@@ -73,7 +73,7 @@ export function SignUpForm({
 
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-zinc-900 mb-1">Create an account</h1>
-        <p className="text-zinc-500 text-sm">Join the library and start managing your reads</p>
+        <p className="text-zinc-500 text-sm">Create an account to access your library system.</p>
       </div>
 
       <form onSubmit={handleSignUp} className="flex flex-col gap-5">
