@@ -2,6 +2,10 @@ import { ForgotPasswordForm } from "@/components/forgot-password-form";
 
 import { Suspense } from "react";
 
+export const metadata = {
+  title: "Forgot Password | Lumina LMS",
+};
+
 export default function ForgotPasswordPage() {
   return (
     <div className="min-h-svh bg-zinc-50 text-zinc-900 flex flex-col md:flex-row">

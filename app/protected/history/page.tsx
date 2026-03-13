@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "Borrowing History | Lumina LMS",
+};
+
 export default function HistoryPage() {
   return (
     <div className="flex flex-col gap-4">

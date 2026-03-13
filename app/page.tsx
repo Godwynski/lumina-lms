@@ -9,6 +9,10 @@ import { getUserRole } from "@/lib/auth-helpers";
 import { RetroGrid } from "@/components/magicui/retro-grid";
 import BlurFade from "@/components/magicui/blur-fade";
 
+export const metadata = {
+  title: "Home | Lumina LMS",
+};
+
 async function HeroSection() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

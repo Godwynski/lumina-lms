@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "Audit Logs | Lumina LMS",
+};
+
 export default function AuditPage() {
   return (
     <div className="flex flex-col gap-4">

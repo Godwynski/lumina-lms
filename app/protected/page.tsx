@@ -207,6 +207,10 @@ function DashboardSkeleton() {
   );
 }
 
+export const metadata = {
+  title: "Dashboard | Lumina LMS",
+};
+
 export default function ProtectedPage() {
   return (
     <Suspense fallback={<DashboardSkeleton />}>

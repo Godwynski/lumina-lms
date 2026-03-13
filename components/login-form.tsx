@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MicrosoftIcon } from "@/components/ui/microsoft-icon";
 
 export function LoginForm({
   className,
@@ -36,6 +38,25 @@ export function LoginForm({
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          scopes: "email profile",
+          redirectTo: `${window.location.origin}/auth/v1/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred");
       setIsLoading(false);
     }
   };
@@ -84,6 +105,7 @@ export function LoginForm({
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -118,6 +140,26 @@ export function LoginForm({
             </>
           ) : "Sign in"}
         </button>
+
+        <div className="relative my-2">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-zinc-200" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-zinc-50 px-2 text-zinc-500">Or continue with</span>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleMicrosoftLogin}
+          disabled={isLoading}
+          className="h-11 rounded-xl border-zinc-200 hover:bg-zinc-100/50 transition-all font-medium flex items-center gap-3 w-full"
+        >
+          <MicrosoftIcon className="h-5 w-5" />
+          <span>Sign in with Microsoft</span>
+        </Button>
       </form>
 
       <div className="mt-6 flex justify-center text-sm text-zinc-500">

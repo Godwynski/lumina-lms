@@ -23,6 +23,10 @@ async function ErrorContent({
   );
 }
 
+export const metadata = {
+  title: "Authentication Error | Lumina LMS",
+};
+
 export default function Page({
   searchParams,
 }: {

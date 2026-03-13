@@ -113,6 +113,7 @@ export function SignUpForm({
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -134,6 +135,7 @@ export function SignUpForm({
             <Input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
+              placeholder="••••••••"
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

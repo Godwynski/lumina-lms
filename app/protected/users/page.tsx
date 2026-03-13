@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "User Management | Lumina LMS",
+};
+
 export default function UsersPage() {
   return (
     <div className="flex flex-col gap-4">

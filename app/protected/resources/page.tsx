@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "Digital Resources | Lumina LMS",
+};
+
 export default function ResourcesPage() {
   return (
     <div className="flex flex-col gap-4">

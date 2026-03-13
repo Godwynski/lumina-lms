@@ -3,6 +3,10 @@ import { SignUpForm } from "@/components/sign-up-form";
 import { Suspense } from "react";
 import BlurFade from "@/components/magicui/blur-fade";
 
+export const metadata = {
+  title: "Sign Up | Lumina LMS",
+};
+
 export default function SignUpPage() {
   return (
     <div className="min-h-svh bg-zinc-50 text-zinc-900 flex flex-col md:flex-row overflow-hidden">

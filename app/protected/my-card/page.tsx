@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "My Library Card | Lumina LMS",
+};
+
 export default function MyCardPage() {
   return (
     <div className="flex flex-col gap-4">
