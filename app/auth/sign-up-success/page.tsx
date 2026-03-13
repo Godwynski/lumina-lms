@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "Sign Up Success | Lumina LMS",
+};
+
 export default function SignUpSuccessPage() {
   return (
     <div className="min-h-svh bg-zinc-50 text-zinc-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">

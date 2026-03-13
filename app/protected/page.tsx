@@ -120,6 +120,9 @@ const COLOR_MAP: Record<string, string> = {
   orange: "bg-orange-50 text-orange-600 border-orange-100 group-hover:bg-orange-100",
 };
 
+import BlurFade from "@/components/magicui/blur-fade";
+import { MagicCard } from "@/components/magicui/magic-card";
+
 async function DashboardContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -133,42 +136,53 @@ async function DashboardContent() {
   return (
     <div className="flex flex-col gap-8">
       {/* Welcome Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3 flex-wrap">
-          <LayoutDashboard size={22} className="text-zinc-400" />
-          <h1 className="text-2xl font-bold text-zinc-900">Dashboard</h1>
-          {roleInfo && (
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${roleInfo.color}`}>
-              {roleInfo.label}
-            </span>
-          )}
+      <BlurFade delay={0.1} inView>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <LayoutDashboard size={22} className="text-zinc-400" />
+            <h1 className="text-2xl font-bold text-zinc-900">Dashboard</h1>
+            {roleInfo && (
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${roleInfo.color}`}>
+                {roleInfo.label}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-zinc-600 text-sm">Welcome back!</p>
+            {user?.email && (
+              <p className="text-zinc-500 text-xs truncate max-w-sm">{user.email}</p>
+            )}
+          </div>
         </div>
-        <p className="text-zinc-600 text-sm">
-          Welcome back{user?.email ? <span className="font-medium text-zinc-900">, {user.email}</span> : ""}! Here&apos;s what you have access to.
-        </p>
-      </div>
+      </BlurFade>
 
       {/* Quick Access Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleCards.map((card) => {
+        {visibleCards.map((card, idx) => {
           const Icon = card.icon;
           const colorClass = COLOR_MAP[card.color] ?? COLOR_MAP["zinc"];
           return (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="group flex flex-col gap-3 p-5 rounded-2xl border border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-md hover:shadow-zinc-200/50 transition-all duration-300"
-            >
-              <div className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-colors ${colorClass}`}>
-                <Icon size={20} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-900 transition-colors">
-                  {card.label}
-                </span>
-                <p className="text-zinc-500 text-sm leading-relaxed">{card.description}</p>
-              </div>
-            </Link>
+            <BlurFade key={card.href} delay={0.15 + idx * 0.05} inView>
+              <Link
+                href={card.href}
+                className="block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-2xl"
+              >
+                <MagicCard 
+                  className="group flex flex-col gap-3 p-5 rounded-2xl border border-zinc-200/60 bg-white/50 backdrop-blur-md shadow-sm transition-all duration-300 h-full cursor-pointer"
+                  gradientColor="rgba(99,102,241,0.08)"
+                >
+                  <div className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-colors ${colorClass}`}>
+                    <Icon size={20} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors">
+                      {card.label}
+                    </span>
+                    <p className="text-zinc-500 text-sm leading-relaxed">{card.description}</p>
+                  </div>
+                </MagicCard>
+              </Link>
+            </BlurFade>
           );
         })}
       </div>
@@ -192,6 +206,10 @@ function DashboardSkeleton() {
     </div>
   );
 }
+
+export const metadata = {
+  title: "Dashboard | Lumina LMS",
+};
 
 export default function ProtectedPage() {
   return (

@@ -2,6 +2,10 @@ import { UpdatePasswordForm } from "@/components/update-password-form";
 
 import { Suspense } from "react";
 
+export const metadata = {
+  title: "Update Password | Lumina LMS",
+};
+
 export default function UpdatePasswordPage() {
   return (
     <div className="min-h-svh bg-zinc-50 text-zinc-900 flex flex-col md:flex-row">

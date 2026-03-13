@@ -1,5 +1,9 @@
 import { getUserRole } from '@/lib/auth-helpers';
 import { createClient } from '@/lib/supabase/server';
+
+export const metadata = {
+  title: "Admin Dashboard | Lumina LMS",
+};
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
