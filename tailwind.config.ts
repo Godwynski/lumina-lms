@@ -60,6 +60,7 @@ export default {
       animation: {
         grid: "grid 15s linear infinite",
         shimmer: "shimmer 8s infinite",
+        "shimmer-button-shimmer": "shimmer-button-shimmer var(--shimmer-duration) infinite linear",
       },
       keyframes: {
         grid: {
@@ -72,6 +73,14 @@ export default {
           },
           "30%, 60%": {
             "background-position": "calc(100% + var(--shimmer-width)) 0",
+          },
+        },
+        "shimmer-button-shimmer": {
+          "0%": {
+            transform: "rotate(0deg)",
+          },
+          "100%": {
+            transform: "rotate(360deg)",
           },
         },
       },
