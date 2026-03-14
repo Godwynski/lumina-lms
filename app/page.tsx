@@ -14,6 +14,8 @@ export const metadata = {
   title: "Home | Lumina LMS",
 };
 
+export const dynamic = "force-dynamic";
+
 async function HeroSection() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
