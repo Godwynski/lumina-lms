@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendWelcomeEmail } from "@/lib/notifications";
+import Image from "next/image";
 
 
 interface PendingCard {
@@ -222,7 +223,13 @@ export default function ApprovalsPage() {
                     <div className="flex gap-4">
                       <div className="h-14 w-14 rounded-2xl bg-zinc-100 overflow-hidden border border-zinc-200">
                         {card.profiles?.avatar_url ? (
-                          <img src={card.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
+                          <Image 
+                            src={card.profiles.avatar_url} 
+                            alt="" 
+                            width={56} 
+                            height={56} 
+                            className="h-full w-full object-cover" 
+                          />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-zinc-400 font-bold text-xl">
                             {card.profiles?.full_name?.charAt(0)}

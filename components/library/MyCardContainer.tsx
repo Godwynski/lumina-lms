@@ -71,7 +71,7 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.2 }}
       >
         <DigitalCard
           fullName={data.fullName}

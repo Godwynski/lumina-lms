@@ -1,6 +1,7 @@
 import { createClient } from './supabase/server';
+import { cache } from 'react';
 
-export async function getUserRole() {
+export const getUserRole = cache(async () => {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -22,4 +23,4 @@ export async function getUserRole() {
     .single();
 
   return (profile?.role as string) || 'student';
-}
+});
