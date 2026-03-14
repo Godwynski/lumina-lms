@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, getURL } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,7 +51,7 @@ export function LoginForm({
         provider: "azure",
         options: {
           scopes: "email profile",
-          redirectTo: `${window.location.origin}/auth/v1/callback`,
+          redirectTo: `${getURL()}auth/v1/callback`,
         },
       });
       if (error) throw error;

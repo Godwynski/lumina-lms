@@ -1,13 +1,23 @@
 import { SignUpForm } from "@/components/sign-up-form";
-
 import { Suspense } from "react";
 import BlurFade from "@/components/magicui/blur-fade";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Sign Up | Lumina LMS",
 };
 
-export default function SignUpPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SignUpPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    return redirect("/protected");
+  }
+
   return (
     <div className="min-h-svh bg-zinc-50 text-zinc-900 flex flex-col md:flex-row overflow-hidden">
       {/* Left: Branding panel */}

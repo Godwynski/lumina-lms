@@ -8,6 +8,7 @@ import { getUserRole } from "@/lib/auth-helpers";
 export default async function MyCardPage() {
   const supabase = await createClient();
 
+  // 1. Get user - single auth API call
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,27 +17,38 @@ export default async function MyCardPage() {
     return redirect("/auth/login");
   }
 
-  // Restrict access to Students and Staff only
-  const role = await getUserRole();
-  if (role === 'admin' || role === 'librarian') {
-    return redirect("/protected");
-  }
-
-
-  // Fetch profile and library card
-  const { data: profile } = await supabase
+  // 2. Optimized: Single DB query for profile and card status using Join
+  // This reduces round-trips from 3 to 1
+  const { data: profileData } = await supabase
     .from("profiles")
-    .select("full_name, student_id, department, avatar_url")
+    .select(`
+      full_name, 
+      student_id, 
+      department, 
+      avatar_url, 
+      role,
+      library_cards (
+        card_number, 
+        status, 
+        expires_at
+      )
+    `)
     .eq("id", user.id)
     .single();
 
-  const { data: card } = await supabase
-    .from("library_cards")
-    .select("card_number, status, expires_at")
-    .eq("user_id", user.id)
-    .single();
+  if (!profileData) {
+    return redirect("/protected"); // Or some error state
+  }
 
-  if (!profile || !card) {
+  // 3. Early Role Check from the same data
+  if (profileData.role === 'admin' || profileData.role === 'librarian') {
+    return redirect("/protected");
+  }
+
+  const card = profileData.library_cards?.[0];
+
+  // If card doesn't exist yet, show the setup state
+  if (!card) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
         <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -49,7 +61,7 @@ export default async function MyCardPage() {
   }
 
   // Generate QR code SVG on the server
-  // This is much faster than client-side rendering and prevents "flicker"
+  // This is fast enough but we only do it after we have all data
   const qrSvg = await QRCode.toString(card.card_number, {
     type: 'svg',
     margin: 2,
@@ -60,13 +72,13 @@ export default async function MyCardPage() {
   });
 
   const initialData = {
-    fullName: profile.full_name || "Student",
-    studentId: profile.student_id || "N/A",
+    fullName: profileData.full_name || "Student",
+    studentId: profileData.student_id || "N/A",
     cardNumber: card.card_number,
-    department: profile.department || "No Department",
+    department: profileData.department || "No Department",
     status: card.status as any,
     expiryDate: card.expires_at || new Date().toISOString(),
-    avatarUrl: profile.avatar_url,
+    avatarUrl: profileData.avatar_url,
     qrSvg: qrSvg
   };
 

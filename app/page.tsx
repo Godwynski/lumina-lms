@@ -8,10 +8,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
 import { RetroGrid } from "@/components/magicui/retro-grid";
 import BlurFade from "@/components/magicui/blur-fade";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Home | Lumina LMS",
 };
+
+export const dynamic = "force-dynamic";
 
 async function HeroSection() {
   const supabase = await createClient();
@@ -20,7 +23,14 @@ async function HeroSection() {
   return <Hero user={user} role={role} />;
 }
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    return redirect("/protected");
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center bg-zinc-50 text-zinc-900 font-sans selection:bg-indigo-500/30 relative overflow-hidden">
       <RetroGrid className="z-0" />

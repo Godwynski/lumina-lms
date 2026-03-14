@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { GraduationCap, Calendar, ShieldCheck, MapPin } from "lucide-react";
 import { MagicCard } from "@/components/magicui/magic-card"; // Adjust paths based on your setup
-// import { ShimmerButton } from "@/components/magicui/shimmer-button";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface DigitalCardProps {
@@ -70,7 +70,14 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-400 rounded-full blur opacity-25 group-hover/avatar:opacity-50 transition" />
             <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg bg-zinc-100">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={fullName} className="h-full w-full object-cover" />
+                <Image 
+                  src={avatarUrl} 
+                  alt={fullName} 
+                  width={64} 
+                  height={64} 
+                  className="h-full w-full object-cover" 
+                  priority
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xl font-bold text-zinc-400">
                   {fullName?.charAt(0)}

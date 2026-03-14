@@ -1,12 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 /**
  * Especially important if using Fluid compute: Don't put this client in a
  * global variable. Always create a new client within each function when using
  * it.
+ *
+ * We wrap this in React's cache() to ensure that the same client is used across
+ * a single request, preventing redundant cookie lookups and potential re-auth overhead.
  */
-export async function createClient() {
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -31,4 +35,4 @@ export async function createClient() {
       },
     },
   );
-}
+});
