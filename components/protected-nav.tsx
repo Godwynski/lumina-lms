@@ -67,6 +67,12 @@ const NAV_LINKS: NavLink[] = [
     roles: ["admin", "librarian", "staff"],
   },
   {
+    href: "/protected/admin/approvals",
+    label: "Card Approvals",
+    icon: ShieldCheck,
+    roles: ["admin", "librarian"],
+  },
+  {
     href: "/protected/fines",
     label: "Fines",
     icon: BookMarked,
@@ -88,7 +94,7 @@ const NAV_LINKS: NavLink[] = [
     href: "/protected/my-card",
     label: "E-Library Card",
     icon: CreditCard,
-    roles: ["admin", "librarian", "staff", "student"],
+    roles: ["staff", "student"],
   },
   {
     href: "/protected/resources",

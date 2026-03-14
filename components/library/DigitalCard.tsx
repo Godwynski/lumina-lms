@@ -15,6 +15,7 @@ interface DigitalCardProps {
   status: "active" | "pending" | "suspended" | "expired";
   expiryDate: string;
   avatarUrl?: string | null;
+  qrSvg?: string; // New prop for instant SVG rendering
 }
 
 const DigitalCard: React.FC<DigitalCardProps> = ({
@@ -25,9 +26,8 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
   status,
   expiryDate,
   avatarUrl,
+  qrSvg,
 }) => {
-  const qrRef = useRef<HTMLCanvasElement>(null);
-  
   // Status Color Mapping
   const statusConfig = {
     active: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -35,19 +35,6 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
     suspended: "bg-red-500/10 text-red-500 border-red-500/20",
     expired: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
   };
-
-  useEffect(() => {
-    if (qrRef.current && cardNumber) {
-      QRCode.toCanvas(qrRef.current, cardNumber, {
-        width: 100,
-        margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
-      });
-    }
-  }, [cardNumber]);
 
   const formattedExpiry = new Date(expiryDate).toLocaleDateString("en-US", {
     month: "short",
@@ -120,8 +107,17 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
           </div>
 
           <div className="flex flex-col items-center justify-center pl-4 border-l border-zinc-100 dark:border-zinc-800">
-            <div className="p-1 bg-white rounded-lg shadow-inner ring-1 ring-zinc-200">
-              <canvas ref={qrRef} className="h-20 w-20" />
+            <div className="p-1 bg-white rounded-lg shadow-inner ring-1 ring-zinc-200 overflow-hidden">
+              {qrSvg ? (
+                <div 
+                  className="h-20 w-20 [&>svg]:h-full [&>svg]:w-full" 
+                  dangerouslySetInnerHTML={{ __html: qrSvg }} 
+                />
+              ) : (
+                <div className="h-20 w-20 bg-zinc-50 animate-pulse flex items-center justify-center">
+                   <div className="h-10 w-10 border-2 border-zinc-200 border-t-zinc-400 rounded-full animate-spin" />
+                </div>
+              )}
             </div>
             <p className="mt-1 text-[9px] font-mono text-zinc-400">{cardNumber}</p>
           </div>
@@ -139,5 +135,6 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
     </div>
   );
 };
+
 
 export default DigitalCard;

@@ -1,8 +1,9 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
-import DigitalCard from "@/components/library/DigitalCard";
-import CardActions from "@/components/library/CardActions";
+import MyCardContainer from "@/components/library/MyCardContainer";
 import { redirect } from "next/navigation";
+import QRCode from "qrcode";
+import { getUserRole } from "@/lib/auth-helpers";
 
 export default async function MyCardPage() {
   const supabase = await createClient();
@@ -14,6 +15,13 @@ export default async function MyCardPage() {
   if (!user) {
     return redirect("/auth/login");
   }
+
+  // Restrict access to Students and Staff only
+  const role = await getUserRole();
+  if (role === 'admin' || role === 'librarian') {
+    return redirect("/protected");
+  }
+
 
   // Fetch profile and library card
   const { data: profile } = await supabase
@@ -40,42 +48,28 @@ export default async function MyCardPage() {
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">My Digital Card</h1>
-        <p className="text-zinc-500">Your official library identity card</p>
-      </div>
+  // Generate QR code SVG on the server
+  // This is much faster than client-side rendering and prevents "flicker"
+  const qrSvg = await QRCode.toString(card.card_number, {
+    type: 'svg',
+    margin: 2,
+    color: {
+      dark: '#000000',
+      light: '#ffffff'
+    }
+  });
 
-      <DigitalCard
-        fullName={profile.full_name || "Student"}
-        studentId={profile.student_id || "N/A"}
-        cardNumber={card.card_number}
-        department={profile.department || "No Department"}
-        status={card.status as any}
-        expiryDate={card.expires_at || new Date().toISOString()}
-        avatarUrl={profile.avatar_url}
-      />
+  const initialData = {
+    fullName: profile.full_name || "Student",
+    studentId: profile.student_id || "N/A",
+    cardNumber: card.card_number,
+    department: profile.department || "No Department",
+    status: card.status as any,
+    expiryDate: card.expires_at || new Date().toISOString(),
+    avatarUrl: profile.avatar_url,
+    qrSvg: qrSvg
+  };
 
-      <CardActions cardNumber={card.card_number} />
-
-      <div className="mt-12 bg-zinc-50 border border-zinc-100 rounded-2xl p-6">
-        <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-widest mb-4">Quick Guide</h3>
-        <ul className="space-y-3 text-sm text-zinc-600">
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">1</span>
-            Present this QR code to the librarian during checkout.
-          </li>
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">2</span>
-            Ensure your screen is clean for easy scanning.
-          </li>
-          <li className="flex gap-3">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">3</span>
-            Downloading the card as a PNG allows for offline use.
-          </li>
-        </ul>
-      </div>
-    </div>
-  );
+  return <MyCardContainer initialData={initialData} />;
 }
+
