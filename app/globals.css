@@ -101,3 +101,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+@layer utilities {
+  @keyframes pulse-bright {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+  .animate-pulse-bright {
+    animation: pulse-bright 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
