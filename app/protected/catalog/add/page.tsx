@@ -1,0 +1,302 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBook } from '@/lib/actions/catalog';
+import { ChevronLeft, Search, Save, BookPlus, ImageIcon, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+
+export default function AddBookPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [isbnLoading, setIsbnLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    title: '',
+    author: '',
+    isbn: '',
+    categoryId: '',
+    tags: '',
+    location: '',
+    section: '',
+    cover_url: '',
+  });
+
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+
+  const handleIsbnLookup = async () => {
+    if (!formData.isbn) return;
+    
+    setIsbnLoading(true);
+    setError('');
+    
+    try {
+      // Clean ISBN
+      const cleanIsbn = formData.isbn.replace(/[- ]/g, '');
+      const response = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
+      const data = await response.json();
+      
+      const bookData = data[`ISBN:${cleanIsbn}`];
+      
+      if (bookData) {
+        setFormData(prev => ({
+          ...prev,
+          title: bookData.title || prev.title,
+          author: bookData.authors?.[0]?.name || prev.author,
+          cover_url: bookData.cover?.large || bookData.cover?.medium || prev.cover_url,
+        }));
+      } else {
+        setError('Book not found in Open Library');
+      }
+    } catch (err) {
+      setError('Failed to fetch ISBN data');
+    } finally {
+      setIsbnLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      let finalCoverUrl = formData.cover_url;
+
+      // Handle cover upload if file selected
+      if (coverFile) {
+        const fileForm = new FormData();
+        fileForm.append('file', coverFile);
+        
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: fileForm,
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
+        
+        finalCoverUrl = uploadData.cover_url;
+      }
+
+      // Convert tags string to array
+      const tagsArray = formData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
+
+      // Save book
+      await createBook({
+        title: formData.title,
+        author: formData.author,
+        isbn: formData.isbn || null,
+        category_id: formData.categoryId || null,
+        tags: tagsArray,
+        location: formData.location,
+        section: formData.section,
+        cover_url: finalCoverUrl,
+      });
+
+      router.push('/protected/catalog');
+    } catch (err: any) {
+      setError(err.message || 'Failed to add book');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href="/protected/catalog">
+          <Button variant="ghost" size="icon" className="rounded-full hover:bg-zinc-100">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 leading-tight">Add New Book</h1>
+          <p className="text-zinc-500 text-sm">Enter book details or use ISBN lookup.</p>
+        </div>
+      </div>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-sm flex items-center gap-2 shadow-sm">
+          <Info className="w-5 h-5 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-2xl border border-zinc-200/50 shadow-sm space-y-8">
+            {/* ISBN Lookup Section */}
+            <div className="space-y-4 p-5 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
+               <div className="flex items-center gap-2 text-indigo-700 mb-1">
+                 <Search className="w-4 h-4" />
+                 <span className="text-sm font-semibold uppercase tracking-wider">ISBN Quick Lookup</span>
+               </div>
+               <div className="flex gap-3">
+                 <div className="flex-1">
+                    <input 
+                      type="text" 
+                      value={formData.isbn}
+                      onChange={e => setFormData({...formData, isbn: e.target.value})}
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                      placeholder="Enter ISBN-10 or ISBN-13"
+                    />
+                 </div>
+                  <Button 
+                    type="button" 
+                    onClick={handleIsbnLookup}
+                    disabled={isbnLoading || !formData.isbn}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-[42px] px-6 font-medium shadow-sm shadow-indigo-200/50 transition-all"
+                  >
+                    {isbnLoading ? 'Searching...' : 'Fetch Data'}
+                  </Button>
+               </div>
+               <p className="text-[11px] text-zinc-500">Retrieves title, author, and cover from Open Library API.</p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Book Title *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.title}
+                    onChange={e => setFormData({...formData, title: e.target.value})}
+                    placeholder="e.g. Clean Code"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Author *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={formData.author}
+                    onChange={e => setFormData({...formData, author: e.target.value})}
+                    placeholder="e.g. Robert C. Martin"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Physical Section</label>
+                  <input 
+                    type="text" 
+                    value={formData.section}
+                    onChange={e => setFormData({...formData, section: e.target.value})}
+                    placeholder="e.g. CS Reference"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                  />
+                </div>
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Exact Location</label>
+                  <input 
+                    type="text" 
+                    value={formData.location}
+                    onChange={e => setFormData({...formData, location: e.target.value})}
+                    placeholder="e.g. Shelf A-5"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Subject Tags (Comma Separated)</label>
+                <input 
+                  type="text" 
+                  value={formData.tags}
+                  onChange={e => setFormData({...formData, tags: e.target.value})}
+                  placeholder="Programming, Best Practices, Engineering"
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 flex gap-4">
+               <Button 
+                type="submit" 
+                disabled={loading}
+                className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl h-12 font-bold shadow-lg shadow-zinc-200 transition-all"
+              >
+                {loading ? 'Processing...' : (
+                  <div className="flex items-center gap-2">
+                    <Save className="w-4 h-4" />
+                    Save to Catalog
+                  </div>
+                )}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => router.push('/protected/catalog')}
+                className="h-12 rounded-xl px-8 font-semibold"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Sidebar / Preview */}
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-zinc-200/50 shadow-sm sticky top-24">
+            <h3 className="text-sm font-bold text-zinc-900 mb-4 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-indigo-600" />
+              Book Cover
+            </h3>
+            
+            <div className="aspect-[2/3] bg-zinc-50 rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center relative group overflow-hidden">
+               {formData.cover_url || coverFile ? (
+                 <>
+                   <img 
+                    src={coverFile ? URL.createObjectURL(coverFile) : formData.cover_url} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                   />
+                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as any).click()}>
+                        Change Image
+                      </Button>
+                   </div>
+                 </>
+               ) : (
+                 <div className="text-center p-6 flex flex-col items-center">
+                    <BookPlus className="w-10 h-10 text-zinc-300 mb-3" />
+                    <p className="text-xs text-zinc-400 font-medium">No cover image selected</p>
+                 </div>
+               )}
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <input 
+                id="file-upload"
+                type="file" 
+                accept="image/jpeg, image/png, image/webp"
+                className="hidden"
+                onChange={e => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setCoverFile(e.target.files[0]);
+                  }
+                }}
+              />
+              <Button 
+                variant="outline" 
+                className="w-full rounded-xl gap-2 text-xs h-10 border-zinc-200 hover:bg-zinc-50"
+                onClick={() => (document.getElementById('file-upload') as any).click()}
+              >
+                Upload File
+              </Button>
+              <p className="text-[10px] text-zinc-400 text-center italic">Supported: JPG, PNG, WEBP (Max 2MB)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

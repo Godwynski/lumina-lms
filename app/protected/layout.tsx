@@ -32,7 +32,7 @@ export default function ProtectedLayout({
       </Suspense>
 
       {/* Main content: offset left for desktop sidebar, top for mobile header */}
-      <main className="min-h-screen pt-14 md:pt-0 md:pl-64 lg:pl-72 relative z-0">
+      <main className="min-h-screen pt-16 md:pt-0 md:pl-64 lg:pl-72 relative z-0">
         <div className="w-full max-w-6xl mx-auto p-4 md:p-6 lg:p-8">
           {children}
         </div>

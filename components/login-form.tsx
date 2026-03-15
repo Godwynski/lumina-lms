@@ -51,7 +51,10 @@ export function LoginForm({
         provider: "azure",
         options: {
           scopes: "email profile",
-          redirectTo: `${getURL()}auth/v1/callback`,
+          redirectTo: `${getURL()}auth/callback`,
+          queryParams: {
+            prompt: "select_account",
+          },
         },
       });
       if (error) throw error;

@@ -14,6 +14,7 @@ import {
   BookOpen,
   LayoutDashboard,
 } from "lucide-react";
+import { OfflinePinGenerator } from "@/components/digital-resources/OfflinePinGenerator";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
@@ -186,6 +187,15 @@ async function DashboardContent() {
           );
         })}
       </div>
+
+      {/* Emergency Offline Protocol (Librarians/Admins only) */}
+      {(role === "admin" || role === "librarian") && (
+        <BlurFade delay={0.5} inView>
+          <div className="mt-4">
+             <OfflinePinGenerator />
+          </div>
+        </BlurFade>
+      )}
     </div>
   );
 }

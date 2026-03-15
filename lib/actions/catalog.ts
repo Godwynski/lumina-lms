@@ -1,0 +1,155 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+
+// --- Categories ---
+
+export async function getCategories() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('categories').select('*').order('name');
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function createCategory(name: string, description?: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('categories')
+    .insert([{ name, description }])
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// --- Books ---
+
+export async function getBooks(query: string = '', categoryId?: string) {
+  const supabase = await createClient();
+  let dbQuery = supabase.from('books').select(`*, categories(name)`).eq('is_active', true);
+  
+  if (query) {
+    dbQuery = dbQuery.textSearch('search_vector', query.split(' ').join(' | '));
+  }
+  
+  if (categoryId) {
+    dbQuery = dbQuery.eq('category_id', categoryId);
+  }
+  
+  const { data, error } = await dbQuery.order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getBookById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('books')
+    .select(`*, categories(name)`)
+    .eq('id', id)
+    .single();
+    
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function createBook(bookData: Record<string, unknown>) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('books')
+    .insert([bookData])
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  revalidatePath('/protected/catalog');
+  return data;
+}
+
+export async function updateBook(id: string, bookData: Record<string, unknown>) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('books')
+    .update(bookData)
+    .eq('id', id)
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  revalidatePath('/protected/catalog');
+  revalidatePath(`/protected/catalog/${id}`);
+  return data;
+}
+
+export async function softDeleteBook(id: string) {
+  const supabase = await createClient();
+  
+  // Check for active borrowed copies
+  const { count, error: countError } = await supabase
+    .from('book_copies')
+    .select('*', { count: 'exact', head: true })
+    .eq('book_id', id)
+    .eq('status', 'BORROWED');
+    
+  if (countError) throw new Error(countError.message);
+  
+  if (count && count > 0) {
+    throw new Error('Cannot delete book: There are active borrowed copies.');
+  }
+
+  const { data, error } = await supabase
+    .from('books')
+    .update({ is_active: false })
+    .eq('id', id)
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  revalidatePath('/protected/catalog');
+  return data;
+}
+
+// --- Book Copies ---
+
+export async function getBookCopies(bookId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('book_copies')
+    .select('*')
+    .eq('book_id', bookId)
+    .order('created_at', { ascending: false });
+    
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function createBookCopy(bookId: string, condition?: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('book_copies')
+    .insert([{ book_id: bookId, condition }])
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  revalidatePath('/protected/catalog');
+  revalidatePath(`/protected/catalog/${bookId}`);
+  return data;
+}
+
+export async function updateBookCopyStatus(id: string, status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST') {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('book_copies')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+    
+  if (error) throw new Error(error.message);
+  revalidatePath('/protected/catalog');
+  revalidatePath(`/protected/catalog/${data.book_id}`);
+  return data;
+}
