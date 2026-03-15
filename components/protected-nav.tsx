@@ -61,6 +61,12 @@ const NAV_LINKS: NavLink[] = [
     roles: ["admin", "librarian", "staff"],
   },
   {
+    href: "/protected/student-catalog",
+    label: "Book Catalog",
+    icon: Library,
+    roles: ["student"],
+  },
+  {
     href: "/protected/users",
     label: "Users & Roles",
     icon: Users,
@@ -151,7 +157,7 @@ export function ProtectedNav({
         Displays on < md screens.
         =============================================================================
       */}
-      <header className="fixed top-0 z-[60] flex items-center lg:items-start gap-3 h-14 px-4 bg-white/70 backdrop-blur-md border-b border-zinc-200/50 md:hidden shadow-sm w-full shrink-0">
+      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center lg:items-start gap-3 h-14 px-4 bg-white border-b border-zinc-200 shadow-sm md:hidden">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-1.5 -ml-1.5 text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg focus:outline-none transition-colors shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"

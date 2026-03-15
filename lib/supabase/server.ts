@@ -36,3 +36,24 @@ export const createClient = cache(async () => {
     },
   );
 });
+
+/**
+ * A Supabase client that doesn't use cookies().
+ * Use this for functions wrapped in unstable_cache().
+ */
+export const createSafeClient = () => {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {
+          // No-op for cached public searches
+        },
+      },
+    }
+  );
+};

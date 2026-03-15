@@ -109,4 +109,12 @@
   .animate-pulse-bright {
     animation: pulse-bright 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
 }
