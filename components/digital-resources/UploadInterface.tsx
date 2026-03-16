@@ -25,6 +25,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  const [publishedYear, setPublishedYear] = useState("");
   const [type, setType] = useState("ebook");
   const [categoryId, setCategoryId] = useState("");
   const [accessLevel, setAccessLevel] = useState("STUDENT");
@@ -67,6 +68,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
     formData.append("file", file);
     formData.append("title", title);
     formData.append("author", author);
+    formData.append("publishedYear", publishedYear);
     formData.append("type", type);
     formData.append("categoryId", categoryId);
     formData.append("accessLevel", accessLevel);
@@ -100,6 +102,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
         setFile(null);
         setTitle("");
         setAuthor("");
+        setPublishedYear("");
         router.refresh();
         if (onUploadSuccess) onUploadSuccess();
       } else {
@@ -162,6 +165,18 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               disabled={uploading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="publishedYear">Year Published</Label>
+            <Input
+              id="publishedYear"
+              placeholder="e.g. 2024"
+              value={publishedYear}
+              onChange={(e) => setPublishedYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              disabled={uploading}
+              inputMode="numeric"
             />
           </div>
 
@@ -271,6 +286,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
               setFile(null);
               setTitle("");
               setAuthor("");
+              setPublishedYear("");
               setError(null);
               setSuccess(false);
               if (onCancel) onCancel();

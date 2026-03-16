@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UploadAction } from "@/components/digital-resources/UploadAction";
 import PDFViewerWrapper from "@/components/digital-resources/PDFViewerWrapper";
+import EditResourceMetadataDialog from "@/components/digital-resources/EditResourceMetadataDialog";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -33,7 +34,7 @@ export default async function DigitalResourcesPage({
     .eq("id", user.id)
     .single();
 
-  const isStaff = profile && ["admin", "librarian", "staff"].includes(profile.role);
+  const isAdmin = profile?.role === "admin";
   const isLibrarian = profile && ["admin", "librarian"].includes(profile.role);
 
   const resolvedParams = await searchParams;
@@ -121,13 +122,14 @@ export default async function DigitalResourcesPage({
                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] px-4 py-1.5 bg-indigo-50 border border-indigo-100/50 rounded-full shadow-sm">
                  {selectedResource.type}
                </span>
-               {isStaff && (
-                 <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl border-zinc-200 text-zinc-600 hover:text-indigo-600">
-                   Edit Resource
-                 </Button>
-               )}
-             </div>
-          </div>
+                {isAdmin && selectedResource && (
+                  <EditResourceMetadataDialog
+                    resource={selectedResource}
+                    categories={categories || []}
+                  />
+                )}
+              </div>
+           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 h-[800px]">
@@ -158,7 +160,7 @@ export default async function DigitalResourcesPage({
                     <div>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Published</p>
                       <p className="text-base font-semibold text-zinc-900">
-                        {new Date(selectedResource.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                        {selectedResource.published_year || new Date(selectedResource.created_at).getFullYear()}
                       </p>
                     </div>
                   </div>
@@ -247,7 +249,7 @@ export default async function DigitalResourcesPage({
                     <div className="flex items-center gap-3">
                        <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-400">
                           <Calendar size={13} className="text-zinc-300" />
-                          {new Date(resource.created_at).getFullYear()}
+                          {resource.published_year || new Date(resource.created_at).getFullYear()}
                        </div>
                        <div className="w-1 h-1 bg-zinc-200 rounded-full" />
                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">

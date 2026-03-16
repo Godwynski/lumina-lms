@@ -1,215 +1,170 @@
 "use client";
 
-import {
-  Settings2,
-  RotateCcw,
-  Zap,
-  Users,
-  ShieldCheck,
-  Search,
-  ArrowRight,
-  UserCheck
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
-// This would normally come from an auth hook, keeping it simple for the UI logic
 type Role = "admin" | "librarian" | "staff" | "student";
 
 export default function SettingsPage() {
-  const [sidebarMemory, setSidebarMemory] = useState(true);
-  const [focusMode, setFocusMode] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [role, setRole] = useState<Role>("admin"); // Default to admin for UI development
+  const [displayName, setDisplayName] = useState("");
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [rememberDevice, setRememberDevice] = useState(true);
+  const [compactTables, setCompactTables] = useState(false);
+  const [role, setRole] = useState<Role>("admin");
 
   useEffect(() => {
     setMounted(true);
-    const mem = localStorage.getItem("lumina_sidebar_expanded");
-    const focus = localStorage.getItem("lumina_sidebar_auto_collapse");
-    setSidebarMemory(mem !== null); 
-    setFocusMode(focus === "true");
+    setDisplayName(localStorage.getItem("lumina_profile_name") || "");
+    setEmailAlerts(localStorage.getItem("lumina_email_alerts") !== "false");
+    setRememberDevice(localStorage.getItem("lumina_remember_device") !== "false");
+    setCompactTables(localStorage.getItem("lumina_compact_tables") === "true");
   }, []);
 
-  const toggleSidebarMemory = () => {
-    const newValue = !sidebarMemory;
-    setSidebarMemory(newValue);
-    if (!newValue) {
-      localStorage.removeItem("lumina_sidebar_expanded");
-    } else {
-      localStorage.setItem("lumina_sidebar_expanded", JSON.stringify({}));
-    }
+  const saveProfile = () => {
+    localStorage.setItem("lumina_profile_name", displayName.trim());
+    alert("Profile settings saved.");
   };
 
-  const toggleFocusMode = () => {
-    const newValue = !focusMode;
-    setFocusMode(newValue);
-    localStorage.setItem("lumina_sidebar_auto_collapse", String(newValue));
-    window.dispatchEvent(new Event("storage"));
+  const savePreferences = () => {
+    localStorage.setItem("lumina_email_alerts", String(emailAlerts));
+    localStorage.setItem("lumina_remember_device", String(rememberDevice));
+    localStorage.setItem("lumina_compact_tables", String(compactTables));
+    alert("Preferences updated.");
   };
 
-  const resetNav = () => {
-    localStorage.removeItem("lumina_sidebar_expanded");
-    localStorage.removeItem("lumina_sidebar_auto_collapse");
-    setSidebarMemory(true);
-    setFocusMode(false);
-    window.dispatchEvent(new Event("storage"));
-    alert("Navigation preferences reset to default.");
+  const clearLocalPreferences = () => {
+    localStorage.removeItem("lumina_profile_name");
+    localStorage.removeItem("lumina_email_alerts");
+    localStorage.removeItem("lumina_remember_device");
+    localStorage.removeItem("lumina_compact_tables");
+    setDisplayName("");
+    setEmailAlerts(true);
+    setRememberDevice(true);
+    setCompactTables(false);
+    alert("Local settings reset.");
   };
 
   if (!mounted) return null;
 
-  const isAdmin = role === "admin";
-  const isLibrarian = role === "librarian" || isAdmin;
-  const isStaff = role === "staff" || isLibrarian;
+  const canManageSystem = role === "admin" || role === "librarian";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 pb-20">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Settings Hub</h1>
-        <p className="text-zinc-500 mt-1">Configure your experience and manage system resources.</p>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-8 pb-16">
+      <header className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Settings</h1>
+        <p className="text-zinc-500">Manage your account, preferences, and security.</p>
+      </header>
 
-      <div className="grid gap-10">
-        {/* MANAGEMENT SECTION - Only for Admin/Librarian/Staff */}
-        {isStaff && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <Users size={18} className="text-indigo-600" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Management</h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ManagementCard 
-                href="/protected/users"
-                title="Users & Roles"
-                description="Manage library staff, students, and their access permissions."
-                icon={Users}
-              />
-              {isLibrarian && (
-                <ManagementCard 
-                  href="/protected/admin/approvals"
-                  title="Card Approvals"
-                  description="Review and approve new library card applications."
-                  icon={UserCheck}
-                />
-              )}
-            </div>
-          </section>
-        )}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm space-y-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Profile</h2>
+        <div className="grid gap-2">
+          <label htmlFor="display-name" className="text-sm font-medium text-zinc-700">
+            Display name
+          </label>
+          <input
+            id="display-name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Enter your display name"
+            className="h-10 rounded-lg border border-zinc-300 px-3 text-sm outline-none focus:border-indigo-500"
+          />
+        </div>
+        <button
+          onClick={saveProfile}
+          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+        >
+          Save profile
+        </button>
+      </section>
 
-        {/* SECURITY & DATA - Only for Admins */}
-        {isAdmin && (
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <ShieldCheck size={18} className="text-indigo-600" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">System & Security</h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ManagementCard 
-                href="/protected/audit"
-                title="Audit Logs"
-                description="View a detailed history of all system events and user actions."
-                icon={Search}
-              />
-            </div>
-          </section>
-        )}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm space-y-4">
+        <h2 className="text-lg font-semibold text-zinc-900">Preferences</h2>
+        <ToggleRow
+          title="Email alerts"
+          description="Receive due date, renewal, and approval notifications."
+          checked={emailAlerts}
+          onChange={setEmailAlerts}
+        />
+        <ToggleRow
+          title="Remember this device"
+          description="Keep your device trusted for faster sign-in."
+          checked={rememberDevice}
+          onChange={setRememberDevice}
+        />
+        <ToggleRow
+          title="Compact tables"
+          description="Use denser table rows in dashboard and reports."
+          checked={compactTables}
+          onChange={setCompactTables}
+        />
+        <button
+          onClick={savePreferences}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+        >
+          Save preferences
+        </button>
+      </section>
 
-        {/* INTERFACE PREFERENCES */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <Settings2 size={18} className="text-indigo-600" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Interface Preferences</h2>
-          </div>
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm space-y-3">
+        <h2 className="text-lg font-semibold text-zinc-900">Security</h2>
+        <p className="text-sm text-zinc-600">For password and session controls, use the account security page.</p>
+        <a
+          href="/auth/update-password"
+          className="inline-flex rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+        >
+          Go to password settings
+        </a>
+      </section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <PreferenceToggle 
-              isActive={sidebarMemory}
-              onToggle={toggleSidebarMemory}
-              title="Sidebar Memory"
-              description="Remember which modules you have expanded between sessions."
-              icon={RotateCcw}
-            />
-            <PreferenceToggle 
-              isActive={focusMode}
-              onToggle={toggleFocusMode}
-              title="Focus Mode"
-              description="Automatically collapse other sections when you open a new one."
-              icon={Zap}
-            />
-          </div>
-        </section>
-
-        <section className="pt-4 border-t border-zinc-100 flex justify-between items-center">
+      {canManageSystem && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm space-y-3">
+          <h2 className="text-lg font-semibold text-amber-900">Admin controls</h2>
+          <p className="text-sm text-amber-800">
+            You can clear local settings used by this browser for testing and support.
+          </p>
           <button
-            onClick={resetNav}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+            onClick={clearLocalPreferences}
+            className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
           >
-            <RotateCcw size={16} />
-            Reset all interface preferences
+            Reset local settings
           </button>
-          
-          <div className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest">
-            Lumina LMS v1.0.4
-          </div>
         </section>
-      </div>
+      )}
     </div>
   );
 }
 
-function ManagementCard({ href, title, description, icon: Icon }: any) {
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
   return (
-    <Link 
-      href={href}
-      className="group bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all flex flex-col justify-between"
-    >
+    <div className="flex items-center justify-between rounded-xl border border-zinc-200 p-3">
       <div>
-        <div className="p-2.5 w-fit rounded-xl bg-zinc-50 group-hover:bg-indigo-50 transition-colors">
-          <Icon size={20} className="text-zinc-500 group-hover:text-indigo-600" />
-        </div>
-        <div className="mt-4">
-          <h3 className="font-semibold text-zinc-900">{title}</h3>
-          <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-            {description}
-          </p>
-        </div>
+        <p className="text-sm font-medium text-zinc-900">{title}</p>
+        <p className="text-xs text-zinc-500">{description}</p>
       </div>
-      <div className="mt-6 flex items-center text-sm font-medium text-indigo-600 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-        Open Module <ArrowRight size={16} className="ml-1" />
-      </div>
-    </Link>
-  );
-}
-
-function PreferenceToggle({ isActive, onToggle, title, description, icon: Icon }: any) {
-  return (
-    <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-indigo-100 transition-colors group">
-      <div className="flex items-start justify-between">
-        <div className="p-2.5 rounded-xl bg-zinc-50 group-hover:bg-indigo-50 transition-colors">
-          <Icon size={20} className="text-zinc-500 group-hover:text-indigo-600" />
-        </div>
-        <button
-          onClick={onToggle}
-          className={cn(
-            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-            isActive ? "bg-indigo-600" : "bg-zinc-200"
-          )}
-        >
-          <span
-            className={cn(
-              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-              isActive ? "translate-x-5" : "translate-x-0"
-            )}
-          />
-        </button>
-      </div>
-      <div className="mt-4">
-        <h3 className="font-semibold text-zinc-900">{title}</h3>
-        <p className="text-sm text-zinc-500 mt-1 leading-relaxed">
-          {description}
-        </p>
-      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${
+          checked ? "bg-indigo-600" : "bg-zinc-300"
+        }`}
+        aria-pressed={checked}
+        type="button"
+      >
+        <span
+          className={`inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white transition-transform ${
+            checked ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
+      </button>
     </div>
   );
 }
