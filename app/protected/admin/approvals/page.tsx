@@ -41,11 +41,7 @@ export default function ApprovalsPage() {
   const supabase = createClient();
 
 
-  useEffect(() => {
-    fetchCards();
-  }, [filter]);
-
-  const fetchCards = async () => {
+  const fetchCards = React.useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from("library_cards")
@@ -70,35 +66,42 @@ export default function ApprovalsPage() {
     if (error) {
       setError(error.message);
     } else {
-      setCards(data as any);
+      setCards((data as unknown as PendingCard[]) || []);
     }
     setLoading(false);
-  };
+  }, [filter, supabase]);
+
+  useEffect(() => {
+    fetchCards();
+  }, [fetchCards]);
 
   const handleApprove = async (cardId: string, userId: string) => {
     setProcessingId(cardId);
     try {
       // 1. Update card status
-      const { error: _updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("library_cards")
         .update({ status: "active" })
         .eq("id", cardId);
 
+      if (updateError) throw updateError;
+
       // 2. Trigger automated email
-      await supabase.auth.admin.getUserById(userId);
       // Note: This requires service_role for admin tasks, but for mock purposes:
+      // In a real app, we would fetch the email from supabase.auth.admin or have it in the profiles table.
       await sendWelcomeEmail(
         cards.find(c => c.id === cardId)?.profiles.full_name || "Student",
-        "student@example.com" // In real case, fetch from auth
+        "student@example.com" // In real case, fetch from auth or join in query
       );
 
       setNotification({ message: "Card approved and welcome email sent!", type: 'success' });
       setTimeout(() => setNotification(null), 5000);
 
       // Refresh list
-      setCards(cards.filter(c => c.id !== cardId));
-    } catch (err: any) {
-      setNotification({ message: "Error approving card: " + err.message, type: 'error' });
+      setCards(cards => cards.filter(c => c.id !== cardId));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setNotification({ message: "Error approving card: " + message, type: 'error' });
       setTimeout(() => setNotification(null), 5000);
     } finally {
       setProcessingId(null);
@@ -119,8 +122,9 @@ export default function ApprovalsPage() {
       if (updateError) throw updateError;
       
       fetchCards();
-    } catch (err: any) {
-      alert("Error suspending card: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert("Error suspending card: " + message);
     } finally {
       setProcessingId(null);
     }

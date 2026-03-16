@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { getBookById } from '@/lib/actions/catalog';
 import { reportMissingBook } from '@/lib/actions/public-catalog';
 import { ChevronLeft, MapPin, AlertCircle, BookOpen, Hash, Tag } from 'lucide-react';
+import { Book } from '@/lib/types';
 
 export default function PublicBookDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
   
-  const [book, setBook] = useState<any>(null);
+  const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reported, setReported] = useState(false);
@@ -62,9 +64,14 @@ export default function PublicBookDetailPage() {
 
       <div className="bg-white rounded-2xl shadow-sm border p-6 md:p-8 flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-1/3 flex-shrink-0">
-          <div className="aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
+          <div className="relative aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
             {book.cover_url ? (
-              <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+              <Image 
+                src={book.cover_url} 
+                alt={book.title} 
+                fill
+                className="object-cover" 
+              />
             ) : (
               <BookOpen className="w-16 h-16 text-gray-300" />
             )}
@@ -106,7 +113,9 @@ export default function PublicBookDetailPage() {
             <div className="flex items-center text-sm text-gray-600">
               <Tag className="w-4 h-4 mr-2 text-gray-400" />
               <span className="font-medium mr-2">Category:</span>
-              {book.categories?.name || 'Uncategorized'}
+              {Array.isArray(book.categories) 
+                ? book.categories[0]?.name 
+                : book.categories?.name || 'Uncategorized'}
             </div>
           </div>
 
@@ -131,7 +140,7 @@ export default function PublicBookDetailPage() {
                 className="flex items-center justify-center w-full py-3 px-4 border border-orange-200 text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AlertCircle className="w-5 h-5 mr-2" />
-                {reportSubmitting ? 'Submitting...' : "I can&apos;t find this book on the shelf"}
+                {reportSubmitting ? 'Submitting...' : "I can't find this book on the shelf"}
               </button>
             ) : (
               <div className="bg-green-50 text-green-800 p-4 rounded-lg flex items-center justify-center border border-green-200">

@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getPublicBooksCached } from '@/lib/actions/public-catalog';
 import { Filter, Search, X } from 'lucide-react';
 import { getCategories } from '@/lib/actions/catalog';
+import { Book, Category } from '@/lib/types';
 
 export default function PublicSearchPage() {
   const [query, setQuery] = useState('');
@@ -12,27 +14,26 @@ export default function PublicSearchPage() {
   const [section, setSection] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
   
-  const [books, setBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Native IntersectionObserver for infinite scroll
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    async function loadCategories() {
+      try {
+        const cats = await getCategories();
+        setCategories(cats);
+      } catch(_e) { /* silent fail */ }
+    }
     loadCategories();
   }, []);
-
-  const loadCategories = async () => {
-    try {
-      const cats = await getCategories();
-      setCategories(cats);
-    } catch(_e) { /* silent fail */ }
-  };
 
   const loadBooks = useCallback(async (reset = false) => {
     try {
@@ -62,8 +63,7 @@ export default function PublicSearchPage() {
       loadBooks(true);
     }, 300);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, categoryId, section, availableOnly]);
+  }, [loadBooks]);
 
   // Native IntersectionObserver for infinite scroll
   useEffect(() => {

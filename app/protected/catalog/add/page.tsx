@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createBook } from '@/lib/actions/catalog';
 import { ChevronLeft, Search, Save, BookPlus, ImageIcon, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -69,7 +70,7 @@ export default function AddBookPage() {
             title: bookData.title || prev.title,
             author: bookData.authors?.[0]?.name || prev.author,
             cover_url: bookData.cover?.large || bookData.cover?.medium || prev.cover_url,
-            tags: bookData.subjects ? bookData.subjects.slice(0, 5).map((s: any) => s.name).join(', ') : prev.tags,
+            tags: bookData.subjects ? bookData.subjects.slice(0, 5).map((s: { name: string }) => s.name).join(', ') : prev.tags,
           }));
           bookFound = true;
         }
@@ -125,8 +126,9 @@ export default function AddBookPage() {
       }, formData.copies);
 
       router.push('/protected/catalog');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add book');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to add book';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -298,10 +300,11 @@ export default function AddBookPage() {
             <div className="aspect-[2/3] bg-zinc-50 rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center relative group overflow-hidden">
                {formData.cover_url || coverFile ? (
                  <>
-                   <img 
+                   <Image 
                     src={coverFile ? URL.createObjectURL(coverFile) : formData.cover_url} 
                     alt="Preview" 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
                    />
                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>

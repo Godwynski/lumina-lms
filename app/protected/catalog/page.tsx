@@ -13,13 +13,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Book } from '@/lib/types';
 
 export default function CatalogPage() {
-  const [books, setBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState<any>(null);
+  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function CatalogPage() {
     }
   };
 
-  const handleDeleteClick = (book: any) => {
+  const handleDeleteClick = (book: Book) => {
     setBookToDelete(book);
     setDeleteError('');
     setDeleteModalOpen(true);
@@ -51,8 +52,9 @@ export default function CatalogPage() {
       await softDeleteBook(bookToDelete.id);
       setDeleteModalOpen(false);
       loadBooks();
-    } catch (error: any) {
-      setDeleteError(error.message || 'Failed to delete book');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete book';
+      setDeleteError(message);
     }
   };
 
@@ -82,7 +84,7 @@ export default function CatalogPage() {
 
       {/* Low Stock Alerts */}
       <div className="space-y-3">
-        {books.filter(b => b.available_copies === 0 && b.total_copies > 0).map(book => (
+        {books.filter(b => b.available_copies === 0 && (b.total_copies || 0) > 0).map(book => (
           <div key={`alert-${book.id}`} className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-xl flex items-start shadow-sm">
             <AlertTriangle className="w-5 h-5 mr-3 mt-0.5 text-orange-600" />
             <div>
