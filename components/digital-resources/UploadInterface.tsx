@@ -25,7 +25,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
-  const [type, setType] = useState("E-BOOK");
+  const [type, setType] = useState("ebook");
   const [categoryId, setCategoryId] = useState("");
   const [accessLevel, setAccessLevel] = useState("STUDENT");
   
@@ -172,9 +172,11 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="E-BOOK">E-Book</SelectItem>
-                <SelectItem value="JOURNAL">Journal</SelectItem>
-                <SelectItem value="THESIS">Thesis</SelectItem>
+                <SelectItem value="ebook">E-Book</SelectItem>
+                <SelectItem value="journal">Journal</SelectItem>
+                <SelectItem value="thesis">Thesis</SelectItem>
+                <SelectItem value="report">Report</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
