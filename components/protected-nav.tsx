@@ -47,100 +47,107 @@ const DASHBOARD_LINK: NavItem = {
   roles: ["admin", "librarian", "staff", "student"],
 };
 
-const NAV_SECTIONS: NavSection[] = [
-  {
-    id: "circulation",
-    label: "Circulation",
-    icon: ScanLine,
-    roles: ["admin", "librarian", "staff"],
-    children: [
-      { href: "/protected/borrow", label: "Checkout", icon: ScanLine, roles: ["admin", "librarian", "staff"] },
-      { href: "/protected/return", label: "Return", icon: RotateCcw, roles: ["admin", "librarian", "staff"] },
-    ],
-  },
-  {
-    id: "catalog",
-    label: "Catalog",
-    icon: Library,
-    roles: ["admin", "librarian", "staff", "student"],
-    children: [
-      { href: "/protected/catalog", label: "Catalog & Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
-      { href: "/protected/student-catalog", label: "Book Catalog", icon: Library, roles: ["student"] },
-    ],
-  },
-  {
-    id: "people",
-    label: "People",
-    icon: Users,
-    roles: ["admin", "librarian", "staff"],
-    children: [
-      { href: "/protected/users", label: "Users & Roles", icon: Users, roles: ["admin", "librarian", "staff"] },
-      { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, roles: ["admin", "librarian"] },
-    ],
-  },
-  {
-    id: "activity",
-    label: "My Activity",
-    icon: History,
-    roles: ["admin", "librarian", "staff", "student"],
-    children: [
-      { href: "/protected/history", label: "My History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
-      { href: "/protected/my-card", label: "E-Library Card", icon: CreditCard, roles: ["staff", "student"] },
-    ],
-  },
-  {
-    id: "operations",
-    label: "Operations",
-    icon: BookMarked,
-    roles: ["admin", "librarian", "staff", "student"],
-    children: [
-      { href: "/protected/fines", label: "Fines", icon: BookMarked, roles: ["admin", "librarian", "staff", "student"] },
-      { href: "/protected/resources", label: "Digital Resources", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
-      { href: "/protected/reports", label: "Reports & Analytics", icon: BarChart2, roles: ["admin", "librarian", "staff"] },
-    ],
-  },
-  {
-    id: "admin",
-    label: "Admin",
-    icon: Settings,
-    roles: ["admin"],
-    children: [
-      { href: "/protected/audit", label: "Audit Logs", icon: ShieldCheck, roles: ["admin"] },
-      { href: "/protected/settings", label: "Settings", icon: Settings, roles: ["admin"] },
-    ],
-  },
-];
-
-const SECTION_ORDER_BY_ROLE: Record<Exclude<Role, null>, string[]> = {
-  admin: ["circulation", "catalog", "operations", "activity"],
-  librarian: ["circulation", "catalog", "operations", "activity"],
-  staff: ["circulation", "catalog", "operations", "activity"],
-  student: ["catalog", "activity", "operations"],
-};
-
 const SETTINGS_LINK: NavItem = {
   href: "/protected/settings",
-  label: "Settings",
+  label: "Settings Hub",
   icon: Settings,
-  roles: ["admin", "librarian", "staff", "student"], // Base settings for all
+  roles: ["admin", "librarian", "staff", "student"],
 };
+
+const NAV_GROUPS = [
+  {
+    label: "Library Operations",
+    roles: ["admin", "librarian", "staff", "student"],
+    sections: [
+      {
+        id: "circulation",
+        label: "Circulation",
+        icon: RotateCcw,
+        roles: ["admin", "librarian", "staff"],
+        children: [
+          { href: "/protected/borrow", label: "Checkout", icon: ScanLine, roles: ["admin", "librarian", "staff"] },
+          { href: "/protected/return", label: "Return", icon: RotateCcw, roles: ["admin", "librarian", "staff"] },
+        ],
+      },
+      {
+        id: "catalog",
+        label: "Catalog",
+        icon: Library,
+        roles: ["admin", "librarian", "staff", "student"],
+        children: [
+          { href: "/protected/catalog", label: "Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
+          { href: "/protected/student-catalog", label: "Book Catalog", icon: Library, roles: ["student"] },
+          { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
+        ],
+      },
+    ]
+  },
+  {
+    label: "Management",
+    roles: ["admin", "librarian", "staff"],
+    sections: [
+      {
+        id: "people",
+        label: "Resources",
+        icon: Users,
+        roles: ["admin", "librarian", "staff"],
+        children: [
+          { href: "/protected/users", label: "Users & Roles", icon: Users, roles: ["admin", "librarian", "staff"] },
+          { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, roles: ["admin", "librarian"] },
+          { href: "/protected/reports", label: "Analytics", icon: BarChart2, roles: ["admin", "librarian", "staff"] },
+        ],
+      },
+      {
+        id: "system",
+        label: "System",
+        icon: Settings,
+        roles: ["admin"],
+        children: [
+          { href: "/protected/audit", label: "Audit Logs", icon: ShieldCheck, roles: ["admin"] },
+          { href: "/protected/settings", label: "System Config", icon: Settings, roles: ["admin"] },
+        ],
+      },
+    ]
+  },
+  {
+    label: "Account",
+    roles: ["admin", "librarian", "staff", "student"],
+    sections: [
+      {
+        id: "activity",
+        label: "Activity",
+        icon: History,
+        roles: ["admin", "librarian", "staff", "student"],
+        children: [
+          { href: "/protected/history", label: "Loan History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
+          { href: "/protected/my-card", label: "Library Card", icon: CreditCard, roles: ["staff", "student"] },
+          { href: "/protected/fines", label: "Fines & Dues", icon: BookMarked, roles: ["admin", "librarian", "staff", "student"] },
+        ],
+      },
+    ]
+  }
+];
 
 function LuminaLogo({ size = 20 }: { size?: number }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-indigo-600 shrink-0"
-    >
-      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-    </svg>
+    <div className="relative flex items-center justify-center">
+      <div className="absolute inset-0 bg-indigo-500/20 blur-[10px] rounded-full scale-150" />
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="text-indigo-600 relative z-10"
+      >
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+        <circle cx="12" cy="12" r="3" className="fill-indigo-600/10" />
+      </svg>
+    </div>
   );
 }
 
@@ -149,8 +156,8 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-function sectionHasActive(pathname: string, section: NavSection) {
-  return section.children.some((item) => isActive(pathname, item.href));
+function sectionHasActive(pathname: string, section: any) {
+  return section.children.some((item: any) => isActive(pathname, item.href));
 }
 
 function CollapsibleSection({
@@ -160,7 +167,7 @@ function CollapsibleSection({
   onToggle,
   onItemClick,
 }: {
-  section: NavSection;
+  section: any;
   pathname: string;
   isExpanded: boolean;
   onToggle: () => void;
@@ -170,31 +177,36 @@ function CollapsibleSection({
   const Icon = section.icon;
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <button
         type="button"
         onClick={onToggle}
         className={cn(
-          "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+          "w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 group",
           hasActive || isExpanded
-            ? "text-zinc-900 bg-zinc-100/50"
+            ? "text-zinc-900 bg-zinc-100/80"
             : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
         )}
       >
         <div className="flex items-center gap-3">
-          <Icon
-            size={18}
-            className={cn(
-              "transition-colors duration-200",
-              hasActive || isExpanded ? "text-indigo-600" : "text-zinc-400 group-hover:text-zinc-600"
-            )}
-          />
+          <div className={cn(
+            "p-1.5 rounded-lg transition-colors duration-200",
+            hasActive || isExpanded ? "bg-white shadow-sm ring-1 ring-zinc-200" : "bg-transparent group-hover:bg-zinc-100"
+          )}>
+            <Icon
+              size={16}
+              className={cn(
+                "transition-colors duration-200",
+                hasActive || isExpanded ? "text-indigo-600" : "text-zinc-400 group-hover:text-zinc-600"
+              )}
+            />
+          </div>
           <span>{section.label}</span>
         </div>
         <ChevronDown
-          size={16}
+          size={14}
           className={cn(
-            "transition-transform duration-300 ease-in-out",
+            "transition-transform duration-300 ease-in-out text-zinc-400",
             isExpanded ? "rotate-0" : "-rotate-90 opacity-40"
           )}
         />
@@ -206,10 +218,10 @@ function CollapsibleSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
-            className="overflow-hidden pl-7 space-y-1"
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden pl-10 pr-2 space-y-0.5"
           >
-            {section.children.map((item) => {
+            {section.children.map((item: any) => {
               const active = isActive(pathname, item.href);
               const ItemIcon = item.icon;
               return (
@@ -218,17 +230,23 @@ function CollapsibleSection({
                   href={item.href}
                   onClick={onItemClick}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-200",
+                    "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 relative group",
                     active
-                      ? "bg-indigo-50 text-indigo-700 font-semibold shadow-sm shadow-indigo-100/50"
-                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
+                      ? "text-indigo-700 font-semibold"
+                      : "text-zinc-500 hover:text-zinc-900"
                   )}
                 >
+                  {active && (
+                    <motion.div 
+                      layoutId="activeSubNav"
+                      className="absolute left-0 w-1 h-4 bg-indigo-500 rounded-full"
+                    />
+                  )}
                   <ItemIcon
-                    size={16}
+                    size={14}
                     className={cn(
-                      "transition-colors duration-200 text-zinc-400",
-                      active && "text-indigo-600"
+                      "transition-colors duration-200",
+                      active ? "text-indigo-600" : "text-zinc-300 group-hover:text-zinc-500"
                     )}
                   />
                   {item.label}
@@ -250,160 +268,121 @@ export function ProtectedNav({
   role?: string | null;
 }) {
   const pathname = usePathname();
-  const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() : null;
+  const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
-  // Navigation Preferences
-  const [autoCollapse, setAutoCollapse] = useState(false);
+  const visibleDashboard = normalizedRole && DASHBOARD_LINK.roles.includes(normalizedRole) ? DASHBOARD_LINK : null;
+  const visibleSettings = normalizedRole && SETTINGS_LINK.roles.includes(normalizedRole) ? SETTINGS_LINK : null;
 
-  const visibleDashboard = normalizedRole && DASHBOARD_LINK.roles.includes(normalizedRole as Role) ? DASHBOARD_LINK : null;
-  const visibleSettings = normalizedRole && SETTINGS_LINK.roles.includes(normalizedRole as Role) ? SETTINGS_LINK : null;
-
-  const visibleSections = useMemo(() => {
-    // Exclude People and Admin from sidebar - they move to Settings Hub
-    const excludedIds = ["people", "admin"];
-
-    const filtered = NAV_SECTIONS
-      .filter(s => !excludedIds.includes(s.id))
-      .map((section) => {
-        const children = section.children.filter(
-          (item) => normalizedRole && item.roles.includes(normalizedRole as Role),
-        );
-        return { ...section, children };
-      })
-      .filter(
-        (section) => normalizedRole && section.roles.includes(normalizedRole as Role) && section.children.length > 0,
-      );
-
-    if (!normalizedRole) return filtered;
-    const order = SECTION_ORDER_BY_ROLE[normalizedRole as Exclude<Role, null>] ?? [];
-    const rank = new Map(order.map((id, index) => [id, index]));
-    return [...filtered].sort((a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999));
+  const filteredGroups = useMemo(() => {
+    return NAV_GROUPS.map(group => ({
+      ...group,
+      sections: group.sections.filter(section => {
+        const canSeeSection = normalizedRole && section.roles.includes(normalizedRole);
+        const hasVisibleChildren = section.children.some(child => normalizedRole && child.roles.includes(normalizedRole));
+        return canSeeSection && hasVisibleChildren;
+      }).map(section => ({
+        ...section,
+        children: section.children.filter(child => normalizedRole && child.roles.includes(normalizedRole))
+      }))
+    })).filter(group => group.sections.length > 0 && (!normalizedRole || group.roles.includes(normalizedRole)));
   }, [normalizedRole]);
 
-  // Hydrate from localStorage on mount
   useEffect(() => {
     const savedExpanded = localStorage.getItem("lumina_sidebar_expanded");
-    const savedAutoCollapse = localStorage.getItem("lumina_sidebar_auto_collapse");
-
     if (savedExpanded) {
       try {
         setExpandedSections(JSON.parse(savedExpanded));
-      } catch (e) {
-        console.error("Failed to parse sidebar state", e);
-      }
-    }
-
-    if (savedAutoCollapse) {
-      setAutoCollapse(savedAutoCollapse === "true");
+      } catch (e) {}
     }
   }, []);
 
-  // Expand the section that has the active item if not already open
   useEffect(() => {
-    const activeSection = visibleSections.find((s) => sectionHasActive(pathname, s));
-    if (activeSection && !expandedSections[activeSection.id]) {
-      setExpandedSections((prev) => {
-        const next = { ...prev, [activeSection.id]: true };
-        localStorage.setItem("lumina_sidebar_expanded", JSON.stringify(next));
-        return next;
+    filteredGroups.forEach(group => {
+      group.sections.forEach(section => {
+        if (sectionHasActive(pathname, section) && !expandedSections[section.id]) {
+          setExpandedSections(prev => {
+            const next = { ...prev, [section.id]: true };
+            localStorage.setItem("lumina_sidebar_expanded", JSON.stringify(next));
+            return next;
+          });
+        }
       });
-    }
-  }, [pathname, visibleSections]);
+    });
+  }, [pathname, filteredGroups]);
 
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
-      let next: Record<string, boolean> = {};
-
-      if (autoCollapse) {
-        // In focus mode, close others when opening
-        if (!prev[id]) {
-          next = { [id]: true };
-        } else {
-          next = { ...prev, [id]: false };
-        }
-      } else {
-        next = { ...prev, [id]: !prev[id] };
-      }
-
+      const next = { ...prev, [id]: !prev[id] };
       localStorage.setItem("lumina_sidebar_expanded", JSON.stringify(next));
       return next;
     });
   };
 
   const moduleName = useMemo(() => {
-    const allLinks = [
-      visibleDashboard, 
-      visibleSettings,
-      ...visibleSections.flatMap((section) => section.children),
-      ...NAV_SECTIONS.filter(s => ["people", "admin"].includes(s.id)).flatMap(s => s.children) // Still match name if navigated directly
-    ].filter(Boolean);
-    
-    const currentLink = allLinks.find((item) => isActive(pathname, (item as NavItem).href)) as NavItem | undefined;
-    return currentLink?.label ?? "Dashboard";
-  }, [pathname, visibleDashboard, visibleSettings, visibleSections]);
+    const allItems = [
+      DASHBOARD_LINK,
+      SETTINGS_LINK,
+      ...NAV_GROUPS.flatMap(g => g.sections).flatMap(s => s.children)
+    ];
+    const match = allItems.find(item => isActive(pathname, item.href));
+    return match?.label ?? "Dashboard";
+  }, [pathname]);
 
   const NavContent = ({ onMobileClick }: { onMobileClick?: () => void }) => (
-    <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
-      <div className="space-y-4">
-        <div>
-          <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-3 mb-2">
-            Main
-          </span>
-          <div className="space-y-1">
-            {visibleDashboard && (
-              <Link
-                href={visibleDashboard.href}
-                onClick={onMobileClick}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
-                  isActive(pathname, visibleDashboard.href)
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 font-semibold"
-                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
-                )}
-              >
-                <visibleDashboard.icon
-                  size={18}
-                  className={cn(
-                    "transition-colors duration-200",
-                    isActive(pathname, visibleDashboard.href) ? "text-white" : "text-zinc-400 group-hover:text-zinc-600"
-                  )}
-                />
-                {visibleDashboard.label}
-              </Link>
+    <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8 scrollbar-hide">
+      {/* Dashboard & Settings directly at the top */}
+      <div className="space-y-1">
+        {visibleDashboard && (
+          <Link
+            href={visibleDashboard.href}
+            onClick={onMobileClick}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+              isActive(pathname, visibleDashboard.href)
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
             )}
-
-            {visibleSettings && (
-              <Link
-                href={visibleSettings.href}
-                onClick={onMobileClick}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
-                  isActive(pathname, visibleSettings.href)
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 font-semibold"
-                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
-                )}
-              >
-                <visibleSettings.icon
-                  size={18}
-                  className={cn(
-                    "transition-colors duration-200",
-                    isActive(pathname, visibleSettings.href) ? "text-white" : "text-zinc-400 group-hover:text-zinc-600"
-                  )}
-                />
-                {visibleSettings.label}
-              </Link>
+          >
+            <div className={cn(
+              "p-1.5 rounded-lg transition-colors",
+              isActive(pathname, visibleDashboard.href) ? "bg-white/20" : "bg-transparent group-hover:bg-zinc-100"
+            )}>
+              <visibleDashboard.icon size={16} />
+            </div>
+            {visibleDashboard.label}
+          </Link>
+        )}
+        {visibleSettings && (
+          <Link
+            href={visibleSettings.href}
+            onClick={onMobileClick}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+              isActive(pathname, visibleSettings.href)
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-100"
+                : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
             )}
-          </div>
-        </div>
+          >
+             <div className={cn(
+              "p-1.5 rounded-lg transition-colors",
+              isActive(pathname, visibleSettings.href) ? "bg-white/20" : "bg-transparent group-hover:bg-zinc-100"
+            )}>
+              <visibleSettings.icon size={16} />
+            </div>
+            {visibleSettings.label}
+          </Link>
+        )}
+      </div>
 
-        <div>
-          <span className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-3 mb-2">
-            Library Work
-          </span>
+      {filteredGroups.map((group) => (
+        <div key={group.label} className="space-y-2">
+          <h3 className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.15em] leading-none">
+            {group.label}
+          </h3>
           <div className="space-y-1">
-            {visibleSections.map((section) => (
+            {group.sections.map((section) => (
               <CollapsibleSection
                 key={section.id}
                 section={section}
@@ -415,13 +394,13 @@ export function ProtectedNav({
             ))}
           </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center h-14 px-4 bg-white/80 backdrop-blur-md border-b border-zinc-200/50 md:hidden">
+      <header className="fixed top-0 left-0 right-0 z-[60] flex items-center h-16 px-4 bg-white/80 backdrop-blur-md border-b border-zinc-200/50 md:hidden">
         <button
           aria-label="Toggle navigation menu"
           onClick={() => setIsOpen((value) => !value)}
@@ -429,14 +408,12 @@ export function ProtectedNav({
         >
           {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
-        <div className="h-4 w-px bg-zinc-200 mx-3" />
-        <Link href="/protected" className="shrink-0">
-          <div className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-            <LuminaLogo size={16} />
-          </div>
-        </Link>
-        <div className="h-4 w-px bg-zinc-200 mx-3" />
-        <span className="text-sm font-semibold text-zinc-900 truncate">{moduleName}</span>
+        <div className="flex-1 flex justify-center">
+           <Link href="/protected" className="flex items-center gap-2">
+            <LuminaLogo size={18} />
+            <span className="font-bold text-sm text-zinc-900 truncate">{moduleName}</span>
+          </Link>
+        </div>
       </header>
 
       <AnimatePresence>
@@ -446,40 +423,46 @@ export function ProtectedNav({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="md:hidden fixed inset-0 z-[55] bg-zinc-900/20 backdrop-blur-sm"
+              className="md:hidden fixed inset-0 z-[55] bg-zinc-900/10 backdrop-blur-[2px]"
               onClick={() => setIsOpen(false)}
             />
             <motion.nav
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-              className="md:hidden fixed top-0 left-0 bottom-0 z-[56] w-[280px] bg-white border-r border-zinc-200/50 flex flex-col pt-14 shadow-2xl"
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="md:hidden fixed top-0 left-0 bottom-0 z-[56] w-[280px] bg-white border-r border-zinc-200/50 flex flex-col shadow-2xl"
             >
+              <div className="h-16 flex items-center px-6 border-b border-zinc-50">
+                <Link href="/protected" className="flex items-center gap-3">
+                  <LuminaLogo size={18} />
+                  <span className="font-bold text-zinc-900">Lumina</span>
+                </Link>
+              </div>
               <NavContent onMobileClick={() => setIsOpen(false)} />
-              <div className="p-4 border-t border-zinc-100 bg-zinc-50/50">{authNode}</div>
+              <div className="p-4 border-t border-zinc-100 bg-zinc-50/30">{authNode}</div>
             </motion.nav>
           </>
         )}
       </AnimatePresence>
 
       <aside className="hidden md:flex fixed inset-y-0 left-0 z-50 w-64 lg:w-[280px] flex-col bg-white border-r border-zinc-200/50">
-        <div className="h-16 flex items-center px-6 shrink-0">
-          <Link href="/protected" className="flex items-center gap-3 group">
-            <div className="h-9 w-9 rounded-[14px] bg-indigo-50 border border-indigo-100 flex items-center justify-center transition-transform group-hover:scale-105 duration-200 shadow-sm shadow-indigo-100">
-              <LuminaLogo size={20} />
+        <div className="h-20 flex items-center px-8 shrink-0">
+          <Link href="/protected" className="flex items-center gap-4 group">
+            <div className="h-11 w-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center transition-all group-hover:scale-105 duration-300 shadow-sm">
+              <LuminaLogo size={24} />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-sm tracking-tight text-zinc-900 leading-none">Lumina LMS</span>
-              <span className="text-[10px] text-zinc-400 font-medium">Library System</span>
+              <span className="font-bold text-lg tracking-tight text-zinc-900 leading-none">Lumina</span>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">LMS Platform</span>
             </div>
           </Link>
         </div>
 
         <NavContent />
 
-        <div className="p-4 border-t border-zinc-100">
-          <div className="rounded-2xl bg-zinc-50/80 p-1 border border-zinc-100/50">
+        <div className="p-6 border-t border-zinc-100 bg-zinc-50/20">
+          <div className="rounded-2xl p-1">
             {authNode}
           </div>
         </div>
