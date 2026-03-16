@@ -1,4 +1,4 @@
-import { ProtectedNav } from "@/components/protected-nav";
+import { ProtectedNavClient } from "@/components/protected-nav-client";
 import { AuthButton } from "@/components/auth-button";
 import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
@@ -10,7 +10,7 @@ type Role = "admin" | "librarian" | "staff" | "student" | null;
 async function NavWithRole() {
   const role = (await getUserRole()) as Role;
   return (
-    <ProtectedNav
+    <ProtectedNavClient
       role={role}
       authNode={
         <Suspense fallback={<div className="h-9 w-full bg-zinc-100 rounded-xl animate-pulse" />}>
