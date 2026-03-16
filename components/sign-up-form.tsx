@@ -76,14 +76,16 @@ export function SignUpForm({
         <p className="text-zinc-500 text-sm">Create an account to access your library system.</p>
       </div>
 
-      <form onSubmit={handleSignUp} className="flex flex-col gap-5">
+      <form onSubmit={handleSignUp} autoComplete="on" className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="fullName" className="text-zinc-700 text-sm font-medium">
             Full Name
           </Label>
           <Input
             id="fullName"
+            name="name"
             type="text"
+            autoComplete="name"
             placeholder="John Doe"
             required
             value={fullName}
@@ -98,7 +100,12 @@ export function SignUpForm({
           </Label>
           <Input
             id="email"
+            name="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="you@example.com"
             required
             value={email}
@@ -112,7 +119,9 @@ export function SignUpForm({
           <div className="relative">
             <Input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
               placeholder="••••••••"
               required
               value={password}
@@ -134,7 +143,9 @@ export function SignUpForm({
           <div className="relative">
             <Input
               id="confirmPassword"
+              name="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
+              autoComplete="new-password"
               placeholder="••••••••"
               required
               value={confirmPassword}
