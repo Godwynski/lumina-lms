@@ -90,6 +90,7 @@ export default function BorrowPage() {
   const [notice, setNotice] = useState<{ tone: 'ok' | 'warn' | 'error'; text: string } | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraSupported, setCameraSupported] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const [isResolving, setIsResolving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -127,6 +128,26 @@ export default function BorrowPage() {
       streamRef.current = null;
     }
     setCameraOpen(false);
+  }, []);
+
+  const requestCameraPermission = useCallback(async () => {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      setNotice({ tone: 'error', text: 'Camera API is unavailable in this browser.' });
+      return;
+    }
+
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      media.getTracks().forEach((track) => track.stop());
+      setCameraPermission('granted');
+      setNotice({ tone: 'ok', text: 'Camera permission granted. You can start scanner now.' });
+    } catch {
+      setCameraPermission('denied');
+      setNotice({ tone: 'error', text: 'Camera permission denied. Allow camera access in browser settings.' });
+    }
   }, []);
 
   const resolveScan = useCallback(
@@ -289,6 +310,7 @@ export default function BorrowPage() {
         }
 
         streamRef.current = media;
+        setCameraPermission('granted');
         if (videoRef.current) {
           videoRef.current.srcObject = media;
           await videoRef.current.play();
@@ -314,6 +336,7 @@ export default function BorrowPage() {
 
         frameRef.current = requestAnimationFrame(tick);
       } catch {
+        setCameraPermission('denied');
         setNotice({ tone: 'error', text: 'Camera access denied or unavailable. You can still use manual scan input.' });
         stopCamera();
       }
@@ -413,106 +436,148 @@ export default function BorrowPage() {
         : 'bg-red-50 border-red-200 text-red-700';
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <section className="relative overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-white via-cyan-50/40 to-amber-50/60 p-6 shadow-sm sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-cyan-200/40 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-amber-200/40 blur-3xl" />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">QR Checkout</h1>
-            <p className="text-sm text-zinc-500">
-              Use one scanner flow: student card first, then book QR codes.
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Circulation Desk</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-900 sm:text-4xl">Borrow Flow Console</h1>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-600">
+              Scan student card, verify identity, then process book QR. Built for fast desk throughput with guardrails.
             </p>
           </div>
           <Button
             type="button"
             variant="outline"
             onClick={clearContext}
-            className="h-10 rounded-xl"
+            className="h-10 rounded-xl border-zinc-300 bg-white/80"
             disabled={!activeStudent && !pendingCheckout}
           >
             <RefreshCcw className="mr-2 h-4 w-4" />
-            Clear Context
+            Reset Session
           </Button>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-zinc-900">
-              <ScanLine className="h-4 w-4 text-indigo-600" />
-              Scanner Input
-            </h2>
+      <section className="grid gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center gap-2 text-base font-bold text-zinc-900">
+                <ScanLine className="h-4 w-4 text-cyan-700" />
+                Scanner Deck
+              </h2>
             {cameraSupported ? (
-              <Button
-                variant={cameraOpen ? 'destructive' : 'outline'}
-                className="h-9 rounded-lg"
-                onClick={() => (cameraOpen ? stopCamera() : setCameraOpen(true))}
-              >
-                <Camera className="mr-2 h-4 w-4" />
-                {cameraOpen ? 'Stop Camera' : 'Start Camera'}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="h-9 rounded-lg"
+                  onClick={() => void requestCameraPermission()}
+                >
+                  {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
+                </Button>
+                <Button
+                  variant={cameraOpen ? 'destructive' : 'outline'}
+                  className="h-9 rounded-lg"
+                  onClick={() => (cameraOpen ? stopCamera() : setCameraOpen(true))}
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  {cameraOpen ? 'Stop Camera' : 'Start Camera'}
+                </Button>
+              </div>
             ) : (
-              <span className="text-xs text-zinc-500">Camera scanner unsupported in this browser</span>
+              <span className="text-xs font-medium text-zinc-500">Camera scanner unsupported in this browser</span>
             )}
-          </div>
+            </div>
 
-          <div className="space-y-4">
-            <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-950/95">
-              <video ref={videoRef} className="h-[270px] w-full object-cover" muted playsInline />
-              {!cameraOpen && (
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 text-zinc-100">
-                  <div className="text-center">
-                    <QrCode className="mx-auto mb-2 h-7 w-7 text-zinc-300" />
-                    <p className="text-sm font-medium">Camera scanner is idle</p>
+            <div className="space-y-4">
+              <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+                <video ref={videoRef} className="h-[280px] w-full object-cover" muted playsInline />
+                <div className="pointer-events-none absolute inset-x-8 top-8 h-16 rounded-full border border-cyan-300/20" />
+                {!cameraOpen && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 text-zinc-100">
+                    <div className="text-center">
+                      <QrCode className="mx-auto mb-2 h-8 w-8 text-cyan-200" />
+                      <p className="text-sm font-semibold">Camera scanner is idle</p>
+                      <p className="mt-1 text-xs text-zinc-300">Manual input stays available below</p>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Manual fallback</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={manualValue}
+                    onChange={(event) => setManualValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        void handleManualSubmit();
+                      }
+                    }}
+                    placeholder="Paste or type QR payload"
+                    className="h-10 flex-1 rounded-lg border border-zinc-300 bg-white px-3 text-sm outline-none ring-cyan-500 transition focus:ring-2"
+                  />
+                  <Button className="h-10 rounded-lg bg-cyan-700 hover:bg-cyan-800" onClick={() => void handleManualSubmit()}>
+                    Process Scan
+                  </Button>
+                </div>
+              </div>
+
+              {notice && (
+                <div className={`rounded-xl border px-3 py-2 text-sm ${noticeClasses}`}>
+                  {notice.text}
                 </div>
               )}
             </div>
-
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Manual scan fallback
-              </p>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  value={manualValue}
-                  onChange={(event) => setManualValue(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      void handleManualSubmit();
-                    }
-                  }}
-                  placeholder="Paste or type QR payload"
-                  className="h-10 flex-1 rounded-lg border border-zinc-300 px-3 text-sm outline-none ring-indigo-500 transition focus:ring-2"
-                />
-                <Button className="h-10 rounded-lg" onClick={() => void handleManualSubmit()}>
-                  Process Scan
-                </Button>
-              </div>
-            </div>
-
-            {notice && (
-              <div className={`rounded-xl border px-3 py-2 text-sm ${noticeClasses}`}>
-                {notice.text}
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-zinc-900">
-              <UserRound className="h-4 w-4 text-indigo-600" />
-              Student Checkout Context
+        <div className="space-y-6 lg:col-span-5">
+          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-zinc-900">
+              <CreditCard className="h-4 w-4 text-cyan-700" />
+              Progress Rail
+            </h2>
+            <div className="space-y-3 text-sm">
+              <div className="rounded-xl border p-3 text-zinc-700">
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 1</p>
+                <p className="mt-1 font-semibold">Scan student card</p>
+                <p className={activeStudent ? 'mt-1 text-emerald-700' : 'mt-1 text-zinc-500'}>
+                  {activeStudent ? 'Completed' : 'Waiting'}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3 text-zinc-700">
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 2</p>
+                <p className="mt-1 font-semibold">Scan book copy QR</p>
+                <p className={pendingCheckout ? 'mt-1 text-emerald-700' : 'mt-1 text-zinc-500'}>
+                  {pendingCheckout ? 'Ready to confirm' : 'Waiting'}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3 text-zinc-700">
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 3</p>
+                <p className="mt-1 font-semibold">Confirm checkout</p>
+                <p className="mt-1 text-zinc-500">Finalized in confirmation modal</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-zinc-900">
+              <UserRound className="h-4 w-4 text-cyan-700" />
+              Student Context
             </h2>
 
             {!activeStudent ? (
               <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
-                Scan a student library card to start checkout.
+                Scan a student library card to lock context for this checkout run.
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
                   <p className="text-xs font-semibold uppercase tracking-wider">Context locked</p>
                   <p className="mt-1 text-sm font-semibold">{activeStudent.fullName}</p>
                   <p className="text-xs">Card: {activeStudent.cardNumber}</p>
@@ -524,30 +589,16 @@ export default function BorrowPage() {
                     Identity verification
                   </p>
                   <p className="mt-1 text-sm text-amber-900">Ask the student to verbally state this ID:</p>
-                  <p className="mt-1 font-mono text-2xl font-bold tracking-wider text-amber-900">
-                    {activeStudent.studentId}
-                  </p>
+                  <p className="mt-1 font-mono text-2xl font-bold tracking-wider text-amber-900">{activeStudent.studentId}</p>
                 </div>
               </div>
             )}
           </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-zinc-900">
-              <CreditCard className="h-4 w-4 text-indigo-600" />
-              Next Step
-            </h2>
-            <p className="text-sm text-zinc-600">
-              {activeStudent
-                ? 'Scan one book QR code. The system will validate eligibility before showing the confirmation modal.'
-                : 'The scanner will block book checkouts until a student card is scanned.'}
-            </p>
-          </div>
         </div>
-      </div>
+      </section>
 
       <Dialog open={!!pendingCheckout} onOpenChange={(open) => (!open ? setPendingCheckout(null) : null)}>
-        <DialogContent className="rounded-2xl sm:max-w-[460px]">
+        <DialogContent className="rounded-2xl border-zinc-200 sm:max-w-[460px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-zinc-900">Borrowing Confirmation</DialogTitle>
             <DialogDescription>
@@ -628,7 +679,7 @@ export default function BorrowPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="mb-2 text-sm font-semibold text-zinc-900">Scanner safeguards enabled</h3>
         <div className="grid gap-2 text-sm text-zinc-600 md:grid-cols-2">
           <p className="flex items-start gap-2">
