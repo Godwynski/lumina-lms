@@ -5,6 +5,8 @@ import { getUserRole } from "@/lib/auth-helpers";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { HeartbeatBanner } from "@/components/HeartbeatBanner";
 
+export const dynamic = "force-dynamic";
+
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
 async function NavWithRole() {
