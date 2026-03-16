@@ -55,7 +55,7 @@ export async function getBookById(id: string) {
   return data;
 }
 
-export async function createBook(bookData: Record<string, unknown>) {
+export async function createBook(bookData: Record<string, unknown>, copiesCount: number = 1) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('books')
@@ -64,6 +64,26 @@ export async function createBook(bookData: Record<string, unknown>) {
     .single();
     
   if (error) throw new Error(error.message);
+
+  // Automatically create copies
+  if (copiesCount > 0) {
+    const copies = Array.from({ length: copiesCount }).map(() => ({
+      book_id: data.id,
+      status: 'AVAILABLE'
+    }));
+
+    const { error: copiesError } = await supabase
+      .from('book_copies')
+      .insert(copies);
+
+    if (copiesError) {
+      console.error('Error creating book copies:', copiesError);
+      // We don't throw here to avoid failing the whole process if copies fail but book succeeded
+      // though throwing might be better for visibility. Let's throw for now.
+      throw new Error(`Book created but copies failed: ${copiesError.message}`);
+    }
+  }
+
   revalidatePath('/protected/catalog');
   return data;
 }

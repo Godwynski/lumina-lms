@@ -13,6 +13,7 @@ import {
   CreditCard,
   BookOpen,
   LayoutDashboard,
+  ScanLine,
 } from "lucide-react";
 import { OfflinePinGenerator } from "@/components/digital-resources/OfflinePinGenerator";
 
@@ -34,6 +35,14 @@ const QUICK_CARDS: QuickCard[] = [
     description: "Manage books, categories, borrowing, and renewals.",
     icon: Library,
     color: "indigo",
+    roles: ["admin", "librarian", "staff"],
+  },
+  {
+    href: "/protected/borrow",
+    label: "Circulation Checkout",
+    description: "Scan student cards and book QR labels for borrow flow.",
+    icon: ScanLine,
+    color: "violet",
     roles: ["admin", "librarian", "staff"],
   },
   {

@@ -5,7 +5,7 @@ import { getUserRole } from "@/lib/auth-helpers";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { HeartbeatBanner } from "@/components/HeartbeatBanner";
 
-type Role = "super_admin" | "librarian" | "student" | null;
+type Role = "admin" | "librarian" | "staff" | "student" | null;
 
 async function NavWithRole() {
   const role = (await getUserRole()) as Role;
