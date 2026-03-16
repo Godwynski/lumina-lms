@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { HeartbeatBanner } from "@/components/HeartbeatBanner";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +25,21 @@ async function NavWithRole() {
   );
 }
 
-export default function ProtectedLayout({
+export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    redirect("/auth/login");
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50/50 text-zinc-900 selection:bg-indigo-500/30">
       {/* Offline & server-status banners (fixed, client-side) */}

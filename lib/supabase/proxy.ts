@@ -37,9 +37,7 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims;
 
   const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/auth") ||
-    request.nextUrl.pathname.startsWith("/sign-up");
+    request.nextUrl.pathname.startsWith("/auth");
   const isPublicRoute =
     request.nextUrl.pathname === "/" ||
     isAuthRoute ||
@@ -62,15 +60,15 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   if (path.startsWith("/admin") && userRole !== "admin") {
-    return NextResponse.redirect(new URL("/unauthorized", request.url));
+    return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
   }
 
   if (path.startsWith("/librarian") && !["admin", "librarian"].includes(userRole)) {
-    return NextResponse.redirect(new URL("/unauthorized", request.url));
+    return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
   }
 
   if (path.startsWith("/staff") && !["admin", "librarian", "staff"].includes(userRole)) {
-    return NextResponse.redirect(new URL("/unauthorized", request.url));
+    return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
   }
 
   return supabaseResponse;

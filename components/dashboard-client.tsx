@@ -187,9 +187,29 @@ export function DashboardClient({ user, role, stats }: DashboardProps) {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Main Content: Recent Books */}
-        <div className="lg:col-span-8 space-y-6">
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-zinc-900 px-2">Shortcuts</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {quickActions.map((action, idx) => (
+              <BlurFade key={action.title} delay={0.5 + idx * 0.05}>
+                <Link href={action.href}>
+                  <div className="flex flex-col items-center justify-center gap-4 p-6 rounded-[32px] bg-white border border-zinc-200/50 hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 text-center h-full group/btn">
+                    <div className={cn(
+                      "p-3.5 rounded-2xl transition-all duration-500 group-hover/btn:scale-110",
+                      idx === 0 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-zinc-50 text-zinc-600 group-hover/btn:bg-indigo-50 group-hover/btn:text-indigo-600"
+                    )}>
+                      <action.icon size={22} strokeWidth={2.5} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-700">{action.title}</span>
+                  </div>
+                </Link>
+              </BlurFade>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xl font-black text-zinc-900 flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -201,7 +221,7 @@ export function DashboardClient({ user, role, stats }: DashboardProps) {
               Inventory <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           </div>
-          
+
           <div className="grid gap-3">
             {stats.recentBooks.length > 0 ? (
               stats.recentBooks.map((book, idx) => (
@@ -242,51 +262,6 @@ export function DashboardClient({ user, role, stats }: DashboardProps) {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Sidebar: Quick Actions */}
-        <div className="lg:col-span-4 space-y-8">
-          <div className="space-y-4">
-            <h2 className="text-xl font-black text-zinc-900 px-2">Shortcuts</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {quickActions.map((action, idx) => (
-                <BlurFade key={action.title} delay={0.5 + idx * 0.05}>
-                  <Link href={action.href}>
-                    <div className="flex flex-col items-center justify-center gap-4 p-6 rounded-[32px] bg-white border border-zinc-200/50 hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 text-center h-full group/btn">
-                      <div className={cn(
-                        "p-3.5 rounded-2xl transition-all duration-500 group-hover/btn:scale-110",
-                        idx === 0 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-zinc-50 text-zinc-600 group-hover/btn:bg-indigo-50 group-hover/btn:text-indigo-600"
-                      )}>
-                        <action.icon size={22} strokeWidth={2.5} />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-700">{action.title}</span>
-                    </div>
-                  </Link>
-                </BlurFade>
-              ))}
-            </div>
-          </div>
-
-          <BlurFade delay={0.8}>
-            <div className="p-8 rounded-[40px] bg-zinc-900 text-white shadow-2xl relative overflow-hidden group">
-              <div className="absolute -top-10 -right-10 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-700">
-                <TrendingUp size={160} />
-              </div>
-              <div className="relative z-10 flex flex-col h-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Live Insights</span>
-                </div>
-                <h3 className="font-black text-2xl leading-tight">Growth <br />Metrics</h3>
-                <p className="text-xs text-zinc-400 mt-3 font-medium leading-relaxed">
-                  Utilization is up 24% this month across digital resources.
-                </p>
-                <Button size="sm" variant="outline" className="mt-8 border-zinc-800 bg-zinc-800/50 hover:bg-zinc-700 text-white rounded-2xl h-11 font-bold transition-all group-hover:translate-x-1" asChild>
-                  <Link href="/protected/reports">View Detailed Analysis</Link>
-                </Button>
-              </div>
-            </div>
-          </BlurFade>
         </div>
       </div>
     </div>
