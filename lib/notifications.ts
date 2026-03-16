@@ -1,4 +1,4 @@
-export async function sendWelcomeEmail(userName: string, userEmail: string, cardNumber: string) {
+export async function sendWelcomeEmail(userName: string, userEmail: string) {
   // In a production environment, this would call Resend, SendGrid, or a Supabase Edge Function
   console.log(`[Email Service] Sending welcome email to ${userEmail}...`);
   

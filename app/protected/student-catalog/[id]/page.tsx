@@ -177,7 +177,7 @@ export default function StudentBookDetailPage() {
                    <AlertCircle className="w-4 h-4 text-orange-600" />
                 </div>
                 <span className="font-bold text-sm">
-                  {reportSubmitting ? 'Sending Alert...' : "I can't find this book on the shelf"}
+                  {reportSubmitting ? 'Sending Alert...' : "I can&apos;t find this book on the shelf"}
                 </span>
               </Button>
             ) : (
@@ -186,7 +186,7 @@ export default function StudentBookDetailPage() {
                    <CheckCircle2 className="w-6 h-6 text-green-600" />
                 </div>
                 <p className="text-sm font-bold">Librarian Notified</p>
-                <p className="text-xs opacity-80">Thank you! We've added this to our queue to verify the shelf location.</p>
+                <p className="text-xs opacity-80">Thank you! We&apos;ve added this to our queue to verify the shelf location.</p>
               </div>
             )}
             {book.available_copies === 0 && !reported && (

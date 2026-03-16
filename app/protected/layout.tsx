@@ -2,6 +2,8 @@ import { ProtectedNav } from "@/components/protected-nav";
 import { AuthButton } from "@/components/auth-button";
 import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { HeartbeatBanner } from "@/components/HeartbeatBanner";
 
 type Role = "super_admin" | "librarian" | "student" | null;
 
@@ -26,6 +28,10 @@ export default function ProtectedLayout({
 }) {
   return (
     <div className="min-h-screen bg-zinc-50/50 text-zinc-900 selection:bg-indigo-500/30">
+      {/* Offline & server-status banners (fixed, client-side) */}
+      <OfflineBanner />
+      <HeartbeatBanner />
+
       {/* Navigation: renders mobile sticky header + desktop fixed sidebar */}
       <Suspense fallback={null}>
         <NavWithRole />

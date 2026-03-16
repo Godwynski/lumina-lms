@@ -4,15 +4,11 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { 
   CheckCircle2, 
-  XCircle, 
-  User, 
   Clock, 
   AlertCircle,
   Search,
-  Filter,
   Mail,
-  ShieldAlert,
-  Bell
+  ShieldAlert
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendWelcomeEmail } from "@/lib/notifications";
@@ -36,7 +32,7 @@ interface PendingCard {
 export default function ApprovalsPage() {
   const [cards, setCards] = useState<PendingCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "suspended">("pending");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -83,18 +79,17 @@ export default function ApprovalsPage() {
     setProcessingId(cardId);
     try {
       // 1. Update card status
-      const { error: updateError } = await supabase
+      const { error: _updateError } = await supabase
         .from("library_cards")
         .update({ status: "active" })
         .eq("id", cardId);
 
       // 2. Trigger automated email
-      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      await supabase.auth.admin.getUserById(userId);
       // Note: This requires service_role for admin tasks, but for mock purposes:
       await sendWelcomeEmail(
         cards.find(c => c.id === cardId)?.profiles.full_name || "Student",
-        "student@example.com", // In real case, fetch from auth
-        cards.find(c => c.id === cardId)?.card_number || "---"
+        "student@example.com" // In real case, fetch from auth
       );
 
       setNotification({ message: "Card approved and welcome email sent!", type: 'success' });

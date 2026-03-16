@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,23 @@ interface UploadActionProps {
 
 export function UploadAction({ categories }: UploadActionProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by waiting for client mounting
+  // This is necessary because Radix UI generates random IDs for accessibility
+  // which can differ between server and client rendering.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Button className="bg-indigo-600/50 hover:bg-indigo-700/50 text-white rounded-xl h-11 shadow-md opacity-70 cursor-not-allowed">
+        <Plus className="mr-2" size={18} />
+        Upload Resource
+      </Button>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

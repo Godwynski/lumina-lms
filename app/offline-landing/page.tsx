@@ -22,7 +22,8 @@ export default function OfflineLandingPage() {
             Internet Connection Required
           </h1>
           <p className="text-zinc-500 text-lg">
-            This feature is currently unavailable during network blackouts. Your current session is limited to <strong>Digital Resources</strong> only.
+            This feature requires an internet connection. Your current offline session is limited to{" "}
+            <strong>Digital Resources</strong> only.
           </p>
         </div>
 
@@ -34,7 +35,7 @@ export default function OfflineLandingPage() {
               <p className="text-sm font-medium text-zinc-700">Why am I seeing this?</p>
            </div>
            <p className="text-xs text-zinc-500 leading-relaxed text-left">
-             Our Hybrid Offline-First system automatically enables emergency access to e-books and journals when the school's internet connection or SSO provider is unreachable. Other services remain offline to protect data integrity.
+             Our Hybrid Offline-First system automatically enables emergency access to e-books and journals when the school&apos;s internet connection or SSO provider is unreachable. Other services remain offline to protect data integrity.
            </p>
         </div>
 

@@ -2,21 +2,16 @@ import { createClient } from "@/lib/supabase/server";
 import { 
   BookOpen, 
   Search, 
-  Plus, 
   FileText, 
-  Download, 
-  Eye, 
-  MoreVertical,
   Calendar,
   User,
   Shield,
-  ExternalLink,
   ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UploadAction } from "@/components/digital-resources/UploadAction";
-import { PDFViewer } from "@/components/digital-resources/PDFViewer";
+import PDFViewerWrapper from "@/components/digital-resources/PDFViewerWrapper";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -136,7 +131,7 @@ export default async function DigitalResourcesPage({
           
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 h-[800px]">
-              <PDFViewer 
+              <PDFViewerWrapper 
                 resourceId={selectedResource.id} 
                 fileUrl={`/api/resources/${selectedResource.file_path}`} 
                 title={selectedResource.title} 
@@ -197,7 +192,7 @@ export default async function DigitalResourcesPage({
                    <p className="text-sm text-indigo-100 opacity-80 mb-4">
                      Request an offline PIN to access this and other resources during internet blackouts.
                    </p>
-                   <Link href="/protected/offline-access-request">
+                   <Link href="/offline-access">
                      <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50 border-none rounded-xl">
                        Get Offline PIN
                      </Button>

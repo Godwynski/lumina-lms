@@ -9,7 +9,7 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check role
+  // Only librarians and admins can revoke sessions
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -21,15 +21,22 @@ export async function POST() {
   }
 
   try {
+    // 1. Expire all active PINs
     await supabase
       .from("offline_pins")
-      .update({ is_revoked: true })
-      .eq("is_revoked", false);
+      .update({ expires_at: new Date().toISOString() })
+      .gt("expires_at", new Date().toISOString());
 
-    const response = NextResponse.json({ success: true });
-    response.cookies.delete("offline_session");
-    return response;
+    // 2. Revoke all active offline sessions (mark revoked_at so middleware rejects them)
+    //    We delete them outright for instant invalidation — the middleware check will fail.
+    await supabase
+      .from("offline_sessions")
+      .delete()
+      .is("revoked_at", null); // delete all non-revoked sessions
+
+    return NextResponse.json({ success: true });
   } catch (error) {
+    console.error("Revoke error:", error);
     return NextResponse.json({ error: "Failed to revoke sessions" }, { status: 500 });
   }
 }

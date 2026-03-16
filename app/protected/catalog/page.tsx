@@ -70,7 +70,7 @@ export default function CatalogPage() {
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-zinc-200/50 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">Catalog & Inventory</h1>
-          <p className="text-zinc-500 text-sm">Manage the library's physical collection.</p>
+          <p className="text-zinc-500 text-sm">Manage the library&apos;s physical collection.</p>
         </div>
         <Link href="/protected/catalog/add">
           <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 h-11">
@@ -171,7 +171,7 @@ export default function CatalogPage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-zinc-900">Delete Book?</DialogTitle>
             <DialogDescription className="text-zinc-500 pt-2">
-              Are you sure you want to delete <span className="font-semibold text-zinc-900">"{bookToDelete?.title}"</span>? This action will hide the book from the catalog.
+              Are you sure you want to delete <span className="font-semibold text-zinc-900">&quot;{bookToDelete?.title}&quot;</span>? This action will hide the book from the catalog.
               If there are active borrowed copies, this action will be blocked.
             </DialogDescription>
           </DialogHeader>

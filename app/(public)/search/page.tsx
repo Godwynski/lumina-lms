@@ -31,7 +31,7 @@ export default function PublicSearchPage() {
     try {
       const cats = await getCategories();
       setCategories(cats);
-    } catch(e) { /* silent fail */ }
+    } catch(_e) { /* silent fail */ }
   };
 
   const loadBooks = useCallback(async (reset = false) => {
@@ -48,8 +48,8 @@ export default function PublicSearchPage() {
       
       setHasMore(data.hasMore);
       setPage(currentPage + 1);
-    } catch (e) {
-      console.error(e);
+    } catch (_e) {
+      console.error(_e);
     } finally {
       setLoading(false);
     }

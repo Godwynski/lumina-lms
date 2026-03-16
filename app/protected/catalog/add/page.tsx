@@ -50,7 +50,7 @@ export default function AddBookPage() {
       } else {
         setError('Book not found in Open Library');
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to fetch ISBN data');
     } finally {
       setIsbnLoading(false);
@@ -260,7 +260,7 @@ export default function AddBookPage() {
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
                    />
                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as any).click()}>
+                      <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>
                         Change Image
                       </Button>
                    </div>
@@ -288,7 +288,7 @@ export default function AddBookPage() {
               <Button 
                 variant="outline" 
                 className="w-full rounded-xl gap-2 text-xs h-10 border-zinc-200 hover:bg-zinc-50"
-                onClick={() => (document.getElementById('file-upload') as any).click()}
+                onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}
               >
                 Upload File
               </Button>

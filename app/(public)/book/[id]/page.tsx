@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { getBookById } from '@/lib/actions/catalog';
 import { reportMissingBook } from '@/lib/actions/public-catalog';
 import { ChevronLeft, MapPin, AlertCircle, BookOpen, Hash, Tag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default function PublicBookDetailPage() {
   const params = useParams();
@@ -132,7 +131,7 @@ export default function PublicBookDetailPage() {
                 className="flex items-center justify-center w-full py-3 px-4 border border-orange-200 text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AlertCircle className="w-5 h-5 mr-2" />
-                {reportSubmitting ? 'Submitting...' : "I can't find this book on the shelf"}
+                {reportSubmitting ? 'Submitting...' : "I can&apos;t find this book on the shelf"}
               </button>
             ) : (
               <div className="bg-green-50 text-green-800 p-4 rounded-lg flex items-center justify-center border border-green-200">
