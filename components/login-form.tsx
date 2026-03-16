@@ -83,14 +83,19 @@ export function LoginForm({
         <p className="text-zinc-500 text-sm">admin@lumina.test	Password123!</p>
       </div>
 
-      <form onSubmit={handleLogin} className="flex flex-col gap-5">
+      <form onSubmit={handleLogin} autoComplete="on" className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email" className="text-zinc-700 text-sm font-medium">
             Email address
           </Label>
           <Input
             id="email"
+            name="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="you@example.com"
             required
             value={email}
@@ -109,7 +114,9 @@ export function LoginForm({
           <div className="relative">
             <Input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
               placeholder="••••••••"
               required
               value={password}

@@ -81,14 +81,19 @@ export function ForgotPasswordForm({
         <p className="text-zinc-500 text-sm">Enter your email to receive a reset link</p>
       </div>
 
-      <form onSubmit={handleForgotPassword} className="flex flex-col gap-5">
+      <form onSubmit={handleForgotPassword} autoComplete="on" className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email" className="text-zinc-700 text-sm font-medium">
             Email address
           </Label>
           <Input
             id="email"
+            name="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="you@example.com"
             required
             value={email}
