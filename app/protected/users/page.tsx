@@ -43,6 +43,7 @@ export default function UsersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [activeView, setActiveView] = useState<"directory" | "permissions">("directory");
   const [isMatrixDirty, setIsMatrixDirty] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
   // Invitation Form State
   const [inviteEmail, setInviteEmail] = useState("");
@@ -67,6 +68,10 @@ export default function UsersPage() {
       review: pool.filter(u => u.status === 'suspended').length,
     };
   }, [activeTab, users]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -305,10 +310,10 @@ export default function UsersPage() {
 
       {activeView === "directory" && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-          <StatCard label={`${activeTab === 'all' ? 'Total' : activeTab} Users`} value={activeStats.total} icon={Users} color="indigo" />
-          <StatCard label="Active" value={activeStats.active} icon={CheckCircle2} color="emerald" />
-          <StatCard label="Pending" value={activeStats.pending} icon={Clock} color="amber" />
-          <StatCard label="Review Required" value={activeStats.review} icon={AlertCircle} color="red" />
+          <StatCard label={`${activeTab === 'all' ? 'Total' : activeTab} Users`} value={hasMounted ? activeStats.total : 0} icon={Users} color="indigo" />
+          <StatCard label="Active" value={hasMounted ? activeStats.active : 0} icon={CheckCircle2} color="emerald" />
+          <StatCard label="Pending" value={hasMounted ? activeStats.pending : 0} icon={Clock} color="amber" />
+          <StatCard label="Review Required" value={hasMounted ? activeStats.review : 0} icon={AlertCircle} color="red" />
         </div>
       )}
 

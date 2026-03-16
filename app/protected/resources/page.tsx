@@ -25,7 +25,7 @@ export default async function DigitalResourcesPage({
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/auth/login");
   }
 
   const { data: profile } = await supabase
