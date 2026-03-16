@@ -25,7 +25,8 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
-  const [type, setType] = useState("E-BOOK");
+  const [publishedYear, setPublishedYear] = useState("");
+  const [type, setType] = useState("ebook");
   const [categoryId, setCategoryId] = useState("");
   const [accessLevel, setAccessLevel] = useState("STUDENT");
   
@@ -67,6 +68,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
     formData.append("file", file);
     formData.append("title", title);
     formData.append("author", author);
+    formData.append("publishedYear", publishedYear);
     formData.append("type", type);
     formData.append("categoryId", categoryId);
     formData.append("accessLevel", accessLevel);
@@ -100,6 +102,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
         setFile(null);
         setTitle("");
         setAuthor("");
+        setPublishedYear("");
         router.refresh();
         if (onUploadSuccess) onUploadSuccess();
       } else {
@@ -166,15 +169,29 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="publishedYear">Year Published</Label>
+            <Input
+              id="publishedYear"
+              placeholder="e.g. 2024"
+              value={publishedYear}
+              onChange={(e) => setPublishedYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              disabled={uploading}
+              inputMode="numeric"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="type">Resource Type</Label>
             <Select value={type} onValueChange={setType} disabled={uploading}>
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="E-BOOK">E-Book</SelectItem>
-                <SelectItem value="JOURNAL">Journal</SelectItem>
-                <SelectItem value="THESIS">Thesis</SelectItem>
+                <SelectItem value="ebook">E-Book</SelectItem>
+                <SelectItem value="journal">Journal</SelectItem>
+                <SelectItem value="thesis">Thesis</SelectItem>
+                <SelectItem value="report">Report</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -269,6 +286,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
               setFile(null);
               setTitle("");
               setAuthor("");
+              setPublishedYear("");
               setError(null);
               setSuccess(false);
               if (onCancel) onCancel();

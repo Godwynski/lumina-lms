@@ -2,20 +2,17 @@ import { createClient } from "@/lib/supabase/server";
 import { 
   BookOpen, 
   Search, 
-  Plus, 
   FileText, 
-  Download, 
-  Eye, 
-  MoreVertical,
   Calendar,
   User,
   Shield,
-  ExternalLink
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UploadAction } from "@/components/digital-resources/UploadAction";
-import { PDFViewer } from "@/components/digital-resources/PDFViewer";
+import PDFViewerWrapper from "@/components/digital-resources/PDFViewerWrapper";
+import EditResourceMetadataDialog from "@/components/digital-resources/EditResourceMetadataDialog";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -37,7 +34,7 @@ export default async function DigitalResourcesPage({
     .eq("id", user.id)
     .single();
 
-  const isStaff = profile && ["admin", "librarian", "staff"].includes(profile.role);
+  const isAdmin = profile?.role === "admin";
   const isLibrarian = profile && ["admin", "librarian"].includes(profile.role);
 
   const resolvedParams = await searchParams;
@@ -71,28 +68,34 @@ export default async function DigitalResourcesPage({
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8 max-w-7xl mx-auto w-full">
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] border border-zinc-200/60 shadow-xl shadow-zinc-100/50 relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 shadow-sm">
-              <BookOpen size={20} />
+          <div className="flex items-center gap-4 mb-3">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+              <BookOpen size={24} />
             </div>
-            <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Digital Resources</h1>
+            <div>
+              <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Digital Library</h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">School Server Intranet</p>
+              </div>
+            </div>
           </div>
-          <p className="text-zinc-500 max-w-md">
-            Access our digital collection of e-books, journals, and research papers exclusively on the school server.
+          <p className="text-zinc-500 max-w-md leading-relaxed">
+            Access our exclusive digital collection of e-books, journals, and local research archives.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
             <form action="/protected/resources" method="GET">
               <Input 
                 name="q"
-                placeholder="Search resources..." 
+                placeholder="Search the collection..." 
                 defaultValue={query}
-                className="pl-10 h-11 bg-zinc-50 border-zinc-200 focus:bg-white transition-all rounded-xl"
+                className="pl-12 h-14 bg-zinc-50/50 border-zinc-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all rounded-2xl text-base shadow-sm"
               />
             </form>
           </div>
@@ -101,34 +104,36 @@ export default async function DigitalResourcesPage({
           )}
         </div>
 
-        {/* Decorative background element */}
-        <div className="absolute top-0 right-0 -mr-12 -mt-12 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl" />
+        {/* Premium Decorative background elements */}
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-indigo-100/40 rounded-full blur-[80px]" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-violet-100/30 rounded-[100%] blur-[60px]" />
       </div>
 
       {selectedResource ? (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
+          <div className="flex items-center justify-between bg-white/50 backdrop-blur-md p-5 rounded-3xl border border-zinc-200/60 shadow-sm">
              <Link href="/protected/resources">
-               <Button variant="ghost" size="sm" className="text-zinc-600">
-                 <ChevronLeft className="mr-2" size={16} />
-                 Back to Collection
+               <Button variant="ghost" size="sm" className="text-zinc-600 hover:bg-zinc-100 rounded-xl px-4">
+                 <ChevronLeft className="mr-2" size={18} />
+                 Back to Library
                </Button>
              </Link>
-             <div className="flex items-center gap-2">
-               <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest px-3 py-1 bg-white border border-zinc-200 rounded-full shadow-sm">
+             <div className="flex items-center gap-3">
+               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] px-4 py-1.5 bg-indigo-50 border border-indigo-100/50 rounded-full shadow-sm">
                  {selectedResource.type}
                </span>
-               {isStaff && (
-                 <Button variant="outline" size="sm" className="h-8 rounded-lg">
-                   Manage
-                 </Button>
-               )}
-             </div>
-          </div>
+                {isAdmin && selectedResource && (
+                  <EditResourceMetadataDialog
+                    resource={selectedResource}
+                    categories={categories || []}
+                  />
+                )}
+              </div>
+           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 h-[800px]">
-              <PDFViewer 
+              <PDFViewerWrapper 
                 resourceId={selectedResource.id} 
                 fileUrl={`/api/resources/${selectedResource.file_path}`} 
                 title={selectedResource.title} 
@@ -136,37 +141,48 @@ export default async function DigitalResourcesPage({
             </div>
             
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm space-y-4">
-                <h3 className="font-bold text-zinc-900 border-b border-zinc-100 pb-3">Details</h3>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <User size={16} className="text-zinc-400 mt-1" />
+              <div className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-xl shadow-zinc-100/50 space-y-6">
+                <h3 className="text-lg font-bold text-zinc-900 border-b border-zinc-100 pb-4">Metadata</h3>
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
+                      <User size={18} />
+                    </div>
                     <div>
-                      <p className="text-xs text-zinc-500">Author</p>
-                      <p className="text-sm font-medium text-zinc-900">{selectedResource.author}</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Author</p>
+                      <p className="text-base font-semibold text-zinc-900">{selectedResource.author}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <Calendar size={16} className="text-zinc-400 mt-1" />
+                  <div className="flex items-start gap-4">
+                    <div className="h-9 w-9 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400">
+                      <Calendar size={18} />
+                    </div>
                     <div>
-                      <p className="text-xs text-zinc-500">Uploaded On</p>
-                      <p className="text-sm font-medium text-zinc-900">
-                        {new Date(selectedResource.created_at).toLocaleDateString()}
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Published</p>
+                      <p className="text-base font-semibold text-zinc-900">
+                        {selectedResource.published_year || new Date(selectedResource.created_at).getFullYear()}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <Shield size={16} className="text-zinc-400 mt-1" />
+                  <div className="flex items-start gap-4">
+                    <div className="h-9 w-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
+                      <Shield size={18} />
+                    </div>
                     <div>
-                      <p className="text-xs text-zinc-500">Access Level</p>
-                      <p className="text-sm font-medium text-zinc-900">{selectedResource.access_level}</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Availability</p>
+                      <p className="text-base font-semibold text-zinc-900">{selectedResource.access_level}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <FileText size={16} className="text-zinc-400 mt-1" />
+                  <div className="flex items-start gap-4">
+                    <div className="h-9 w-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                      <FileText size={18} />
+                    </div>
                     <div>
-                      <p className="text-xs text-zinc-500">File Size</p>
-                      <p className="text-sm font-medium text-zinc-900">{selectedResource.file_size_mb} MB</p>
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">File Format</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-base font-semibold text-zinc-900">PDF Document</p>
+                        <span className="text-[10px] font-bold bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-md">{selectedResource.file_size_mb} MB</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -178,7 +194,7 @@ export default async function DigitalResourcesPage({
                    <p className="text-sm text-indigo-100 opacity-80 mb-4">
                      Request an offline PIN to access this and other resources during internet blackouts.
                    </p>
-                   <Link href="/protected/offline-access-request">
+                   <Link href="/offline-access">
                      <Button className="w-full bg-white text-indigo-600 hover:bg-indigo-50 border-none rounded-xl">
                        Get Offline PIN
                      </Button>
@@ -193,45 +209,61 @@ export default async function DigitalResourcesPage({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main List */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {resources?.map((resource) => (
                 <div 
                   key={resource.id} 
-                  className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group flex flex-col justify-between"
+                  className="group relative bg-white p-6 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="bg-zinc-50 p-3 rounded-xl text-zinc-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
-                      <FileText size={24} />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="h-14 w-14 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-400 group-hover:bg-indigo-600 group-hover:text-white group-hover:rotate-6 transition-all duration-500">
+                      <FileText size={28} />
                     </div>
-                    <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full uppercase tracking-tighter">
-                      {resource.type}
-                    </span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-100/50">
+                        {resource.type}
+                      </span>
+                      {resource.categories?.name && (
+                        <span className="text-[9px] font-medium text-zinc-400 uppercase tracking-tighter">
+                          {resource.categories.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
-                  <div>
-                    <h3 className="font-bold text-zinc-900 group-hover:text-indigo-600 transition-colors line-clamp-1 mb-1">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold text-zinc-900 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-tight mb-2">
                       {resource.title}
                     </h3>
-                    <p className="text-sm text-zinc-500 line-clamp-1 mb-4">by {resource.author}</p>
-                    
-                    <div className="flex items-center gap-3 mb-6">
-                       <div className="flex items-center gap-1 text-xs text-zinc-400">
-                          <Calendar size={12} />
-                          {new Date(resource.created_at).getFullYear()}
-                       </div>
-                       <div className="w-1 h-1 bg-zinc-300 rounded-full" />
-                       <div className="flex items-center gap-1 text-xs text-zinc-400">
-                          <div className={`w-1.5 h-1.5 rounded-full ${resource.access_level === 'STUDENT' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                          {resource.access_level}
-                       </div>
+                    <div className="flex items-center gap-2 group-hover:translate-x-1 transition-transform duration-300">
+                      <div className="h-6 w-6 rounded-full bg-zinc-100 flex items-center justify-center">
+                        <User size={12} className="text-zinc-400" />
+                      </div>
+                      <p className="text-sm font-medium text-zinc-500">{resource.author}</p>
                     </div>
                   </div>
 
-                  <Link href={`/protected/resources?view=${resource.id}`} className="w-full">
-                    <Button variant="outline" className="w-full rounded-xl border-zinc-200 text-zinc-600 hover:text-indigo-600 hover:border-indigo-200 group-hover:bg-indigo-50/50">
-                      Read Now
-                    </Button>
-                  </Link>
+                  <div className="flex items-center justify-between pt-6 border-t border-zinc-50">
+                    <div className="flex items-center gap-3">
+                       <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-400">
+                          <Calendar size={13} className="text-zinc-300" />
+                          {resource.published_year || new Date(resource.created_at).getFullYear()}
+                       </div>
+                       <div className="w-1 h-1 bg-zinc-200 rounded-full" />
+                       <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">
+                          <Shield size={13} className="opacity-70" />
+                          {resource.access_level}
+                       </div>
+                    </div>
+                    
+                    <Link href={`/protected/resources?view=${resource.id}`}>
+                      <Button size="sm" className="rounded-xl px-5 bg-zinc-900 hover:bg-indigo-600 text-white shadow-lg transition-all active:scale-95">
+                        Read
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
@@ -249,33 +281,33 @@ export default async function DigitalResourcesPage({
 
             {/* Sidebar (Admin/Stats) */}
             <div className="space-y-6">
-              <div className="bg-zinc-900 p-6 rounded-3xl text-white shadow-xl shadow-zinc-200 relative overflow-hidden">
+            <div className="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-zinc-200/60 shadow-xl shadow-zinc-100/50 relative overflow-hidden group">
                <div className="relative z-10">
-                 <div className="flex items-center gap-2 text-indigo-400 mb-4">
-                    <Shield size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">School Intranet Only</span>
+                 <div className="flex items-center gap-2.5 text-indigo-600 mb-6 bg-indigo-50 w-fit px-4 py-1.5 rounded-full border border-indigo-100/50">
+                    <Shield size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Intranet Fortress</span>
                  </div>
-                 <h4 className="text-xl font-bold mb-3 tracking-tight">Network Fence Active</h4>
-                 <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-                   All digital assets are streamed locally from the school server. These files are not synced to the public cloud for maximum security and privacy.
+                 <h4 className="text-2xl font-bold mb-4 tracking-tight leading-tight text-zinc-900">Local School Network Active</h4>
+                 <p className="text-zinc-500 text-sm leading-relaxed mb-8">
+                   Your connection is secured within the school intranet. All digital resources are served locally for zero-latency access and maximum data privacy.
                  </p>
-                 <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700/50 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">Status</p>
-                      <div className="text-sm font-medium text-white flex items-center gap-2">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                        Online (Local)
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="p-5 bg-zinc-50/50 rounded-3xl border border-zinc-100 backdrop-blur-sm group-hover:bg-white transition-colors">
+                      <p className="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-2">Node Status</p>
+                      <div className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                        Online
                       </div>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-1">IP Address</p>
-                       <p className="text-sm font-mono text-zinc-400">192.168.1.10</p>
-                    </div>
+                   </div>
+                   <div className="p-5 bg-zinc-50/50 rounded-3xl border border-zinc-100 backdrop-blur-sm group-hover:bg-white transition-colors">
+                       <p className="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-2">Server IP</p>
+                       <p className="text-sm font-mono font-bold text-zinc-600">192.168.1.10</p>
+                   </div>
                  </div>
                </div>
                
-               {/* Decorative background circle */}
-               <div className="absolute -left-12 -top-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl" />
+               {/* Decorative background element */}
+               <div className="absolute -right-20 -top-20 w-80 h-80 bg-indigo-50 rounded-full blur-[100px] group-hover:bg-indigo-100/50 transition-all duration-1000" />
             </div>
           </div>
         </div>
@@ -284,21 +316,4 @@ export default async function DigitalResourcesPage({
   );
 }
 
-function ChevronLeft({ className, size }: { className?: string, size?: number }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size || 24}
-      height={size || 24}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
+

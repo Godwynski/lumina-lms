@@ -6,6 +6,18 @@ import path from "path";
 const ALLOWED_MIMES = ["application/pdf", "application/epub+zip"];
 const UPLOAD_ROOT = process.env.UPLOAD_PATH || "C:/uploads/resources";
 
+function parsePublishedYear(value: FormDataEntryValue | null): number | null {
+  if (value === null) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const year = Number.parseInt(raw, 10);
+  const currentYear = new Date().getFullYear();
+  if (!Number.isInteger(year) || year < 1000 || year > currentYear + 1) {
+    throw new Error("Invalid published year.");
+  }
+  return year;
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,6 +45,7 @@ export async function POST(request: Request) {
     const type = formData.get("type") as string;
     const categoryId = formData.get("categoryId") as string;
     const accessLevel = formData.get("accessLevel") as string;
+    const publishedYear = parsePublishedYear(formData.get("publishedYear"));
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -63,6 +76,7 @@ export async function POST(request: Request) {
         type,
         category_id: categoryId || null,
         access_level: accessLevel || "STUDENT",
+        published_year: publishedYear,
       })
       .select()
       .single();

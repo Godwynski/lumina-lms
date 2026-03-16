@@ -1,217 +1,463 @@
+import Link from "next/link";
+import { Suspense } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  Clock3,
+  CreditCard,
+  LayoutDashboard,
+  ScanLine,
+  Settings,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
-import { Suspense } from "react";
-import Link from "next/link";
-import {
-  Library,
-  Users,
-  BookMarked,
-  BarChart2,
-  ShieldCheck,
-  Settings,
-  History,
-  CreditCard,
-  BookOpen,
-  LayoutDashboard,
-} from "lucide-react";
 import { OfflinePinGenerator } from "@/components/digital-resources/OfflinePinGenerator";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
-interface QuickCard {
+type Metric = {
+  label: string;
+  value: string;
+  hint: string;
+  tone: "neutral" | "ok" | "warn";
+};
+
+type AttentionItem = {
+  title: string;
+  description: string;
   href: string;
+  cta: string;
+};
+
+type QuickAction = {
   label: string;
   description: string;
-  icon: React.ElementType;
-  color: string;
-  roles: Role[];
+  href: string;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  librarian: "Librarian",
+  staff: "Staff",
+  student: "Student",
+};
+
+function formatCount(value: number | null) {
+  if (value === null) return "--";
+  return new Intl.NumberFormat("en-US").format(value);
 }
 
-const QUICK_CARDS: QuickCard[] = [
-  {
-    href: "/protected/catalog",
-    label: "Catalog & Inventory",
-    description: "Manage books, categories, borrowing, and renewals.",
-    icon: Library,
-    color: "indigo",
-    roles: ["admin", "librarian", "staff"],
-  },
-  {
-    href: "/protected/users",
-    label: "Users & Roles",
-    description: "Manage admins, librarians, students, and e-library card approvals.",
-    icon: Users,
-    color: "violet",
-    roles: ["admin", "librarian", "staff"],
-  },
-  {
-    href: "/protected/fines",
-    label: "Fines",
-    description: "View, pay, and waive borrower fines.",
-    icon: BookMarked,
-    color: "rose",
-    roles: ["admin", "librarian", "staff"],
-  },
-  {
-    href: "/protected/reports",
-    label: "Reports & Analytics",
-    description: "View system-wide usage reports and analytics.",
-    icon: BarChart2,
-    color: "emerald",
-    roles: ["admin", "librarian", "staff"],
-  },
-  {
-    href: "/protected/history",
-    label: "My History",
-    description: "View your borrowing history and self-service renewals.",
-    icon: History,
-    color: "sky",
-    roles: ["admin", "librarian", "staff", "student"],
-  },
-  {
-    href: "/protected/my-card",
-    label: "E-Library Card",
-    description: "View and manage your digital library card.",
-    icon: CreditCard,
-    color: "amber",
-    roles: ["admin", "librarian", "staff", "student"],
-  },
-  {
-    href: "/protected/resources",
-    label: "Digital Resources",
-    description: "Access e-books, journals, and digital materials.",
-    icon: BookOpen,
-    color: "teal",
-    roles: ["admin", "librarian", "staff", "student"],
-  },
-  {
-    href: "/protected/settings",
-    label: "Settings",
-    description: "Configure system-wide settings and preferences.",
-    icon: Settings,
-    color: "zinc",
-    roles: ["admin"],
-  },
-  {
-    href: "/protected/audit",
-    label: "Audit Logs",
-    description: "Review system activity and audit trails.",
-    icon: ShieldCheck,
-    color: "orange",
-    roles: ["admin"],
-  },
-];
+async function getTableCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+) {
+  const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
+  if (error) return null;
+  return count ?? 0;
+}
 
-const ROLE_LABELS: Record<string, { label: string; color: string }> = {
-  admin:     { label: "Admin",     color: "text-amber-700 bg-amber-100 border-amber-200" },
-  librarian: { label: "Librarian", color: "text-indigo-700 bg-indigo-100 border-indigo-200" },
-  staff:     { label: "Staff",     color: "text-sky-700 bg-sky-100 border-sky-200" },
-  student:   { label: "Student",   color: "text-emerald-700 bg-emerald-100 border-emerald-200" },
-};
+async function getStatusCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+  status: string,
+) {
+  const { count, error } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("status", status);
+  if (error) return null;
+  return count ?? 0;
+}
 
-const COLOR_MAP: Record<string, string> = {
-  indigo: "bg-indigo-50 text-indigo-600 border-indigo-100 group-hover:bg-indigo-100",
-  violet: "bg-violet-50 text-violet-600 border-violet-100 group-hover:bg-violet-100",
-  rose:   "bg-rose-50 text-rose-600 border-rose-100 group-hover:bg-rose-100",
-  emerald:"bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-emerald-100",
-  sky:    "bg-sky-50 text-sky-600 border-sky-100 group-hover:bg-sky-100",
-  amber:  "bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-amber-100",
-  teal:   "bg-teal-50 text-teal-600 border-teal-100 group-hover:bg-teal-100",
-  zinc:   "bg-zinc-100 text-zinc-600 border-zinc-200 group-hover:bg-zinc-200",
-  orange: "bg-orange-50 text-orange-600 border-orange-100 group-hover:bg-orange-100",
-};
+async function getStatusInCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+  statuses: string[],
+) {
+  const { count, error } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .in("status", statuses);
+  if (error) return null;
+  return count ?? 0;
+}
 
-import BlurFade from "@/components/magicui/blur-fade";
-import { MagicCard } from "@/components/magicui/magic-card";
+async function getUserStatusCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+  userId: string,
+  status: string,
+) {
+  const { count, error } = await supabase
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", status);
+  if (error) return null;
+  return count ?? 0;
+}
+
+function metricTone(value: number | null, warnAt: number): "neutral" | "ok" | "warn" {
+  if (value === null) return "neutral";
+  return value >= warnAt ? "warn" : "ok";
+}
 
 async function DashboardContent() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const role = (await getUserRole()) as Role;
 
-  const roleInfo = role ? ROLE_LABELS[role] : null;
-  const visibleCards = QUICK_CARDS.filter(
-    (card) => !role || card.roles.includes(role)
-  );
+  const [
+    totalBooks,
+    availableCopies,
+    activeBorrowings,
+    overdueBorrowings,
+    pendingCards,
+    unpaidFines,
+    totalUsers,
+    myActiveBorrowings,
+    myOverdueBorrowings,
+    myUnpaidFines,
+  ] = await Promise.all([
+    getTableCount(supabase, "books"),
+    getStatusCount(supabase, "book_copies", "AVAILABLE"),
+    getStatusCount(supabase, "borrowing_records", "active"),
+    getStatusCount(supabase, "borrowing_records", "overdue"),
+    getStatusInCount(supabase, "library_cards", ["pending", "PENDING"]),
+    getStatusInCount(supabase, "fines", ["unpaid", "open"]),
+    getTableCount(supabase, "profiles"),
+    user ? getUserStatusCount(supabase, "borrowing_records", user.id, "active") : Promise.resolve(null),
+    user ? getUserStatusCount(supabase, "borrowing_records", user.id, "overdue") : Promise.resolve(null),
+    user
+      ? (async () => {
+          const { count, error } = await supabase
+            .from("fines")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .in("status", ["unpaid", "open"]);
+          if (error) return null;
+          return count ?? 0;
+        })()
+      : Promise.resolve(null),
+  ]);
+
+  const staffLike = role === "admin" || role === "librarian" || role === "staff";
+
+  const metrics: Metric[] = staffLike
+    ? [
+        {
+          label: "Active Borrowings",
+          value: formatCount(activeBorrowings),
+          hint: "Currently checked out books",
+          tone: metricTone(activeBorrowings, 25),
+        },
+        {
+          label: "Overdue Items",
+          value: formatCount(overdueBorrowings),
+          hint: "Needs borrower follow-up",
+          tone: metricTone(overdueBorrowings, 1),
+        },
+        {
+          label: "Available Copies",
+          value: formatCount(availableCopies),
+          hint: `Across ${formatCount(totalBooks)} catalog titles`,
+          tone: "ok",
+        },
+        {
+          label: "Pending Card Approvals",
+          value: formatCount(pendingCards),
+          hint: "Students waiting for validation",
+          tone: metricTone(pendingCards, 1),
+        },
+      ]
+    : [
+        {
+          label: "My Active Loans",
+          value: formatCount(myActiveBorrowings),
+          hint: "Books currently borrowed",
+          tone: "ok",
+        },
+        {
+          label: "Due/Overdue",
+          value: formatCount(myOverdueBorrowings),
+          hint: "Items that need immediate action",
+          tone: metricTone(myOverdueBorrowings, 1),
+        },
+        {
+          label: "Outstanding Fines",
+          value: formatCount(myUnpaidFines),
+          hint: "Unpaid or open charges",
+          tone: metricTone(myUnpaidFines, 1),
+        },
+        {
+          label: "Available Copies",
+          value: formatCount(availableCopies),
+          hint: "Ready to borrow right now",
+          tone: "ok",
+        },
+      ];
+
+  const attentionItems: AttentionItem[] = staffLike
+    ? [
+        {
+          title: "Resolve overdue queue",
+          description:
+            overdueBorrowings === null
+              ? "Overdue data unavailable. Verify migration and table access."
+              : `${formatCount(overdueBorrowings)} overdue record(s) currently open for follow-up.`,
+          href: "/protected/fines",
+          cta: "Open Fines",
+        },
+        {
+          title: "Review pending approvals",
+          description:
+            pendingCards === null
+              ? "Approval queue unavailable. Check library_cards table and policies."
+              : `${formatCount(pendingCards)} card request(s) waiting in queue.`,
+          href: "/protected/admin/approvals",
+          cta: "Review Approvals",
+        },
+        {
+          title: "Watch unresolved fines",
+          description:
+            unpaidFines === null
+              ? "Fine records unavailable. Confirm fines table is deployed."
+              : `${formatCount(unpaidFines)} unpaid/open fine record(s) need action.`,
+          href: "/protected/fines",
+          cta: "Process Fines",
+        },
+      ]
+    : [
+        {
+          title: "Renew due items",
+          description:
+            myOverdueBorrowings === null
+              ? "Loan status currently unavailable. Try refreshing shortly."
+              : `${formatCount(myOverdueBorrowings)} item(s) are due or overdue.`,
+          href: "/protected/history",
+          cta: "Open My History",
+        },
+        {
+          title: "Check card and account status",
+          description: "Open your digital card and verify your account details before borrowing.",
+          href: "/protected/my-card",
+          cta: "Open E-Library Card",
+        },
+        {
+          title: "Clear outstanding charges",
+          description:
+            myUnpaidFines === null
+              ? "Fine balance unavailable. You can still check your history page."
+              : `${formatCount(myUnpaidFines)} fine record(s) may block new checkouts.`,
+          href: "/protected/fines",
+          cta: "View Fines",
+        },
+      ];
+
+  const quickActions: QuickAction[] =
+    role === "admin"
+      ? [
+          { label: "Start Checkout", description: "Scan student and book QR", href: "/protected/borrow" },
+          { label: "Process Return", description: "Finalize returned books", href: "/protected/return" },
+          { label: "Approve Cards", description: "Handle queued card requests", href: "/protected/admin/approvals" },
+          { label: "Manage Roles", description: "Update user access", href: "/protected/users" },
+          { label: "Review Audit", description: "Inspect system activity", href: "/protected/audit" },
+          { label: "System Settings", description: "Adjust library policies", href: "/protected/settings" },
+        ]
+      : role === "librarian"
+        ? [
+            { label: "Start Checkout", description: "Open circulation checkout", href: "/protected/borrow" },
+            { label: "Process Return", description: "Receive returned books", href: "/protected/return" },
+            { label: "Catalog", description: "Maintain titles and copies", href: "/protected/catalog" },
+            { label: "Approvals", description: "Validate e-library cards", href: "/protected/admin/approvals" },
+            { label: "Fines", description: "Resolve borrower balances", href: "/protected/fines" },
+            { label: "Reports", description: "Check usage trends", href: "/protected/reports" },
+          ]
+        : role === "staff"
+          ? [
+              { label: "Start Checkout", description: "Run counter checkout", href: "/protected/borrow" },
+              { label: "Process Return", description: "Mark copies available", href: "/protected/return" },
+              { label: "Users", description: "Search and assist patrons", href: "/protected/users" },
+              { label: "Catalog", description: "Locate books and copies", href: "/protected/catalog" },
+              { label: "Fines", description: "Handle payment/waiver flow", href: "/protected/fines" },
+              { label: "History", description: "Verify circulation logs", href: "/protected/history" },
+            ]
+          : [
+              { label: "My History", description: "Track loans and due dates", href: "/protected/history" },
+              { label: "My Card", description: "Open your e-library card", href: "/protected/my-card" },
+              { label: "Book Catalog", description: "Discover available books", href: "/protected/student-catalog" },
+              { label: "Digital Resources", description: "Use e-books and journals", href: "/protected/resources" },
+            ];
+
+  const roleLabel = role ? ROLE_LABELS[role] : "Guest";
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Welcome Header */}
-      <BlurFade delay={0.1} inView>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <LayoutDashboard size={22} className="text-zinc-400" />
-            <h1 className="text-2xl font-bold text-zinc-900">Dashboard</h1>
-            {roleInfo && (
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${roleInfo.color}`}>
-                {roleInfo.label}
-              </span>
-            )}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <LayoutDashboard className="h-5 w-5 text-indigo-600" />
+              <h1 className="text-2xl font-bold text-zinc-900">Operations Dashboard</h1>
+            </div>
+            <p className="text-sm text-zinc-600">Focused tasks, alerts, and shortcuts for your current role.</p>
+            <p className="text-xs text-zinc-500">Signed in as {roleLabel}{user?.email ? ` - ${user.email}` : ""}</p>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <p className="text-zinc-600 text-sm">Welcome back!</p>
-            {user?.email && (
-              <p className="text-zinc-500 text-xs truncate max-w-sm">{user.email}</p>
-            )}
+          <div className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">
+            <Clock3 className="h-4 w-4" />
+            Live operational view
           </div>
         </div>
-      </BlurFade>
+      </section>
 
-      {/* Quick Access Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visibleCards.map((card, idx) => {
-          const Icon = card.icon;
-          const colorClass = COLOR_MAP[card.color] ?? COLOR_MAP["zinc"];
-          return (
-            <BlurFade key={card.href} delay={0.15 + idx * 0.05} inView>
-              <Link
-                href={card.href}
-                className="block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-2xl"
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Today Snapshot</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <div key={metric.label} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{metric.label}</p>
+              <p
+                className={`mt-2 text-3xl font-bold ${
+                  metric.tone === "warn"
+                    ? "text-rose-700"
+                    : metric.tone === "ok"
+                      ? "text-emerald-700"
+                      : "text-zinc-800"
+                }`}
               >
-                <MagicCard 
-                  className="group flex flex-col gap-3 p-5 rounded-2xl border border-zinc-200/60 bg-white/50 backdrop-blur-md shadow-sm transition-all duration-300 h-full cursor-pointer"
-                  gradientColor="rgba(99,102,241,0.08)"
-                >
-                  <div className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-colors ${colorClass}`}>
-                    <Icon size={20} />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors">
-                      {card.label}
-                    </span>
-                    <p className="text-zinc-500 text-sm leading-relaxed">{card.description}</p>
-                  </div>
-                </MagicCard>
-              </Link>
-            </BlurFade>
-          );
-        })}
-      </div>
+                {metric.value}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">{metric.hint}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Emergency Offline Protocol (Librarians/Admins only) */}
-      {(role === "admin" || role === "librarian") && (
-        <BlurFade delay={0.5} inView>
-          <div className="mt-4">
-             <OfflinePinGenerator />
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <h2 className="text-base font-semibold text-zinc-900">Needs Attention</h2>
           </div>
-        </BlurFade>
+          <div className="space-y-3">
+            {attentionItems.map((item) => (
+              <div key={item.title} className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                <p className="font-semibold text-zinc-900">{item.title}</p>
+                <p className="mt-1 text-sm text-zinc-600">{item.description}</p>
+                <Link
+                  href={item.href}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-indigo-700 hover:text-indigo-600"
+                >
+                  {item.cta}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <ScanLine className="h-4 w-4 text-indigo-600" />
+            <h2 className="text-base font-semibold text-zinc-900">Quick Actions</h2>
+          </div>
+          <div className="space-y-2">
+            {quickActions.map((action) => (
+              <Link
+                key={action.href + action.label}
+                href={action.href}
+                className="flex items-start justify-between gap-3 rounded-xl border border-zinc-200 px-3 py-2.5 transition hover:bg-zinc-50"
+              >
+                <div>
+                  <p className="font-medium text-zinc-900">{action.label}</p>
+                  <p className="text-xs text-zinc-500">{action.description}</p>
+                </div>
+                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-zinc-400" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {(role === "admin" || role === "librarian") && (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-indigo-600" />
+            <h2 className="text-base font-semibold text-zinc-900">Offline Emergency Toolkit</h2>
+          </div>
+          <p className="mb-4 text-sm text-zinc-600">Generate and manage offline PIN access for blackout scenarios.</p>
+          <OfflinePinGenerator />
+        </section>
+      )}
+
+      {!staffLike && (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-emerald-600" />
+            <h2 className="text-base font-semibold text-zinc-900">Discover More</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Link href="/protected/student-catalog" className="rounded-xl border border-zinc-200 p-3 hover:bg-zinc-50">
+              <p className="font-medium text-zinc-900">Browse Student Catalog</p>
+              <p className="text-xs text-zinc-500">Find available titles and book details.</p>
+            </Link>
+            <Link href="/protected/resources" className="rounded-xl border border-zinc-200 p-3 hover:bg-zinc-50">
+              <p className="font-medium text-zinc-900">Open Digital Resources</p>
+              <p className="text-xs text-zinc-500">Read e-books and journals online.</p>
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {role === "admin" && (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-600" />
+            <h2 className="text-base font-semibold text-zinc-900">Admin Oversight</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Total Profiles</p>
+              <p className="mt-1 text-xl font-bold text-zinc-900">{formatCount(totalUsers)}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Catalog Titles</p>
+              <p className="mt-1 text-xl font-bold text-zinc-900">{formatCount(totalBooks)}</p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Configuration</p>
+              <Link href="/protected/settings" className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-indigo-700">
+                Open settings
+                <Settings className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </section>
       )}
     </div>
   );
 }
 
-// Skeleton shown while DashboardContent loads
 function DashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-8 animate-pulse">
-      <div className="flex flex-col gap-2">
-        <div className="h-8 w-48 bg-zinc-200 rounded-lg" />
-        <div className="h-4 w-72 bg-zinc-100 rounded" />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-3 p-5 rounded-2xl border border-zinc-100 bg-zinc-50 h-32" />
+    <div className="flex flex-col gap-6 animate-pulse">
+      <div className="h-28 rounded-2xl border border-zinc-200 bg-zinc-100" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-28 rounded-2xl border border-zinc-200 bg-zinc-100" />
         ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="h-72 rounded-2xl border border-zinc-200 bg-zinc-100" />
+        <div className="h-72 rounded-2xl border border-zinc-200 bg-zinc-100" />
       </div>
     </div>
   );

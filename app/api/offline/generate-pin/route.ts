@@ -27,18 +27,24 @@ export async function POST() {
     const pinHash = await bcrypt.hash(pin, 10);
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
 
-    // Invalidate existing pins first
+    // Invalidate any currently active PINs (set expires_at to now)
     await supabase
       .from("offline_pins")
-      .update({ is_revoked: true })
-      .filter("is_revoked", "eq", false);
+      .update({ expires_at: new Date().toISOString() })
+      .gt("expires_at", new Date().toISOString());
+
+    // Also revoke all active offline sessions tied to stale PINs
+    await supabase
+      .from("offline_sessions")
+      .delete()
+      .is("revoked_at", null);
 
     const { data: newPin, error: dbError } = await supabase
       .from("offline_pins")
       .insert({
         pin_hash: pinHash,
         expires_at: expiresAt.toISOString(),
-        created_by: user.id
+        user_id: user.id // Standardizing to user_id as per schema
       })
       .select()
       .single();

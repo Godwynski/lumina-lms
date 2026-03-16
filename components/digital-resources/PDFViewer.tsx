@@ -75,44 +75,48 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
   return (
     <div 
       ref={containerRef}
-      className={`relative flex flex-col h-full bg-zinc-900 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[100]' : 'rounded-2xl border border-zinc-800'}`}
+      className={`relative flex flex-col h-full bg-zinc-100 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[100]' : 'rounded-3xl border border-zinc-200 shadow-inner'}`}
     >
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800 z-10">
-        <div className="flex items-center gap-3">
-          <BookOpen className="text-indigo-400" size={18} />
-          <h2 className="text-sm font-medium text-zinc-200 truncate max-w-[200px] md:max-w-md">
+      <div className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-2xl border-b border-zinc-200 z-10">
+        <div className="flex items-center gap-4">
+          <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100/50">
+            <BookOpen size={16} />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-900 truncate max-w-[180px] md:max-w-md tracking-tight">
             {title}
           </h2>
         </div>
-        <div className="flex items-center gap-1 md:gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800 h-8 w-8"
-          >
-            <ZoomOut size={16} />
-          </Button>
-          <span className="text-[10px] md:text-xs text-zinc-500 w-10 text-center">
-            {Math.round(scale * 100)}%
-          </span>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setScale(s => Math.min(3, s + 0.1))}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800 h-8 w-8"
-          >
-            <ZoomIn size={16} />
-          </Button>
-          <div className="w-px h-4 bg-zinc-800 mx-1" />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-zinc-50 rounded-xl border border-zinc-200 p-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
+              className="text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 h-8 w-8 rounded-lg"
+            >
+              <ZoomOut size={16} />
+            </Button>
+            <span className="text-[10px] font-black text-zinc-400 w-12 text-center uppercase tracking-tighter">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setScale(s => Math.min(3, s + 0.1))}
+              className="text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50 h-8 w-8 rounded-lg"
+            >
+              <ZoomIn size={16} />
+            </Button>
+          </div>
+          <div className="w-px h-4 bg-zinc-200 mx-1" />
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={toggleFullscreen}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800 h-8 w-8"
+            className="text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 h-10 w-10 rounded-xl border border-zinc-200"
           >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} /> }
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} /> }
           </Button>
         </div>
       </div>
@@ -124,9 +128,9 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
             file={fileUrl}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={
-              <div className="flex flex-col items-center justify-center p-20 text-zinc-500">
+              <div className="flex flex-col items-center justify-center p-20 text-indigo-500/50">
                 <Loader2 className="animate-spin mb-4" size={32} />
-                <p>Loading PDF...</p>
+                <p className="text-sm font-medium tracking-tight">Loading PDF Access...</p>
               </div>
             }
             error={
@@ -146,18 +150,18 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
         </div>
       </div>
 
-      {/* Floating Toolbar */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-20 z-20 flex items-center gap-1 p-1 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-full shadow-2xl transition-opacity hover:opacity-100 opacity-90 md:opacity-40">
+      {/* Floating Pagination Controller */}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-24 z-20 flex items-center gap-2 p-2 bg-white/80 backdrop-blur-3xl border border-zinc-200 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-2xl transition-all hover:scale-105 group/toolbar">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={() => changePage(-1)}
           disabled={pageNumber <= 1}
-          className="text-white hover:bg-zinc-800 rounded-full h-10 w-10"
+          className="text-zinc-600 hover:bg-zinc-100 rounded-xl h-11 w-11 disabled:opacity-30"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={22} />
         </Button>
-        <div className="flex items-center gap-2 px-3 text-sm font-medium text-zinc-300">
+        <div className="flex items-center gap-3 px-4 py-1 bg-zinc-50 rounded-xl border border-zinc-200">
           <input 
             type="number"
             value={pageNumber}
@@ -165,24 +169,25 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
               const val = parseInt(e.target.value);
               if (numPages && val >= 1 && val <= numPages) setPageNumber(val);
             }}
-            className="w-12 bg-zinc-800 border-none rounded text-center focus:ring-1 focus:ring-indigo-500"
+            className="w-12 bg-transparent border-none text-center text-sm font-bold text-indigo-600 focus:ring-0 p-0"
           />
-          <span className="text-zinc-500">/ {numPages || '--'}</span>
+          <span className="text-zinc-400 font-black text-[10px] uppercase tracking-widest">of</span>
+          <span className="text-zinc-900 font-bold text-sm min-w-[20px] text-center">{numPages || '--'}</span>
         </div>
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={() => changePage(1)}
           disabled={!!numPages && pageNumber >= numPages}
-          className="text-white hover:bg-zinc-800 rounded-full h-10 w-10"
+          className="text-zinc-600 hover:bg-zinc-100 rounded-xl h-11 w-11 disabled:opacity-30"
         >
-          <ChevronRight size={20} />
+          <ChevronRight size={22} />
         </Button>
       </div>
 
       {/* Bottom Seek Bar */}
-      <div className="px-6 py-4 bg-zinc-900/80 backdrop-blur-md border-t border-zinc-800 z-10">
-        <div className="flex flex-col gap-2">
+      <div className="px-8 py-5 bg-white border-t border-zinc-200 z-10 shadow-[0_-5px_20px_rgba(0,0,0,0.02)]">
+        <div className="flex flex-col gap-3">
           <Slider
             value={[pageNumber]}
             max={numPages || 100}
@@ -191,9 +196,14 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
             onValueChange={([val]) => setPageNumber(val)}
             className="cursor-pointer"
           />
-          <div className="flex justify-between text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-            <span>Page {pageNumber}</span>
-            <span>{numPages ? `${Math.round((pageNumber / numPages) * 100)}% Complete` : 'Loading...'}</span>
+          <div className="flex justify-between items-center text-[9px] text-zinc-400 uppercase tracking-[0.2em] font-black">
+            <div className="flex items-center gap-3">
+              <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/50">Page {pageNumber}</span>
+              <span className="opacity-40 font-bold">Total {numPages || '--'} Sections</span>
+            </div>
+            <span className={numPages ? "text-emerald-600" : "animate-pulse"}>
+              {numPages ? `${Math.round((pageNumber / numPages) * 100)}% Reading Progress` : 'Loading Document...'}
+            </span>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { getBookById, getBookCopies, createBookCopy, updateBookCopyStatus } from '@/lib/actions/catalog';
 import { 
   ChevronLeft, 
@@ -20,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import Link from 'next/link';
+import { Book, BookCopy } from '@/lib/types';
 
 const STATUS_CONFIG = {
   'AVAILABLE': { label: 'Available', icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50' },
@@ -30,11 +32,12 @@ const STATUS_CONFIG = {
 
 export default function StaffBookManagementPage() {
   const params = useParams();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const router = useRouter();
   const id = params.id as string;
   
-  const [book, setBook] = useState<any>(null);
-  const [copies, setCopies] = useState<any[]>([]);
+  const [book, setBook] = useState<Book | null>(null);
+  const [copies, setCopies] = useState<BookCopy[]>([]);
   const [loading, setLoading] = useState(true);
   const [addCopyLoading, setAddCopyLoading] = useState(false);
 
@@ -72,9 +75,9 @@ export default function StaffBookManagementPage() {
     }
   };
 
-  const handleStatusChange = async (copyId: string, newStatus: any) => {
+  const handleStatusChange = async (copyId: string, newStatus: string) => {
     try {
-      await updateBookCopyStatus(copyId, newStatus);
+      await updateBookCopyStatus(copyId, newStatus as any);
       const updatedCopies = await getBookCopies(id);
       setCopies(updatedCopies);
       const updatedBook = await getBookById(id);
@@ -127,9 +130,9 @@ export default function StaffBookManagementPage() {
         {/* Book Info Sidebar */}
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-zinc-200/50 shadow-sm overflow-hidden p-6">
-            <div className="aspect-[2/3] bg-zinc-50 rounded-xl border border-zinc-100 mb-6 overflow-hidden flex items-center justify-center">
+            <div className="relative aspect-[2/3] bg-zinc-50 rounded-xl border border-zinc-100 mb-6 overflow-hidden flex items-center justify-center">
               {book.cover_url ? (
-                <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                <Image src={book.cover_url} alt={book.title} fill className="object-cover" />
               ) : (
                 <BookOpen className="w-16 h-16 text-zinc-200" />
               )}
@@ -142,7 +145,7 @@ export default function StaffBookManagementPage() {
               </div>
               <div className="flex items-center gap-3 text-zinc-600 text-sm">
                 <Tag className="w-4 h-4 text-zinc-400" />
-                <span className="font-medium">Category:</span> {book.categories?.name || 'Unassigned'}
+                <span className="font-medium">Category:</span> {Array.isArray(book.categories) ? book.categories[0]?.name : book.categories?.name || 'Unassigned'}
               </div>
               <div className="flex items-center gap-3 text-zinc-600 text-sm">
                 <MapPin className="w-4 h-4 text-zinc-400" />
@@ -191,7 +194,7 @@ export default function StaffBookManagementPage() {
           
           <div className="space-y-3">
             {copies.map((copy) => {
-              const status = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG];
+              const status = STATUS_CONFIG[copy.status];
               const StatusIcon = status.icon;
               
               return (
@@ -236,7 +239,7 @@ export default function StaffBookManagementPage() {
               <div className="text-center py-24 bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200">
                 <AlertCircle className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
                 <p className="text-zinc-500 font-medium">No physical copies in inventory.</p>
-                <p className="text-zinc-400 text-xs">Click "Add Physical Copy" to start tracking inventory.</p>
+                <p className="text-zinc-400 text-xs">Click &quot;Add Physical Copy&quot; to start tracking inventory.</p>
               </div>
             )}
           </div>

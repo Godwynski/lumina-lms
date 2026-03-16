@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  librarian
+  staff
+  student
+}
+
+model Profile {
+  id               String           @id @db.Uuid
+  role             UserRole         @default(student)
+  updated_at       DateTime?        @db.Timestamptz(6)
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  full_name        String?
+  email            String?
+  avatar_url       String?
+  status           String           @default("active")
+  department       String?
+  offline_pins     OfflinePin[]
+  offline_sessions OfflineSession[]
+
+  @@map("profiles")
+}
+
+model RolePermission {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role      UserRole
+  module    String
+  access    Boolean  @default(false)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([role, module])
+  @@map("role_permissions")
+}
+
+model OfflinePin {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  pin_hash   String
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  expires_at DateTime  @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  user       Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("offline_pins")
+}
+
+model OfflineSession {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String   @db.Uuid
+  session_token String   @unique
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  user          Profile  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("offline_sessions")
+}

@@ -79,6 +79,8 @@ export function LoginForm({
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-zinc-900 mb-1">Welcome back</h1>
         <p className="text-zinc-500 text-sm">Sign in to your account to continue</p>
+        <p className="text-zinc-500 text-sm">student@lumina.test	Password123!</p>
+        <p className="text-zinc-500 text-sm">admin@lumina.test	Password123!</p>
       </div>
 
       <form onSubmit={handleLogin} className="flex flex-col gap-5">

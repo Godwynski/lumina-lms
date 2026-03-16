@@ -1,20 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound, ShieldAlert, ChevronRight, Loader2, Info } from "lucide-react";
+import { KeyRound, ShieldAlert, ChevronRight, Loader2, Info, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
 
 export default function OfflineAccessPage() {
   const [pin, setPin] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!studentId.trim()) {
+      setError("Please enter your Student ID number.");
+      return;
+    }
     if (pin.length !== 6) {
       setError("Please enter a 6-digit PIN.");
       return;
@@ -26,7 +33,7 @@ export default function OfflineAccessPage() {
     try {
       const response = await fetch("/api/offline/validate", {
         method: "POST",
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ pin, student_id: studentId.trim() }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -37,7 +44,7 @@ export default function OfflineAccessPage() {
       } else {
         setError(data.error || "Validation failed");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Network error. Make sure you are connected to the school server.");
     } finally {
       setLoading(false);
@@ -58,7 +65,9 @@ export default function OfflineAccessPage() {
             <KeyRound className="text-indigo-400 group-hover:scale-110 transition-transform" size={32} />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">Emergency Access</h1>
-          <p className="text-zinc-500">Enter the 6-digit PIN provided by your librarian during network blackouts.</p>
+          <p className="text-zinc-500">
+            Present your ID to the librarian then enter the 6-digit PIN they provide.
+          </p>
         </div>
 
         <div className="bg-zinc-900/50 backdrop-blur-xl p-8 rounded-3xl border border-zinc-800 shadow-2xl">
@@ -71,26 +80,52 @@ export default function OfflineAccessPage() {
               </Alert>
             )}
 
-            <div className="space-y-4">
+            {/* Student ID Field */}
+            <div className="space-y-2">
+              <Label htmlFor="student-id" className="text-zinc-400 text-xs font-bold uppercase tracking-widest">
+                Student ID Number
+              </Label>
               <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
                 <Input
+                  id="student-id"
                   type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                  className="bg-zinc-950 border-zinc-800 text-white text-center text-4xl font-black tracking-[0.5em] h-20 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-zinc-800"
+                  placeholder="e.g. 2024-00001"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  className="pl-11 bg-zinc-950 border-zinc-800 text-white h-14 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   disabled={loading}
                   autoFocus
+                  autoComplete="off"
                 />
               </div>
-              <p className="text-center text-[10px] text-zinc-600 uppercase font-bold tracking-widest">Enter 6-digit code</p>
+            </div>
+
+            {/* PIN Field */}
+            <div className="space-y-2">
+              <Label htmlFor="pin-input" className="text-zinc-400 text-xs font-bold uppercase tracking-widest">
+                6-Digit Offline PIN
+              </Label>
+              <Input
+                id="pin-input"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                className="bg-zinc-950 border-zinc-800 text-white text-center text-4xl font-black tracking-[0.5em] h-20 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-zinc-800"
+                disabled={loading}
+                autoComplete="off"
+              />
+              <p className="text-center text-[10px] text-zinc-600 uppercase font-bold tracking-widest">
+                Enter 6-digit code
+              </p>
             </div>
 
             <Button
               type="submit"
-              disabled={loading || pin.length !== 6}
+              disabled={loading || pin.length !== 6 || !studentId.trim()}
               className="w-full h-14 bg-white text-black hover:bg-zinc-200 rounded-2xl font-bold text-lg shadow-xl shadow-white/5 transition-all group"
             >
               {loading ? (

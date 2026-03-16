@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createBook } from '@/lib/actions/catalog';
 import { ChevronLeft, Search, Save, BookPlus, ImageIcon, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ export default function AddBookPage() {
     location: '',
     section: '',
     cover_url: '',
+    copies: 1,
   });
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -33,25 +35,52 @@ export default function AddBookPage() {
     setError('');
     
     try {
-      // Clean ISBN
       const cleanIsbn = formData.isbn.replace(/[- ]/g, '');
-      const response = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
-      const data = await response.json();
-      
-      const bookData = data[`ISBN:${cleanIsbn}`];
-      
-      if (bookData) {
-        setFormData(prev => ({
-          ...prev,
-          title: bookData.title || prev.title,
-          author: bookData.authors?.[0]?.name || prev.author,
-          cover_url: bookData.cover?.large || bookData.cover?.medium || prev.cover_url,
-        }));
-      } else {
-        setError('Book not found in Open Library');
+      let bookFound = false;
+
+      // 1. Try Google Books API First (usually better metadata and covers)
+      try {
+        const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
+        const googleData = await googleRes.json();
+
+        if (googleData.items && googleData.items.length > 0) {
+          const info = googleData.items[0].volumeInfo;
+          setFormData(prev => ({
+            ...prev,
+            title: info.title || prev.title,
+            author: info.authors ? info.authors.join(', ') : prev.author,
+            cover_url: info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.thumbnail || prev.cover_url,
+            tags: info.categories ? info.categories.join(', ') : prev.tags,
+          }));
+          bookFound = true;
+        }
+      } catch (e) {
+        console.error("Google Books API error:", e);
       }
-    } catch (err) {
-      setError('Failed to fetch ISBN data');
+
+      // 2. Fallback to Open Library if Google didn't find it or failed
+      if (!bookFound) {
+        const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
+        const olData = await olRes.json();
+        const bookData = olData[`ISBN:${cleanIsbn}`];
+        
+        if (bookData) {
+          setFormData(prev => ({
+            ...prev,
+            title: bookData.title || prev.title,
+            author: bookData.authors?.[0]?.name || prev.author,
+            cover_url: bookData.cover?.large || bookData.cover?.medium || prev.cover_url,
+            tags: bookData.subjects ? bookData.subjects.slice(0, 5).map((s: { name: string }) => s.name).join(', ') : prev.tags,
+          }));
+          bookFound = true;
+        }
+      }
+
+      if (!bookFound) {
+        setError('Book not found in any database. Please enter details manually.');
+      }
+    } catch (_err) {
+      setError('Failed to fetch book data. Please check your connection.');
     } finally {
       setIsbnLoading(false);
     }
@@ -94,11 +123,12 @@ export default function AddBookPage() {
         location: formData.location,
         section: formData.section,
         cover_url: finalCoverUrl,
-      });
+      }, formData.copies);
 
       router.push('/protected/catalog');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add book');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to add book';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -206,6 +236,22 @@ export default function AddBookPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Initial Copies</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="100"
+                    value={formData.copies}
+                    onChange={e => setFormData({...formData, copies: parseInt(e.target.value) || 0})}
+                    placeholder="1"
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none font-semibold text-indigo-600"
+                  />
+                  <p className="text-[10px] text-zinc-400 ml-1">How many physical copies to add now? (Default: 1)</p>
+                </div>
+              </div>
+
               <div className="space-y-2 text-left">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Subject Tags (Comma Separated)</label>
                 <input 
@@ -254,13 +300,14 @@ export default function AddBookPage() {
             <div className="aspect-[2/3] bg-zinc-50 rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center relative group overflow-hidden">
                {formData.cover_url || coverFile ? (
                  <>
-                   <img 
+                   <Image 
                     src={coverFile ? URL.createObjectURL(coverFile) : formData.cover_url} 
                     alt="Preview" 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
                    />
                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as any).click()}>
+                      <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>
                         Change Image
                       </Button>
                    </div>
@@ -288,7 +335,7 @@ export default function AddBookPage() {
               <Button 
                 variant="outline" 
                 className="w-full rounded-xl gap-2 text-xs h-10 border-zinc-200 hover:bg-zinc-50"
-                onClick={() => (document.getElementById('file-upload') as any).click()}
+                onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}
               >
                 Upload File
               </Button>

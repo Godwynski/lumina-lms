@@ -56,10 +56,19 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // @ts-ignore - Node.js ReadStream to Web ReadableStream
-    const stream = createReadStream(filePath);
+    const nodeStream = createReadStream(filePath);
+    const stream = new ReadableStream({
+      start(controller) {
+        nodeStream.on("data", (chunk) => controller.enqueue(chunk));
+        nodeStream.on("end", () => controller.close());
+        nodeStream.on("error", (err) => controller.error(err));
+      },
+      cancel() {
+        nodeStream.destroy();
+      }
+    });
     
-    return new Response(stream as any, {
+    return new Response(stream, {
       headers: {
         "Content-Type": fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/epub+zip",
         "Content-Length": fileStat.size.toString(),

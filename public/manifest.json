@@ -1,11 +1,14 @@
 {
-  "name": "Lumina LMS",
-  "short_name": "Lumina",
-  "description": "Hybrid Offline-First Library Management System",
+  "name": "Lumina Library Management System",
+  "short_name": "Lumina LMS",
+  "description": "Hybrid Offline-First Library Management System for students and staff.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/favicon.ico",

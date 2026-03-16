@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import MyCardContainer from "@/components/library/MyCardContainer";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
-import { getUserRole } from "@/lib/auth-helpers";
 
 export default async function MyCardPage() {
   const supabase = await createClient();
@@ -76,7 +75,7 @@ export default async function MyCardPage() {
     studentId: profileData.student_id || "N/A",
     cardNumber: card.card_number,
     department: profileData.department || "No Department",
-    status: card.status as any,
+    status: card.status as "pending" | "active" | "suspended" | "expired",
     expiryDate: card.expires_at || new Date().toISOString(),
     avatarUrl: profileData.avatar_url,
     qrSvg: qrSvg
