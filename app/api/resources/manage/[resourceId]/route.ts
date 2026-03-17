@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 const ALLOWED_TYPES = ["ebook", "journal", "thesis", "report", "other"];
-const ALLOWED_ACCESS_LEVELS = ["STUDENT", "STAFF", "LIBRARIAN"];
+const ALLOWED_ACCESS_LEVELS = ["PUBLIC", "STUDENT", "STAFF", "LIBRARIAN", "ADMIN"];
 
 function parsePublishedYear(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -36,7 +36,7 @@ export async function PATCH(
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "admin") {
+  if (!profile || !["admin", "librarian"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

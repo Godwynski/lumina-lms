@@ -28,7 +28,7 @@ export async function GET(
     // Check if user has access to this resource
     const { data: resource } = await supabase
       .from("digital_resources")
-      .select("access_level")
+      .select("title, access_level")
       .eq("file_path", fileName)
       .single();
 
@@ -68,11 +68,14 @@ export async function GET(
       }
     });
     
+    const safeTitle = resource.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const extension = fileName.toLowerCase().endsWith(".pdf") ? "pdf" : "epub";
+
     return new Response(stream, {
       headers: {
-        "Content-Type": fileName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/epub+zip",
+        "Content-Type": extension === "pdf" ? "application/pdf" : "application/epub+zip",
         "Content-Length": fileStat.size.toString(),
-        "Content-Disposition": `inline; filename="${fileName}"`,
+        "Content-Disposition": `inline; filename="${safeTitle}.${extension}"`,
       },
     });
   } catch (error) {
