@@ -9,9 +9,10 @@ import QRCode from 'qrcode';
 interface QRPrinterModalProps {
   qrString: string;
   bookTitle: string;
+  bookId: string;
 }
 
-export function QRPrinterModal({ qrString, bookTitle }: QRPrinterModalProps) {
+export function QRPrinterModal({ qrString, bookTitle, bookId }: QRPrinterModalProps) {
   const [open, setOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const printRef = useRef<HTMLDivElement>(null);
