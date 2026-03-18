@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, X } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface QRPrinterModalProps {
@@ -56,7 +56,6 @@ export function QRPrinterModal({ qrString, bookTitle, bookId }: QRPrinterModalPr
           <div 
             ref={printRef} 
             className="border p-4 bg-white text-black flex flex-col items-center justify-center w-[200px] h-[200px]"
-            style={{ '@media print': { margin: 0, padding: 0 } } as any}
           >
             {qrDataUrl && (
               <img src={qrDataUrl} alt={`QR Code for ${bookTitle}`} className="w-24 h-24 mb-2" />

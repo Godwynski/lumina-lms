@@ -7,15 +7,26 @@ import {
   Calendar, 
   Shield, 
   Eye, 
-  Download, 
-  ExternalLink,
-  MoreVertical
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
+type ResourceCard = {
+  id: string;
+  title: string;
+  author: string;
+  type: string;
+  access_level: string;
+  created_at: string;
+  published_year?: number | null;
+  categories?: {
+    name?: string | null;
+  } | null;
+};
+
 interface AssetCardProps {
-  resource: any;
+  resource: ResourceCard;
 }
 
 export function ModernAssetCard({ resource }: AssetCardProps) {

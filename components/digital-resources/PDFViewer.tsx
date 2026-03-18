@@ -9,7 +9,6 @@ import {
   ChevronRight, 
   Maximize2, 
   Minimize2,
-  Search,
   BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

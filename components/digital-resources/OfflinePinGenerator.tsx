@@ -1,30 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Key, ShieldAlert, RefreshCw, Terminal, Clock, ShieldCheck, Loader2 } from "lucide-react";
+import { Key, ShieldAlert, RefreshCw, Terminal, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function OfflinePinGenerator() {
   const [pin, setPin] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
   const generatePin = async () => {
     setLoading(true);
-    setError(null);
     try {
       const response = await fetch("/api/offline/generate-pin", { method: "POST" });
       const data = await response.json();
       if (data.success) {
         setPin(data.pin);
         setExpiresAt(new Date(data.expiresAt).toLocaleTimeString());
-      } else {
-        setError(data.error || "Failed to generate PIN");
       }
-    } catch (err) {
-      setError("Network error occurred.");
+    } catch {
+      alert("Failed to generate PIN.");
     } finally {
       setLoading(false);
     }
@@ -41,7 +36,7 @@ export function OfflinePinGenerator() {
         setPin(null);
         alert("All offline sessions revoked.");
       }
-    } catch (err) {
+    } catch {
       alert("Failed to revoke sessions.");
     } finally {
       setLoading(false);

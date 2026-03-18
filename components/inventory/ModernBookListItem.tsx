@@ -5,7 +5,6 @@ import {
   Book as BookIcon, 
   MapPin, 
   Trash2, 
-  ChevronRight,
   Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

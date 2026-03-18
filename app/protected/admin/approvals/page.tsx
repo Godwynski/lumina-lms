@@ -75,7 +75,7 @@ export default function ApprovalsPage() {
     fetchCards();
   }, [fetchCards]);
 
-  const handleApprove = async (cardId: string, userId: string) => {
+  const handleApprove = async (cardId: string) => {
     setProcessingId(cardId);
     try {
       // 1. Update card status
@@ -267,7 +267,7 @@ export default function ApprovalsPage() {
                   <div className="flex gap-2">
                     {card.status === 'pending' && (
                       <button
-                        onClick={() => handleApprove(card.id, card.user_id)}
+                        onClick={() => handleApprove(card.id)}
                         disabled={!!processingId}
                         className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
@@ -293,7 +293,7 @@ export default function ApprovalsPage() {
 
                     {card.status === 'suspended' && (
                       <button
-                        onClick={() => handleApprove(card.id, card.user_id)}
+                        onClick={() => handleApprove(card.id)}
                         disabled={!!processingId}
                         className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >

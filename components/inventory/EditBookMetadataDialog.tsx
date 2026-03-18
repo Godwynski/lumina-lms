@@ -6,7 +6,6 @@ import { updateBook } from "@/lib/actions/catalog";
 import { 
   Dialog, 
   DialogContent, 
-  DialogHeader, 
   DialogTitle, 
   DialogDescription,
   DialogFooter
@@ -72,8 +71,8 @@ export function EditBookMetadataDialog({ book, isOpen, onOpenChange, onSuccess }
         onSuccess();
         onOpenChange(false);
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || "Failed to update asset metadata");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update asset metadata");
     } finally {
       setLoading(false);
     }

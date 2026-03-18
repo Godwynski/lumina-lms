@@ -5,7 +5,6 @@ import {
   Book as BookIcon, 
   MapPin, 
   Layers, 
-  ArrowRight, 
   Trash2, 
   Info,
   ChevronRight

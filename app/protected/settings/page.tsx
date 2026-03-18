@@ -10,7 +10,7 @@ export default function SettingsPage() {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [rememberDevice, setRememberDevice] = useState(true);
   const [compactTables, setCompactTables] = useState(false);
-  const [role, setRole] = useState<Role>("admin");
+  const [role] = useState<Role>("admin");
 
   useEffect(() => {
     setMounted(true);
