@@ -52,7 +52,11 @@ export default async function DigitalResourcesPage({
     .order("created_at", { ascending: false });
 
   if (query) {
-    resourcesQuery = resourcesQuery.ilike("title", `%${query}%`);
+    if (viewId) {
+      resourcesQuery = resourcesQuery.or(`title.ilike.%${query}%,id.eq.${viewId}`);
+    } else {
+      resourcesQuery = resourcesQuery.ilike("title", `%${query}%`);
+    }
   }
 
   const { data: resources } = await resourcesQuery;
@@ -77,7 +81,7 @@ export default async function DigitalResourcesPage({
             <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] px-5 py-2 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-100/50 dark:border-indigo-800/50 rounded-full shadow-sm">
               {selectedResource.type}
             </span>
-            {isAdmin && (
+            {isLibrarian && (
               <EditResourceMetadataDialog
                 resource={selectedResource}
                 categories={categories || []}
