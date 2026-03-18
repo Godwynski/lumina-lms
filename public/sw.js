@@ -5,8 +5,8 @@
 //   Heartbeat API        → NetworkOnly (never cache)
 //   Everything else      → StaleWhileRevalidate
 
-const CACHE_NAME = 'lumina-v3';
-const STATIC_CACHE = 'lumina-static-v3';
+const CACHE_NAME = 'lumina-v4';
+const STATIC_CACHE = 'lumina-static-v4';
 
 // Pages to pre-cache on install (the app shell + offline-accessible routes)
 const PRE_CACHE_URLS = [
@@ -59,7 +59,14 @@ self.addEventListener('fetch', (event) => {
     return; // fall through to browser default (network only)
   }
 
-  // 3. CacheFirst for Next.js static assets & images (long-lived, hash-named)
+  // 3. CRITICAL: Never intercept auth routes — OAuth callbacks carry one-time
+  //    codes that are invalidated after first use. Any SW caching or
+  //    interception will break the Microsoft/Azure OAuth flow.
+  if (url.pathname.startsWith('/auth/')) {
+    return; // fall through to browser default (network only)
+  }
+
+  // 4. CacheFirst for Next.js static assets & images (long-lived, hash-named)
   if (
     url.pathname.startsWith('/_next/static') ||
     url.pathname.startsWith('/_next/image') ||
@@ -77,7 +84,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4. NetworkFirst for navigation (HTML pages)
+  // 5. NetworkFirst for navigation (HTML pages)
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -100,7 +107,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 5. StaleWhileRevalidate for API routes that can show stale data
+  // 6. StaleWhileRevalidate for API routes that can show stale data
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       (async () => {
