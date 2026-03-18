@@ -49,7 +49,7 @@ const DASHBOARD_LINK: NavItem = {
 
 const SETTINGS_LINK: NavItem = {
   href: "/protected/settings",
-  label: "Settings Hub",
+  label: "Settings",
   icon: Settings,
   roles: ["admin", "librarian", "staff", "student"],
 };
@@ -104,7 +104,6 @@ const NAV_GROUPS = [
         roles: ["admin"],
         children: [
           { href: "/protected/audit", label: "Audit Logs", icon: ShieldCheck, roles: ["admin"] },
-          { href: "/protected/settings", label: "System Config", icon: Settings, roles: ["admin"] },
         ],
       },
     ]
