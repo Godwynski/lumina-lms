@@ -1,35 +1,31 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 interface RenewalRequest {
   borrowingRecordId: string;
-}
-
-async function getSystemSetting(supabase: any, key: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("system_settings")
-    .select("value")
-    .eq("key", key)
-    .single();
-  return data?.value || null;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!user?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.user.id)
+      .eq("id", user.id)
       .single();
 
-    if (!["librarian", "staff"].includes(profile?.role)) {
+    if (!["admin", "librarian", "staff"].includes(profile?.role ?? "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -43,78 +39,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch policy settings
-    const maxRenewalCount = parseInt(
-      (await getSystemSetting(supabase, "max_renewal_count")) || "3"
-    );
-    const renewalPeriodDays = parseInt(
-      (await getSystemSetting(supabase, "renewal_period_days")) || "14"
-    );
-
-    // Get borrowing record
-    const { data: borrow, error: borrowError } = await supabase
-      .from("borrowing_records")
-      .select("*")
-      .eq("id", borrowingRecordId)
-      .single();
-
-    if (borrowError) {
+    if (!UUID_RE.test(borrowingRecordId)) {
       return NextResponse.json(
-        { ok: false, message: "Borrowing record not found" },
-        { status: 404 }
-      );
-    }
-
-    if (borrow.status !== "ACTIVE") {
-      return NextResponse.json(
-        { ok: false, message: `Cannot renew a ${borrow.status} borrowing record` },
+        { ok: false, message: "borrowingRecordId must be a valid UUID" },
         { status: 400 }
       );
     }
 
-    if (borrow.renewal_count >= maxRenewalCount) {
-      return NextResponse.json(
-        { ok: false, message: `Maximum renewal count of ${maxRenewalCount} exceeded` },
-        { status: 400 }
-      );
-    }
-
-    // Calculate new due date
-    const newDueDate = new Date(borrow.due_date);
-    newDueDate.setDate(newDueDate.getDate() + renewalPeriodDays);
-
-    // Create renewal record
-    const { data: renewal, error: renewalError } = await supabase
-      .from("renewals")
-      .insert([
-        {
-          borrowing_record_id: borrowingRecordId,
-          renewed_by: user.user.id,
-          new_due_date: newDueDate.toISOString(),
-        },
-      ])
-      .select()
-      .single();
-
-    if (renewalError) throw renewalError;
-
-    // Update borrowing record
-    const { error: updateError } = await supabase
-      .from("borrowing_records")
-      .update({
-        due_date: newDueDate.toISOString(),
-        renewal_count: borrow.renewal_count + 1,
-      })
-      .eq("id", borrowingRecordId);
-
-    if (updateError) throw updateError;
-
-    return NextResponse.json({
-      ok: true,
-      renewal_id: renewal.id,
-      new_due_date: newDueDate.toISOString(),
-      renewal_count: borrow.renewal_count + 1,
+    const { data, error } = await supabase.rpc("renew_borrowing_atomic", {
+      p_actor_id: user.id,
+      p_borrowing_record_id: borrowingRecordId,
     });
+
+    if (error) throw error;
+
+    const result = (data ?? {}) as {
+      ok?: boolean;
+      code?: string;
+      message?: string;
+      renewal_id?: string;
+      new_due_date?: string;
+      renewal_count?: number;
+    };
+
+    if (!result.ok) {
+      const statusByCode: Record<string, number> = {
+        INVALID_INPUT: 400,
+        FORBIDDEN: 403,
+        BORROW_NOT_FOUND: 404,
+        BORROW_NOT_ACTIVE: 400,
+        MAX_RENEWAL_EXCEEDED: 409,
+      };
+
+      return NextResponse.json(
+        { ok: false, message: result.message || "Renewal failed", code: result.code },
+        { status: statusByCode[result.code ?? ""] ?? 400 }
+      );
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Renewal error:", error);
     return NextResponse.json(

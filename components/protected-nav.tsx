@@ -29,15 +29,21 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: Role[];
+  roles: Exclude<Role, null>[];
 };
 
-type NavSection = {
+type GroupSection = {
   id: string;
   label: string;
   icon: React.ElementType;
-  roles: Role[];
+  roles: Exclude<Role, null>[];
   children: NavItem[];
+};
+
+type NavGroup = {
+  label: string;
+  roles: Exclude<Role, null>[];
+  sections: GroupSection[];
 };
 
 const DASHBOARD_LINK: NavItem = {
@@ -54,7 +60,7 @@ const SETTINGS_LINK: NavItem = {
   roles: ["admin", "librarian", "staff", "student"],
 };
 
-const NAV_GROUPS = [
+const NAV_GROUPS: NavGroup[] = [
   {
     label: "Library Operations",
     roles: ["admin", "librarian", "staff", "student"],
@@ -155,8 +161,8 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-function sectionHasActive(pathname: string, section: any) {
-  return section.children.some((item: any) => isActive(pathname, item.href));
+function sectionHasActive(pathname: string, section: GroupSection) {
+  return section.children.some((item) => isActive(pathname, item.href));
 }
 
 function CollapsibleSection({
@@ -166,7 +172,7 @@ function CollapsibleSection({
   onToggle,
   onItemClick,
 }: {
-  section: any;
+  section: GroupSection;
   pathname: string;
   isExpanded: boolean;
   onToggle: () => void;
@@ -220,7 +226,7 @@ function CollapsibleSection({
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden pl-10 pr-2 space-y-0.5"
           >
-            {section.children.map((item: any) => {
+            {section.children.map((item) => {
               const active = isActive(pathname, item.href);
               const ItemIcon = item.icon;
               return (
@@ -293,7 +299,8 @@ export function ProtectedNav({
     if (savedExpanded) {
       try {
         setExpandedSections(JSON.parse(savedExpanded));
-      } catch (e) {}
+      } catch {
+      }
     }
   }, []);
 
@@ -309,7 +316,7 @@ export function ProtectedNav({
         }
       });
     });
-  }, [pathname, filteredGroups]);
+  }, [pathname, filteredGroups, expandedSections]);
 
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {

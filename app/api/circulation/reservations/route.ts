@@ -1,128 +1,84 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 interface ReservationRequest {
   bookId: string;
-  userId: string;
-}
-
-async function getSystemSetting(supabase: any, key: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("system_settings")
-    .select("value")
-    .eq("key", key)
-    .single();
-  return data?.value || null;
+  userId?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!user?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body: ReservationRequest = await request.json();
     const { bookId, userId } = body;
 
-    if (!bookId || !userId) {
+    if (!bookId) {
       return NextResponse.json(
-        { ok: false, message: "bookId and userId are required" },
+        { ok: false, message: "bookId is required" },
         { status: 400 }
       );
     }
 
-    // Get hold_expiry_days policy
-    const holdExpiryDays = parseInt(
-      (await getSystemSetting(supabase, "hold_expiry_days")) || "7"
-    );
-
-    // Check if book exists
-    const { data: book, error: bookError } = await supabase
-      .from("books")
-      .select("id, available_copies")
-      .eq("id", bookId)
-      .single();
-
-    if (bookError) {
+    if (!UUID_RE.test(bookId)) {
       return NextResponse.json(
-        { ok: false, message: "Book not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check if user already has a reservation for this book
-    const { data: existing } = await supabase
-      .from("reservations")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("book_id", bookId)
-      .eq("status", "ACTIVE")
-      .single();
-
-    if (existing) {
-      return NextResponse.json(
-        { ok: false, message: "User already has an active reservation for this book" },
+        { ok: false, message: "bookId must be a valid UUID" },
         { status: 400 }
       );
     }
 
-    // Get queue position (count existing reservations + 1)
-    const { count: queueCount } = await supabase
-      .from("reservations")
-      .select("*", { count: "exact" })
-      .eq("book_id", bookId)
-      .eq("status", "ACTIVE");
+    if (userId && !UUID_RE.test(userId)) {
+      return NextResponse.json(
+        { ok: false, message: "userId must be a valid UUID" },
+        { status: 400 }
+      );
+    }
 
-    const queuePosition = (queueCount || 0) + 1;
-
-    // Calculate hold expiry date
-    const holdExpiresAt = new Date();
-    holdExpiresAt.setDate(holdExpiresAt.getDate() + holdExpiryDays);
-
-    // Create reservation
-    const { data: reservation, error: reservationError } = await supabase
-      .from("reservations")
-      .insert([
-        {
-          user_id: userId,
-          book_id: bookId,
-          status: "ACTIVE",
-          reserved_at: new Date().toISOString(),
-          hold_expires_at: holdExpiresAt.toISOString(),
-          queue_position: queuePosition,
-        },
-      ])
-      .select()
-      .single();
-
-    if (reservationError) throw reservationError;
-
-    // Log audit entry
-    await supabase.from("audit_logs").insert([
-      {
-        admin_id: user.user.id,
-        entity_type: "reservation",
-        entity_id: reservation.id,
-        action: "create",
-        new_value: JSON.stringify({
-          user_id: userId,
-          book_id: bookId,
-          queue_position: queuePosition,
-        }),
-        reason: "User made a book reservation",
-      },
-    ]);
-
-    return NextResponse.json({
-      ok: true,
-      reservation_id: reservation.id,
-      queue_position: queuePosition,
-      hold_expires_at: holdExpiresAt.toISOString(),
-      hold_expiry_days: holdExpiryDays,
+    const { data, error } = await supabase.rpc("create_reservation_atomic", {
+      p_actor_id: user.id,
+      p_book_id: bookId,
+      p_target_user_id: userId ?? null,
     });
+
+    if (error) throw error;
+
+    const result = (data ?? {}) as {
+      ok?: boolean;
+      code?: string;
+      message?: string;
+      reservation_id?: string;
+      queue_position?: number;
+      hold_expires_at?: string;
+      hold_expiry_days?: number;
+    };
+
+    if (!result.ok) {
+      const statusByCode: Record<string, number> = {
+        INVALID_INPUT: 400,
+        FORBIDDEN: 403,
+        UNAUTHORIZED: 401,
+        TARGET_USER_NOT_FOUND: 404,
+        BOOK_NOT_FOUND: 404,
+        DUPLICATE_ACTIVE_RESERVATION: 409,
+      };
+
+      return NextResponse.json(
+        { ok: false, message: result.message || "Reservation failed", code: result.code },
+        { status: statusByCode[result.code ?? ""] ?? 400 }
+      );
+    }
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Reservation error:", error);
     return NextResponse.json(
@@ -136,6 +92,21 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isStaff = Boolean(profile && ["admin", "librarian", "staff"].includes(profile.role));
 
     const searchParams = request.nextUrl.searchParams;
     const bookId = searchParams.get("bookId");
@@ -147,7 +118,12 @@ export async function GET(request: NextRequest) {
       query = query.eq("book_id", bookId);
     }
     if (userId) {
+      if (!isStaff && userId !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       query = query.eq("user_id", userId);
+    } else if (!isStaff) {
+      query = query.eq("user_id", user.id);
     }
 
     const { data, error } = await query.order("queue_position");

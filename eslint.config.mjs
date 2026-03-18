@@ -14,6 +14,12 @@ const eslintConfig = [
     ignores: [".next/*"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["components/qr-printer-modal.tsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

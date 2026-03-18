@@ -23,7 +23,7 @@ export default async function AdminSettingsRedirect({
     .eq("id", user.user.id)
     .single();
 
-  if (profile?.role !== "admin") redirect("/protected/dashboard");
+  if (profile?.role !== "admin") redirect("/protected");
 
   const params = await searchParams;
   const tab = params?.tab;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import type { LucideIcon } from "lucide-react";
 
 type Role = "admin" | "librarian" | "staff" | "student";
 
@@ -60,6 +62,14 @@ const ADMIN_TABS = [
 type TabId =
   | (typeof PERSONAL_TABS)[number]["id"]
   | (typeof ADMIN_TABS)[number]["id"];
+
+type NavTab = {
+  id: TabId;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  section: "personal" | "admin";
+};
 
 export default function SettingsPageClient({ isAdmin, role, settings, categories }: Props) {
   const router = useRouter();
@@ -122,8 +132,10 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
   };
 
   const allTabs = useMemo(() => {
-    const personal = PERSONAL_TABS.map(t => ({ ...t, section: 'personal' }));
-    const admin = isAdmin ? ADMIN_TABS.map(t => ({ ...t, section: 'admin' })) : [];
+    const personal: NavTab[] = PERSONAL_TABS.map((t) => ({ ...t, section: "personal" }));
+    const admin: NavTab[] = isAdmin
+      ? ADMIN_TABS.map((t) => ({ ...t, section: "admin" }))
+      : [];
     return [...personal, ...admin];
   }, [isAdmin]);
 
@@ -147,10 +159,12 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
         className="relative mb-10 h-72 w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-zinc-900 shadow-2xl"
       >
         <div className="absolute inset-0">
-          <img 
-            src="/images/settings-bg.png" 
-            alt="Profile Background" 
-            className="h-full w-full object-cover opacity-60 mix-blend-overlay"
+          <Image
+            src="/images/settings-bg.png"
+            alt="Profile Background"
+            fill
+            sizes="100vw"
+            className="object-cover opacity-60 mix-blend-overlay"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-900/40 to-transparent" />
         </div>
@@ -440,9 +454,9 @@ function SectionNav({
   onChange 
 }: { 
   title: string; 
-  items: any[]; 
-  activeId: string; 
-  onChange: (id: any) => void 
+  items: NavTab[];
+  activeId: TabId;
+  onChange: (id: TabId) => void;
 }) {
   if (items.length === 0) return null;
   
@@ -486,7 +500,7 @@ function SectionNav({
   );
 }
 
-function Section({ title, icon: Icon, children, danger }: { title: string; icon: any; children: React.ReactNode; danger?: boolean }) {
+function Section({ title, icon: Icon, children, danger }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 pb-4 border-b border-zinc-100">
@@ -533,7 +547,7 @@ function PremiumToggle({ title, description, checked, onChange }: { title: strin
   );
 }
 
-function StatusIndicator({ icon: Icon, label, value, color }: { icon: any, label: string, value: string, color: string }) {
+function StatusIndicator({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string; color: string }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">

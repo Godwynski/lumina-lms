@@ -87,7 +87,7 @@ export default async function MyCardPage() {
           </div>
           <h2 className="text-xl font-bold text-zinc-900">Finalizing Setup...</h2>
           <p className="text-zinc-500 mt-2 max-w-xs">
-            We're still setting up your secure identity. Please refresh this page in a few seconds.
+            We&apos;re still setting up your secure identity. Please refresh this page in a few seconds.
           </p>
           <a 
             href="/protected/my-card"

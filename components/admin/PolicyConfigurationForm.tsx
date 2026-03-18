@@ -44,7 +44,7 @@ export function PolicyConfigurationForm({
 
     try {
       const value = formData[key];
-      const description = (DEFAULT_POLICIES as any)[key]?.description;
+      const description = DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.description;
 
       const response = await fetch("/api/admin/policy-settings", {
         method: "POST",

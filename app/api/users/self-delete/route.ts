@@ -36,6 +36,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const rpcSuccess = Boolean(data && typeof data === "object" && "success" in data && (data as { success?: boolean }).success);
+    if (!rpcSuccess) {
+      const message =
+        data && typeof data === "object" && "message" in data && typeof (data as { message?: unknown }).message === "string"
+          ? (data as { message: string }).message
+          : "Deletion procedure did not complete";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     // Sign out the user after deletion
     await supabase.auth.signOut();
 

@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 
+type ProfileRole = "admin" | "librarian" | "staff" | "student";
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
@@ -59,6 +61,26 @@ export async function POST(request: Request) {
             "PIN invalidated due to multiple failed attempts. Librarian notified. Please return to the library desk.",
         },
         { status: 429 }
+      );
+    }
+
+    const { data: targetProfile, error: targetProfileError } = await supabase
+      .from("profiles")
+      .select("id, role")
+      .eq("student_id", normalizedStudentId)
+      .single();
+
+    if (targetProfileError || !targetProfile) {
+      return NextResponse.json(
+        { error: "Invalid student ID. Please return to the desk." },
+        { status: 401 }
+      );
+    }
+
+    if ((targetProfile.role as ProfileRole) !== "student") {
+      return NextResponse.json(
+        { error: "Offline emergency PIN is available for students only." },
+        { status: 403 }
       );
     }
 
@@ -137,9 +159,8 @@ export async function POST(request: Request) {
     const { error: sessionError } = await supabase
       .from("offline_sessions")
       .insert({
-        user_id: currentPin.user_id,
+        user_id: targetProfile.id,
         session_token: sessionToken,
-        student_id: normalizedStudentId,
       });
 
     if (sessionError) throw sessionError;
@@ -158,7 +179,7 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PIN validation error:", error);
     return NextResponse.json({ error: "Validation failed" }, { status: 500 });
   }

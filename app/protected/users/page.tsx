@@ -30,6 +30,16 @@ type User = {
   joined: string;
 };
 
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: string | null;
+  status: string | null;
+  department: string | null;
+  created_at: string | null;
+};
+
 export default function UsersPage() {
   const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState<User[]>([]);
@@ -44,6 +54,29 @@ export default function UsersPage() {
   const [activeView, setActiveView] = useState<"directory" | "permissions">("directory");
   const [isMatrixDirty, setIsMatrixDirty] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+
+  const mapProfileToUser = (row: ProfileRow): User => ({
+    id: String(row.id ?? ""),
+    name:
+      (typeof row.full_name === "string" && row.full_name.trim()) ||
+      (typeof row.email === "string"
+        ? row.email
+            .split("@")[0]
+            .split(".")
+            .map((part: string) => (part ? part[0].toUpperCase() + part.slice(1) : ""))
+            .join(" ")
+        : "Unnamed User"),
+    email: typeof row.email === "string" ? row.email : "",
+    role: ["admin", "librarian", "staff", "student"].includes(String(row.role))
+      ? (String(row.role) as User["role"])
+      : "student",
+    status: typeof row.status === "string" ? row.status : "active",
+    department: typeof row.department === "string" && row.department.trim() ? row.department : "General",
+    joined:
+      typeof row.created_at === "string"
+        ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+        : "Unknown",
+  });
 
   // Invitation Form State
   const [inviteEmail, setInviteEmail] = useState("");
@@ -87,28 +120,7 @@ export default function UsersPage() {
           throw new Error(error.message || "Failed to load users");
         }
 
-        const nextUsers = (data ?? []).map((row: any) => ({
-          id: String(row.id ?? ""),
-          name:
-            (typeof row.full_name === "string" && row.full_name.trim()) ||
-            (typeof row.email === "string"
-              ? row.email
-                  .split("@")[0]
-                  .split(".")
-                  .map((part: string) => (part ? part[0].toUpperCase() + part.slice(1) : ""))
-                  .join(" ")
-              : "Unnamed User"),
-          email: typeof row.email === "string" ? row.email : "",
-          role: ["admin", "librarian", "staff", "student"].includes(String(row.role))
-            ? (String(row.role) as User["role"])
-            : "student",
-          status: typeof row.status === "string" ? row.status : "active",
-          department: typeof row.department === "string" && row.department.trim() ? row.department : "General",
-          joined:
-            typeof row.created_at === "string"
-              ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-              : "Unknown",
-        }));
+        const nextUsers = ((data ?? []) as ProfileRow[]).map(mapProfileToUser);
 
         setUsers(nextUsers);
       } catch (error) {
@@ -253,7 +265,7 @@ export default function UsersPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Users & Roles</h1>
           <p className="text-zinc-500 text-sm">
-            Manage your organization's directory and access control.
+            Manage your organization&apos;s directory and access control.
           </p>
           
           {/* Navigation Tabs */}
@@ -264,7 +276,7 @@ export default function UsersPage() {
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveView(tab.id as any)}
+                    onClick={() => setActiveView(tab.id as "directory" | "permissions")}
                 className={cn(
                   "flex items-center gap-2 pb-3 text-sm font-semibold transition-all relative",
                   activeView === tab.id 
@@ -776,7 +788,7 @@ export default function UsersPage() {
   );
 }
 
-function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: boolean) => void, users: any[] }) {
+function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: boolean) => void; users: User[] }) {
   const [editingRole, setEditingRole] = useState<string>("librarian");
 
   const MODULES = [
@@ -850,7 +862,7 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
 
                 <h4 className="font-bold text-lg text-zinc-900 leading-tight">{role.label}</h4>
                 <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed italic">
-                  "{ROLES.find(r => r.id === role.id)?.desc}"
+                  &quot;{ROLES.find((r) => r.id === role.id)?.desc}&quot;
                 </p>
 
                 {editingRole === role.id && (
@@ -863,7 +875,7 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
           <div className="bg-indigo-600 rounded-[32px] p-6 shadow-xl shadow-indigo-200 text-white animate-in zoom-in-95 duration-300">
             <h5 className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 mb-4">Member Inspector</h5>
             <div className="flex -space-x-3 mb-4">
-              {roleMembers.map((m, i) => (
+              {roleMembers.map((m) => (
                 <div key={m.id} className="h-9 w-9 rounded-full bg-white/20 border-2 border-indigo-600 flex items-center justify-center text-[10px] font-bold backdrop-blur-sm">
                   {m.name.charAt(0)}
                 </div>
@@ -967,8 +979,18 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
   );
 }
 
-function StatCard({ label, value, icon: Icon, color }: any) {
-  const colors: any = {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  color: "indigo" | "emerald" | "amber" | "red";
+}) {
+  const colors: Record<"indigo" | "emerald" | "amber" | "red", string> = {
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
     emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
     amber: "bg-amber-50 text-amber-600 border-amber-100",
@@ -989,7 +1011,7 @@ function StatCard({ label, value, icon: Icon, color }: any) {
 }
 
 function RoleBadge({ role }: { role: string }) {
-  const styles: any = {
+  const styles: Record<string, string> = {
     admin: "bg-indigo-600 text-white",
     librarian: "bg-blue-100 text-blue-700",
     staff: "bg-purple-100 text-purple-700",
@@ -1003,12 +1025,12 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: any = {
+  const styles: Record<string, string> = {
     active: "text-emerald-600",
     pending: "text-amber-600",
     suspended: "text-red-500",
   };
-  const label: any = {
+  const label: Record<string, string> = {
     active: "Active Account",
     pending: "Verification Required",
     suspended: "Access Revoked",
@@ -1019,28 +1041,6 @@ function StatusBadge({ status }: { status: string }) {
       <span className={cn("text-[11px] font-semibold", styles[status])}>
         {label[status]}
       </span>
-    </div>
-  );
-}
-
-function InfoRow({ icon: Icon, label, value, editable }: any) {
-  return (
-    <div className="flex items-center justify-between group">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-zinc-50 text-zinc-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
-          <Icon size={16} />
-        </div>
-        <span className="text-sm text-zinc-500">{label}</span>
-      </div>
-      {editable ? (
-        <input 
-          type="text" 
-          defaultValue={value} 
-          className="text-sm font-semibold text-zinc-900 border-b border-indigo-200 outline-none bg-transparent text-right"
-        />
-      ) : (
-        <span className="text-sm font-semibold text-zinc-900">{value}</span>
-      )}
     </div>
   );
 }

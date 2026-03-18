@@ -15,21 +15,14 @@ interface GraduationCleanupResult {
   }>;
 }
 
-async function getSystemSetting(supabase: any, key: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("system_settings")
-    .select("value")
-    .eq("key", key)
-    .single();
-  return data?.value || null;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!user?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -37,7 +30,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.user.id)
+      .eq("id", user.id)
       .single();
 
     if (profile?.role !== "admin") {
@@ -99,7 +92,7 @@ export async function POST(request: NextRequest) {
             // Log audit entry
             await supabase.from("audit_logs").insert([
               {
-                admin_id: user.user.id,
+                admin_id: user.id,
                 entity_type: "profile",
                 entity_id: student.id,
                 action: "update",

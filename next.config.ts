@@ -12,6 +12,13 @@ const nextConfig = {
       },
     ],
   },
-} satisfies NextConfig;
+  experimental: {
+    allowedDevOrigins: ['localhost', '127.0.0.1'],
+  },
+} satisfies NextConfig & {
+  experimental?: NextConfig["experimental"] & {
+    allowedDevOrigins?: string[];
+  };
+};
 
 export default nextConfig;

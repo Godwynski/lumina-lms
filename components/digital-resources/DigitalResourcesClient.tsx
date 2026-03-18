@@ -14,9 +14,22 @@ import { Input } from "@/components/ui/input";
 import { UploadAction } from "./UploadAction";
 import Image from "next/image";
 
+type Category = { id: string; name: string };
+
+type ResourceItem = {
+  id: string;
+  title: string;
+  author: string;
+  type: string;
+  access_level: string;
+  created_at: string;
+  published_year?: number | null;
+  categories?: { name?: string | null } | null;
+};
+
 interface DigitalResourcesClientProps {
-  resources: any[] | null;
-  categories: any[];
+  resources: ResourceItem[] | null;
+  categories: Category[];
   isLibrarian: boolean;
   query?: string;
 }
@@ -58,7 +71,7 @@ export function DigitalResourcesClient({
               Explore the <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Digital Archive</span>
             </h1>
             <p className="text-zinc-300 max-w-xl text-lg leading-relaxed mb-8">
-              Access the school's high-performance repository of curated academic assets, zero-latency research materials, and historical archives.
+              Access the school&apos;s high-performance repository of curated academic assets, zero-latency research materials, and historical archives.
             </p>
           </motion.div>
         </div>

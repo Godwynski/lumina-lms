@@ -130,6 +130,12 @@ interface GDPRHardDeleteProps {
   userName?: string;
 }
 
+type GdprDeleteResult = {
+  user_id: string;
+  deleted_at: string;
+  retained_borrow_count: number;
+};
+
 export function GDPRHardDeleteDialog({
   userId,
   userName,
@@ -139,7 +145,7 @@ export function GDPRHardDeleteDialog({
   const [confirming, setConfirming] = useState(false);
   const [reason, setReason] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<GdprDeleteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {

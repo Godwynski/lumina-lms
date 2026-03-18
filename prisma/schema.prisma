@@ -4,7 +4,9 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
+  // Runtime: Supavisor connection pooler (serverless-safe, port 6543)
   url       = env("DATABASE_URL")
+  // Migrations: direct DB connection (port 5432), bypasses PgBouncer
   directUrl = env("DIRECT_URL")
 }
 

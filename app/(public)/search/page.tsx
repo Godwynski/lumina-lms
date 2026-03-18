@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getPublicBooksCached } from '@/lib/actions/public-catalog';
 import { Filter, Search, X } from 'lucide-react';
 import { getCategories } from '@/lib/actions/catalog';
@@ -107,9 +108,15 @@ export default function PublicSearchPage() {
         {books.map(book => (
           <Link key={book.id} href={`/book/${book.id}`} className="block">
             <div className="border rounded-lg p-4 hover:shadow-md transition-shadow flex gap-4 bg-white">
-              <div className="w-16 h-24 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
+              <div className="w-16 h-24 bg-gray-200 rounded-md overflow-hidden flex-shrink-0 relative">
                 {book.cover_url ? (
-                   <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                  <Image
+                    src={book.cover_url}
+                    alt={book.title}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
                 ) : (
                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">No Cover</div>
                 )}

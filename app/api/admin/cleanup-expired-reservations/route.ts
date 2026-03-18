@@ -4,15 +4,32 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     // Allow either authenticated user or internal/cron call
     const authHeader = request.headers.get("authorization");
-    const hasInternalAuth = authHeader?.includes("Bearer ") &&
-      authHeader === `Bearer ${process.env.INTERNAL_CRON_SECRET}`;
+    const hasInternalAuth = Boolean(
+      authHeader &&
+        process.env.INTERNAL_CRON_SECRET &&
+        authHeader === `Bearer ${process.env.INTERNAL_CRON_SECRET}`
+    );
 
-    if (!user?.user?.id && !hasInternalAuth) {
+    if (!user?.id && !hasInternalAuth) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!hasInternalAuth && user?.id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || !["admin", "librarian"].includes(profile.role)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     // Get expired reservations (hold_expires_at < now())

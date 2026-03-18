@@ -62,6 +62,15 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    const rpcSuccess = Boolean(data && typeof data === "object" && "success" in data && (data as { success?: boolean }).success);
+    if (!rpcSuccess) {
+      const message =
+        data && typeof data === "object" && "message" in data && typeof (data as { message?: unknown }).message === "string"
+          ? (data as { message: string }).message
+          : "Deletion procedure did not complete";
+      return NextResponse.json({ error: message, success: false }, { status: 400 });
+    }
+
     // Log the deletion action in our app
     await supabase.from("audit_logs").insert([
       {

@@ -16,7 +16,7 @@ const PRE_CACHE_URLS = [
   '/offline-landing',
   '/protected/catalog',
   '/protected/my-card',
-  '/protected/my-borrowing-history',
+  '/protected/history',
 ];
 
 // ─── Install ────────────────────────────────────────────────────────────────

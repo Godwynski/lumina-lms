@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { getBookById } from '@/lib/actions/catalog';
 import { reportMissingBook } from '@/lib/actions/public-catalog';
 import { 
@@ -15,13 +16,19 @@ import {
   Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Book } from '@/lib/types';
+
+type StudentBook = Book & {
+  section?: string | null;
+  tags?: string[];
+};
 
 export default function StudentBookDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
   
-  const [book, setBook] = useState<any>(null);
+  const [book, setBook] = useState<StudentBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reported, setReported] = useState(false);
@@ -88,10 +95,12 @@ export default function StudentBookDetailPage() {
         <div className="w-full md:w-2/5 flex-shrink-0">
           <div className="aspect-[3/4] bg-zinc-50 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center border border-zinc-100 relative group">
             {book.cover_url ? (
-              <img 
-                src={book.cover_url} 
-                alt={book.title} 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              <Image
+                src={book.cover_url}
+                alt={book.title}
+                fill
+                sizes="(min-width: 768px) 40vw, 100vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
               />
             ) : (
               <BookOpen className="w-20 h-20 text-zinc-200" />
@@ -149,7 +158,11 @@ export default function StudentBookDetailPage() {
                 <Tag className="w-3 h-3" />
                 Category
               </span>
-              <p className="text-sm font-bold text-zinc-700">{book.categories?.name || 'Uncategorized'}</p>
+              <p className="text-sm font-bold text-zinc-700">
+                {Array.isArray(book.categories)
+                  ? book.categories[0]?.name || 'Uncategorized'
+                  : book.categories?.name || 'Uncategorized'}
+              </p>
             </div>
           </div>
 

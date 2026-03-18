@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
+import Image from 'next/image';
 import { 
   Search, 
   Filter, 
@@ -15,10 +16,26 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
+type CatalogBook = {
+  id: string;
+  title: string;
+  author: string;
+  isbn?: string | null;
+  cover_url?: string | null;
+  available_copies: number;
+  total_copies: number;
+  section?: string | null;
+};
+
+type CatalogCategory = {
+  id: string;
+  name: string;
+};
+
 export default function StudentCatalogPage() {
   const [query, setQuery] = useState('');
-  const [books, setBooks] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [books, setBooks] = useState<CatalogBook[]>([]);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
@@ -31,7 +48,7 @@ export default function StudentCatalogPage() {
   const [selectedSection, setSelectedSection] = useState('');
 
   const observer = useRef<IntersectionObserver | null>(null);
-  const lastBookElementRef = useCallback((node: any) => {
+  const lastBookElementRef = useCallback((node: HTMLAnchorElement | null) => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
@@ -70,12 +87,11 @@ export default function StudentCatalogPage() {
     loadCategories();
   }, []);
 
-  const loadBooks = useCallback(async (isNewSearch = false) => {
+  const loadBooks = useCallback(async (isNewSearch = false, currentPage = 1) => {
     if (isOffline && !isNewSearch) return;
     
     setLoading(true);
     try {
-      const currentPage = isNewSearch ? 1 : page;
       const result = await getPublicBooksCached(
         query,
         selectedCategory,
@@ -95,17 +111,18 @@ export default function StudentCatalogPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, selectedCategory, selectedSection, availableOnly, page, isOffline]);
+  }, [query, selectedCategory, selectedSection, availableOnly, isOffline]);
 
   useEffect(() => {
-    loadBooks(true);
-  }, [query, selectedCategory, selectedSection, availableOnly]);
+    setPage(1);
+    void loadBooks(true, 1);
+  }, [query, selectedCategory, selectedSection, availableOnly, loadBooks]);
 
   useEffect(() => {
     if (page > 1) {
-      loadBooks(false);
+      void loadBooks(false, page);
     }
-  }, [page]);
+  }, [page, loadBooks]);
 
   const clearFilters = () => {
     setSelectedCategory('');
@@ -198,10 +215,12 @@ export default function StudentCatalogPage() {
               {/* Cover Preview */}
               <div className="w-24 h-32 bg-zinc-50 rounded-xl overflow-hidden shadow-inner flex-shrink-0 relative">
                 {book.cover_url ? (
-                  <img 
-                    src={book.cover_url} 
-                    alt={book.title} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  <Image
+                    src={book.cover_url}
+                    alt={book.title}
+                    fill
+                    sizes="96px"
+                    className="object-cover transition-transform group-hover:scale-105"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">

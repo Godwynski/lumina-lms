@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { getBookById, getBookCopies, createBookCopy, updateBookCopyStatus } from '@/lib/actions/catalog';
 import { 
@@ -30,10 +30,12 @@ const STATUS_CONFIG = {
   'LOST': { label: 'Lost', icon: SearchX, color: 'text-red-600', bg: 'bg-red-50' },
 };
 
+function isBookCopyStatus(value: string): value is BookCopy['status'] {
+  return value === 'AVAILABLE' || value === 'BORROWED' || value === 'MAINTENANCE' || value === 'LOST';
+}
+
 export default function StaffBookManagementPage() {
   const params = useParams();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const router = useRouter();
   const id = params.id as string;
   
   const [book, setBook] = useState<Book | null>(null);
@@ -75,9 +77,9 @@ export default function StaffBookManagementPage() {
     }
   };
 
-  const handleStatusChange = async (copyId: string, newStatus: string) => {
+  const handleStatusChange = async (copyId: string, newStatus: BookCopy['status']) => {
     try {
-      await updateBookCopyStatus(copyId, newStatus as any);
+      await updateBookCopyStatus(copyId, newStatus);
       const updatedCopies = await getBookCopies(id);
       setCopies(updatedCopies);
       const updatedBook = await getBookById(id);
@@ -217,7 +219,10 @@ export default function StaffBookManagementPage() {
                   <div className="flex flex-wrap items-center gap-3">
                      <select 
                       value={copy.status}
-                      onChange={(e) => handleStatusChange(copy.id, e.target.value)}
+                      onChange={(e) => {
+                        if (!isBookCopyStatus(e.target.value)) return;
+                        void handleStatusChange(copy.id, e.target.value);
+                      }}
                       className="bg-zinc-50 border border-zinc-200 text-zinc-600 text-[11px] font-bold p-2 h-10 px-4 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
                     >
                       {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
@@ -227,8 +232,7 @@ export default function StaffBookManagementPage() {
 
                     <QRPrinterModal 
                       qrString={copy.qr_string} 
-                      bookTitle={book.title} 
-                      bookId={book.id} 
+                      bookTitle={book.title}
                     />
                   </div>
                 </div>

@@ -40,7 +40,7 @@ export async function POST() {
       message: "All offline sessions have been revoked and active PINs invalidated." 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Session revocation error:", error);
     return NextResponse.json({ error: "Failed to revoke sessions" }, { status: 500 });
   }
