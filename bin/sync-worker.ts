@@ -38,8 +38,6 @@ async function syncUsers() {
         continue;
       }
 
-      let profileId = profile?.id;
-
       if (!profile) {
         console.log(`Creating profile for new user ${user.email}...`);
         
@@ -50,22 +48,19 @@ async function syncUsers() {
           studentId = emailMatch[1];
         }
 
-        const { data: newProfile, error: createProfileError } = await supabase
+        const { error: createProfileError } = await supabase
           .from('profiles')
           .insert({
             id: user.id,
             full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
             student_id: studentId,
             role: 'student'
-          })
-          .select()
-          .single();
+          });
 
         if (createProfileError) {
           console.error(`Error creating profile for ${user.id}:`, createProfileError);
           continue;
         }
-        profileId = newProfile.id;
       }
 
       // 3. Check if user has a library card

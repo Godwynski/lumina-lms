@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { 
-  BookOpen, 
   ChevronLeft,
   User,
   Calendar,
@@ -32,7 +31,6 @@ export default async function DigitalResourcesPage({
     .eq("id", user.id)
     .single();
 
-  const isAdmin = profile?.role === "admin";
   const isLibrarian = profile && ["admin", "librarian"].includes(profile.role);
 
   const resolvedParams = await searchParams;

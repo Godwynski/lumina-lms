@@ -13,27 +13,28 @@ import {
   Settings, 
   TrendingUp, 
   BookMarked, 
-  LayoutDashboard, 
   History as HistoryIcon,
   Moon, 
-  Sun, 
-  Cloud, 
   Coffee, 
   Sparkles, 
-  CloudMoon, 
   Zap,
   Sunrise,
   Sunset,
-  Timer,
   CloudSun
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MagicCard } from '@/components/magicui/magic-card';
 import BlurFade from '@/components/magicui/blur-fade';
-import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
+
+type RecentBook = {
+  id: string;
+  title: string;
+  author: string;
+  created_at: string;
+};
 
 interface DashboardProps {
   user: User;
@@ -42,7 +43,7 @@ interface DashboardProps {
     totalBooks: number;
     activeLoans: number;
     totalUsers: number;
-    recentBooks: any[];
+    recentBooks: RecentBook[];
   };
 }
 
@@ -358,7 +359,7 @@ export function DashboardClient({ user, role, stats }: DashboardProps) {
         animate="show"
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        {metricCards.map((card, idx) => (
+        {metricCards.map((card) => (
           <motion.div key={card.title} variants={item}>
             <MagicCard 
               className={cn(

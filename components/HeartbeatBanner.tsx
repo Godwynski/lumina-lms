@@ -45,7 +45,6 @@ export function HeartbeatBanner() {
     checkHeartbeat(); // immediate check on mount
     const id = setInterval(checkHeartbeat, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!serverOffline) return null;

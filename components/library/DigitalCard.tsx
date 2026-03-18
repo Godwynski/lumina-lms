@@ -1,7 +1,5 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
 import { GraduationCap, Calendar, ShieldCheck, MapPin } from "lucide-react";
 import { MagicCard } from "@/components/magicui/magic-card"; // Adjust paths based on your setup
 import Image from "next/image";
@@ -18,7 +16,7 @@ interface DigitalCardProps {
   qrSvg?: string; // New prop for instant SVG rendering
 }
 
-const DigitalCard: React.FC<DigitalCardProps> = ({
+export default function DigitalCard({
   fullName,
   studentId,
   cardNumber,
@@ -27,7 +25,7 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
   expiryDate,
   avatarUrl,
   qrSvg,
-}) => {
+}: DigitalCardProps) {
   // Status Color Mapping
   const statusConfig = {
     active: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -141,7 +139,4 @@ const DigitalCard: React.FC<DigitalCardProps> = ({
       </MagicCard>
     </div>
   );
-};
-
-
-export default DigitalCard;
+}

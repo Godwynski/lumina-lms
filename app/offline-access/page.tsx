@@ -44,7 +44,7 @@ export default function OfflineAccessPage() {
       } else {
         setError(data.error || "Validation failed");
       }
-    } catch (_err) {
+    } catch {
       setError("Network error. Make sure you are connected to the school server.");
     } finally {
       setLoading(false);

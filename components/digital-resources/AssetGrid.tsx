@@ -4,8 +4,21 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ModernAssetCard } from "./ModernAssetCard";
 import { Search } from "lucide-react";
 
+type AssetGridResource = {
+  id: string;
+  title: string;
+  author: string;
+  type: string;
+  access_level: string;
+  created_at: string;
+  published_year?: number | null;
+  categories?: {
+    name?: string | null;
+  } | null;
+};
+
 interface AssetGridProps {
-  resources: any[] | null;
+  resources: AssetGridResource[] | null;
 }
 
 export function AssetGrid({ resources }: AssetGridProps) {
@@ -28,7 +41,7 @@ export function AssetGrid({ resources }: AssetGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       <AnimatePresence mode="popLayout">
-        {resources.map((resource, index) => (
+        {resources.map((resource) => (
           <ModernAssetCard key={resource.id} resource={resource} />
         ))}
       </AnimatePresence>
