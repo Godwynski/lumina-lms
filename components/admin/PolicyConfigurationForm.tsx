@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
-import { DEFAULT_POLICIES } from "@/lib/actions/policy-settings";
+import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 
 interface PolicySetting {
   id: string;
