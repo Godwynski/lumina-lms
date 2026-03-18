@@ -32,7 +32,7 @@ export async function POST() {
     await supabase
       .from("offline_sessions")
       .delete()
-      .is("revoked_at", null); // delete all non-revoked sessions
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all sessions
 
     return NextResponse.json({ success: true });
   } catch (error) {

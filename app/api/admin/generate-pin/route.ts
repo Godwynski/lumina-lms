@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       expires_at: expiresAt.toISOString() 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PIN generation error:", error);
     return NextResponse.json({ error: "Failed to generate PIN" }, { status: 500 });
   }

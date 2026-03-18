@@ -37,9 +37,9 @@ export async function POST() {
     await supabase
       .from("offline_sessions")
       .delete()
-      .is("revoked_at", null);
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
-    const { data: newPin, error: dbError } = await supabase
+    const { error: dbError } = await supabase
       .from("offline_pins")
       .insert({
         pin_hash: pinHash,
@@ -52,7 +52,7 @@ export async function POST() {
     if (dbError) throw dbError;
 
     return NextResponse.json({ success: true, pin, expiresAt: expiresAt.toISOString() });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PIN generation error:", error);
     return NextResponse.json({ error: "Failed to generate PIN" }, { status: 500 });
   }

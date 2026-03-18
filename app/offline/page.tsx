@@ -47,7 +47,7 @@ export default function OfflineFallbackPage() {
               desc: "Show your digital card for scanning",
             },
             {
-              href: "/protected/my-borrowing-history",
+              href: "/protected/history",
               icon: History,
               label: "My History",
               desc: "View currently borrowed books",

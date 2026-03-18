@@ -26,6 +26,7 @@ interface PendingCard {
     student_id: string;
     department: string;
     avatar_url: string;
+    email: string | null;
   };
 }
 
@@ -51,7 +52,8 @@ export default function ApprovalsPage() {
           full_name,
           student_id,
           department,
-          avatar_url
+          avatar_url,
+          email
         )
       `);
 
@@ -89,9 +91,15 @@ export default function ApprovalsPage() {
       // 2. Trigger automated email
       // Note: This requires service_role for admin tasks, but for mock purposes:
       // In a real app, we would fetch the email from supabase.auth.admin or have it in the profiles table.
+      const targetCard = cards.find((c) => c.id === cardId);
+      const recipientEmail = targetCard?.profiles?.email;
+      if (!recipientEmail) {
+        throw new Error("Student email not found for card holder");
+      }
+
       await sendWelcomeEmail(
-        cards.find(c => c.id === cardId)?.profiles.full_name || "Student",
-        "student@example.com" // In real case, fetch from auth or join in query
+        targetCard?.profiles.full_name || "Student",
+        recipientEmail
       );
 
       setNotification({ message: "Card approved and welcome email sent!", type: 'success' });

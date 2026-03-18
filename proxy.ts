@@ -84,13 +84,7 @@ export async function proxy(request: NextRequest) {
 
     // If they try to access restricted routes, block them
     if (isRestrictedPath || (!isAllowedPath && (path.startsWith("/protected") || path.startsWith("/api")))) {
-      // Privileged staff can still roam freely even on an offline session
-      const userRole = (session.profiles as any)?.role;
-      const isPrivileged = ["admin", "librarian", "staff"].includes(userRole);
-
-      if (!isPrivileged) {
-        return NextResponse.redirect(new URL("/offline-landing", request.url));
-      }
+      return NextResponse.redirect(new URL("/offline-landing", request.url));
     }
     return response;
   }

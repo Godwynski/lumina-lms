@@ -17,7 +17,7 @@ export function LogoutButton() {
     <button
       onClick={logout}
       title="Sign out"
-      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+      className="p-2 md:p-1.5 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
     >
       <LogOut size={16} />
     </button>

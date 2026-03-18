@@ -37,7 +37,7 @@ export default async function Home() {
       <div className="flex-1 w-full flex flex-col items-center">
         {/* Navigation Bar */}
         <nav className="w-full flex justify-center border-b border-zinc-200/50 h-16 bg-white/60 backdrop-blur-xl sticky top-0 z-50">
-          <div className="w-full max-w-6xl flex justify-between items-center p-3 px-5">
+          <div className="w-full max-w-6xl flex justify-between items-center p-3 px-4 md:px-6">
             <div className="flex gap-3 items-center font-bold text-lg tracking-tight">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
@@ -58,7 +58,7 @@ export default async function Home() {
         </nav>
 
         {/* Hero Section */}
-        <div className="flex-1 flex flex-col gap-12 max-w-5xl p-5 mt-16 w-full relative z-10">
+        <div className="flex-1 flex flex-col gap-8 md:gap-12 max-w-5xl px-4 md:px-6 mt-8 md:mt-16 w-full relative z-10">
           <Suspense fallback={<Hero user={null} role={null} />}>
             <HeroSection />
           </Suspense>
@@ -67,7 +67,7 @@ export default async function Home() {
             {/* Soft decorative background element for the features area */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-3xl bg-indigo-50/50 blur-3xl -z-10 rounded-full pointer-events-none" />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               <BlurFade delay={0.4} inView>
                 <div className="flex flex-col gap-3 p-6 rounded-2xl border border-zinc-200/60 bg-white/70 backdrop-blur-sm hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 h-full">
                   <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">

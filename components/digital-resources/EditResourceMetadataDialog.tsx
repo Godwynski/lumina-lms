@@ -78,8 +78,9 @@ export default function EditResourceMetadataDialog({
 
       setOpen(false);
       router.refresh();
-    } catch (e: any) {
-      setError(e.message || "Failed to save metadata.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to save metadata.";
+      setError(message);
     } finally {
       setSaving(false);
     }

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { writeFile } from "fs/promises";
 import path from "path";
+import crypto from "node:crypto";
 
 const ALLOWED_MIMES = ["application/pdf", "application/epub+zip"];
 const UPLOAD_ROOT = process.env.UPLOAD_PATH || "C:/uploads/resources";
@@ -86,8 +87,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, resource });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: error.message || "Failed to upload resource" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to upload resource";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

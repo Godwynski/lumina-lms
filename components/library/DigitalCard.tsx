@@ -1,7 +1,13 @@
 "use client";
 
-import { GraduationCap, Calendar, ShieldCheck, MapPin } from "lucide-react";
-import { MagicCard } from "@/components/magicui/magic-card"; // Adjust paths based on your setup
+import {
+  GraduationCap,
+  Calendar,
+  ShieldCheck,
+  MapPin,
+  LibraryBig,
+  Sparkles,
+} from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +19,18 @@ interface DigitalCardProps {
   status: "active" | "pending" | "suspended" | "expired";
   expiryDate: string;
   avatarUrl?: string | null;
-  qrSvg?: string; // New prop for instant SVG rendering
+  qrUrl?: string | null;
+  side?: "front" | "back";
+  exportMode?: boolean;
+  cardId?: string;
+}
+
+function formatCardDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function DigitalCard({
@@ -24,119 +41,276 @@ export default function DigitalCard({
   status,
   expiryDate,
   avatarUrl,
-  qrSvg,
+  qrUrl,
+  side = "front",
+  exportMode = false,
+  cardId,
 }: DigitalCardProps) {
-  // Status Color Mapping
-  const statusConfig = {
-    active: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-    pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    suspended: "bg-red-500/10 text-red-500 border-red-500/20",
-    expired: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
-  };
-
-  const formattedExpiry = new Date(expiryDate).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  if (side === "back") {
+    return (
+      <CardBack
+        cardNumber={cardNumber}
+        expiryDate={expiryDate}
+        exportMode={exportMode}
+        cardId={cardId}
+      />
+    );
+  }
 
   return (
-    <div className="flex items-center justify-center p-4 w-full">
-      <MagicCard 
-        id="library-card-element"
-        className="group relative flex flex-col aspect-[1.6/1] w-full max-w-[500px] overflow-hidden border bg-white dark:bg-zinc-950 shadow-2xl transition-all"
-        gradientColor="#E2E8F0"
+    <CardFront
+      fullName={fullName}
+      studentId={studentId}
+      cardNumber={cardNumber}
+      department={department}
+      status={status}
+      expiryDate={expiryDate}
+      avatarUrl={avatarUrl}
+      qrUrl={qrUrl}
+      exportMode={exportMode}
+      cardId={cardId}
+    />
+  );
+}
+
+function CardFront({
+  fullName,
+  studentId,
+  cardNumber,
+  department,
+  status,
+  expiryDate,
+  avatarUrl,
+  qrUrl,
+  exportMode,
+  cardId,
+}: Omit<DigitalCardProps, "side">) {
+  const statusConfig = {
+    active: "bg-emerald-500/15 text-emerald-700 border-emerald-400/40",
+    pending: "bg-amber-500/15 text-amber-700 border-amber-400/40",
+    suspended: "bg-red-500/15 text-red-700 border-red-400/40",
+    expired: "bg-zinc-500/15 text-zinc-700 border-zinc-400/40",
+  };
+
+  const formattedExpiry = formatCardDate(expiryDate);
+
+  return (
+    <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
+      <div
+        id={cardId}
+        className={cn(
+          "relative overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(115deg,#e8f2ff_0%,#f7fbff_34%,#fff8e7_68%,#e8fff4_100%)] shadow-[0_20px_60px_rgba(16,24,40,0.18)]",
+          exportMode ? "max-w-none" : "aspect-[1.586/1] w-full max-w-[560px]"
+        )}
+        style={exportMode ? { width: 560, height: 353 } : undefined}
       >
-        {/* Top Accent Bar */}
-        <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-blue-600 to-indigo-400" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(37,99,235,0.23),transparent_38%),radial-gradient(circle_at_94%_88%,rgba(16,185,129,0.15),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-35 [background:linear-gradient(120deg,transparent_0%,transparent_44%,rgba(255,255,255,0.7)_50%,transparent_56%,transparent_100%)]" />
 
-        {/* Card Header */}
-        <div className="flex justify-between items-start p-6 pb-2">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-black tracking-tighter text-blue-700 italic">
-              STI <span className="text-zinc-400 font-light not-italic text-sm ml-2">LMS</span>
-            </h2>
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusConfig[status]}`}>
-              <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse", 
-                status === 'active' ? 'bg-emerald-500' : 'bg-current'
-              )} />
-              {status}
-            </div>
-          </div>
-          
-          <div className="relative group/avatar">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-400 rounded-full blur opacity-25 group-hover/avatar:opacity-50 transition" />
-            <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg bg-zinc-100">
-              {avatarUrl ? (
-                <Image 
-                  src={avatarUrl} 
-                  alt={fullName} 
-                  width={64} 
-                  height={64} 
-                  className="h-full w-full object-cover" 
-                  priority
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-xl font-bold text-zinc-400">
-                  {fullName?.charAt(0)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-bl-[36px] border-l border-b border-blue-200/60 bg-blue-400/10" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-tr-[30px] border-r border-t border-emerald-200/70 bg-emerald-300/10" />
 
-        {/* Card Body */}
-        <div className="flex flex-1 px-6 py-2">
-          <div className="flex-1 space-y-3">
+        <div className="relative z-10 flex h-full flex-col p-3 sm:p-6">
+          <div className="mb-3 flex items-start justify-between sm:mb-4">
             <div>
-              <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-widest">Student Name</p>
-              <p className="text-lg font-bold leading-tight text-zinc-800 dark:text-zinc-100">{fullName}</p>
+              <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-blue-300/50 bg-blue-600/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-900 sm:gap-2 sm:px-2.5 sm:text-[10px] sm:tracking-[0.18em]">
+                <LibraryBig className="h-3.5 w-3.5" /> STI College Alabang
+              </div>
+              <h2 className="text-[17px] font-black leading-tight tracking-tight text-zinc-900 sm:text-[28px]">
+                Library Access Card
+              </h2>
+              <p className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-600 sm:block">
+                Student Identity Credential
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-blue-500" />
-                <div>
-                  <p className="text-[10px] text-zinc-400">ID Number</p>
-                  <p className="text-xs font-mono font-semibold">{studentId}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-blue-500" />
-                <div>
-                  <p className="text-[10px] text-zinc-400">Department</p>
-                  <p className="text-xs font-semibold truncate max-w-[100px]">{department}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center pl-4 border-l border-zinc-100 dark:border-zinc-800">
-            <div className="p-1 bg-white rounded-lg shadow-inner ring-1 ring-zinc-200 overflow-hidden">
-              {qrSvg ? (
-                <div 
-                  className="h-20 w-20 [&>svg]:h-full [&>svg]:w-full" 
-                  dangerouslySetInnerHTML={{ __html: qrSvg }} 
+            <div className="flex flex-col items-end gap-2">
+              <div
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
+                  statusConfig[status]
+                )}
+              >
+                <div
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    status === "active" ? "animate-pulse bg-emerald-500" : "bg-current"
+                  )}
                 />
-              ) : (
-                <div className="h-20 w-20 bg-zinc-50 animate-pulse flex items-center justify-center">
-                   <div className="h-10 w-10 border-2 border-zinc-200 border-t-zinc-400 rounded-full animate-spin" />
-                </div>
-              )}
+                {status}
+              </div>
+              <div className="max-w-[140px] truncate rounded-full border border-zinc-200/80 bg-white/80 px-2 py-0.5 text-[9px] font-mono text-zinc-700 sm:max-w-none sm:text-[10px]">
+                {cardNumber}
+              </div>
             </div>
-            <p className="mt-1 text-[9px] font-mono text-zinc-400">{cardNumber}</p>
           </div>
-        </div>
 
-        {/* Card Footer */}
-        <div className="mt-auto bg-zinc-50 dark:bg-zinc-900/50 px-6 py-3 flex justify-between items-center border-t">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-            <span className="text-[10px] text-zinc-500">Expires: <span className="font-bold">{formattedExpiry}</span></span>
+          <div className="grid flex-1 grid-cols-[1fr_auto] gap-3 sm:gap-6">
+            <div className="min-w-0 space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white bg-zinc-100 shadow-lg sm:h-20 sm:w-20">
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={fullName}
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                      priority
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl font-black text-zinc-400">
+                      {fullName?.charAt(0)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.2em]">
+                    Card Holder
+                  </p>
+                  <p className="truncate text-sm font-black leading-tight text-zinc-900 sm:text-xl">
+                    {fullName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="rounded-xl border border-zinc-200/70 bg-white/65 p-2 sm:p-3">
+                  <div className="mb-1 flex items-center gap-1 text-[9px] uppercase tracking-wider text-zinc-500 sm:gap-1.5 sm:text-[10px]">
+                    <GraduationCap className="h-3.5 w-3.5 text-blue-600" /> Student ID
+                  </div>
+                  <p className="truncate text-[10px] font-mono font-bold text-zinc-900 sm:text-sm">{studentId}</p>
+                </div>
+
+                <div className="rounded-xl border border-zinc-200/70 bg-white/65 p-2 sm:p-3">
+                  <div className="mb-1 flex items-center gap-1 text-[9px] uppercase tracking-wider text-zinc-500 sm:gap-1.5 sm:text-[10px]">
+                    <MapPin className="h-3.5 w-3.5 text-cyan-700" /> Department
+                  </div>
+                  <p className="truncate text-[10px] font-bold text-zinc-900 sm:text-sm">{department}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex w-[86px] shrink-0 flex-col items-center justify-between rounded-2xl border border-zinc-200/70 bg-white/80 p-2 sm:w-[124px] sm:p-3">
+              <div className="rounded-xl border border-zinc-200 bg-white p-1 shadow-inner sm:p-1.5">
+                {qrUrl ? (
+                  <Image
+                    src={qrUrl}
+                    alt={`QR code for ${cardNumber}`}
+                    width={96}
+                    height={96}
+                    className="h-16 w-16 sm:h-24 sm:w-24"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 animate-pulse items-center justify-center bg-zinc-50 sm:h-24 sm:w-24">
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-400" />
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-1.5 flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-zinc-600 sm:mt-2 sm:text-[10px]">
+                <Sparkles className="h-3 w-3" /> Scan to verify
+              </div>
+            </div>
           </div>
-          <ShieldCheck className="h-4 w-4 text-zinc-300" />
+
+          <div className="mt-2.5 flex items-center justify-between border-t border-zinc-300/60 pt-2 sm:mt-4 sm:pt-3">
+            <div className="flex items-center gap-1.5 text-[10px] text-zinc-700 sm:gap-2 sm:text-[11px]">
+              <Calendar className="h-3.5 w-3.5 text-zinc-500" />
+              Expires: <span className="font-black text-zinc-900">{formattedExpiry}</span>
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-1 text-[8px] font-semibold uppercase tracking-wider text-zinc-100 sm:gap-1.5 sm:px-2.5 sm:text-[10px]">
+              <ShieldCheck className="h-3.5 w-3.5" /> Verified Identity
+            </div>
+          </div>
         </div>
-      </MagicCard>
+      </div>
+    </div>
+  );
+}
+
+function CardBack({
+  cardNumber,
+  expiryDate,
+  exportMode,
+  cardId,
+}: Pick<
+  DigitalCardProps,
+  "cardNumber" | "expiryDate" | "exportMode" | "cardId"
+>) {
+  return (
+    <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
+      <div
+        id={cardId}
+        className={cn(
+          "relative overflow-hidden rounded-[28px] border border-white/60 bg-[linear-gradient(115deg,#e8f2ff_0%,#f7fbff_34%,#fff8e7_68%,#e8fff4_100%)] shadow-[0_20px_60px_rgba(16,24,40,0.18)]",
+          exportMode ? "max-w-none" : "aspect-[1.586/1] w-full max-w-[560px]"
+        )}
+        style={exportMode ? { width: 560, height: 353 } : undefined}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(37,99,235,0.23),transparent_38%),radial-gradient(circle_at_94%_88%,rgba(16,185,129,0.15),transparent_42%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-35 [background:linear-gradient(120deg,transparent_0%,transparent_44%,rgba(255,255,255,0.7)_50%,transparent_56%,transparent_100%)]" />
+
+        <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-bl-[36px] border-l border-b border-blue-200/60 bg-blue-400/10" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-tr-[30px] border-r border-t border-emerald-200/70 bg-emerald-300/10" />
+
+        <div className="relative z-10 grid h-full grid-rows-[auto_1fr_auto] gap-2 p-3 sm:gap-2.5 sm:p-4 text-zinc-900">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-blue-300/50 bg-blue-600/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-900 sm:gap-2 sm:px-2.5 sm:text-[10px] sm:tracking-[0.18em]">
+                <LibraryBig className="h-3.5 w-3.5" /> STI College Alabang
+              </div>
+              <h3 className="text-[17px] font-black leading-tight tracking-tight sm:text-[26px]">Library Process Guide</h3>
+            </div>
+            <div className="max-w-[140px] truncate rounded-full border border-zinc-200/80 bg-white/80 px-2 py-0.5 text-[9px] font-mono text-zinc-700 sm:max-w-none sm:text-[10px]">
+              {cardNumber}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Borrowing</p>
+              <ol className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <li>1. Bring selected book to desk.</li>
+                <li>2. Present this card QR.</li>
+                <li>3. Librarian scans book QR.</li>
+              </ol>
+            </div>
+            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Returning</p>
+              <ol className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <li>1. Bring book to desk.</li>
+                <li>2. Librarian scans book QR.</li>
+                <li>3. Confirm cleared status.</li>
+              </ol>
+            </div>
+
+            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Important</p>
+              <ul className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <li>- Non-transferable card.</li>
+                <li>- Keep QR visible and readable.</li>
+                <li>- Report lost card immediately.</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Support</p>
+              <ul className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <li>Library Services Office</li>
+                <li>STI College Alabang</li>
+                <li>Bring this ID for assistance.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-zinc-300/60 bg-white/80 px-2.5 py-1.5 text-[9px] font-semibold tracking-[0.06em] text-zinc-700 sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.08em]">
+            Valid until {formatCardDate(expiryDate)} • Non-transferable credential
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

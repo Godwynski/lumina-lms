@@ -4,7 +4,7 @@ import { AnimatedShinyText } from './magicui/animated-shiny-text';
 
 export function Hero({ user, role }: { user: User | null; role: string | null }) {
   return (
-    <div className="flex flex-col gap-8 items-center justify-center p-8 lg:p-12 bg-white/70 backdrop-blur-md border border-zinc-200/50 rounded-[32px] shadow-sm relative overflow-hidden">
+    <div className="flex flex-col gap-6 md:gap-8 items-center justify-center p-6 md:p-8 lg:p-12 bg-white/70 backdrop-blur-md border border-zinc-200/50 rounded-2xl md:rounded-[32px] shadow-sm relative overflow-hidden">
       {/* Decorative background glow */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
@@ -16,7 +16,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
             </svg>
           </div>
-          <span className="text-4xl lg:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 to-zinc-500 tracking-tight">
+          <span className="text-3xl md:text-4xl lg:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-zinc-900 to-zinc-500 tracking-tight">
             Lumina
           </span>
         </div>
@@ -26,7 +26,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
         {user ? (
           <>
             <BlurFade delay={0.2} inView>
-              <h1 className="text-3xl lg:text-4xl font-bold !leading-tight mx-auto max-w-2xl text-zinc-900">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold !leading-tight mx-auto max-w-2xl text-zinc-900">
                 Welcome back, <span className="text-indigo-600">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
               </h1>
             </BlurFade>
