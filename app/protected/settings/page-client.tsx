@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -85,6 +85,9 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
   const [rememberDevice, setRememberDevice] = useState(true);
   const [compactTables, setCompactTables] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [selectedPhotoName, setSelectedPhotoName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -129,6 +132,40 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
     const url = new URL(window.location.href);
     url.searchParams.set("tab", id);
     router.replace(url.pathname + url.search, { scroll: false });
+  };
+
+  const uploadProfilePhoto = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) {
+      flash("Select a photo first");
+      return;
+    }
+
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/profile-photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Profile photo upload failed");
+      }
+
+      flash("Profile photo updated");
+      setSelectedPhotoName("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      flash(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setPhotoUploading(false);
+    }
   };
 
   const allTabs = useMemo(() => {
@@ -269,6 +306,34 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
                         placeholder="e.g. Alex Rivera"
                         className="h-12 rounded-xl text-md"
                       />
+                    </FieldGroup>
+
+                    <FieldGroup
+                      label="Profile Photo"
+                      description="Upload once to store a fixed 300x300 card photo. Future uploads replace the same file."
+                    >
+                      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 space-y-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
+                          onChange={(e) => setSelectedPhotoName(e.target.files?.[0]?.name || "")}
+                        />
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs text-zinc-500 truncate">
+                            {selectedPhotoName || "No file selected"}
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={uploadProfilePhoto}
+                            disabled={photoUploading}
+                            className="rounded-xl h-10 px-5 bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            {photoUploading ? "Uploading..." : "Upload Photo"}
+                          </Button>
+                        </div>
+                      </div>
                     </FieldGroup>
 
                     <div className="flex items-center justify-between p-6 rounded-2xl bg-zinc-50 border border-zinc-100">

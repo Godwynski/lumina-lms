@@ -13,7 +13,7 @@ interface DigitalCardProps {
   status: "active" | "pending" | "suspended" | "expired";
   expiryDate: string;
   avatarUrl?: string | null;
-  qrSvg?: string; // New prop for instant SVG rendering
+  qrUrl?: string | null;
 }
 
 export default function DigitalCard({
@@ -24,7 +24,7 @@ export default function DigitalCard({
   status,
   expiryDate,
   avatarUrl,
-  qrSvg,
+  qrUrl,
 }: DigitalCardProps) {
   // Status Color Mapping
   const statusConfig = {
@@ -113,10 +113,14 @@ export default function DigitalCard({
 
           <div className="flex flex-col items-center justify-center pl-4 border-l border-zinc-100 dark:border-zinc-800">
             <div className="p-1 bg-white rounded-lg shadow-inner ring-1 ring-zinc-200 overflow-hidden">
-              {qrSvg ? (
-                <div 
-                  className="h-20 w-20 [&>svg]:h-full [&>svg]:w-full" 
-                  dangerouslySetInnerHTML={{ __html: qrSvg }} 
+              {qrUrl ? (
+                <Image
+                  src={qrUrl}
+                  alt={`QR code for ${cardNumber}`}
+                  width={80}
+                  height={80}
+                  className="h-20 w-20"
+                  unoptimized
                 />
               ) : (
                 <div className="h-20 w-20 bg-zinc-50 animate-pulse flex items-center justify-center">

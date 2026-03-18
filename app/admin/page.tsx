@@ -30,8 +30,8 @@ async function AdminContent() {
 
 export default function AdminTestPage() {
   return (
-    <div className="flex-1 w-full flex flex-col gap-12 items-center p-8">
-      <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+    <div className="flex-1 w-full flex flex-col gap-8 md:gap-12 items-center p-4 md:p-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-center">Admin Dashboard</h1>
       <Suspense fallback={<p>Loading user data...</p>}>
         <AdminContent />
       </Suspense>

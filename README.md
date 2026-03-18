@@ -118,6 +118,8 @@ src/
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Yes |
+| `NEXT_PUBLIC_CARD_ASSET_BUCKET` | Public storage bucket for static card assets (default: `library-cards`) | No |
+| `NEXT_PUBLIC_SHOW_CARD_ASSET_REFRESH` | Show the support/debug "Refresh assets" button on My Card (`true`/`false`) | No |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
 | `JWT_SECRET` | Secret for JWT token generation | Yes |
 | `VERCEL_URL` | Vercel deployment URL (auto-set) | No |
