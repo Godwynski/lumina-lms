@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit2, AlertCircle, Loader2 } from "lucide-react";
 
+function toSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 interface Category {
   id: string;
   name: string;
@@ -56,7 +64,8 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.slug) {
+    const normalizedSlug = toSlug(formData.slug || formData.name);
+    if (!formData.name || !normalizedSlug) {
       setError("Name and slug are required");
       return;
     }
@@ -71,6 +80,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...formData,
+            slug: normalizedSlug,
             is_active: true,
           }),
         });
@@ -85,7 +95,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         const response = await fetch("/api/admin/categories", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({ ...formData, slug: normalizedSlug }),
         });
 
         if (!response.ok) throw new Error("Failed to create category");
@@ -208,7 +218,16 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                 id="name"
                 placeholder="e.g., Science Fiction"
                 value={formData.name}
-                onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((p) => {
+                    const nextName = e.target.value;
+                    return {
+                      ...p,
+                      name: nextName,
+                      slug: toSlug(p.slug ? p.slug : nextName),
+                    };
+                  })
+                }
                 disabled={loading}
               />
             </div>
@@ -220,7 +239,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                 placeholder="e.g., science-fiction"
                 value={formData.slug}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, slug: e.target.value }))
+                  setFormData((p) => ({ ...p, slug: toSlug(e.target.value) }))
                 }
                 disabled={loading}
               />

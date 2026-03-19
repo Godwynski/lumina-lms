@@ -24,6 +24,7 @@ export function PolicyConfigurationForm({
     settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
   );
   const [loading, setLoading] = useState(false);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export function PolicyConfigurationForm({
     }
 
     setLoading(true);
+    setSavingKey(key);
     setError(null);
 
     try {
@@ -53,7 +55,8 @@ export function PolicyConfigurationForm({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save setting");
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "Failed to save setting");
       }
 
       setSaved(key);
@@ -62,6 +65,7 @@ export function PolicyConfigurationForm({
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+      setSavingKey(null);
     }
   };
 
@@ -125,7 +129,7 @@ export function PolicyConfigurationForm({
                       : "bg-indigo-600 hover:bg-indigo-700"
                   }`}
                 >
-                  {loading && key === Object.keys(DEFAULT_POLICIES)[0] ? (
+                  {loading && savingKey === key ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : saved === key ? (
                     <>

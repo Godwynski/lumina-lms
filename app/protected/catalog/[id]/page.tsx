@@ -16,7 +16,8 @@ import {
   Wrench, 
   SearchX,
   History,
-  QrCode
+  QrCode,
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
@@ -42,6 +43,7 @@ export default function StaffBookManagementPage() {
   const [copies, setCopies] = useState<BookCopy[]>([]);
   const [loading, setLoading] = useState(true);
   const [addCopyLoading, setAddCopyLoading] = useState(false);
+  const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopy['status']>('ALL');
 
   useEffect(() => {
     async function loadData() {
@@ -88,6 +90,8 @@ export default function StaffBookManagementPage() {
       console.error(err);
     }
   };
+
+  const visibleCopies = copies.filter((copy) => copyFilter === 'ALL' || copy.status === copyFilter);
 
   if (loading) return (
     <div className="p-8 flex items-center justify-center min-h-[400px]">
@@ -192,10 +196,30 @@ export default function StaffBookManagementPage() {
 
         {/* Inventory List */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-zinc-900 px-1">Physical Inventory ({copies.length})</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <h2 className="text-lg font-bold text-zinc-900">Physical Inventory ({visibleCopies.length}/{copies.length})</h2>
+            <div className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-sm">
+              <Filter className="h-4 w-4 text-zinc-500" />
+              <select
+                value={copyFilter}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === 'ALL' || isBookCopyStatus(value)) {
+                    setCopyFilter(value as 'ALL' | BookCopy['status']);
+                  }
+                }}
+                className="bg-transparent text-xs font-semibold text-zinc-700 outline-none"
+              >
+                <option value="ALL">All statuses</option>
+                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                  <option key={key} value={key}>{cfg.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           
           <div className="space-y-3">
-            {copies.map((copy) => {
+            {visibleCopies.map((copy) => {
               const status = STATUS_CONFIG[copy.status];
               const StatusIcon = status.icon;
               
@@ -239,11 +263,11 @@ export default function StaffBookManagementPage() {
               );
             })}
 
-            {copies.length === 0 && (
+            {visibleCopies.length === 0 && (
               <div className="text-center py-24 bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200">
                 <AlertCircle className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
-                <p className="text-zinc-500 font-medium">No physical copies in inventory.</p>
-                <p className="text-zinc-400 text-xs">Click &quot;Add Physical Copy&quot; to start tracking inventory.</p>
+                <p className="text-zinc-500 font-medium">No copies match this filter.</p>
+                <p className="text-zinc-400 text-xs">Try another status or add a new physical copy.</p>
               </div>
             )}
           </div>

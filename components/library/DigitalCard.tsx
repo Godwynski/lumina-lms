@@ -7,6 +7,10 @@ import {
   MapPin,
   LibraryBig,
   Sparkles,
+  ArrowRight,
+  RotateCcw,
+  AlertTriangle,
+  LifeBuoy,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -271,38 +275,46 @@ function CardBack({
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Borrowing</p>
-              <ol className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
-                <li>1. Bring selected book to desk.</li>
-                <li>2. Present this card QR.</li>
-                <li>3. Librarian scans book QR.</li>
-              </ol>
+            <div className="rounded-xl border border-blue-200/80 bg-blue-50/75 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+                Borrowing
+              </p>
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <p className="flex items-center gap-1"><ArrowRight className="h-3 w-3 text-blue-600" /> Pick book</p>
+                <p className="flex items-center gap-1"><ArrowRight className="h-3 w-3 text-blue-600" /> Show card QR</p>
+                <p className="flex items-center gap-1"><ArrowRight className="h-3 w-3 text-blue-600" /> Scan and confirm</p>
+              </div>
             </div>
-            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Returning</p>
-              <ol className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
-                <li>1. Bring book to desk.</li>
-                <li>2. Librarian scans book QR.</li>
-                <li>3. Confirm cleared status.</li>
-              </ol>
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/75 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+                Returning
+              </p>
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <p className="flex items-center gap-1"><RotateCcw className="h-3 w-3 text-emerald-600" /> Bring to desk</p>
+                <p className="flex items-center gap-1"><RotateCcw className="h-3 w-3 text-emerald-600" /> Scan book QR</p>
+                <p className="flex items-center gap-1"><RotateCcw className="h-3 w-3 text-emerald-600" /> Clear record</p>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Important</p>
-              <ul className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
-                <li>- Non-transferable card.</li>
-                <li>- Keep QR visible and readable.</li>
-                <li>- Report lost card immediately.</li>
-              </ul>
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/75 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+                Important
+              </p>
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <p className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" /> Non-transferable</p>
+                <p className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" /> Keep QR readable</p>
+                <p className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" /> Report loss fast</p>
+              </div>
             </div>
-            <div className="rounded-xl border border-zinc-200/70 bg-white/70 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">Support</p>
-              <ul className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
-                <li>Library Services Office</li>
-                <li>STI College Alabang</li>
-                <li>Bring this ID for assistance.</li>
-              </ul>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/75 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+                Support
+              </p>
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+                <p className="flex items-center gap-1"><LifeBuoy className="h-3 w-3 text-slate-600" /> Library Services Office</p>
+                <p className="flex items-center gap-1"><LifeBuoy className="h-3 w-3 text-slate-600" /> STI College Alabang</p>
+                <p className="flex items-center gap-1"><LifeBuoy className="h-3 w-3 text-slate-600" /> Bring ID for help</p>
+              </div>
             </div>
           </div>
 

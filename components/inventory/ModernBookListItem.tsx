@@ -5,7 +5,9 @@ import {
   Book as BookIcon, 
   MapPin, 
   Trash2, 
-  Package
+  Package,
+  CircleOff,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,7 @@ interface ModernBookListItemProps {
 
 export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListItemProps) {
   const isOutOfStock = book.available_copies === 0;
+  const isLowStock = !isOutOfStock && book.available_copies <= 2;
   
   return (
     <motion.div
@@ -58,15 +61,30 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
       </div>
 
       {/* Stock Status */}
-      <div className="flex flex-col items-center sm:items-end gap-1.5 min-w-[120px]">
-        <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0.5 font-bold text-[9px] uppercase tracking-widest whitespace-nowrap">
+       <div className="flex flex-col items-center sm:items-end gap-1.5 min-w-[120px]">
+        <Badge
+          variant={isOutOfStock ? "destructive" : isLowStock ? "outline" : "secondary"}
+          className="rounded-full px-2.5 py-0.5 font-bold text-[9px] uppercase tracking-widest whitespace-nowrap"
+        >
           {book.available_copies} / {book.total_copies}
         </Badge>
+        {isOutOfStock && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500">
+            <CircleOff className="h-3 w-3" />
+            Out of stock
+          </span>
+        )}
+        {isLowStock && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600">
+            <AlertTriangle className="h-3 w-3" />
+            Low stock
+          </span>
+        )}
         <div className="h-1 w-20 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
            <div 
-             className={`h-full truncate ${isOutOfStock ? "bg-orange-500" : "bg-emerald-500"}`} 
+             className={`h-full truncate ${isOutOfStock ? "bg-orange-500" : isLowStock ? "bg-amber-500" : "bg-emerald-500"}`} 
              style={{ width: `${(book.available_copies / (book.total_copies || 1)) * 100}%` }}
-           />
+            />
         </div>
       </div>
 

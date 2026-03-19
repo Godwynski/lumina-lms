@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { getBookById } from '@/lib/actions/catalog';
-import { reportMissingBook } from '@/lib/actions/public-catalog';
+import { getPublicBookById, reportMissingBook } from '@/lib/actions/public-catalog';
 import { 
   ChevronLeft, 
   MapPin, 
@@ -13,7 +12,9 @@ import {
   Hash, 
   Tag,
   CheckCircle2,
-  Clock
+  Clock,
+  BookMarked,
+  ScanLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Book } from '@/lib/types';
@@ -36,7 +37,7 @@ export default function StudentBookDetailPage() {
   useEffect(() => {
     async function loadBook() {
       try {
-        const data = await getBookById(id);
+        const data = await getPublicBookById(id);
         setBook(data);
       } catch (err) {
         console.error(err);
@@ -166,6 +167,28 @@ export default function StudentBookDetailPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1 flex items-center gap-1.5">
+                <BookMarked className="h-3 w-3" />
+                Smart Tip
+              </p>
+              <p className="text-xs text-indigo-800 leading-relaxed">
+                Use the section tag to go directly to the correct aisle before checking nearby shelves.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-zinc-200 bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1 flex items-center gap-1.5">
+                <ScanLine className="h-3 w-3" />
+                Desk Assist
+              </p>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                If unavailable, ask staff to scan a copy QR for live return status updates.
+              </p>
+            </div>
+          </div>
+
           {book.tags && book.tags.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Subject Tags</h3>
@@ -190,7 +213,7 @@ export default function StudentBookDetailPage() {
                    <AlertCircle className="w-4 h-4 text-orange-600" />
                 </div>
                 <span className="font-bold text-sm">
-                  {reportSubmitting ? 'Sending Alert...' : "I can&apos;t find this book on the shelf"}
+                  {reportSubmitting ? 'Sending Alert...' : "I can't find this book on the shelf"}
                 </span>
               </Button>
             ) : (
@@ -199,7 +222,7 @@ export default function StudentBookDetailPage() {
                    <CheckCircle2 className="w-6 h-6 text-green-600" />
                 </div>
                 <p className="text-sm font-bold">Librarian Notified</p>
-                <p className="text-xs opacity-80">Thank you! We&apos;ve added this to our queue to verify the shelf location.</p>
+                <p className="text-xs opacity-80">{"Thank you! We've added this to our queue to verify the shelf location."}</p>
               </div>
             )}
             {book.available_copies === 0 && !reported && (

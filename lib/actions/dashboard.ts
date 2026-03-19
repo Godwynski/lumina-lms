@@ -12,7 +12,10 @@ export async function getDashboardStats() {
     { data: recentBooks }
   ] = await Promise.all([
     supabase.from('books').select('*', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('borrowing_records').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase
+      .from('borrowing_records')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['active', 'ACTIVE']),
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('books').select('id, title, author, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(5)
   ]);

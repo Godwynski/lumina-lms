@@ -1,5 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
+
+function isValidPolicyValue(key: string, value: string) {
+  const numberLikeKeys = ["days", "limit", "count", "years", "fine", "amount"];
+  if (numberLikeKeys.some((token) => key.includes(token))) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0;
+  }
+  return value.trim().length > 0;
+}
 
 export async function GET() {
   try {
@@ -22,7 +32,7 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data, error } = await supabase.from("system_settings").select("*");
+    const { data, error } = await supabase.from("system_settings").select("*").order("key", { ascending: true });
 
     if (error) throw error;
 
@@ -57,7 +67,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { key, value, description } = body;
+    const key = typeof body.key === "string" ? body.key.trim() : "";
+    const value = typeof body.value === "string" ? body.value.trim() : "";
+    const description =
+      typeof body.description === "string"
+        ? body.description.trim()
+        : DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.description;
 
     if (!key || !value) {
       return NextResponse.json(
@@ -66,12 +81,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!isValidPolicyValue(key, value)) {
+      return NextResponse.json({ error: "Invalid policy value" }, { status: 400 });
+    }
+
     // Check if exists
     const { data: existing } = await supabase
       .from("system_settings")
       .select("*")
       .eq("key", key)
-      .single();
+      .maybeSingle();
 
     let result;
     if (existing) {

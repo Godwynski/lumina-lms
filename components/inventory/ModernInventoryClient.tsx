@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { ModernBookListItem } from "./ModernBookListItem";
+import { InventoryGrid } from "./InventoryGrid";
 import { 
   Search, 
   Plus, 
@@ -10,7 +11,10 @@ import {
   Package,
   Activity,
   Archive,
-  MapPin
+  MapPin,
+  LayoutGrid,
+  Rows3,
+  ArrowUpDown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +31,9 @@ interface ModernInventoryClientProps {
 
 export function ModernInventoryClient({ books, onDelete }: ModernInventoryClientProps) {
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out" | "low">("all");
+  const [sortBy, setSortBy] = useState<"title_asc" | "title_desc" | "availability_desc" | "availability_asc">("title_asc");
   
   // Edit State
   const [bookToEdit, setBookToEdit] = useState<Book | null>(null);
@@ -42,12 +49,38 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
   };
   
   const filteredBooks = useMemo(() => {
-    return books.filter(b => 
+    const searched = books.filter(b => 
       b.title.toLowerCase().includes(search.toLowerCase()) || 
       b.author.toLowerCase().includes(search.toLowerCase()) ||
       b.isbn?.toLowerCase().includes(search.toLowerCase())
     );
-  }, [books, search]);
+
+    const stockFiltered = searched.filter((b) => {
+      if (stockFilter === "in") return b.available_copies > 0;
+      if (stockFilter === "out") return b.available_copies === 0;
+      if (stockFilter === "low") return b.available_copies > 0 && b.available_copies <= 2;
+      return true;
+    });
+
+    const sorted = [...stockFiltered].sort((a, b) => {
+      if (sortBy === "title_desc") return b.title.localeCompare(a.title);
+      if (sortBy === "availability_desc") return b.available_copies - a.available_copies;
+      if (sortBy === "availability_asc") return a.available_copies - b.available_copies;
+      return a.title.localeCompare(b.title);
+    });
+
+    return sorted;
+  }, [books, search, sortBy, stockFilter]);
+
+  const quickFilters = useMemo(
+    () => [
+      { key: "all" as const, label: "All", count: books.length },
+      { key: "in" as const, label: "In Stock", count: books.filter((b) => b.available_copies > 0).length },
+      { key: "out" as const, label: "Out", count: books.filter((b) => b.available_copies === 0).length },
+      { key: "low" as const, label: "Low (<=2)", count: books.filter((b) => b.available_copies > 0 && b.available_copies <= 2).length },
+    ],
+    [books],
+  );
 
   const stats = useMemo(() => {
     const totalTitles = books.length;
@@ -97,7 +130,7 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative w-full sm:w-[300px] md:w-[350px] group">
+           <div className="relative w-full sm:w-[280px] md:w-[320px] group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
             <Input 
               placeholder="Search by title, author, or ISBN..." 
@@ -105,6 +138,28 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
               onChange={(e) => setSearch(e.target.value)}
               className="pl-11 h-12 md:h-14 bg-zinc-50 dark:bg-zinc-800/50 border-none focus:ring-4 focus:ring-indigo-500/5 rounded-xl md:rounded-2xl text-sm md:text-base w-full"
             />
+          </div>
+          <div className="flex w-full sm:w-auto items-center gap-2 rounded-xl md:rounded-2xl border border-zinc-200/70 bg-zinc-50 p-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "list" ? "default" : "ghost"}
+              onClick={() => setViewMode("list")}
+              className="h-9 rounded-lg px-3"
+            >
+              <Rows3 className="mr-1.5 h-4 w-4" />
+              List
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              onClick={() => setViewMode("grid")}
+              className="h-9 rounded-lg px-3"
+            >
+              <LayoutGrid className="mr-1.5 h-4 w-4" />
+              Grid
+            </Button>
           </div>
           <Link href="/protected/catalog/add" className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto h-12 md:h-14 px-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-2xl shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 font-black text-[10px] md:text-xs uppercase tracking-widest transition-transform active:scale-95">
@@ -174,26 +229,75 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
           )}
 
           {/* Catalog Controls */}
-          <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4 md:pb-6">
+          <div className="space-y-4 border-b border-zinc-100 dark:border-zinc-800 pb-4 md:pb-6">
+            <div className="flex items-center justify-between">
              <h2 className="text-lg md:text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight flex items-center gap-2 md:gap-4">
-               Active Collection
-               <Badge variant="outline" className="text-[10px] py-0">{filteredBooks.length}</Badge>
-             </h2>
+                Active Collection
+                <Badge variant="outline" className="text-[10px] py-0">{filteredBooks.length}</Badge>
+              </h2>
+              <div className="hidden md:flex items-center gap-2 text-xs text-zinc-500">
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold outline-none"
+                >
+                  <option value="title_asc">Title A-Z</option>
+                  <option value="title_desc">Title Z-A</option>
+                  <option value="availability_desc">Most Available</option>
+                  <option value="availability_asc">Least Available</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {quickFilters.map((filter) => (
+                <Button
+                  key={filter.key}
+                  type="button"
+                  variant={stockFilter === filter.key ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStockFilter(filter.key)}
+                  className="h-8 rounded-full px-3 text-[11px]"
+                >
+                  {filter.label} ({filter.count})
+                </Button>
+              ))}
+
+              <div className="md:hidden ml-auto">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none"
+                >
+                  <option value="title_asc">Title A-Z</option>
+                  <option value="title_desc">Title Z-A</option>
+                  <option value="availability_desc">Most Available</option>
+                  <option value="availability_asc">Least Available</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
             <motion.div 
-              key="list"
+              key={viewMode}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
-              {filteredBooks.map(book => (
-                <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
-              ))}
-              {filteredBooks.length === 0 && (
-                <div className="text-center py-20 text-zinc-400">No assets found matching your query.</div>
+              {viewMode === "list" ? (
+                <>
+                  {filteredBooks.map((book) => (
+                    <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
+                  ))}
+                  {filteredBooks.length === 0 && (
+                    <div className="text-center py-20 text-zinc-400">No assets found matching your query.</div>
+                  )}
+                </>
+              ) : (
+                <InventoryGrid books={filteredBooks} onDelete={onDelete} onEdit={handleEditClick} />
               )}
             </motion.div>
           </AnimatePresence>

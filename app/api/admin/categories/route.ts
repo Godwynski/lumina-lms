@@ -1,9 +1,35 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+function toSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export async function GET() {
   try {
     const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || !["admin", "librarian"].includes(String(profile.role))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { data, error } = await supabase
       .from("categories")
@@ -43,7 +69,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, description } = body;
+    const rawName = typeof body.name === "string" ? body.name.trim() : "";
+    const rawSlug = typeof body.slug === "string" ? body.slug.trim() : "";
+    const description = typeof body.description === "string" ? body.description.trim() : null;
+    const name = rawName;
+    const slug = toSlug(rawSlug || rawName);
 
     if (!name || !slug) {
       return NextResponse.json(

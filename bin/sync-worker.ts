@@ -41,11 +41,12 @@ async function syncUsers() {
       if (!profile) {
         console.log(`Creating profile for new user ${user.email}...`);
         
-        // Auto-parse student_id from school email: lastname.studentid@alabang.sti.edu.ph
-        let studentId = "N/A";
-        const emailMatch = user.email?.match(/\.(\d+)@/);
-        if (emailMatch && emailMatch[1]) {
-          studentId = emailMatch[1];
+        // Parse student_id only for STI-formatted school emails.
+        let studentId: string | null = null;
+        const email = user.email?.toLowerCase() ?? "";
+        const emailMatch = email.match(/^[^@.]+\.([a-z0-9_-]+)@alabang\.sti\.edu\.ph$/i);
+        if (emailMatch?.[1]) {
+          studentId = emailMatch[1].toUpperCase();
         }
 
         const { error: createProfileError } = await supabase
@@ -53,6 +54,7 @@ async function syncUsers() {
           .insert({
             id: user.id,
             full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+            email: user.email,
             student_id: studentId,
             role: 'student'
           });

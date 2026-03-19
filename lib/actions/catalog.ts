@@ -3,17 +3,40 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
+async function assertStaffCatalogAccess() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !profile || !['admin', 'librarian', 'staff'].includes(String(profile.role))) {
+    throw new Error('Forbidden');
+  }
+
+  return supabase;
+}
+
 // --- Categories ---
 
 export async function getCategories() {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase.from('categories').select('*').order('name');
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function createCategory(name: string, description?: string) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('categories')
     .insert([{ name, description }])
@@ -27,7 +50,7 @@ export async function createCategory(name: string, description?: string) {
 // --- Books ---
 
 export async function getBooks(query: string = '', categoryId?: string) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   let dbQuery = supabase.from('books').select(`*, categories(name)`).eq('is_active', true);
   
   if (query) {
@@ -44,7 +67,7 @@ export async function getBooks(query: string = '', categoryId?: string) {
 }
 
 export async function getBookById(id: string) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('books')
     .select(`*, categories(name)`)
@@ -56,7 +79,7 @@ export async function getBookById(id: string) {
 }
 
 export async function createBook(bookData: Record<string, unknown>, copiesCount: number = 1) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('books')
     .insert([bookData])
@@ -89,7 +112,7 @@ export async function createBook(bookData: Record<string, unknown>, copiesCount:
 }
 
 export async function updateBook(id: string, bookData: Record<string, unknown>) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('books')
     .update(bookData)
@@ -104,7 +127,7 @@ export async function updateBook(id: string, bookData: Record<string, unknown>) 
 }
 
 export async function softDeleteBook(id: string) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   
   // Check for active borrowed copies
   const { count, error: countError } = await supabase
@@ -134,7 +157,7 @@ export async function softDeleteBook(id: string) {
 // --- Book Copies ---
 
 export async function getBookCopies(bookId: string) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('book_copies')
     .select('*')
@@ -146,7 +169,7 @@ export async function getBookCopies(bookId: string) {
 }
 
 export async function createBookCopy(bookId: string, condition?: string) {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('book_copies')
     .insert([{ book_id: bookId, condition }])
@@ -160,7 +183,7 @@ export async function createBookCopy(bookId: string, condition?: string) {
 }
 
 export async function updateBookCopyStatus(id: string, status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST') {
-  const supabase = await createClient();
+  const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('book_copies')
     .update({ status })

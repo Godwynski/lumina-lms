@@ -19,6 +19,8 @@ interface MyCardContainerProps {
   };
 }
 
+type CardData = MyCardContainerProps["initialData"];
+
 const CACHE_KEY = "lumina_library_card_cache";
 const SHOW_ASSET_REFRESH =
   process.env.NEXT_PUBLIC_SHOW_CARD_ASSET_REFRESH === "true";
@@ -89,7 +91,23 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
-        JSON.parse(cached);
+        const parsed = JSON.parse(cached) as Partial<CardData>;
+        if (
+          typeof parsed.fullName === "string" &&
+          typeof parsed.studentId === "string" &&
+          typeof parsed.cardNumber === "string" &&
+          typeof parsed.department === "string" &&
+          typeof parsed.expiryDate === "string" &&
+          (parsed.status === "active" ||
+            parsed.status === "pending" ||
+            parsed.status === "suspended" ||
+            parsed.status === "expired")
+        ) {
+          setData((current) => ({
+            ...current,
+            ...parsed,
+          }));
+        }
       } catch {
         console.error("Cache corrupted");
       }
@@ -172,8 +190,8 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
       setData((current) => {
         const next = {
           ...current,
-          qrUrl: payload.qr_url || current.qrUrl,
-          avatarUrl: payload.profile_url || current.avatarUrl,
+          qrUrl: payload.qr_url ?? current.qrUrl,
+          avatarUrl: payload.profile_url ?? current.avatarUrl,
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(next));
         return next;

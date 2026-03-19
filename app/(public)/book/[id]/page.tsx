@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { getBookById } from '@/lib/actions/catalog';
-import { reportMissingBook } from '@/lib/actions/public-catalog';
+import { getPublicBookById, reportMissingBook } from '@/lib/actions/public-catalog';
 import { ChevronLeft, MapPin, AlertCircle, BookOpen, Hash, Tag } from 'lucide-react';
 import { Book } from '@/lib/types';
 
@@ -21,7 +20,7 @@ export default function PublicBookDetailPage() {
   useEffect(() => {
     async function loadBook() {
       try {
-        const data = await getBookById(id);
+        const data = await getPublicBookById(id);
         setBook(data);
       } catch (err) {
         console.error(err);

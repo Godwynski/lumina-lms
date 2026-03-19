@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getPublicBooksCached } from '@/lib/actions/public-catalog';
+import { getCategoriesCached, getPublicBooksCached } from '@/lib/actions/public-catalog';
 import { Filter, Search, X } from 'lucide-react';
-import { getCategories } from '@/lib/actions/catalog';
 import { Book, Category } from '@/lib/types';
 
 export default function PublicSearchPage() {
@@ -28,7 +27,7 @@ export default function PublicSearchPage() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const cats = await getCategories();
+        const cats = await getCategoriesCached();
         setCategories(cats);
       } catch { /* silent fail */ }
     }

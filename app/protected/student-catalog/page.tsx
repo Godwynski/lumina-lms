@@ -11,7 +11,10 @@ import {
   X, 
   ChevronRight, 
   WifiOff,
-  AlertCircle
+  AlertCircle,
+  ArrowUpDown,
+  LayoutGrid,
+  Rows3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -46,6 +49,9 @@ export default function StudentCatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
   const [selectedSection, setSelectedSection] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [sortBy, setSortBy] = useState<'title' | 'author' | 'availability'>('title');
+  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
 
   const observer = useRef<IntersectionObserver | null>(null);
   const lastBookElementRef = useCallback((node: HTMLAnchorElement | null) => {
@@ -91,6 +97,7 @@ export default function StudentCatalogPage() {
     if (isOffline && !isNewSearch) return;
     
     setLoading(true);
+    setLoadError('');
     try {
       const result = await getPublicBooksCached(
         query,
@@ -108,6 +115,7 @@ export default function StudentCatalogPage() {
       setHasMore(result.hasMore);
     } catch (err) {
       console.error(err);
+      setLoadError('Unable to load catalog right now. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -130,6 +138,12 @@ export default function StudentCatalogPage() {
     setSelectedSection('');
     setQuery('');
   };
+
+  const displayBooks = [...books].sort((a, b) => {
+    if (sortBy === 'author') return a.author.localeCompare(b.author);
+    if (sortBy === 'availability') return b.available_copies - a.available_copies;
+    return a.title.localeCompare(b.title);
+  });
 
   return (
     <div className="min-h-screen bg-zinc-50 pb-20 overflow-x-hidden">
@@ -173,6 +187,44 @@ export default function StudentCatalogPage() {
             />
           </div>
 
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+              <Button
+                type="button"
+                variant={density === 'comfortable' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDensity('comfortable')}
+                className="h-7 rounded-lg px-2 text-[11px]"
+              >
+                <LayoutGrid className="mr-1 h-3.5 w-3.5" />
+                Comfortable
+              </Button>
+              <Button
+                type="button"
+                variant={density === 'compact' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDensity('compact')}
+                className="h-7 rounded-lg px-2 text-[11px]"
+              >
+                <Rows3 className="mr-1 h-3.5 w-3.5" />
+                Compact
+              </Button>
+            </div>
+
+            <div className="inline-flex items-center gap-1 text-xs text-zinc-500">
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold outline-none"
+              >
+                <option value="title">Sort: Title</option>
+                <option value="author">Sort: Author</option>
+                <option value="availability">Sort: Availability</option>
+              </select>
+            </div>
+          </div>
+
           {/* Desktop Filters */}
           <div className="hidden md:flex flex-wrap items-center gap-2 pt-2">
             <select 
@@ -204,22 +256,37 @@ export default function StudentCatalogPage() {
 
       {/* Main Content */}
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {books.map((book, index) => (
+        {loadError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700">
+            {loadError}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between px-1 pb-1">
+          <p className="text-xs font-semibold text-zinc-500">
+            Showing {displayBooks.length} title{displayBooks.length === 1 ? '' : 's'}
+          </p>
+          {(selectedCategory || availableOnly || query) && (
+            <p className="text-[11px] text-indigo-600 font-semibold">Filtered view</p>
+          )}
+        </div>
+
+        {displayBooks.map((book, index) => (
           <Link 
             key={book.id} 
             href={`/protected/student-catalog/${book.id}`}
-            ref={index === books.length - 1 ? lastBookElementRef : null}
-            className="block bg-white rounded-2xl border border-zinc-200/50 shadow-sm p-4 hover:shadow-md transition-all active:scale-[0.98] group"
+            ref={index === displayBooks.length - 1 ? lastBookElementRef : null}
+            className={`block bg-white rounded-2xl border border-zinc-200/50 shadow-sm hover:shadow-md transition-all active:scale-[0.98] group ${density === 'compact' ? 'p-3' : 'p-4'}`}
           >
-            <div className="flex gap-5">
+            <div className={`flex ${density === 'compact' ? 'gap-3' : 'gap-5'}`}>
               {/* Cover Preview */}
-              <div className="w-24 h-32 bg-zinc-50 rounded-xl overflow-hidden shadow-inner flex-shrink-0 relative">
+              <div className={`${density === 'compact' ? 'w-16 h-24' : 'w-24 h-32'} bg-zinc-50 rounded-xl overflow-hidden shadow-inner flex-shrink-0 relative`}>
                 {book.cover_url ? (
                   <Image
                     src={book.cover_url}
                     alt={book.title}
                     fill
-                    sizes="96px"
+                    sizes={density === 'compact' ? '64px' : '96px'}
                     className="object-cover transition-transform group-hover:scale-105"
                   />
                 ) : (
@@ -238,8 +305,8 @@ export default function StudentCatalogPage() {
               {/* Info */}
               <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                 <div>
-                  <h3 className="font-bold text-zinc-900 line-clamp-1 leading-snug group-hover:text-indigo-600 transition-colors">{book.title}</h3>
-                  <p className="text-zinc-500 text-sm font-medium">{book.author}</p>
+                  <h3 className={`font-bold text-zinc-900 line-clamp-1 leading-snug group-hover:text-indigo-600 transition-colors ${density === 'compact' ? 'text-sm' : ''}`}>{book.title}</h3>
+                  <p className={`text-zinc-500 font-medium ${density === 'compact' ? 'text-xs' : 'text-sm'}`}>{book.author}</p>
                 </div>
                 
                 <div className="space-y-3">

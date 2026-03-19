@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { createBook } from '@/lib/actions/catalog';
+import { createBook, getCategories } from '@/lib/actions/catalog';
 import { Camera, ChevronLeft, Search, Save, BookPlus, ImageIcon, Info, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -42,6 +42,7 @@ export default function AddBookPage() {
   });
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -166,6 +167,18 @@ export default function AddBookPage() {
     },
     [handleIsbnLookup, normalizeIsbn, stopScanner],
   );
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await getCategories();
+        setCategories((data ?? []).map((c) => ({ id: c.id as string, name: c.name as string })));
+      } catch (err) {
+        console.error('Failed to load categories', err);
+      }
+    }
+    void loadCategories();
+  }, []);
 
   useEffect(() => {
     const detectorCtor = (window as WindowWithDetector).BarcodeDetector;
@@ -413,6 +426,20 @@ export default function AddBookPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Category</label>
+                  <select
+                    value={formData.categoryId}
+                    onChange={e => setFormData({...formData, categoryId: e.target.value})}
+                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                  >
+                    <option value="">Uncategorized</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-2 text-left">
                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Physical Section</label>
                   <input 

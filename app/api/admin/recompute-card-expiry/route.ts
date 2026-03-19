@@ -12,7 +12,7 @@ async function getSystemSetting(supabase: SupabaseServerClient, key: string): Pr
     .from("system_settings")
     .select("value")
     .eq("key", key)
-    .single();
+    .maybeSingle();
   return data?.value || null;
 }
 
@@ -42,9 +42,11 @@ export async function POST(request: NextRequest) {
     const { dryRun = false } = body;
 
     // Get policy: card_validity_years
-    const validityYears = parseInt(
-      (await getSystemSetting(supabase, "card_validity_years")) || "4"
+    const validityYearsRaw = parseInt(
+      (await getSystemSetting(supabase, "card_validity_years")) || "4",
+      10,
     );
+    const validityYears = Number.isFinite(validityYearsRaw) && validityYearsRaw > 0 ? validityYearsRaw : 4;
 
     // Get all active library cards
     const { data: cards, error: cardsError } = await supabase

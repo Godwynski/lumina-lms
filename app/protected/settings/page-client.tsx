@@ -41,6 +41,7 @@ type Category = { id: string; name: string; slug: string; description?: string; 
 interface Props {
   isAdmin: boolean;
   role: Role;
+  profileName: string;
   settings: PolicySetting[];
   categories: Category[];
 }
@@ -71,7 +72,7 @@ type NavTab = {
   section: "personal" | "admin";
 };
 
-export default function SettingsPageClient({ isAdmin, role, settings, categories }: Props) {
+export default function SettingsPageClient({ isAdmin, role, profileName, settings, categories }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
@@ -85,29 +86,50 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
   const [rememberDevice, setRememberDevice] = useState(true);
   const [compactTables, setCompactTables] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [selectedPhotoName, setSelectedPhotoName] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    setDisplayName(localStorage.getItem("lumina_profile_name") || "");
+    const localName = localStorage.getItem("lumina_profile_name") || "";
+    setDisplayName(profileName || localName);
     setEmailAlerts(localStorage.getItem("lumina_email_alerts") !== "false");
     setRememberDevice(localStorage.getItem("lumina_remember_device") !== "false");
     setCompactTables(localStorage.getItem("lumina_compact_tables") === "true");
 
     const tab = searchParams.get("tab") as TabId | null;
     if (tab) setActiveTab(tab);
-  }, [searchParams]);
+  }, [searchParams, profileName]);
 
   const flash = useCallback((msg: string) => {
     setSavedMsg(msg);
     setTimeout(() => setSavedMsg(""), 3000);
   }, []);
 
-  const saveProfile = () => {
-    localStorage.setItem("lumina_profile_name", displayName.trim());
-    flash("Profile saved successfully");
+  const saveProfile = async () => {
+    const nextName = displayName.trim();
+    setProfileSaving(true);
+    try {
+      const response = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: nextName }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to save profile");
+      }
+
+      localStorage.setItem("lumina_profile_name", nextName);
+      flash("Profile saved successfully");
+    } catch (error) {
+      flash(error instanceof Error ? error.message : "Failed to save profile");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const savePreferences = () => {
@@ -175,6 +197,15 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
       : [];
     return [...personal, ...admin];
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!allTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab("profile");
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", "profile");
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }, [activeTab, allTabs, router]);
 
   const filteredTabs = useMemo(() => {
     if (!searchQuery) return allTabs;
@@ -346,8 +377,12 @@ export default function SettingsPageClient({ isAdmin, role, settings, categories
                           <p className="text-xs text-zinc-500 capitalize">{role}</p>
                         </div>
                       </div>
-                      <Button onClick={saveProfile} className="rounded-xl h-11 px-8 bg-indigo-600 hover:bg-indigo-700">
-                        Save Changes
+                      <Button
+                        onClick={() => void saveProfile()}
+                        disabled={profileSaving}
+                        className="rounded-xl h-11 px-8 bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        {profileSaving ? "Saving..." : "Save Changes"}
                       </Button>
                     </div>
                   </div>
