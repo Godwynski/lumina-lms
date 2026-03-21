@@ -18,12 +18,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
 type User = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: "admin" | "librarian" | "staff" | "student";
   status: string;
   department: string;
@@ -34,6 +40,7 @@ type ProfileRow = {
   id: string;
   full_name: string | null;
   email: string | null;
+  avatar_url: string | null;
   role: string | null;
   status: string | null;
   department: string | null;
@@ -67,6 +74,7 @@ export default function UsersPage() {
             .join(" ")
         : "Unnamed User"),
     email: typeof row.email === "string" ? row.email : "",
+    avatarUrl: typeof row.avatar_url === "string" && row.avatar_url.trim() ? row.avatar_url : null,
     role: ["admin", "librarian", "staff", "student"].includes(String(row.role))
       ? (String(row.role) as User["role"])
       : "student",
@@ -82,6 +90,15 @@ export default function UsersPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("student");
   const [inviteDept, setInviteDept] = useState("");
+  const [editRole, setEditRole] = useState<User["role"]>("student");
+  const [editStatus, setEditStatus] = useState("active");
+
+  useEffect(() => {
+    if (selectedUser) {
+      setEditRole(selectedUser.role);
+      setEditStatus(selectedUser.status);
+    }
+  }, [selectedUser]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
@@ -131,6 +148,15 @@ export default function UsersPage() {
     };
 
     void loadUsers();
+
+    const handleProfilePhotoUpdated = () => {
+      void loadUsers();
+    };
+
+    window.addEventListener("lumina:profile-photo-updated", handleProfilePhotoUpdated);
+    return () => {
+      window.removeEventListener("lumina:profile-photo-updated", handleProfilePhotoUpdated);
+    };
   }, [supabase]);
 
   const handleInvite = async () => {
@@ -173,6 +199,7 @@ export default function UsersPage() {
                   .join(" ")
               : "Unnamed User"),
           email: typeof updated.email === "string" ? updated.email : "",
+          avatarUrl: typeof updated.avatar_url === "string" && updated.avatar_url.trim() ? updated.avatar_url : null,
           role: ["admin", "librarian", "staff", "student"].includes(String(updated.role))
             ? (String(updated.role) as User["role"])
             : "student",
@@ -235,6 +262,7 @@ export default function UsersPage() {
                     .join(" ")
                 : "Unnamed User"),
             email: typeof updated.email === "string" ? updated.email : "",
+            avatarUrl: typeof updated.avatar_url === "string" && updated.avatar_url.trim() ? updated.avatar_url : null,
             role: ["admin", "librarian", "staff", "student"].includes(String(updated.role))
               ? (String(updated.role) as User["role"])
               : "student",
@@ -261,10 +289,10 @@ export default function UsersPage() {
   return (
     <div className="relative min-h-[calc(100vh-120px)] flex flex-col gap-6">
       {/* Refined Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-100 pb-1">
+      <div className="flex flex-col justify-between gap-6 border-b border-border pb-1 md:flex-row md:items-end">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Users & Roles</h1>
-          <p className="text-zinc-500 text-sm">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Users & Roles</h1>
+          <p className="text-muted-foreground text-sm">
             Manage your organization&apos;s directory and access control.
           </p>
           
@@ -274,25 +302,26 @@ export default function UsersPage() {
               { id: "directory", label: "User Directory", icon: Users },
               { id: "permissions", label: "Role Policies", icon: Shield }
             ].map(tab => (
-              <button
+              <Button
                 key={tab.id}
                     onClick={() => setActiveView(tab.id as "directory" | "permissions")}
+                variant="ghost"
                 className={cn(
                   "flex items-center gap-2 pb-3 text-sm font-semibold transition-all relative",
                   activeView === tab.id 
-                    ? "text-indigo-600" 
-                    : "text-zinc-400 hover:text-zinc-600"
+                    ? "text-foreground" 
+                    : "text-muted-foreground hover:text-muted-foreground"
                 )}
               >
                 <tab.icon size={16} />
                 {tab.label}
                 {activeView === tab.id && (
-                  <motion.div 
-                    layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"
-                  />
+                    <motion.div 
+                     layoutId="activeTab"
+                     className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-primary"
+                   />
                 )}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -300,19 +329,19 @@ export default function UsersPage() {
         <div className="pb-3 text-right">
           {activeView === "directory" ? (
              <div className="flex flex-col items-end gap-1">
-              <button 
+              <Button
                 onClick={() => setIsAddingUser(true)}
-                className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-zinc-200 transition-all active:scale-95 text-sm"
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95"
               >
                 <UserPlus size={18} />
                 Invite User
-              </button>
-              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest px-2">
+              </Button>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest px-2">
                 Manage Directory
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-zinc-50 px-4 py-2 rounded-xl border border-zinc-100 text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
+            <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-xl border border-border text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
               <Shield size={14} />
               Global Access Rules
             </div>
@@ -322,7 +351,7 @@ export default function UsersPage() {
 
       {activeView === "directory" && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-          <StatCard label={`${activeTab === 'all' ? 'Total' : activeTab} Users`} value={hasMounted ? activeStats.total : 0} icon={Users} color="indigo" />
+           <StatCard label={`${activeTab === 'all' ? 'Total' : activeTab} Users`} value={hasMounted ? activeStats.total : 0} icon={Users} color="slate" />
           <StatCard label="Active" value={hasMounted ? activeStats.active : 0} icon={CheckCircle2} color="emerald" />
           <StatCard label="Pending" value={hasMounted ? activeStats.pending : 0} icon={Clock} color="amber" />
           <StatCard label="Review Required" value={hasMounted ? activeStats.review : 0} icon={AlertCircle} color="red" />
@@ -340,50 +369,51 @@ export default function UsersPage() {
 
             {/* Filter & Search Bar - Cleaner Layout */}
             <div className="flex flex-col xl:flex-row items-center gap-4">
-              <div className="flex-1 w-full relative group">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-600 transition-colors" />
-                <input 
+            <div className="group relative w-full flex-1">
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-slate-700" />
+                <Input
                   type="text" 
                   placeholder="Find a user by name or email..."
-                  className="w-full bg-white border border-zinc-200 focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/30 rounded-2xl py-3 pl-11 text-sm shadow-sm transition-all"
+                  className="w-full rounded-xl border border-border bg-card py-3 pl-11 text-sm shadow-sm transition-all focus:border-slate-400 focus:ring-2 focus:ring-ring"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex p-1.5 bg-zinc-100/50 rounded-2xl border border-zinc-200/50 w-full xl:w-fit overflow-x-auto scrollbar-hide">
+              <div className="scrollbar-hide flex w-full overflow-x-auto rounded-xl border border-border bg-muted p-1.5 xl:w-fit">
                 {['all', 'admin', 'librarian', 'staff', 'student'].map((tab) => (
-                  <button
+                  <Button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
+                    variant="ghost"
                     className={cn(
                       "px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all whitespace-nowrap",
                       activeTab === tab 
-                        ? "bg-white text-indigo-600 shadow-sm" 
-                        : "text-zinc-500 hover:text-zinc-800"
+                        ? "bg-card text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-zinc-800"
                     )}
                   >
                     {tab}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
 
             {/* Redesigned User Table - No Redundant Columns */}
-            <div className="bg-white rounded-[32px] border border-zinc-200 shadow-sm overflow-hidden">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-zinc-50 border-b border-zinc-100">
-                      <th className="px-6 py-4 text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Identity</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Role & Context</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-zinc-400 uppercase tracking-widest text-center">Active Status</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Join Date</th>
+                    <tr className="bg-muted border-b border-border">
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Identity</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Role & Context</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Active Status</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Join Date</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-50">
+                  <tbody className="divide-y divide-muted">
                     {isLoadingUsers ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-20 text-center text-sm text-zinc-500">
+                        <td colSpan={4} className="px-6 py-20 text-center text-sm text-muted-foreground">
                           Loading users...
                         </td>
                       </tr>
@@ -391,7 +421,7 @@ export default function UsersPage() {
                       filteredUsers.map((user) => (
                         <tr 
                           key={user.id} 
-                          className="group hover:bg-indigo-50/30 transition-all cursor-pointer relative"
+                          className="group relative cursor-pointer transition-all hover:bg-slate-50"
                           onClick={() => {
                             setSelectedUser(user);
                             setIsEditingUser(false);
@@ -399,19 +429,22 @@ export default function UsersPage() {
                         >
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-4">
-                              <div className="h-10 w-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                {user.name.charAt(0)}
-                              </div>
+                              <Avatar className="h-10 w-10 rounded-xl border border-border">
+                                <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+                                <AvatarFallback className="rounded-xl bg-muted font-bold text-slate-700 transition-all group-hover:bg-primary group-hover:text-primary-foreground">
+                                  {user.name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
                               <div>
-                                <p className="font-bold text-zinc-900 leading-none">{user.name}</p>
-                                <p className="text-xs text-zinc-400 mt-1">{user.email}</p>
+                                <p className="font-bold text-foreground leading-none">{user.name}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-5">
                             <div className="flex flex-col gap-1">
                               <RoleBadge role={user.role} />
-                              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest px-1">{user.department}</span>
+                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest px-1">{user.department}</span>
                             </div>
                           </td>
                           <td className="px-6 py-5">
@@ -420,8 +453,8 @@ export default function UsersPage() {
                             </div>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="flex items-center gap-2 text-zinc-500 text-sm font-medium">
-                              <Clock size={14} className="text-zinc-300" />
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm font-medium">
+                              <Clock size={14} className="text-muted-foreground" />
                               {user.joined}
                             </div>
                           </td>
@@ -431,12 +464,12 @@ export default function UsersPage() {
                       <tr>
                         <td colSpan={4} className="px-6 py-32 text-center">
                           <div className="flex flex-col items-center gap-4">
-                            <div className="h-16 w-16 rounded-3xl bg-zinc-50 flex items-center justify-center text-zinc-200">
+                            <div className="h-16 w-16 rounded-3xl bg-muted flex items-center justify-center text-zinc-200">
                               <Search size={32} />
                             </div>
                             <div>
-                              <p className="font-bold text-zinc-900">No users found</p>
-                              <p className="text-sm text-zinc-400 mt-1">Try adjusting your search or filters.</p>
+                              <p className="font-bold text-foreground">No users found</p>
+                              <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters.</p>
                             </div>
                           </div>
                         </td>
@@ -471,36 +504,43 @@ export default function UsersPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col"
+              className="relative w-full max-w-md bg-card h-full shadow-2xl flex flex-col"
             >
               <div className="p-8 pb-32 overflow-y-auto flex-1 h-full scrollbar-hide">
                 <div className="flex items-center justify-between mb-8">
-                <button 
+                <Button
                   onClick={() => setSelectedUser(null)}
-                  className="p-2 -ml-2 text-zinc-400 hover:text-zinc-900 transition-colors"
+                  variant="ghost"
+                  className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <X size={20} />
-                </button>
+                </Button>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <Button
                     onClick={() => setIsEditingUser(!isEditingUser)}
+                    variant="ghost"
                     className={cn(
-                      "px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all rounded-xl",
-                      isEditingUser ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-zinc-400 hover:text-indigo-600"
+                      "rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all",
+                      isEditingUser ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-slate-700"
                     )}
                   >
                     {isEditingUser ? "Finish Editing" : "Edit Profile"}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div className="flex flex-col items-center text-center">
-                <div className="h-24 w-24 rounded-[32px] bg-gradient-to-br from-indigo-50 to-white border-2 border-indigo-100 flex items-center justify-center text-3xl font-bold text-indigo-600 shadow-xl shadow-indigo-500/5 mb-4 group relative overflow-hidden">
-                  <span className={cn(isEditingUser && "blur-sm opacity-50")}>{selectedUser.name.charAt(0)}</span>
+                 <div className="group relative mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-border bg-muted text-3xl font-bold text-slate-700 shadow-sm">
+                  <Avatar className={cn("h-full w-full rounded-3xl", isEditingUser && "blur-sm opacity-50")}>
+                    <AvatarImage src={selectedUser.avatarUrl ?? undefined} alt={selectedUser.name} className="object-cover" />
+                    <AvatarFallback className="rounded-3xl bg-muted text-3xl font-bold text-slate-700">
+                      {selectedUser.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
                   {isEditingUser && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-indigo-600/10 cursor-pointer">
-                      <MoreVertical size={20} className="text-indigo-600" />
-                    </div>
+                     <div className="absolute inset-0 flex cursor-pointer items-center justify-center bg-slate-900/10">
+                       <MoreVertical size={20} className="text-slate-700" />
+                     </div>
                   )}
                 </div>
                 
@@ -517,25 +557,25 @@ export default function UsersPage() {
                       name: String(formData.get("name") ?? selectedUser.name),
                       email: String(formData.get("email") ?? selectedUser.email),
                       role: safeRole,
-                      status: String(formData.get("status") ?? selectedUser.status),
+                      status: editStatus,
                       department: String(formData.get("department") ?? selectedUser.department),
                     });
                   }}>
                     <div className="space-y-4 text-center">
-                      <input 
+                      <Input
                         name="name"
                         type="text" 
                         defaultValue={selectedUser.name} 
-                        className="text-2xl font-bold text-zinc-900 border-b-2 border-indigo-500 outline-none w-full text-center bg-transparent"
+                         className="w-full border-b-2 border-slate-500 bg-transparent text-center text-2xl font-bold text-foreground outline-none"
                         required
                       />
-                      <div className="flex items-center justify-center gap-1.5 text-zinc-400 text-sm">
+                      <div className="flex items-center justify-center gap-1.5 text-muted-foreground text-sm">
                         <Mail size={14} />
-                        <input 
+                        <Input
                           name="email"
                           type="email" 
                           defaultValue={selectedUser.email} 
-                          className="border-b border-zinc-200 outline-none text-zinc-600 px-1 text-center"
+                          className="border-b border-border outline-none text-muted-foreground px-1 text-center"
                           required
                         />
                       </div>
@@ -543,34 +583,45 @@ export default function UsersPage() {
 
                     <div className="mt-6 flex flex-col gap-3 w-full max-w-[240px] mx-auto text-left">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block px-1">System Role</label>
-                        <select name="role" defaultValue={selectedUser.role} className="w-full bg-zinc-100 border-none rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer">
-                          <option value="admin">Admin</option>
-                          <option value="librarian">Librarian</option>
-                          <option value="staff">Staff</option>
-                          <option value="student">Student</option>
-                        </select>
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block px-1">System Role</Label>
+                        <input type="hidden" name="role" value={editRole} />
+                        <Select value={editRole} onValueChange={(value) => setEditRole(value as User["role"])}>
+                           <SelectTrigger className="w-full rounded-xl border border-border bg-muted px-3 py-2.5 text-xs font-semibold text-foreground">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="librarian">Librarian</SelectItem>
+                            <SelectItem value="staff">Staff</SelectItem>
+                            <SelectItem value="student">Student</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block px-1">Account Status</label>
-                        <select name="status" defaultValue={selectedUser.status} className="w-full bg-zinc-100 border-none rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer">
-                          <option value="active">Active</option>
-                          <option value="pending">Pending</option>
-                          <option value="suspended">Suspended</option>
-                        </select>
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block px-1">Account Status</Label>
+                        <Select value={editStatus} onValueChange={setEditStatus}>
+                           <SelectTrigger className="w-full rounded-xl border border-border bg-muted px-3 py-2.5 text-xs font-semibold text-foreground">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="suspended">Suspended</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block px-1">Department</label>
-                        <input name="department" defaultValue={selectedUser.department} className="w-full bg-zinc-100 border-none rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 outline-none" />
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block px-1">Department</Label>
+                         <Input name="department" defaultValue={selectedUser.department} className="w-full rounded-xl border border-border bg-muted px-3 py-2.5 text-xs font-semibold text-foreground outline-none" />
                       </div>
                     </div>
                     
-                    <button type="submit" disabled={isSaving} className="hidden" id="submit-profile-edit" />
+                    <Button type="submit" disabled={isSaving} className="hidden" id="submit-profile-edit" />
                   </form>
                 ) : (
                   <div className="flex flex-col items-center text-center">
-                    <h2 className="text-2xl font-bold text-zinc-900">{selectedUser.name}</h2>
-                    <div className="flex items-center gap-1.5 mt-2 text-zinc-400 text-sm">
+                    <h2 className="text-2xl font-bold text-foreground">{selectedUser.name}</h2>
+                    <div className="flex items-center gap-1.5 mt-2 text-muted-foreground text-sm">
                       <Mail size={14} />
                       {selectedUser.email}
                     </div>
@@ -584,35 +635,35 @@ export default function UsersPage() {
 
               <div className="mt-12 space-y-8">
                 <div>
-                  <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Account Information</h3>
+                  <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Account Information</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between group">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-zinc-50 text-zinc-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
+                           <div className="rounded-xl bg-muted p-2 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-slate-700">
                           <GraduationCap size={16} />
                         </div>
-                        <span className="text-sm text-zinc-500">Department</span>
+                        <span className="text-sm text-muted-foreground">Department</span>
                       </div>
-                      <span className="text-sm font-semibold text-zinc-900">{selectedUser.department}</span>
+                      <span className="text-sm font-semibold text-foreground">{selectedUser.department}</span>
                     </div>
                     <div className="flex items-center justify-between group">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-zinc-50 text-zinc-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
+                           <div className="rounded-xl bg-muted p-2 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-slate-700">
                           <Clock size={16} />
                         </div>
-                        <span className="text-sm text-zinc-500">Member Since</span>
+                        <span className="text-sm text-muted-foreground">Member Since</span>
                       </div>
-                      <span className="text-sm font-semibold text-zinc-900">{selectedUser.joined}</span>
+                      <span className="text-sm font-semibold text-foreground">{selectedUser.joined}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                   <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4 flex justify-between items-center">
+                   <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 flex justify-between items-center">
                     <span>Effective Permissions</span>
-                    <Shield size={12} className="text-zinc-300" />
+                     <Shield size={12} className="text-muted-foreground" />
                   </h3>
-                  <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 space-y-3">
+                  <div className="p-4 rounded-2xl bg-muted border border-border space-y-3">
                     <PermissionItem label="Administrative Dashboard" allowed={selectedUser.role === 'admin'} />
                     <PermissionItem label="Issue Library Cards" allowed={['admin', 'librarian'].includes(selectedUser.role)} />
                     <PermissionItem label="Manage Digital Archive" allowed={['admin', 'librarian'].includes(selectedUser.role)} />
@@ -624,28 +675,29 @@ export default function UsersPage() {
 
             <div className="absolute bottom-0 left-0 right-0 p-8 pt-0 bg-gradient-to-t from-white via-white to-transparent">
               {isEditingUser ? (
-                <button 
-                  onClick={() => document.getElementById('submit-profile-edit')?.click()}
-                  disabled={isSaving}
-                  className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
+                 <Button
+                   onClick={() => document.getElementById('submit-profile-edit')?.click()}
+                   disabled={isSaving}
+                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                 >
                   {isSaving ? (
                     <>
                       <RotateCcw size={18} className="animate-spin" />
                       Saving...
                     </>
                   ) : "Save Changes"}
-                </button>
+                </Button>
               ) : (
-                 <button 
+                 <Button
                   onClick={() => {
                     setSelectedUser(null);
                     setActiveView("directory");
                   }}
-                  className="w-full border border-zinc-200 text-zinc-500 font-bold py-4 rounded-2xl hover:bg-zinc-50 transition-all active:scale-[0.98]"
+                  variant="outline"
+                  className="w-full border border-border text-muted-foreground font-bold py-4 rounded-2xl hover:bg-muted transition-all active:scale-[0.98]"
                 >
                   Close Window
-                </button>
+                </Button>
               )}
             </div>
             </motion.div>
@@ -660,28 +712,29 @@ export default function UsersPage() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[110] bg-zinc-900 text-white px-4 py-3 rounded-2xl shadow-2xl shadow-black/20 flex items-center gap-6 border border-white/5 backdrop-blur-md"
+               className="fixed bottom-8 left-1/2 z-[110] flex -translate-x-1/2 items-center gap-6 rounded-2xl border border-white/5 bg-zinc-900 px-4 py-3 text-white shadow-2xl shadow-black/20 backdrop-blur-md"
           >
             <div className="flex items-center gap-3 border-r border-white/10 pr-6 mr-2">
               <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-sm font-bold tracking-tight whitespace-nowrap">Unsaved permission changes</span>
             </div>
             <div className="flex items-center gap-3">
-              <button 
+              <Button
                 onClick={() => setIsMatrixDirty(false)}
-                className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+                variant="ghost"
+                 className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                 Discard
-              </button>
-              <button 
+              </Button>
+              <Button
                 onClick={() => {
                   setIsMatrixDirty(false);
                   alert("Permissions synchronized across system.");
                 }}
-                className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+                 className="rounded-xl bg-primary px-6 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground transition-all hover:bg-primary/90 active:scale-95"
               >
                 Save Changes
-              </button>
+              </Button>
             </div>
           </motion.div>
         )}
@@ -703,63 +756,64 @@ export default function UsersPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col"
+              className="relative w-full max-w-md bg-card h-full shadow-2xl flex flex-col"
             >
               <div className="p-8 pb-32 overflow-y-auto flex-1 h-full scrollbar-hide">
                 <div className="flex items-center justify-between mb-8">
-                   <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <UserPlus size={24} />
-                  </div>
-                  <button onClick={() => setIsAddingUser(false)} className="p-2 text-zinc-400 hover:text-zinc-900">
+                   <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted text-slate-700">
+                     <UserPlus size={24} />
+                   </div>
+                  <Button onClick={() => setIsAddingUser(false)} variant="ghost" size="icon" className="p-2 text-muted-foreground hover:text-foreground">
                     <X size={20} />
-                  </button>
+                  </Button>
                 </div>
 
-                <h2 className="text-2xl font-bold text-zinc-900">Invite New User</h2>
-                <p className="text-zinc-500 text-sm mt-1">Send a registration link to a new member.</p>
+                <h2 className="text-2xl font-bold text-foreground">Invite New User</h2>
+                <p className="text-muted-foreground text-sm mt-1">Send a registration link to a new member.</p>
 
                 <div className="mt-10 space-y-6">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest px-1">Email Address</label>
-                    <input 
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Email Address</Label>
+                    <Input
                       type="email" 
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder="name@organization.com"
-                      className="w-full bg-zinc-50 border-2 border-transparent focus:bg-white focus:border-indigo-500/20 rounded-2xl py-3 px-4 outline-none transition-all font-medium text-sm"
+                      className="w-full bg-muted border-2 border-transparent focus:bg-card focus:border-slate-400/30 rounded-2xl py-3 px-4 outline-none transition-all font-medium text-sm"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest px-1">Assign Role</label>
-                    <select 
-                      value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value)}
-                      className="w-full bg-zinc-50 border-2 border-transparent focus:bg-white focus:border-indigo-500/20 rounded-2xl py-3 px-4 outline-none transition-all font-bold text-sm text-zinc-900 appearance-none cursor-pointer"
-                    >
-                      <option value="librarian">Librarian</option>
-                      <option value="staff">Staff</option>
-                      <option value="student">Student</option>
-                      <option value="admin">System Admin</option>
-                    </select>
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Assign Role</Label>
+                    <Select value={inviteRole} onValueChange={setInviteRole}>
+                       <SelectTrigger className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-sm font-semibold text-foreground transition-all">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="librarian">Librarian</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="admin">System Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest px-1">Department / Faculty</label>
-                    <input 
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Department / Faculty</Label>
+                    <Input
                       type="text" 
                       value={inviteDept}
                       onChange={(e) => setInviteDept(e.target.value)}
                       placeholder="e.g. Computer Science"
-                      className="w-full bg-zinc-50 border-2 border-transparent focus:bg-white focus:border-indigo-500/20 rounded-2xl py-3 px-4 outline-none transition-all font-medium text-sm"
+                      className="w-full bg-muted border-2 border-transparent focus:bg-card focus:border-slate-400/30 rounded-2xl py-3 px-4 outline-none transition-all font-medium text-sm"
                     />
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 flex gap-3">
-                    <div className="h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <Shield size={10} className="text-white" />
+                  <div className="flex gap-3 rounded-xl border border-border bg-muted p-4">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary">
+                      <Shield size={10} className="text-primary-foreground" />
                     </div>
-                    <p className="text-[11px] text-indigo-700 leading-relaxed">
+                    <p className="text-[11px] leading-relaxed text-slate-700">
                       Lumina will send an automated invitation email to <span className="font-bold">{inviteEmail || 'the recipient'}</span>.
                     </p>
                   </div>
@@ -767,10 +821,10 @@ export default function UsersPage() {
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent">
-                <button 
+                <Button
                   onClick={handleInvite}
                   disabled={!inviteEmail || isSaving}
-                  className="w-full bg-zinc-900 text-white font-bold py-4 rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? (
                     <>
@@ -778,7 +832,7 @@ export default function UsersPage() {
                       Sending Invitation...
                     </>
                   ) : "Send Invitation"}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
@@ -836,7 +890,7 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Left: Role Definitions */}
         <div className="lg:col-span-1 space-y-4">
-          <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Role Profiles</h3>
+          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Role Profiles</h3>
           <div className="space-y-3">
             {ROLES.map((role) => (
               <div 
@@ -844,8 +898,8 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
                 className={cn(
                   "p-5 rounded-3xl border transition-all cursor-pointer group relative overflow-hidden",
                   editingRole === role.id 
-                    ? "bg-white border-indigo-200 shadow-xl shadow-indigo-500/5 ring-2 ring-indigo-100" 
-                    : "bg-white border-zinc-200 hover:border-indigo-100 shadow-sm opacity-60 hover:opacity-100"
+                    ? "bg-card border-border shadow-xl shadow-slate-500/5 ring-2 ring-slate-200" 
+                    : "bg-card border-border hover:border-slate-300 shadow-sm opacity-60 hover:opacity-100"
                 )}
                 onClick={() => setEditingRole(role.id)}
               >
@@ -860,28 +914,31 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
                   </div>
                 </div>
 
-                <h4 className="font-bold text-lg text-zinc-900 leading-tight">{role.label}</h4>
-                <p className="text-[11px] text-zinc-400 mt-1.5 leading-relaxed italic">
+                <h4 className="font-bold text-lg text-foreground leading-tight">{role.label}</h4>
+                <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed italic">
                   &quot;{ROLES.find((r) => r.id === role.id)?.desc}&quot;
                 </p>
 
                 {editingRole === role.id && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-600" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-700" />
                 )}
               </div>
             ))}
           </div>
 
-          <div className="bg-indigo-600 rounded-[32px] p-6 shadow-xl shadow-indigo-200 text-white animate-in zoom-in-95 duration-300">
+          <div className="bg-slate-900 rounded-[32px] p-6 shadow-xl shadow-slate-300 text-white animate-in zoom-in-95 duration-300">
             <h5 className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 mb-4">Member Inspector</h5>
             <div className="flex -space-x-3 mb-4">
               {roleMembers.map((m) => (
-                <div key={m.id} className="h-9 w-9 rounded-full bg-white/20 border-2 border-indigo-600 flex items-center justify-center text-[10px] font-bold backdrop-blur-sm">
-                  {m.name.charAt(0)}
-                </div>
+                <Avatar key={m.id} className="h-9 w-9 rounded-full border-2 border-slate-900 bg-white/20 backdrop-blur-sm">
+                  <AvatarImage src={m.avatarUrl ?? undefined} alt={m.name} className="object-cover" />
+                  <AvatarFallback className="text-[10px] font-bold bg-transparent text-white">
+                    {m.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
               ))}
               {ROLES.find(r => r.id === editingRole)!.members > 5 && (
-                <div className="h-9 w-9 rounded-full bg-indigo-500 border-2 border-indigo-600 flex items-center justify-center text-[10px] font-bold">
+                <div className="h-9 w-9 rounded-full bg-slate-700 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold">
                   +{ROLES.find(r => r.id === editingRole)!.members - 5}
                 </div>
               )}
@@ -895,23 +952,23 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
         {/* Right: Permission Matrix */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Access Matrix</h3>
-            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">
+          <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Access Matrix</h3>
+            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
               Editing: {editingRole}
             </span>
           </div>
-          <div className="bg-white rounded-[32px] border border-zinc-200 shadow-sm overflow-hidden">
+          <div className="bg-card rounded-[32px] border border-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                    <th className="px-8 py-6 text-[11px] font-bold text-zinc-400 uppercase tracking-widest bg-white">Capabilities</th>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="px-8 py-6 text-[11px] font-bold text-muted-foreground uppercase tracking-widest bg-card">Capabilities</th>
                     {ROLES.map(role => (
                       <th 
                         key={role.id} 
                         className={cn(
                           "px-4 py-6 text-[11px] font-bold uppercase tracking-widest text-center transition-all",
-                          editingRole === role.id ? "text-indigo-600 bg-indigo-50/50" : "text-zinc-400"
+                          editingRole === role.id ? "text-slate-700 bg-muted/80" : "text-muted-foreground"
                         )}
                       >
                         {role.label}
@@ -924,8 +981,8 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
                     <tr key={mod.id} className="group hover:bg-zinc-50/30 transition-colors">
                       <td className="px-8 py-5">
                         <div className="flex flex-col">
-                          <span className="font-semibold text-zinc-900 leading-none">{mod.label}</span>
-                          <span className="text-[11px] text-zinc-400 mt-1.5">{mod.desc}</span>
+                          <span className="font-semibold text-foreground leading-none">{mod.label}</span>
+                          <span className="text-[11px] text-muted-foreground mt-1.5">{mod.desc}</span>
                         </div>
                       </td>
                       {ROLES.map(role => {
@@ -937,24 +994,25 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
                             key={role.id} 
                             className={cn(
                               "px-4 py-5 text-center transition-all",
-                              isFocused && "bg-indigo-50/30"
+                              isFocused && "bg-slate-100/50"
                             )}
                           >
-                            <button 
+                            <Button
                               onClick={() => togglePerm(role.id, mod.id)}
                               disabled={isDisabled}
+                              variant="ghost"
                               className={cn(
                                 "h-10 w-10 mx-auto rounded-2xl flex items-center justify-center transition-all",
                                 isAllowed 
                                   ? "bg-emerald-50 text-emerald-600 shadow-sm shadow-emerald-500/5 group-hover:scale-110" 
-                                  : "bg-zinc-50 text-zinc-300",
-                                isAllowed && isFocused && "bg-emerald-500 text-white shadow-emerald-200",
-                                !isAllowed && isFocused && "bg-zinc-200 text-zinc-400",
+                                  : "bg-muted text-zinc-300",
+                                isAllowed && isFocused && "bg-emerald-500 text-primary-foreground shadow-emerald-200",
+                                !isAllowed && isFocused && "bg-muted text-muted-foreground",
                                 isDisabled && "opacity-60 cursor-not-allowed"
                               )}
                             >
                               {isAllowed ? <CheckCircle2 size={18} /> : <X size={16} />}
-                            </button>
+                            </Button>
                           </td>
                         );
                       })}
@@ -963,14 +1021,14 @@ function PermissionsMatrix({ onDirtyChange, users }: { onDirtyChange: (dirty: bo
                 </tbody>
               </table>
             </div>
-            <div className="p-8 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium">
+            <div className="p-8 bg-muted/50 border-t border-border flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                 <AlertCircle size={14} />
                 <span>Admin permissions are locked for system safety.</span>
               </div>
-              <button className="bg-white hover:bg-zinc-900 hover:text-white text-zinc-900 border border-zinc-200 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm">
+              <Button variant="outline" className="bg-card hover:bg-zinc-900 hover:text-white text-foreground border border-border px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm">
                 Discard Changes
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -988,23 +1046,23 @@ function StatCard({
   label: string;
   value: number;
   icon: React.ElementType;
-  color: "indigo" | "emerald" | "amber" | "red";
+  color: "slate" | "emerald" | "amber" | "red";
 }) {
-  const colors: Record<"indigo" | "emerald" | "amber" | "red", string> = {
-    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
+  const colors: Record<"slate" | "emerald" | "amber" | "red", string> = {
+    slate: "bg-slate-100 text-slate-700 border-slate-300",
     emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
     amber: "bg-amber-50 text-amber-600 border-amber-100",
     red: "bg-red-50 text-red-600 border-red-100",
   };
   
   return (
-    <div className="bg-white p-5 rounded-3xl border border-zinc-200 shadow-sm">
+    <div className="bg-card p-5 rounded-3xl border border-border shadow-sm">
       <div className={cn("p-2.5 w-fit rounded-xl border mb-4", colors[color])}>
         <Icon size={20} />
       </div>
       <div>
-        <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-bold text-zinc-900 mt-1">{value}</p>
+        <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">{label}</p>
+        <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
       </div>
     </div>
   );
@@ -1012,7 +1070,7 @@ function StatCard({
 
 function RoleBadge({ role }: { role: string }) {
   const styles: Record<string, string> = {
-    admin: "bg-indigo-600 text-white",
+    admin: "bg-slate-900 text-white",
     librarian: "bg-blue-100 text-blue-700",
     staff: "bg-purple-100 text-purple-700",
     student: "bg-zinc-100 text-zinc-600",

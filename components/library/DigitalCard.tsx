@@ -93,7 +93,7 @@ function CardFront({
     active: "bg-emerald-500/15 text-emerald-700 border-emerald-400/40",
     pending: "bg-amber-500/15 text-amber-700 border-amber-400/40",
     suspended: "bg-red-500/15 text-red-700 border-red-400/40",
-    expired: "bg-zinc-500/15 text-zinc-700 border-zinc-400/40",
+    expired: "bg-muted0/15 text-muted-foreground border-zinc-400/40",
   };
 
   const formattedExpiry = formatCardDate(expiryDate);
@@ -120,10 +120,10 @@ function CardFront({
               <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-blue-300/50 bg-blue-600/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-900 sm:gap-2 sm:px-2.5 sm:text-[10px] sm:tracking-[0.18em]">
                 <LibraryBig className="h-3.5 w-3.5" /> STI College Alabang
               </div>
-              <h2 className="text-[17px] font-black leading-tight tracking-tight text-zinc-900 sm:text-[28px]">
+              <h2 className="text-[17px] font-black leading-tight tracking-tight text-foreground sm:text-[28px]">
                 Library Access Card
               </h2>
-              <p className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-600 sm:block">
+              <p className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:block">
                 Student Identity Credential
               </p>
             </div>
@@ -143,7 +143,7 @@ function CardFront({
                 />
                 {status}
               </div>
-              <div className="max-w-[140px] truncate rounded-full border border-zinc-200/80 bg-white/80 px-2 py-0.5 text-[9px] font-mono text-zinc-700 sm:max-w-none sm:text-[10px]">
+              <div className="max-w-[140px] truncate rounded-full border border-border/80 bg-card/80 px-2 py-0.5 text-[9px] font-mono text-muted-foreground sm:max-w-none sm:text-[10px]">
                 {cardNumber}
               </div>
             </div>
@@ -152,7 +152,7 @@ function CardFront({
           <div className="grid flex-1 grid-cols-[1fr_auto] gap-3 sm:gap-6">
             <div className="min-w-0 space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2.5 sm:gap-3">
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white bg-zinc-100 shadow-lg sm:h-20 sm:w-20">
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white bg-muted shadow-lg sm:h-20 sm:w-20">
                   {avatarUrl ? (
                     <Image
                       src={avatarUrl}
@@ -164,41 +164,41 @@ function CardFront({
                       unoptimized
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl font-black text-zinc-400">
+                    <div className="flex h-full w-full items-center justify-center text-2xl font-black text-muted-foreground">
                       {fullName?.charAt(0)}
                     </div>
                   )}
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.2em]">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px] sm:tracking-[0.2em]">
                     Card Holder
                   </p>
-                  <p className="truncate text-sm font-black leading-tight text-zinc-900 sm:text-xl">
+                  <p className="truncate text-sm font-black leading-tight text-foreground sm:text-xl">
                     {fullName}
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <div className="rounded-xl border border-zinc-200/70 bg-white/65 p-2 sm:p-3">
-                  <div className="mb-1 flex items-center gap-1 text-[9px] uppercase tracking-wider text-zinc-500 sm:gap-1.5 sm:text-[10px]">
+                <div className="rounded-xl border border-border/70 bg-card/65 p-2 sm:p-3">
+                  <div className="mb-1 flex items-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground sm:gap-1.5 sm:text-[10px]">
                     <GraduationCap className="h-3.5 w-3.5 text-blue-600" /> Student ID
                   </div>
-                  <p className="truncate text-[10px] font-mono font-bold text-zinc-900 sm:text-sm">{studentId}</p>
+                  <p className="truncate text-[10px] font-mono font-bold text-foreground sm:text-sm">{studentId}</p>
                 </div>
 
-                <div className="rounded-xl border border-zinc-200/70 bg-white/65 p-2 sm:p-3">
-                  <div className="mb-1 flex items-center gap-1 text-[9px] uppercase tracking-wider text-zinc-500 sm:gap-1.5 sm:text-[10px]">
+                <div className="rounded-xl border border-border/70 bg-card/65 p-2 sm:p-3">
+                  <div className="mb-1 flex items-center gap-1 text-[9px] uppercase tracking-wider text-muted-foreground sm:gap-1.5 sm:text-[10px]">
                     <MapPin className="h-3.5 w-3.5 text-cyan-700" /> Department
                   </div>
-                  <p className="truncate text-[10px] font-bold text-zinc-900 sm:text-sm">{department}</p>
+                  <p className="truncate text-[10px] font-bold text-foreground sm:text-sm">{department}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex w-[86px] shrink-0 flex-col items-center justify-between rounded-2xl border border-zinc-200/70 bg-white/80 p-2 sm:w-[124px] sm:p-3">
-              <div className="rounded-xl border border-zinc-200 bg-white p-1 shadow-inner sm:p-1.5">
+            <div className="flex w-[86px] shrink-0 flex-col items-center justify-between rounded-2xl border border-border/70 bg-card/80 p-2 sm:w-[124px] sm:p-3">
+              <div className="rounded-xl border border-border bg-card p-1 shadow-inner sm:p-1.5">
                 {qrUrl ? (
                   <Image
                     src={qrUrl}
@@ -209,24 +209,24 @@ function CardFront({
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-16 w-16 animate-pulse items-center justify-center bg-zinc-50 sm:h-24 sm:w-24">
-                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-400" />
+                  <div className="flex h-16 w-16 animate-pulse items-center justify-center bg-muted sm:h-24 sm:w-24">
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-zinc-400" />
                   </div>
                 )}
               </div>
 
-              <div className="mt-1.5 flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-zinc-600 sm:mt-2 sm:text-[10px]">
+              <div className="mt-1.5 flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-muted-foreground sm:mt-2 sm:text-[10px]">
                 <Sparkles className="h-3 w-3" /> Scan to verify
               </div>
             </div>
           </div>
 
           <div className="mt-2.5 flex items-center justify-between border-t border-zinc-300/60 pt-2 sm:mt-4 sm:pt-3">
-            <div className="flex items-center gap-1.5 text-[10px] text-zinc-700 sm:gap-2 sm:text-[11px]">
-              <Calendar className="h-3.5 w-3.5 text-zinc-500" />
-              Expires: <span className="font-black text-zinc-900">{formattedExpiry}</span>
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground sm:gap-2 sm:text-[11px]">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+              Expires: <span className="font-black text-foreground">{formattedExpiry}</span>
             </div>
-            <div className="flex items-center gap-1 rounded-full bg-zinc-900 px-2 py-1 text-[8px] font-semibold uppercase tracking-wider text-zinc-100 sm:gap-1.5 sm:px-2.5 sm:text-[10px]">
+            <div className="flex items-center gap-1 rounded-full bg-primary px-2 py-1 text-[8px] font-semibold uppercase tracking-wider text-zinc-100 sm:gap-1.5 sm:px-2.5 sm:text-[10px]">
               <ShieldCheck className="h-3.5 w-3.5" /> Verified Identity
             </div>
           </div>
@@ -261,7 +261,7 @@ function CardBack({
         <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-bl-[36px] border-l border-b border-blue-200/60 bg-blue-400/10" />
         <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-tr-[30px] border-r border-t border-emerald-200/70 bg-emerald-300/10" />
 
-        <div className="relative z-10 grid h-full grid-rows-[auto_1fr_auto] gap-2 p-3 sm:gap-2.5 sm:p-4 text-zinc-900">
+        <div className="relative z-10 grid h-full grid-rows-[auto_1fr_auto] gap-2 p-3 sm:gap-2.5 sm:p-4 text-foreground">
           <div className="flex items-start justify-between">
             <div>
               <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-blue-300/50 bg-blue-600/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-blue-900 sm:gap-2 sm:px-2.5 sm:text-[10px] sm:tracking-[0.18em]">
@@ -269,27 +269,27 @@ function CardBack({
               </div>
               <h3 className="text-[17px] font-black leading-tight tracking-tight sm:text-[26px]">Library Process Guide</h3>
             </div>
-            <div className="max-w-[140px] truncate rounded-full border border-zinc-200/80 bg-white/80 px-2 py-0.5 text-[9px] font-mono text-zinc-700 sm:max-w-none sm:text-[10px]">
+            <div className="max-w-[140px] truncate rounded-full border border-border/80 bg-card/80 px-2 py-0.5 text-[9px] font-mono text-muted-foreground sm:max-w-none sm:text-[10px]">
               {cardNumber}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
             <div className="rounded-xl border border-blue-200/80 bg-blue-50/75 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">
                 Borrowing
               </p>
-              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-foreground">
                 <p className="flex items-center gap-1"><ArrowRight className="h-3 w-3 text-blue-600" /> Pick book</p>
                 <p className="flex items-center gap-1"><ArrowRight className="h-3 w-3 text-blue-600" /> Show card QR</p>
                 <p className="flex items-center gap-1"><ArrowRight className="h-3 w-3 text-blue-600" /> Scan and confirm</p>
               </div>
             </div>
             <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/75 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">
                 Returning
               </p>
-              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-foreground">
                 <p className="flex items-center gap-1"><RotateCcw className="h-3 w-3 text-emerald-600" /> Bring to desk</p>
                 <p className="flex items-center gap-1"><RotateCcw className="h-3 w-3 text-emerald-600" /> Scan book QR</p>
                 <p className="flex items-center gap-1"><RotateCcw className="h-3 w-3 text-emerald-600" /> Clear record</p>
@@ -297,20 +297,20 @@ function CardBack({
             </div>
 
             <div className="rounded-xl border border-amber-200/80 bg-amber-50/75 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">
                 Important
               </p>
-              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-foreground">
                 <p className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" /> Non-transferable</p>
                 <p className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" /> Keep QR readable</p>
                 <p className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-600" /> Report loss fast</p>
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/75 p-2">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-zinc-500 sm:text-[10px] sm:tracking-[0.18em]">
+            <div className="rounded-xl border border-border/80 bg-muted/75 p-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">
                 Support
               </p>
-              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-zinc-800">
+              <div className="mt-1 space-y-1 text-[10px] font-semibold leading-tight text-foreground">
                 <p className="flex items-center gap-1"><LifeBuoy className="h-3 w-3 text-slate-600" /> Library Services Office</p>
                 <p className="flex items-center gap-1"><LifeBuoy className="h-3 w-3 text-slate-600" /> STI College Alabang</p>
                 <p className="flex items-center gap-1"><LifeBuoy className="h-3 w-3 text-slate-600" /> Bring ID for help</p>
@@ -318,7 +318,7 @@ function CardBack({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-300/60 bg-white/80 px-2.5 py-1.5 text-[9px] font-semibold tracking-[0.06em] text-zinc-700 sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.08em]">
+          <div className="rounded-lg border border-zinc-300/60 bg-card/80 px-2.5 py-1.5 text-[9px] font-semibold tracking-[0.06em] text-muted-foreground sm:px-3 sm:py-2 sm:text-[11px] sm:tracking-[0.08em]">
             Valid until {formatCardDate(expiryDate)} • Non-transferable credential
           </div>
         </div>

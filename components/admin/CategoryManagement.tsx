@@ -143,7 +143,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         </div>
         <Button
           onClick={() => openDialog()}
-          className="bg-indigo-600 hover:bg-indigo-700 rounded-lg gap-2"
+          className="rounded-lg bg-slate-900 gap-2 hover:bg-slate-800"
         >
           <Plus className="h-4 w-4" />
           Add Category
@@ -157,7 +157,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
       )}
 
       {categories.length === 0 ? (
-        <Card className="p-12 text-center border-zinc-200/50">
+        <Card className="p-12 text-center border-slate-200 bg-white shadow-sm">
           <AlertCircle className="h-12 w-12 text-zinc-300 mx-auto mb-4" />
           <p className="text-zinc-500">No categories yet. Create your first one!</p>
         </Card>
@@ -182,7 +182,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                   onClick={() => openDialog(category)}
                   size="sm"
                   variant="ghost"
-                  className="rounded-lg text-indigo-600 hover:bg-indigo-50"
+                  className="rounded-lg text-slate-700 hover:bg-slate-100"
                 >
                   <Edit2 className="h-4 w-4" />
                 </Button>
@@ -275,7 +275,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
             <Button
               onClick={handleSave}
               disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+              className="rounded-lg bg-slate-900 hover:bg-slate-800"
             >
               {loading ? (
                 <>

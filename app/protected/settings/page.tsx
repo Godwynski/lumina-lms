@@ -18,13 +18,14 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name")
+    .select("role, full_name, avatar_url")
     .eq("id", user.user.id)
     .single();
 
   const role = (profile?.role as Role) || "student";
   const isAdmin = role === "admin";
   const profileName = typeof profile?.full_name === "string" ? profile.full_name : "";
+  const avatarUrl = typeof profile?.avatar_url === "string" ? profile.avatar_url : "";
 
   // Only fetch admin data if the user is an admin
   let settings: { id: string; key: string; value: string; description?: string }[] = [];
@@ -44,6 +45,7 @@ export default async function SettingsPage() {
       isAdmin={isAdmin}
       role={role}
       profileName={profileName}
+      avatarUrl={avatarUrl}
       settings={settings}
       categories={categories}
     />

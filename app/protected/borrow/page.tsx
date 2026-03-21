@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Camera, CheckCircle2, CreditCard, QrCode, RefreshCcw, ScanLine, ShieldAlert, UserRound, XCircle } from 'lucide-react';
+import { AlertCircle, Camera, QrCode, RefreshCcw, ScanLine, ShieldAlert, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -436,51 +437,44 @@ export default function BorrowPage() {
         : 'bg-red-50 border-red-200 text-red-700';
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-white via-cyan-50/40 to-amber-50/60 p-6 shadow-sm sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-cyan-200/40 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Circulation Desk</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-900 sm:text-4xl">Borrow Flow Console</h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-              Scan student card, verify identity, then process book QR. Built for fast desk throughput with guardrails.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={clearContext}
-            className="h-10 rounded-xl border-zinc-300 bg-white/80"
-            disabled={!activeStudent && !pendingCheckout}
-          >
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            Reset Session
-          </Button>
+    <div className="w-full space-y-4 pb-6 md:pb-8">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Checkout</h1>
+          <p className="text-xs text-muted-foreground">Scan card, scan book, confirm.</p>
         </div>
-      </section>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={clearContext}
+          className="h-8 rounded-md border-border"
+          disabled={!activeStudent && !pendingCheckout}
+        >
+          <RefreshCcw className="mr-2 h-3.5 w-3.5" />
+          Reset
+        </Button>
+      </div>
 
-      <section className="grid gap-6 lg:grid-cols-12">
+      <section className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="flex items-center gap-2 text-base font-bold text-zinc-900">
-                <ScanLine className="h-4 w-4 text-cyan-700" />
-                Scanner Deck
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <ScanLine className="h-4 w-4 text-muted-foreground" />
+                Scanner
               </h2>
             {cameraSupported ? (
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  className="h-9 rounded-lg"
+                  className="h-8 rounded-md"
                   onClick={() => void requestCameraPermission()}
                 >
                   {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
                 </Button>
                 <Button
                   variant={cameraOpen ? 'destructive' : 'outline'}
-                  className="h-9 rounded-lg"
+                  className="h-8 rounded-md"
                   onClick={() => (cameraOpen ? stopCamera() : setCameraOpen(true))}
                 >
                   <Camera className="mr-2 h-4 w-4" />
@@ -488,29 +482,29 @@ export default function BorrowPage() {
                 </Button>
               </div>
             ) : (
-              <span className="text-xs font-medium text-zinc-500">Camera scanner unsupported in this browser</span>
+              <span className="text-xs font-medium text-muted-foreground">Camera scanner unsupported in this browser</span>
             )}
             </div>
 
             <div className="space-y-4">
-              <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
-                <video ref={videoRef} className="h-[280px] w-full object-cover" muted playsInline />
-                <div className="pointer-events-none absolute inset-x-8 top-8 h-16 rounded-full border border-cyan-300/20" />
-                {!cameraOpen && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 text-zinc-100">
+                <div className="relative overflow-hidden rounded-xl border border-border bg-primary">
+                  <video ref={videoRef} className="h-[220px] w-full object-cover" muted playsInline />
+                  <div className="pointer-events-none absolute inset-x-8 top-8 h-16 rounded-full border border-border/20" />
+                  {!cameraOpen && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-primary/80 text-primary-foreground">
                     <div className="text-center">
-                      <QrCode className="mx-auto mb-2 h-8 w-8 text-cyan-200" />
+                      <QrCode className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                       <p className="text-sm font-semibold">Camera scanner is idle</p>
-                      <p className="mt-1 text-xs text-zinc-300">Manual input stays available below</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Manual input stays available below</p>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Manual fallback</p>
+              <div className="rounded-xl border border-border bg-muted p-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Manual</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
+                  <Input
                     value={manualValue}
                     onChange={(event) => setManualValue(event.target.value)}
                     onKeyDown={(event) => {
@@ -519,9 +513,9 @@ export default function BorrowPage() {
                       }
                     }}
                     placeholder="Paste or type QR payload"
-                    className="h-10 flex-1 rounded-lg border border-zinc-300 bg-white px-3 text-sm outline-none ring-cyan-500 transition focus:ring-2"
+                    className="h-9 flex-1 rounded-md border border-border bg-card px-3 text-sm outline-none ring-ring transition focus:ring-2"
                   />
-                  <Button className="h-10 rounded-lg bg-cyan-700 hover:bg-cyan-800" onClick={() => void handleManualSubmit()}>
+                  <Button className="h-9 rounded-md bg-primary hover:bg-primary/90" onClick={() => void handleManualSubmit()}>
                     Process Scan
                   </Button>
                 </div>
@@ -536,51 +530,23 @@ export default function BorrowPage() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:col-span-5">
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-zinc-900">
-              <CreditCard className="h-4 w-4 text-cyan-700" />
-              Progress Rail
-            </h2>
-            <div className="space-y-3 text-sm">
-              <div className="rounded-xl border p-3 text-zinc-700">
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 1</p>
-                <p className="mt-1 font-semibold">Scan student card</p>
-                <p className={activeStudent ? 'mt-1 text-emerald-700' : 'mt-1 text-zinc-500'}>
-                  {activeStudent ? 'Completed' : 'Waiting'}
-                </p>
-              </div>
-              <div className="rounded-xl border p-3 text-zinc-700">
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 2</p>
-                <p className="mt-1 font-semibold">Scan book copy QR</p>
-                <p className={pendingCheckout ? 'mt-1 text-emerald-700' : 'mt-1 text-zinc-500'}>
-                  {pendingCheckout ? 'Ready to confirm' : 'Waiting'}
-                </p>
-              </div>
-              <div className="rounded-xl border p-3 text-zinc-700">
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 3</p>
-                <p className="mt-1 font-semibold">Confirm checkout</p>
-                <p className="mt-1 text-zinc-500">Finalized in confirmation modal</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-zinc-900">
-              <UserRound className="h-4 w-4 text-cyan-700" />
-              Student Context
-            </h2>
+        <div className="space-y-4 lg:col-span-5">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <UserRound className="h-4 w-4 text-muted-foreground" />
+                Session Context
+              </h2>
 
             {!activeStudent ? (
-              <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600">
+              <div className="rounded-xl border border-dashed border-border bg-muted p-4 text-sm text-muted-foreground">
                 Scan a student library card to lock context for this checkout run.
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
-                  <p className="text-xs font-semibold uppercase tracking-wider">Context locked</p>
+                <div className="rounded-xl border border-border bg-muted p-3 text-foreground">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active student</p>
                   <p className="mt-1 text-sm font-semibold">{activeStudent.fullName}</p>
-                  <p className="text-xs">Card: {activeStudent.cardNumber}</p>
+                  <p className="text-xs text-muted-foreground">Card: {activeStudent.cardNumber}</p>
                 </div>
 
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -598,30 +564,30 @@ export default function BorrowPage() {
       </section>
 
       <Dialog open={!!pendingCheckout} onOpenChange={(open) => (!open ? setPendingCheckout(null) : null)}>
-        <DialogContent className="rounded-2xl border-zinc-200 sm:max-w-[460px]">
+        <DialogContent className="rounded-2xl border-border sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-zinc-900">Borrowing Confirmation</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-foreground">Borrowing Confirmation</DialogTitle>
             <DialogDescription>
               Review the checkout details before finalizing this transaction.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
+          <div className="space-y-3 rounded-xl border border-border bg-muted p-4 text-sm">
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Student</span>
-              <span className="font-semibold text-zinc-900">{activeStudent?.fullName}</span>
+              <span className="text-muted-foreground">Student</span>
+              <span className="font-semibold text-foreground">{activeStudent?.fullName}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Student ID</span>
-              <span className="font-mono font-semibold text-zinc-900">{activeStudent?.studentId}</span>
+              <span className="text-muted-foreground">Student ID</span>
+              <span className="font-mono font-semibold text-foreground">{activeStudent?.studentId}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Book</span>
-              <span className="text-right font-semibold text-zinc-900">{pendingCheckout?.bookTitle}</span>
+              <span className="text-muted-foreground">Book</span>
+              <span className="text-right font-semibold text-foreground">{pendingCheckout?.bookTitle}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Due Date</span>
-              <span className="font-semibold text-zinc-900">{dueDateLabel}</span>
+              <span className="text-muted-foreground">Due Date</span>
+              <span className="font-semibold text-foreground">{dueDateLabel}</span>
             </div>
           </div>
 
@@ -639,7 +605,7 @@ export default function BorrowPage() {
       <Dialog open={contextLockOpen} onOpenChange={setContextLockOpen}>
         <DialogContent className="rounded-2xl sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-zinc-900">Checkout context is locked</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-foreground">Checkout context is locked</DialogTitle>
             <DialogDescription>
               Another student card was scanned while a checkout is already in progress.
             </DialogDescription>
@@ -665,41 +631,20 @@ export default function BorrowPage() {
       <Dialog open={errorModal.open} onOpenChange={(open) => setErrorModal((prev) => ({ ...prev, open }))}>
         <DialogContent className="rounded-2xl sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-zinc-900">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <AlertCircle className="h-4 w-4 text-red-600" />
               {errorModal.title}
             </DialogTitle>
-            <DialogDescription className="pt-1 text-zinc-600">{errorModal.body}</DialogDescription>
+            <DialogDescription className="pt-1 text-muted-foreground">{errorModal.body}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button className="rounded-xl" onClick={() => setErrorModal((prev) => ({ ...prev, open: false }))}>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={() => setErrorModal((prev) => ({ ...prev, open: false }))}>
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
-        <h3 className="mb-2 text-sm font-semibold text-zinc-900">Scanner safeguards enabled</h3>
-        <div className="grid gap-2 text-sm text-zinc-600 md:grid-cols-2">
-          <p className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-            1.5-second scanner debounce prevents duplicate reads.
-          </p>
-          <p className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-            Context lock blocks accidental student switching mid-transaction.
-          </p>
-          <p className="flex items-start gap-2">
-            <XCircle className="mt-0.5 h-4 w-4 text-red-600" />
-            Inactive cards, over-limit borrowers, and unavailable copies are auto-blocked.
-          </p>
-          <p className="flex items-start gap-2">
-            <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600" />
-            Simultaneous scans for the same copy return a friendly conflict message.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

@@ -30,7 +30,7 @@ export function UploadAction({ categories }: UploadActionProps) {
 
   if (!mounted) {
     return (
-      <Button className="bg-indigo-600/50 hover:bg-indigo-700/50 text-white rounded-xl h-11 shadow-md opacity-70 cursor-not-allowed">
+      <Button className="h-11 cursor-not-allowed rounded-xl bg-primary/50 text-primary-foreground opacity-70">
         <Plus className="mr-2" size={18} />
         Upload Resource
       </Button>
@@ -40,12 +40,12 @@ export function UploadAction({ categories }: UploadActionProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11 shadow-md shadow-indigo-100 transition-all active:scale-95">
+        <Button className="h-11 rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 active:scale-95">
           <Plus className="mr-2" size={18} />
           Upload Resource
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-xl p-0 border-l border-zinc-200 overflow-y-auto">
+      <SheetContent side="right" className="w-full overflow-y-auto border-l border-border p-0 sm:max-w-xl">
         <div className="p-6">
           <SheetHeader className="mb-6">
             <SheetTitle className="text-2xl font-bold tracking-tight">Upload Resource</SheetTitle>

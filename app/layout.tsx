@@ -1,14 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
-import { ThemeProvider } from "next-themes";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+  : "http://127.0.0.1:3000";
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#0f172a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -17,12 +16,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "Lumina LMS",
+  description: "Library management platform for students, staff, and administrators.",
 };
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const appSans = Manrope({
+  variable: "--font-app-sans",
   display: "swap",
   subsets: ["latin"],
 });
@@ -37,30 +36,8 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={`${geistSans.className} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                    console.log('SW registered');
-                  }, function(err) {
-                    console.log('SW registration failed: ', err);
-                  });
-                });
-              }
-            `,
-          }}
-        />
+      <body className={`${appSans.className} antialiased`}>
+        {children}
       </body>
     </html>
   );

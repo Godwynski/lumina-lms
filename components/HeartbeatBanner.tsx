@@ -18,7 +18,7 @@ export function HeartbeatBanner() {
   const lastSeenRef = useRef<number | null>(null);
 
   const checkHeartbeat = async () => {
-    // Don't show this banner on top of the OfflineBanner; browser already offline
+    // If browser itself is offline, suppress this server-health banner.
     if (!navigator.onLine) {
       setServerOffline(false);
       return;

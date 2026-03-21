@@ -71,9 +71,9 @@ export function PolicyConfigurationForm({
 
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+      <div className="flex gap-3 rounded-xl border border-slate-300 bg-slate-100 p-4">
         <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-800">
+        <div className="text-sm text-slate-700">
           <p className="font-semibold mb-1">Policy Configuration</p>
           <p>These settings control the core library management behavior system-wide.</p>
         </div>
@@ -89,7 +89,7 @@ export function PolicyConfigurationForm({
         {Object.entries(DEFAULT_POLICIES).map(([key, config]) => (
           <Card
             key={key}
-            className="p-6 border-zinc-200/50 hover:shadow-md transition-shadow"
+            className="border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
             <div className="space-y-3">
               <div>
@@ -124,11 +124,11 @@ export function PolicyConfigurationForm({
                   onClick={() => handleSave(key)}
                   disabled={loading || formData[key] === settings.find((s) => s.key === key)?.value}
                   className={`rounded-lg h-10 px-4 ${
-                    saved === key
-                      ? "bg-emerald-600 hover:bg-emerald-700"
-                      : "bg-indigo-600 hover:bg-indigo-700"
-                  }`}
-                >
+                      saved === key
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-slate-900 hover:bg-slate-800"
+                    }`}
+                  >
                   {loading && savingKey === key ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : saved === key ? (

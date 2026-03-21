@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Camera, CheckCircle2, QrCode, RotateCcw, ScanLine } from 'lucide-react';
+import { AlertCircle, Camera, QrCode, RotateCcw, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -330,43 +331,38 @@ export default function ReturnPage() {
         : 'bg-red-50 border-red-200 text-red-700';
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-white via-teal-50/40 to-orange-50/60 p-6 shadow-sm sm:p-8">
-        <div className="pointer-events-none absolute -left-10 top-4 h-40 w-40 rounded-full bg-teal-200/35 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-12 right-0 h-52 w-52 rounded-full bg-orange-200/35 blur-3xl" />
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Circulation Desk</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-900 sm:text-4xl">Return Flow Console</h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-600">Fast intake for returned books with one-scan validation and safe finalize.</p>
-          </div>
-          <Button type="button" variant="outline" onClick={clearState} className="h-10 rounded-xl border-zinc-300 bg-white/80">
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Reset Flow
-          </Button>
+    <div className="w-full space-y-4 pb-6 md:pb-8">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Return</h1>
+          <p className="text-xs text-muted-foreground">Scan copy QR and confirm return.</p>
         </div>
-      </section>
+        <Button type="button" variant="outline" onClick={clearState} className="h-8 rounded-md border-border">
+          <RotateCcw className="mr-2 h-3.5 w-3.5" />
+          Reset
+        </Button>
+      </div>
 
-      <section className="grid gap-6 lg:grid-cols-12">
+      <section className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="flex items-center gap-2 text-base font-bold text-zinc-900">
-                <ScanLine className="h-4 w-4 text-teal-700" />
-                Scan Book QR
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <ScanLine className="h-4 w-4 text-muted-foreground" />
+                Scanner
               </h2>
               {cameraSupported ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     variant="outline"
-                    className="h-9 rounded-lg"
+                    className="h-8 rounded-md"
                     onClick={() => void requestCameraPermission()}
                   >
                     {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
                   </Button>
                   <Button
                     variant={cameraOpen ? 'destructive' : 'outline'}
-                    className="h-9 rounded-lg"
+                    className="h-8 rounded-md"
                     onClick={() => (cameraOpen ? stopCamera() : setCameraOpen(true))}
                   >
                     <Camera className="mr-2 h-4 w-4" />
@@ -374,26 +370,26 @@ export default function ReturnPage() {
                   </Button>
                 </div>
               ) : (
-                <span className="text-xs font-medium text-zinc-500">Camera scanner unsupported in this browser</span>
+                <span className="text-xs font-medium text-muted-foreground">Camera scanner unsupported in this browser</span>
               )}
             </div>
 
-            <div className="mb-4 relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
-              <video ref={videoRef} className="h-[240px] w-full object-cover" muted playsInline />
+            <div className="mb-3 relative overflow-hidden rounded-xl border border-border bg-primary">
+              <video ref={videoRef} className="h-[220px] w-full object-cover" muted playsInline />
               {!cameraOpen && (
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 text-zinc-100">
-                  <div className="text-center">
-                    <QrCode className="mx-auto mb-2 h-8 w-8 text-teal-200" />
-                    <p className="text-sm font-semibold">Camera scanner is idle</p>
-                    <p className="mt-1 text-xs text-zinc-300">Manual entry stays active below</p>
+                <div className="absolute inset-0 flex items-center justify-center bg-primary/80 text-primary-foreground">
+                    <div className="text-center">
+                      <QrCode className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm font-semibold">Camera scanner is idle</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Manual entry stays active below</p>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="rounded-xl border border-border bg-muted p-3">
               <div className="flex flex-col gap-2 sm:flex-row">
-                <input
+                <Input
                   value={scanValue}
                   onChange={(event) => setScanValue(event.target.value)}
                   onKeyDown={(event) => {
@@ -402,9 +398,9 @@ export default function ReturnPage() {
                     }
                   }}
                   placeholder="Paste or type book QR payload"
-                  className="h-10 flex-1 rounded-lg border border-zinc-300 bg-white px-3 text-sm outline-none ring-teal-500 transition focus:ring-2"
+                  className="h-9 flex-1 rounded-md border border-border bg-card px-3 text-sm outline-none ring-ring transition focus:ring-2"
                 />
-                <Button className="h-10 rounded-lg bg-teal-700 hover:bg-teal-800" onClick={() => void startPreviewReturn()} disabled={isPreviewing || isConfirming}>
+                <Button className="h-9 rounded-md bg-primary hover:bg-primary/90" onClick={() => void startPreviewReturn()} disabled={isPreviewing || isConfirming}>
                   {isPreviewing ? 'Validating...' : 'Validate Return'}
                 </Button>
               </div>
@@ -414,73 +410,37 @@ export default function ReturnPage() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:col-span-5">
-          <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-zinc-900">
-              <QrCode className="h-4 w-4 text-teal-700" />
-              Intake Progress
-            </h2>
-            <div className="space-y-3 text-sm">
-              <div className="rounded-xl border p-3 text-zinc-700">
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 1</p>
-                <p className="mt-1 font-semibold">Scan copy QR</p>
-                <p className={pendingReturn ? 'mt-1 text-emerald-700' : 'mt-1 text-zinc-500'}>{pendingReturn ? 'Validated' : 'Waiting'}</p>
-              </div>
-              <div className="rounded-xl border p-3 text-zinc-700">
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Step 2</p>
-                <p className="mt-1 font-semibold">Review borrower details</p>
-                <p className="mt-1 text-zinc-500">Shown in confirmation modal before finalize</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
-            <h3 className="mb-2 text-sm font-semibold text-zinc-900">Return safeguards enabled</h3>
-            <div className="grid gap-2 text-sm text-zinc-600">
-              <p className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                Locks the scanned copy to prevent double-return races.
-              </p>
-              <p className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                Verifies there is an active borrowing record before completing.
-              </p>
-              <p className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600" />
-                Repeated confirm clicks are idempotent-safe.
-              </p>
-              <p className="flex items-start gap-2">
-                <QrCode className="mt-0.5 h-4 w-4 text-teal-700" />
-                Copy status flips back to AVAILABLE after successful return.
-              </p>
-            </div>
+        <div className="space-y-4 lg:col-span-5">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Status</h2>
+            <p className="text-xs text-muted-foreground">{pendingReturn ? 'Validated and ready for confirmation.' : 'Waiting for a valid book scan.'}</p>
           </div>
         </div>
       </section>
 
       <Dialog open={!!pendingReturn} onOpenChange={(open) => (!open ? setPendingReturn(null) : null)}>
-        <DialogContent className="rounded-2xl border-zinc-200 sm:max-w-[460px]">
+        <DialogContent className="rounded-2xl border-border sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-zinc-900">Return Confirmation</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-foreground">Return Confirmation</DialogTitle>
             <DialogDescription>Review the return details before finalizing this transaction.</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
+          <div className="space-y-3 rounded-xl border border-border bg-muted p-4 text-sm">
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Student</span>
-              <span className="font-semibold text-zinc-900">{pendingReturn?.studentName}</span>
+              <span className="text-muted-foreground">Student</span>
+              <span className="font-semibold text-foreground">{pendingReturn?.studentName}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Book</span>
-              <span className="text-right font-semibold text-zinc-900">{pendingReturn?.bookTitle}</span>
+              <span className="text-muted-foreground">Book</span>
+              <span className="text-right font-semibold text-foreground">{pendingReturn?.bookTitle}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Borrowed</span>
-              <span className="font-semibold text-zinc-900">{borrowedAtLabel}</span>
+              <span className="text-muted-foreground">Borrowed</span>
+              <span className="font-semibold text-foreground">{borrowedAtLabel}</span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-zinc-500">Due Date</span>
-              <span className="font-semibold text-zinc-900">{dueDateLabel}</span>
+              <span className="text-muted-foreground">Due Date</span>
+              <span className="font-semibold text-foreground">{dueDateLabel}</span>
             </div>
           </div>
 
@@ -488,7 +448,7 @@ export default function ReturnPage() {
             <Button variant="ghost" className="rounded-xl" onClick={() => setPendingReturn(null)}>
               Cancel
             </Button>
-            <Button className="rounded-xl" disabled={isConfirming} onClick={() => void confirmReturn()}>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" disabled={isConfirming} onClick={() => void confirmReturn()}>
               {isConfirming ? 'Finalizing...' : 'Confirm Return'}
             </Button>
           </DialogFooter>
@@ -498,14 +458,14 @@ export default function ReturnPage() {
       <Dialog open={errorModal.open} onOpenChange={(open) => setErrorModal((prev) => ({ ...prev, open }))}>
         <DialogContent className="rounded-2xl sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-zinc-900">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
               <AlertCircle className="h-4 w-4 text-red-600" />
               {errorModal.title}
             </DialogTitle>
-            <DialogDescription className="pt-1 text-zinc-600">{errorModal.body}</DialogDescription>
+            <DialogDescription className="pt-1 text-muted-foreground">{errorModal.body}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button className="rounded-xl" onClick={() => setErrorModal((prev) => ({ ...prev, open: false }))}>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={() => setErrorModal((prev) => ({ ...prev, open: false }))}>
               Close
             </Button>
           </DialogFooter>

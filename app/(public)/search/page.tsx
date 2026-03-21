@@ -6,6 +6,11 @@ import Image from 'next/image';
 import { getCategoriesCached, getPublicBooksCached } from '@/lib/actions/public-catalog';
 import { Filter, Search, X } from 'lucide-react';
 import { Book, Category } from '@/lib/types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 export default function PublicSearchPage() {
   const [query, setQuery] = useState('');
@@ -87,7 +92,7 @@ export default function PublicSearchPage() {
       <div className="sticky top-0 bg-white z-10 py-4 border-b flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-          <input
+          <Input
             type="text"
             placeholder="Search title, author, ISBN..."
             className="w-full pl-10 pr-4 py-2 border rounded-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -95,12 +100,14 @@ export default function PublicSearchPage() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <button 
+        <Button
           onClick={() => setShowFilters(true)}
+          variant="outline"
+          size="icon"
           className="p-2 border rounded-full hover:bg-gray-50"
         >
           <Filter className="w-5 h-5 text-gray-600" />
-        </button>
+        </Button>
       </div>
 
       <div className="py-6 space-y-4">
@@ -161,42 +168,41 @@ export default function PublicSearchPage() {
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Filters</h2>
-              <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-gray-100 rounded-full">
+              <Button onClick={() => setShowFilters(false)} variant="ghost" size="icon" className="p-2 hover:bg-gray-100 rounded-full">
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Availability</label>
+                <Label className="text-sm font-medium">Availability</Label>
                 <label className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
+                  <Checkbox
                     checked={availableOnly}
-                    onChange={(e) => setAvailableOnly(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600"
+                    onCheckedChange={(checked) => setAvailableOnly(Boolean(checked))}
                   />
                   <span>Show available only</span>
                 </label>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
-                <select 
-                  className="w-full p-2 border rounded-md bg-white"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                >
-                  <option value="">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
+                <Label className="text-sm font-medium">Category</Label>
+                <Select value={categoryId || "all"} onValueChange={(value) => setCategoryId(value === "all" ? "" : value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Section</label>
-                <input 
+                <Label className="text-sm font-medium">Section</Label>
+                <Input
                   type="text" 
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
@@ -205,12 +211,12 @@ export default function PublicSearchPage() {
                 />
               </div>
 
-              <button 
+              <Button
                 onClick={() => setShowFilters(false)}
                 className="w-full bg-blue-600 text-white font-medium p-3 rounded-md mt-4"
               >
                 Apply Filters
-              </button>
+              </Button>
             </div>
           </div>
         </div>

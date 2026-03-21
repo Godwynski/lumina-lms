@@ -5,6 +5,7 @@ import DigitalCard from "./DigitalCard";
 import { motion } from "framer-motion";
 import { toPng } from "html-to-image";
 import { Download, RefreshCw, RotateCcw, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface MyCardContainerProps {
   initialData: {
@@ -19,9 +20,6 @@ interface MyCardContainerProps {
   };
 }
 
-type CardData = MyCardContainerProps["initialData"];
-
-const CACHE_KEY = "lumina_library_card_cache";
 const SHOW_ASSET_REFRESH =
   process.env.NEXT_PUBLIC_SHOW_CARD_ASSET_REFRESH === "true";
 
@@ -86,41 +84,12 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [showBack, setShowBack] = useState(false);
 
-  // 1. Instant Optimistic Load from Cache
-  useEffect(() => {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as Partial<CardData>;
-        if (
-          typeof parsed.fullName === "string" &&
-          typeof parsed.studentId === "string" &&
-          typeof parsed.cardNumber === "string" &&
-          typeof parsed.department === "string" &&
-          typeof parsed.expiryDate === "string" &&
-          (parsed.status === "active" ||
-            parsed.status === "pending" ||
-            parsed.status === "suspended" ||
-            parsed.status === "expired")
-        ) {
-          setData((current) => ({
-            ...current,
-            ...parsed,
-          }));
-        }
-      } catch {
-        console.error("Cache corrupted");
-      }
-    }
-  }, []);
-
-  // 2. Hydrate & Update Cache with fresh server data
+  // Hydrate with fresh server data
   useEffect(() => {
     setData(initialData);
-    localStorage.setItem(CACHE_KEY, JSON.stringify(initialData));
   }, [initialData]);
 
-  // 3. Client short-circuit check for existing static assets
+  // Client short-circuit check for existing static assets
   useEffect(() => {
     let mounted = true;
 
@@ -153,7 +122,6 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
             avatarUrl: nextAvatarUrl,
           };
 
-          localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
           return updated;
         });
       } catch {
@@ -167,9 +135,6 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
       mounted = false;
     };
   }, []);
-
-  // Handle local state updates (e.g. if we want to allow manual refresh)
-  // This is where we could add advanced offline logic if needed
 
   const refreshAssets = async () => {
     setIsRefreshingAssets(true);
@@ -193,7 +158,6 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
           qrUrl: payload.qr_url ?? current.qrUrl,
           avatarUrl: payload.profile_url ?? current.avatarUrl,
         };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
         return next;
       });
     } finally {
@@ -327,51 +291,54 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">My Digital Card</h1>
+          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">My Digital Card</h1>
           <p className="text-zinc-500">STI College Alabang official library identity card</p>
         </div>
 
         <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-col sm:items-end">
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
-            <button
+            <Button
               type="button"
               onClick={() => setShowBack((prev) => !prev)}
-              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 sm:flex-none`}
+              variant="outline"
+              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-slate-300 bg-white text-zinc-700 hover:bg-slate-100 sm:flex-none`}
             >
               <RotateCcw className="h-3.5 w-3.5" />
               {showBack ? "Show front" : "Show back"}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={exportCardAsImage}
               disabled={isExporting}
-              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-blue-700 bg-blue-700 text-white hover:bg-blue-800 sm:flex-none`}
+              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-slate-900 bg-slate-900 text-white hover:bg-slate-800 sm:flex-none`}
             >
               <Download className="h-3.5 w-3.5" />
               {isExporting ? "Exporting..." : "Export front + back"}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={exportWalletPreset}
               disabled={isExporting}
-              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 sm:flex-none`}
+              variant="outline"
+              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-slate-300 bg-white text-zinc-700 hover:bg-slate-100 sm:flex-none`}
             >
               <Wallet className="h-3.5 w-3.5" />
               Wallet preset
-            </button>
+            </Button>
 
             {SHOW_ASSET_REFRESH && (
-              <button
+              <Button
                 type="button"
                 onClick={refreshAssets}
                 disabled={isRefreshingAssets}
-                className={`${actionBaseClass} ${desktopActionClass} hidden border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 sm:inline-flex`}
+                variant="outline"
+                className={`${actionBaseClass} ${desktopActionClass} hidden border-slate-300 bg-white text-zinc-600 hover:bg-slate-100 sm:inline-flex`}
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 {isRefreshingAssets ? "Refreshing..." : "Refresh assets"}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -454,19 +421,19 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
 
 
 
-      <div className="mt-12 bg-zinc-50 border border-zinc-100 rounded-2xl p-6">
+      <div className="mt-12 rounded-2xl border border-slate-200 bg-zinc-50 p-6">
         <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-widest mb-4">Quick Guide</h3>
         <ul className="space-y-3 text-sm text-zinc-600">
           <li className="flex gap-3">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">1</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">1</span>
             Present this QR code to the librarian during checkout.
           </li>
           <li className="flex gap-3">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">2</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">2</span>
             Back side now focuses on essential borrowing, returning, and support information.
           </li>
           <li className="flex gap-3">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold">3</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">3</span>
             Export options include front+back composite and wallet-size preset (1012x638 px).
           </li>
 

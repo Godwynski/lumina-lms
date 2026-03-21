@@ -84,7 +84,7 @@ export function RecomputeExpiryDates() {
 
   return (
     <div className="space-y-4">
-      <Card className="p-6 border-zinc-200/50">
+      <Card className="border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-zinc-900">
@@ -98,7 +98,7 @@ export function RecomputeExpiryDates() {
           <Button
             onClick={handleDryRun}
             disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 rounded-lg gap-2"
+            className="rounded-lg bg-slate-900 gap-2 hover:bg-slate-800"
           >
             {loading ? (
               <>
@@ -195,7 +195,7 @@ export function RecomputeExpiryDates() {
                 <Button
                   onClick={handleExecute}
                   disabled={executing}
-                  className="bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                  className="rounded-lg bg-slate-900 hover:bg-slate-800"
                 >
                   {executing ? (
                     <>
@@ -211,7 +211,7 @@ export function RecomputeExpiryDates() {
             {executionResult && (
               <Button
                 onClick={() => setDialogOpen(false)}
-                className="bg-indigo-600 hover:bg-indigo-700 rounded-lg w-full"
+                className="w-full rounded-lg bg-slate-900 hover:bg-slate-800"
               >
                 Close
               </Button>

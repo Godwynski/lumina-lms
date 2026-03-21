@@ -85,8 +85,8 @@ export function AuditLogViewer() {
       </div>
 
       {loading ? (
-        <Card className="p-8 text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-indigo-600" />
+        <Card className="p-8 text-center border-slate-200 bg-white shadow-sm">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-700" />
           <p className="text-zinc-600 mt-2">Loading audit logs...</p>
         </Card>
       ) : filteredLogs.length === 0 ? (
@@ -101,7 +101,7 @@ export function AuditLogViewer() {
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                    <Shield className="h-4 w-4 text-slate-700 flex-shrink-0" />
                     <p className="font-semibold text-sm text-zinc-900">
                       {log.action.toUpperCase()}
                     </p>
@@ -202,16 +202,16 @@ export function GDPRHardDeleteDialog({
           resetForm();
           setOpen(true);
         }}
-        className="bg-red-600 hover:bg-red-700 rounded-lg text-white gap-2"
+        className="rounded-lg bg-red-600 text-white gap-2 hover:bg-red-700"
       >
         <Lock className="h-4 w-4" />
         Request GDPR Hard Delete
       </Button>
 
-      <DialogContent className="rounded-xl max-w-lg">
+      <DialogContent className="max-w-md rounded-xl p-5">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <AlertCircle className="h-4 w-4 text-red-600" />
             GDPR Right to Erasure
           </DialogTitle>
           <DialogDescription>
@@ -222,7 +222,7 @@ export function GDPRHardDeleteDialog({
 
         {!result ? (
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3.5">
               <p className="text-sm text-red-800 font-semibold mb-2">
                 ⚠️ Warning: This action is irreversible
               </p>
@@ -270,7 +270,7 @@ export function GDPRHardDeleteDialog({
                     value={confirmation}
                     onChange={(e) => setConfirmation(e.target.value.toUpperCase())}
                     disabled={loading}
-                    className="font-mono font-bold"
+                    className="h-10 rounded-lg border-zinc-300 font-mono font-bold"
                   />
                 </div>
               </div>
@@ -312,7 +312,7 @@ export function GDPRHardDeleteDialog({
                 }}
                 variant="outline"
                 disabled={loading}
-                className="rounded-lg"
+                className="h-9 rounded-lg"
               >
                 {confirming ? "Back" : "Cancel"}
               </Button>
@@ -325,11 +325,11 @@ export function GDPRHardDeleteDialog({
                   }
                 }}
                 disabled={loading}
-                className="bg-red-600 hover:bg-red-700 rounded-lg"
+                className="h-9 rounded-lg bg-red-600 hover:bg-red-700"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processing...
                   </>
                 ) : confirming ? (
@@ -341,15 +341,15 @@ export function GDPRHardDeleteDialog({
             </>
           )}
           {result && (
-            <Button
-              onClick={() => {
-                setOpen(false);
-                resetForm();
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700 rounded-lg w-full"
-            >
-              Close
-            </Button>
+              <Button
+                onClick={() => {
+                  setOpen(false);
+                  resetForm();
+                }}
+                className="h-9 w-full rounded-lg bg-slate-900 hover:bg-slate-800"
+              >
+                Close
+              </Button>
           )}
         </DialogFooter>
       </DialogContent>

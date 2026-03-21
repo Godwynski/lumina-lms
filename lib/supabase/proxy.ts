@@ -3,11 +3,24 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  const path = request.nextUrl.pathname;
+  const isAuthRoute = path.startsWith("/auth");
+  const isApiRoute = path.startsWith("/api");
+  const isPublicRoute = path === "/" || isAuthRoute || isApiRoute;
+
+  let supabaseResponse = NextResponse.next({ request });
 
   if (!hasEnvVars) {
+    return supabaseResponse;
+  }
+
+  const hasSupabaseSessionCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-"));
+
+  // Fast path for public routes when no Supabase session cookie is present.
+  // This avoids unnecessary auth client creation and token work for anonymous traffic.
+  if (isPublicRoute && !hasSupabaseSessionCookie) {
     return supabaseResponse;
   }
 
@@ -36,13 +49,6 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/auth");
-  const isPublicRoute =
-    request.nextUrl.pathname === "/" ||
-    isAuthRoute ||
-    request.nextUrl.pathname.startsWith("/api");
-
   // 1. Unauthenticated → redirect to login
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
@@ -57,8 +63,6 @@ export async function updateSession(request: NextRequest) {
     : "student";
 
   // 3. RBAC Route Guards — pure in-memory, <1ms
-  const path = request.nextUrl.pathname;
-
   if (path.startsWith("/admin") && userRole !== "admin") {
     return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
   }

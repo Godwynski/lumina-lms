@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AlertCircle, Trash2 } from "lucide-react";
 
 interface SelfDeleteAccountDialogProps {
@@ -69,10 +70,10 @@ export function SelfDeleteAccountDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[460px] rounded-xl p-5">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <Trash2 className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-red-600 text-base">
+            <Trash2 className="h-4 w-4" />
             Delete My Account
           </DialogTitle>
           <DialogDescription>
@@ -82,7 +83,7 @@ export function SelfDeleteAccountDialog({
 
         {step === "warning" ? (
           <div className="space-y-4">
-            <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3.5">
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div className="space-y-2 text-sm text-red-800">
@@ -104,12 +105,14 @@ export function SelfDeleteAccountDialog({
               <Button
                 variant="outline"
                 onClick={handleClose}
+                className="h-9 rounded-lg"
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => setStep("confirm")}
+                className="h-9 rounded-lg"
               >
                 Continue to Deletion
               </Button>
@@ -121,12 +124,12 @@ export function SelfDeleteAccountDialog({
               <p className="text-sm font-medium text-zinc-900">
                 To confirm, please type the following text:
               </p>
-              <code className="block bg-zinc-100 p-2 rounded text-sm font-mono border border-zinc-300">
+              <code className="block rounded border border-zinc-300 bg-zinc-100 p-2 text-sm font-mono">
                 DELETE MY ACCOUNT
               </code>
             </div>
 
-            <input
+            <Input
               type="text"
               placeholder="Type confirmation text..."
               value={confirmText}
@@ -134,11 +137,11 @@ export function SelfDeleteAccountDialog({
                 setConfirmText(e.target.value);
                 setError(null);
               }}
-              className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-red-500"
+              className="h-10 w-full rounded-lg border-zinc-300 text-sm focus:border-red-500"
             />
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+              <div className="rounded bg-red-50 p-2 text-sm text-red-600">
                 {error}
               </div>
             )}
@@ -152,6 +155,7 @@ export function SelfDeleteAccountDialog({
                   setError(null);
                 }}
                 disabled={isLoading}
+                className="h-9 rounded-lg"
               >
                 Back
               </Button>
@@ -159,6 +163,7 @@ export function SelfDeleteAccountDialog({
                 variant="destructive"
                 onClick={handleConfirm}
                 disabled={isLoading || confirmText !== "DELETE MY ACCOUNT"}
+                className="h-9 rounded-lg"
               >
                 {isLoading ? "Deleting..." : "Delete My Account"}
               </Button>

@@ -2,28 +2,52 @@
 
 import { createClient } from '@/lib/supabase/server';
 
-export async function getDashboardStats() {
+export async function getDashboardStats({
+  userId,
+  role,
+}: {
+  userId: string;
+  role: string | null;
+}) {
   const supabase = await createClient();
-  
+  const isStudent = role === 'student';
+  const canReviewApprovals = role === 'admin' || role === 'librarian';
+
   const [
-    { count: totalBooks },
     { count: activeLoans },
-    { count: totalUsers },
-    { data: recentBooks }
+    { data: recentBooks },
+    pendingApprovalsResult,
+    myActiveLoansResult,
   ] = await Promise.all([
-    supabase.from('books').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase
       .from('borrowing_records')
       .select('*', { count: 'exact', head: true })
       .in('status', ['active', 'ACTIVE']),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('books').select('id, title, author, created_at').eq('is_active', true).order('created_at', { ascending: false }).limit(5)
+    supabase
+      .from('books')
+      .select('id, title, author, created_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(5),
+    canReviewApprovals
+      ? supabase
+          .from('library_cards')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending')
+      : Promise.resolve({ count: 0 }),
+    isStudent
+      ? supabase
+          .from('borrowing_records')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .in('status', ['active', 'ACTIVE'])
+      : Promise.resolve({ count: 0 }),
   ]);
 
   return {
-    totalBooks: totalBooks || 0,
     activeLoans: activeLoans || 0,
-    totalUsers: totalUsers || 0,
-    recentBooks: recentBooks || []
+    pendingApprovals: pendingApprovalsResult.count || 0,
+    myActiveLoans: myActiveLoansResult.count || 0,
+    recentBooks: recentBooks || [],
   };
 }

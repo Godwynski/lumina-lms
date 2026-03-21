@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { getPublicBookById, reportMissingBook } from '@/lib/actions/public-catalog';
 import { ChevronLeft, MapPin, AlertCircle, BookOpen, Hash, Tag } from 'lucide-react';
 import { Book } from '@/lib/types';
+import { Button } from '@/components/ui/button';
 
 export default function PublicBookDetailPage() {
   const params = useParams();
@@ -53,13 +54,14 @@ export default function PublicBookDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8">
-      <button 
-        onClick={() => router.back()}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+      <Button
+        onClick={() => router.push('/')}
+        variant="ghost"
+        className="flex items-center text-gray-600 hover:text-gray-900 mb-6 px-0"
       >
         <ChevronLeft className="w-5 h-5 mr-1" />
         Back to Search
-      </button>
+      </Button>
 
       <div className="bg-white rounded-2xl shadow-sm border p-6 md:p-8 flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-1/3 flex-shrink-0">
@@ -133,14 +135,14 @@ export default function PublicBookDetailPage() {
 
           <div className="pt-6">
             {!reported ? (
-              <button
+              <Button
                 onClick={handleReportMissing}
                 disabled={reportSubmitting || book.available_copies === 0}
                 className="flex items-center justify-center w-full py-3 px-4 border border-orange-200 text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <AlertCircle className="w-5 h-5 mr-2" />
                 {reportSubmitting ? 'Submitting...' : "I can't find this book on the shelf"}
-              </button>
+              </Button>
             ) : (
               <div className="bg-green-50 text-green-800 p-4 rounded-lg flex items-center justify-center border border-green-200">
                 <p className="text-sm font-medium">Thank you! A librarian has been notified to check the shelf.</p>

@@ -13,6 +13,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { sendWelcomeEmail } from "@/lib/notifications";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 
 interface PendingCard {
@@ -163,37 +165,38 @@ export default function ApprovalsPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
 
         <div>
-          <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">E-Library Card Management</h1>
-          <p className="text-zinc-500">Review, approve, or suspend student digital library cards.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">E-Library Card Management</h1>
+          <p className="text-muted-foreground">Review, approve, or suspend student digital library cards.</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-zinc-100 p-1 rounded-xl">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted p-1">
           {(["pending", "active", "suspended", "all"] as const).map((f) => (
-            <button
+            <Button
               key={f}
               onClick={() => setFilter(f)}
+              variant="ghost"
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
                 filter === f 
-                  ? "bg-white text-indigo-600 shadow-sm" 
-                  : "text-zinc-500 hover:text-zinc-800"
+                  ? "bg-card text-foreground shadow-sm" 
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {f}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-          <input 
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
             type="text" 
             placeholder="Search by name, ID, or card number..."
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full rounded-xl border border-border py-3 pl-10 pr-4 outline-none transition-all focus:ring-2 focus:ring-ring"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -201,20 +204,20 @@ export default function ApprovalsPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-zinc-500 font-medium">Loading records...</p>
+          <div className="flex flex-col items-center justify-center gap-4 py-20">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-700 border-t-transparent" />
+          <p className="text-muted-foreground font-medium">Loading records...</p>
         </div>
       ) : filteredCards.length === 0 ? (
-        <div className="bg-white border border-dashed border-zinc-200 rounded-3xl p-20 text-center">
-          <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            {filter === 'pending' ? <CheckCircle2 className="text-zinc-300 w-8 h-8" /> : <Search className="text-zinc-300 w-8 h-8" />}
+        <div className="rounded-2xl border border-dashed border-border bg-card p-20 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-muted">
+            {filter === 'pending' ? <CheckCircle2 className="text-muted-foreground w-8 h-8" /> : <Search className="text-muted-foreground w-8 h-8" />}
           </div>
-          <h3 className="text-xl font-bold text-zinc-900">No {filter} cards found</h3>
-          <p className="text-zinc-500 mt-2">Try changing your filter or search query.</p>
+          <h3 className="text-xl font-bold text-foreground">No {filter} cards found</h3>
+          <p className="text-muted-foreground mt-2">Try changing your filter or search query.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <AnimatePresence mode="popLayout">
             {filteredCards.map((card) => (
               <motion.div
@@ -223,12 +226,12 @@ export default function ApprovalsPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white border border-zinc-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex gap-4">
-                      <div className="h-14 w-14 rounded-2xl bg-zinc-100 overflow-hidden border border-zinc-200">
+                      <div className="h-14 w-14 rounded-2xl bg-muted overflow-hidden border border-border">
                         {card.profiles?.avatar_url ? (
                           <Image 
                             src={card.profiles.avatar_url} 
@@ -238,15 +241,15 @@ export default function ApprovalsPage() {
                             className="h-full w-full object-cover" 
                           />
                         ) : (
-                          <div className="h-full w-full flex items-center justify-center text-zinc-400 font-bold text-xl">
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground font-bold text-xl">
                             {card.profiles?.full_name?.charAt(0)}
                           </div>
                         )}
                       </div>
                       <div>
-                        <h4 className="font-bold text-zinc-900">{card.profiles?.full_name}</h4>
-                        <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
-                          <span className="bg-zinc-100 px-1.5 py-0.5 rounded font-mono">{card.profiles?.student_id}</span>
+                        <h4 className="font-bold text-foreground">{card.profiles?.full_name}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                          <span className="bg-muted px-1.5 py-0.5 rounded font-mono">{card.profiles?.student_id}</span>
                           <span>•</span>
                           <span>{card.profiles?.department}</span>
                         </div>
@@ -261,57 +264,58 @@ export default function ApprovalsPage() {
                     </div>
                   </div>
 
-                  <div className="bg-zinc-50 rounded-xl p-4 flex justify-between items-center mb-6">
+                  <div className="bg-muted rounded-xl p-4 flex justify-between items-center mb-6">
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Card Number</p>
-                      <p className="font-mono font-bold text-zinc-700">{card.card_number}</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Card Number</p>
+                      <p className="font-mono font-bold text-muted-foreground">{card.card_number}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Requested</p>
-                      <p className="text-xs text-zinc-600">{new Date(card.issued_at).toLocaleDateString()}</p>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Requested</p>
+                      <p className="text-xs text-muted-foreground">{new Date(card.issued_at).toLocaleDateString()}</p>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
                     {card.status === 'pending' && (
-                      <button
+                      <Button
                         onClick={() => handleApprove(card.id)}
                         disabled={!!processingId}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
+                          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-white transition-all hover:bg-primary/90 disabled:opacity-50"
+                        >
                         {processingId === card.id ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : <Mail className="w-4 h-4" />}
                         Approve & Send Email
-                      </button>
+                      </Button>
                     )}
                     
                     {card.status === 'active' && (
-                      <button
+                      <Button
                         onClick={() => handleSuspend(card.id)}
                         disabled={!!processingId}
-                        className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        variant="outline"
+                        className="flex-1 bg-card border border-red-200 text-red-600 hover:bg-red-50 rounded-xl py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         {processingId === card.id ? (
                           <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
                         ) : <ShieldAlert className="w-4 h-4" />}
                         Suspend Card
-                      </button>
+                      </Button>
                     )}
 
                     {card.status === 'suspended' && (
-                      <button
+                      <Button
                         onClick={() => handleApprove(card.id)}
                         disabled={!!processingId}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-700 py-2.5 text-sm font-semibold text-white transition-all hover:bg-primary/90 disabled:opacity-50"
                       >
                         Re-activate
-                      </button>
+                      </Button>
                     )}
                     
-                    <button className="px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded-xl py-2.5 transition-all outline-none">
+                    <Button variant="ghost" className="px-4 bg-muted hover:bg-muted text-muted-foreground rounded-xl py-2.5 transition-all outline-none">
                       <Clock className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </motion.div>
