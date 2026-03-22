@@ -12,12 +12,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UploadInterface } from "./UploadInterface";
+import { cn } from "@/lib/utils";
 
 interface UploadActionProps {
   categories: { id: string; name: string }[];
+  className?: string;
 }
 
-export function UploadAction({ categories }: UploadActionProps) {
+export function UploadAction({ categories, className }: UploadActionProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -30,8 +32,8 @@ export function UploadAction({ categories }: UploadActionProps) {
 
   if (!mounted) {
     return (
-      <Button className="h-11 cursor-not-allowed rounded-xl bg-primary/50 text-primary-foreground opacity-70">
-        <Plus className="mr-2" size={18} />
+      <Button className={cn("h-8 cursor-not-allowed rounded-md bg-primary/50 px-2.5 text-xs text-primary-foreground opacity-70", className)}>
+        <Plus className="mr-1.5" size={14} />
         Upload Resource
       </Button>
     );
@@ -40,8 +42,8 @@ export function UploadAction({ categories }: UploadActionProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button className="h-11 rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 active:scale-95">
-          <Plus className="mr-2" size={18} />
+        <Button className={cn("h-8 rounded-md bg-primary px-2.5 text-xs text-primary-foreground transition-all hover:bg-primary/90 active:scale-95", className)}>
+          <Plus className="mr-1.5" size={14} />
           Upload Resource
         </Button>
       </SheetTrigger>

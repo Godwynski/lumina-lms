@@ -9,7 +9,6 @@ import {
   Settings,
   Library,
   BookOpen,
-  ScanLine,
   RotateCcw,
   Users,
   ShieldCheck,
@@ -75,16 +74,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Library Operations",
     roles: ["admin", "librarian", "staff", "student"],
     sections: [
-      {
-        id: "circulation",
-        label: "Circulation",
-        icon: RotateCcw,
-        roles: ["admin", "librarian", "staff"],
-        children: [
-          { href: "/protected/borrow", label: "Checkout", icon: ScanLine, roles: ["admin", "librarian", "staff"] },
-          { href: "/protected/return", label: "Return", icon: RotateCcw, roles: ["admin", "librarian", "staff"] },
-        ],
-      },
       {
         id: "catalog",
         label: "Catalog",
@@ -205,6 +194,18 @@ export function ProtectedNav({
             <SidebarMenuItem>
               <SidebarMenuButton 
                 asChild 
+                isActive={isActive('/protected/circulation')}
+                tooltip="Circulation Desk"
+              >
+                <Link href="/protected/circulation">
+                  <RotateCcw />
+                  <span>Circulation Desk</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
                 isActive={isActive(DASHBOARD_LINK.href)}
                 tooltip={DASHBOARD_LINK.label}
               >

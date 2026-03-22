@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
 import Image from 'next/image';
 import {
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { CompactPagination } from '@/components/ui/compact-pagination';
 import Link from 'next/link';
 
 type CatalogBook = {
@@ -42,8 +43,9 @@ export default function StudentCatalogPage() {
   const [books, setBooks] = useState<CatalogBook[]>([]);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const pageSize = 12;
   
   // Filters
   const [showFilters, setShowFilters] = useState(false);
@@ -53,18 +55,6 @@ export default function StudentCatalogPage() {
   const [loadError, setLoadError] = useState('');
   const [sortBy, setSortBy] = useState<'title' | 'author' | 'availability'>('title');
   const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
-
-  const observer = useRef<IntersectionObserver | null>(null);
-  const lastBookElementRef = useCallback((node: HTMLAnchorElement | null) => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prevPage => prevPage + 1);
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [loading, hasMore]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -78,7 +68,7 @@ export default function StudentCatalogPage() {
     loadCategories();
   }, []);
 
-  const loadBooks = useCallback(async (isNewSearch = false, currentPage = 1) => {
+  const loadBooks = useCallback(async (currentPage = 1) => {
     setLoading(true);
     setLoadError('');
     try {
@@ -87,32 +77,26 @@ export default function StudentCatalogPage() {
         selectedCategory,
         selectedSection,
         availableOnly,
-        currentPage
+        currentPage,
+        pageSize,
       );
-      
-      if (isNewSearch) {
-        setBooks(result.books);
-      } else {
-        setBooks(prev => [...prev, ...result.books]);
-      }
-      setHasMore(result.hasMore);
+
+      setBooks(result.books);
+      setTotalBooks(result.total);
     } catch (err) {
       console.error(err);
       setLoadError('Unable to load catalog right now. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [query, selectedCategory, selectedSection, availableOnly]);
+  }, [query, selectedCategory, selectedSection, availableOnly, pageSize]);
 
   useEffect(() => {
     setPage(1);
-    void loadBooks(true, 1);
-  }, [query, selectedCategory, selectedSection, availableOnly, loadBooks]);
+  }, [query, selectedCategory, selectedSection, availableOnly]);
 
   useEffect(() => {
-    if (page > 1) {
-      void loadBooks(false, page);
-    }
+    void loadBooks(page);
   }, [page, loadBooks]);
 
   const clearFilters = () => {
@@ -248,11 +232,10 @@ export default function StudentCatalogPage() {
           )}
         </div>
 
-        {displayBooks.map((book, index) => (
+        {displayBooks.map((book) => (
           <Link 
             key={book.id} 
             href={`/protected/student-catalog/${book.id}`}
-            ref={index === displayBooks.length - 1 ? lastBookElementRef : null}
             className={`group block rounded-2xl border border-border bg-card shadow-sm transition-all hover:bg-muted active:scale-[0.98] ${density === 'compact' ? 'p-3' : 'p-4'}`}
           >
             <div className={`flex ${density === 'compact' ? 'gap-3' : 'gap-5'}`}>
@@ -322,6 +305,15 @@ export default function StudentCatalogPage() {
                 Clear Filters
              </Button>
           </div>
+        )}
+
+        {!loading && totalBooks > 0 && (
+          <CompactPagination
+            page={page}
+            totalItems={totalBooks}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
         )}
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getCategoriesCached, getPublicBooksCached } from '@/lib/actions/public-catalog';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { CompactPagination } from '@/components/ui/compact-pagination';
 
 export default function PublicSearchPage() {
   const [query, setQuery] = useState('');
@@ -20,14 +21,12 @@ export default function PublicSearchPage() {
   
   const [books, setBooks] = useState<Book[]>([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalBooks, setTotalBooks] = useState(0);
   const [loading, setLoading] = useState(false);
+  const pageSize = 10;
   
   const [categories, setCategories] = useState<Category[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-
-  // Native IntersectionObserver for infinite scroll
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadCategories() {
@@ -39,53 +38,31 @@ export default function PublicSearchPage() {
     loadCategories();
   }, []);
 
-  const loadBooks = useCallback(async (reset = false) => {
+  const loadBooks = useCallback(async (targetPage: number) => {
     try {
       setLoading(true);
-      const currentPage = reset ? 1 : page;
-      const data = await getPublicBooksCached(query, categoryId, section, availableOnly, currentPage, 10);
-      
-      if (reset) {
-        setBooks(data.books);
-      } else {
-        setBooks(prev => [...prev, ...data.books]);
-      }
-      
-      setHasMore(data.hasMore);
-      setPage(currentPage + 1);
+      const data = await getPublicBooksCached(query, categoryId, section, availableOnly, targetPage, pageSize);
+
+      setBooks(data.books);
+      setTotalBooks(data.total);
     } catch (_e) {
       console.error(_e);
     } finally {
       setLoading(false);
     }
-  }, [query, categoryId, section, availableOnly, page]);
+  }, [query, categoryId, section, availableOnly, pageSize]);
 
   useEffect(() => {
     // Debounce search
     const timer = setTimeout(() => {
       setPage(1);
-      loadBooks(true);
     }, 300);
     return () => clearTimeout(timer);
-  }, [loadBooks]);
+  }, [query, categoryId, section, availableOnly]);
 
-  // Native IntersectionObserver for infinite scroll
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          loadBooks(false);
-        }
-      },
-      { threshold: 0 }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasMore, loading, loadBooks]);
+    void loadBooks(page);
+  }, [page, loadBooks]);
 
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 relative min-h-screen">
@@ -155,8 +132,14 @@ export default function PublicSearchPage() {
           </div>
         )}
 
-        {/* Intersection sentinel for infinite scrolling */}
-        {hasMore && <div ref={sentinelRef} className="h-10" />}
+        {!loading && totalBooks > 0 && (
+          <CompactPagination
+            page={page}
+            totalItems={totalBooks}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        )}
       </div>
 
       {/* Sticky Bottom Sheet for Filters */}

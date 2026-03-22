@@ -3,17 +3,20 @@
 import { motion } from "framer-motion";
 import { 
   FileText, 
+  BookText,
+  ScrollText,
+  FileBadge,
   User, 
   Calendar, 
   Shield, 
   Eye, 
-  Download,
   CircleDot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type ResourceCard = {
   id: string;
@@ -22,6 +25,7 @@ type ResourceCard = {
   type: string;
   access_level: string;
   created_at: string;
+  updated_at?: string | null;
   published_year?: number | null;
   categories?: {
     name?: string | null;
@@ -30,10 +34,22 @@ type ResourceCard = {
 
 interface AssetCardProps {
   resource: ResourceCard;
+  selected: boolean;
+  onSelectChange: (checked: boolean) => void;
 }
 
-export function ModernAssetCard({ resource }: AssetCardProps) {
-  const isRecent = new Date(resource.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+function getTypeIcon(type: string) {
+  const normalized = type.toLowerCase();
+  if (normalized === "ebook") return BookText;
+  if (normalized === "journal") return ScrollText;
+  if (normalized === "report") return FileBadge;
+  return FileText;
+}
+
+export function ModernAssetCard({ resource, selected, onSelectChange }: AssetCardProps) {
+  const modifiedAt = resource.updated_at || resource.created_at;
+  const isRecent = new Date(modifiedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const TypeIcon = getTypeIcon(resource.type);
 
   return (
     <motion.div
@@ -46,12 +62,14 @@ export function ModernAssetCard({ resource }: AssetCardProps) {
     >
       <Card className="h-full border-border bg-card shadow-sm transition-colors hover:bg-muted">
         <CardContent className="flex h-full flex-col p-3">
-        
-        <div className="mb-2 flex items-start justify-between">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
-              <FileText size={15} />
-              {isRecent ? <CircleDot className="absolute -right-1 -top-1 h-3 w-3 text-emerald-500" /> : null}
-            </div>
+
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <Checkbox checked={selected} onCheckedChange={(checked) => onSelectChange(Boolean(checked))} aria-label={`Select ${resource.title}`} className="mt-1" />
+
+          <div className="relative flex h-20 flex-1 items-center justify-center rounded-md border border-border bg-muted/70 text-muted-foreground">
+              <TypeIcon size={30} strokeWidth={1.8} />
+              {isRecent ? <CircleDot className="absolute right-2 top-2 h-3 w-3 text-emerald-500" /> : null}
+          </div>
 
           <div className="flex flex-col items-end gap-1">
             <Badge variant="outline" className="border-border bg-muted px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -81,10 +99,10 @@ export function ModernAssetCard({ resource }: AssetCardProps) {
             <div className="rounded-md border border-border bg-muted p-2">
               <div className="mb-0.5 flex items-center gap-1.5 text-muted-foreground">
                 <Calendar size={11} />
-                <span className="text-[9px] font-semibold uppercase tracking-wider">Released</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider">Last Modified</span>
               </div>
               <p className="text-xs font-semibold text-muted-foreground">
-                {resource.published_year || new Date(resource.created_at).getFullYear()}
+                {new Date(modifiedAt).toLocaleDateString()}
               </p>
             </div>
             <div className="rounded-md border border-border bg-muted p-2">
@@ -104,9 +122,6 @@ export function ModernAssetCard({ resource }: AssetCardProps) {
               Open
             </Button>
           </Link>
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-md border-border text-muted-foreground hover:bg-muted">
-             <Download size={14} />
-          </Button>
         </div>
 
         </CardContent>

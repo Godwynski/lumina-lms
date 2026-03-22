@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   UserCheck,
   Zap,
+  PanelLeft,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +86,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Personal settings state
@@ -212,6 +215,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
 
   const changeTab = (id: TabId) => {
     setActiveTab(id);
+    setMobileNavOpen(false);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", id);
     router.replace(url.pathname + url.search, { scroll: false });
@@ -357,14 +361,25 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
     );
   }, [allTabs, searchQuery]);
 
+  const activeTabMeta = useMemo(() => allTabs.find((tab) => tab.id === activeTab), [activeTab, allTabs]);
+  const hasPendingPhoto = !!selectedPhotoBlob;
+
+  const handleMobilePhotoAction = () => {
+    if (hasPendingPhoto) {
+      void uploadProfilePhoto();
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
   if (!mounted) return null;
 
   return (
-    <div className="w-full pb-6 md:pb-8">
+    <div className="w-full pb-24 md:pb-8">
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4"
+        className="mb-4 border-b border-border pb-4"
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
@@ -373,22 +388,58 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                 {isAdmin ? "Admin" : role}
               </Badge>
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{displayName || "Unnamed Member"}</h1>
-            <p className="text-xs text-muted-foreground sm:text-sm">Manage your profile, preferences, and system configuration.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
+            <p className="text-sm text-muted-foreground">Manage profile, preferences, security, and system configuration.</p>
           </div>
 
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search settings..."
+              placeholder="Search settings"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 rounded-lg pl-9"
+              className="h-10 rounded-lg pl-9"
             />
           </div>
         </div>
       </motion.div>
+
+      <div className="mb-3 flex items-center justify-between rounded-xl border border-border bg-card p-2.5 lg:hidden">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Current section</p>
+          <p className="truncate text-sm font-semibold text-foreground">{activeTabMeta?.label ?? "Settings"}</p>
+        </div>
+          <Button type="button" variant="outline" className="h-11 rounded-lg border-border px-3" onClick={() => setMobileNavOpen(true)}>
+            <PanelLeft className="mr-2 h-4 w-4" />
+            Browse sections
+          </Button>
+      </div>
+
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="w-[86%] max-w-xs border-r border-border bg-card p-0">
+          <SheetHeader className="border-b border-border">
+            <SheetTitle className="text-base">Settings navigation</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 p-4">
+            <SectionNav
+              title="Personal"
+              items={filteredTabs.filter((t) => t.section === "personal")}
+              activeId={activeTab}
+              onChange={changeTab}
+            />
+
+            {isAdmin && (
+              <SectionNav
+                title="System Administration"
+                items={filteredTabs.filter((t) => t.section === "admin")}
+                activeId={activeTab}
+                onChange={changeTab}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ── Toast banner ────────────────────────────────── */}
       <AnimatePresence>
@@ -407,7 +458,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[240px_1fr] lg:gap-6">
         {/* ── Unified Navigation ─────────────────────────── */}
-        <nav className="order-2 flex flex-col gap-4 lg:order-1">
+        <nav className="order-2 hidden flex-col gap-4 lg:order-1 lg:flex">
           <SectionNav 
             title="Personal" 
             items={filteredTabs.filter(t => t.section === 'personal')} 
@@ -453,7 +504,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="e.g. Alex Rivera"
-                        className="h-10 rounded-lg text-sm"
+                        className="h-11 rounded-lg text-sm"
                       />
                     </FieldGroup>
 
@@ -499,7 +550,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                             type="button"
                             variant="outline"
                             onClick={() => fileInputRef.current?.click()}
-                            className="h-8 rounded-md border-border px-3 text-xs"
+                            className="h-11 rounded-md border-border px-3 text-xs sm:h-9"
                           >
                             Choose Photo
                           </Button>
@@ -507,14 +558,14 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                             {selectedPhotoName || "No file selected"}
                           </p>
                         </div>
-                        <div className="flex justify-end">
+                        <div className="hidden justify-end sm:flex">
                           <Button
                             type="button"
                             onClick={uploadProfilePhoto}
                             disabled={photoUploading}
-                            className="h-8 rounded-md px-3 text-xs"
+                            className="h-9 rounded-md px-3 text-xs"
                           >
-                            {photoUploading ? "Uploading..." : "Upload Photo"}
+                        {photoUploading ? "Uploading..." : "Upload photo"}
                           </Button>
                         </div>
                       </div>
@@ -533,9 +584,9 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                       <Button
                         onClick={() => void saveProfile()}
                         disabled={profileSaving}
-                        className="h-9 rounded-lg px-5"
+                        className="hidden h-9 rounded-lg px-5 sm:inline-flex"
                       >
-                        {profileSaving ? "Saving..." : "Save Changes"}
+                        {profileSaving ? "Saving..." : "Save changes"}
                       </Button>
                     </div>
                   </div>
@@ -566,10 +617,10 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                   </div>
                   <div className="flex items-center gap-2 pt-2">
                     <Button onClick={savePreferences} className="h-9 flex-1 rounded-lg sm:flex-none sm:px-6">
-                      Sync Preferences
+                      Save preferences
                     </Button>
                     <Button variant="outline" onClick={clearLocalPreferences} className="h-9 rounded-lg border-border text-muted-foreground">
-                      Restore Defaults
+                      Reset defaults
                     </Button>
                   </div>
                 </Section>
@@ -582,7 +633,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                     <Button asChild variant="outline" className="h-9 w-full gap-3 rounded-lg border-border sm:w-auto">
                       <Link href="/auth/update-password">
                         <Lock size={16} />
-                        Update Password
+                        Update password
                         <ChevronRight size={16} className="text-muted-foreground" />
                       </Link>
                     </Button>
@@ -595,10 +646,10 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                     <Button 
                       variant="destructive" 
                       onClick={() => setDeleteDialogOpen(true)}
-                      className="h-9 rounded-lg gap-3 bg-red-600 hover:bg-red-700"
+                      className="h-11 rounded-lg gap-3 bg-red-600 hover:bg-red-700 sm:h-9"
                     >
                       <Trash2 size={16} />
-                      Erasure Request
+                      Request erasure
                     </Button>
                   </Section>
                 </div>
@@ -694,6 +745,34 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
         </main>
       </div>
 
+      <Card className="mt-4 p-4 lg:hidden">
+        <h4 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">System Status</h4>
+        <div className="space-y-4">
+          <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
+          <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
+          <StatusIndicator icon={Database} label="Storage" value="94% Free" color="text-muted-foreground" />
+        </div>
+      </Card>
+
+      {activeTab === "profile" && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-3xl gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleMobilePhotoAction}
+              disabled={photoUploading}
+              className="h-11 flex-1 rounded-lg border-border"
+            >
+              {photoUploading ? "Uploading..." : hasPendingPhoto ? "Upload photo" : "Choose photo"}
+            </Button>
+            <Button onClick={() => void saveProfile()} disabled={profileSaving} className="h-11 flex-1 rounded-lg">
+              {profileSaving ? "Saving..." : "Save changes"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <SelfDeleteAccountDialog
         isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
@@ -727,13 +806,13 @@ function SectionNav({
             onClick={() => onChange(id)}
             variant="ghost"
             className={cn(
-              "relative h-10 w-full justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
+              "relative h-11 w-full justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
               activeId === id ? "bg-muted text-foreground hover:bg-muted" : "text-muted-foreground hover:bg-muted"
             )}
           >
             <div className="flex items-center gap-3">
               <div className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-md transition-all",
+                "flex h-9 w-9 items-center justify-center rounded-md transition-all",
                 activeId === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
               )}>
                 <Icon size={15} />

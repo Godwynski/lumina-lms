@@ -6,6 +6,7 @@ import { Plus, Search, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CompactPagination } from "@/components/ui/compact-pagination";
 import { ModernBookListItem } from "./ModernBookListItem";
 import { InventoryGrid } from "./InventoryGrid";
 import { EditBookMetadataDialog } from "./EditBookMetadataDialog";
@@ -174,34 +175,12 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
       )}
 
       {filteredBooks.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-          <span>
-            Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filteredBooks.length)} of {filteredBooks.length}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 rounded-md px-2 text-[11px]"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Prev
-            </Button>
-            <span className="min-w-12 text-center text-[11px] font-medium text-foreground">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 rounded-md px-2 text-[11px]"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <CompactPagination
+          page={page}
+          totalItems={filteredBooks.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+        />
       )}
 
       <EditBookMetadataDialog

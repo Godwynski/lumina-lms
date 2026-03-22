@@ -5,8 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { ModernAssetCard } from "./ModernAssetCard";
 import { Search } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CompactPagination } from "@/components/ui/compact-pagination";
 
 type AssetGridResource = {
   id: string;
@@ -15,6 +14,7 @@ type AssetGridResource = {
   type: string;
   access_level: string;
   created_at: string;
+  updated_at?: string | null;
   published_year?: number | null;
   categories?: {
     name?: string | null;
@@ -23,18 +23,19 @@ type AssetGridResource = {
 
 interface AssetGridProps {
   resources: AssetGridResource[] | null;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string, checked: boolean) => void;
 }
 
-export function AssetGrid({ resources }: AssetGridProps) {
+export function AssetGrid({ resources, selectedIds, onToggleSelect }: AssetGridProps) {
   const normalizedResources = resources ?? [];
-  const [pageSize, setPageSize] = useState(9);
+  const pageSize = 9;
   const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(normalizedResources.length / pageSize));
   const pageItems = normalizedResources.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [normalizedResources.length, pageSize]);
+  }, [normalizedResources.length]);
 
   if (!resources || resources.length === 0) {
     return (
@@ -51,49 +52,22 @@ export function AssetGrid({ resources }: AssetGridProps) {
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {pageItems.map((resource) => (
-            <ModernAssetCard key={resource.id} resource={resource} />
+            <ModernAssetCard
+              key={resource.id}
+              resource={resource}
+              selected={selectedIds.has(resource.id)}
+              onSelectChange={(checked) => onToggleSelect(resource.id, checked)}
+            />
           ))}
         </AnimatePresence>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-        <span>
-          Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, normalizedResources.length)} of {normalizedResources.length}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
-            <SelectTrigger className="h-7 w-[72px] rounded-md border-border bg-card px-2 text-[11px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="9">9 / page</SelectItem>
-              <SelectItem value="18">18 / page</SelectItem>
-              <SelectItem value="27">27 / page</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 rounded-md px-2 text-[11px]"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Prev
-          </Button>
-          <span className="min-w-12 text-center text-[11px] font-medium text-foreground">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 rounded-md px-2 text-[11px]"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <CompactPagination
+        page={page}
+        totalItems={normalizedResources.length}
+        pageSize={pageSize}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CompactPagination } from '@/components/ui/compact-pagination';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import Link from 'next/link';
 import { Book, BookCopy } from '@/lib/types';
@@ -290,44 +291,14 @@ export default function StaffBookManagementPage() {
           </div>
 
           {visibleCopies.length > 0 && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-              <span>
-                Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, visibleCopies.length)} of {visibleCopies.length}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
-                  <SelectTrigger className="h-7 w-[72px] rounded-md border-border bg-card px-2 text-[11px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 / page</SelectItem>
-                    <SelectItem value="20">20 / page</SelectItem>
-                    <SelectItem value="30">30 / page</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 rounded-md px-2 text-[11px]"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  Prev
-                </Button>
-                <span className="min-w-12 text-center text-[11px] font-medium text-foreground">
-                  {page} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 rounded-md px-2 text-[11px]"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            <CompactPagination
+              page={page}
+              totalItems={visibleCopies.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              pageSizeOptions={[10, 20, 30]}
+              onPageSizeChange={setPageSize}
+            />
           )}
         </div>
       </div>

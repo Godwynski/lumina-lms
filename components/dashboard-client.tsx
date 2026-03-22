@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
-import { ArrowUpRight, BookMarked, Clock, Loader2, ScanLine, RotateCcw, Library, BookOpen, ShieldCheck, History } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Clock, Loader2, RotateCcw, Library, BookOpen, ShieldCheck, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,8 +51,7 @@ export function DashboardClient({ role, stats }: DashboardProps) {
         { title: 'Loan History', href: '/protected/history', icon: History },
       ]
     : [
-        { title: 'Checkout', href: '/protected/borrow', icon: ScanLine },
-        { title: 'Return', href: '/protected/return', icon: RotateCcw },
+        { title: 'Circulation Desk', href: '/protected/circulation', icon: RotateCcw },
         { title: 'Inventory', href: '/protected/catalog', icon: Library },
         { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
         ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/protected/admin/approvals', icon: ShieldCheck }] : []),
@@ -72,13 +71,15 @@ export function DashboardClient({ role, stats }: DashboardProps) {
     },
   ].filter((item) => item.show !== false);
 
+  const attentionItems = queueItems.filter((item) => item.value > 0);
+
   return (
     <div className="space-y-4 pb-6 md:space-y-5">
-      <section className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm md:px-5 md:py-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <section className="border-b border-border pb-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">Operations Dashboard</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">Core actions and live queue only.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Operations Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Core actions, queue visibility, and recent activity.</p>
           </div>
           <Badge variant="outline" className="w-fit border-border bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {role ?? 'member'}
@@ -86,19 +87,19 @@ export function DashboardClient({ role, stats }: DashboardProps) {
         </div>
       </section>
 
-      <section className="space-y-2.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Core Actions</h2>
-        <div className={`grid grid-cols-2 gap-2 ${actions.length > 4 ? 'md:grid-cols-3 xl:grid-cols-5' : 'md:grid-cols-4'}`}>
+      <section className="sticky top-3 z-20 -mx-1 rounded-xl border border-border/60 bg-background/90 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/75 md:top-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Core actions</h2>
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {actions.map((action) => (
             <Button
               key={action.title}
               asChild
               variant="outline"
-              className="h-auto min-h-16 flex-col items-start gap-1.5 rounded-lg border-border bg-card px-3 py-2.5 text-left hover:bg-muted"
+              className="h-10 min-w-10 justify-center gap-1.5 rounded-md border-border bg-card px-2 text-left text-foreground hover:bg-muted sm:min-w-[132px] sm:justify-start sm:px-2.5"
             >
-              <Link href={action.href}>
-                <action.icon size={15} className="text-muted-foreground" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{action.title}</span>
+              <Link href={action.href} aria-label={action.title} title={action.title}>
+                <action.icon size={14} className="shrink-0 text-muted-foreground" />
+                <span className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] sm:inline">{action.title}</span>
               </Link>
             </Button>
           ))}
@@ -106,33 +107,47 @@ export function DashboardClient({ role, stats }: DashboardProps) {
       </section>
 
       <section className="space-y-2.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Needs Attention</h2>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-          {queueItems.map((item) => (
-            <Link key={item.label} href={item.href}>
-              <Card className="border-border bg-card shadow-sm transition-colors hover:bg-muted">
-                <CardContent className="flex items-center justify-between p-3">
-                  <div>
-                    <CardDescription className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</CardDescription>
-                    <CardTitle className="mt-0.5 text-2xl font-bold text-foreground">{item.value}</CardTitle>
-                  </div>
-                  <ArrowUpRight className="text-muted-foreground" size={16} />
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Needs attention</h2>
+        {attentionItems.length > 0 ? (
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {attentionItems.map((item) => (
+              <Link key={item.label} href={item.href}>
+                <Card className="border-border bg-card shadow-sm transition-colors hover:bg-muted">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <div>
+                      <CardDescription className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</CardDescription>
+                      <CardTitle className="mt-0.5 text-2xl font-bold text-foreground">{item.value}</CardTitle>
+                    </div>
+                    <ArrowUpRight className="text-muted-foreground" size={16} />
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50 p-5">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-emerald-100 p-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">All caught up</p>
+                <p className="text-xs text-emerald-700">No pending queue items need attention right now.</p>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-2.5">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground md:text-lg">
             <BookMarked size={16} className="text-muted-foreground" />
-            Recent Catalog Activity
+            Recent catalog activity
           </h2>
           <Button asChild variant="ghost" size="sm" className="h-8 text-muted-foreground hover:bg-muted hover:text-foreground">
             <Link href={isStudent ? '/protected/student-catalog' : '/protected/catalog'}>
-              Open Catalog <ArrowUpRight size={14} className="ml-1" />
+              Open catalog <ArrowUpRight size={14} className="ml-1" />
             </Link>
           </Button>
         </div>
@@ -142,14 +157,23 @@ export function DashboardClient({ role, stats }: DashboardProps) {
             stats.recentBooks.slice(0, 4).map((book) => (
               <Link key={book.id} href={`/protected/catalog/${book.id}`}>
                 <Card className="border-border bg-card shadow-sm transition-colors hover:bg-muted">
-                  <CardContent className="flex items-center justify-between p-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{book.title}</p>
-                      <p className="text-xs text-muted-foreground">{book.author}</p>
+                  <CardContent className="flex items-center justify-between gap-3 p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded border border-border bg-muted text-xs font-bold text-foreground">
+                        {book.title.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">{book.title}</p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold">Catalog</Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock size={13} />
-                      {new Date(book.created_at).toLocaleDateString()}
+                    <div className="w-24 shrink-0 text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Added</p>
+                      <p className="mt-0.5 text-xs font-medium text-foreground">{new Date(book.created_at).toLocaleDateString()}</p>
+                      <p className="mt-0.5 inline-flex items-center justify-end gap-1 text-[11px] text-muted-foreground"><Clock size={12} /> Recent</p>
                     </div>
                   </CardContent>
                 </Card>

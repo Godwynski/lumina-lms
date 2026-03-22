@@ -25,6 +25,8 @@ type UiPreferencesResponse = {
 };
 
 export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
+  const minScale = 0.7;
+  const maxScale = 2.4;
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
@@ -87,12 +89,19 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
     } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      void document.exitFullscreen();
     }
   };
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
 
   const readingProgress = useMemo(() => {
     if (!numPages) return 0;
@@ -102,36 +111,36 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative flex h-full flex-col overflow-hidden bg-muted ${isFullscreen ? "fixed inset-0 z-[100]" : "rounded-lg border border-border shadow-sm"}`}
+      className={`relative flex h-full flex-col overflow-hidden bg-muted/40 ${isFullscreen ? "fixed inset-0 z-[100]" : "rounded-lg border border-border shadow-sm"}`}
     >
-      <div className="z-10 flex items-center justify-between border-b border-border bg-card px-3 py-2">
+      <div className="z-10 flex items-center justify-between border-b border-border bg-card/95 px-2.5 py-1.5 backdrop-blur">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
             <BookOpen size={14} />
           </div>
-          <h2 className="truncate text-xs font-semibold tracking-tight text-foreground">{title}</h2>
+          <h2 className="truncate text-[11px] font-semibold tracking-tight text-foreground">{title}</h2>
         </div>
 
         <div className="flex items-center gap-1.5">
           <div className="flex items-center rounded-md border border-border bg-muted p-0.5">
-            <Button variant="ghost" size="icon" onClick={() => setScale((s) => Math.max(0.5, s - 0.1))} className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Button variant="ghost" size="icon" onClick={() => setScale((s) => Math.max(minScale, s - 0.1))} className="h-6 w-6 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
               <ZoomOut size={14} />
             </Button>
-            <span className="w-10 text-center text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
+            <span className="w-9 text-center text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
               {Math.round(scale * 100)}%
             </span>
-            <Button variant="ghost" size="icon" onClick={() => setScale((s) => Math.min(3, s + 0.1))} className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Button variant="ghost" size="icon" onClick={() => setScale((s) => Math.min(maxScale, s + 0.1))} className="h-6 w-6 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
               <ZoomIn size={14} />
             </Button>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-7 w-7 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
+          <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="h-6 w-6 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 justify-center overflow-auto p-2 md:p-3">
+      <div className="flex flex-1 justify-center overflow-auto p-1.5 md:p-2.5">
         <Card className="overflow-hidden rounded-md border-border bg-card shadow-sm">
           <Document
             file={fileUrl}
@@ -153,13 +162,13 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
         </Card>
       </div>
 
-      <div className="z-10 border-t border-border bg-card px-3 py-2">
-        <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="z-10 border-t border-border bg-card/95 px-2.5 py-1.5 backdrop-blur">
+        <div className="mb-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={() => changePage(-1)} disabled={pageNumber <= 1} className="h-7 w-7 rounded-md">
+            <Button variant="outline" size="icon" onClick={() => changePage(-1)} disabled={pageNumber <= 1} className="h-6 w-6 rounded-md">
               <ChevronLeft size={14} />
             </Button>
-            <div className="flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-1">
+            <div className="flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5">
               <Input
                 type="number"
                 value={pageNumber}
@@ -167,11 +176,11 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
                   const val = parseInt(e.target.value, 10);
                   if (numPages && val >= 1 && val <= numPages) setPageNumber(val);
                 }}
-                className="h-auto w-9 border-none bg-transparent p-0 text-center text-xs font-semibold text-muted-foreground focus:ring-0"
+                className="h-auto w-10 border-none bg-transparent p-0 text-center text-[11px] font-semibold text-muted-foreground focus:ring-0"
               />
               <span className="text-[10px] text-muted-foreground">/ {numPages || "--"}</span>
             </div>
-            <Button variant="outline" size="icon" onClick={() => changePage(1)} disabled={!!numPages && pageNumber >= numPages} className="h-7 w-7 rounded-md">
+            <Button variant="outline" size="icon" onClick={() => changePage(1)} disabled={!!numPages && pageNumber >= numPages} className="h-6 w-6 rounded-md">
               <ChevronRight size={14} />
             </Button>
           </div>
