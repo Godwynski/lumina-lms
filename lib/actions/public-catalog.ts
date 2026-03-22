@@ -80,6 +80,19 @@ export async function getCategories() {
   return data;
 }
 
+export async function getPublicBookById(id: string) {
+  const supabase = createSafeClient();
+  const { data, error } = await supabase
+    .from('books')
+    .select('id, title, author, isbn, category_id, tags, section, location, cover_url, total_copies, available_copies, categories(name)')
+    .eq('id', id)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export const getCategoriesCached = unstable_cache(
   getCategories,
   ['public-categories'],

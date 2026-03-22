@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getBookById } from '@/lib/actions/catalog';
-import { reportMissingBook } from '@/lib/actions/public-catalog';
+import Image from 'next/image';
+import { getPublicBookById, reportMissingBook } from '@/lib/actions/public-catalog';
 import { 
   ChevronLeft, 
   MapPin, 
@@ -12,16 +12,24 @@ import {
   Hash, 
   Tag,
   CheckCircle2,
-  Clock
+  Clock,
+  BookMarked,
+  ScanLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Book } from '@/lib/types';
+
+type StudentBook = Book & {
+  section?: string | null;
+  tags?: string[];
+};
 
 export default function StudentBookDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
   
-  const [book, setBook] = useState<any>(null);
+  const [book, setBook] = useState<StudentBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reported, setReported] = useState(false);
@@ -29,7 +37,7 @@ export default function StudentBookDetailPage() {
   useEffect(() => {
     async function loadBook() {
       try {
-        const data = await getBookById(id);
+        const data = await getPublicBookById(id);
         setBook(data);
       } catch (err) {
         console.error(err);
@@ -55,8 +63,8 @@ export default function StudentBookDetailPage() {
   if (loading) {
     return (
       <div className="p-12 flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-zinc-500 text-sm font-medium">Loading book details...</p>
+        <div className="w-8 h-8 border-4 border-slate-700 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-muted-foreground text-sm font-medium">Loading book details...</p>
       </div>
     );
   }
@@ -67,31 +75,34 @@ export default function StudentBookDetailPage() {
         <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto">
           <BookOpen className="w-8 h-8 text-zinc-300" />
         </div>
-        <p className="text-zinc-500 font-medium">Book not found.</p>
-        <Button onClick={() => router.back()} variant="outline" className="rounded-xl">Go Back</Button>
+        <p className="text-muted-foreground font-medium">Book not found.</p>
+        <Button onClick={() => router.push('/protected/student-catalog')} variant="outline" className="rounded-xl">Go Back</Button>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
-      <button 
-        onClick={() => router.back()}
-        className="flex items-center text-zinc-500 hover:text-indigo-600 transition-colors font-medium text-sm group"
+      <Button
+        onClick={() => router.push('/protected/student-catalog')}
+        variant="ghost"
+        className="flex items-center text-muted-foreground hover:text-slate-800 transition-colors font-medium text-sm group px-0"
       >
         <ChevronLeft className="w-5 h-5 mr-1 group-hover:-translate-x-1 transition-transform" />
         Back to Catalog
-      </button>
+      </Button>
 
-      <div className="bg-white rounded-[32px] shadow-sm border border-zinc-200/50 p-6 md:p-10 flex flex-col md:flex-row gap-10">
+      <div className="bg-card rounded-[32px] shadow-sm border border-border/50 p-6 md:p-10 flex flex-col md:flex-row gap-10">
         {/* Left Side: Cover */}
         <div className="w-full md:w-2/5 flex-shrink-0">
-          <div className="aspect-[3/4] bg-zinc-50 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center border border-zinc-100 relative group">
+          <div className="aspect-[3/4] bg-muted rounded-2xl overflow-hidden shadow-inner flex items-center justify-center border border-border relative group">
             {book.cover_url ? (
-              <img 
-                src={book.cover_url} 
-                alt={book.title} 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              <Image
+                src={book.cover_url}
+                alt={book.title}
+                fill
+                sizes="(min-width: 768px) 40vw, 100vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
               />
             ) : (
               <BookOpen className="w-20 h-20 text-zinc-200" />
@@ -119,25 +130,25 @@ export default function StudentBookDetailPage() {
         {/* Right Side: Details */}
         <div className="flex-1 space-y-8 pt-2">
           <div>
-            <h1 className="text-3xl font-bold text-zinc-900 mb-2 leading-tight tracking-tight">{book.title}</h1>
-            <p className="text-xl text-zinc-500 font-medium">{book.author}</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2 leading-tight tracking-tight">{book.title}</h1>
+            <p className="text-xl text-muted-foreground font-medium">{book.author}</p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             {book.section && (
-              <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-bold flex items-center border border-indigo-100/50">
+              <span className="bg-muted text-slate-700 px-4 py-1.5 rounded-full text-xs font-bold flex items-center border border-border">
                 <MapPin className="w-3.5 h-3.5 mr-2" />
                 {book.section}
               </span>
             )}
-            <span className="bg-zinc-50 text-zinc-600 px-4 py-1.5 rounded-full text-xs font-bold border border-zinc-100">
+            <span className="bg-muted text-muted-foreground px-4 py-1.5 rounded-full text-xs font-bold border border-border">
                {book.available_copies} of {book.total_copies} Available
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-zinc-50 rounded-2xl border border-zinc-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-muted rounded-2xl border border-border">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
                 <Hash className="w-3 h-3" />
                 ISBN
               </span>
@@ -145,20 +156,46 @@ export default function StudentBookDetailPage() {
             </div>
             
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
                 <Tag className="w-3 h-3" />
                 Category
               </span>
-              <p className="text-sm font-bold text-zinc-700">{book.categories?.name || 'Uncategorized'}</p>
+              <p className="text-sm font-bold text-zinc-700">
+                {Array.isArray(book.categories)
+                  ? book.categories[0]?.name || 'Uncategorized'
+                  : book.categories?.name || 'Uncategorized'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-border bg-muted p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-1 flex items-center gap-1.5">
+                <BookMarked className="h-3 w-3" />
+                Smart Tip
+              </p>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                Use the section tag to go directly to the correct aisle before checking nearby shelves.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
+                <ScanLine className="h-3 w-3" />
+                Desk Assist
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                If unavailable, ask staff to scan a copy QR for live return status updates.
+              </p>
             </div>
           </div>
 
           {book.tags && book.tags.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Subject Tags</h3>
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Subject Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {book.tags.map((tag: string, i: number) => (
-                  <span key={i} className="bg-white text-zinc-600 px-3 py-1 rounded-lg text-xs font-medium border border-zinc-200 shadow-sm">
+                  <span key={i} className="bg-card text-muted-foreground px-3 py-1 rounded-lg text-xs font-medium border border-border shadow-sm">
                     {tag}
                   </span>
                 ))}
@@ -171,13 +208,13 @@ export default function StudentBookDetailPage() {
               <Button
                 onClick={handleReportMissing}
                 disabled={reportSubmitting || book.available_copies === 0}
-                className="w-full h-14 bg-white hover:bg-orange-50 border border-orange-200 text-orange-700 rounded-2xl transition-all shadow-sm shadow-orange-100 group flex items-center justify-center gap-3"
+                className="w-full h-14 bg-card hover:bg-orange-50 border border-orange-200 text-orange-700 rounded-2xl transition-all shadow-sm shadow-orange-100 group flex items-center justify-center gap-3"
               >
                 <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
                    <AlertCircle className="w-4 h-4 text-orange-600" />
                 </div>
                 <span className="font-bold text-sm">
-                  {reportSubmitting ? 'Sending Alert...' : "I can&apos;t find this book on the shelf"}
+                  {reportSubmitting ? 'Sending Alert...' : "I can't find this book on the shelf"}
                 </span>
               </Button>
             ) : (
@@ -186,11 +223,11 @@ export default function StudentBookDetailPage() {
                    <CheckCircle2 className="w-6 h-6 text-green-600" />
                 </div>
                 <p className="text-sm font-bold">Librarian Notified</p>
-                <p className="text-xs opacity-80">Thank you! We&apos;ve added this to our queue to verify the shelf location.</p>
+                <p className="text-xs opacity-80">{"Thank you! We've added this to our queue to verify the shelf location."}</p>
               </div>
             )}
             {book.available_copies === 0 && !reported && (
-              <p className="text-[11px] text-center text-zinc-400 mt-4 leading-relaxed italic">
+              <p className="text-[11px] text-center text-muted-foreground mt-4 leading-relaxed italic">
                 This book is currently checked out to another student. Please check back later.
               </p>
             )}

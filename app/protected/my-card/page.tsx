@@ -2,7 +2,10 @@ import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import MyCardContainer from "@/components/library/MyCardContainer";
 import { redirect } from "next/navigation";
-import QRCode from "qrcode";
+import {
+  getDeterministicQrUrl,
+  resolveStudentId,
+} from "@/lib/library-card-assets";
 
 export default async function MyCardPage() {
   const supabase = await createClient();
@@ -81,17 +84,17 @@ export default async function MyCardPage() {
 
     if (!finalCard) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
             <span className="text-red-600 text-2xl font-bold">!</span>
           </div>
           <h2 className="text-xl font-bold text-zinc-900">Finalizing Setup...</h2>
           <p className="text-zinc-500 mt-2 max-w-xs">
-            We're still setting up your secure identity. Please refresh this page in a few seconds.
+            We&apos;re still setting up your secure identity. Please refresh this page in a few seconds.
           </p>
           <a 
             href="/protected/my-card"
-            className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors inline-block"
+            className="mt-6 inline-block rounded-xl bg-slate-900 px-6 py-2 font-semibold text-white transition-colors hover:bg-slate-800"
           >
             Refresh Now
           </a>
@@ -100,25 +103,24 @@ export default async function MyCardPage() {
     }
   }
 
-  // 5. Generate QR code SVG on the server
-  const qrSvg = await QRCode.toString(finalCard.card_number, {
-    type: 'svg',
-    margin: 2,
-    color: {
-      dark: '#000000',
-      light: '#ffffff'
-    }
+  const resolvedStudentId = resolveStudentId({
+    studentId: profileData.student_id,
+    fallbackEmail: user.email,
+    userId: user.id,
   });
+
+  const studentId = resolvedStudentId || profileData.student_id || "N/A";
+  const qrUrl = resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null;
 
   const initialData = {
     fullName: profileData.full_name || "Student",
-    studentId: profileData.student_id || "N/A",
+    studentId,
     cardNumber: finalCard.card_number,
     department: profileData.department || "No Department",
     status: finalCard.status as "pending" | "active" | "suspended" | "expired",
     expiryDate: finalCard.expires_at || new Date().toISOString(),
     avatarUrl: profileData.avatar_url,
-    qrSvg: qrSvg
+    qrUrl,
   };
 
   return <MyCardContainer initialData={initialData} />;

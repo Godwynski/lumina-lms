@@ -17,7 +17,10 @@ export default async function ProtectedPage() {
   }
 
   const role = await getUserRole();
-  const stats = await getDashboardStats();
+  const stats = await getDashboardStats({
+    userId: user.id,
+    role,
+  });
 
   return (
     <DashboardClient 

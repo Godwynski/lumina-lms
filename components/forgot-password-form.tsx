@@ -4,8 +4,19 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState } from "react";
+import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
+import { Logo } from "@/components/logo";
+import { AuthErrorAlert } from "@/components/auth/auth-feedback";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function ForgotPasswordForm({
   className,
@@ -36,101 +47,86 @@ export function ForgotPasswordForm({
 
   if (success) {
     return (
-      <div className={cn("w-full", className)} {...props}>
-        {/* Logo mark */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-            </svg>
-          </div>
-          <span className="font-bold text-lg tracking-tight text-zinc-900">Lumina LMS</span>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">Check your email</h1>
-          <p className="text-zinc-500 text-sm leading-relaxed">
-            We&apos;ve sent a password reset link to <span className="text-indigo-600 font-medium">{email}</span>. Click the link to reset your password.
-          </p>
-        </div>
-
-        <Link
-          href="/auth/login"
-          className="h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-900 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-1 w-full"
-        >
-          Return to sign in
-        </Link>
+      <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
+        <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+          <CardHeader className="space-y-4 pb-5">
+            <div className="flex items-center gap-3">
+              <Logo size={20} />
+              <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
+            </div>
+            <div className="flex flex-col items-center justify-center pt-4 pb-2">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-slate-300 bg-slate-100">
+                <MailCheck className="h-6 w-6 text-slate-700" />
+              </div>
+              <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Check your email</CardTitle>
+              <CardDescription className="mt-2 text-center text-slate-600">
+                We&apos;ve sent a password reset link to <span className="font-semibold text-slate-900">{email}</span>.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-8">
+            <Button asChild variant="outline" className="h-11 w-full rounded-lg border-slate-300">
+              <Link href="/auth/login">
+                Return to sign in
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className={cn("w-full", className)} {...props}>
-      {/* Logo mark */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-          </svg>
-        </div>
-        <span className="font-bold text-lg tracking-tight text-zinc-900">Lumina LMS</span>
-      </div>
-
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-900 mb-1">Reset password</h1>
-        <p className="text-zinc-500 text-sm">Enter your email to receive a reset link</p>
-      </div>
-
-      <form onSubmit={handleForgotPassword} autoComplete="on" className="flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email" className="text-zinc-700 text-sm font-medium">
-            Email address
-          </Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            autoCapitalize="none"
-            spellCheck={false}
-            placeholder="you@example.com"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-indigo-500/20 h-11 rounded-xl"
-          />
-        </div>
-
-        {error && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-            {error}
+    <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
+      <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+        <CardHeader className="space-y-4 pb-5">
+          <div className="flex items-center gap-3">
+            <Logo size={20} />
+            <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
           </div>
-        )}
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Reset password</CardTitle>
+            <CardDescription className="text-sm text-slate-600">
+              Enter your email to receive a password reset link.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300"
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-1 w-full"
-        >
-          {isLoading ? (
-            <>
-              <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-              Sending link…
-            </>
-          ) : "Send reset link"}
-        </button>
-      </form>
+            {error ? <AuthErrorAlert message={error} /> : null}
 
-      <div className="mt-6 flex justify-center">
-        <Link
-          href="/auth/login"
-          className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
-        >
-          &larr; Back to sign in
-        </Link>
-      </div>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 h-11 w-full rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800"
+            >
+              {isLoading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+              {isLoading ? "Sending link..." : "Send reset link"}
+            </Button>
+          </form>
+
+          <Link
+            href="/auth/login"
+            className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+          >
+            <ArrowLeft size={14} />
+            Back to sign in
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }

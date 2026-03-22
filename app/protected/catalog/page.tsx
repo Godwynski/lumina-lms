@@ -59,49 +59,46 @@ export default function CatalogPage() {
   };
 
   if (loading) return (
-    <div className="p-8 flex items-center justify-center min-h-[60vh]">
+    <div className="flex min-h-[60vh] items-center justify-center p-8">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-100 dark:border-indigo-900 rounded-full"></div>
-          <Loader2 className="w-16 h-16 text-indigo-600 animate-spin absolute inset-0" />
+          <div className="h-16 w-16 rounded-full border-4 border-slate-200" />
+          <Loader2 className="absolute inset-0 h-16 w-16 animate-spin text-slate-600" />
         </div>
         <div className="text-center">
-          <p className="text-xl font-black text-zinc-900 dark:text-white mb-2 uppercase tracking-widest">Sychronizing Vault</p>
-          <p className="text-zinc-500 text-sm font-medium">Acquiring primary inventory ledger...</p>
+          <p className="mb-2 text-xl font-bold uppercase tracking-wider text-slate-900">Synchronizing inventory</p>
+          <p className="text-sm text-slate-600">Loading current catalog records...</p>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="w-full">
       <ModernInventoryClient books={books} onDelete={handleDeleteClick} />
 
-      {/* Delete Warning Modal - Kept here for clean logic flow */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="rounded-[2.5rem] sm:max-w-[450px] p-8 border-none shadow-2xl">
+        <DialogContent className="rounded-xl border-border p-4 shadow-sm sm:max-w-[420px]">
           <DialogHeader>
-            <div className="h-14 w-14 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
-              <AlertTriangle size={32} />
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600">
+              <AlertTriangle size={20} />
             </div>
-            <DialogTitle className="text-2xl font-black text-zinc-900 dark:text-white text-center tracking-tight">Decommission Asset?</DialogTitle>
-            <DialogDescription className="text-zinc-500 pt-4 text-center text-base leading-relaxed">
-              You are about to remove <span className="font-bold text-zinc-900 dark:text-white">&quot;{bookToDelete?.title}&quot;</span> from the active physical inventory.
-              <br/><br/>
-              <span className="text-sm italic">Note: This action is logically reversible but will block active circulation if not managed correctly.</span>
+            <DialogTitle className="text-center text-base font-semibold tracking-tight text-foreground">Remove from inventory?</DialogTitle>
+            <DialogDescription className="pt-2 text-center text-sm leading-relaxed text-muted-foreground">
+              You are about to remove <span className="font-semibold text-foreground">&quot;{bookToDelete?.title}&quot;</span>. This can be restored later.
             </DialogDescription>
           </DialogHeader>
           
           {deleteError && (
-            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 p-4 rounded-2xl text-sm flex items-center gap-3 mt-4">
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               {deleteError}
             </div>
           )}
 
-          <DialogFooter className="mt-10 gap-3 sm:gap-0 sm:flex-row flex-col">
-            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)} className="rounded-2xl h-14 font-black text-xs uppercase tracking-widest flex-1">Aborted Action</Button>
-            <Button variant="destructive" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white rounded-2xl h-14 font-black text-xs uppercase tracking-widest flex-1 shadow-xl shadow-red-100 dark:shadow-none">Confirm Removal</Button>
+          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-2">
+            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">Remove</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

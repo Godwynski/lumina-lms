@@ -121,71 +121,74 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b border-border bg-muted p-3">
         <div>
-          <h3 className="text-lg font-semibold text-zinc-900">Upload Digital Resource</h3>
-          <p className="text-sm text-zinc-500">Add new e-books, journals, or theses</p>
+          <h3 className="text-sm font-semibold text-foreground">Upload Resource</h3>
+          <p className="text-xs text-muted-foreground">PDF or EPUB</p>
         </div>
-        <FileText className="text-indigo-500" size={24} />
+        <FileText className="text-muted-foreground" size={18} />
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-3 p-3">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 text-sm">
+          <div className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-2 text-xs text-red-700">
             <AlertCircle className="shrink-0 mt-0.5" size={16} />
             <p>{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start gap-3 text-emerald-700 text-sm">
+          <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-2 text-xs text-emerald-700">
             <CheckCircle2 className="shrink-0 mt-0.5" size={16} />
             <p>Resource uploaded successfully!</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Advanced Calculus"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={uploading}
-            />
-          </div>
+              <Input
+                id="title"
+                placeholder="e.g. Advanced Calculus"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={uploading}
+                className="h-8 rounded-md text-xs"
+              />
+            </div>
 
           <div className="space-y-2">
             <Label htmlFor="author">Author *</Label>
-            <Input
-              id="author"
-              placeholder="e.g. John Doe"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              disabled={uploading}
-            />
-          </div>
+              <Input
+                id="author"
+                placeholder="e.g. John Doe"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                disabled={uploading}
+                className="h-8 rounded-md text-xs"
+              />
+            </div>
 
           <div className="space-y-2">
             <Label htmlFor="publishedYear">Year Published</Label>
-            <Input
-              id="publishedYear"
-              placeholder="e.g. 2024"
-              value={publishedYear}
-              onChange={(e) => setPublishedYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              disabled={uploading}
-              inputMode="numeric"
-            />
-          </div>
+              <Input
+                id="publishedYear"
+                placeholder="e.g. 2024"
+                value={publishedYear}
+                onChange={(e) => setPublishedYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                disabled={uploading}
+                inputMode="numeric"
+                className="h-8 rounded-md text-xs"
+              />
+            </div>
 
           <div className="space-y-2">
             <Label htmlFor="type">Resource Type</Label>
-            <Select value={type} onValueChange={setType} disabled={uploading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
+              <Select value={type} onValueChange={setType} disabled={uploading}>
+                <SelectTrigger className="h-8 rounded-md text-xs">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ebook">E-Book</SelectItem>
                 <SelectItem value="journal">Journal</SelectItem>
@@ -198,10 +201,10 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} disabled={uploading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
+              <Select value={categoryId} onValueChange={setCategoryId} disabled={uploading}>
+                <SelectTrigger className="h-8 rounded-md text-xs">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
@@ -214,10 +217,10 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
 
           <div className="space-y-2">
             <Label htmlFor="accessLevel">Access Level</Label>
-            <Select value={accessLevel} onValueChange={setAccessLevel} disabled={uploading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select access level" />
-              </SelectTrigger>
+              <Select value={accessLevel} onValueChange={setAccessLevel} disabled={uploading}>
+                <SelectTrigger className="h-8 rounded-md text-xs">
+                  <SelectValue placeholder="Select access level" />
+                </SelectTrigger>
               <SelectContent>
                 <SelectItem value="STUDENT">Student (Public)</SelectItem>
                 <SelectItem value="STAFF">Staff Only</SelectItem>
@@ -228,9 +231,9 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
 
           <div className="space-y-2">
             <Label>File (PDF/EPUB) *</Label>
-            <div 
-              className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-colors cursor-pointer ${
-                file ? "border-emerald-200 bg-emerald-50/30" : "border-zinc-200 hover:border-indigo-300 hover:bg-zinc-50"
+            <div
+              className={`cursor-pointer rounded-lg border-2 border-dashed p-2.5 transition-colors ${
+                file ? "border-emerald-200 bg-emerald-50/30" : "border-border hover:border-border hover:bg-muted"
               }`}
               onClick={() => !uploading && fileInputRef.current?.click()}
             >
@@ -244,25 +247,27 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
               />
               {file ? (
                 <div className="flex items-center gap-3 w-full">
-                  <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-                    <CheckCircle2 size={20} />
+                  <div className="rounded-md bg-emerald-100 p-1.5 text-emerald-600">
+                    <CheckCircle2 size={16} />
                   </div>
                   <div className="flex-1 truncate">
-                    <p className="text-sm font-medium text-zinc-900 truncate">{file.name}</p>
-                    <p className="text-xs text-zinc-500">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    <p className="truncate text-xs font-medium text-foreground">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
                   </div>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                    className="p-1 hover:bg-zinc-200 rounded-full transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-md p-0 transition-colors hover:bg-muted"
+                    >
+                      <X size={16} />
+                    </Button>
                 </div>
               ) : (
                 <>
-                  <Upload className="text-zinc-400 mb-2" size={24} />
-                  <p className="text-sm font-medium text-zinc-600">Click or drag file to upload</p>
-                  <p className="text-xs text-zinc-400">PDF or EPUB up to 500MB</p>
+                  <Upload className="mb-1 text-muted-foreground" size={16} />
+                  <p className="text-xs font-medium text-muted-foreground">Click or drag file</p>
+                  <p className="text-xs text-muted-foreground">PDF or EPUB up to 500MB</p>
                 </>
               )}
             </div>
@@ -271,7 +276,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
 
         {uploading && (
           <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex justify-between text-xs font-medium text-zinc-600">
+            <div className="flex justify-between text-xs font-medium text-muted-foreground">
               <span>Uploading... {Math.round(uploadProgress)}%</span>
               <span>{estimatedTime}</span>
             </div>
@@ -279,7 +284,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
           </div>
         )}
 
-        <div className="pt-4 border-t border-zinc-100 flex justify-end gap-3">
+        <div className="flex justify-end gap-2 border-t border-border pt-2.5">
           <Button
             variant="outline"
             onClick={() => {
@@ -292,13 +297,14 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
               if (onCancel) onCancel();
             }}
             disabled={uploading}
+            className="h-8 rounded-md text-xs"
           >
             Cancel
           </Button>
           <Button 
             onClick={handleUpload} 
             disabled={uploading || !file || !title || !author}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]"
+            className="h-8 min-w-[110px] rounded-md bg-primary text-xs text-primary-foreground hover:bg-primary/90"
           >
             {uploading ? (
               <>

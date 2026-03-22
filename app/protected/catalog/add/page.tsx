@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { createBook } from '@/lib/actions/catalog';
+import { createBook, getCategories } from '@/lib/actions/catalog';
 import { Camera, ChevronLeft, Search, Save, BookPlus, ImageIcon, Info, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 
 type BarcodeLike = { rawValue?: string };
@@ -42,6 +45,7 @@ export default function AddBookPage() {
   });
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -166,6 +170,18 @@ export default function AddBookPage() {
     },
     [handleIsbnLookup, normalizeIsbn, stopScanner],
   );
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await getCategories();
+        setCategories((data ?? []).map((c) => ({ id: c.id as string, name: c.name as string })));
+      } catch (err) {
+        console.error('Failed to load categories', err);
+      }
+    }
+    void loadCategories();
+  }, []);
 
   useEffect(() => {
     const detectorCtor = (window as WindowWithDetector).BarcodeDetector;
@@ -296,16 +312,16 @@ export default function AddBookPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-4 pb-6 md:pb-8">
       <div className="flex items-center gap-4">
         <Link href="/protected/catalog">
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-zinc-100">
-            <ChevronLeft className="w-5 h-5" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-muted">
+            <ChevronLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 leading-tight">Add New Book</h1>
-          <p className="text-zinc-500 text-sm">Enter book details or use ISBN lookup.</p>
+          <h1 className="text-lg font-semibold leading-tight text-foreground">Add Book</h1>
+          <p className="text-xs text-muted-foreground">Enter details or scan ISBN.</p>
         </div>
       </div>
       
@@ -316,41 +332,41 @@ export default function AddBookPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-2xl border border-zinc-200/50 shadow-sm space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
             {/* ISBN Lookup Section */}
-            <div className="space-y-4 p-5 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
-               <div className="flex items-center gap-2 text-indigo-700 mb-1">
+             <div className="space-y-3 rounded-lg border border-border bg-muted p-3">
+               <div className="mb-1 flex items-center gap-2 text-slate-700">
                  <Search className="w-4 h-4" />
                  <span className="text-sm font-semibold uppercase tracking-wider">ISBN Quick Lookup</span>
                </div>
-               <div className="flex gap-3">
+               <div className="flex gap-2">
                  <div className="flex-1">
-                    <input 
+                    <Input
                       type="text" 
                       value={formData.isbn}
                       onChange={e => setFormData({...formData, isbn: e.target.value})}
-                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
-                      placeholder="Enter ISBN-10 or ISBN-13"
-                    />
-                 </div>
+                       className="h-9 w-full rounded-md border border-border bg-card px-3 text-sm transition-all focus:ring-2 focus:ring-ring"
+                       placeholder="Enter ISBN-10 or ISBN-13"
+                     />
+                  </div>
                    <Button 
                      type="button" 
                     onClick={() => void handleIsbnLookup()}
                     disabled={isbnLoading || !formData.isbn}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-[42px] px-6 font-medium shadow-sm shadow-indigo-200/50 transition-all"
-                  >
-                    {isbnLoading ? 'Searching...' : 'Fetch Data'}
-                  </Button>
-                </div>
-                {cameraSupported && (
-                  <div className="space-y-3 rounded-xl border border-indigo-100 bg-white p-3">
+                    className="h-9 rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+                   >
+                     {isbnLoading ? 'Searching...' : 'Fetch Data'}
+                   </Button>
+                 </div>
+                 {cameraSupported && (
+                  <div className="space-y-2 rounded-lg border border-border bg-card p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-9 rounded-lg"
+                        className="h-8 rounded-md text-xs"
                         onClick={() => void requestCameraPermission()}
                       >
                         {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
@@ -358,19 +374,19 @@ export default function AddBookPage() {
                       <Button
                         type="button"
                         variant={cameraOpen ? 'destructive' : 'outline'}
-                        className="h-9 rounded-lg"
+                        className="h-8 rounded-md text-xs"
                         onClick={() => (cameraOpen ? stopScanner() : setCameraOpen(true))}
                       >
                         <Camera className="mr-2 h-4 w-4" />
                         {cameraOpen ? 'Stop ISBN Scanner' : 'Start ISBN Scanner'}
                       </Button>
                     </div>
-                    <div className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
-                      <video ref={videoRef} className="h-44 w-full object-cover" muted playsInline />
+                    <div className="relative overflow-hidden rounded-md border border-border bg-primary">
+                      <video ref={videoRef} className="h-36 w-full object-cover" muted playsInline />
                       {!cameraOpen && (
                         <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 text-zinc-100">
                           <div className="text-center">
-                            <ScanLine className="mx-auto mb-2 h-5 w-5 text-indigo-200" />
+                            <ScanLine className="mx-auto mb-2 h-5 w-5 text-slate-300" />
                             <p className="text-xs font-medium">Scanner idle</p>
                           </div>
                         </div>
@@ -379,95 +395,110 @@ export default function AddBookPage() {
                   </div>
                 )}
                 {!cameraSupported && (
-                  <p className="text-[11px] text-zinc-500">Camera scanner unsupported in this browser. Manual ISBN still works.</p>
+                  <p className="text-[11px] text-muted-foreground">Camera scanner unsupported in this browser. Manual ISBN still works.</p>
                 )}
-                {scanNotice && <p className="text-[11px] text-zinc-600">{scanNotice}</p>}
-                <p className="text-[11px] text-zinc-500">Retrieves title, author, and cover from Open Library API.</p>
+                {scanNotice && <p className="text-[11px] text-muted-foreground">{scanNotice}</p>}
+                <p className="text-[11px] text-muted-foreground">Retrieves title, author, and cover from Open Library API.</p>
              </div>
 
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2 text-left">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Book Title *</label>
-                  <input 
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Book Title *</Label>
+                  <Input
                     type="text" 
                     required
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                     placeholder="e.g. Clean Code"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                    className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm outline-none transition-all focus:bg-card focus:ring-2 focus:ring-ring"
                   />
                 </div>
 
                 <div className="space-y-2 text-left">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Author *</label>
-                  <input 
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Author *</Label>
+                  <Input
                     type="text" 
                     required
                     value={formData.author}
                     onChange={e => setFormData({...formData, author: e.target.value})}
                     placeholder="e.g. Robert C. Martin"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                    className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm outline-none transition-all focus:bg-card focus:ring-2 focus:ring-ring"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2 text-left">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Physical Section</label>
-                  <input 
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Category</Label>
+                  <Select value={formData.categoryId || 'none'} onValueChange={(value) => setFormData({...formData, categoryId: value === 'none' ? '' : value})}>
+                    <SelectTrigger className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm">
+                      <SelectValue placeholder="Uncategorized" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Uncategorized</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Physical Section</Label>
+                  <Input
                     type="text" 
                     value={formData.section}
                     onChange={e => setFormData({...formData, section: e.target.value})}
                     placeholder="e.g. CS Reference"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                    className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm outline-none transition-all focus:bg-card focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div className="space-y-2 text-left">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Exact Location</label>
-                  <input 
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Exact Location</Label>
+                  <Input
                     type="text" 
                     value={formData.location}
                     onChange={e => setFormData({...formData, location: e.target.value})}
                     placeholder="e.g. Shelf A-5"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                    className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm outline-none transition-all focus:bg-card focus:ring-2 focus:ring-ring"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2 text-left">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Initial Copies</label>
-                  <input 
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Initial Copies</Label>
+                  <Input
                     type="number" 
                     min="1"
                     max="100"
                     value={formData.copies}
                     onChange={e => setFormData({...formData, copies: parseInt(e.target.value) || 0})}
                     placeholder="1"
-                    className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none font-semibold text-indigo-600"
+                    className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm font-semibold text-foreground outline-none transition-all focus:bg-card focus:ring-2 focus:ring-ring"
                   />
-                  <p className="text-[10px] text-zinc-400 ml-1">How many physical copies to add now? (Default: 1)</p>
+                  <p className="text-[10px] text-muted-foreground ml-1">How many physical copies to add now? (Default: 1)</p>
                 </div>
               </div>
 
               <div className="space-y-2 text-left">
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">Subject Tags (Comma Separated)</label>
-                <input 
+                  <Label className="ml-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Subject Tags (Comma Separated)</Label>
+                <Input
                   type="text" 
                   value={formData.tags}
                   onChange={e => setFormData({...formData, tags: e.target.value})}
                   placeholder="Programming, Best Practices, Engineering"
-                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm outline-none"
+                  className="h-9 w-full rounded-md border border-border bg-muted px-3 text-sm outline-none transition-all focus:bg-card focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
 
-            <div className="pt-4 flex gap-4">
+            <div className="flex gap-2 pt-2">
                <Button 
                 type="submit" 
                 disabled={loading}
-                className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl h-12 font-bold shadow-lg shadow-zinc-200 transition-all"
+                className="h-9 flex-1 rounded-md bg-primary text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90"
               >
                 {loading ? 'Processing...' : (
                   <div className="flex items-center gap-2">
@@ -480,7 +511,7 @@ export default function AddBookPage() {
                 type="button" 
                 variant="outline"
                 onClick={() => router.push('/protected/catalog')}
-                className="h-12 rounded-xl px-8 font-semibold"
+                className="h-9 rounded-md px-4 text-xs font-semibold"
               >
                 Cancel
               </Button>
@@ -489,14 +520,14 @@ export default function AddBookPage() {
         </div>
 
         {/* Sidebar / Preview */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-zinc-200/50 shadow-sm sticky top-24">
-            <h3 className="text-sm font-bold text-zinc-900 mb-4 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-indigo-600" />
+          <div className="space-y-4">
+          <div className="sticky top-24 rounded-xl border border-border bg-card p-4 shadow-sm">
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
+              <ImageIcon className="h-4 w-4 text-muted-foreground" />
               Book Cover
             </h3>
             
-            <div className="aspect-[2/3] bg-zinc-50 rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center relative group overflow-hidden">
+            <div className="relative flex aspect-[2/3] flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted">
                {formData.cover_url || coverFile ? (
                  <>
                    <Image 
@@ -506,20 +537,20 @@ export default function AddBookPage() {
                     className="object-cover transition-transform group-hover:scale-105"
                    />
                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button variant="secondary" size="sm" className="rounded-lg h-8 text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>
+                       <Button variant="secondary" size="sm" className="h-7 rounded-md text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>
                         Change Image
                       </Button>
                    </div>
                  </>
                ) : (
                  <div className="text-center p-6 flex flex-col items-center">
-                    <BookPlus className="w-10 h-10 text-zinc-300 mb-3" />
-                    <p className="text-xs text-zinc-400 font-medium">No cover image selected</p>
+                    <BookPlus className="mb-3 h-8 w-8 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground font-medium">No cover image selected</p>
                  </div>
                )}
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-4 space-y-2">
               <input 
                 id="file-upload"
                 type="file" 
@@ -533,12 +564,12 @@ export default function AddBookPage() {
               />
               <Button 
                 variant="outline" 
-                className="w-full rounded-xl gap-2 text-xs h-10 border-zinc-200 hover:bg-zinc-50"
+                className="h-8 w-full gap-2 rounded-md border-border text-xs hover:bg-muted"
                 onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}
               >
                 Upload File
               </Button>
-              <p className="text-[10px] text-zinc-400 text-center italic">Supported: JPG, PNG, WEBP (Max 2MB)</p>
+              <p className="text-[10px] text-muted-foreground text-center italic">Supported: JPG, PNG, WEBP (Max 2MB)</p>
             </div>
           </div>
         </div>

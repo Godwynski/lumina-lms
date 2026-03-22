@@ -84,9 +84,10 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, resource: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Invalid request payload.";
     return NextResponse.json(
-      { error: error?.message || "Invalid request payload." },
+      { error: message },
       { status: 400 }
     );
   }

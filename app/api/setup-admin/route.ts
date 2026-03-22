@@ -36,19 +36,38 @@ export async function POST(request: Request) {
 
     const userId = userAuthData.user.id;
 
-    // 2. The trigger `on_auth_user_created` (if you ran the migration) should have 
-    // automatically created a profile with the 'student' role.
-    // We now need to update that profile to 'admin'.
-    const { error: profileUpdateError } = await supabaseAdmin
+    // 2. Upsert the profile to avoid depending on trigger timing/state.
+    const { error: profileUpsertError } = await supabaseAdmin
       .from('profiles')
-      .update({ role: 'admin' })
-      .eq('id', userId);
+      .upsert(
+        {
+          id: userId,
+          role: 'admin',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
 
-    if (profileUpdateError) {
-      console.error('Error updating profile role:', profileUpdateError);
-      // Clean up the created auth user if profile update fails
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      return NextResponse.json({ error: profileUpdateError.message }, { status: 400 });
+    if (profileUpsertError) {
+      console.error('Error upserting admin profile:', profileUpsertError);
+
+      // Best-effort rollback so we don't leave orphaned auth users.
+      const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (deleteUserError) {
+        console.error('Rollback failed: could not delete auth user:', deleteUserError);
+        return NextResponse.json(
+          {
+            error:
+              'Admin setup partially failed. Auth user was created but profile upsert failed, and rollback also failed.',
+            userId,
+            profileError: profileUpsertError.message,
+            rollbackError: deleteUserError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ error: profileUpsertError.message }, { status: 400 });
     }
 
     return NextResponse.json({ 
@@ -57,8 +76,9 @@ export async function POST(request: Request) {
       user: userAuthData.user 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unhandled error setting up admin:', error);
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Server error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
