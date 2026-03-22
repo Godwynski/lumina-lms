@@ -32,15 +32,14 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const signInWithCredentials = async (nextEmail: string, nextPassword: string) => {
     const supabase = createClient();
     setIsLoading(true);
     setError(null);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: nextEmail,
+        password: nextPassword,
       });
       if (error) throw error;
       router.push("/protected");
@@ -50,6 +49,11 @@ export function LoginForm({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await signInWithCredentials(email, password);
   };
 
   const handleMicrosoftLogin = async () => {
@@ -88,12 +92,27 @@ export function LoginForm({
               Access your library workspace.
             </CardDescription>
           </div>
-          <div className="space-y-1 rounded-lg border border-slate-200 bg-slate-100 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Demo Credentials</p>
-            <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-              <div><span className="font-semibold text-slate-900">Student:</span> student@lumina.test</div>
-              <div><span className="font-semibold text-slate-900">Admin:</span> admin@lumina.test</div>
-              <div className="col-span-2"><span className="font-semibold text-slate-900">Password:</span> Password123!</div>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-100 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Demo Accounts</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 rounded-md border-slate-300 bg-white text-xs font-semibold text-slate-900 hover:bg-slate-100"
+                onClick={() => signInWithCredentials("student@lumina.test", "Password123!")}
+                disabled={isLoading}
+              >
+                Student Demo
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 rounded-md border-slate-300 bg-white text-xs font-semibold text-slate-900 hover:bg-slate-100"
+                onClick={() => signInWithCredentials("admin@lumina.test", "Password123!")}
+                disabled={isLoading}
+              >
+                Admin Demo
+              </Button>
             </div>
           </div>
         </CardHeader>
