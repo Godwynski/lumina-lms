@@ -30,6 +30,11 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
+
+    --status-success: 142 72% 32%;
+    --status-warning: 38 92% 38%;
+    --status-danger: 0 72% 44%;
+    --status-neutral: 215 16% 38%;
   }
 }
 
@@ -67,6 +72,54 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 @layer utilities {
+  .status-success {
+    border-color: hsl(var(--status-success) / 0.35);
+    background-color: hsl(var(--status-success) / 0.15);
+    color: hsl(var(--status-success));
+  }
+
+  .status-warning {
+    border-color: hsl(var(--status-warning) / 0.35);
+    background-color: hsl(var(--status-warning) / 0.15);
+    color: hsl(var(--status-warning));
+  }
+
+  .status-danger {
+    border-color: hsl(var(--status-danger) / 0.35);
+    background-color: hsl(var(--status-danger) / 0.15);
+    color: hsl(var(--status-danger));
+  }
+
+  .status-neutral {
+    border-color: hsl(var(--status-neutral) / 0.35);
+    background-color: hsl(var(--status-neutral) / 0.12);
+    color: hsl(var(--status-neutral));
+  }
+
+  .status-dot-success {
+    background-color: hsl(var(--status-success));
+  }
+
+  .status-dot-warning {
+    background-color: hsl(var(--status-warning));
+  }
+
+  .status-dot-danger {
+    background-color: hsl(var(--status-danger));
+  }
+
+  .status-fill-success {
+    background-color: hsl(var(--status-success));
+  }
+
+  .status-fill-warning {
+    background-color: hsl(var(--status-warning));
+  }
+
+  .status-fill-danger {
+    background-color: hsl(var(--status-danger));
+  }
+
   @keyframes pulse-bright {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.8; }

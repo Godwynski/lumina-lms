@@ -1,5 +1,11 @@
 import { redirect } from 'next/navigation';
+import { getUserRole } from '@/lib/auth-helpers';
 
-export default function ReturnRedirectPage() {
+export default async function ReturnRedirectPage() {
+  const role = await getUserRole();
+  if (!role || role === 'student') {
+    redirect('/protected');
+  }
+
   redirect('/protected/circulation?mode=return');
 }

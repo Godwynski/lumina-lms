@@ -23,7 +23,8 @@ export default async function SettingsPage() {
     .single();
 
   const role = (profile?.role as Role) || "student";
-  const isAdmin = role === "admin";
+  const canManageSystem = role === "admin" || role === "librarian";
+  const isSuperAdmin = role === "admin";
   const profileName = typeof profile?.full_name === "string" ? profile.full_name : "";
   const avatarUrl = typeof profile?.avatar_url === "string" ? profile.avatar_url : "";
 
@@ -31,7 +32,7 @@ export default async function SettingsPage() {
   let settings: { id: string; key: string; value: string; description?: string }[] = [];
   let categories: { id: string; name: string; slug: string; description?: string; is_active: boolean }[] = [];
 
-  if (isAdmin) {
+  if (canManageSystem) {
     const [{ data: settingsData }, { data: categoriesData }] = await Promise.all([
       supabase.from("system_settings").select("*").order("key"),
       supabase.from("categories").select("*").order("name"),
@@ -42,7 +43,8 @@ export default async function SettingsPage() {
 
   return (
     <SettingsPageClient
-      isAdmin={isAdmin}
+      canManageSystem={canManageSystem}
+      isSuperAdmin={isSuperAdmin}
       role={role}
       profileName={profileName}
       avatarUrl={avatarUrl}

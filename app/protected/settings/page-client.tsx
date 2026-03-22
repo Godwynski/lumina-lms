@@ -23,7 +23,6 @@ import {
   ChevronRight,
   Search,
   CheckCircle2,
-  Database,
   ShieldCheck,
   UserCheck,
   Zap,
@@ -46,7 +45,8 @@ type PolicySetting = { id: string; key: string; value: string; description?: str
 type Category = { id: string; name: string; slug: string; description?: string; is_active: boolean };
 
 interface Props {
-  isAdmin: boolean;
+  canManageSystem: boolean;
+  isSuperAdmin: boolean;
   role: Role;
   profileName: string;
   avatarUrl: string;
@@ -80,7 +80,7 @@ type NavTab = {
   section: "personal" | "admin";
 };
 
-export default function SettingsPageClient({ isAdmin, role, profileName, avatarUrl, settings, categories }: Props) {
+export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role, profileName, avatarUrl, settings, categories }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
@@ -92,8 +92,6 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
   // Personal settings state
   const [displayName, setDisplayName] = useState("");
   const [emailAlerts, setEmailAlerts] = useState(true);
-  const [rememberDevice, setRememberDevice] = useState(true);
-  const [compactTables, setCompactTables] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -115,8 +113,6 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
             preferences?: {
               displayName?: string;
               emailAlerts?: boolean;
-              rememberDevice?: boolean;
-              compactTables?: boolean;
             };
           };
           const preferences = payload.preferences ?? {};
@@ -125,12 +121,6 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
           }
           if (typeof preferences.emailAlerts === "boolean") {
             setEmailAlerts(preferences.emailAlerts);
-          }
-          if (typeof preferences.rememberDevice === "boolean") {
-            setRememberDevice(preferences.rememberDevice);
-          }
-          if (typeof preferences.compactTables === "boolean") {
-            setCompactTables(preferences.compactTables);
           }
         }
       } catch {
@@ -184,8 +174,6 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           emailAlerts,
-          rememberDevice,
-          compactTables,
         }),
       });
       if (!response.ok) throw new Error("Failed to save preferences");
@@ -198,16 +186,12 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
   const clearLocalPreferences = async () => {
     setDisplayName("");
     setEmailAlerts(true);
-    setRememberDevice(true);
-    setCompactTables(false);
     await fetch("/api/ui-preferences", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         displayName: "",
         emailAlerts: true,
-        rememberDevice: true,
-        compactTables: false,
       }),
     });
     flash("Settings reset to defaults");
@@ -335,13 +319,19 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
     };
   }, [selectedPhotoPreviewUrl]);
 
+  const visibleAdminTabs = useMemo(() => {
+    if (!canManageSystem) return [] as Array<(typeof ADMIN_TABS)[number]>;
+    if (isSuperAdmin) return ADMIN_TABS;
+    return ADMIN_TABS.filter((tab) => tab.id === "policies" || tab.id === "categories");
+  }, [canManageSystem, isSuperAdmin]);
+
   const allTabs = useMemo(() => {
     const personal: NavTab[] = PERSONAL_TABS.map((t) => ({ ...t, section: "personal" }));
-    const admin: NavTab[] = isAdmin
-      ? ADMIN_TABS.map((t) => ({ ...t, section: "admin" }))
+    const admin: NavTab[] = canManageSystem
+      ? visibleAdminTabs.map((t) => ({ ...t, section: "admin" }))
       : [];
     return [...personal, ...admin];
-  }, [isAdmin]);
+  }, [canManageSystem, visibleAdminTabs]);
 
   useEffect(() => {
     if (!allTabs.some((tab) => tab.id === activeTab)) {
@@ -384,8 +374,8 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="border-border bg-muted text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                {isAdmin ? "Admin" : role}
+                <Badge variant="outline" className="border-border bg-muted text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {isSuperAdmin ? "Admin" : role}
               </Badge>
             </div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
@@ -429,7 +419,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
               onChange={changeTab}
             />
 
-            {isAdmin && (
+            {canManageSystem && (
               <SectionNav
                 title="System Administration"
                 items={filteredTabs.filter((t) => t.section === "admin")}
@@ -466,7 +456,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
             onChange={changeTab} 
           />
           
-          {isAdmin && (
+          {canManageSystem && (
             <SectionNav 
               title="System Administration" 
               items={filteredTabs.filter(t => t.section === 'admin')} 
@@ -480,7 +470,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
             <div className="space-y-4">
               <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
               <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
-              <StatusIndicator icon={Database} label="Storage" value="94% Free" color="text-muted-foreground" />
+              <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
             </div>
           </Card>
         </nav>
@@ -602,18 +592,6 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                       checked={emailAlerts}
                       onChange={setEmailAlerts}
                     />
-                    <PremiumToggle 
-                      title="Fast Login" 
-                      description="Remember this device for a seamless authentication experience."
-                      checked={rememberDevice}
-                      onChange={setRememberDevice}
-                    />
-                    <PremiumToggle 
-                      title="Pro Mode Layout" 
-                      description="Use compact tables and condensed layouts for high efficiency."
-                      checked={compactTables}
-                      onChange={setCompactTables}
-                    />
                   </div>
                   <div className="flex items-center gap-2 pt-2">
                     <Button onClick={savePreferences} className="h-9 flex-1 rounded-lg sm:flex-none sm:px-6">
@@ -656,45 +634,27 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
               )}
 
               {/* Admin Views */}
-              {activeTab === "policies" && isAdmin && (
+              {activeTab === "policies" && canManageSystem && (
                 <Section key="policies" title="Policy Control Center" icon={Settings2}>
-                  <PolicyConfigurationForm settings={settings} />
+                  <PolicyConfigurationForm settings={settings} canEdit={isSuperAdmin} />
                 </Section>
               )}
 
-              {activeTab === "categories" && isAdmin && (
+              {activeTab === "categories" && canManageSystem && (
                 <Section key="categories" title="Catalog Architecture" icon={Tags}>
                   <CategoryManagement initialCategories={categories} />
                 </Section>
               )}
 
-              {activeTab === "operations" && isAdmin && (
-                <div key="operations" className="space-y-5">
+              {activeTab === "operations" && isSuperAdmin && (
+                <div key="operations" className="space-y-4">
                   <Section title="Fleet Maintenance" icon={RefreshCw}>
                     <RecomputeExpiryDates />
                   </Section>
-
-                  <Card className="border-border bg-card shadow-sm">
-                    <div className="flex flex-col items-start gap-4 p-4 sm:flex-row">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted">
-                        <Database className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div>
-                          <h3 className="text-base font-semibold text-foreground">Active Directory Synchronization</h3>
-                          <p className="mt-1 text-sm text-muted-foreground">Microsoft Graph API integration for automated graduation data processing.</p>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                          <code className="rounded-md border border-border bg-muted px-2.5 py-1 text-xs text-muted-foreground">/admin/graduation-sync</code>
-                          <Badge variant="outline" className="border-border bg-muted text-[10px] uppercase tracking-wider text-muted-foreground">Ready</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
                 </div>
               )}
 
-              {activeTab === "audit" && isAdmin && (
+              {activeTab === "audit" && isSuperAdmin && (
                 <Section key="audit" title="System Transparency" icon={ScrollText}>
                   <Card className="mb-6 border-border bg-card shadow-sm">
                     <div className="flex items-start gap-3 p-4">
@@ -713,7 +673,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
                 </Section>
               )}
 
-              {activeTab === "gdpr" && isAdmin && (
+              {activeTab === "gdpr" && isSuperAdmin && (
                 <Section key="gdpr" title="Right to Erasure" icon={Trash2} danger>
                   <Card className="mb-6 border-border bg-card shadow-sm">
                     <div className="p-4">
@@ -750,7 +710,7 @@ export default function SettingsPageClient({ isAdmin, role, profileName, avatarU
         <div className="space-y-4">
           <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
           <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
-          <StatusIndicator icon={Database} label="Storage" value="94% Free" color="text-muted-foreground" />
+          <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
         </div>
       </Card>
 

@@ -91,7 +91,7 @@ export function EditBookMetadataDialog({ book, isOpen, onOpenChange, onSuccess }
 
         <form onSubmit={handleSubmit} className="space-y-3">
            {error && (
-             <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+             <div className="status-danger rounded-lg p-2 text-xs">
                {error}
              </div>
            )}
@@ -181,7 +181,7 @@ export function EditBookMetadataDialog({ book, isOpen, onOpenChange, onSuccess }
                 type="submit" 
                 className={`h-8 rounded-md px-4 text-xs font-semibold uppercase tracking-wider transition-all ${
                   success 
-                  ? "bg-emerald-500 hover:bg-emerald-600 text-primary-foreground" 
+                  ? "bg-primary/85 hover:bg-primary text-primary-foreground" 
                   : "bg-primary hover:bg-primary/90 text-primary-foreground"
                 }`}
                 disabled={loading || success}

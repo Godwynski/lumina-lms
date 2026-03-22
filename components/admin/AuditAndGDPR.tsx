@@ -70,50 +70,50 @@ export function AuditLogViewer() {
     <div className="space-y-4">
       <div className="flex gap-3">
         <Input
-          placeholder="Filter by entity type or action..."
+          placeholder="Filter by entity or action"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="rounded-lg"
+          className="h-9 rounded-md"
         />
         <Button
           onClick={fetchAuditLogs}
           variant="outline"
-          className="rounded-lg"
+          className="h-9 rounded-md px-3 text-xs"
         >
           Refresh
         </Button>
       </div>
 
       {loading ? (
-        <Card className="p-8 text-center border-slate-200 bg-white shadow-sm">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-700" />
-          <p className="text-zinc-600 mt-2">Loading audit logs...</p>
+        <Card className="border-border bg-card p-6 text-center shadow-sm">
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
         </Card>
       ) : filteredLogs.length === 0 ? (
-        <Card className="p-8 text-center">
-          <Clock className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
-          <p className="text-zinc-600">No audit logs found</p>
+        <Card className="border-border bg-card p-6 text-center">
+          <Clock className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No logs found.</p>
         </Card>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {filteredLogs.map((log) => (
-            <Card key={log.id} className="p-3 border-zinc-200/50">
+            <Card key={log.id} className="border-border bg-card p-2.5">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-slate-700 flex-shrink-0" />
-                    <p className="font-semibold text-sm text-zinc-900">
+                    <Shield className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <p className="text-xs font-semibold text-foreground">
                       {log.action.toUpperCase()}
                     </p>
-                    <span className="text-xs font-mono text-zinc-500">
+                    <span className="font-mono text-[11px] text-muted-foreground">
                       {log.entity_type}
                     </span>
                   </div>
                   {log.reason && (
-                    <p className="text-xs text-zinc-600 mt-1">{log.reason}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{log.reason}</p>
                   )}
                 </div>
-                <p className="text-xs text-zinc-400 whitespace-nowrap ml-2">
+                <p className="ml-2 whitespace-nowrap text-[11px] text-muted-foreground">
                   {new Date(log.created_at).toLocaleString()}
                 </p>
               </div>
@@ -202,19 +202,19 @@ export function GDPRHardDeleteDialog({
           resetForm();
           setOpen(true);
         }}
-        className="rounded-lg bg-red-600 text-white gap-2 hover:bg-red-700"
+        className="h-8 rounded-md gap-1.5 px-3 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
       >
-        <Lock className="h-4 w-4" />
-        Request GDPR Hard Delete
+        <Lock className="h-3.5 w-3.5" />
+        Request hard delete
       </Button>
 
-      <DialogContent className="max-w-md rounded-xl p-5">
+      <DialogContent className="max-w-md rounded-lg p-4">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <AlertCircle className="h-4 w-4 text-red-600" />
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <AlertCircle className="h-3.5 w-3.5 text-destructive" />
             GDPR Right to Erasure
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             This action will anonymize the user profile and remove personal identifiers.
             {userName && ` Target user: ${userName}`}
           </DialogDescription>
@@ -222,11 +222,11 @@ export function GDPRHardDeleteDialog({
 
         {!result ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3.5">
-              <p className="text-sm text-red-800 font-semibold mb-2">
+            <div className="status-danger rounded-md p-3">
+              <p className="mb-2 text-xs font-semibold">
                 ⚠️ Warning: This action is irreversible
               </p>
-              <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
+              <ul className="list-inside list-disc space-y-1 text-[11px]">
                 <li>User profile will be permanently anonymized</li>
                 <li>Personal data (name, email, phone) will be removed</li>
                 <li>Transaction history will be preserved for audit purposes</li>
@@ -238,17 +238,18 @@ export function GDPRHardDeleteDialog({
               <>
                 <div className="space-y-2">
                   <Label htmlFor="reason">Deletion Reason (Optional)</Label>
-                  <Input
-                    id="reason"
-                    placeholder="e.g., User requested deletion upon graduation"
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
+                    <Input
+                      id="reason"
+                      placeholder="e.g., User requested deletion upon graduation"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      disabled={loading}
+                      className="h-9"
+                    />
+                  </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                  <div className="status-danger rounded-md p-2 text-xs">
                     {error}
                   </div>
                 )}
@@ -257,11 +258,11 @@ export function GDPRHardDeleteDialog({
 
             {confirming && (
               <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-yellow-900 mb-3">
+                <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3">
+                  <p className="mb-2 text-xs font-semibold text-yellow-900">
                     Final Confirmation Required
                   </p>
-                  <p className="text-xs text-yellow-800 mb-3">
+                  <p className="mb-2 text-[11px] text-yellow-800">
                     To proceed with anonymization, type <strong>DELETE</strong> in
                     the field below:
                   </p>
@@ -270,7 +271,7 @@ export function GDPRHardDeleteDialog({
                     value={confirmation}
                     onChange={(e) => setConfirmation(e.target.value.toUpperCase())}
                     disabled={loading}
-                    className="h-10 rounded-lg border-zinc-300 font-mono font-bold"
+                    className="h-9 rounded-md border-border font-mono font-bold"
                   />
                 </div>
               </div>
@@ -278,11 +279,11 @@ export function GDPRHardDeleteDialog({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-emerald-900 mb-2">
+            <div className="status-success rounded-md p-3">
+              <p className="mb-2 text-xs font-semibold">
                 ✓ User Profile Anonymized
               </p>
-              <div className="text-xs text-emerald-800 space-y-1 font-mono">
+              <div className="space-y-1 font-mono text-[11px]">
                 <p>
                   <span className="font-bold">User ID:</span> {result.user_id}
                 </p>
@@ -312,7 +313,7 @@ export function GDPRHardDeleteDialog({
                 }}
                 variant="outline"
                 disabled={loading}
-                className="h-9 rounded-lg"
+                className="h-8 rounded-md px-3 text-xs"
               >
                 {confirming ? "Back" : "Cancel"}
               </Button>
@@ -325,11 +326,11 @@ export function GDPRHardDeleteDialog({
                   }
                 }}
                 disabled={loading}
-                className="h-9 rounded-lg bg-red-600 hover:bg-red-700"
+                className="h-8 rounded-md bg-destructive px-3 text-xs text-destructive-foreground hover:bg-destructive/90"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                     Processing...
                   </>
                 ) : confirming ? (
@@ -346,7 +347,7 @@ export function GDPRHardDeleteDialog({
                   setOpen(false);
                   resetForm();
                 }}
-                className="h-9 w-full rounded-lg bg-slate-900 hover:bg-slate-800"
+                className="h-8 w-full rounded-md px-3 text-xs"
               >
                 Close
               </Button>

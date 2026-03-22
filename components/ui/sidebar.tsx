@@ -510,7 +510,14 @@ function SidebarMenuButton({
   tooltip?: string | React.ComponentProps<typeof TooltipContent>
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot.Root : "button"
-  const { isMobile, state } = useSidebar()
+  const { isMobile, state, setOpenMobile } = useSidebar()
+
+  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    props.onClick?.(event)
+    if (!event.defaultPrevented && isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   const button = (
     <Comp
@@ -519,6 +526,7 @@ function SidebarMenuButton({
       data-size={size}
       data-active={isActive}
       className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+      onClick={handleClick}
       {...props}
     />
   )
@@ -676,6 +684,14 @@ function SidebarMenuSubButton({
   isActive?: boolean
 }) {
   const Comp = asChild ? Slot.Root : "a"
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  const handleClick: React.MouseEventHandler<HTMLAnchorElement> = (event) => {
+    props.onClick?.(event)
+    if (!event.defaultPrevented && isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
     <Comp
@@ -691,6 +707,7 @@ function SidebarMenuSubButton({
         "group-data-[collapsible=icon]:hidden",
         className
       )}
+      onClick={handleClick}
       {...props}
     />
   )

@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
   Camera,
+  ChevronDown,
+  Circle,
   CheckCircle2,
   QrCode,
   RefreshCcw,
@@ -13,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -126,6 +129,19 @@ type WindowWithDetector = Window & {
 
 const SCAN_DEBOUNCE_MS = 1500;
 
+function getCameraIssueMessage(error: unknown) {
+  if (!(error instanceof Error)) return 'Unknown camera error.';
+
+  if (error.name === 'NotAllowedError') return 'Camera permission was denied in browser settings.';
+  if (error.name === 'NotFoundError') return 'No camera device was detected.';
+  if (error.name === 'NotReadableError') return 'Camera is busy in another app or browser tab.';
+  if (error.name === 'OverconstrainedError') return 'Requested camera constraints are not supported.';
+  if (error.name === 'SecurityError') return 'Camera access requires HTTPS or localhost.';
+  if (error.name === 'AbortError') return 'Camera startup was interrupted.';
+
+  return error.message || 'Unable to initialize camera.';
+}
+
 export default function CirculationPage() {
   const searchParams = useSearchParams();
   const initialMode = searchParams.get('mode') === 'return' ? 'return' : 'checkout';
@@ -135,13 +151,17 @@ export default function CirculationPage() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraSupported, setCameraSupported] = useState(false);
+  const [cameraPermissionAvailable, setCameraPermissionAvailable] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [cameraIssue, setCameraIssue] = useState<string | null>(null);
+  const [showScannerHelp, setShowScannerHelp] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
   const [activeStudent, setActiveStudent] = useState<ActiveStudent | null>(null);
   const [pendingCheckout, setPendingCheckout] = useState<CheckoutDraft | null>(null);
   const [pendingReturn, setPendingReturn] = useState<PendingReturn | null>(null);
+  const [studentScanFlash, setStudentScanFlash] = useState(false);
 
   const [contextLockOpen, setContextLockOpen] = useState(false);
   const [blockedStudent, setBlockedStudent] = useState<{ fullName: string; studentId: string } | null>(null);
@@ -160,6 +180,33 @@ export default function CirculationPage() {
 
   const focusManualInput = useCallback(() => {
     manualInputRef.current?.focus();
+  }, []);
+
+  const playScanCue = useCallback((type: 'success' | 'error') => {
+    if (typeof window === 'undefined') return;
+    const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+
+    try {
+      const ctx = new AudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(type === 'success' ? 880 : 220, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      oscillator.start(now);
+      oscillator.stop(now + 0.16);
+      void ctx.close();
+    } catch {
+      // Ignore audio context failures.
+    }
   }, []);
 
   const dueDateLabel = useMemo(() => {
@@ -188,6 +235,15 @@ export default function CirculationPage() {
       day: 'numeric',
     });
   }, [pendingReturn?.borrowedAt]);
+
+  const activeStudentKey = activeStudent?.cardNumber;
+
+  useEffect(() => {
+    if (!activeStudentKey) return;
+    setStudentScanFlash(true);
+    const timer = window.setTimeout(() => setStudentScanFlash(false), 1400);
+    return () => window.clearTimeout(timer);
+  }, [activeStudentKey]);
 
   const stopCamera = useCallback(() => {
     if (frameRef.current) {
@@ -225,10 +281,10 @@ export default function CirculationPage() {
     clearAll(nextMode);
   };
 
-  const requestCameraPermission = useCallback(async () => {
+  const requestCameraPermission = useCallback(async (): Promise<boolean> => {
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
       setNotice({ tone: 'error', text: 'Camera API is unavailable in this browser.' });
-      return;
+      return false;
     }
 
     try {
@@ -238,12 +294,32 @@ export default function CirculationPage() {
       });
       media.getTracks().forEach((track) => track.stop());
       setCameraPermission('granted');
+      setCameraIssue(null);
       setNotice({ tone: 'ok', text: 'Camera permission granted. You can start scanner now.' });
-    } catch {
+      return true;
+    } catch (error) {
       setCameraPermission('denied');
-      setNotice({ tone: 'error', text: 'Camera permission denied. Allow camera access in browser settings.' });
+      setCameraIssue(getCameraIssueMessage(error));
+      setNotice({ tone: 'error', text: 'Camera permission denied. Check troubleshooting details.' });
+      return false;
     }
   }, []);
+
+  const handleCameraToggle = useCallback(async () => {
+    if (cameraOpen) {
+      stopCamera();
+      return;
+    }
+
+    if (!cameraSupported) {
+      setNotice({ tone: 'warn', text: 'Camera scanner is unavailable on this browser/device.' });
+      return;
+    }
+
+    const granted = cameraPermission === 'granted' ? true : await requestCameraPermission();
+    if (!granted) return;
+    setCameraOpen(true);
+  }, [cameraOpen, cameraPermission, cameraSupported, requestCameraPermission, stopCamera]);
 
   const resolveScan = useCallback(async (scanValue: string): Promise<ScanResolveResponse | null> => {
     const response = await fetch('/api/circulation/resolve-scan', {
@@ -291,13 +367,13 @@ export default function CirculationPage() {
   const handleResolvedCheckoutPayload = useCallback(async (payload: ScanResolveResponse) => {
     if (!payload.ok) {
       setNotice({ tone: 'error', text: payload.message });
-      return;
+      return false;
     }
 
     if (!activeStudent) {
       if (payload.type === 'book') {
         setNotice({ tone: 'warn', text: 'Scan the student library card first, then scan book copies.' });
-        return;
+        return false;
       }
 
       if (payload.data.status !== 'active') {
@@ -306,7 +382,7 @@ export default function CirculationPage() {
           title: 'Card inactive',
           body: 'This student card is not active. Only active cards can check out books.',
         });
-        return;
+        return false;
       }
 
       setActiveStudent({
@@ -316,26 +392,27 @@ export default function CirculationPage() {
         status: payload.data.status,
       });
       setNotice({ tone: 'ok', text: 'Student locked. Continue by scanning one book copy QR.' });
-      return;
+      return true;
     }
 
     if (payload.type === 'student') {
       if (payload.data.cardNumber === activeStudent.cardNumber) {
         setNotice({ tone: 'warn', text: 'This student card is already active in the current checkout flow.' });
-        return;
+        return false;
       }
 
       setBlockedStudent({ fullName: payload.data.fullName, studentId: payload.data.studentId });
       setContextLockOpen(true);
-      return;
+      return false;
     }
 
     await startPreviewCheckout(activeStudent.cardNumber, payload.data.qrString);
+    return true;
   }, [activeStudent, startPreviewCheckout]);
 
   const startPreviewReturn = useCallback(async (rawQr: string) => {
     const bookQr = rawQr.trim();
-    if (!bookQr || isConfirming) return;
+    if (!bookQr || isConfirming) return false;
 
     const response = await fetch('/api/circulation/return', {
       method: 'POST',
@@ -353,7 +430,7 @@ export default function CirculationPage() {
         title: 'Return blocked',
         body: payload.message ?? 'Unable to prepare return confirmation.',
       });
-      return;
+      return false;
     }
 
     setPendingReturn({
@@ -364,6 +441,7 @@ export default function CirculationPage() {
       borrowedAt: payload.borrowed_at,
       idempotencyKey: crypto.randomUUID(),
     });
+    return true;
   }, [isConfirming]);
 
   const processScan = useCallback(async (rawValue: string) => {
@@ -374,6 +452,7 @@ export default function CirculationPage() {
     const last = lastAcceptedScanRef.current;
     if (last && last.value === scanValue && now - last.at < SCAN_DEBOUNCE_MS) {
       setNotice({ tone: 'warn', text: 'Duplicate scan ignored. Wait 1.5 seconds before scanning again.' });
+      playScanCue('error');
       return;
     }
 
@@ -385,20 +464,24 @@ export default function CirculationPage() {
         const payload = await resolveScan(scanValue);
         if (!payload) {
           setNotice({ tone: 'error', text: 'Failed to decode QR scan response.' });
+          playScanCue('error');
           return;
         }
-        await handleResolvedCheckoutPayload(payload);
+        const ok = await handleResolvedCheckoutPayload(payload);
+        playScanCue(ok ? 'success' : 'error');
       } else {
-        await startPreviewReturn(scanValue);
+        const ok = await startPreviewReturn(scanValue);
+        playScanCue(ok ? 'success' : 'error');
       }
       setManualValue('');
     } catch {
       setNotice({ tone: 'error', text: 'Unable to process the scanned QR value right now.' });
+      playScanCue('error');
     } finally {
       setIsResolving(false);
       focusManualInput();
     }
-  }, [focusManualInput, handleResolvedCheckoutPayload, isConfirming, isResolving, mode, resolveScan, startPreviewReturn]);
+  }, [focusManualInput, handleResolvedCheckoutPayload, isConfirming, isResolving, mode, playScanCue, resolveScan, startPreviewReturn]);
 
   const confirmCheckout = async () => {
     if (!activeStudent || !pendingCheckout) return;
@@ -518,11 +601,24 @@ export default function CirculationPage() {
 
   useEffect(() => {
     const detectorCtor = (window as WindowWithDetector).BarcodeDetector;
-    setCameraSupported(
-      !!navigator.mediaDevices &&
-        typeof navigator.mediaDevices.getUserMedia === 'function' &&
-        !!detectorCtor,
-    );
+    const hasMediaDevices = !!navigator.mediaDevices;
+    const hasGetUserMedia = typeof navigator.mediaDevices?.getUserMedia === 'function';
+
+    setCameraPermissionAvailable(hasMediaDevices && hasGetUserMedia);
+
+    let reason: string | null = null;
+    if (!window.isSecureContext) {
+      reason = 'Camera only works on HTTPS or localhost.';
+    } else if (!hasMediaDevices) {
+      reason = 'This browser does not expose mediaDevices.';
+    } else if (!hasGetUserMedia) {
+      reason = 'This browser does not support getUserMedia.';
+    } else if (!detectorCtor) {
+      reason = 'QR scanner API (BarcodeDetector) is unavailable in this browser.';
+    }
+
+    setCameraSupported(!reason);
+    setCameraIssue(reason);
   }, []);
 
   useEffect(() => {
@@ -550,6 +646,7 @@ export default function CirculationPage() {
 
         streamRef.current = media;
         setCameraPermission('granted');
+        setCameraIssue(null);
         if (videoRef.current) {
           videoRef.current.srcObject = media;
           await videoRef.current.play();
@@ -574,8 +671,9 @@ export default function CirculationPage() {
         };
 
         frameRef.current = requestAnimationFrame(tick);
-      } catch {
+      } catch (error) {
         setCameraPermission('denied');
+        setCameraIssue(getCameraIssueMessage(error));
         setNotice({ tone: 'error', text: 'Camera access denied or unavailable. You can still use manual input.' });
         stopCamera();
       }
@@ -597,22 +695,22 @@ export default function CirculationPage() {
 
   const noticeClasses =
     notice?.tone === 'ok'
-      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+      ? 'status-success'
       : notice?.tone === 'warn'
-        ? 'bg-amber-50 border-amber-200 text-amber-800'
-        : 'bg-red-50 border-red-200 text-red-700';
+        ? 'status-warning'
+        : 'status-danger';
 
   const checkoutStep = !activeStudent ? 1 : pendingCheckout ? 3 : 2;
   const returnStep = pendingReturn ? (isConfirming ? 3 : 2) : 1;
-  const cameraStateLabel = !cameraSupported ? 'Scanner Unavailable' : cameraOpen ? 'Live Scanner' : 'Scanner Idle';
-  const permissionLabel =
-    !cameraSupported
-      ? 'Manual input mode'
-      : cameraPermission === 'granted'
-      ? 'Camera ready'
-      : cameraPermission === 'denied'
-        ? 'Permission denied'
-        : 'Permission needed';
+  const scannerStatus = !cameraSupported
+    ? { label: 'Camera unavailable', dot: 'status-dot-warning', tone: 'status-warning' }
+    : cameraOpen
+    ? { label: 'Scanner live', dot: 'status-dot-success animate-pulse', tone: 'status-success' }
+    : cameraPermission === 'denied'
+    ? { label: 'Permission denied', dot: 'status-dot-danger', tone: 'status-danger' }
+    : cameraPermission === 'granted'
+    ? { label: 'Camera ready', dot: 'status-dot-success', tone: 'status-success' }
+    : { label: 'Permission needed', dot: 'status-dot-warning', tone: 'text-muted-foreground' };
   const nextActionLabel =
     mode === 'checkout'
       ? checkoutStep === 1
@@ -637,11 +735,6 @@ export default function CirculationPage() {
         : returnStep === 2
           ? 'Ready to confirm return'
           : 'Finalizing return';
-  const stepChipClasses = (active: boolean) =>
-    active
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : 'border-border bg-muted text-muted-foreground';
-
   return (
     <div className="w-full space-y-2 pb-4 md:space-y-2.5 md:pb-5">
       <div className="border-b border-border pb-4">
@@ -683,60 +776,83 @@ export default function CirculationPage() {
       </div>
 
       <section className="grid gap-2 lg:grid-cols-12">
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-9">
           <div className="rounded-xl border border-border bg-card p-3 shadow-sm md:p-4">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
                 <ScanLine className="h-4 w-4 text-muted-foreground" />
                 Scanner
               </h2>
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="rounded-md border border-border bg-muted px-2 py-1 font-medium text-muted-foreground">{cameraStateLabel}</span>
-                <span className="rounded-md border border-border bg-muted px-2 py-1 font-medium text-muted-foreground">{permissionLabel}</span>
+              <div className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-1 text-[11px]">
+                <span className={`h-2 w-2 rounded-full ${scannerStatus.dot}`} />
+                <span className={`font-medium ${scannerStatus.tone}`}>{scannerStatus.label}</span>
               </div>
             </div>
 
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              {cameraSupported ? (
-                <>
-                  <Button
-                    variant="outline"
-                    className="h-8 rounded-md"
-                    onClick={() => void requestCameraPermission()}
-                  >
-                    {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
-                  </Button>
-                  <Button
-                    variant={cameraOpen ? 'destructive' : 'outline'}
-                    className="h-8 rounded-md"
-                    onClick={() => (cameraOpen ? stopCamera() : setCameraOpen(true))}
-                  >
-                    <Camera className="mr-2 h-4 w-4" />
-                    {cameraOpen ? 'Stop Camera' : 'Start Camera'}
-                  </Button>
-                </>
-              ) : null}
+            {cameraIssue && (
+              <Collapsible open={showScannerHelp} onOpenChange={setShowScannerHelp} className="mb-2">
+                <div className="status-warning rounded-md px-2 py-1.5">
+                  <CollapsibleTrigger asChild>
+                    <Button type="button" variant="ghost" className="h-6 w-full justify-between px-1 text-[11px]">
+                      <span className="font-semibold">Scanner help</span>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showScannerHelp ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-1 pb-1 text-[11px]">
+                      <p>{cameraIssue}</p>
+                      <p className="mt-1">Try allowing camera permission, closing apps using camera, or switching to Chrome/Edge.</p>
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            )}
+
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                className="h-8 rounded-md"
+                onClick={() => void requestCameraPermission()}
+                disabled={!cameraPermissionAvailable}
+              >
+                {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
+              </Button>
+              {!cameraPermissionAvailable && (
+                <span className="text-[11px] text-muted-foreground">Permission prompt not supported in this context.</span>
+              )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="relative overflow-hidden rounded-xl border border-border bg-primary">
-                <video ref={videoRef} className="h-[176px] w-full object-cover md:h-[196px]" muted playsInline />
-                <div className="pointer-events-none absolute inset-x-8 top-8 h-16 rounded-full border border-border/20" />
+                <video ref={videoRef} className="h-[250px] w-full object-cover md:h-[320px]" muted playsInline />
+                <div className="pointer-events-none absolute inset-x-8 top-1/2 h-20 -translate-y-1/2 rounded-2xl border border-border/25" />
+                <div className="absolute right-3 bottom-3">
+                  <Button
+                    variant={cameraOpen ? 'destructive' : 'secondary'}
+                    size="sm"
+                    className="h-8 rounded-md px-3 text-xs"
+                    onClick={() => void handleCameraToggle()}
+                    disabled={!cameraSupported}
+                  >
+                    <Camera className="mr-1.5 h-3.5 w-3.5" />
+                    {cameraOpen ? 'Stop camera' : 'Start camera'}
+                  </Button>
+                </div>
                 {!cameraOpen && (
                   <div className="absolute inset-0 flex items-center justify-center bg-primary/80 text-primary-foreground">
                     <div className="text-center">
                       <QrCode className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                       <p className="text-sm font-semibold">Camera scanner is idle</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Manual input is always available below</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Use manual input if camera is unavailable</p>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Manual input</p>
-                  <p className="text-xs font-medium text-muted-foreground">Next step: {nextActionLabel}</p>
+              <div className="rounded-lg border border-border bg-muted/40 p-2">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Manual input</p>
+                  <p className="text-[11px] text-muted-foreground">{nextActionLabel}</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
@@ -753,10 +869,12 @@ export default function CirculationPage() {
                         ? 'Scan student card first, then book QR'
                         : 'Paste or type book QR payload'
                     }
-                    className="h-9 flex-1 rounded-md border border-border bg-card px-3 text-sm outline-none ring-ring transition focus:ring-2"
+                    autoFocus
+                    className="h-8 flex-1 rounded-md border border-border bg-card px-2.5 text-xs outline-none ring-ring transition focus:ring-2"
                   />
                   <Button
-                    className="h-9 rounded-md bg-primary px-4 hover:bg-primary/90"
+                    variant="outline"
+                    className="h-8 rounded-md px-3 text-xs"
                     onClick={() => void processScan(manualValue)}
                     disabled={isResolving || isConfirming || actionCtaLabel.includes('Ready')}
                   >
@@ -770,15 +888,31 @@ export default function CirculationPage() {
           </div>
         </div>
 
-        <div className="space-y-2.5 lg:col-span-4">
+        <div className="space-y-2.5 lg:col-span-3">
           <div className="rounded-xl border border-border bg-card p-3 shadow-sm md:p-4">
             <h2 className="mb-3 text-base font-semibold text-foreground">Workflow guide</h2>
             {mode === 'checkout' ? (
               <div className="space-y-3">
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className={`rounded-md border px-2 py-1 font-semibold ${stepChipClasses(checkoutStep === 1)}`}>Step 1: Student card</span>
-                  <span className={`rounded-md border px-2 py-1 font-semibold ${stepChipClasses(checkoutStep === 2)}`}>Step 2: Book QR</span>
-                  <span className={`rounded-md border px-2 py-1 font-semibold ${stepChipClasses(checkoutStep === 3)}`}>Step 3: Confirm</span>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { step: 1, label: 'Student card' },
+                    { step: 2, label: 'Book QR' },
+                    { step: 3, label: 'Confirm' },
+                  ].map((item, index, arr) => {
+                    const active = checkoutStep === item.step;
+                    const done = checkoutStep > item.step;
+                    return (
+                      <div key={item.step} className="flex items-start gap-2">
+                        <div className="flex flex-col items-center">
+                          <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${done ? 'status-success' : active ? 'border-primary/40 bg-primary/10 text-primary animate-pulse' : 'border-border bg-muted text-muted-foreground'}`}>
+                            {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : active ? <ScanLine className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                          </span>
+                          {index < arr.length - 1 && <span className="my-0.5 h-4 w-px bg-border" />}
+                        </div>
+                        <p className={`pt-0.5 ${active || done ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{item.label}</p>
+                      </div>
+                    );
+                  })}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {checkoutStep === 1
@@ -793,28 +927,44 @@ export default function CirculationPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="rounded-lg border border-border bg-muted p-3 text-foreground">
+                    <div className={`rounded-lg border p-3 text-foreground transition-colors ${studentScanFlash ? 'status-success' : 'border-border bg-muted'}`}>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active student</p>
                       <p className="mt-1 text-base font-bold">{activeStudent.fullName}</p>
                       <p className="text-xs text-muted-foreground">Card: {activeStudent.cardNumber}</p>
                     </div>
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-800">
+                    <div className="status-warning rounded-lg p-3">
+                      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
                         <ShieldAlert className="h-3.5 w-3.5" />
                         Identity verification
                       </p>
-                      <p className="mt-1 text-sm text-amber-900">Ask the student to verbally confirm this ID:</p>
-                      <p className="mt-1 font-mono text-2xl font-bold tracking-wider text-amber-900">{activeStudent.studentId}</p>
+                      <p className="mt-1 text-sm">Ask the student to verbally confirm this ID:</p>
+                      <p className="mt-1 font-mono text-2xl font-bold tracking-wider">{activeStudent.studentId}</p>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className={`rounded-md border px-2 py-1 font-semibold ${stepChipClasses(returnStep === 1)}`}>Step 1: Book QR</span>
-                  <span className={`rounded-md border px-2 py-1 font-semibold ${stepChipClasses(returnStep === 2)}`}>Step 2: Review</span>
-                  <span className={`rounded-md border px-2 py-1 font-semibold ${stepChipClasses(returnStep === 3)}`}>Step 3: Confirm</span>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { step: 1, label: 'Book QR' },
+                    { step: 2, label: 'Review' },
+                    { step: 3, label: 'Confirm' },
+                  ].map((item, index, arr) => {
+                    const active = returnStep === item.step;
+                    const done = returnStep > item.step;
+                    return (
+                      <div key={item.step} className="flex items-start gap-2">
+                        <div className="flex flex-col items-center">
+                          <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${done ? 'status-success' : active ? 'border-primary/40 bg-primary/10 text-primary animate-pulse' : 'border-border bg-muted text-muted-foreground'}`}>
+                            {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : active ? <ScanLine className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                          </span>
+                          {index < arr.length - 1 && <span className="my-0.5 h-4 w-px bg-border" />}
+                        </div>
+                        <p className={`pt-0.5 ${active || done ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{item.label}</p>
+                      </div>
+                    );
+                  })}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {returnStep === 1
@@ -823,7 +973,7 @@ export default function CirculationPage() {
                 </p>
                 {pendingReturn ? (
                   <div className="space-y-2 rounded-lg border border-border bg-muted p-3 text-sm">
-                    <div className="flex items-center gap-2 text-emerald-700">
+                    <div className="status-success flex items-center gap-2 rounded-md px-2 py-1">
                       <CheckCircle2 className="h-4 w-4" />
                       <span className="text-xs font-semibold uppercase tracking-[0.1em]">Validated</span>
                     </div>
@@ -849,10 +999,10 @@ export default function CirculationPage() {
             <DialogDescription>Review details before finalizing this checkout.</DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">Primary Focus</p>
-            <p className="mt-0.5 text-sm font-semibold text-amber-900">Confirm borrower identity, then finalize checkout.</p>
-            <p className="text-xs text-amber-800">Risk check: student verbally confirms ID before you press Confirm.</p>
+          <div className="status-warning rounded-lg px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]">Primary Focus</p>
+            <p className="mt-0.5 text-sm font-semibold">Confirm borrower identity, then finalize checkout.</p>
+            <p className="text-xs">Risk check: student verbally confirms ID before you press Confirm.</p>
           </div>
 
           <div className="space-y-3 rounded-xl border border-border bg-muted p-4 text-sm">
@@ -892,10 +1042,10 @@ export default function CirculationPage() {
             <DialogDescription>Review details before finalizing this return.</DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Primary Focus</p>
-            <p className="mt-0.5 text-sm font-semibold text-emerald-900">Verify loan details, then finalize return.</p>
-            <p className="text-xs text-emerald-800">Risk check: confirm title and borrower before you press Confirm.</p>
+          <div className="status-success rounded-lg px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em]">Primary Focus</p>
+            <p className="mt-0.5 text-sm font-semibold">Verify loan details, then finalize return.</p>
+            <p className="text-xs">Risk check: confirm title and borrower before you press Confirm.</p>
           </div>
 
           <div className="space-y-3 rounded-xl border border-border bg-muted p-4 text-sm">
@@ -936,7 +1086,7 @@ export default function CirculationPage() {
               Another student card was scanned while a checkout is already in progress.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="status-warning rounded-xl p-3 text-sm">
             <p>
               Detected: <span className="font-semibold">{blockedStudent?.fullName ?? 'Student'}</span> ({' '}
               {blockedStudent?.studentId ?? 'N/A'})
@@ -958,7 +1108,7 @@ export default function CirculationPage() {
         <DialogContent className="rounded-2xl sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertCircle className="h-4 w-4 text-destructive" />
               {errorModal.title}
             </DialogTitle>
             <DialogDescription className="pt-1 text-muted-foreground">{errorModal.body}</DialogDescription>

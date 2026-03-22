@@ -20,7 +20,7 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
     <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="group relative flex flex-col gap-2 overflow-hidden rounded-lg border border-border bg-card px-3 py-2.5 transition-all hover:bg-muted sm:flex-row sm:items-center sm:gap-3">
       <div className={`h-9 w-9 shrink-0 rounded-md flex items-center justify-center transition-all duration-500 ${
         isOutOfStock 
-        ? "bg-orange-100 text-orange-600" 
+        ? "status-warning" 
         : "bg-muted text-muted-foreground"
       }`}>
         <BookIcon size={16} />
@@ -51,20 +51,20 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
           {book.available_copies} of {book.total_copies} copies
         </span>
         {isOutOfStock && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500">
+          <span className="status-danger inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold">
             <CircleOff className="h-3 w-3" />
             Out of stock
           </span>
         )}
         {isLowStock && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600">
+          <span className="status-warning inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold">
             <AlertTriangle className="h-3 w-3" />
             Low stock
           </span>
         )}
-        <div className="h-1 w-20 overflow-hidden rounded-full bg-muted">
-           <div 
-             className={`h-full ${isOutOfStock ? "bg-orange-500" : isLowStock ? "bg-amber-500" : "bg-emerald-500"}`} 
+         <div className="h-1 w-20 overflow-hidden rounded-full bg-muted">
+            <div 
+             className={`h-full ${isOutOfStock ? "status-fill-danger" : isLowStock ? "status-fill-warning" : "status-fill-success"}`} 
              style={{ width: `${(book.available_copies / (book.total_copies || 1)) * 100}%` }}
             />
         </div>
@@ -85,12 +85,12 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
             Open
           </Button>
         </Link>
-        <Button 
-          onClick={() => onDelete(book)}
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-500"
-        >
+         <Button 
+           onClick={() => onDelete(book)}
+           variant="ghost" 
+           size="icon" 
+           className="h-8 w-8 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+         >
           <Trash2 size={14} />
         </Button>
       </div>

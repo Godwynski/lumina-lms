@@ -12,7 +12,7 @@ export function AuthErrorAlert({ message, className }: AuthErrorAlertProps) {
   return (
     <Alert
       variant="destructive"
-      className={cn("border-red-200 bg-red-50 text-red-700", className)}
+      className={cn("status-danger", className)}
     >
       <AlertCircle className="h-4 w-4" />
       <AlertDescription>{message}</AlertDescription>

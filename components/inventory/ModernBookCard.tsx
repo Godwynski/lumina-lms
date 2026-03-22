@@ -72,7 +72,7 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
             {book.cover_url ? (
               <Image src={book.cover_url} alt={book.title} fill className="object-cover" />
             ) : (
-              <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "text-orange-600" : "text-muted-foreground"}`}>
+              <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground"}`}>
                 <BookIcon size={14} />
               </div>
             )}
@@ -99,7 +99,7 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
             onClick={() => onDelete(book)}
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600"
+            className="h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 size={16} />
           </Button>
@@ -110,7 +110,7 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: `${(book.available_copies / (book.total_copies || 1)) * 100}%` }}
-            className={`h-full ${isOutOfStock ? "bg-orange-500" : "bg-emerald-500"}`}
+            className={`h-full ${isOutOfStock ? "status-fill-danger" : "status-fill-success"}`}
           />
         </div>
       </div>

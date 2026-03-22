@@ -9,14 +9,13 @@ import {
   MapPin, 
   AlertCircle, 
   BookOpen, 
-  Hash, 
-  Tag,
   CheckCircle2,
   Clock,
   BookMarked,
   ScanLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import type { Book } from '@/lib/types';
 
 type StudentBook = Book & {
@@ -62,140 +61,124 @@ export default function StudentBookDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-12 flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="w-8 h-8 border-4 border-slate-700 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-muted-foreground text-sm font-medium">Loading book details...</p>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-sm font-medium text-muted-foreground">Loading book details...</p>
       </div>
     );
   }
 
   if (!book) {
     return (
-      <div className="p-12 text-center space-y-4">
-        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto">
-          <BookOpen className="w-8 h-8 text-zinc-300" />
-        </div>
-        <p className="text-muted-foreground font-medium">Book not found.</p>
-        <Button onClick={() => router.push('/protected/student-catalog')} variant="outline" className="rounded-xl">Go Back</Button>
-      </div>
+      <AdminTableShell
+        title="Book Catalog"
+        description="Browse available books, sections, and current shelf availability."
+        headerActions={
+          <Button onClick={() => router.push('/protected/student-catalog')} variant="outline" className="h-8 px-3 text-xs">
+            Back
+          </Button>
+        }
+      >
+        <div className="px-4 py-10 text-center text-sm text-muted-foreground">Book not found.</div>
+      </AdminTableShell>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
-      <Button
-        onClick={() => router.push('/protected/student-catalog')}
-        variant="ghost"
-        className="flex items-center text-muted-foreground hover:text-slate-800 transition-colors font-medium text-sm group px-0"
-      >
-        <ChevronLeft className="w-5 h-5 mr-1 group-hover:-translate-x-1 transition-transform" />
-        Back to Catalog
-      </Button>
-
-      <div className="bg-card rounded-[32px] shadow-sm border border-border/50 p-6 md:p-10 flex flex-col md:flex-row gap-10">
-        {/* Left Side: Cover */}
-        <div className="w-full md:w-2/5 flex-shrink-0">
-          <div className="aspect-[3/4] bg-muted rounded-2xl overflow-hidden shadow-inner flex items-center justify-center border border-border relative group">
+    <AdminTableShell
+      title="Book Details"
+      description="View metadata and shelf availability for this catalog entry."
+      headerActions={
+        <Button onClick={() => router.push('/protected/student-catalog')} variant="outline" className="h-8 px-3 text-xs">
+          <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+          Back
+        </Button>
+      }
+      feedback={
+        reported ? (
+          <div className="status-success rounded-md px-3 py-2 text-sm">
+            Librarian notified. Thank you for reporting this shelf issue.
+          </div>
+        ) : null
+      }
+    >
+      <div className="grid gap-4 p-4 md:grid-cols-[200px_1fr] md:p-6">
+        <div className="space-y-3">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-border bg-muted">
             {book.cover_url ? (
               <Image
                 src={book.cover_url}
                 alt={book.title}
                 fill
-                sizes="(min-width: 768px) 40vw, 100vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                sizes="(min-width: 768px) 200px, 100vw"
+                className="object-cover"
               />
             ) : (
-              <BookOpen className="w-20 h-20 text-zinc-200" />
+              <div className="flex h-full items-center justify-center">
+                <BookOpen className="h-10 w-10 text-muted-foreground" />
+              </div>
             )}
-             <div className="absolute top-4 right-4">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${
-                  book.available_copies > 0 ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'
-                }`}>
-                  {book.available_copies > 0 ? (
-                    <>
-                      <CheckCircle2 className="w-3 h-3" />
-                      In Library
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="w-3 h-3" />
-                      Borrowed
-                    </>
-                  )}
-                </span>
-             </div>
           </div>
+
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
+              book.available_copies > 0 ? 'status-success' : 'status-warning'
+            }`}
+          >
+            {book.available_copies > 0 ? (
+              <>
+                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                Available
+              </>
+            ) : (
+              <>
+                <Clock className="mr-1 h-3.5 w-3.5" />
+                Borrowed
+              </>
+            )}
+          </span>
         </div>
 
-        {/* Right Side: Details */}
-        <div className="flex-1 space-y-8 pt-2">
+        <div className="space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2 leading-tight tracking-tight">{book.title}</h1>
-            <p className="text-xl text-muted-foreground font-medium">{book.author}</p>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">{book.title}</h2>
+            <p className="text-sm text-muted-foreground">{book.author}</p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            {book.section && (
-              <span className="bg-muted text-slate-700 px-4 py-1.5 rounded-full text-xs font-bold flex items-center border border-border">
-                <MapPin className="w-3.5 h-3.5 mr-2" />
-                {book.section}
-              </span>
-            )}
-            <span className="bg-muted text-muted-foreground px-4 py-1.5 rounded-full text-xs font-bold border border-border">
-               {book.available_copies} of {book.total_copies} Available
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-muted rounded-2xl border border-border">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                <Hash className="w-3 h-3" />
-                ISBN
-              </span>
-              <p className="text-sm font-bold text-zinc-700 font-mono tracking-tight">{book.isbn || 'Unknown'}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground">ISBN</p>
+              <p className="mt-1 font-mono text-sm text-foreground">{book.isbn || 'Unknown'}</p>
             </div>
-            
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                <Tag className="w-3 h-3" />
-                Category
-              </span>
-              <p className="text-sm font-bold text-zinc-700">
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground">Category</p>
+              <p className="mt-1 text-sm text-foreground">
                 {Array.isArray(book.categories)
                   ? book.categories[0]?.name || 'Uncategorized'
                   : book.categories?.name || 'Uncategorized'}
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-border bg-muted p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-1 flex items-center gap-1.5">
-                <BookMarked className="h-3 w-3" />
-                Smart Tip
-              </p>
-              <p className="text-xs text-slate-700 leading-relaxed">
-                Use the section tag to go directly to the correct aisle before checking nearby shelves.
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground">Section</p>
+              <p className="mt-1 inline-flex items-center gap-1 text-sm text-foreground">
+                <MapPin className="h-3.5 w-3.5" />
+                {book.section || 'General'}
               </p>
             </div>
-
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
-                <ScanLine className="h-3 w-3" />
-                Desk Assist
-              </p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                If unavailable, ask staff to scan a copy QR for live return status updates.
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground">Availability</p>
+              <p className="mt-1 text-sm text-foreground">
+                {book.available_copies} of {book.total_copies}
               </p>
             </div>
           </div>
 
           {book.tags && book.tags.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Subject Tags</h3>
-              <div className="flex flex-wrap gap-2">
+            <div className="rounded-md border border-border p-3">
+              <p className="mb-2 text-xs text-muted-foreground">Subject Tags</p>
+              <div className="flex flex-wrap gap-1.5">
                 {book.tags.map((tag: string, i: number) => (
-                  <span key={i} className="bg-card text-muted-foreground px-3 py-1 rounded-lg text-xs font-medium border border-border shadow-sm">
+                  <span key={i} className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                     {tag}
                   </span>
                 ))}
@@ -203,37 +186,41 @@ export default function StudentBookDetailPage() {
             </div>
           )}
 
-          <div className="pt-6">
-            {!reported ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-md border border-border bg-muted/40 p-3">
+              <p className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <BookMarked className="h-3.5 w-3.5" />
+                Smart Tip
+              </p>
+              <p className="text-xs text-foreground">Use the section label first, then scan nearby shelves for adjacent call numbers.</p>
+            </div>
+            <div className="rounded-md border border-border bg-muted/40 p-3">
+              <p className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <ScanLine className="h-3.5 w-3.5" />
+                Desk Assist
+              </p>
+              <p className="text-xs text-foreground">If unavailable, request staff to verify return queue and shelf placement.</p>
+            </div>
+          </div>
+
+          {!reported && (
+            <div className="pt-1">
               <Button
                 onClick={handleReportMissing}
                 disabled={reportSubmitting || book.available_copies === 0}
-                className="w-full h-14 bg-card hover:bg-orange-50 border border-orange-200 text-orange-700 rounded-2xl transition-all shadow-sm shadow-orange-100 group flex items-center justify-center gap-3"
+                variant="outline"
+                className="h-9 w-full justify-center gap-2 text-xs"
               >
-                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                   <AlertCircle className="w-4 h-4 text-orange-600" />
-                </div>
-                <span className="font-bold text-sm">
-                  {reportSubmitting ? 'Sending Alert...' : "I can't find this book on the shelf"}
-                </span>
+                <AlertCircle className="h-3.5 w-3.5" />
+                {reportSubmitting ? 'Sending alert...' : "I can't find this book"}
               </Button>
-            ) : (
-              <div className="bg-green-50 text-green-800 p-6 rounded-2xl flex flex-col items-center text-center gap-2 border border-green-200 animate-in zoom-in duration-300">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-1">
-                   <CheckCircle2 className="w-6 h-6 text-green-600" />
-                </div>
-                <p className="text-sm font-bold">Librarian Notified</p>
-                <p className="text-xs opacity-80">{"Thank you! We've added this to our queue to verify the shelf location."}</p>
-              </div>
-            )}
-            {book.available_copies === 0 && !reported && (
-              <p className="text-[11px] text-center text-muted-foreground mt-4 leading-relaxed italic">
-                This book is currently checked out to another student. Please check back later.
-              </p>
-            )}
-          </div>
+              {book.available_copies === 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">This book is currently checked out. Reporting is disabled for now.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </AdminTableShell>
   );
 }

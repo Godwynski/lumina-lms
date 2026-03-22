@@ -62,12 +62,12 @@ export default function CatalogPage() {
     <div className="flex min-h-[60vh] items-center justify-center p-8">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
-          <div className="h-16 w-16 rounded-full border-4 border-slate-200" />
-          <Loader2 className="absolute inset-0 h-16 w-16 animate-spin text-slate-600" />
+          <div className="h-16 w-16 rounded-full border-4 border-border" />
+          <Loader2 className="absolute inset-0 h-16 w-16 animate-spin text-primary" />
         </div>
         <div className="text-center">
-          <p className="mb-2 text-xl font-bold uppercase tracking-wider text-slate-900">Synchronizing inventory</p>
-          <p className="text-sm text-slate-600">Loading current catalog records...</p>
+          <p className="mb-2 text-xl font-bold uppercase tracking-wider text-foreground">Synchronizing inventory</p>
+          <p className="text-sm text-muted-foreground">Loading current catalog records...</p>
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ export default function CatalogPage() {
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent className="rounded-xl border-border p-4 shadow-sm sm:max-w-[420px]">
           <DialogHeader>
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600">
+            <div className="status-danger mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
               <AlertTriangle size={20} />
             </div>
             <DialogTitle className="text-center text-base font-semibold tracking-tight text-foreground">Remove from inventory?</DialogTitle>
@@ -90,7 +90,7 @@ export default function CatalogPage() {
           </DialogHeader>
           
           {deleteError && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+            <div className="status-danger mt-2 flex items-center gap-2 rounded-lg p-2 text-xs">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               {deleteError}
             </div>

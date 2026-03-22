@@ -89,8 +89,8 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
       <div className="rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">Inventory</h1>
-            <p className="text-[11px] text-muted-foreground">Active titles</p>
+            <h1 className="text-base font-semibold tracking-tight text-foreground">Book Catalog</h1>
+            <p className="text-[11px] text-muted-foreground">Search, filter, and maintain inventory records.</p>
           </div>
 
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
@@ -168,7 +168,11 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
           {pagedBooks.map((book) => (
             <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
           ))}
-          {filteredBooks.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">No books match current filters.</div>}
+          {filteredBooks.length === 0 && (
+            <div className="rounded-lg border border-dashed border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
+              No books match current filters.
+            </div>
+          )}
         </div>
       ) : (
         <InventoryGrid books={pagedBooks} onDelete={onDelete} onEdit={handleEditClick} />

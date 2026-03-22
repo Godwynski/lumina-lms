@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ServerCrash } from "lucide-react";
-
 const HEARTBEAT_URL = "/api/heartbeat";
 const POLL_INTERVAL_MS = 60_000; // poll every 60 seconds
 const STALE_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
@@ -53,12 +51,9 @@ export function HeartbeatBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed top-0 inset-x-0 z-50 bg-red-600 text-white flex items-center gap-3 px-4 py-2.5 shadow-lg animate-in slide-in-from-top-2 duration-300"
+      className="status-danger fixed left-1/2 top-3 z-50 -translate-x-1/2 rounded-md px-3 py-1.5 shadow-sm animate-in slide-in-from-top-2 duration-300"
     >
-      <ServerCrash size={16} className="shrink-0" />
-      <p className="text-sm font-semibold leading-snug">
-        Library Server is offline. Data shown is read-only and may be out of date.
-      </p>
+      <p className="text-xs font-semibold leading-snug">Library server is offline.</p>
     </div>
   );
 }

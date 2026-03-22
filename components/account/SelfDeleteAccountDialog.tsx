@@ -72,7 +72,7 @@ export function SelfDeleteAccountDialog({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[460px] rounded-xl p-5">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600 text-base">
+          <DialogTitle className="flex items-center gap-2 text-destructive text-base">
             <Trash2 className="h-4 w-4" />
             Delete My Account
           </DialogTitle>
@@ -83,10 +83,10 @@ export function SelfDeleteAccountDialog({
 
         {step === "warning" ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3.5">
+            <div className="status-danger rounded-lg p-3.5">
               <div className="flex gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-2 text-sm text-red-800">
+                <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="space-y-2 text-sm">
                   <p className="font-semibold">This will permanently delete:</p>
                   <ul className="list-disc list-inside space-y-1 ml-1">
                     <li>Your account and profile</li>
@@ -121,10 +121,10 @@ export function SelfDeleteAccountDialog({
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-zinc-900">
+              <p className="text-sm font-medium text-foreground">
                 To confirm, please type the following text:
               </p>
-              <code className="block rounded border border-zinc-300 bg-zinc-100 p-2 text-sm font-mono">
+              <code className="block rounded border border-border bg-muted p-2 text-sm font-mono text-foreground">
                 DELETE MY ACCOUNT
               </code>
             </div>
@@ -137,11 +137,11 @@ export function SelfDeleteAccountDialog({
                 setConfirmText(e.target.value);
                 setError(null);
               }}
-              className="h-10 w-full rounded-lg border-zinc-300 text-sm focus:border-red-500"
+              className="h-10 w-full rounded-lg border-border text-sm focus:border-destructive"
             />
 
             {error && (
-              <div className="rounded bg-red-50 p-2 text-sm text-red-600">
+              <div className="status-danger rounded p-2 text-sm">
                 {error}
               </div>
             )}

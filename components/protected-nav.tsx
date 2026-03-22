@@ -191,18 +191,20 @@ export function ProtectedNav({
       <SidebarContent className="px-2">
         <SidebarGroup>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton 
-                asChild 
-                isActive={isActive('/protected/circulation')}
-                tooltip="Circulation Desk"
-              >
-                <Link href="/protected/circulation">
-                  <RotateCcw />
-                  <span>Circulation Desk</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {normalizedRole && ["admin", "librarian", "staff"].includes(normalizedRole) && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive('/protected/circulation')}
+                  tooltip="Circulation Desk"
+                >
+                  <Link href="/protected/circulation">
+                    <RotateCcw />
+                    <span>Circulation Desk</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild

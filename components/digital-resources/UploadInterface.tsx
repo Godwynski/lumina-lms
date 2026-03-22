@@ -132,14 +132,14 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
 
       <div className="space-y-3 p-3">
         {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-2 text-xs text-red-700">
+          <div className="status-danger flex items-start gap-2 rounded-lg p-2 text-xs">
             <AlertCircle className="shrink-0 mt-0.5" size={16} />
             <p>{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-2 text-xs text-emerald-700">
+          <div className="status-success flex items-start gap-2 rounded-lg p-2 text-xs">
             <CheckCircle2 className="shrink-0 mt-0.5" size={16} />
             <p>Resource uploaded successfully!</p>
           </div>
@@ -233,7 +233,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
             <Label>File (PDF/EPUB) *</Label>
             <div
               className={`cursor-pointer rounded-lg border-2 border-dashed p-2.5 transition-colors ${
-                file ? "border-emerald-200 bg-emerald-50/30" : "border-border hover:border-border hover:bg-muted"
+                file ? "border-border bg-muted" : "border-border hover:border-border hover:bg-muted"
               }`}
               onClick={() => !uploading && fileInputRef.current?.click()}
             >
@@ -247,7 +247,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
               />
               {file ? (
                 <div className="flex items-center gap-3 w-full">
-                  <div className="rounded-md bg-emerald-100 p-1.5 text-emerald-600">
+                  <div className="status-success rounded-md p-1.5">
                     <CheckCircle2 size={16} />
                   </div>
                   <div className="flex-1 truncate">

@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
-import { ArrowUpRight, BookMarked, CheckCircle2, Clock, Loader2, RotateCcw, Library, BookOpen, ShieldCheck, History } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Clock, Loader2, RotateCcw, Library, BookOpen, ShieldCheck, History, CreditCard, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import DigitalCard from '@/components/library/DigitalCard';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type RecentBook = {
   id: string;
@@ -24,9 +26,23 @@ interface DashboardProps {
     myActiveLoans: number;
     recentBooks: RecentBook[];
   };
+  studentCard?: {
+    fullName: string;
+    studentId: string;
+    cardNumber: string;
+    department: string;
+    status: 'active' | 'pending' | 'suspended' | 'expired';
+    expiryDate: string;
+    avatarUrl: string | null;
+    qrUrl: string | null;
+  } | null;
+  studentFaqs?: {
+    question: string;
+    answer: string;
+  }[];
 }
 
-export function DashboardClient({ role, stats }: DashboardProps) {
+export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -72,6 +88,208 @@ export function DashboardClient({ role, stats }: DashboardProps) {
   ].filter((item) => item.show !== false);
 
   const attentionItems = queueItems.filter((item) => item.value > 0);
+
+  if (isStudent) {
+    return (
+      <div className="space-y-3 overflow-x-hidden pb-6">
+        <section className="border-b border-border pb-3">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Student Dashboard</h1>
+              <p className="text-sm text-muted-foreground">Quick access to your catalog, card, and loan activity.</p>
+            </div>
+            <Badge variant="outline" className="h-6 border-border bg-muted px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              student
+            </Badge>
+          </div>
+        </section>
+
+        <section className="grid gap-3 lg:grid-cols-[1.15fr_1fr]">
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="space-y-3 p-3">
+              <div className="grid gap-2 sm:grid-cols-3">
+                {actions.map((action) => (
+                  <Button
+                    key={action.title}
+                    asChild
+                    variant="outline"
+                    className="h-9 justify-start gap-1.5 rounded-md border-border px-2.5 text-left text-xs"
+                  >
+                    <Link href={action.href}>
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted">
+                        <action.icon size={12} className="text-foreground" />
+                      </span>
+                      <span className="min-w-0 truncate leading-tight">{action.title}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+
+              <div className="rounded-md border border-border bg-muted/50 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">My active loans</p>
+                  <p className="text-lg font-bold text-foreground">{stats.myActiveLoans}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {stats.myActiveLoans > 0 ? 'Check due dates in Loan History.' : 'No active borrowing right now.'}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Suggested reads</p>
+                {stats.recentBooks.length > 0 ? (
+                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {stats.recentBooks.slice(0, 6).map((book) => (
+                      <Link
+                        key={book.id}
+                        href={`/protected/student-catalog/${book.id}`}
+                        className="min-w-[156px] snap-start rounded-md border border-border bg-card px-2.5 py-2 hover:bg-muted/50 sm:min-w-[190px]"
+                      >
+                        <p className="truncate text-xs font-medium text-foreground">{book.title}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{book.author}</p>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed border-border p-2.5 text-xs text-muted-foreground">
+                    Suggested reads will appear here.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="space-y-2 p-3">
+              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <BookMarked className="h-3.5 w-3.5" />
+                  Recent catalog activity
+                </h2>
+                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+                  <Link href="/protected/student-catalog">Open catalog</Link>
+                </Button>
+              </div>
+
+              {stats.recentBooks.length > 0 ? (
+                <div className="space-y-1.5">
+                  {stats.recentBooks.slice(0, 3).map((book) => (
+                    <Link key={book.id} href={`/protected/student-catalog/${book.id}`}>
+                      <div className="flex items-center justify-between rounded-md border border-border px-2.5 py-2 hover:bg-muted/50">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">{book.title}</p>
+                          <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+                        </div>
+                        <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+                  No recent catalog activity.
+                </div>
+              )}
+
+              <Button asChild variant="outline" className="h-8 w-full justify-between rounded-md border-border px-2 text-xs">
+                <Link href="/protected/history">
+                  <span className="truncate">Loan history</span>
+                  <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-3 lg:grid-cols-2">
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="space-y-2 p-3">
+              <div className="flex items-center justify-between">
+                <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  FAQs
+                </h2>
+                <span className="text-[10px] text-muted-foreground">Tap to expand</span>
+              </div>
+              <div className="space-y-1.5">
+                {studentFaqs.map((item) => (
+                  <Collapsible key={item.question} className="rounded-md border border-border">
+                    <CollapsibleTrigger className="w-full px-2.5 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/60">
+                      {item.question}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="border-t border-border px-2.5 py-2 text-xs leading-relaxed text-foreground/85">
+                      {item.answer}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="space-y-2 p-3">
+              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Library card
+                </h2>
+                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+                  <Link href="/protected/my-card">Open</Link>
+                </Button>
+              </div>
+
+              <div className="grid gap-1.5 rounded-md border border-border bg-muted/40 p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                    studentCard?.status === 'active' ? 'status-success' :
+                    studentCard?.status === 'pending' ? 'status-warning' :
+                    studentCard?.status === 'suspended' ? 'status-danger' : 'status-neutral'
+                  }`}>
+                    {studentCard?.status ?? 'pending'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Card number</span>
+                  <span className="max-w-[65%] truncate font-mono text-foreground">{studentCard?.cardNumber ?? 'Pending assignment'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Student ID</span>
+                  <span className="font-medium text-foreground">{studentCard?.studentId ?? 'N/A'}</span>
+                </div>
+              </div>
+
+              <Collapsible>
+                <CollapsibleTrigger className="w-full rounded-md border border-border px-2.5 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/60">
+                  Show visual card preview
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  {studentCard ? (
+                    <div className="overflow-hidden rounded-md border border-border bg-muted/20">
+                      <DigitalCard
+                        fullName={studentCard.fullName}
+                        studentId={studentCard.studentId}
+                        cardNumber={studentCard.cardNumber}
+                        department={studentCard.department}
+                        status={studentCard.status}
+                        expiryDate={studentCard.expiryDate}
+                        avatarUrl={studentCard.avatarUrl}
+                        qrUrl={studentCard.qrUrl}
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-border p-2.5 text-xs text-muted-foreground">
+                      Card details are still syncing. Open My Card to refresh.
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-6 md:space-y-5">
@@ -186,6 +404,7 @@ export function DashboardClient({ role, stats }: DashboardProps) {
           )}
         </div>
       </section>
+
     </div>
   );
 }

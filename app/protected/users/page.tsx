@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AdminTableShell } from "@/components/admin/AdminTableShell";
 
 
 type User = {
@@ -288,50 +289,58 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-120px)] w-full max-w-7xl flex-col gap-4">
-      <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Users & Roles</h1>
-          <p className="text-sm text-muted-foreground">Manage users, role assignment, and account status.</p>
-        </div>
-        <Button onClick={() => setIsAddingUser(true)} className="w-full sm:w-auto">
-          <UserPlus size={16} className="mr-2" />
-          Invite user
-        </Button>
-      </div>
-
-      {loadError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</div>
-      )}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative w-full sm:max-w-md">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search by name or email"
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex w-full flex-wrap gap-1 sm:w-auto">
-          {(["all", "admin", "librarian", "staff", "student"] as const).map((tab) => (
-            <Button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              variant={activeTab === tab ? "default" : "outline"}
-              className="h-8 px-3 text-xs"
-            >
-              {roleFilterLabels[tab]}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+    <>
+      <AdminTableShell
+        title="Users & Roles"
+        description="Manage users, role assignment, and account status."
+        className="min-h-[calc(100vh-120px)]"
+        headerActions={(
+          <Button onClick={() => setIsAddingUser(true)} className="w-full sm:w-auto">
+            <UserPlus size={16} className="mr-2" />
+            Invite user
+          </Button>
+        )}
+        feedback={
+          loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
+        }
+        controls={(
+          <>
+            <div className="relative w-full sm:max-w-md">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search by name or email"
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex w-full flex-wrap gap-1 sm:w-auto">
+              {(["all", "admin", "librarian", "staff", "student"] as const).map((tab) => (
+                <Button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  variant={activeTab === tab ? "default" : "outline"}
+                  className="h-8 px-3 text-xs"
+                >
+                  {roleFilterLabels[tab]}
+                </Button>
+              ))}
+            </div>
+          </>
+        )}
+        pagination={
+          !isLoadingUsers && filteredUsers.length > 0 ? (
+            <CompactPagination
+              page={currentPage}
+              totalItems={filteredUsers.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          ) : null
+        }
+      >
+        <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 <th className="px-4 py-2.5 font-medium text-muted-foreground">User</th>
@@ -391,18 +400,7 @@ export default function UsersPage() {
               )}
             </tbody>
           </table>
-        </div>
-        {!isLoadingUsers && filteredUsers.length > 0 && (
-          <div className="border-t border-border p-2">
-            <CompactPagination
-              page={currentPage}
-              totalItems={filteredUsers.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
-      </div>
+      </AdminTableShell>
 
       <AnimatePresence>
         {selectedUser && (
@@ -604,16 +602,16 @@ export default function UsersPage() {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
 function RoleBadge({ role }: { role: string }) {
   const styles: Record<string, string> = {
-    admin: "text-slate-900",
+    admin: "text-foreground",
     librarian: "text-blue-700",
     staff: "text-indigo-700",
-    student: "text-zinc-700",
+    student: "text-muted-foreground",
   };
   return (
     <span className={cn("text-xs font-medium capitalize", styles[role])}>
@@ -624,17 +622,20 @@ function RoleBadge({ role }: { role: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    active: "text-emerald-600",
-    pending: "text-amber-600",
-    suspended: "text-red-500",
+    active: "status-success",
+    pending: "status-warning",
+    suspended: "status-danger",
   };
   const label: Record<string, string> = {
     active: "Active",
     pending: "Pending",
     suspended: "Suspended",
   };
+  const normalizedStatus = status.toLowerCase();
   return (
-    <span className={cn("text-xs font-medium", styles[status])}>{label[status]}</span>
+    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", styles[normalizedStatus] ?? "status-neutral")}>
+      {label[normalizedStatus] ?? status}
+    </span>
   );
 }
 
