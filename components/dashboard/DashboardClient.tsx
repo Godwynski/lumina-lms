@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
-import { ArrowUpRight, BookMarked, CheckCircle2, Clock, Loader2, RotateCcw, Library, BookOpen, ShieldCheck, History, CreditCard, HelpCircle } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Clock, RotateCcw, Library, BookOpen, ShieldCheck, History, CreditCard, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,19 +42,10 @@ interface DashboardProps {
 }
 
 export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: DashboardProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  // NOTE: The useState(mounted)+useEffect hydration fence has been intentionally removed.
+  // All data is passed as props from the RSC page — there are no client-only APIs (window,
+  // localStorage) accessed at render time. The 'use client' boundary is kept only because
+  // <Collapsible> requires client-side event handling.
 
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';

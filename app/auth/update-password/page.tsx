@@ -1,4 +1,4 @@
-import { UpdatePasswordForm } from "@/components/update-password-form";
+import { UpdatePasswordForm } from "@/components/auth/UpdatePasswordForm";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
 
 import { Suspense } from "react";

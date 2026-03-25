@@ -1,4 +1,4 @@
-import { SignUpForm } from "@/components/sign-up-form";
+import { SignUpForm } from "@/components/auth/SignUpForm";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";

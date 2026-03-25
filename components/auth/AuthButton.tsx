@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
-import { UserNav } from "./user-nav";
+import { UserNav } from "@/components/layout/UserNav";
 
 export async function AuthButton() {
   const supabase = await createClient();

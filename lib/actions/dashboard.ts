@@ -1,6 +1,29 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server';
+import { createSafeClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+
+/**
+ * Cache the recentBooks query for 1 hour.
+ * This data is not user-specific — it's the latest catalog additions.
+ * Using createSafeClient because unstable_cache runs outside the request lifecycle
+ * and cannot access cookies().
+ */
+const getCachedRecentBooks = unstable_cache(
+  async () => {
+    const supabase = createSafeClient();
+    const { data } = await supabase
+      .from('books')
+      .select('id, title, author, created_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    return data ?? [];
+  },
+  ['dashboard-recent-books'],
+  { revalidate: 3600, tags: ['books'] },
+);
 
 export async function getDashboardStats({
   userId,
@@ -13,22 +36,19 @@ export async function getDashboardStats({
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
+  // recentBooks is cached for 1 hour — no user data, changes infrequently.
+  // The user-specific counts are always fresh (no cache).
   const [
     { count: activeLoans },
-    { data: recentBooks },
+    recentBooks,
     pendingApprovalsResult,
     myActiveLoansResult,
   ] = await Promise.all([
     supabase
       .from('borrowing_records')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['active', 'ACTIVE']),
-    supabase
-      .from('books')
-      .select('id, title, author, created_at')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(5),
+      .eq('status', 'ACTIVE'), // Fixed: was ['active', 'ACTIVE']; enum migration is applied
+    getCachedRecentBooks(),
     canReviewApprovals
       ? supabase
           .from('library_cards')
@@ -40,7 +60,7 @@ export async function getDashboardStats({
           .from('borrowing_records')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .in('status', ['active', 'ACTIVE'])
+          .eq('status', 'ACTIVE') // Fixed: canonical enum value
       : Promise.resolve({ count: 0 }),
   ]);
 
@@ -48,6 +68,6 @@ export async function getDashboardStats({
     activeLoans: activeLoans || 0,
     pendingApprovals: pendingApprovalsResult.count || 0,
     myActiveLoans: myActiveLoansResult.count || 0,
-    recentBooks: recentBooks || [],
+    recentBooks,
   };
 }

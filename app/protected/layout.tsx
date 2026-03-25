@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { ProtectedNavClient } from "@/components/protected-nav-client";
-import { AuthButton } from "@/components/auth-button";
+import { ProtectedNavClient } from "@/components/layout/ProtectedNavClient";
+import { AuthButton } from "@/components/auth/AuthButton";
 import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
-import { HeartbeatBanner } from "@/components/HeartbeatBanner";
+import { HeartbeatBanner } from "@/components/layout/HeartbeatBanner";
 import { createClient } from "@/lib/supabase/server";
-import { BreadcrumbNav } from "@/components/breadcrumb-nav";
+import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 
 export const dynamic = "force-dynamic";
 

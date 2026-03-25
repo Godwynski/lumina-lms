@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MicrosoftIcon } from "@/components/ui/microsoft-icon";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/layout/Logo";
 import { AuthErrorAlert } from "@/components/auth/auth-feedback";
 import {
   Card,

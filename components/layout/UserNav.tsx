@@ -67,7 +67,10 @@ export function UserNav({ user, role }: UserNavProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-10 w-10 rounded-xl">
+          <Button
+            variant="ghost"
+            className="relative h-10 w-10 rounded-xl transition-all hover:scale-[1.02] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 data-[state=open]:bg-slate-100"
+          >
             <Avatar className="h-10 w-10 rounded-xl border border-slate-300">
               <AvatarImage src={user.user_metadata?.avatar_url} alt={name} />
               <AvatarFallback className="bg-slate-100 font-bold text-slate-700">
@@ -78,16 +81,18 @@ export function UserNav({ user, role }: UserNavProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{name}</p>
-              <p className="text-xs leading-none text-muted-foreground">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium leading-none">{name}</p>
+                {role && (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                    {role}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs leading-tight text-muted-foreground">
                 {user.email}
               </p>
-              {role && (
-                <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                  {role}
-                </p>
-              )}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -101,7 +106,7 @@ export function UserNav({ user, role }: UserNavProps) {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="cursor-pointer text-red-600 focus:text-red-600"
+            className="cursor-pointer font-semibold text-red-600 focus:text-red-600"
             onSelect={(event) => {
               event.preventDefault();
               setLogoutDialogOpen(true);

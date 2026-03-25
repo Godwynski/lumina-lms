@@ -218,8 +218,8 @@ export function ProtectedNav({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                asChild 
+              <SidebarMenuButton
+                asChild
                 isActive={pathname === "/protected/settings"}
                 tooltip="Settings"
               >

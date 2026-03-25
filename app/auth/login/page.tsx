@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";

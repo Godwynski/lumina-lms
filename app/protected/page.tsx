@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
 import { getDashboardStats } from "@/lib/actions/dashboard";
-import { DashboardClient } from "@/components/dashboard-client";
+import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getDeterministicQrUrl, resolveStudentId } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import { redirect } from "next/navigation";
