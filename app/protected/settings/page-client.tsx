@@ -21,12 +21,11 @@ import {
   Trash2,
   AlertCircle,
   ChevronRight,
+  ChevronDown,
   Search,
   CheckCircle2,
   ShieldCheck,
   UserCheck,
-  Zap,
-  PanelLeft,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -126,13 +125,15 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
       } catch {
         // Non-blocking: keep defaults
       }
-
-      const tab = searchParams.get("tab") as TabId | null;
-      if (tab) setActiveTab(tab);
     };
 
     void loadPrefs();
-  }, [searchParams, profileName]);
+  }, [profileName]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab") as TabId | null;
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
 
   const flash = useCallback((msg: string) => {
     setSavedMsg(msg);
@@ -373,12 +374,17 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-1">
                 <Badge variant="outline" className="border-border bg-muted text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                 {isSuperAdmin ? "Admin" : role}
               </Badge>
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
+            
+            <div className="flex items-center gap-1.5 text-base md:text-xl font-semibold tracking-tight text-foreground">
+               <span className="text-muted-foreground/80">Settings</span>
+               <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+               <span>{activeTabMeta?.label || "Profile Details"}</span>
+            </div>
             <p className="text-sm text-muted-foreground">Manage profile, preferences, security, and system configuration.</p>
           </div>
 
@@ -394,17 +400,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
           </div>
         </div>
       </motion.div>
-
-      <div className="mb-3 flex items-center justify-between rounded-xl border border-border bg-card p-2.5 lg:hidden">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Current section</p>
-          <p className="truncate text-sm font-semibold text-foreground">{activeTabMeta?.label ?? "Settings"}</p>
-        </div>
-          <Button type="button" variant="outline" className="h-11 rounded-lg border-border px-3" onClick={() => setMobileNavOpen(true)}>
-            <PanelLeft className="mr-2 h-4 w-4" />
-            Browse sections
-          </Button>
-      </div>
 
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetContent side="left" className="w-[86%] max-w-xs border-r border-border bg-card p-0">
@@ -446,37 +441,9 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[240px_1fr] lg:gap-6">
-        {/* ── Unified Navigation ─────────────────────────── */}
-        <nav className="order-2 hidden flex-col gap-4 lg:order-1 lg:flex">
-          <SectionNav 
-            title="Personal" 
-            items={filteredTabs.filter(t => t.section === 'personal')} 
-            activeId={activeTab} 
-            onChange={changeTab} 
-          />
-          
-          {canManageSystem && (
-            <SectionNav 
-              title="System Administration" 
-              items={filteredTabs.filter(t => t.section === 'admin')} 
-              activeId={activeTab} 
-              onChange={changeTab} 
-            />
-          )}
-
-          <Card className="hidden p-4 lg:block">
-            <h4 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">System Status</h4>
-            <div className="space-y-4">
-              <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
-              <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
-              <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
-            </div>
-          </Card>
-        </nav>
-
+      <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-4 lg:gap-6">
         {/* ── Main Panel ─────────────────────────────────── */}
-        <main className="order-1 min-w-0 lg:order-2">
+        <main className="min-w-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -487,7 +454,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               className="space-y-5"
             >
               {activeTab === "profile" && (
-                <Section key="profile" title="Profile Details" icon={User}>
+                <Section key="profile" title="Profile Details" icon={User} onMobileNavClick={() => setMobileNavOpen(true)}>
                   <div className="grid gap-5">
                     <FieldGroup label="Display Name" description="How you appear across the system.">
                       <Input
@@ -535,28 +502,27 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                           className="hidden"
                           onChange={(e) => void handlePhotoSelected(e.target.files?.[0])}
                         />
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center mt-5 mb-1">
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="default"
                             onClick={() => fileInputRef.current?.click()}
-                            className="h-11 rounded-md border-border px-3 text-xs sm:h-9"
+                            className="h-11 w-full sm:w-auto rounded-md px-3 text-sm font-semibold sm:px-4"
                           >
                             Choose Photo
                           </Button>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {selectedPhotoName || "No file selected"}
-                          </p>
-                        </div>
-                        <div className="hidden justify-end sm:flex">
                           <Button
                             type="button"
+                            variant="outline"
                             onClick={uploadProfilePhoto}
                             disabled={photoUploading}
-                            className="h-9 rounded-md px-3 text-xs"
+                            className="h-11 w-full sm:w-auto rounded-md px-4 text-sm font-semibold"
                           >
-                        {photoUploading ? "Uploading..." : "Upload photo"}
+                            {photoUploading ? "Uploading..." : "Upload photo"}
                           </Button>
+                          <p className="truncate text-xs text-muted-foreground text-center sm:text-left sm:ml-2">
+                            {selectedPhotoName || "No file selected"}
+                          </p>
                         </div>
                       </div>
                     </FieldGroup>
@@ -572,9 +538,10 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                         </div>
                       </div>
                       <Button
+                        variant="default"
                         onClick={() => void saveProfile()}
                         disabled={profileSaving}
-                        className="hidden h-9 rounded-lg px-5 sm:inline-flex"
+                        className="hidden h-11 rounded-lg px-6 font-semibold sm:inline-flex"
                       >
                         {profileSaving ? "Saving..." : "Save changes"}
                       </Button>
@@ -584,7 +551,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               )}
 
               {activeTab === "preferences" && (
-                <Section key="preferences" title="Personalization" icon={SlidersHorizontal}>
+                <Section key="preferences" title="Personalization" icon={SlidersHorizontal} onMobileNavClick={() => setMobileNavOpen(true)}>
                   <div className="space-y-3">
                     <PremiumToggle 
                       title="Intelligent Alerts" 
@@ -594,10 +561,10 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                     />
                   </div>
                   <div className="flex items-center gap-2 pt-2">
-                    <Button onClick={savePreferences} className="h-9 flex-1 rounded-lg sm:flex-none sm:px-6">
+                    <Button variant="default" onClick={savePreferences} className="h-11 flex-1 rounded-lg sm:flex-none sm:px-6 font-semibold">
                       Save preferences
                     </Button>
-                    <Button variant="outline" onClick={clearLocalPreferences} className="h-9 rounded-lg border-border text-muted-foreground">
+                    <Button variant="outline" onClick={clearLocalPreferences} className="h-11 rounded-lg border-border text-muted-foreground font-semibold px-6">
                       Reset defaults
                     </Button>
                   </div>
@@ -606,9 +573,9 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
               {activeTab === "security" && (
                 <div key="security" className="space-y-5">
-                  <Section title="Account Security" icon={Lock}>
+                  <Section title="Account Security" icon={Lock} onMobileNavClick={() => setMobileNavOpen(true)}>
                     <p className="mb-3 text-sm text-muted-foreground">Manage your authentication methods and login credentials.</p>
-                    <Button asChild variant="outline" className="h-9 w-full gap-3 rounded-lg border-border sm:w-auto">
+                    <Button asChild variant="outline" className="h-11 w-full gap-3 rounded-lg border-border sm:w-auto px-6 font-semibold">
                       <Link href="/auth/update-password">
                         <Lock size={16} />
                         Update password
@@ -624,7 +591,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                     <Button 
                       variant="destructive" 
                       onClick={() => setDeleteDialogOpen(true)}
-                      className="h-11 rounded-lg gap-3 bg-red-600 hover:bg-red-700 sm:h-9"
+                      className="h-11 rounded-lg gap-3 bg-red-600 hover:bg-red-700 font-semibold px-6"
                     >
                       <Trash2 size={16} />
                       Request erasure
@@ -635,27 +602,27 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
               {/* Admin Views */}
               {activeTab === "policies" && canManageSystem && (
-                <Section key="policies" title="Policy Control Center" icon={Settings2}>
+                <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={() => setMobileNavOpen(true)}>
                   <PolicyConfigurationForm settings={settings} canEdit={isSuperAdmin} />
                 </Section>
               )}
 
               {activeTab === "categories" && canManageSystem && (
-                <Section key="categories" title="Catalog Architecture" icon={Tags}>
+                <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={() => setMobileNavOpen(true)}>
                   <CategoryManagement initialCategories={categories} />
                 </Section>
               )}
 
               {activeTab === "operations" && isSuperAdmin && (
                 <div key="operations" className="space-y-4">
-                  <Section title="Fleet Maintenance" icon={RefreshCw}>
+                  <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={() => setMobileNavOpen(true)}>
                     <RecomputeExpiryDates />
                   </Section>
                 </div>
               )}
 
               {activeTab === "audit" && isSuperAdmin && (
-                <Section key="audit" title="System Transparency" icon={ScrollText}>
+                <Section key="audit" title="System Transparency" icon={ScrollText} onMobileNavClick={() => setMobileNavOpen(true)}>
                   <Card className="mb-6 border-border bg-card shadow-sm">
                     <div className="flex items-start gap-3 p-4">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted">
@@ -674,7 +641,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               )}
 
               {activeTab === "gdpr" && isSuperAdmin && (
-                <Section key="gdpr" title="Right to Erasure" icon={Trash2} danger>
+                <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={() => setMobileNavOpen(true)} danger>
                   <Card className="mb-6 border-border bg-card shadow-sm">
                     <div className="p-4">
                       <div className="mb-3 flex items-center gap-2">
@@ -705,14 +672,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
         </main>
       </div>
 
-      <Card className="mt-4 p-4 lg:hidden">
-        <h4 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">System Status</h4>
-        <div className="space-y-4">
-          <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
-          <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
-          <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
-        </div>
-      </Card>
+
 
       {activeTab === "profile" && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 p-3 backdrop-blur lg:hidden">
@@ -759,27 +719,28 @@ function SectionNav({
   return (
     <div className="space-y-2">
       <h3 className="px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{title}</h3>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3">
         {items.map(({ id, label, icon: Icon }) => (
           <Button
             key={id}
             onClick={() => onChange(id)}
             variant="ghost"
             className={cn(
-              "relative h-11 w-full justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
-              activeId === id ? "bg-muted text-foreground hover:bg-muted" : "text-muted-foreground hover:bg-muted"
+              "relative h-11 w-full justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition-all border-l-4",
+              activeId === id ? "bg-primary/5 text-primary border-primary hover:bg-primary/10 shadow-sm" : "border-transparent text-muted-foreground hover:bg-muted"
             )}
+            aria-current={activeId === id ? "page" : undefined}
           >
             <div className="flex items-center gap-3">
               <div className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-md transition-all",
-                activeId === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                "flex h-8 w-8 items-center justify-center rounded-md transition-all",
+                activeId === id ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground"
               )}>
                 <Icon size={15} />
               </div>
               <span>{label}</span>
             </div>
-            {activeId === id && <ChevronRight size={14} className="text-muted-foreground" />}
+            {activeId === id && <div className="h-2 w-2 rounded-full bg-primary" aria-label="You are here" />}
           </Button>
         ))}
       </div>
@@ -787,14 +748,19 @@ function SectionNav({
   );
 }
 
-function Section({ title, icon: Icon, children, danger }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean }) {
+function Section({ title, icon: Icon, children, danger, onMobileNavClick }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; onMobileNavClick?: () => void }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3 border-b border-border pb-3">
         <div className={cn("rounded-xl p-2", danger ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground")}>
           <Icon size={18} />
         </div>
-        <h2 className={cn("text-lg font-semibold tracking-tight", danger ? "text-red-900" : "text-foreground")}>{title}</h2>
+        <h2 className={cn("flex-1 text-lg font-semibold tracking-tight", danger ? "text-red-900" : "text-foreground")}>{title}</h2>
+        {onMobileNavClick && (
+          <button onClick={onMobileNavClick} className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted lg:hidden shadow-sm" aria-label="Browse sections">
+            <ChevronDown size={14} />
+          </button>
+        )}
       </div>
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">{children}</div>
     </div>
@@ -833,17 +799,5 @@ function PremiumToggle({ title, description, checked, onChange }: { title: strin
       </div>
       <Switch checked={checked} onCheckedChange={onChange} onClick={(e) => e.stopPropagation()} />
     </Card>
-  );
-}
-
-function StatusIndicator({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string; color: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <Icon size={14} className="text-muted-foreground" />
-        <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
-      </div>
-      <span className={cn("text-[10px] font-semibold uppercase tracking-wider", color)}>{value}</span>
-    </div>
   );
 }

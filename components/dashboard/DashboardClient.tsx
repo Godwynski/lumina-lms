@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
-import { ArrowUpRight, BookMarked, CheckCircle2, Clock, RotateCcw, Library, BookOpen, ShieldCheck, History, CreditCard, HelpCircle } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Clock, Library, BookOpen, ShieldCheck, History, CreditCard, HelpCircle, Zap, AlertCircle, Users, BarChart2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -50,18 +51,37 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
-  const actions = isStudent
-    ? [
+  const operationsGroups = isStudent ? [
+    {
+      title: 'Library Ops',
+      items: [
         { title: 'Book Catalog', href: '/protected/student-catalog', icon: Library },
         { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
+      ]
+    },
+    {
+      title: 'Account',
+      items: [
         { title: 'Loan History', href: '/protected/history', icon: History },
       ]
-    : [
-        { title: 'Circulation Desk', href: '/protected/circulation', icon: RotateCcw },
+    }
+  ] : [
+    {
+      title: 'Library Ops',
+      items: [
         { title: 'Inventory', href: '/protected/catalog', icon: Library },
         { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
+      ]
+    },
+    {
+      title: 'Management',
+      items: [
+        { title: 'Users & Roles', href: '/protected/users', icon: Users },
         ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/protected/admin/approvals', icon: ShieldCheck }] : []),
-      ];
+        { title: 'Analytics', href: '/protected/reports', icon: BarChart2 },
+      ]
+    }
+  ];
 
   const queueItems = [
     {
@@ -97,21 +117,26 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
         <section className="grid gap-3 lg:grid-cols-[1.15fr_1fr]">
           <Card className="border-border bg-card shadow-sm">
             <CardContent className="space-y-3 p-3">
-              <div className="grid gap-2 sm:grid-cols-3">
-                {actions.map((action) => (
-                  <Button
-                    key={action.title}
-                    asChild
-                    variant="outline"
-                    className="h-9 justify-start gap-1.5 rounded-md border-border px-2.5 text-left text-xs"
-                  >
-                    <Link href={action.href}>
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted">
-                        <action.icon size={12} className="text-foreground" />
-                      </span>
-                      <span className="min-w-0 truncate leading-tight">{action.title}</span>
-                    </Link>
-                  </Button>
+              <div className="flex flex-col gap-3">
+                {operationsGroups.map((group) => (
+                  <div key={group.title} className="space-y-1.5">
+                    <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.title}</h3>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {group.items.map((action) => (
+                        <Button
+                          key={action.title}
+                          asChild
+                          variant="outline"
+                          className="h-11 justify-start gap-2.5 rounded-md border-border px-3 text-left text-xs shadow-sm hover:bg-muted/60 transition-colors"
+                        >
+                          <Link href={action.href}>
+                            <action.icon size={16} className="text-primary shrink-0" />
+                            <span className="min-w-0 truncate leading-tight font-semibold tracking-wide">{action.title}</span>
+                          </Link>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
 
@@ -295,21 +320,28 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
         </div>
       </section>
 
-      <section className="sticky top-3 z-20 -mx-1 rounded-xl border border-border/60 bg-background/90 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/75 md:top-4">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Core actions</h2>
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-          {actions.map((action) => (
-            <Button
-              key={action.title}
-              asChild
-              variant="outline"
-              className="h-10 min-w-10 justify-center gap-1.5 rounded-md border-border bg-card px-2 text-left text-foreground hover:bg-muted sm:min-w-[132px] sm:justify-start sm:px-2.5"
-            >
-              <Link href={action.href} aria-label={action.title} title={action.title}>
-                <action.icon size={14} className="shrink-0 text-muted-foreground" />
-                <span className="hidden text-[10px] font-semibold uppercase tracking-[0.12em] sm:inline">{action.title}</span>
-              </Link>
-            </Button>
+      <section className="sticky top-3 z-20 -mx-1 rounded-xl border border-border/60 bg-background/90 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 md:top-4">
+        <h2 className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Core actions</h2>
+        <div className="mt-3 flex gap-4 overflow-x-auto px-1 pb-2 scrollbar-thin">
+          {operationsGroups.map(group => (
+            <div key={group.title} className="flex min-w-max flex-col gap-2 border-l-2 border-border/50 pl-3 first:border-0 first:pl-0">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">{group.title}</span>
+              <div className="flex gap-2">
+                {group.items.map(action => (
+                  <Button
+                    key={action.title}
+                    asChild
+                    variant="outline"
+                    className="h-11 min-w-[140px] justify-start gap-2.5 rounded-md border-border bg-card px-3 shadow-sm text-left text-foreground hover:bg-muted/60 transition-colors"
+                  >
+                    <Link href={action.href} aria-label={action.title} title={action.title}>
+                      <action.icon size={16} className="shrink-0 text-primary" />
+                      <span className="text-[11px] font-semibold tracking-wide sm:text-[12px]">{action.title}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </section>
@@ -395,6 +427,31 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
         </div>
       </section>
 
+      <section className="space-y-2.5 pt-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">System Status</h2>
+        <Card className="border-border bg-card shadow-sm">
+          <CardContent className="grid gap-4 p-4 sm:grid-cols-3">
+            <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
+            <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
+            <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </section>
+
+    </div>
+  );
+}
+
+function StatusIndicator({ icon: Icon, label, value, color }: { icon: React.ElementType, label: string, value: string, color: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60 border border-border">
+        <Icon size={18} className={color} />
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+        <p className={cn("mt-0.5 text-sm font-bold", color)}>{value}</p>
+      </div>
     </div>
   );
 }

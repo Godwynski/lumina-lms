@@ -2,28 +2,26 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
   LayoutDashboard,
   Settings,
   Library,
   BookOpen,
-  RotateCcw,
   Users,
   ShieldCheck,
   BarChart2,
   History,
-  CreditCard,
-  BookMarked,
+  AlertTriangle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -48,18 +46,12 @@ type NavItem = {
   roles: Exclude<Role, null>[];
 };
 
-type GroupSection = {
+type NavGroup = {
   id: string;
   label: string;
   icon: React.ElementType;
   roles: Exclude<Role, null>[];
   children: NavItem[];
-};
-
-type NavGroup = {
-  label: string;
-  roles: Exclude<Role, null>[];
-  sections: GroupSection[];
 };
 
 const DASHBOARD_LINK: NavItem = {
@@ -71,54 +63,34 @@ const DASHBOARD_LINK: NavItem = {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Library Operations",
+    id: "library-ops",
+    label: "Catalog",
+    icon: Library,
     roles: ["admin", "librarian", "staff", "student"],
-    sections: [
-      {
-        id: "catalog",
-        label: "Catalog",
-        icon: Library,
-        roles: ["admin", "librarian", "staff", "student"],
-        children: [
-          { href: "/protected/catalog", label: "Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
-          { href: "/protected/student-catalog", label: "Book Catalog", icon: Library, roles: ["student"] },
-          { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
-        ],
-      },
-    ]
+    children: [
+      { href: "/protected/catalog", label: "Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
+      { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
+    ],
   },
   {
-    label: "Management",
+    id: "management",
+    label: "Resources",
+    icon: Users,
     roles: ["admin", "librarian", "staff"],
-    sections: [
-      {
-        id: "people",
-        label: "Resources",
-        icon: Users,
-        roles: ["admin", "librarian", "staff"],
-        children: [
-          { href: "/protected/users", label: "Users & Roles", icon: Users, roles: ["admin", "librarian", "staff"] },
-          { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, roles: ["admin", "librarian"] },
-          { href: "/protected/reports", label: "Analytics", icon: BarChart2, roles: ["admin", "librarian", "staff"] },
-        ],
-      }
-    ]
+    children: [
+      { href: "/protected/users", label: "Users & Roles", icon: Users, roles: ["admin", "librarian", "staff"] },
+      { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, roles: ["admin", "librarian"] },
+      { href: "/protected/reports", label: "Analytics", icon: BarChart2, roles: ["admin", "librarian", "staff"] },
+    ],
   },
   {
-    label: "Account",
+    id: "account",
+    label: "Activity",
+    icon: History,
     roles: ["admin", "librarian", "staff", "student"],
-    sections: [
-      {
-        id: "activity",
-        label: "Activity",
-        icon: History,
-        roles: ["admin", "librarian", "staff", "student"],
-        children: [
-          { href: "/protected/history", label: "Loan History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
-          { href: "/protected/my-card", label: "Library Card", icon: CreditCard, roles: ["staff", "student"] },
-          { href: "/protected/fines", label: "Fines & Dues", icon: BookMarked, roles: ["admin", "librarian", "staff", "student"] },
-        ],
-      },
+    children: [
+      { href: "/protected/history", label: "Loan History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
+      { href: "/protected/violations", label: "Violations", icon: AlertTriangle, roles: ["admin", "librarian", "staff", "student"] },
     ]
   }
 ];
@@ -153,20 +125,43 @@ export function ProtectedNav({
   role?: string | null;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab") || "profile";
   const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
+
+  const settingsLinks = React.useMemo(() => {
+    const links = [
+      { id: "profile", label: "Profile" },
+      { id: "preferences", label: "Preferences" },
+      { id: "security", label: "Security" },
+    ];
+    if (normalizedRole === "admin" || normalizedRole === "librarian") {
+      links.push(
+        { id: "policies", label: "Policies" },
+        { id: "categories", label: "Categories" }
+      );
+    }
+    if (normalizedRole === "admin") {
+      links.push(
+        { id: "operations", label: "Operations" },
+        { id: "audit", label: "Audit Logs" },
+        { id: "gdpr", label: "GDPR" }
+      );
+    }
+    return links;
+  }, [normalizedRole]);
+
+  const isSettingsActive = pathname === "/protected/settings";
 
   const filteredGroups = React.useMemo(() => {
     return NAV_GROUPS.map(group => ({
       ...group,
-      sections: group.sections.filter(section => {
-        const canSeeSection = normalizedRole && section.roles.includes(normalizedRole);
-        const hasVisibleChildren = section.children.some(child => normalizedRole && child.roles.includes(normalizedRole));
-        return canSeeSection && hasVisibleChildren;
-      }).map(section => ({
-        ...section,
-        children: section.children.filter(child => normalizedRole && child.roles.includes(normalizedRole))
-      }))
-    })).filter(group => group.sections.length > 0 && (!normalizedRole || group.roles.includes(normalizedRole)));
+      children: group.children.filter(child => normalizedRole && child.roles.includes(normalizedRole))
+    })).filter(group => {
+      const canSeeGroup = normalizedRole && group.roles.includes(normalizedRole);
+      const hasVisibleChildren = group.children.length > 0;
+      return canSeeGroup && hasVisibleChildren;
+    });
   }, [normalizedRole]);
 
   const isActive = (href: string) => {
@@ -189,77 +184,82 @@ export function ProtectedNav({
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarGroup>
-          <SidebarMenu>
-            {normalizedRole && ["admin", "librarian", "staff"].includes(normalizedRole) && (
+        <nav className="flex flex-col gap-4">
+          <SidebarGroup>
+            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive('/protected/circulation')}
-                  tooltip="Circulation Desk"
+                  isActive={isActive(DASHBOARD_LINK.href)}
+                  tooltip={DASHBOARD_LINK.label}
                 >
-                  <Link href="/protected/circulation">
-                    <RotateCcw />
-                    <span>Circulation Desk</span>
+                  <Link href={DASHBOARD_LINK.href}>
+                    <DASHBOARD_LINK.icon />
+                    <span>{DASHBOARD_LINK.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            )}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive(DASHBOARD_LINK.href)}
-                tooltip={DASHBOARD_LINK.label}
-              >
-                <Link href={DASHBOARD_LINK.href}>
-                  <DASHBOARD_LINK.icon />
-                  <span>{DASHBOARD_LINK.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === "/protected/settings"}
-                tooltip="Settings"
-              >
-                <Link href="/protected/settings">
-                  <Settings />
-                  <span>Settings</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+              <Collapsible defaultOpen={isSettingsActive} className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
+                      <Settings />
+                      <span>Settings</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {settingsLinks.map((item) => {
+                        const href = `/protected/settings?tab=${item.id}`;
+                        const isSubActive = isSettingsActive && currentTab === item.id;
+                        return (
+                          <SidebarMenuSubItem key={item.id}>
+                            <SidebarMenuSubButton asChild isActive={isSubActive}>
+                              <Link href={href} className="flex items-center gap-2">
+                                <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isSubActive ? "bg-sidebar-primary" : "bg-transparent")} />
+                                <span className={cn("truncate", isSubActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroup>
 
-        {filteredGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden px-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-sidebar-foreground/70">
-              {group.label}
-            </SidebarGroupLabel>
+          <SidebarGroup>
             <SidebarMenu>
-              {group.sections.map((section) => (
+              {filteredGroups.map((group) => (
                 <Collapsible
-                  key={section.id}
+                  key={group.id}
                   asChild
-                  defaultOpen={section.children.some(child => isActive(child.href))}
+                  defaultOpen={group.children.some(child => isActive(child.href))}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={section.label}>
-                        <section.icon />
-                        <span>{section.label}</span>
+                      <SidebarMenuButton tooltip={group.label} isActive={group.children.some(child => isActive(child.href))}>
+                        <group.icon />
+                        <span>{group.label}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {section.children.map((item) => (
+                        {group.children.map((item) => (
                           <SidebarMenuSubItem key={item.href}>
                             <SidebarMenuSubButton asChild isActive={isActive(item.href)}>
-                              <Link href={item.href}>
-                                <span>{item.label}</span>
+                              <Link href={item.href} className="flex items-center gap-2">
+                                {isActive(item.href) ? (
+                                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-primary" />
+                                ) : (
+                                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-transparent" />
+                                )}
+                                <span className={cn("truncate", isActive(item.href) && "font-semibold text-sidebar-primary")}>{item.label}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
@@ -271,7 +271,7 @@ export function ProtectedNav({
               ))}
             </SidebarMenu>
           </SidebarGroup>
-        ))}
+        </nav>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-4">

@@ -40,9 +40,14 @@ export function HeartbeatBanner() {
   };
 
   useEffect(() => {
-    checkHeartbeat(); // immediate check on mount
+    const initTimer = setTimeout(() => {
+      checkHeartbeat();
+    }, 5000);
     const id = setInterval(checkHeartbeat, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(initTimer);
+      clearInterval(id);
+    };
   }, []);
 
   if (!serverOffline) return null;

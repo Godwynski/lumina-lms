@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, Suspense } from 'react';
+import useSWR from 'swr';
 import { getBooks, softDeleteBook } from '@/lib/actions/catalog';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -15,29 +17,26 @@ import { Button } from '@/components/ui/button';
 import { Book } from '@/lib/types';
 import { ModernInventoryClient } from '@/components/inventory/ModernInventoryClient';
 
-export default function CatalogPage() {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState(true);
+function CatalogSkeleton() {
+  return (
+    <div className="w-full space-y-4 pb-5 md:pb-7 animate-pulse">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm h-16 w-full" />
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm h-12 w-1/2" />
+      <div className="space-y-2 mt-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-24 w-full rounded-lg bg-muted border border-border" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CatalogData() {
+  const { data: books, mutate } = useSWR('catalog', () => getBooks(), { suspense: true });
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [deleteError, setDeleteError] = useState('');
-
-  useEffect(() => {
-    loadBooks();
-  }, []);
-
-  const loadBooks = async () => {
-    try {
-      setLoading(true);
-      const data = await getBooks();
-      setBooks(data);
-    } catch (error) {
-      console.error('Failed to load books', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDeleteClick = (book: Book) => {
     setBookToDelete(book);
@@ -51,31 +50,17 @@ export default function CatalogPage() {
     try {
       await softDeleteBook(bookToDelete.id);
       setDeleteModalOpen(false);
-      loadBooks();
+      toast.success(`Removed "${bookToDelete.title}" from inventory`);
+      mutate();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to delete book';
       setDeleteError(message);
     }
   };
 
-  if (loading) return (
-    <div className="flex min-h-[60vh] items-center justify-center p-8">
-      <div className="flex flex-col items-center gap-6">
-        <div className="relative">
-          <div className="h-16 w-16 rounded-full border-4 border-border" />
-          <Loader2 className="absolute inset-0 h-16 w-16 animate-spin text-primary" />
-        </div>
-        <div className="text-center">
-          <p className="mb-2 text-xl font-bold uppercase tracking-wider text-foreground">Synchronizing inventory</p>
-          <p className="text-sm text-muted-foreground">Loading current catalog records...</p>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="w-full">
-      <ModernInventoryClient books={books} onDelete={handleDeleteClick} />
+      <ModernInventoryClient books={books || []} onDelete={handleDeleteClick} />
 
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent className="rounded-xl border-border p-4 shadow-sm sm:max-w-[420px]">
@@ -103,6 +88,14 @@ export default function CatalogPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={<CatalogSkeleton />}>
+      <CatalogData />
+    </Suspense>
   );
 }
 

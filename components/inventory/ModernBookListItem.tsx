@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Book as BookIcon, MapPin, Trash2, Package, CircleOff, AlertTriangle } from "lucide-react";
+import { Book as BookIcon, MapPin, Trash2, Package, CircleOff, AlertTriangle, CheckCircle2, Pencil, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Book } from "@/lib/types";
@@ -17,85 +17,94 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
   const isLowStock = !isOutOfStock && book.available_copies <= 2;
   
   return (
-    <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="group relative flex flex-col gap-2 overflow-hidden rounded-lg border border-border bg-card px-3 py-2.5 transition-all hover:bg-muted sm:flex-row sm:items-center sm:gap-3">
-      <div className={`h-9 w-9 shrink-0 rounded-md flex items-center justify-center transition-all duration-500 ${
-        isOutOfStock 
-        ? "status-warning" 
-        : "bg-muted text-muted-foreground"
-      }`}>
-        <BookIcon size={16} />
-      </div>
+    <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="group relative flex min-w-[700px] flex-row items-center gap-4 rounded-lg border border-border bg-card pr-3 transition-all hover:bg-muted">
+      
+      {/* Pinned Title & Context Column */}
+      <div className="sticky left-0 z-10 flex min-w-[280px] flex-1 shrink-0 items-center justify-start gap-4 bg-card py-2.5 pl-3 pr-4 shadow-[12px_0_15px_-10px_rgba(0,0,0,0.06)] transition-colors group-hover:bg-muted">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-all duration-500 ${
+          isOutOfStock 
+          ? "status-warning" 
+          : "bg-muted text-muted-foreground"
+        }`}>
+          <BookIcon size={18} />
+        </div>
 
-      {/* Main Info */}
-      <div className="min-w-0 flex-1 text-center sm:text-left">
-        <h3 className="truncate font-bold text-foreground transition-colors group-hover:text-foreground">
-          {book.title}
-        </h3>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">by {book.author}</p>
-        
-        <div className="flex items-center justify-center sm:justify-start gap-4 mt-2">
-           <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground">
-              <MapPin size={10} />
-              {book.location || "Shelf A1"}
-           </div>
-           <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground">
-              <Package size={10} />
-              {book.isbn || "INTERNAL"}
-           </div>
+        <div className="min-w-0 flex-1 text-left">
+          <h3 className="truncate font-bold text-foreground transition-colors group-hover:text-foreground">
+            {book.title}
+          </h3>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">by {book.author}</p>
+          
+          <div className="mt-2 flex items-center justify-start gap-4">
+             <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground">
+                <MapPin size={10} />
+                {book.location || "Shelf A1"}
+             </div>
+             <div className="flex items-center gap-1.5 rounded-sm bg-muted/60 px-1.5 py-0.5 text-[11px] font-bold tracking-wider text-foreground shadow-sm ring-1 ring-border/50">
+                <Package size={12} className="text-muted-foreground" />
+                {book.isbn || "INTERNAL-ID"}
+             </div>
+          </div>
         </div>
       </div>
 
       {/* Stock Status */}
-      <div className="flex min-w-[110px] flex-col items-center gap-1 sm:items-end">
+      <div className="flex min-w-[140px] flex-col justify-center items-start gap-1.5 py-2.5">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {book.available_copies} of {book.total_copies} copies
         </span>
-        {isOutOfStock && (
-          <span className="status-danger inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold">
-            <CircleOff className="h-3 w-3" />
+        
+        {isOutOfStock ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            <CircleOff className="h-3.5 w-3.5" />
             Out of stock
           </span>
-        )}
-        {isLowStock && (
-          <span className="status-warning inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold">
-            <AlertTriangle className="h-3 w-3" />
+        ) : isLowStock ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5" />
             Low stock
           </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Available
+          </span>
         )}
-         <div className="h-1 w-20 overflow-hidden rounded-full bg-muted">
-            <div 
-             className={`h-full ${isOutOfStock ? "status-fill-danger" : isLowStock ? "status-fill-warning" : "status-fill-success"}`} 
-             style={{ width: `${(book.available_copies / (book.total_copies || 1)) * 100}%` }}
-            />
-        </div>
       </div>
 
+      {/* Empty space filler mapped from original width usage */}
+      <div className="flex-1" />
+
       {/* Action Area */}
-       <div className="flex items-center gap-1.5">
+       <div className="flex items-center gap-2 py-2.5 pl-4 ml-auto border-l border-border/50">
         <Button 
           onClick={() => onEdit(book)}
-          variant="outline" 
-          size="sm" 
-          className="h-8 rounded-md px-2.5 text-[11px] font-semibold"
+          variant="ghost" 
+          size="icon" 
+          className="h-11 w-11 shrink-0 rounded-md bg-transparent text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground shadow-none"
+          title="Edit"
+          aria-label="Edit book metadata"
         >
-          Edit
+          <Pencil size={18} />
         </Button>
         <Link href={`/protected/catalog/${book.id}`}>
-          <Button variant="outline" size="sm" className="h-8 rounded-md px-2.5 text-[11px] font-semibold">
-            Open
+          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-md bg-transparent text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground shadow-none" title="Open details" aria-label="Open book details">
+            <ExternalLink size={18} />
           </Button>
         </Link>
          <Button 
            onClick={() => onDelete(book)}
            variant="ghost" 
            size="icon" 
-           className="h-8 w-8 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+           className="h-11 w-11 shrink-0 rounded-md bg-transparent text-muted-foreground hover:bg-destructive/10 hover:text-destructive shadow-none"
+           title="Remove"
+           aria-label="Remove book"
          >
-          <Trash2 size={14} />
+          <Trash2 size={18} />
         </Button>
       </div>
 
-      <div className="absolute left-0 top-0 h-full w-1 bg-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-1 bg-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
     </motion.div>
   );
 }

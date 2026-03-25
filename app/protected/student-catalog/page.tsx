@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, Suspense } from 'react';
+import useSWR from 'swr';
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
 import Image from 'next/image';
 import {
@@ -14,86 +15,43 @@ import { CompactPagination } from '@/components/ui/compact-pagination';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import Link from 'next/link';
 
-type CatalogBook = {
-  id: string;
-  title: string;
-  author: string;
-  isbn?: string | null;
-  cover_url?: string | null;
-  available_copies: number;
-  total_copies: number;
-  section?: string | null;
-};
-
 type CatalogCategory = {
   id: string;
   name: string;
 };
 
-export default function StudentCatalogPage() {
+function StudentCatalogData() {
   const [query, setQuery] = useState('');
-  const [books, setBooks] = useState<CatalogBook[]>([]);
-  const [categories, setCategories] = useState<CatalogCategory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalBooks, setTotalBooks] = useState(0);
   const pageSize = 16;
   
-  // Filters
   const [selectedCategory, setSelectedCategory] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
-  const [loadError, setLoadError] = useState('');
   const [sortBy, setSortBy] = useState<'title' | 'author' | 'availability'>('title');
 
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const data = await getCategoriesCached();
-        setCategories(data);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    loadCategories();
-  }, []);
-
-  const loadBooks = useCallback(async (currentPage = 1) => {
-    setLoading(true);
-    setLoadError('');
-    try {
-      const result = await getPublicBooksCached(
-        query,
-        selectedCategory,
-        '',
-        availableOnly,
-        currentPage,
-        pageSize,
-      );
-
-      setBooks(result.books);
-      setTotalBooks(result.total);
-    } catch (err) {
-      console.error(err);
-      setLoadError('Unable to load catalog right now. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [query, selectedCategory, availableOnly, pageSize]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, selectedCategory, availableOnly]);
-
-  useEffect(() => {
-    void loadBooks(page);
-  }, [page, loadBooks]);
+  const handleQueryChange = (val: string) => { setQuery(val); setPage(1); };
+  const handleCatChange = (val: string) => { setSelectedCategory(val === 'all' ? '' : val); setPage(1); };
+  const handleAvailableToggle = () => { setAvailableOnly(p => !p); setPage(1); };
 
   const clearFilters = () => {
     setSelectedCategory('');
     setAvailableOnly(false);
     setQuery('');
     setSortBy('title');
+    setPage(1);
   };
+
+  const { data: categories = [] } = useSWR('public-categories', () => getCategoriesCached(), { suspense: true });
+
+  const swrKey = ['student-books', query, selectedCategory, availableOnly, page, pageSize];
+  const { data: booksData, error } = useSWR(
+    swrKey,
+    () => getPublicBooksCached(query, selectedCategory, '', availableOnly, page, pageSize),
+    { keepPreviousData: true, suspense: true }
+  );
+
+  const books = booksData?.books || [];
+  const totalBooks = booksData?.total || 0;
 
   const displayBooks = [...books].sort((a, b) => {
     if (sortBy === 'author') return a.author.localeCompare(b.author);
@@ -106,7 +64,7 @@ export default function StudentCatalogPage() {
       title="Book Catalog"
       description="Browse available books, sections, and current shelf availability."
       feedback={
-        loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
+        error ? <div className="status-danger rounded-lg px-3 py-2 text-sm">Unable to load catalog right now. Please try again.</div> : null
       }
       controls={
         <>
@@ -116,7 +74,7 @@ export default function StudentCatalogPage() {
               type="text"
               placeholder="Search title, author, or ISBN"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => handleQueryChange(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -124,14 +82,14 @@ export default function StudentCatalogPage() {
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Select
               value={selectedCategory || 'all'}
-              onValueChange={(value) => setSelectedCategory(value === 'all' ? '' : value)}
+              onValueChange={handleCatChange}
             >
               <SelectTrigger className="h-8 min-w-[170px] px-2.5 text-xs">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
+                {categories.map((category: CatalogCategory) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -143,7 +101,7 @@ export default function StudentCatalogPage() {
               type="button"
               variant={availableOnly ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setAvailableOnly((prev) => !prev)}
+              onClick={handleAvailableToggle}
               className="h-8 px-3 text-xs"
             >
               Available only
@@ -172,7 +130,7 @@ export default function StudentCatalogPage() {
         </>
       }
       pagination={
-        !loading && totalBooks > 0 ? (
+        totalBooks > 0 ? (
           <CompactPagination
             page={page}
             totalItems={totalBooks}
@@ -193,13 +151,7 @@ export default function StudentCatalogPage() {
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {loading ? (
-            <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                Loading catalog...
-              </td>
-            </tr>
-          ) : displayBooks.length > 0 ? (
+          {displayBooks.length > 0 ? (
             displayBooks.map((book) => (
               <tr key={book.id} className="hover:bg-muted/40">
                 <td className="px-4 py-3">
@@ -236,7 +188,7 @@ export default function StudentCatalogPage() {
               </tr>
             ))
           ) : (
-            <tr>
+             <tr>
               <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
                 No books found for the selected filters.
               </td>
@@ -245,5 +197,27 @@ export default function StudentCatalogPage() {
         </tbody>
       </table>
     </AdminTableShell>
+  );
+}
+
+function StudentCatalogSkeleton() {
+  return (
+    <div className="w-full animate-pulse p-4">
+      <div className="h-8 w-1/3 rounded-lg bg-muted border border-border mb-4"></div>
+      <div className="h-12 w-full rounded-lg bg-muted border border-border mb-6"></div>
+      <div className="space-y-3">
+        {[...Array(6)].map((_, i) => (
+           <div key={i} className="h-16 w-full rounded-lg bg-muted opacity-50 border border-border"></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function StudentCatalogPage() {
+  return (
+    <Suspense fallback={<StudentCatalogSkeleton />}>
+      <StudentCatalogData />
+    </Suspense>
   );
 }

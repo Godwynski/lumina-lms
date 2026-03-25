@@ -30,6 +30,8 @@
     "react-dom": "^19.0.0",
     "react-pdf": "^10.4.1",
     "sharp": "^0.34.5",
+    "sonner": "^2.0.7",
+    "swr": "^2.4.1",
     "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {

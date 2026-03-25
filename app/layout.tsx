@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -38,6 +39,7 @@ export default function RootLayout({
       </head>
       <body className={`${appSans.className} antialiased`}>
         {children}
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );
