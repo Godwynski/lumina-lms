@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,13 +20,31 @@ interface ModernInventoryClientProps {
 }
 
 export function ModernInventoryClient({ books, onDelete }: ModernInventoryClientProps) {
-  const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
-  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out" | "low">("all");
-  const [sortBy, setSortBy] = useState<"title_asc" | "title_desc" | "availability_desc" | "availability_asc">("title_asc");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const [search, setSearch] = useState(searchParams.get("q") || "");
+  const [viewMode, setViewMode] = useState<"list" | "grid">((searchParams.get("view") as "list" | "grid" | null) || "grid");
+  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out" | "low">((searchParams.get("stock") as "all" | "in" | "out" | "low" | null) || "all");
+  const [sortBy, setSortBy] = useState<"title_asc" | "title_desc" | "availability_desc" | "availability_asc">((searchParams.get("sort") as "title_asc" | "title_desc" | "availability_desc" | "availability_asc" | null) || "title_asc");
   const [bookToEdit, setBookToEdit] = useState<Book | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(parseInt(searchParams.get("page") || "1", 10));
+
+  // Sync state to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (viewMode !== "grid") params.set("view", viewMode);
+    if (stockFilter !== "all") params.set("stock", stockFilter);
+    if (sortBy !== "title_asc") params.set("sort", sortBy);
+    if (page !== 1) params.set("page", page.toString());
+    
+    startTransition(() => {
+      router.replace(`?${params.toString()}`, { scroll: false });
+    });
+  }, [search, viewMode, stockFilter, sortBy, page, router]);
 
   const handleEditClick = (book: Book) => {
     setBookToEdit(book);
@@ -32,7 +52,11 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
   };
 
   const handleEditSuccess = () => {
-    window.location.reload();
+    toast.success("Inventory record updated successfully");
+    setIsEditDialogOpen(false);
+    startTransition(() => {
+      router.refresh();
+    });
   };
 
   const filteredBooks = useMemo(() => {
@@ -86,7 +110,7 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
 
   return (
     <div className="w-full space-y-3 pb-5 md:pb-7">
-      <div className="rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <div className="sticky top-2 z-20 rounded-xl border border-border bg-card/90 p-2.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-base font-semibold tracking-tight text-foreground">Book Catalog</h1>
@@ -164,15 +188,17 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
       </div>
 
       {viewMode === "list" ? (
-        <div className="space-y-2">
-          {pagedBooks.map((book) => (
-            <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
-          ))}
-          {filteredBooks.length === 0 && (
-            <div className="rounded-lg border border-dashed border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
-              No books match current filters.
-            </div>
-          )}
+        <div className="overflow-x-auto pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-thin">
+          <div className="space-y-2 min-w-[700px] pr-2">
+            {pagedBooks.map((book) => (
+              <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
+            ))}
+            {filteredBooks.length === 0 && (
+              <div className="rounded-lg border border-dashed border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground p-4">
+                No books match current filters.
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <InventoryGrid books={pagedBooks} onDelete={onDelete} onEdit={handleEditClick} />
