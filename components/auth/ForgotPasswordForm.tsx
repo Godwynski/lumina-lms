@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState } from "react";
 import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/layout/Logo";
 import { AuthErrorAlert } from "@/components/auth/auth-feedback";
 import {
   Card,

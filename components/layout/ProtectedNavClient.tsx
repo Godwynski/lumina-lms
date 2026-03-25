@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 
 const ProtectedNavNoSSR = dynamic(
-  () => import("@/components/protected-nav").then((module) => module.ProtectedNav),
+  () => import("@/components/layout/ProtectedNav").then((module) => module.ProtectedNav),
   {
     ssr: false,
     loading: () => null,
