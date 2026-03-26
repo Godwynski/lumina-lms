@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { getBooks, softDeleteBook } from '@/lib/actions/catalog';
 import { AlertTriangle } from 'lucide-react';
@@ -32,7 +32,7 @@ function CatalogSkeleton() {
 }
 
 function CatalogData() {
-  const { data: books, mutate } = useSWR('catalog', () => getBooks(), { suspense: true });
+  const { data: books, mutate, isLoading } = useSWR('catalog', () => getBooks());
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
@@ -57,6 +57,8 @@ function CatalogData() {
       setDeleteError(message);
     }
   };
+
+  if (isLoading) return <CatalogSkeleton />;
 
   return (
     <div className="w-full">
@@ -92,10 +94,6 @@ function CatalogData() {
 }
 
 export default function CatalogPage() {
-  return (
-    <Suspense fallback={<CatalogSkeleton />}>
-      <CatalogData />
-    </Suspense>
-  );
+  return <CatalogData />;
 }
 

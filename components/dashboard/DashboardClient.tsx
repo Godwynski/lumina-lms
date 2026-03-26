@@ -62,7 +62,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
     {
       title: 'Account',
       items: [
-        { title: 'Loan History', href: '/protected/history', icon: History },
+        { title: 'Borrow History', href: '/protected/history', icon: History },
       ]
     }
   ] : [
@@ -146,7 +146,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
                   <p className="text-lg font-bold text-foreground">{stats.myActiveLoans}</p>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {stats.myActiveLoans > 0 ? 'Check due dates in Loan History.' : 'No active borrowing right now.'}
+                  {stats.myActiveLoans > 0 ? 'Check due dates in Borrow History.' : 'No active borrowing right now.'}
                 </p>
               </div>
 

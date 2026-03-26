@@ -22,7 +22,6 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronDown,
-  Search,
   CheckCircle2,
   ShieldCheck,
   UserCheck,
@@ -86,7 +85,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Personal settings state
   const [displayName, setDisplayName] = useState("");
@@ -343,15 +341,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     }
   }, [activeTab, allTabs, router]);
 
-  const filteredTabs = useMemo(() => {
-    if (!searchQuery) return allTabs;
-    const query = searchQuery.toLowerCase();
-    return allTabs.filter(tab => 
-      tab.label.toLowerCase().includes(query) || 
-      tab.description.toLowerCase().includes(query)
-    );
-  }, [allTabs, searchQuery]);
-
   const activeTabMeta = useMemo(() => allTabs.find((tab) => tab.id === activeTab), [activeTab, allTabs]);
   const hasPendingPhoto = !!selectedPhotoBlob;
 
@@ -388,16 +377,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
             <p className="text-sm text-muted-foreground">Manage profile, preferences, security, and system configuration.</p>
           </div>
 
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search settings"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 rounded-lg pl-9"
-            />
-          </div>
         </div>
       </motion.div>
 
@@ -409,7 +388,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
           <div className="space-y-4 p-4">
             <SectionNav
               title="Personal"
-              items={filteredTabs.filter((t) => t.section === "personal")}
+              items={allTabs.filter((t) => t.section === "personal")}
               activeId={activeTab}
               onChange={changeTab}
             />
@@ -417,7 +396,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
             {canManageSystem && (
               <SectionNav
                 title="System Administration"
-                items={filteredTabs.filter((t) => t.section === "admin")}
+                items={allTabs.filter((t) => t.section === "admin")}
                 activeId={activeTab}
                 onChange={changeTab}
               />
