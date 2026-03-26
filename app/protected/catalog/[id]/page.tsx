@@ -153,7 +153,7 @@ export default function StaffBookManagementPage() {
             <div className="mb-3 flex items-start gap-3">
               <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
                 {book.cover_url ? (
-                  <Image src={book.cover_url} alt={book.title} fill className="object-cover" />
+                  <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized={true} />
                 ) : (
                   <BookOpen className="h-full w-full p-3 text-muted-foreground" />
                 )}

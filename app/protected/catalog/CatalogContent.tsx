@@ -44,7 +44,7 @@ export function CatalogContent({ initialData, categories, page, q, stock, catego
   const { data, mutate, isLoading } = useSWR(
     ['catalog', page, q, stock, categoryId],
     () => getBooks(q, categoryId || undefined, page, 9),
-    { fallbackData: initialData, revalidateOnMount: false }
+    { fallbackData: initialData, revalidateOnMount: true }
   );
 
   const books = data?.data || [];
