@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Lock, Shield, Loader2, Clock } from "lucide-react";
+import { CompactPagination } from "@/components/ui/compact-pagination";
 
 interface AuditLog {
   id: string;
@@ -23,21 +24,35 @@ interface AuditLog {
   action: string;
   reason?: string;
   created_at: string;
+  profiles?: {
+    full_name: string | null;
+    email: string | null;
+    role: string | null;
+  } | null;
 }
 
 export function AuditLogViewer() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("");
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, []);
-
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/audit-logs");
+      const offset = (page - 1) * pageSize;
+      const queryParams = new URLSearchParams({
+        limit: pageSize.toString(),
+        offset: offset.toString()
+      });
+      
+      if (filter.trim()) {
+        queryParams.append("query", filter.trim());
+      }
+      
+      const response = await fetch(`/api/admin/audit-logs?${queryParams.toString()}`);
       if (!response.ok) throw new Error("Failed to fetch audit logs");
       const data = await response.json();
       const nextLogs = Array.isArray(data)
@@ -45,26 +60,24 @@ export function AuditLogViewer() {
         : Array.isArray(data?.logs)
           ? data.logs
           : [];
+          
       setLogs(nextLogs);
+      setTotal(data?.total || nextLogs.length);
     } catch (err) {
       console.error("Error fetching audit logs:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filter, pageSize]);
 
-  const normalizedFilter = filter.trim().toLowerCase();
-  const filteredLogs = logs.filter((log) => {
-    if (!normalizedFilter) return true;
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
-    const entityType = (log.entity_type ?? "").toLowerCase();
-    const action = (log.action ?? "").toLowerCase();
-
-    return (
-      entityType.includes(normalizedFilter) ||
-      action.includes(normalizedFilter)
-    );
-  });
+  const handleRefresh = useCallback(() => {
+    if (page === 1) fetchAuditLogs();
+    else setPage(1);
+  }, [page, fetchAuditLogs]);
 
   return (
     <div className="space-y-4">
@@ -73,14 +86,17 @@ export function AuditLogViewer() {
           placeholder="Filter by entity or action"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleRefresh();
+          }}
           className="h-9 rounded-md"
         />
         <Button
-          onClick={fetchAuditLogs}
+          onClick={handleRefresh}
           variant="outline"
           className="h-9 rounded-md px-3 text-xs"
         >
-          Refresh
+          Search
         </Button>
       </div>
 
@@ -89,36 +105,62 @@ export function AuditLogViewer() {
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
         </Card>
-      ) : filteredLogs.length === 0 ? (
+      ) : logs.length === 0 ? (
         <Card className="border-border bg-card p-6 text-center">
           <Clock className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">No logs found.</p>
         </Card>
       ) : (
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {filteredLogs.map((log) => (
-            <Card key={log.id} className="border-border bg-card p-2.5">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <p className="text-xs font-semibold text-foreground">
-                      {log.action.toUpperCase()}
-                    </p>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {log.entity_type}
-                    </span>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {logs.map((log) => (
+              <Card key={log.id} className="border-border bg-card p-3 md:p-4">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Shield className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="inline-flex items-center rounded-sm bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                        {log.action.toUpperCase()}
+                      </span>
+                      <span className="font-mono text-xs font-medium text-muted-foreground border-l border-border pl-2">
+                        {log.entity_type}
+                      </span>
+                      {log.entity_id && (
+                        <span className="font-mono text-[10px] text-muted-foreground/70 truncate max-w-[120px]" title={log.entity_id}>
+                          ID: {log.entity_id.split('-')[0]}...
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col gap-1 pl-6">
+                       <span className="text-xs text-foreground font-medium">
+                         {log.profiles?.full_name || log.profiles?.email || "Unknown Admin"} 
+                         {log.profiles?.role && <span className="text-muted-foreground font-normal"> ({log.profiles.role})</span>}
+                       </span>
+                       
+                      {log.reason && (
+                        <p className="text-xs text-muted-foreground italic border-l-2 border-muted pl-2">{log.reason}</p>
+                      )}
+                    </div>
                   </div>
-                  {log.reason && (
-                    <p className="mt-1 text-[11px] text-muted-foreground">{log.reason}</p>
-                  )}
+                  
+                  <div className="flex flex-col items-start md:items-end text-xs text-muted-foreground shrink-0 pl-6 md:pl-0">
+                    <span className="font-medium">{new Date(log.created_at).toLocaleDateString()}</span>
+                    <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                  </div>
                 </div>
-                <p className="ml-2 whitespace-nowrap text-[11px] text-muted-foreground">
-                  {new Date(log.created_at).toLocaleString()}
-                </p>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
+          
+          {total > 0 && (
+            <CompactPagination
+              page={page}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+            />
+          )}
         </div>
       )}
     </div>

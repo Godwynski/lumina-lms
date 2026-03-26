@@ -89,7 +89,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: History,
     roles: ["admin", "librarian", "staff", "student"],
     children: [
-      { href: "/protected/history", label: "Loan History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
+      { href: "/protected/history", label: "Borrow History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
       { href: "/protected/violations", label: "Violations", icon: AlertTriangle, roles: ["admin", "librarian", "staff", "student"] },
     ]
   }

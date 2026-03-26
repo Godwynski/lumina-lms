@@ -102,7 +102,7 @@ export function ModernAssetCard({ resource, selected, onSelectChange }: AssetCar
                 <span className="text-[9px] font-semibold uppercase tracking-wider">Last Modified</span>
               </div>
               <p className="text-xs font-semibold text-muted-foreground">
-                {new Date(modifiedAt).toLocaleDateString()}
+                {new Date(modifiedAt).toLocaleDateString('en-US')}
               </p>
             </div>
             <div className="rounded-md border border-border bg-muted p-2">

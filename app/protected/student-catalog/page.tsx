@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
 import Image from 'next/image';
@@ -41,13 +41,13 @@ function StudentCatalogData() {
     setPage(1);
   };
 
-  const { data: categories = [] } = useSWR('public-categories', () => getCategoriesCached(), { suspense: true });
+  const { data: categories = [] } = useSWR('public-categories', () => getCategoriesCached());
 
   const swrKey = ['student-books', query, selectedCategory, availableOnly, page, pageSize];
-  const { data: booksData, error } = useSWR(
+  const { data: booksData, error, isLoading } = useSWR(
     swrKey,
     () => getPublicBooksCached(query, selectedCategory, '', availableOnly, page, pageSize),
-    { keepPreviousData: true, suspense: true }
+    { keepPreviousData: true }
   );
 
   const books = booksData?.books || [];
@@ -58,6 +58,8 @@ function StudentCatalogData() {
     if (sortBy === 'availability') return b.available_copies - a.available_copies;
     return a.title.localeCompare(b.title);
   });
+
+  if (isLoading && !booksData) return <StudentCatalogSkeleton />;
 
   return (
     <AdminTableShell
@@ -215,9 +217,5 @@ function StudentCatalogSkeleton() {
 }
 
 export default function StudentCatalogPage() {
-  return (
-    <Suspense fallback={<StudentCatalogSkeleton />}>
-      <StudentCatalogData />
-    </Suspense>
-  );
+  return <StudentCatalogData />;
 }
