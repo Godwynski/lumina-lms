@@ -46,6 +46,7 @@ export default function AddBookPage() {
   });
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -79,13 +80,17 @@ export default function AddBookPage() {
 
         if (googleData.items && googleData.items.length > 0) {
           const info = googleData.items[0].volumeInfo;
-          setFormData(prev => ({
-            ...prev,
-            title: info.title || prev.title,
-            author: info.authors ? info.authors.join(', ') : prev.author,
-            cover_url: info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.thumbnail || prev.cover_url,
-            tags: info.categories ? info.categories.join(', ') : prev.tags,
-          }));
+          setFormData(prev => {
+            const rawCoverUrl = info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.thumbnail || prev.cover_url;
+            const secureCoverUrl = rawCoverUrl ? rawCoverUrl.replace('http://', 'https://') : '';
+            return {
+              ...prev,
+              title: info.title || prev.title,
+              author: info.authors ? info.authors.join(', ') : prev.author,
+              cover_url: secureCoverUrl,
+              tags: info.categories ? info.categories.join(', ') : prev.tags,
+            };
+          });
           bookFound = true;
         }
       } catch (e) {
@@ -99,13 +104,17 @@ export default function AddBookPage() {
         const bookData = olData[`ISBN:${cleanIsbn}`];
         
         if (bookData) {
-          setFormData(prev => ({
-            ...prev,
-            title: bookData.title || prev.title,
-            author: bookData.authors?.[0]?.name || prev.author,
-            cover_url: bookData.cover?.large || bookData.cover?.medium || prev.cover_url,
-            tags: bookData.subjects ? bookData.subjects.slice(0, 5).map((s: { name: string }) => s.name).join(', ') : prev.tags,
-          }));
+          setFormData(prev => {
+            const rawCoverUrl = bookData.cover?.large || bookData.cover?.medium || prev.cover_url;
+            const secureCoverUrl = rawCoverUrl ? rawCoverUrl.replace('http://', 'https://') : '';
+            return {
+              ...prev,
+              title: bookData.title || prev.title,
+              author: bookData.authors?.[0]?.name || prev.author,
+              cover_url: secureCoverUrl,
+              tags: bookData.subjects ? bookData.subjects.slice(0, 5).map((s: { name: string }) => s.name).join(', ') : prev.tags,
+            };
+          });
           bookFound = true;
         }
       }
@@ -264,6 +273,16 @@ export default function AddBookPage() {
     };
   }, [stopScanner]);
 
+  useEffect(() => {
+    if (!coverFile) {
+      setCoverPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(coverFile);
+    setCoverPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [coverFile]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -271,17 +290,23 @@ export default function AddBookPage() {
 
     try {
       let finalCoverUrl = formData.cover_url;
+      const uploadFile = coverFile;
 
-      // Handle cover upload if file selected
-      if (coverFile) {
-        const compressedBlob = await compressImage(coverFile, {
-          maxDimension: 1200,
-          quality: 0.8,
-          type: "image/webp"
-        });
-        
+      // Handle cover upload if file selected OR auto-persist remote URL
+      if (uploadFile || (!uploadFile && formData.cover_url && formData.cover_url.startsWith('http'))) {
         const fileForm = new FormData();
-        fileForm.append('file', new File([compressedBlob], `cover-${Date.now()}.webp`, { type: "image/webp" }));
+        
+        if (uploadFile) {
+          const compressedBlob = await compressImage(uploadFile, {
+            maxDimension: 1200,
+            quality: 0.8,
+            type: "image/webp"
+          });
+          fileForm.append('file', new File([compressedBlob], `cover-${Date.now()}.webp`, { type: "image/webp" }));
+        } else {
+          // Send URL to server for fetching (bypasses client-side CORS)
+          fileForm.append('url', formData.cover_url);
+        }
         
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
@@ -318,6 +343,7 @@ export default function AddBookPage() {
         cover_url: finalCoverUrl,
       }, formData.copies);
 
+      router.refresh();
       router.push('/protected/catalog');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to add book';
@@ -543,17 +569,18 @@ export default function AddBookPage() {
               Book Cover
             </h3>
             
-            <div className="relative flex aspect-[2/3] flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted">
-               {formData.cover_url || coverFile ? (
+            <div className="relative flex aspect-[2/3] flex-col items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted group">
+               {coverPreviewUrl || formData.cover_url ? (
                  <>
                    <Image 
-                    src={coverFile ? URL.createObjectURL(coverFile) : formData.cover_url} 
+                    src={coverPreviewUrl || formData.cover_url} 
                     alt="Preview" 
                     fill
                     className="object-cover transition-transform group-hover:scale-105"
+                    unoptimized={true}
                    />
-                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <Button variant="secondary" size="sm" className="h-7 rounded-md text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>
+                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                       <Button type="button" variant="secondary" size="sm" className="h-7 rounded-md text-[11px]" onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}>
                         Change Image
                       </Button>
                    </div>
@@ -570,7 +597,7 @@ export default function AddBookPage() {
               <input 
                 id="file-upload"
                 type="file" 
-                accept="image/jpeg, image/png, image/webp"
+                accept="image/jpeg, image/png, image/webp, image/jpg, image/gif"
                 className="hidden"
                 onChange={e => {
                   if (e.target.files && e.target.files.length > 0) {

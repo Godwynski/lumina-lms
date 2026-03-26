@@ -77,7 +77,7 @@ export function ModernBookCard({ book, onDelete, onEdit, index }: ModernBookCard
                 fill 
                 className="object-cover" 
                 sizes="(max-width: 768px) 30vw, (max-width: 1200px) 15vw, 10vw"
-                priority={index < 6}
+                unoptimized={true}
               />
             ) : (
               <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground"}`}>
