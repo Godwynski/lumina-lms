@@ -19,10 +19,9 @@ interface ModernBookCardProps {
   book: Book;
   onDelete: (book: Book) => void;
   onEdit: (book: Book) => void;
-  index: number;
 }
 
-export function ModernBookCard({ book, onDelete, onEdit, index }: ModernBookCardProps) {
+export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   
   return (

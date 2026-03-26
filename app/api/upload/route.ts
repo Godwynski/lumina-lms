@@ -63,7 +63,7 @@ export async function POST(_req: NextRequest) {
         }
         
         const bytes = await res.arrayBuffer();
-        console.log(`Fetched remote image: ${url}, size: ${bytes.byteLength}, type: ${contentType}`);
+        console.warn(`Fetched remote image: ${url}, size: ${bytes.byteLength}, type: ${contentType}`);
         
         if (bytes.byteLength > MAX_UPLOAD_SIZE_BYTES) {
           return NextResponse.json({ error: "Remote image is too large." }, { status: 400 });
