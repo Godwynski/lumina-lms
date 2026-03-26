@@ -12,6 +12,16 @@ export async function AuthButton() {
   } = await supabase.auth.getUser();
   const role = user ? await getUserRole() : null;
 
+  let profile = null;
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    profile = profileData;
+  }
+
   if (!user) {
     return (
       <div className="flex gap-2">
@@ -25,5 +35,5 @@ export async function AuthButton() {
     );
   }
 
-  return <UserNav user={user} role={role} />;
+  return <UserNav user={user} profile={profile} role={role} />;
 }

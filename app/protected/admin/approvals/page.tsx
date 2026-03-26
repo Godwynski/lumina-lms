@@ -149,11 +149,16 @@ export default function ApprovalsPage() {
     }
   };
 
-  const filteredCards = cards.filter(card => 
-    card.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    card.profiles?.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    card.card_number.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCards = cards.filter(card => {
+    const fullName = card.profiles?.full_name?.toLowerCase() || '';
+    const studentId = card.profiles?.student_id?.toLowerCase() || '';
+    const cardNumber = card.card_number?.toLowerCase() || '';
+    const search = searchQuery.toLowerCase();
+
+    return fullName.includes(search) || 
+           studentId.includes(search) || 
+           cardNumber.includes(search);
+  });
 
   const totalPages = Math.max(1, Math.ceil(filteredCards.length / pageSize));
   const paginatedCards = filteredCards.slice((currentPage - 1) * pageSize, currentPage * pageSize);

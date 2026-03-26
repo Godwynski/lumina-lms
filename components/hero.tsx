@@ -27,10 +27,10 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
           <>
             <p className="inline-flex items-center rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-600">Library Operations Platform</p>
             <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-900 md:text-4xl">
-              Structured, reliable library management for every role.
+              Intelligent Library Operations for the Modern Era.
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-600 md:text-base">
-              Lumina centralizes catalog operations, circulation, and digital resources in one clean operational interface.
+              Streamline physical and digital resource management with role-based access, smart circulation, and unified identity.
             </p>
           </>
         )}

@@ -12,10 +12,12 @@ const ProtectedNavNoSSR = dynamic(
 
 export function ProtectedNavClient({
   role,
-  authNode,
+  user,
+  profile,
 }: {
   role?: string | null;
-  authNode?: React.ReactNode;
+  user?: any;
+  profile?: any;
 }) {
-  return <ProtectedNavNoSSR role={role} authNode={authNode} />;
+  return <ProtectedNavNoSSR role={role} user={user} profile={profile} />;
 }

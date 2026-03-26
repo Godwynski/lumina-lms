@@ -48,6 +48,8 @@ interface Props {
   role: Role;
   profileName: string;
   avatarUrl: string;
+  address: string;
+  phone: string;
   settings: PolicySetting[];
   categories: Category[];
 }
@@ -78,7 +80,7 @@ type NavTab = {
   section: "personal" | "admin";
 };
 
-export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role, profileName, avatarUrl, settings, categories }: Props) {
+export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role, profileName, avatarUrl, address, phone, settings, categories }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
@@ -88,6 +90,8 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
   // Personal settings state
   const [displayName, setDisplayName] = useState("");
+  const [addressValue, setAddressValue] = useState("");
+  const [phoneValue, setPhoneValue] = useState("");
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [savedMsg, setSavedMsg] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -102,6 +106,8 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     const loadPrefs = async () => {
       setMounted(true);
       setDisplayName(profileName || "");
+      setAddressValue(address || "");
+      setPhoneValue(phone || "");
 
       try {
         const response = await fetch("/api/ui-preferences", { method: "GET" });
@@ -145,7 +151,11 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: nextName }),
+        body: JSON.stringify({ 
+          displayName: nextName,
+          address: addressValue.trim(),
+          phone: phoneValue.trim()
+        }),
       });
 
       const payload = (await response.json()) as { error?: string; avatar_url?: string };
@@ -443,6 +453,26 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                         className="h-11 rounded-lg text-sm"
                       />
                     </FieldGroup>
+
+                    <div className="grid gap-5 sm:grid-cols-2">
+                       <FieldGroup label="Contact Number" description="Mobile or phone number.">
+                          <Input
+                            value={phoneValue}
+                            onChange={(e) => setPhoneValue(e.target.value)}
+                            placeholder="+63 900 000 0000"
+                            className="h-11 rounded-lg text-sm"
+                          />
+                        </FieldGroup>
+
+                        <FieldGroup label="Residential Address" description="Current living address.">
+                          <Input
+                            value={addressValue}
+                            onChange={(e) => setAddressValue(e.target.value)}
+                            placeholder="Street, City, Province"
+                            className="h-11 rounded-lg text-sm"
+                          />
+                        </FieldGroup>
+                    </div>
 
                     <FieldGroup
                       label="Profile Photo"

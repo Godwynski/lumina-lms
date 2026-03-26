@@ -66,24 +66,24 @@ export default async function Home() {
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-700">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Catalog Intelligence</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">Search and manage physical and digital resources from a structured inventory workspace.</p>
+                <h3 className="text-lg font-semibold text-slate-900">Unified Catalog</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">Manage physical books and digital assets with advanced search and real-time availability tracking.</p>
               </div>
 
               <div className="h-full rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-700">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Role Governance</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">Permission-aware navigation and workflows for students, staff, librarians, and administrators.</p>
+                <h3 className="text-lg font-semibold text-slate-900">Smart Circulation</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">Automated borrowing, returns, and penalty tracking with transparent operational history.</p>
               </div>
 
               <div className="h-full rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Circulation Controls</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">Track borrowing, returns, due dates, and penalties with transparent operational records.</p>
+                <h3 className="text-lg font-semibold text-slate-900">Digital Identity</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">Fully integrated digital library cards with QR scanning for seamless student interactions.</p>
               </div>
             </div>
           </section>
