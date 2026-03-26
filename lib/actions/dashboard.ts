@@ -15,7 +15,7 @@ const getCachedRecentBooks = unstable_cache(
     const supabase = createSafeClient();
     const { data } = await supabase
       .from('books')
-      .select('id, title, author, created_at')
+      .select('id, title, author, cover_url, created_at')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(5);

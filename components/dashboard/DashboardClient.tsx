@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
+import Image from 'next/image';
 import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, AlertCircle, Users, BarChart2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ type RecentBook = {
   id: string;
   title: string;
   author: string;
+  cover_url?: string | null;
   created_at: string;
 };
 
@@ -167,7 +169,18 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
             {stats.recentBooks.map((book) => (
               <Link key={book.id} href={`/protected/student-catalog/${book.id}`} className="flex-none w-[140px] snap-start group bg-card border border-border/60 rounded-xl overflow-hidden hover:border-primary/30 transition-all shadow-sm">
                 <div className="aspect-[3/4] bg-muted/30 flex flex-col items-center justify-center relative overflow-hidden">
-                  <BookMarked size={28} className="text-muted-foreground/20 group-hover:scale-110 transition-transform duration-500" />
+                  {book.cover_url ? (
+                    <Image 
+                      src={book.cover_url} 
+                      alt={book.title} 
+                      fill 
+                      sizes="140px" 
+                      className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                      unoptimized={book.cover_url.startsWith('http')}
+                    />
+                  ) : (
+                    <BookMarked size={28} className="text-muted-foreground/20 group-hover:scale-110 transition-transform duration-500" />
+                  )}
                 </div>
                 <div className="p-2.5 bg-card">
                   <p className="truncate text-[11px] font-bold text-foreground/90 leading-tight">{book.title}</p>
@@ -206,127 +219,150 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
   }
 
   return (
-    <div className="space-y-4 pb-6">
-      {/* Sticky Core Actions Hub */}
-      <section className="sticky top-0 z-20 -mx-1 rounded-xl border border-border/60 bg-background/90 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/75 overflow-x-hidden shadow-sm">
-        <h2 className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Operations hub</h2>
-        <div className="mt-2.5 flex gap-3 overflow-x-auto px-1 pb-1 scrollbar-none">
-          {operationsGroups.map(group => (
-            <div key={group.title} className="flex min-w-max flex-col gap-1.5 border-l border-border/40 pl-3 first:border-0 first:pl-0">
-              <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{group.title}</span>
-              <div className="flex gap-2">
-                {group.items.map(action => (
-                  <Button
-                    key={action.title}
-                    asChild
-                    variant="outline"
-                    className="h-9 min-w-[110px] justify-start gap-2 rounded-md border-border/60 bg-card px-2.5 shadow-none text-left text-foreground hover:bg-muted/80 transition-all active:scale-[0.98]"
-                  >
-                    <Link href={action.href} aria-label={action.title} title={action.title}>
-                      <action.icon size={14} className="shrink-0 text-primary" />
-                      <span className="text-[11px] font-medium tracking-tight whitespace-nowrap">{action.title}</span>
-                    </Link>
-                  </Button>
+    <div className="space-y-6 pb-10 overflow-x-hidden">
+      <div className="grid gap-6 md:grid-cols-12 items-start">
+        {/* Main Column: Tasks & Activity */}
+        <div className="md:col-span-8 space-y-6">
+          {/* Section: Needs Attention */}
+          <section className="space-y-3">
+             <div className="flex items-center justify-between px-1">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
+                  Priority Queue
+                </h2>
+                <Badge variant="outline" className="text-[9px] font-medium border-border/60">Real-time alerts</Badge>
+              </div>
+            {attentionItems.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {attentionItems.map((item) => (
+                  <Link key={item.label} href={item.href}>
+                    <Card className="border-border bg-card/40 shadow-sm transition-all hover:bg-muted/50 hover:border-primary/30 group p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{item.label}</p>
+                          <p className="mt-1 text-2xl font-black text-foreground">{item.value}</p>
+                        </div>
+                        <div className="rounded-xl bg-primary/10 p-2 text-primary group-hover:scale-110 transition-transform">
+                          <ArrowUpRight size={18} />
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-2.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Needs attention</h2>
-        {attentionItems.length > 0 ? (
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-            {attentionItems.map((item) => (
-              <Link key={item.label} href={item.href}>
-                <Card className="border-border/60 bg-card shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
-                  <CardContent className="flex items-center justify-between p-2.5">
-                    <div>
-                      <CardDescription className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground/70">{item.label}</CardDescription>
-                      <CardTitle className="mt-0 text-xl font-bold text-foreground">{item.value}</CardTitle>
-                    </div>
-                    <div className="rounded-full bg-muted/50 p-1">
-                      <ArrowUpRight className="text-muted-foreground/70" size={14} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50 p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-100 p-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 p-6">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-full bg-emerald-100 p-2.5 shadow-sm">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-900 leading-tight">Zero Backlog</h3>
+                    <p className="text-xs text-emerald-700/80 mt-0.5">All administrative queues are currently clear.</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-emerald-900">All caught up</p>
-                <p className="text-xs text-emerald-700">No pending queue items need attention right now.</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
+            )}
+          </section>
 
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground md:text-lg">
-            <BookMarked size={16} className="text-muted-foreground" />
-            Recent catalog activity
-          </h2>
-          <Button asChild variant="ghost" size="sm" className="h-8 text-muted-foreground hover:bg-muted hover:text-foreground">
-            <Link href={isStudent ? '/protected/student-catalog' : '/protected/catalog'}>
-              Open catalog <ArrowUpRight size={14} className="ml-1" />
-            </Link>
-          </Button>
+          {/* Section: Recent Catalog Activity */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <History className="h-3 w-3 text-primary" />
+                Latest In Catalog
+              </h2>
+              <Link href="/protected/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
+            </div>
+
+            <div className="grid gap-2">
+              {stats.recentBooks.length > 0 ? (
+                stats.recentBooks.slice(0, 4).map((book) => (
+                  <Link key={book.id} href={`/protected/catalog/${book.id}`}>
+                    <Card className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
+                      <CardContent className="flex items-center justify-between gap-4 p-3">
+                        <div className="flex min-w-0 items-center gap-3.5">
+                          <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 text-[10px] font-bold text-foreground/80 overflow-hidden relative shadow-sm">
+                            {book.cover_url ? (
+                              <Image src={book.cover_url} alt={book.title} fill sizes="30px" className="object-cover" unoptimized={book.cover_url.startsWith('http')} />
+                            ) : (
+                              <BookMarked size={14} className="text-muted-foreground/30" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-foreground/90">{book.title}</p>
+                            <p className="truncate text-xs text-muted-foreground/60">{book.author}</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="hidden sm:block text-right">
+                            <p className="text-[10px] font-bold text-foreground/60 tracking-wider">
+                               {new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground/40 uppercase font-medium">Added on</p>
+                          </div>
+                          <div className="bg-muted p-1.5 rounded-lg">
+                             <ArrowUpRight size={14} className="text-muted-foreground/40" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
+                  <BookMarked size={32} className="mx-auto text-muted-foreground/10 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground/40">No recent catalog entries found.</p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
 
-        <div className="grid gap-1.5">
-          {stats.recentBooks.length > 0 ? (
-            stats.recentBooks.slice(0, 3).map((book) => (
-              <Link key={book.id} href={`/protected/catalog/${book.id}`}>
-                <Card className="border-border/50 bg-card/50 shadow-none transition-all hover:bg-muted/40">
-                  <CardContent className="flex items-center justify-between gap-3 p-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="flex h-8 w-6 shrink-0 items-center justify-center rounded border border-border/60 bg-muted/40 text-[10px] font-bold text-foreground/80">
-                        {book.title.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold text-foreground/90">{book.title}</p>
-                        <p className="truncate text-[11px] text-muted-foreground/70">{book.author}</p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <Badge variant="secondary" className="h-5 px-1.5 text-[9px] font-medium bg-muted/50 border-none text-muted-foreground/80">Catalog</Badge>
-                      <div className="w-16 text-right">
-                        <p className="text-[10px] font-bold text-foreground/70">{new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))
-          ) : (
-            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground">No recent activity available.</p>
-            </div>
-          )}
-        </div>
-      </section>
+        {/* Sidebar Column: Actions & Infrastructure */}
+        <aside className="md:col-span-4 space-y-6">
+           {/* Section: Quick Actions */}
+           <section className="space-y-3">
+              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Terminal Commands</h2>
+              <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-background shadow-md shadow-primary/5 overflow-hidden">
+                <div className="p-1 space-y-0.5">
+                  {operationsGroups.flatMap(group => group.items).map(action => (
+                    <Button
+                      key={action.title}
+                      asChild
+                      variant="ghost"
+                      className="w-full justify-between items-center h-11 px-3 hover:bg-primary/5 hover:text-primary group transition-all rounded-lg"
+                    >
+                      <Link href={action.href}>
+                         <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-background border border-border p-1.5 group-hover:border-primary/30 transition-colors shadow-sm">
+                               <action.icon size={14} className="text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="text-xs font-bold tracking-tight">{action.title}</span>
+                         </div>
+                         <ArrowUpRight size={14} className="text-muted-foreground/20 group-hover:text-primary/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+           </section>
 
-      <section className="pt-2">
-        <Card className="border-border/40 bg-muted/20 shadow-none">
-          <CardContent className="flex flex-wrap items-center justify-around gap-6 p-2">
-            <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
-            <div className="h-6 w-px bg-border/40 hidden sm:block" />
-            <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
-            <div className="h-6 w-px bg-border/40 hidden sm:block" />
-            <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </section>
-
+           {/* Section: System Status */}
+           <section className="space-y-3">
+             <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Health node</h2>
+             <Card className="border-border/60 bg-card/40 shadow-none border-none">
+               <CardContent className="p-3 space-y-3">
+                 <StatusIndicator icon={Zap} label="Response" value="24ms" color="text-emerald-500" />
+                 <div className="h-px w-full bg-border/40" />
+                 <StatusIndicator icon={ShieldCheck} label="Firewall" value="Active" color="text-blue-500" />
+                 <div className="h-px w-full bg-border/40" />
+                 <StatusIndicator icon={BarChart2} label="Traffic" value="Normal" color="text-amber-500" />
+               </CardContent>
+             </Card>
+           </section>
+        </aside>
+      </div>
     </div>
   );
 }
