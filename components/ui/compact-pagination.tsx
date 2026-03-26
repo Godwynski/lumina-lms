@@ -26,21 +26,21 @@ export function CompactPagination({
   const end = totalItems === 0 ? 0 : Math.min(page * pageSize, totalItems);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] text-muted-foreground">
-      <span className="font-medium">
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+      <span className="text-[11px]">
         {start}-{end} of {totalItems}
       </span>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {pageSizeOptions && onPageSizeChange ? (
           <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-            <SelectTrigger className="h-7 w-[74px] rounded-md border-border bg-card px-2 text-[10px]">
+            <SelectTrigger className="h-7 w-16 rounded-md border-border bg-card text-[10px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}/pg
+                <SelectItem key={size} value={String(size)} className="text-xs">
+                  {size} / pg
                 </SelectItem>
               ))}
             </SelectContent>
@@ -48,22 +48,22 @@ export function CompactPagination({
         ) : null}
 
         <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 rounded-md p-0"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-md"
           onClick={() => onPageChange(Math.max(1, page - 1))}
           disabled={page <= 1}
           aria-label="Previous page"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
-        <span className="min-w-14 text-center text-[10px] font-semibold text-foreground">
+        <span className="min-w-[3.5rem] text-center text-[11px] font-medium text-foreground">
           {page} / {totalPages}
         </span>
         <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-7 rounded-md p-0"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-md"
           onClick={() => onPageChange(Math.min(totalPages, page + 1))}
           disabled={page >= totalPages}
           aria-label="Next page"
