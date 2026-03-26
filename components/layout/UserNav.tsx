@@ -29,6 +29,11 @@ import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+interface Profile {
+  full_name?: string | null;
+  avatar_url?: string | null;
+}
+
 interface UserNavProps {
   user: {
     email?: string;
@@ -37,10 +42,11 @@ interface UserNavProps {
       avatar_url?: string;
     };
   };
+  profile: Profile | null;
   role: string | null;
 }
 
-export function UserNav({ user, role }: UserNavProps) {
+export function UserNav({ user, profile, role }: UserNavProps) {
   const router = useRouter();
   const supabase = createClient();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -55,10 +61,11 @@ export function UserNav({ user, role }: UserNavProps) {
     router.push("/auth/login");
   };
 
-  const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+  const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
   const initials = name
     .split(" ")
-    .map((n) => n[0])
+    .map((n: string) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
@@ -71,12 +78,12 @@ export function UserNav({ user, role }: UserNavProps) {
             variant="ghost"
             className="relative h-10 w-10 rounded-xl transition-all hover:scale-[1.02] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 data-[state=open]:bg-slate-100"
           >
-            <Avatar className="h-10 w-10 rounded-xl border border-slate-300">
-              <AvatarImage src={user.user_metadata?.avatar_url} alt={name} />
-              <AvatarFallback className="bg-slate-100 font-bold text-slate-700">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+          <Avatar className="h-10 w-10 rounded-xl border border-slate-300">
+            <AvatarImage src={avatarUrl} alt={name} />
+            <AvatarFallback className="bg-slate-100 font-bold text-slate-700">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>

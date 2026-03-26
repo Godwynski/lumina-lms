@@ -10,12 +10,21 @@ const ProtectedNavNoSSR = dynamic(
   },
 );
 
+import type { User } from "@supabase/supabase-js";
+
+interface Profile {
+  full_name?: string | null;
+  avatar_url?: string | null;
+}
+
 export function ProtectedNavClient({
   role,
-  authNode,
+  user,
+  profile,
 }: {
   role?: string | null;
-  authNode?: React.ReactNode;
+  user?: User | null;
+  profile?: Profile | null;
 }) {
-  return <ProtectedNavNoSSR role={role} authNode={authNode} />;
+  return <ProtectedNavNoSSR role={role} user={user} profile={profile} />;
 }

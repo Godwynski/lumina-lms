@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { compressImage } from '@/lib/image-utils';
 
 type BarcodeLike = { rawValue?: string };
 type BarcodeDetectorLike = {
@@ -273,15 +274,30 @@ export default function AddBookPage() {
 
       // Handle cover upload if file selected
       if (coverFile) {
+        const compressedBlob = await compressImage(coverFile, {
+          maxDimension: 1200,
+          quality: 0.8,
+          type: "image/webp"
+        });
+        
         const fileForm = new FormData();
-        fileForm.append('file', coverFile);
+        fileForm.append('file', new File([compressedBlob], `cover-${Date.now()}.webp`, { type: "image/webp" }));
         
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',
           body: fileForm,
         });
         
-        const uploadData = await uploadRes.json();
+        let uploadData;
+        try {
+          uploadData = await uploadRes.json();
+        } catch {
+          if (uploadRes.status === 413) {
+            throw new Error('Image is too large. Even after compression, it exceeds the 5MB server limit.');
+          }
+          throw new Error(`Upload failed with status ${uploadRes.status}`);
+        }
+
         if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
         
         finalCoverUrl = uploadData.cover_url;

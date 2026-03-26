@@ -7,6 +7,8 @@ import {
   resolveStudentId,
 } from "@/lib/library-card-assets";
 
+export const dynamic = "force-dynamic";
+
 export default async function MyCardPage() {
   const supabase = await createClient();
 
@@ -29,6 +31,8 @@ export default async function MyCardPage() {
       department, 
       avatar_url, 
       role,
+      address,
+      phone,
       library_cards (
         card_number, 
         status, 
@@ -121,6 +125,8 @@ export default async function MyCardPage() {
     expiryDate: finalCard.expires_at || new Date().toISOString(),
     avatarUrl: profileData.avatar_url,
     qrUrl,
+    address: profileData.address,
+    phone: profileData.phone,
   };
 
   return <MyCardContainer initialData={initialData} />;

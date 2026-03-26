@@ -10,6 +10,8 @@ export const metadata = {
   title: "Dashboard | Lumina LMS",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ProtectedPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,28 +35,25 @@ export default async function ProtectedPage() {
     expiryDate: string;
     avatarUrl: string | null;
     qrUrl: string | null;
+    address?: string;
+    phone?: string;
   } | null = null;
   let studentFaqs: { question: string; answer: string }[] = [...DEFAULT_STUDENT_FAQS];
 
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("full_name, student_id, department, avatar_url, address, phone")
+    .eq("id", user.id)
+    .single();
+
   if (role === "student") {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select(`
-        full_name,
-        student_id,
-        department,
-        avatar_url,
-        library_cards (
-          card_number,
-          status,
-          expires_at
-        )
-      `)
-      .eq("id", user.id)
-      .single();
+    const { data: card } = await supabase
+      .from("library_cards")
+      .select("card_number, status, expires_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     if (profileData) {
-      const card = profileData.library_cards?.[0];
       const resolvedStudentId = resolveStudentId({
         studentId: profileData.student_id,
         fallbackEmail: user.email,
@@ -70,6 +69,8 @@ export default async function ProtectedPage() {
         expiryDate: card?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
         avatarUrl: profileData.avatar_url,
         qrUrl: resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null,
+        address: profileData.address,
+        phone: profileData.phone,
       };
     }
 
@@ -108,12 +109,39 @@ export default async function ProtectedPage() {
   }
 
   return (
-    <DashboardClient 
-      user={user} 
-      role={role} 
-      stats={stats} 
-      studentCard={studentCard}
-      studentFaqs={studentFaqs}
-    />
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {role === 'student' ? 'Student Dashboard' : 'Operations Dashboard'}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {role === 'student' 
+              ? `Welcome back, ${profileData?.full_name?.split(' ')[0] || 'Student'}. Here's your library at a glance.`
+              : 'Core actions, queue visibility, and recent activity.'}
+          </p>
+        </div>
+        <div className="relative w-full max-w-sm sm:w-auto">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="search"
+            placeholder="Search books, ISBN, or authors..."
+            className="h-10 w-full rounded-full border border-border bg-muted/30 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:w-64 md:w-80"
+          />
+        </div>
+      </header>
+
+      <DashboardClient 
+        user={user} 
+        role={role} 
+        stats={stats} 
+        studentCard={studentCard}
+        studentFaqs={studentFaqs}
+      />
+    </div>
   );
 }

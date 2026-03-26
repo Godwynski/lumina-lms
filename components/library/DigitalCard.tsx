@@ -15,6 +15,8 @@ interface DigitalCardProps {
   expiryDate: string;
   avatarUrl?: string | null;
   qrUrl?: string | null;
+  address?: string;
+  phone?: string;
   side?: "front" | "back";
   exportMode?: boolean;
   cardId?: string;
@@ -25,6 +27,7 @@ function formatCardDate(dateString: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -37,6 +40,8 @@ export default function DigitalCard({
   expiryDate,
   avatarUrl,
   qrUrl,
+  address,
+  phone,
   side = "front",
   exportMode = false,
   cardId,
@@ -47,6 +52,8 @@ export default function DigitalCard({
         cardNumber={cardNumber}
         expiryDate={expiryDate}
         qrUrl={qrUrl}
+        address={address}
+        phone={phone}
         exportMode={exportMode}
         cardId={cardId}
       />
@@ -96,7 +103,7 @@ function CardFront({
         id={cardId}
         className={cn(
           "relative overflow-hidden rounded-none border border-foreground bg-[#e6e6e6]",
-          exportMode ? "max-w-none shadow-none" : "aspect-[1.586/1] w-full max-w-[560px] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+          exportMode ? "max-w-none shadow-none" : "min-h-[260px] sm:min-h-[auto] sm:aspect-[1.586/1] w-full max-w-[560px] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
         )}
         style={exportMode ? { width: 560, height: 353 } : undefined}
       >
@@ -189,11 +196,13 @@ function CardBack({
   cardNumber,
   expiryDate,
   qrUrl,
+  address,
+  phone,
   exportMode,
   cardId,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "expiryDate" | "qrUrl" | "exportMode" | "cardId"
+  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -201,7 +210,7 @@ function CardBack({
         id={cardId}
         className={cn(
           "relative overflow-hidden rounded-none border border-foreground bg-[#e6e6e6]",
-          exportMode ? "max-w-none shadow-none" : "aspect-[1.586/1] w-full max-w-[560px] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+          exportMode ? "max-w-none shadow-none" : "min-h-[260px] sm:min-h-[auto] sm:aspect-[1.586/1] w-full max-w-[560px] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
         )}
         style={exportMode ? { width: 560, height: 353 } : undefined}
       >
@@ -220,12 +229,16 @@ function CardBack({
         <div className="grid h-[calc(100%-58px)] grid-rows-[auto_1fr_auto] gap-2 p-2.5 sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4">
           <div className="grid gap-1.5">
             <div>
-              <p className="text-[11px] text-foreground sm:text-xs">Address:</p>
-              <div className="mt-1 h-6 border border-border bg-card sm:h-7" />
+              <p className="text-[11px] font-medium text-foreground sm:text-xs">Address:</p>
+              <div className="mt-1 flex min-h-[1.5rem] items-center border border-foreground bg-card px-2 py-0.5 text-[10px] sm:min-h-[1.75rem] sm:text-xs">
+                {address || "N/A"}
+              </div>
             </div>
             <div>
-              <p className="text-[11px] text-foreground sm:text-xs">Contact No:</p>
-              <div className="mt-1 h-6 border border-border bg-card sm:h-7" />
+              <p className="text-[11px] font-medium text-foreground sm:text-xs">Contact No:</p>
+              <div className="mt-1 flex min-h-[1.5rem] items-center border border-foreground bg-card px-2 py-0.5 text-[10px] sm:min-h-[1.75rem] sm:text-xs">
+                {phone || "N/A"}
+              </div>
             </div>
           </div>
 

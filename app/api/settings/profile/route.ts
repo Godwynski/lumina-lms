@@ -12,8 +12,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await request.json()) as { displayName?: unknown };
+    const body = (await request.json()) as { displayName?: string; address?: string; phone?: string };
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+    const address = typeof body.address === "string" ? body.address.trim() : "";
+    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
 
     if (!displayName) {
       return NextResponse.json({ error: "Display name is required" }, { status: 400 });
@@ -23,9 +25,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Display name is too long" }, { status: 400 });
     }
 
+    if (address.length > 500) {
+      return NextResponse.json({ error: "Address is too long" }, { status: 400 });
+    }
+
+    if (phone.length > 50) {
+      return NextResponse.json({ error: "Phone number is too long" }, { status: 400 });
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: displayName, updated_at: new Date().toISOString() })
+      .update({ 
+        full_name: displayName, 
+        address, 
+        phone, 
+        updated_at: new Date().toISOString() 
+      })
       .eq("id", user.id);
 
     if (error) {

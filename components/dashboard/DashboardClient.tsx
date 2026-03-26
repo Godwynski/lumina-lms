@@ -2,18 +2,20 @@
 
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
-import { ArrowUpRight, BookMarked, CheckCircle2, Clock, Library, BookOpen, ShieldCheck, History, CreditCard, HelpCircle, Zap, AlertCircle, Users, BarChart2 } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import DigitalCard from '@/components/library/DigitalCard';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import MyCardContainer from '@/components/library/MyCardContainer';
 
 type RecentBook = {
   id: string;
   title: string;
   author: string;
+  cover_url?: string | null;
   created_at: string;
 };
 
@@ -31,10 +33,12 @@ interface DashboardProps {
     studentId: string;
     cardNumber: string;
     department: string;
-    status: 'active' | 'pending' | 'suspended' | 'expired';
+    status: "active" | "pending" | "suspended" | "expired";
     expiryDate: string;
     avatarUrl: string | null;
     qrUrl: string | null;
+    address?: string;
+    phone?: string;
   } | null;
   studentFaqs?: {
     question: string;
@@ -85,7 +89,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
 
   const queueItems = [
     {
-      label: isStudent ? 'My Active Loans' : 'Active Loans Now',
+      label: isStudent ? 'Borrowed Books' : 'Active Borrows Now',
       value: isStudent ? stats.myActiveLoans : stats.activeLoans,
       href: '/protected/history',
     },
@@ -101,357 +105,288 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
 
   if (isStudent) {
     return (
-      <div className="space-y-3 overflow-x-hidden pb-6">
-        <section className="border-b border-border pb-3">
-          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">Student Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Quick access to your catalog, card, and loan activity.</p>
-            </div>
-            <Badge variant="outline" className="h-6 border-border bg-muted px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              student
-            </Badge>
+      <div className="space-y-6 pb-14 overflow-x-hidden">
+        <section className="grid gap-6 md:grid-cols-12 items-start">
+          {/* Main Hero: The Digital Card */}
+          <Card className="md:col-span-8 border-none bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-md overflow-hidden relative p-5 sm:p-7">
+            {studentCard ? (
+              <MyCardContainer initialData={studentCard} variant="dashboard" />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <Library size={42} className="text-muted-foreground/20 mb-3" />
+                <h2 className="text-lg font-bold text-muted-foreground/40">No Digital Card Available</h2>
+                <p className="text-xs text-muted-foreground/40 mt-1">Please contact the librarian if you believe this is an error.</p>
+              </div>
+            )}
+          </Card>
+
+          {/* Compact Stats & Terminal Actions */}
+          <div className="md:col-span-4 space-y-5 h-full">
+            {/* Quick Stats */}
+            <Card className="border-border bg-card/40 shadow-sm p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
+                  <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
+                </div>
+                <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                   <History size={18} />
+                </div>
+              </div>
+            </Card>
+
+            {/* Terminal Actions */}
+            <section className="space-y-3">
+              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Library Terminal</h2>
+              <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-background shadow-md shadow-primary/5 overflow-hidden">
+                <div className="p-1 space-y-0.5">
+                  {[
+                    { title: 'Book Catalog', href: '/protected/student-catalog', icon: Library },
+                    { title: 'Borrow History', href: '/protected/history', icon: History },
+                    { title: 'Digital Resources', href: '/protected/resources', icon: BookOpen },
+                    { title: 'Manual & Guidelines', href: '/protected/my-card', icon: HelpCircle },
+                  ].map(action => (
+                    <Button
+                      key={action.title}
+                      asChild
+                      variant="ghost"
+                      className="w-full justify-between items-center h-11 px-3 hover:bg-primary/5 hover:text-primary group transition-all rounded-lg"
+                    >
+                      <Link href={action.href}>
+                         <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-background border border-border p-1.5 group-hover:border-primary/30 transition-colors shadow-sm">
+                               <action.icon size={14} className="text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="text-xs font-bold tracking-tight">{action.title}</span>
+                         </div>
+                         <ArrowUpRight size={14} className="text-muted-foreground/20 group-hover:text-primary/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+            </section>
           </div>
         </section>
 
-        <section className="grid gap-3 lg:grid-cols-[1.15fr_1fr]">
-          <Card className="border-border bg-card shadow-sm">
-            <CardContent className="space-y-3 p-3">
-              <div className="flex flex-col gap-3">
-                {operationsGroups.map((group) => (
-                  <div key={group.title} className="space-y-1.5">
-                    <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.title}</h3>
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {group.items.map((action) => (
-                        <Button
-                          key={action.title}
-                          asChild
-                          variant="outline"
-                          className="h-11 justify-start gap-2.5 rounded-md border-border px-3 text-left text-xs shadow-sm hover:bg-muted/60 transition-colors"
-                        >
-                          <Link href={action.href}>
-                            <action.icon size={16} className="text-primary shrink-0" />
-                            <span className="min-w-0 truncate leading-tight font-semibold tracking-wide">{action.title}</span>
-                          </Link>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="rounded-md border border-border bg-muted/50 px-3 py-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">My active loans</p>
-                  <p className="text-lg font-bold text-foreground">{stats.myActiveLoans}</p>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {stats.myActiveLoans > 0 ? 'Check due dates in Borrow History.' : 'No active borrowing right now.'}
-                </p>
-              </div>
-
-              <div>
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Suggested reads</p>
-                {stats.recentBooks.length > 0 ? (
-                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {stats.recentBooks.slice(0, 6).map((book) => (
-                      <Link
-                        key={book.id}
-                        href={`/protected/student-catalog/${book.id}`}
-                        className="min-w-[156px] snap-start rounded-md border border-border bg-card px-2.5 py-2 hover:bg-muted/50 sm:min-w-[190px]"
-                      >
-                        <p className="truncate text-xs font-medium text-foreground">{book.title}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">{book.author}</p>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-md border border-dashed border-border p-2.5 text-xs text-muted-foreground">
-                    Suggested reads will appear here.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card shadow-sm">
-            <CardContent className="space-y-2 p-3">
-              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  <BookMarked className="h-3.5 w-3.5" />
-                  Recent catalog activity
-                </h2>
-                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
-                  <Link href="/protected/student-catalog">Open catalog</Link>
-                </Button>
-              </div>
-
-              {stats.recentBooks.length > 0 ? (
-                <div className="space-y-1.5">
-                  {stats.recentBooks.slice(0, 3).map((book) => (
-                    <Link key={book.id} href={`/protected/student-catalog/${book.id}`}>
-                      <div className="flex items-center justify-between rounded-md border border-border px-2.5 py-2 hover:bg-muted/50">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{book.title}</p>
-                          <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-                        </div>
-                        <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
-                  No recent catalog activity.
-                </div>
-              )}
-
-              <Button asChild variant="outline" className="h-8 w-full justify-between rounded-md border-border px-2 text-xs">
-                <Link href="/protected/history">
-                  <span className="truncate">Loan history</span>
-                  <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-3 lg:grid-cols-2">
-          <Card className="border-border bg-card shadow-sm">
-            <CardContent className="space-y-2 p-3">
-              <div className="flex items-center justify-between">
-                <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  <HelpCircle className="h-3.5 w-3.5" />
-                  FAQs
-                </h2>
-                <span className="text-[10px] text-muted-foreground">Tap to expand</span>
-              </div>
-              <div className="space-y-1.5">
-                {studentFaqs.map((item) => (
-                  <Collapsible key={item.question} className="rounded-md border border-border">
-                    <CollapsibleTrigger className="w-full px-2.5 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/60">
-                      {item.question}
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="border-t border-border px-2.5 py-2 text-xs leading-relaxed text-foreground/85">
-                      {item.answer}
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card shadow-sm">
-            <CardContent className="space-y-2 p-3">
-              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  <CreditCard className="h-3.5 w-3.5" />
-                  Library card
-                </h2>
-                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
-                  <Link href="/protected/my-card">Open</Link>
-                </Button>
-              </div>
-
-              <div className="grid gap-1.5 rounded-md border border-border bg-muted/40 p-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                    studentCard?.status === 'active' ? 'status-success' :
-                    studentCard?.status === 'pending' ? 'status-warning' :
-                    studentCard?.status === 'suspended' ? 'status-danger' : 'status-neutral'
-                  }`}>
-                    {studentCard?.status ?? 'pending'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Card number</span>
-                  <span className="max-w-[65%] truncate font-mono text-foreground">{studentCard?.cardNumber ?? 'Pending assignment'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Student ID</span>
-                  <span className="font-medium text-foreground">{studentCard?.studentId ?? 'N/A'}</span>
-                </div>
-              </div>
-
-              <Collapsible>
-                <CollapsibleTrigger className="w-full rounded-md border border-border px-2.5 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/60">
-                  Show visual card preview
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2">
-                  {studentCard ? (
-                    <div className="overflow-hidden rounded-md border border-border bg-muted/20">
-                      <DigitalCard
-                        fullName={studentCard.fullName}
-                        studentId={studentCard.studentId}
-                        cardNumber={studentCard.cardNumber}
-                        department={studentCard.department}
-                        status={studentCard.status}
-                        expiryDate={studentCard.expiryDate}
-                        avatarUrl={studentCard.avatarUrl}
-                        qrUrl={studentCard.qrUrl}
-                      />
-                    </div>
+        {/* Discovery & New Arrivals */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
+              Latest In Library
+            </h2>
+            <Link href="/protected/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x px-0.5">
+            {stats.recentBooks.map((book) => (
+              <Link key={book.id} href={`/protected/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
+                <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
+                  {book.cover_url ? (
+                    <Image 
+                      src={book.cover_url} 
+                      alt={book.title} 
+                      fill 
+                      sizes="130px" 
+                      className="object-cover group-hover:scale-110 transition-transform duration-700" 
+                      unoptimized={book.cover_url.startsWith('http')}
+                    />
                   ) : (
-                    <div className="rounded-md border border-dashed border-border p-2.5 text-xs text-muted-foreground">
-                      Card details are still syncing. Open My Card to refresh.
-                    </div>
+                    <BookMarked size={24} className="text-muted-foreground/10 group-hover:scale-125 transition-transform duration-700" />
                   )}
-                </CollapsibleContent>
-              </Collapsible>
-            </CardContent>
-          </Card>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="p-2.5 bg-card/80 backdrop-blur-sm">
+                  <p className="truncate text-[10px] font-bold text-foreground leading-tight">{book.title}</p>
+                  <p className="truncate text-[9px] text-muted-foreground/70 mt-0.5">{book.author}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
+
+        {/* Compressed FAQs / Help */}
+        {studentFaqs && studentFaqs.length > 0 && (
+          <section className="pt-2">
+            <Collapsible className="bg-card/30 border border-border/40 rounded-xl overflow-hidden shadow-sm">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Support & FAQs</span>
+                </div>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-3 pb-3 space-y-2 border-t border-border/20 pt-3">
+                {studentFaqs.map((faq, index) => (
+                  <div key={index} className="space-y-1">
+                    <p className="text-xs font-bold text-foreground/90">{faq.question}</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{faq.answer}</p>
+                    {index < studentFaqs.length - 1 && <div className="h-px w-full bg-border/10 my-2" />}
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          </section>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-6 md:space-y-5">
-      <section className="border-b border-border pb-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Operations Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Core actions, queue visibility, and recent activity.</p>
-          </div>
-          <Badge variant="outline" className="w-fit border-border bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {role ?? 'member'}
-          </Badge>
-        </div>
-      </section>
-
-      <section className="sticky top-3 z-20 -mx-1 rounded-xl border border-border/60 bg-background/90 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 md:top-4">
-        <h2 className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Core actions</h2>
-        <div className="mt-3 flex gap-4 overflow-x-auto px-1 pb-2 scrollbar-thin">
-          {operationsGroups.map(group => (
-            <div key={group.title} className="flex min-w-max flex-col gap-2 border-l-2 border-border/50 pl-3 first:border-0 first:pl-0">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em]">{group.title}</span>
-              <div className="flex gap-2">
-                {group.items.map(action => (
-                  <Button
-                    key={action.title}
-                    asChild
-                    variant="outline"
-                    className="h-11 min-w-[140px] justify-start gap-2.5 rounded-md border-border bg-card px-3 shadow-sm text-left text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    <Link href={action.href} aria-label={action.title} title={action.title}>
-                      <action.icon size={16} className="shrink-0 text-primary" />
-                      <span className="text-[11px] font-semibold tracking-wide sm:text-[12px]">{action.title}</span>
-                    </Link>
-                  </Button>
-                ))}
+    <div className="space-y-6 pb-10 overflow-x-hidden">
+      <div className="grid gap-6 md:grid-cols-12 items-start">
+        {/* Main Column: Tasks & Activity */}
+        <div className="md:col-span-8 space-y-6">
+          {/* Section: Needs Attention */}
+          <section className="space-y-3">
+             <div className="flex items-center justify-between px-1">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
+                  Priority Queue
+                </h2>
+                <Badge variant="outline" className="text-[9px] font-medium border-border/60">Real-time alerts</Badge>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-2.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Needs attention</h2>
-        {attentionItems.length > 0 ? (
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-            {attentionItems.map((item) => (
-              <Link key={item.label} href={item.href}>
-                <Card className="border-border bg-card shadow-sm transition-colors hover:bg-muted">
-                  <CardContent className="flex items-center justify-between p-3">
-                    <div>
-                      <CardDescription className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</CardDescription>
-                      <CardTitle className="mt-0.5 text-2xl font-bold text-foreground">{item.value}</CardTitle>
-                    </div>
-                    <ArrowUpRight className="text-muted-foreground" size={16} />
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50 p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-100 p-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-700" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-emerald-900">All caught up</p>
-                <p className="text-xs text-emerald-700">No pending queue items need attention right now.</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground md:text-lg">
-            <BookMarked size={16} className="text-muted-foreground" />
-            Recent catalog activity
-          </h2>
-          <Button asChild variant="ghost" size="sm" className="h-8 text-muted-foreground hover:bg-muted hover:text-foreground">
-            <Link href={isStudent ? '/protected/student-catalog' : '/protected/catalog'}>
-              Open catalog <ArrowUpRight size={14} className="ml-1" />
-            </Link>
-          </Button>
-        </div>
-
-        <div className="grid gap-2">
-          {stats.recentBooks.length > 0 ? (
-            stats.recentBooks.slice(0, 4).map((book) => (
-              <Link key={book.id} href={`/protected/catalog/${book.id}`}>
-                <Card className="border-border bg-card shadow-sm transition-colors hover:bg-muted">
-                  <CardContent className="flex items-center justify-between gap-3 p-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded border border-border bg-muted text-xs font-bold text-foreground">
-                        {book.title.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">{book.title}</p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold">Catalog</Badge>
+            {attentionItems.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {attentionItems.map((item) => (
+                  <Link key={item.label} href={item.href}>
+                    <Card className="border-border bg-card/40 shadow-sm transition-all hover:bg-muted/50 hover:border-primary/30 group p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{item.label}</p>
+                          <p className="mt-1 text-2xl font-black text-foreground">{item.value}</p>
+                        </div>
+                        <div className="rounded-xl bg-primary/10 p-2 text-primary group-hover:scale-110 transition-transform">
+                          <ArrowUpRight size={18} />
                         </div>
                       </div>
-                    </div>
-                    <div className="w-24 shrink-0 text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Added</p>
-                      <p className="mt-0.5 text-xs font-medium text-foreground">{new Date(book.created_at).toLocaleDateString()}</p>
-                      <p className="mt-0.5 inline-flex items-center justify-end gap-1 text-[11px] text-muted-foreground"><Clock size={12} /> Recent</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))
-          ) : (
-            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground">No recent activity available.</p>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 p-6">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-full bg-emerald-100 p-2.5 shadow-sm">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-900 leading-tight">Zero Backlog</h3>
+                    <p className="text-xs text-emerald-700/80 mt-0.5">All administrative queues are currently clear.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Section: Recent Catalog Activity */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <History className="h-3 w-3 text-primary" />
+                Latest In Catalog
+              </h2>
+              <Link href="/protected/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
             </div>
-          )}
+
+            <div className="grid gap-2">
+              {stats.recentBooks.length > 0 ? (
+                stats.recentBooks.slice(0, 4).map((book) => (
+                  <Link key={book.id} href={`/protected/catalog/${book.id}`}>
+                    <Card className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
+                      <CardContent className="flex items-center justify-between gap-4 p-3">
+                        <div className="flex min-w-0 items-center gap-3.5">
+                          <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 text-[10px] font-bold text-foreground/80 overflow-hidden relative shadow-sm">
+                            {book.cover_url ? (
+                              <Image src={book.cover_url} alt={book.title} fill sizes="30px" className="object-cover" unoptimized={book.cover_url.startsWith('http')} />
+                            ) : (
+                              <BookMarked size={14} className="text-muted-foreground/30" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-foreground/90">{book.title}</p>
+                            <p className="truncate text-xs text-muted-foreground/60">{book.author}</p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="hidden sm:block text-right">
+                            <p className="text-[10px] font-bold text-foreground/60 tracking-wider">
+                               {new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground/40 uppercase font-medium">Added on</p>
+                          </div>
+                          <div className="bg-muted p-1.5 rounded-lg">
+                             <ArrowUpRight size={14} className="text-muted-foreground/40" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
+                  <BookMarked size={32} className="mx-auto text-muted-foreground/10 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground/40">No recent catalog entries found.</p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
 
-      <section className="space-y-2.5 pt-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">System Status</h2>
-        <Card className="border-border bg-card shadow-sm">
-          <CardContent className="grid gap-4 p-4 sm:grid-cols-3">
-            <StatusIndicator icon={Zap} label="Performance" value="Optimal" color="text-emerald-600" />
-            <StatusIndicator icon={ShieldCheck} label="Security" value="Protected" color="text-blue-600" />
-            <StatusIndicator icon={AlertCircle} label="Storage" value="94% Free" color="text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </section>
+        {/* Sidebar Column: Actions & Infrastructure */}
+        <aside className="md:col-span-4 space-y-6">
+           {/* Section: Quick Actions */}
+           <section className="space-y-3">
+              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Terminal Commands</h2>
+              <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-background shadow-md shadow-primary/5 overflow-hidden">
+                <div className="p-1 space-y-0.5">
+                  {operationsGroups.flatMap(group => group.items).map(action => (
+                    <Button
+                      key={action.title}
+                      asChild
+                      variant="ghost"
+                      className="w-full justify-between items-center h-11 px-3 hover:bg-primary/5 hover:text-primary group transition-all rounded-lg"
+                    >
+                      <Link href={action.href}>
+                         <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-background border border-border p-1.5 group-hover:border-primary/30 transition-colors shadow-sm">
+                               <action.icon size={14} className="text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="text-xs font-bold tracking-tight">{action.title}</span>
+                         </div>
+                         <ArrowUpRight size={14} className="text-muted-foreground/20 group-hover:text-primary/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+           </section>
 
+           {/* Section: System Status */}
+           <section className="space-y-3">
+             <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Health node</h2>
+             <Card className="border-border/60 bg-card/40 shadow-none border-none">
+               <CardContent className="p-3 space-y-3">
+                 <StatusIndicator icon={Zap} label="Response" value="24ms" color="text-emerald-500" />
+                 <div className="h-px w-full bg-border/40" />
+                 <StatusIndicator icon={ShieldCheck} label="Firewall" value="Active" color="text-blue-500" />
+                 <div className="h-px w-full bg-border/40" />
+                 <StatusIndicator icon={BarChart2} label="Traffic" value="Normal" color="text-amber-500" />
+               </CardContent>
+             </Card>
+           </section>
+        </aside>
+      </div>
     </div>
   );
 }
 
 function StatusIndicator({ icon: Icon, label, value, color }: { icon: React.ElementType, label: string, value: string, color: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/60 border border-border">
-        <Icon size={18} className={color} />
-      </div>
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-        <p className={cn("mt-0.5 text-sm font-bold", color)}>{value}</p>
-      </div>
+    <div className="flex items-center gap-2">
+      <Icon size={14} className={cn("shrink-0", color)} />
+      <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">{label}:</span>
+      <span className={cn("text-[11px] font-bold", color)}>{value}</span>
     </div>
   );
 }

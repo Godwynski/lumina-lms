@@ -102,6 +102,7 @@ export function LoginForm({
                 onClick={() => signInWithCredentials("student@lumina.test", "Password123!")}
                 disabled={isLoading}
               >
+                {isLoading ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : null}
                 Student Demo
               </Button>
               <Button
@@ -111,6 +112,7 @@ export function LoginForm({
                 onClick={() => signInWithCredentials("admin@lumina.test", "Password123!")}
                 disabled={isLoading}
               >
+                {isLoading ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : null}
                 Admin Demo
               </Button>
             </div>
@@ -183,12 +185,16 @@ export function LoginForm({
           <Button
             type="button"
             variant="outline"
-            className="h-11 w-full rounded-lg text-sm font-semibold flex items-center gap-3 border-slate-300 bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900"
+            className="h-11 w-full rounded-lg text-sm font-semibold flex items-center justify-center gap-3 border-slate-300 bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900"
             onClick={handleMicrosoftLogin}
             disabled={isLoading}
           >
-            <MicrosoftIcon className="h-5 w-5" />
-            <span>Sign in with Microsoft</span>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+            ) : (
+              <MicrosoftIcon className="h-5 w-5" />
+            )}
+            <span>{isLoading ? "Redirecting..." : "Sign in with Microsoft"}</span>
           </Button>
         </CardContent>
         <CardFooter className="flex justify-center border-t border-slate-200 bg-slate-50 py-4 text-sm">

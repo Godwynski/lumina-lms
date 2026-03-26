@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { toPng } from "html-to-image";
 import { Download, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface MyCardContainerProps {
   initialData: {
@@ -17,17 +19,14 @@ interface MyCardContainerProps {
     expiryDate: string;
     avatarUrl: string | null;
     qrUrl: string | null;
+    address?: string;
+    phone?: string;
   };
+  variant?: "page" | "dashboard";
 }
 
 const SHOW_ASSET_REFRESH =
   process.env.NEXT_PUBLIC_SHOW_CARD_ASSET_REFRESH === "true";
-
-const actionBaseClass =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60";
-
-const desktopActionClass =
-  "sm:whitespace-nowrap sm:min-w-[132px]";
 
 const EXPORT_CARD_WIDTH = 560;
 const EXPORT_CARD_HEIGHT = 353;
@@ -78,11 +77,16 @@ type AssetStatusResponse = {
   ready: boolean;
 };
 
-export default function MyCardContainer({ initialData }: MyCardContainerProps) {
+export default function MyCardContainer({ initialData, variant = "page" }: MyCardContainerProps) {
   const [data, setData] = useState(initialData);
   const [isRefreshingAssets, setIsRefreshingAssets] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showBack, setShowBack] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Hydrate with fresh server data
   useEffect(() => {
@@ -287,12 +291,130 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
     }
   };
 
+  if (variant === "dashboard") {
+    return (
+      <div className="w-full relative group/dashboard">
+        {/* Subtle Background Glow */}
+        <div className="absolute -inset-4 bg-primary/5 rounded-[2rem] blur-2xl opacity-0 group-hover/dashboard:opacity-100 transition-opacity pointer-events-none" />
+        
+        <div className="relative mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Badge className="mb-1 bg-primary/20 text-primary border-none text-[10px] font-bold uppercase tracking-widest px-2.5 h-6">Official Library ID</Badge>
+            <h1 className="text-xl font-black tracking-tight text-foreground/90 uppercase">{data.fullName}</h1>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => setShowBack((prev) => !prev)}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-[10px] font-bold"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {showBack ? "Front" : "Back"}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={exportCardAsImage}
+              disabled={isExporting}
+              size="sm"
+              className="h-8 gap-1.5 text-[10px] font-bold"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isExporting ? "..." : "Export"}
+            </Button>
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="relative"
+        >
+          <div id="library-card-front" className={cn("transition-all duration-300", showBack ? "opacity-0 invisible absolute inset-0" : "opacity-100 visible relative")}>
+            <DigitalCard
+              fullName={data.fullName}
+              studentId={data.studentId}
+              cardNumber={data.cardNumber}
+              department={data.department}
+              status={data.status}
+              expiryDate={data.expiryDate}
+              avatarUrl={data.avatarUrl}
+              qrUrl={data.qrUrl}
+              address={data.address}
+              phone={data.phone}
+              side="front"
+            />
+          </div>
+
+          <div id="library-card-back" className={cn("transition-all duration-300", !showBack ? "opacity-0 invisible absolute inset-0" : "opacity-100 visible relative")}>
+            <DigitalCard
+              fullName={data.fullName}
+              studentId={data.studentId}
+              cardNumber={data.cardNumber}
+              department={data.department}
+              status={data.status}
+              expiryDate={data.expiryDate}
+              avatarUrl={data.avatarUrl}
+              qrUrl={data.qrUrl}
+              address={data.address}
+              phone={data.phone}
+              side="back"
+            />
+          </div>
+
+          {/* Export Hidden Layer */}
+          <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
+             {/* ... export logic remains same ... */}
+             <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
+              <DigitalCard
+                fullName={data.fullName}
+                studentId={data.studentId}
+                cardNumber={data.cardNumber}
+                department={data.department}
+                status={data.status}
+                expiryDate={data.expiryDate}
+                avatarUrl={data.avatarUrl}
+                qrUrl={data.qrUrl}
+                address={data.address}
+                phone={data.phone}
+                side="front"
+                exportMode
+                cardId="library-card-front-export-card"
+              />
+            </div>
+            <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
+              <DigitalCard
+                fullName={data.fullName}
+                studentId={data.studentId}
+                cardNumber={data.cardNumber}
+                department={data.department}
+                status={data.status}
+                expiryDate={data.expiryDate}
+                avatarUrl={data.avatarUrl}
+                qrUrl={data.qrUrl}
+                address={data.address}
+                phone={data.phone}
+                side="back"
+                exportMode
+                cardId="library-card-back-export-card"
+              />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">My Digital Card</h1>
-          <p className="text-zinc-500">STI College Alabang official library identity card</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Digital Card</h1>
+          <p className="text-sm text-muted-foreground">STI College Alabang official library identity card</p>
         </div>
 
         <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-col sm:items-end">
@@ -301,9 +423,10 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
               type="button"
               onClick={() => setShowBack((prev) => !prev)}
               variant="outline"
-              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-slate-300 bg-white text-zinc-700 hover:bg-slate-100 sm:flex-none`}
+              size="sm"
+              className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
               {showBack ? "Show front" : "Show back"}
             </Button>
 
@@ -311,9 +434,10 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
               type="button"
               onClick={exportCardAsImage}
               disabled={isExporting}
-              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-slate-900 bg-slate-900 text-white hover:bg-slate-800 sm:flex-none`}
+              size="sm"
+              className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="mr-1.5 h-3.5 w-3.5" />
               {isExporting ? "Exporting..." : "Export front + back"}
             </Button>
 
@@ -322,9 +446,10 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
               onClick={exportWalletPreset}
               disabled={isExporting}
               variant="outline"
-              className={`${actionBaseClass} ${desktopActionClass} flex-1 border-slate-300 bg-white text-zinc-700 hover:bg-slate-100 sm:flex-none`}
+              size="sm"
+              className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
             >
-              <Wallet className="h-3.5 w-3.5" />
+              <Wallet className="mr-1.5 h-3.5 w-3.5" />
               Wallet preset
             </Button>
 
@@ -334,16 +459,17 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
                 onClick={refreshAssets}
                 disabled={isRefreshingAssets}
                 variant="outline"
-                className={`${actionBaseClass} ${desktopActionClass} hidden border-slate-300 bg-white text-zinc-600 hover:bg-slate-100 sm:inline-flex`}
+                size="sm"
+                className="hidden sm:inline-flex text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
                 {isRefreshingAssets ? "Refreshing..." : "Refresh assets"}
               </Button>
             )}
           </div>
 
-          <div className="hidden text-[10px] font-bold uppercase tracking-widest text-zinc-300 sm:block">
-            Verified • {new Date().toLocaleDateString()}
+          <div className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
+            Verified • {mounted ? new Date().toLocaleDateString("en-US") : "..."}
           </div>
         </div>
       </div>
@@ -363,6 +489,8 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
             expiryDate={data.expiryDate}
             avatarUrl={data.avatarUrl}
             qrUrl={data.qrUrl}
+            address={data.address}
+            phone={data.phone}
             side="front"
           />
         </div>
@@ -377,6 +505,8 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
             expiryDate={data.expiryDate}
             avatarUrl={data.avatarUrl}
             qrUrl={data.qrUrl}
+            address={data.address}
+            phone={data.phone}
             side="back"
           />
         </div>
@@ -392,6 +522,8 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
               expiryDate={data.expiryDate}
               avatarUrl={data.avatarUrl}
               qrUrl={data.qrUrl}
+              address={data.address}
+              phone={data.phone}
               side="front"
               exportMode
               cardId="library-card-front-export-card"
@@ -407,6 +539,8 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
               expiryDate={data.expiryDate}
               avatarUrl={data.avatarUrl}
               qrUrl={data.qrUrl}
+              address={data.address}
+              phone={data.phone}
               side="back"
               exportMode
               cardId="library-card-back-export-card"
@@ -415,25 +549,25 @@ export default function MyCardContainer({ initialData }: MyCardContainerProps) {
         </div>
       </motion.div>
 
-      <p className="mt-2 text-[11px] text-zinc-500 sm:hidden">
+      <p className="mt-2 text-[11px] text-muted-foreground sm:hidden">
         Tip: Rotate your phone to landscape for the best card preview.
       </p>
 
 
 
-      <div className="mt-12 rounded-2xl border border-slate-200 bg-zinc-50 p-6">
-        <h3 className="text-sm font-bold text-zinc-900 uppercase tracking-widest mb-4">Quick Guide</h3>
-        <ul className="space-y-3 text-sm text-zinc-600">
+      <div className="mt-8 rounded-xl border border-border bg-card p-6 shadow-sm">
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4">Quick Guide</h3>
+        <ul className="space-y-3 text-sm text-muted-foreground">
           <li className="flex gap-3">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">1</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border text-[10px] font-bold text-foreground">1</span>
             Present this QR code to the librarian during checkout.
           </li>
           <li className="flex gap-3">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">2</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border text-[10px] font-bold text-foreground">2</span>
             Back side now focuses on essential borrowing, returning, and support information.
           </li>
           <li className="flex gap-3">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">3</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border text-[10px] font-bold text-foreground">3</span>
             Export options include front+back composite and wallet-size preset (1012x638 px).
           </li>
 
