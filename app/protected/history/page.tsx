@@ -151,15 +151,13 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Borrow History</h1>
-          <p className="max-w-2xl text-sm text-slate-600">
-            Review your borrowing timeline, due dates, and completed returns.
-          </p>
-        </div>
-      </section>
+    <div className="space-y-4 pb-4 w-full">
+      <div className="border-b border-border pb-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Borrow History</h1>
+        <p className="text-sm text-muted-foreground">
+          Review your borrowing timeline, due dates, and completed returns.
+        </p>
+      </div>
 
       <Card className="border-border bg-card shadow-sm">
         <CardContent className="p-4">

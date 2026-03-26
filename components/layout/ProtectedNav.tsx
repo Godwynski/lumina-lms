@@ -70,6 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     children: [
       { href: "/protected/catalog", label: "Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
       { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
+      { href: "/protected/circulation", label: "Circulation", icon: History, roles: ["admin", "librarian", "staff"] },
     ],
   },
   {
@@ -172,7 +173,7 @@ export function ProtectedNav({
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="flex h-20 shrink-0 items-center px-4">
-        <Link href="/protected" className="flex items-center gap-3 group">
+        <Link href="/protected" className="flex items-center gap-3 group" aria-label="Lumina LMS Dashboard">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring">
             <LuminaLogo size={20} />
           </div>
@@ -184,7 +185,7 @@ export function ProtectedNav({
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <nav className="flex flex-col gap-4">
+        <nav className="flex flex-col gap-4" aria-label="Main Navigation">
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem>

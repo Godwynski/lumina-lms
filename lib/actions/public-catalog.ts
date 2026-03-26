@@ -2,6 +2,7 @@
 
 import { createClient, createSafeClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
+import { logger } from '../logger';
 
 // Data fetching function for search, intended to be wrapped by cache
 async function fetchPublicBooks(
@@ -64,7 +65,7 @@ export async function reportMissingBook(bookId: string, notes?: string) {
   const supabase = await createClient();
   // Here we assume a simple tasks table exists, or we just log it if we don't have the table defined
   // Since we didn't add a 'tasks' table in the migration, we'll just return success for now.
-  console.log(`Student reported missing book ID: ${bookId}. Notes: ${notes}`);
+  logger.warn('catalog', `Student reported missing book ID: ${bookId}`, { notes });
   void supabase; // supabase is required for auth context in real usage
   return { success: true };
 }

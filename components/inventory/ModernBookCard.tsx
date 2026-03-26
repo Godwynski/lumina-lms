@@ -19,9 +19,10 @@ interface ModernBookCardProps {
   book: Book;
   onDelete: (book: Book) => void;
   onEdit: (book: Book) => void;
+  index: number;
 }
 
-export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) {
+export function ModernBookCard({ book, onDelete, onEdit, index }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   
   return (
@@ -70,7 +71,14 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
 
           <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
             {book.cover_url ? (
-              <Image src={book.cover_url} alt={book.title} fill className="object-cover" />
+              <Image 
+                src={book.cover_url} 
+                alt={book.title} 
+                fill 
+                className="object-cover" 
+                sizes="(max-width: 768px) 30vw, (max-width: 1200px) 15vw, 10vw"
+                priority={index < 6}
+              />
             ) : (
               <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground"}`}>
                 <BookIcon size={14} />

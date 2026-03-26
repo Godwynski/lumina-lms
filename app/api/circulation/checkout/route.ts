@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 type CheckoutRequest = {
   studentCardQr: string;
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    logger.error("circulation", "Checkout RPC error", { error: error.message, studentCardQr, bookQr });
     const pgCode = (error as { code?: string }).code;
     if (pgCode === "55P03" || pgCode === "P2034") {
       return NextResponse.json(
@@ -74,10 +76,12 @@ export async function POST(request: Request) {
 
   const result = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
   if (!result.ok) {
+    logger.warn("circulation", `Checkout failed: ${result.message}`, { studentCardQr, bookQr, code: result.code });
     const conflictCodes = new Set(["COPY_LOCKED", "COPY_UNAVAILABLE"]);
     const status = conflictCodes.has(result.code ?? "") ? 409 : 400;
     return NextResponse.json(result, { status });
   }
 
+  logger.info("circulation", "Checkout successful", { studentCardQr, bookQr, librarianId: profile.id });
   return NextResponse.json(result, { status: 200 });
 }

@@ -1,5 +1,6 @@
 import { createClient } from './supabase/server';
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 
 const normalizeRole = (value: unknown): 'admin' | 'librarian' | 'staff' | 'student' | null => {
   if (typeof value !== 'string') return null;
@@ -25,7 +26,7 @@ const normalizeRole = (value: unknown): 'admin' | 'librarian' | 'staff' | 'stude
  * be stale until the token refreshes. Always use the Admin API to change roles to ensure
  * immediate consistency.
  */
-export const getUserRole = cache(async () => {
+const fetchUserRole = async () => {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -33,13 +34,9 @@ export const getUserRole = cache(async () => {
     return null;
   }
 
-  // Fast path: role is embedded in the JWT via app_metadata (set by Admin API).
-  // This is the authoritative source and requires no DB query.
   const metadataRole = normalizeRole(user.app_metadata?.role);
   if (metadataRole) return metadataRole;
 
-  // Slow path: fall back to the profiles table for legacy accounts or OAuth users
-  // whose app_metadata.role has not been set yet.
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -50,5 +47,23 @@ export const getUserRole = cache(async () => {
   if (profileRole) return profileRole;
 
   return 'student';
+};
+
+/**
+ * Returns the role for the currently authenticated user.
+ * Cached per-request via React cache() and cross-request via Next.js unstable_cache().
+ */
+export const getUserRole = cache(async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return null;
+
+  // Cross-request cache for 5 minutes keyed by user ID
+  return await unstable_cache(
+    async () => fetchUserRole(),
+    [`user-role-${user.id}`],
+    { revalidate: 300, tags: [`user-${user.id}`] }
+  )();
 });
 

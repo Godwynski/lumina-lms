@@ -38,8 +38,8 @@ export function InventoryGrid({ books, onDelete, onEdit }: InventoryGridProps) {
   return (
     <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
       <AnimatePresence mode="popLayout">
-        {books.map((book) => (
-          <ModernBookCard key={book.id} book={book} onDelete={onDelete} onEdit={onEdit} />
+        {books.map((book, index) => (
+          <ModernBookCard key={book.id} book={book} onDelete={onDelete} onEdit={onEdit} index={index} />
         ))}
       </AnimatePresence>
     </div>
