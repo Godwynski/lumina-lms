@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import {
   ChevronRight,
   LayoutDashboard,
@@ -67,6 +68,10 @@ import {
 } from "@/components/ui/collapsible";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
+interface Profile {
+  full_name?: string | null;
+  avatar_url?: string | null;
+}
 
 type NavItem = {
   href: string;
@@ -98,6 +103,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ["admin", "librarian", "staff", "student"],
     children: [
       { href: "/protected/catalog", label: "Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
+      { href: "/protected/student-catalog", label: "Catalog", icon: Library, roles: ["student"] },
       { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
       { href: "/protected/circulation", label: "Circulation", icon: History, roles: ["admin", "librarian", "staff"] },
     ],
@@ -166,8 +172,8 @@ export function ProtectedNav({
   profile,
 }: {
   role?: string | null;
-  user?: any;
-  profile?: any;
+  user?: User | null;
+  profile?: Profile | null;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();

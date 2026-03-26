@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ProtectedNavClient } from "@/components/layout/ProtectedNavClient";
-import { AuthButton } from "@/components/auth/AuthButton";
 import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
 import { HeartbeatBanner } from "@/components/layout/HeartbeatBanner";

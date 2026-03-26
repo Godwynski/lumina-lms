@@ -29,6 +29,11 @@ import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+interface Profile {
+  full_name?: string | null;
+  avatar_url?: string | null;
+}
+
 interface UserNavProps {
   user: {
     email?: string;
@@ -37,7 +42,7 @@ interface UserNavProps {
       avatar_url?: string;
     };
   };
-  profile: any;
+  profile: Profile | null;
   role: string | null;
 }
 
@@ -57,7 +62,6 @@ export function UserNav({ user, profile, role }: UserNavProps) {
   };
 
   const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
-  const email = user?.email || "";
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
   const initials = name
     .split(" ")

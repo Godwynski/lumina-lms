@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, AlertCircle, Users, BarChart2, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import MyCardContainer from '@/components/library/MyCardContainer';
@@ -89,7 +89,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
 
   const queueItems = [
     {
-      label: isStudent ? 'My Active Borrows' : 'Active Borrows Now',
+      label: isStudent ? 'Borrowed Books' : 'Active Borrows Now',
       value: isStudent ? stats.myActiveLoans : stats.activeLoans,
       href: '/protected/history',
     },
@@ -105,115 +105,129 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
 
   if (isStudent) {
     return (
-      <div className="space-y-4 pb-10 overflow-x-hidden">
+      <div className="space-y-6 pb-14 overflow-x-hidden">
         <section className="grid gap-6 md:grid-cols-12 items-start">
           {/* Main Hero: The Digital Card */}
-          <Card className="md:col-span-8 border-none bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-md overflow-hidden relative group p-6">
+          <Card className="md:col-span-8 border-none bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-md overflow-hidden relative p-5 sm:p-7">
             {studentCard ? (
               <MyCardContainer initialData={studentCard} variant="dashboard" />
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Library size={48} className="text-muted-foreground/20 mb-4" />
-                <h2 className="text-xl font-bold text-muted-foreground/40">No Digital Card Available</h2>
-                <p className="text-sm text-muted-foreground/40 mt-1">Please contact the librarian if you believe this is an error.</p>
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <Library size={42} className="text-muted-foreground/20 mb-3" />
+                <h2 className="text-lg font-bold text-muted-foreground/40">No Digital Card Available</h2>
+                <p className="text-xs text-muted-foreground/40 mt-1">Please contact the librarian if you believe this is an error.</p>
               </div>
             )}
           </Card>
 
-          {/* Stats & Quick Actions Sidebar */}
-          <div className="md:col-span-4 space-y-4 h-full">
-            <Card className="border-border bg-card shadow-sm border-border/70 h-full">
-              <CardContent className="p-4 flex flex-col justify-between h-full gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Active Borrows</p>
-                      <p className="text-3xl font-black text-primary">{stats.myActiveLoans}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button asChild variant="outline" className="h-12 flex-col gap-1 rounded-xl border-border/60 hover:bg-primary/5 hover:border-primary/20 transition-all font-bold">
-                      <Link href="/protected/history">
-                        <History size={16} className="text-primary/60" />
-                        <span className="text-[9px] uppercase tracking-wider">History</span>
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline" className="h-12 flex-col gap-1 rounded-xl border-border/60 hover:bg-primary/5 hover:border-primary/20 transition-all font-bold">
-                      <Link href="/protected/student-catalog">
-                        <Library size={16} className="text-primary/60" />
-                        <span className="text-[9px] uppercase tracking-wider">Catalog</span>
-                      </Link>
-                    </Button>
-                  </div>
+          {/* Compact Stats & Terminal Actions */}
+          <div className="md:col-span-4 space-y-5 h-full">
+            {/* Quick Stats */}
+            <Card className="border-border bg-card/40 shadow-sm p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
+                  <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
                 </div>
-
-                <Button asChild className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95">
-                  <Link href="/protected/my-card">Manual & Tips</Link>
-                </Button>
-              </CardContent>
+                <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                   <History size={18} />
+                </div>
+              </div>
             </Card>
+
+            {/* Terminal Actions */}
+            <section className="space-y-3">
+              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Library Terminal</h2>
+              <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-background shadow-md shadow-primary/5 overflow-hidden">
+                <div className="p-1 space-y-0.5">
+                  {[
+                    { title: 'Book Catalog', href: '/protected/student-catalog', icon: Library },
+                    { title: 'Borrow History', href: '/protected/history', icon: History },
+                    { title: 'Digital Resources', href: '/protected/resources', icon: BookOpen },
+                    { title: 'Manual & Guidelines', href: '/protected/my-card', icon: HelpCircle },
+                  ].map(action => (
+                    <Button
+                      key={action.title}
+                      asChild
+                      variant="ghost"
+                      className="w-full justify-between items-center h-11 px-3 hover:bg-primary/5 hover:text-primary group transition-all rounded-lg"
+                    >
+                      <Link href={action.href}>
+                         <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-background border border-border p-1.5 group-hover:border-primary/30 transition-colors shadow-sm">
+                               <action.icon size={14} className="text-muted-foreground/60 group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="text-xs font-bold tracking-tight">{action.title}</span>
+                         </div>
+                         <ArrowUpRight size={14} className="text-muted-foreground/20 group-hover:text-primary/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+            </section>
           </div>
         </section>
 
-        {/* Discovery & New Arrivals - Horizontal Scroll */}
-        <section className="space-y-2">
+        {/* Discovery & New Arrivals */}
+        <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-              Recommended & Recent
+              Latest In Library
             </h2>
-            <Link href="/protected/student-catalog" className="text-[10px] font-bold text-primary hover:underline">Explore All</Link>
+            <Link href="/protected/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin snap-x px-0.5">
+          <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x px-0.5">
             {stats.recentBooks.map((book) => (
-              <Link key={book.id} href={`/protected/student-catalog/${book.id}`} className="flex-none w-[140px] snap-start group bg-card border border-border/60 rounded-xl overflow-hidden hover:border-primary/30 transition-all shadow-sm">
-                <div className="aspect-[3/4] bg-muted/30 flex flex-col items-center justify-center relative overflow-hidden">
+              <Link key={book.id} href={`/protected/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
+                <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
                   {book.cover_url ? (
                     <Image 
                       src={book.cover_url} 
                       alt={book.title} 
                       fill 
-                      sizes="140px" 
-                      className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                      sizes="130px" 
+                      className="object-cover group-hover:scale-110 transition-transform duration-700" 
                       unoptimized={book.cover_url.startsWith('http')}
                     />
                   ) : (
-                    <BookMarked size={28} className="text-muted-foreground/20 group-hover:scale-110 transition-transform duration-500" />
+                    <BookMarked size={24} className="text-muted-foreground/10 group-hover:scale-125 transition-transform duration-700" />
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <div className="p-2.5 bg-card">
-                  <p className="truncate text-[11px] font-bold text-foreground/90 leading-tight">{book.title}</p>
-                  <p className="truncate text-[10px] text-muted-foreground/60 mt-0.5">{book.author}</p>
+                <div className="p-2.5 bg-card/80 backdrop-blur-sm">
+                  <p className="truncate text-[10px] font-bold text-foreground leading-tight">{book.title}</p>
+                  <p className="truncate text-[9px] text-muted-foreground/70 mt-0.5">{book.author}</p>
                 </div>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* FAQs */}
+        {/* Compressed FAQs / Help */}
         {studentFaqs && studentFaqs.length > 0 && (
-          <section className="space-y-3 pt-4">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 px-1">
-              <HelpCircle className="h-3 w-3 text-primary" />
-              Frequently Asked Questions
-            </h2>
-            <div className="grid gap-2">
-              {studentFaqs.map((faq, index) => (
-                <Collapsible key={index} className="bg-card border border-border/60 rounded-xl overflow-hidden shadow-sm">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left font-semibold text-sm hover:bg-muted/50 transition-colors">
-                    {faq.question}
-                    <ChevronDown size={16} className="text-muted-foreground shrink-0" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 text-sm text-muted-foreground border-t border-border/40 pt-2">
-                    {faq.answer}
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
-            </div>
+          <section className="pt-2">
+            <Collapsible className="bg-card/30 border border-border/40 rounded-xl overflow-hidden shadow-sm">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Support & FAQs</span>
+                </div>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-3 pb-3 space-y-2 border-t border-border/20 pt-3">
+                {studentFaqs.map((faq, index) => (
+                  <div key={index} className="space-y-1">
+                    <p className="text-xs font-bold text-foreground/90">{faq.question}</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{faq.answer}</p>
+                    {index < studentFaqs.length - 1 && <div className="h-px w-full bg-border/10 my-2" />}
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
           </section>
         )}
-
       </div>
     );
   }
