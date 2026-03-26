@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import {
   CreditCard,
   ChevronsUpDown,
   LogOut,
+  Server,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -63,7 +65,6 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
-  CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
@@ -122,7 +123,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "platform",
     label: "Platform",
-    icon: Settings,
+    icon: Server,
     roles: ["admin", "librarian"],
     children: [
       { href: "/protected/settings?tab=policies", label: "System Policies", icon: Settings, roles: ["admin", "librarian"] },
@@ -212,7 +213,8 @@ export function ProtectedNav({
     ];
   }, []);
 
-  const isSettingsActive = pathname === "/protected/settings";
+  const settingsTabIds = ["profile", "preferences", "security"];
+  const isSettingsActive = pathname === "/protected/settings" && settingsTabIds.includes(currentTab);
 
   const filteredGroups = React.useMemo(() => {
     return NAV_GROUPS.map(group => ({
@@ -227,7 +229,28 @@ export function ProtectedNav({
 
   const isActive = (href: string) => {
     if (href === "/protected") return pathname === href;
-    return pathname.startsWith(href);
+    const pathWithoutQuery = pathname.split("?")[0];
+    const hrefBase = href.split("?")[0];
+
+    if (href.includes("?tab=")) {
+      const hrefTab = href.split("?tab=")[1].split("&")[0];
+      return pathWithoutQuery === hrefBase && currentTab === hrefTab;
+    }
+
+    return pathWithoutQuery.startsWith(hrefBase);
+  };
+
+  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    filteredGroups.forEach(group => {
+      initial[group.id] = group.children.some(child => isActive(child.href));
+    });
+    if (isSettingsActive) initial["settings"] = true;
+    return initial;
+  });
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
   return (
@@ -260,35 +283,55 @@ export function ProtectedNav({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <Collapsible defaultOpen={isSettingsActive} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Settings" isActive={isSettingsActive}>
-                      <Settings />
-                      <span>Settings</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {settingsLinks.map((item) => {
-                        const href = `/protected/settings?tab=${item.id}`;
-                        const isSubActive = isSettingsActive && currentTab === item.id;
-                        return (
-                          <SidebarMenuSubItem key={item.id}>
-                            <SidebarMenuSubButton asChild isActive={isSubActive}>
-                              <Link href={href} className="flex items-center gap-2">
-                                <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isSubActive ? "bg-sidebar-primary" : "bg-transparent")} />
-                                <span className={cn("truncate", isSubActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        );
-                      })}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+              <Collapsible
+                  open={openGroups["settings"]}
+                  onOpenChange={() => toggleGroup("settings")}
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip="Settings"
+                        isActive={isSettingsActive}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleGroup("settings");
+                        }}
+                      >
+                        <Settings />
+                        <span>Settings</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <AnimatePresence mode="wait">
+                      {openGroups["settings"] && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                        >
+                          <SidebarMenuSub>
+                            {settingsLinks.map((item) => {
+                              const href = `/protected/settings?tab=${item.id}`;
+                              const isSubActive = isSettingsActive && currentTab === item.id;
+                              return (
+                                <SidebarMenuSubItem key={item.id}>
+                                  <SidebarMenuSubButton asChild isActive={isSubActive}>
+                                    <Link href={href} className="flex items-center gap-2">
+                                      <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isSubActive ? "bg-sidebar-primary" : "bg-sidebar-border")} />
+                                      <span className={cn("truncate", isSubActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </SidebarMenuItem>
+                </Collapsible>
             </SidebarMenu>
           </SidebarGroup>
 
@@ -297,36 +340,48 @@ export function ProtectedNav({
               {filteredGroups.map((group) => (
                 <Collapsible
                   key={group.id}
-                  asChild
-                  defaultOpen={group.children.some(child => isActive(child.href))}
+                  open={openGroups[group.id]}
+                  onOpenChange={() => toggleGroup(group.id)}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={group.label} isActive={group.children.some(child => isActive(child.href))}>
+                      <SidebarMenuButton
+                        tooltip={group.label}
+                        isActive={group.children.some(child => isActive(child.href))}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleGroup(group.id);
+                        }}
+                      >
                         <group.icon />
                         <span>{group.label}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {group.children.map((item) => (
-                          <SidebarMenuSubItem key={item.href}>
-                            <SidebarMenuSubButton asChild isActive={isActive(item.href)}>
-                              <Link href={item.href} className="flex items-center gap-2">
-                                {isActive(item.href) ? (
-                                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-primary" />
-                                ) : (
-                                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-transparent" />
-                                )}
-                                <span className={cn("truncate", isActive(item.href) && "font-semibold text-sidebar-primary")}>{item.label}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
+                    <AnimatePresence mode="wait">
+                      {openGroups[group.id] && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                        >
+                          <SidebarMenuSub>
+                            {group.children.map((item) => (
+                              <SidebarMenuSubItem key={item.href}>
+                                <SidebarMenuSubButton asChild isActive={isActive(item.href)}>
+                                  <Link href={item.href} className="flex items-center gap-2">
+                                    <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive(item.href) ? "bg-sidebar-primary" : "bg-sidebar-border")} />
+                                    <span className={cn("truncate", isActive(item.href) && "font-semibold text-sidebar-primary")}>{item.label}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </SidebarMenuItem>
                 </Collapsible>
               ))}

@@ -1,40 +1,88 @@
+'use client';
+
 import type { User } from '@supabase/supabase-js';
+import { motion } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 export function Hero({ user, role }: { user: User | null; role: string | null }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm md:p-12">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-300 bg-slate-50">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-          </svg>
-        </div>
-        <span className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Lumina LMS</span>
-      </div>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+    }
+  };
 
-      <div className="space-y-4">
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8 } }
+  };
+
+  return (
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-12 md:py-24"
+    >
+      <motion.div variants={itemVariants} className="mb-6 flex items-center gap-3">
+        <Badge variant="secondary" className="px-3 py-1 text-xs font-medium shadow-sm">
+          <Sparkles className="mr-1.5 h-3.5 w-3.5 text-slate-500" />
+          {user ? 'Account Active' : 'Library Operations Platform'}
+        </Badge>
+      </motion.div>
+
+      <motion.div variants={itemVariants} className="space-y-6 mb-10">
+        <h1 className="text-balance text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl">
+          {user ? (
+            <>Welcome back, <br className="hidden sm:block"/><span className="text-slate-500">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
+          ) : (
+            <>Intelligent Library Operations for the <span className="text-slate-500">Modern Era.</span></>
+          )}
+        </h1>
+        <p className="text-balance text-lg text-slate-600 sm:text-xl md:max-w-2xl mx-auto">
+          {user ? (
+            `You are signed in with the ${role} role and have access to your workspace.`
+          ) : (
+            'Streamline physical and digital resource management with role-based access, smart circulation, and unified identity.'
+          )}
+        </p>
+      </motion.div>
+
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-center">
         {user ? (
           <>
-            <p className="inline-flex items-center rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-600">Account Active</p>
-            <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-900 md:text-4xl">
-              Welcome back, {user.user_metadata?.full_name || user.email?.split('@')[0]}.
-            </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-slate-600 md:text-base">
-              You are signed in with the {role} role and have access to your workspace.
-            </p>
+            <Button asChild size="lg" className="rounded-full font-semibold shadow-md px-8 h-12">
+              <Link href="/protected">
+                Go to Dashboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-white/50 backdrop-blur-sm">
+              <Link href="/settings">
+                Account Settings
+              </Link>
+            </Button>
           </>
         ) : (
           <>
-            <p className="inline-flex items-center rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-600">Library Operations Platform</p>
-            <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-900 md:text-4xl">
-              Intelligent Library Operations for the Modern Era.
-            </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-slate-600 md:text-base">
-              Streamline physical and digital resource management with role-based access, smart circulation, and unified identity.
-            </p>
+            <Button asChild size="lg" className="rounded-full font-semibold shadow-md px-8 h-12">
+              <Link href="/login">
+                Get Started
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-white/50 backdrop-blur-sm">
+              <Link href="/about">
+                Learn More
+              </Link>
+            </Button>
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
