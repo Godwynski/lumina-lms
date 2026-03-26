@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 type ReturnRequest = {
   bookQr: string;
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    logger.error("circulation", "Return RPC error", { error: error.message, bookQr });
     const pgCode = (error as { code?: string }).code;
     if (pgCode === "55P03" || pgCode === "P2034") {
       return NextResponse.json(
@@ -68,10 +70,12 @@ export async function POST(request: Request) {
 
   const result = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
   if (!result.ok) {
+    logger.warn("circulation", `Return failed: ${result.message}`, { bookQr, code: result.code });
     const conflictCodes = new Set(["COPY_LOCKED"]);
     const status = conflictCodes.has(result.code ?? "") ? 409 : 400;
     return NextResponse.json(result, { status });
   }
 
+  logger.info("circulation", "Return successful", { bookQr, librarianId: profile.id });
   return NextResponse.json(result, { status: 200 });
 }

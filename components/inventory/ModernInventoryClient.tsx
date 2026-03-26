@@ -12,14 +12,16 @@ import { CompactPagination } from "@/components/ui/compact-pagination";
 import { ModernBookListItem } from "./ModernBookListItem";
 import { InventoryGrid } from "./InventoryGrid";
 import { EditBookMetadataDialog } from "./EditBookMetadataDialog";
-import { Book } from "@/lib/types";
+import { Book, Category } from "@/lib/types";
 
 interface ModernInventoryClientProps {
   books: Book[];
+  totalItems: number;
+  categories: Category[];
   onDelete: (book: Book) => void;
 }
 
-export function ModernInventoryClient({ books, onDelete }: ModernInventoryClientProps) {
+export function ModernInventoryClient({ books, totalItems, categories, onDelete }: ModernInventoryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -31,6 +33,7 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
   const [bookToEdit, setBookToEdit] = useState<Book | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1", 10));
+  const [categoryId, setCategoryId] = useState(searchParams.get("categoryId") || "all");
 
   // Sync state to URL
   useEffect(() => {
@@ -38,13 +41,14 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
     if (search) params.set("q", search);
     if (viewMode !== "grid") params.set("view", viewMode);
     if (stockFilter !== "all") params.set("stock", stockFilter);
+    if (categoryId !== "all") params.set("categoryId", categoryId);
     if (sortBy !== "title_asc") params.set("sort", sortBy);
     if (page !== 1) params.set("page", page.toString());
     
     startTransition(() => {
       router.replace(`?${params.toString()}`, { scroll: false });
     });
-  }, [search, viewMode, stockFilter, sortBy, page, router]);
+  }, [search, viewMode, stockFilter, sortBy, page, router, categoryId]);
 
   const handleEditClick = (book: Book) => {
     setBookToEdit(book);
@@ -59,44 +63,8 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
     });
   };
 
-  const filteredBooks = useMemo(() => {
-    const searched = books.filter((b) =>
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.author.toLowerCase().includes(search.toLowerCase()) ||
-      b.isbn?.toLowerCase().includes(search.toLowerCase()),
-    );
-
-    const stockFiltered = searched.filter((b) => {
-      if (stockFilter === "in") return b.available_copies > 0;
-      if (stockFilter === "out") return b.available_copies === 0;
-      if (stockFilter === "low") return b.available_copies > 0 && b.available_copies <= 2;
-      return true;
-    });
-
-    return [...stockFiltered].sort((a, b) => {
-      if (sortBy === "title_desc") return b.title.localeCompare(a.title);
-      if (sortBy === "availability_desc") return b.available_copies - a.available_copies;
-      if (sortBy === "availability_asc") return a.available_copies - b.available_copies;
-      return a.title.localeCompare(b.title);
-    });
-  }, [books, search, sortBy, stockFilter]);
-
-  const quickFilters = useMemo(
-    () => [
-      { key: "all" as const, label: "All", count: books.length },
-      { key: "in" as const, label: "In", count: books.filter((b) => b.available_copies > 0).length },
-      { key: "out" as const, label: "Out", count: books.filter((b) => b.available_copies === 0).length },
-      { key: "low" as const, label: "Low", count: books.filter((b) => b.available_copies > 0 && b.available_copies <= 2).length },
-    ],
-    [books],
-  );
-
   const pageSize = viewMode === "list" ? 10 : 9;
-  const totalPages = Math.max(1, Math.ceil(filteredBooks.length / pageSize));
-  const pagedBooks = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredBooks.slice(start, start + pageSize);
-  }, [filteredBooks, page, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   useEffect(() => {
     setPage(1);
@@ -107,6 +75,23 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, stockFilter, sortBy, viewMode]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const quickFilters = useMemo(
+    () => [
+      { key: "all" as const, label: "All", count: totalItems },
+    ],
+    [totalItems],
+  );
 
   return (
     <div className="w-full space-y-3 pb-5 md:pb-7">
@@ -151,6 +136,32 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
           </Button>
         ))}
 
+        <div className="mx-1 h-4 w-[1px] bg-border/50" />
+
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[400px]">
+          <Button
+            type="button"
+            variant={categoryId === "all" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setCategoryId("all")}
+            className="h-7 whitespace-nowrap rounded-md px-2.5 text-[10px]"
+          >
+            All Categories
+          </Button>
+          {categories.map((cat) => (
+            <Button
+              key={cat.id}
+              type="button"
+              variant={categoryId === cat.id ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setCategoryId(cat.id)}
+              className="h-7 whitespace-nowrap rounded-md px-2.5 text-[10px]"
+            >
+              {cat.name}
+            </Button>
+          ))}
+        </div>
+
         <div className="ml-auto flex items-center gap-1.5">
           <Button
             type="button"
@@ -190,10 +201,10 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
       {viewMode === "list" ? (
         <div className="overflow-x-auto pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-thin">
           <div className="space-y-2 min-w-[700px] pr-2">
-            {pagedBooks.map((book) => (
+            {books.map((book) => (
               <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
             ))}
-            {filteredBooks.length === 0 && (
+            {books.length === 0 && (
               <div className="rounded-lg border border-dashed border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground p-4">
                 No books match current filters.
               </div>
@@ -201,13 +212,13 @@ export function ModernInventoryClient({ books, onDelete }: ModernInventoryClient
           </div>
         </div>
       ) : (
-        <InventoryGrid books={pagedBooks} onDelete={onDelete} onEdit={handleEditClick} />
+        <InventoryGrid books={books} onDelete={onDelete} onEdit={handleEditClick} />
       )}
 
-      {filteredBooks.length > 0 && (
+      {totalItems > 0 && (
         <CompactPagination
           page={page}
-          totalItems={filteredBooks.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setPage}
         />

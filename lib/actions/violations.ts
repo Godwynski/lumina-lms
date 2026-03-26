@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { ViolationSchema, ResolutionSchema } from '../validations/violations'
 
 export type ViolationWithProfile = {
   id: string
@@ -102,23 +103,18 @@ export async function searchStudents(query: string) {
   return data || []
 }
 
-export async function createViolation(data: {
-  userId: string
-  violationType: string
-  severity: string
-  points: number
-  description: string
-  incidentDate: string
-}) {
+export async function createViolation(rawInput: unknown) {
   const { supabase, userId } = await assertStaffAccess()
 
+  const validated = ViolationSchema.parse(rawInput)
+
   const { error } = await supabase.from('violations').insert({
-    user_id: data.userId,
-    violation_type: data.violationType,
-    severity: data.severity,
-    points: data.points,
-    description: data.description,
-    incident_date: data.incidentDate,
+    user_id: validated.userId,
+    violation_type: validated.violationType,
+    severity: validated.severity,
+    points: validated.points,
+    description: validated.description,
+    incident_date: validated.incidentDate,
     status: 'active',
     created_by: userId,
   })
@@ -137,6 +133,27 @@ export async function deleteViolation(violationId: string) {
     .from('violations')
     .delete()
     .eq('id', violationId)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/protected/violations')
+  return { success: true }
+}
+
+export async function resolveViolation(violationId: string, notes?: string) {
+  await assertStaffAccess()
+
+  const validated = ResolutionSchema.parse({ violationId, notes })
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('violations')
+    .update({
+      status: 'resolved',
+      resolved_at: new Date().toISOString(),
+      resolution_notes: validated.notes || null
+    })
+    .eq('id', validated.violationId)
 
   if (error) throw new Error(error.message)
 

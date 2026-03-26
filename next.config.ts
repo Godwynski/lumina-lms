@@ -2,13 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig = {
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'lvifzwbafxpopzcgdvtt.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'covers.openlibrary.org',
+        port: '',
+        pathname: '/b/id/**',
       },
     ],
   },

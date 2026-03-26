@@ -1,45 +1,46 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { createClient, createSafeClient } from '@/lib/supabase/server';
+import { getUserRole } from '@/lib/auth-helpers';
+import { revalidatePath, unstable_cache } from 'next/cache';
+import { BookSchema, CategorySchema } from '../validations/catalog';
+import { logger } from '../logger';
 
 async function assertStaffCatalogAccess() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const role = await getUserRole();
 
-  if (!user) {
-    throw new Error('Unauthorized');
+  if (!role || !['admin', 'librarian', 'staff'].includes(role)) {
+    throw new Error('Unauthorized or Forbidden');
   }
 
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (error || !profile || !['admin', 'librarian', 'staff'].includes(String(profile.role))) {
-    throw new Error('Forbidden');
-  }
-
-  return supabase;
+  return await createClient();
 }
 
 // --- Categories ---
 
-export async function getCategories() {
-  const supabase = await assertStaffCatalogAccess();
-  const { data, error } = await supabase.from('categories').select('*').order('name');
-  if (error) throw new Error(error.message);
-  return data;
-}
+/**
+ * Fetches all inventory categories. Results are cached via Next.js unstable_cache.
+ * @returns Array of categories.
+ */
+export const getCategories = unstable_cache(
+  async () => {
+    const supabase = createSafeClient();
+    const { data, error } = await supabase.from('categories').select('*').order('name');
+    if (error) throw new Error(error.message);
+    return data;
+  },
+  ['catalog-categories'],
+  { revalidate: 3600, tags: ['categories'] }
+);
 
 export async function createCategory(name: string, description?: string) {
   const supabase = await assertStaffCatalogAccess();
+
+  const validated = CategorySchema.parse({ name, description });
+
   const { data, error } = await supabase
     .from('categories')
-    .insert([{ name, description }])
+    .insert([{ name: validated.name, description: validated.description }])
     .select()
     .single();
     
@@ -49,9 +50,24 @@ export async function createCategory(name: string, description?: string) {
 
 // --- Books ---
 
-export async function getBooks(query: string = '', categoryId?: string) {
+/**
+ * Retrieves a paginated list of books with optional filtering.
+ * @param query - Search term for title, author, or ISBN.
+ * @param categoryId - Filter by a specific category ID.
+ * @param page - Current page for pagination.
+ * @param pageSize - Number of items per page.
+ * @returns Object with book list and total count.
+ */
+export async function getBooks(query: string = '', categoryId?: string, page: number = 1, pageSize: number = 10) {
   const supabase = await assertStaffCatalogAccess();
-  let dbQuery = supabase.from('books').select(`*, categories(name)`).eq('is_active', true);
+  
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let dbQuery = supabase
+    .from('books')
+    .select(`*, categories(name)`, { count: 'exact' })
+    .eq('is_active', true);
   
   if (query) {
     dbQuery = dbQuery.textSearch('search_vector', query.split(' ').join(' | '));
@@ -61,28 +77,38 @@ export async function getBooks(query: string = '', categoryId?: string) {
     dbQuery = dbQuery.eq('category_id', categoryId);
   }
   
-  const { data, error } = await dbQuery.order('created_at', { ascending: false });
+  const { data, error, count } = await dbQuery
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
   if (error) throw new Error(error.message);
-  return data;
+  return { data, count };
 }
 
-export async function getBookById(id: string) {
-  const supabase = await assertStaffCatalogAccess();
-  const { data, error } = await supabase
-    .from('books')
-    .select(`*, categories(name)`)
-    .eq('id', id)
-    .single();
-    
-  if (error) throw new Error(error.message);
-  return data;
-}
+export const getBookById = unstable_cache(
+  async (id: string) => {
+    const supabase = createSafeClient();
+    const { data, error } = await supabase
+      .from('books')
+      .select(`*, categories(name)`)
+      .eq('id', id)
+      .single();
+      
+    if (error) throw new Error(error.message);
+    return data;
+  },
+  ['catalog-book-detail'],
+  { revalidate: 3600, tags: ['books'] }
+);
 
-export async function createBook(bookData: Record<string, unknown>, copiesCount: number = 1) {
+export async function createBook(bookData: unknown, copiesCount: number = 1) {
   const supabase = await assertStaffCatalogAccess();
+
+  const validated = BookSchema.parse(bookData);
+
   const { data, error } = await supabase
     .from('books')
-    .insert([bookData])
+    .insert([validated])
     .select()
     .single();
     
@@ -100,27 +126,30 @@ export async function createBook(bookData: Record<string, unknown>, copiesCount:
       .insert(copies);
 
     if (copiesError) {
-      console.error('Error creating book copies:', copiesError);
-      // We don't throw here to avoid failing the whole process if copies fail but book succeeded
-      // though throwing might be better for visibility. Let's throw for now.
+      logger.error('catalog', `Book created but copies failed for ID: ${data.id}`, { error: copiesError.message });
       throw new Error(`Book created but copies failed: ${copiesError.message}`);
     }
   }
 
+  logger.info('catalog', `Book created: ${validated.title}`, { bookId: data.id, isbn: validated.isbn });
   revalidatePath('/protected/catalog');
   return data;
 }
 
-export async function updateBook(id: string, bookData: Record<string, unknown>) {
+export async function updateBook(id: string, bookData: unknown) {
   const supabase = await assertStaffCatalogAccess();
+
+  const validated = BookSchema.partial().parse(bookData);
+
   const { data, error } = await supabase
     .from('books')
-    .update(bookData)
+    .update(validated)
     .eq('id', id)
     .select()
     .single();
     
   if (error) throw new Error(error.message);
+  logger.info('catalog', `Book updated: ${id}`, { updates: validated });
   revalidatePath('/protected/catalog');
   revalidatePath(`/protected/catalog/${id}`);
   return data;
@@ -150,6 +179,7 @@ export async function softDeleteBook(id: string) {
     .single();
     
   if (error) throw new Error(error.message);
+  logger.warn('catalog', `Book soft-deleted: ${id}`);
   revalidatePath('/protected/catalog');
   return data;
 }

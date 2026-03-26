@@ -13,15 +13,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -31,19 +22,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/utils'
+import { AdminTableShell } from '@/components/admin/AdminTableShell'
+import { RecordViolationModal } from '@/components/admin/RecordViolationModal'
 import {
-  createViolation,
   deleteViolation,
-  searchStudents,
+  resolveViolation,
   type ViolationWithProfile,
   type ViolationStats,
 } from '@/lib/actions/violations'
-
-type Student = {
-  id: string
-  full_name: string
-  student_id: string
-}
 
 const VIOLATION_TYPES = [
   { value: 'late_return', label: 'Late Return', icon: Clock, color: 'text-yellow-600', points: 1 },
@@ -80,18 +66,10 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [resolveModalOpen, setResolveModalOpen] = useState<ViolationWithProfile | null>(null)
+  const [resolveNotes, setResolveNotes] = useState('')
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<ViolationWithProfile | null>(null)
-
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
-  const [studentSearch, setStudentSearch] = useState('')
-  const [studentResults, setStudentResults] = useState<Student[]>([])
-  const [newViolation, setNewViolation] = useState({
-    violationType: 'late_return',
-    severity: 'minor',
-    description: '',
-    incidentDate: new Date().toISOString().split('T')[0],
-  })
 
   const refreshViolations = useCallback(() => {
     startTransition(async () => {
@@ -119,49 +97,19 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
     })
   }, [statusFilter, typeFilter])
 
-  const handleStudentSearch = useCallback(async (query: string) => {
-    if (query.length < 2) {
-      setStudentResults([])
-      return
-    }
-    try {
-      const results = await searchStudents(query)
-      setStudentResults(results)
-    } catch {
-      setNotice({ type: 'error', message: 'Failed to search students' })
-    }
-  }, [])
-
-  const debouncedSearch = useCallback((query: string) => {
-    const timer = setTimeout(() => {
-      void handleStudentSearch(query)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [handleStudentSearch])
-
-  const handleCreateViolation = () => {
-    if (!selectedStudent || !newViolation.description) {
-      setNotice({ type: 'error', message: 'Please fill in all required fields' })
-      return
-    }
+  const handleResolveViolation = () => {
+    if (!resolveModalOpen) return
 
     startTransition(async () => {
       try {
-        const typeInfo = VIOLATION_TYPES.find(t => t.value === newViolation.violationType)
-        await createViolation({
-          userId: selectedStudent.id,
-          violationType: newViolation.violationType,
-          severity: newViolation.severity,
-          points: typeInfo?.points || 1,
-          description: newViolation.description,
-          incidentDate: newViolation.incidentDate,
-        })
-        setNotice({ type: 'success', message: 'Violation recorded successfully' })
-        setCreateModalOpen(false)
-        resetCreateForm()
+        await resolveViolation(resolveModalOpen.id, resolveNotes)
+        setNotice({ type: 'success', message: 'Violation marked as resolved' })
         void refreshViolations()
       } catch {
-        setNotice({ type: 'error', message: 'Failed to create violation' })
+        setNotice({ type: 'error', message: 'Failed to resolve violation' })
+      } finally {
+        setResolveModalOpen(null)
+        setResolveNotes('')
       }
     })
   }
@@ -182,27 +130,6 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
     })
   }
 
-  const resetCreateForm = () => {
-    setSelectedStudent(null)
-    setStudentSearch('')
-    setStudentResults([])
-    setNewViolation({
-      violationType: 'late_return',
-      severity: 'minor',
-      description: '',
-      incidentDate: new Date().toISOString().split('T')[0],
-    })
-  }
-
-  const handleTypeSelect = (type: string) => {
-    const typeInfo = VIOLATION_TYPES.find(t => t.value === type)
-    setNewViolation(prev => ({
-      ...prev,
-      violationType: type,
-      severity: typeInfo?.points && typeInfo.points >= 3 ? 'major' : 'minor',
-    }))
-  }
-
   const filteredViolations = violations.filter((v) => {
     const searchLower = searchQuery.toLowerCase()
     return (
@@ -217,23 +144,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
   const getSeverityInfo = (sev: string) => SEVERITY_OPTIONS.find(s => s.value === sev) || SEVERITY_OPTIONS[0]
 
   return (
-    <div className="w-full space-y-4 pb-4">
-      <div className="border-b border-border pb-4">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Violation Records</h1>
-            <p className="text-sm text-muted-foreground">
-              Track and manage student school violations
-            </p>
-          </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Record Violation
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
+    <>
+      <div className="grid gap-4 md:grid-cols-4 mb-4">
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
@@ -280,115 +192,125 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
         </div>
       </div>
 
-      {notice && (
-        <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
-            notice.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-red-200 bg-red-50 text-red-800'
-          }`}
-        >
-          {notice.message}
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by student name, ID, or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm"
+      <AdminTableShell
+        title="Violation Records"
+        description="Track and manage student school violations"
+        headerActions={
+          <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Record Violation
+          </Button>
+        }
+        feedback={
+          notice && (
+            <div
+              className={`rounded-lg border px-4 py-3 text-sm ${
+                notice.type === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-800'
+                  : 'border-red-200 bg-red-50 text-red-800'
+              }`}
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="resolved">Resolved</option>
-              <option value="appealed">Appealed</option>
-            </select>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm"
-            >
-              <option value="all">All Types</option>
-              {VIOLATION_TYPES.map(type => (
-                <option key={type.value} value={type.value}>{type.label}</option>
+              {notice.message}
+            </div>
+          )
+        }
+        controls={
+          <>
+            <div className="relative flex-1 sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by student name, ID, or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1 sm:w-auto">
+              {(['all', 'active', 'resolved', 'appealed'] as const).map((tab) => (
+                <Button
+                  key={tab}
+                  onClick={() => setStatusFilter(tab)}
+                  variant={statusFilter === tab ? 'default' : 'outline'}
+                  className="h-8 px-3 text-xs capitalize"
+                >
+                  {tab === 'all' ? 'All Status' : tab}
+                </Button>
               ))}
-            </select>
-            <Button variant="outline" onClick={() => void refreshViolations()} disabled={isPending}>
-              Refresh
-            </Button>
-          </div>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Severity</TableHead>
-              <TableHead>Points</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm"
+              >
+                <option value="all">All Types</option>
+                {VIOLATION_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        }
+      >
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/60">
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Student</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Type</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Severity</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Points</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Description</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Date</th>
+              <th className="px-4 py-2.5 font-medium text-muted-foreground">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
             {isPending ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+              <tr>
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   Loading...
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : filteredViolations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+              <tr>
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   No violations found
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
               filteredViolations.map((v) => {
                 const typeInfo = getTypeInfo(v.violation_type)
                 const sevInfo = getSeverityInfo(v.severity)
                 const TypeIcon = typeInfo.icon
                 return (
-                  <TableRow key={v.id}>
-                    <TableCell>
+                  <tr key={v.id} className="hover:bg-muted/40">
+                    <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium">{v.profiles?.full_name || 'Unknown'}</p>
+                        <p className="font-medium text-foreground">{v.profiles?.full_name || 'Unknown'}</p>
                         <p className="text-xs text-muted-foreground">
                           {v.profiles?.student_id || 'N/A'}
                         </p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center gap-1 text-sm ${typeInfo.color}`}>
-                        <TypeIcon className="h-4 w-4" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium ${typeInfo.color}`}>
+                        <TypeIcon className="h-3.5 w-3.5" />
                         {typeInfo.label}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${sevInfo.color}`}>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${sevInfo.color}`}>
                         {sevInfo.label}
                       </span>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {v.points} {v.points === 1 ? 'point' : 'points'}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm">
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {v.points} {v.points === 1 ? 'pt' : 'pts'}
+                    </td>
+                    <td className="px-4 py-3 max-w-[200px] truncate text-xs">
                       {v.description}
-                    </TableCell>
-                    <TableCell>
+                    </td>
+                    <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                           v.status === 'active'
@@ -402,159 +324,83 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
                         {v.status === 'resolved' && <CheckCircle2 className="h-3 w-3" />}
                         {v.status.charAt(0).toUpperCase() + v.status.slice(1)}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
                       {formatDate(v.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => setDeleteConfirm(v)}
-                      >
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        {v.status === 'active' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                            onClick={() => setResolveModalOpen(v)}
+                          >
+                            Resolve
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => setDeleteConfirm(v)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
                 )
               })
             )}
-          </TableBody>
-        </Table>
-      </div>
+          </tbody>
+        </table>
+      </AdminTableShell>
 
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="max-w-2xl">
+      <RecordViolationModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSuccess={() => {
+          setNotice({ type: 'success', message: 'Violation recorded successfully' })
+          void refreshViolations()
+        }}
+      />
+
+      <Dialog open={!!resolveModalOpen} onOpenChange={(v) => !v && setResolveModalOpen(null)}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record School Violation</DialogTitle>
+            <DialogTitle>Resolve Violation</DialogTitle>
             <DialogDescription>
-              Document a violation for a student (no monetary fine involved)
+              Mark this violation as resolved. Provide any notes or outcomes below.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
-            <div>
-              <Label>Student</Label>
-              {selectedStudent ? (
-                <div className="mt-1 flex items-center justify-between rounded-lg border border-border bg-muted p-3">
-                  <div>
-                    <p className="font-medium">{selectedStudent.full_name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedStudent.student_id}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectedStudent(null)
-                      setStudentSearch('')
-                    }}
-                  >
-                    Change
-                  </Button>
-                </div>
-              ) : (
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search student by name or ID..."
-                    value={studentSearch}
-                    onChange={(e) => {
-                      setStudentSearch(e.target.value)
-                      void debouncedSearch(e.target.value)
-                    }}
-                    className="pl-9"
-                  />
-                  {studentResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-border bg-card shadow-lg">
-                      {studentResults.map(student => (
-                        <button
-                          key={student.id}
-                          type="button"
-                          className="w-full px-3 py-2 text-left hover:bg-muted"
-                          onClick={() => {
-                            setSelectedStudent(student)
-                            setStudentResults([])
-                            setStudentSearch(`${student.full_name} (${student.student_id})`)
-                          }}
-                        >
-                          <p className="font-medium">{student.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{student.student_id}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+            <div className="rounded-lg border border-border bg-muted p-3">
+              <p className="font-medium">{resolveModalOpen?.profiles?.full_name}</p>
+              <p className="text-sm text-muted-foreground">{resolveModalOpen?.description}</p>
             </div>
-
             <div>
-              <Label>Violation Type</Label>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {VIOLATION_TYPES.map(type => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    className={`rounded-lg border p-2 text-left text-xs transition-colors hover:bg-muted ${
-                      newViolation.violationType === type.value 
-                        ? `border-primary bg-primary/5 ${type.color}` 
-                        : 'border-border'
-                    }`}
-                    onClick={() => handleTypeSelect(type.value)}
-                  >
-                    <type.icon className="mb-1 h-4 w-4" />
-                    <p className="font-medium">{type.label}</p>
-                    <p className="text-muted-foreground">{type.points} pt{type.points !== 1 ? 's' : ''}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Severity</Label>
-                <select
-                  value={newViolation.severity}
-                  onChange={(e) => setNewViolation(prev => ({ ...prev, severity: e.target.value }))}
-                  className="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-                >
-                  {SEVERITY_OPTIONS.map(sev => (
-                    <option key={sev.value} value={sev.value}>{sev.label} ({sev.points} pts)</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <Label>Incident Date</Label>
-                <Input
-                  type="date"
-                  value={newViolation.incidentDate}
-                  onChange={(e) => setNewViolation(prev => ({ ...prev, incidentDate: e.target.value }))}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Description *</Label>
+              <label className="text-sm font-medium mb-1 block">Resolution Notes (Optional)</label>
               <textarea
-                placeholder="Describe the violation in detail..."
-                value={newViolation.description}
-                onChange={(e) => setNewViolation(prev => ({ ...prev, description: e.target.value }))}
-                className="mt-1 w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
                 rows={3}
+                placeholder="Student returned book, paid fine, gave a warning..."
+                value={resolveNotes}
+                onChange={(e) => setResolveNotes(e.target.value)}
               />
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setCreateModalOpen(false); resetCreateForm() }}>
+            <Button variant="ghost" onClick={() => setResolveModalOpen(null)}>
               Cancel
             </Button>
             <Button
-              disabled={!selectedStudent || !newViolation.description || isPending}
-              onClick={() => handleCreateViolation()}
+              disabled={isPending}
+              onClick={() => handleResolveViolation()}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              {isPending ? 'Recording...' : 'Record Violation'}
+              {isPending ? 'Resolving...' : 'Confirm Resolution'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -584,6 +430,6 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
