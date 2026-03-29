@@ -43,7 +43,7 @@ export default defineConfig({
         // Use prepared auth state
         storageState: STORAGE_STATE,
       },
-      dependencies: ['setup'],
+      // dependencies: ['setup'],
     },
     {
       name: 'webkit',

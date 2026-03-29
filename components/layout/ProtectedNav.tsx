@@ -127,7 +127,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ["admin", "librarian"],
     children: [
       { href: "/protected/settings?tab=policies", label: "System Policies", icon: Settings, roles: ["admin", "librarian"] },
-      { href: "/protected/settings?tab=audit", label: "Audit Logs", icon: History, roles: ["admin"] },
+      { href: "/protected/audit", label: "Audit Logs", icon: History, roles: ["admin"] },
       { href: "/protected/settings?tab=operations", label: "Operations", icon: LayoutDashboard, roles: ["admin"] },
       { href: "/protected/settings?tab=gdpr", label: "Compliance", icon: AlertTriangle, roles: ["admin"] },
     ],

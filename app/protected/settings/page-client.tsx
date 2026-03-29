@@ -9,7 +9,7 @@ import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountD
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
 import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { RecomputeExpiryDates } from "@/components/admin/RecomputeExpiryDates";
-import { AuditLogViewer, GDPRHardDeleteDialog } from "@/components/admin/AuditAndGDPR";
+import { GDPRHardDeleteDialog } from "@/components/admin/AuditAndGDPR";
 import {
   User,
   SlidersHorizontal,
@@ -67,7 +67,6 @@ const ADMIN_TABS = [
   { id: "policies", label: "Policies", icon: Settings2, description: "Manage system-wide policies" },
   { id: "categories", label: "Categories", icon: Tags, description: "Book categories & genres" },
   { id: "operations", label: "Operations", icon: RefreshCw, description: "System maintenance tasks" },
-  { id: "audit", label: "Audit Logs", icon: ScrollText, description: "Immutable system activity trail" },
   { id: "gdpr", label: "GDPR", icon: Trash2, description: "Profile anonymization & deletion" },
 ] as const;
 
@@ -646,24 +645,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                 </div>
               )}
 
-              {activeTab === "audit" && isSuperAdmin && (
-                <Section key="audit" title="System Transparency" icon={ScrollText} onMobileNavClick={() => setMobileNavOpen(true)}>
-                  <Card className="mb-6 border-border bg-card shadow-sm">
-                    <div className="flex items-start gap-3 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted">
-                        <AlertCircle size={18} className="text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">Immutable Ledger</p>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                          Every transaction and administrative change is permanently hashed and recorded. Deletion or unauthorized modification is physically restricted at the database layer.
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                  <AuditLogViewer />
-                </Section>
-              )}
 
               {activeTab === "gdpr" && isSuperAdmin && (
                 <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={() => setMobileNavOpen(true)} danger>
