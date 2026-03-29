@@ -12,8 +12,8 @@ test.describe('Admin Critical Paths', () => {
     // Check for the "Operational Pulse" widget
     await expect(page.getByText('Operational Pulse')).toBeVisible();
     
-    // Check for chart interactivity area
-    await expect(page.getByText('Circulation Velocity')).toBeVisible();
+    // Check for chart interactivity area (using heading to differentiate from tooltip labels)
+    await expect(page.getByRole('heading', { name: 'Circulation Velocity' })).toBeVisible();
   });
 
   test('should search and filter books in inventory', async ({ page }) => {
