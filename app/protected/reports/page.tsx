@@ -3,6 +3,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
+import { InteractivePulseChart } from "@/components/analytics/InteractivePulseChart";
+import { UtilizationChart } from "@/components/analytics/UtilizationChart";
+import { OperationalPulseFeed, type ActivityEvent } from "@/components/analytics/OperationalPulseFeed";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Activity, BookCheck, ClipboardList, TrendingUp } from "lucide-react";
 
 export const metadata = {
   title: "Analytics | Lumina LMS",
@@ -19,6 +24,19 @@ type BookRow = {
 
 type BorrowRow = {
   borrowed_at: string | null;
+};
+
+type ActivityRow = {
+  id: string;
+  status: string;
+  borrowed_at: string;
+  returned_at: string | null;
+  profiles: { full_name: string | null } | null;
+  book_copies: {
+    books: {
+      title: string;
+    } | null;
+  } | null;
 };
 
 function monthLabel(date: Date) {
@@ -69,6 +87,7 @@ export default async function ReportsPage({
   rangeStartDate.setDate(rangeStartDate.getDate() - rangeDays + 1);
   const rangeStartIso = rangeStartDate.toISOString();
 
+  // Multi-query data fetching
   const [
     activeLoansResult,
     overdueLoansResult,
@@ -76,6 +95,7 @@ export default async function ReportsPage({
     pendingCardsResult,
     suspendedCardsResult,
     booksResult,
+    recentActivityData,
   ] = await Promise.all([
     supabase
       .from("borrowing_records")
@@ -104,6 +124,20 @@ export default async function ReportsPage({
       .select("id, title, author, total_copies, available_copies, categories(name)")
       .eq("is_active", true)
       .limit(400),
+    supabase
+      .from("borrowing_records")
+      .select(`
+        id, 
+        status, 
+        borrowed_at, 
+        returned_at,
+        profiles!borrowing_records_user_id_fkey(full_name),
+        book_copies(
+          books(title)
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   const activeLoans = activeLoansResult.count ?? 0;
@@ -113,12 +147,24 @@ export default async function ReportsPage({
 
   const monthlyRows = (monthlyLoansResult.data ?? []) as BorrowRow[];
   const books = (booksResult.data ?? []) as BookRow[];
+  const activityRows = (recentActivityData.data ?? []) as unknown as ActivityRow[];
 
+  // Map activities to UI events
+  const activities: ActivityEvent[] = activityRows.map(row => ({
+    id: row.id,
+    type: row.status.toLowerCase() === 'returned' ? 'return' : 
+          (new Date() > new Date(row.borrowed_at) && row.status.toLowerCase() === 'active') ? 'checkout' : 'checkout',
+    bookTitle: row.book_copies?.books?.title || "Unknown Book",
+    userName: row.profiles?.full_name || "Unknown User",
+    timestamp: row.borrowed_at,
+  }));
+
+  // Trend Bucket Math
   const bucketCount = 6;
   const bucketSpanDays = Math.max(1, Math.ceil(rangeDays / bucketCount));
   const dayMs = 24 * 60 * 60 * 1000;
 
-  const monthBuckets: { key: string; label: string; value: number; startMs: number; endMs: number }[] = Array.from({ length: bucketCount }).map((_, idx) => {
+  const monthBuckets = Array.from({ length: bucketCount }).map((_, idx) => {
     const startMs = rangeStartDate.getTime() + idx * bucketSpanDays * dayMs;
     const endMs = Math.min(now.getTime(), startMs + bucketSpanDays * dayMs - 1);
     const endDate = new Date(endMs);
@@ -141,6 +187,7 @@ export default async function ReportsPage({
   const peakMonth = Math.max(1, ...monthBuckets.map((m) => m.value));
   const loansThisMonth = monthBuckets[monthBuckets.length - 1]?.value ?? 0;
 
+  // Category Utilization Math
   const categoryMap = new Map<string, { name: string; total: number; borrowed: number }>();
   for (const book of books) {
     const name = book.categories?.name?.trim() || "Uncategorized";
@@ -181,192 +228,117 @@ export default async function ReportsPage({
     .slice(0, 6);
 
   const displayedTitles = showAllTitles ? topBooks : topBooks.slice(0, 4);
-  const hasAnyQueue = activeLoans > 0 || overdueLoans > 0 || pendingCards > 0 || suspendedCards > 0;
-  const trendPoints = monthBuckets
-    .map((bucket, idx) => {
-      const x = monthBuckets.length === 1 ? 50 : (idx / (monthBuckets.length - 1)) * 100;
-      const y = 36 - (bucket.value / peakMonth) * 28;
-      return `${x},${y}`;
-    })
-    .join(" ");
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
-      <section className="border-b border-border pb-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analytics</h1>
-            <p className="text-sm text-muted-foreground">Circulation, card pipeline, and catalog utilization.</p>
-          </div>
-          <div className="flex items-center gap-1">
-            {[
-              { days: 30, label: "30d" },
-              { days: 90, label: "90d" },
-              { days: 180, label: "180d" },
-            ].map((opt) => (
-              <Button key={opt.days} asChild size="sm" variant={rangeDays === opt.days ? "default" : "outline"} className="h-8 px-2.5 text-xs">
-                <Link
-                  href={buildReportsHref({
-                    range: opt.days,
-                    categories: showAllCategories ? "all" : undefined,
-                    titles: showAllTitles ? "all" : undefined,
-                  })}
-                >
-                  {opt.label}
-                </Link>
-              </Button>
-            ))}
-          </div>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 animate-in fade-in duration-700">
+      <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b pb-6">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Intelligence Dashboard</h1>
+          <p className="mt-1 text-slate-500 font-medium tracking-tight">Real-time circulation trends and inventory health.</p>
         </div>
-      </section>
-
-      <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        <Link href="/protected/history" className="rounded-lg border border-border bg-card p-2.5 transition-colors hover:bg-muted/40">
-          <p className="text-xs text-muted-foreground">Active loans</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{activeLoans}</p>
-        </Link>
-        <Link href="/protected/history" className="rounded-lg border border-border bg-card p-2.5 transition-colors hover:bg-muted/40">
-          <p className="text-xs text-muted-foreground">Overdue loans</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{overdueLoans}</p>
-        </Link>
-        <Link href="/protected/history" className="rounded-lg border border-border bg-card p-2.5 transition-colors hover:bg-muted/40">
-          <p className="text-xs text-muted-foreground">Loans this month</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{loansThisMonth}</p>
-        </Link>
-        <Link href="/protected/admin/approvals" className="rounded-lg border border-border bg-card p-2.5 transition-colors hover:bg-muted/40">
-          <p className="text-xs text-muted-foreground">Pending cards</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{pendingCards}</p>
-        </Link>
-        <Link href="/protected/admin/approvals" className="rounded-lg border border-border bg-card p-2.5 transition-colors hover:bg-muted/40">
-          <p className="text-xs text-muted-foreground">Suspended cards</p>
-          <p className="mt-1 text-xl font-semibold text-foreground">{suspendedCards}</p>
-        </Link>
-      </section>
-
-      {!hasAnyQueue && (
-        <section className="rounded-lg border border-dashed border-border bg-card p-3 text-sm text-muted-foreground">
-          <p>No active queue yet. Start a checkout to generate operational analytics.</p>
-          <div className="mt-2 flex gap-2">
-            <Button asChild variant="outline" size="sm" className="h-7 px-2 text-xs">
-              <Link href="/protected/circulation">Open circulation</Link>
-            </Button>
-          </div>
-        </section>
-      )}
-
-      <section className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-3">
-          <p className="mb-2 text-sm font-semibold text-foreground">Loan trend</p>
-          <div className="rounded-md border border-border bg-muted/40 p-2">
-            <svg viewBox="0 0 100 40" className="h-32 w-full">
-              <polyline
-                points={trendPoints}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="text-primary"
-                vectorEffect="non-scaling-stroke"
-              />
-              {monthBuckets.map((bucket, idx) => {
-                const x = monthBuckets.length === 1 ? 50 : (idx / (monthBuckets.length - 1)) * 100;
-                const y = 36 - (bucket.value / peakMonth) * 28;
-                return <circle key={bucket.key} cx={x} cy={y} r="1.4" className="fill-primary" />;
-              })}
-            </svg>
-            <div className="mt-1 grid grid-cols-6 text-[10px] text-muted-foreground">
-              {monthBuckets.map((m) => (
-                <span key={m.key} className="text-center">{m.label}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-3">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-foreground">Most utilized titles</p>
-            <div className="flex items-center gap-1">
-              {topBooks.length > 4 && (
-                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground">
-                  <Link
-                    href={buildReportsHref({
-                      range: rangeDays,
-                      categories: showAllCategories ? "all" : undefined,
-                      titles: showAllTitles ? undefined : "all",
-                    })}
-                  >
-                    {showAllTitles ? "View less" : "View all"}
-                  </Link>
-                </Button>
-              )}
-              <Button asChild variant="outline" size="sm" className="h-7 px-2 text-xs">
-                <Link href={`/api/admin/analytics-export?type=titles&range=${rangeDays}`}>Export</Link>
-              </Button>
-            </div>
-          </div>
-          {topBooks.length > 0 ? (
-            <div className="space-y-2">
-              {displayedTitles.map((book) => (
-                <Link key={book.id} href={`/protected/catalog/${book.id}`} className="block rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted/40">
-                  <p className="truncate font-medium text-foreground">{book.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{book.borrowed}/{book.total} borrowed ({book.utilization}%)</p>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              No title utilization data yet. Process circulation to populate this list.
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-border bg-card p-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">Top categories by circulation</p>
-          <div className="flex items-center gap-1">
-            {topCategories.length > 4 && (
-              <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground">
-                <Link
-                  href={buildReportsHref({
-                    range: rangeDays,
-                    categories: showAllCategories ? undefined : "all",
-                    titles: showAllTitles ? "all" : undefined,
-                  })}
-                >
-                  {showAllCategories ? "View less" : "View all"}
-                </Link>
-              </Button>
-            )}
-            <Button asChild variant="outline" size="sm" className="h-7 px-2 text-xs">
-              <Link href={`/api/admin/analytics-export?type=categories&range=${rangeDays}`}>Export</Link>
-            </Button>
-          </div>
-        </div>
-        {topCategories.length > 0 ? (
-          <div className="space-y-2">
-            {displayedCategories.map((c) => (
-              <Link key={c.name} href="/protected/catalog" className="block rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-muted/40">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-foreground">{c.name}</span>
-                  <span className="text-xs text-muted-foreground">{c.utilization}% utilization</span>
-                </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded bg-muted">
-                  <div
-                    className={c.utilization > 0 ? "h-full rounded bg-primary" : "h-full rounded bg-transparent"}
-                    style={{ width: `${Math.max(0, c.utilization)}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{c.borrowed} borrowed of {c.total} copies</p>
+        <div className="flex items-center gap-2 bg-slate-100/50 p-1 rounded-xl ring-1 ring-slate-200/60">
+          {[
+            { days: 30, label: "30 Days" },
+            { days: 90, label: "90 Days" },
+            { days: 180, label: "180 Days" },
+          ].map((opt) => (
+            <Button key={opt.days} asChild size="sm" variant={rangeDays === opt.days ? "secondary" : "ghost"} className={`h-8 px-4 text-xs font-bold rounded-lg transition-all ${rangeDays === opt.days ? 'shadow-sm bg-white' : ''}`}>
+              <Link href={buildReportsHref({ range: opt.days, categories: showAllCategories ? "all" : undefined, titles: showAllTitles ? "all" : undefined })}>
+                {opt.label}
               </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            No category utilization data yet.
-          </div>
-        )}
+            </Button>
+          ))}
+        </div>
       </section>
+
+      <section className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+        {[
+          { label: "Active Loans", value: activeLoans, icon: ClipboardList, color: "bg-indigo-50 text-indigo-600", href: "/protected/history" },
+          { label: "Overdue", value: overdueLoans, icon: Activity, color: "bg-rose-50 text-rose-600", href: "/protected/history" },
+          { label: "Monthly Circulation", value: loansThisMonth, icon: TrendingUp, color: "bg-emerald-50 text-emerald-600", href: "/protected/history" },
+          { label: "Pending Cards", value: pendingCards, icon: BookCheck, color: "bg-amber-50 text-amber-600", href: "/protected/admin/approvals" },
+          { label: "Suspended", value: suspendedCards, icon: Activity, color: "bg-slate-100 text-slate-600", href: "/protected/admin/approvals" },
+        ].map((stat, idx) => (
+          <Link key={idx} href={stat.href} className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md active:scale-95">
+            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${stat.color} transition-transform group-hover:scale-110`}>
+              <stat.icon className="h-5 w-5" />
+            </div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-slate-600 transition-colors">{stat.label}</p>
+            <p className="mt-1 text-2xl font-black text-slate-900 group-hover:text-primary transition-colors">{stat.value}</p>
+          </Link>
+        ))}
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-12 items-start">
+        {/* Main Charts Area */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          <Card className="rounded-2xl border-slate-200/60 shadow-sm overflow-hidden border-none bg-slate-50/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold uppercase tracking-[0.15em] text-slate-400">Circulation Velocity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InteractivePulseChart buckets={monthBuckets} peakValue={peakMonth} />
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="rounded-2xl border-slate-200/60 shadow-sm border-none bg-white ring-1 ring-slate-200/60">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-400">Utilization by Category</CardTitle>
+                <div className="flex gap-1.5">
+                  <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold text-slate-500">
+                    <Link href={buildReportsHref({ range: rangeDays, categories: showAllCategories ? undefined : "all", titles: showAllTitles ? "all" : undefined })}>
+                      {showAllCategories ? "Collapse" : "Expand"}
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="h-6 px-2 text-[10px] font-bold">
+                    <Link href={`/api/admin/analytics-export?type=categories&range=${rangeDays}`}>CSV</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <UtilizationChart categories={displayedCategories} />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-slate-200/60 shadow-sm border-none bg-white ring-1 ring-slate-200/60">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-400">High Demand Titles</CardTitle>
+                <div className="flex gap-1.5">
+                  <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold text-slate-500">
+                    <Link href={buildReportsHref({ range: rangeDays, categories: showAllCategories ? "all" : undefined, titles: showAllTitles ? undefined : "all" })}>
+                      {showAllTitles ? "Collapse" : "Expand"}
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="h-6 px-2 text-[10px] font-bold">
+                    <Link href={`/api/admin/analytics-export?type=titles&range=${rangeDays}`}>CSV</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {displayedTitles.map((book) => (
+                  <Link key={book.id} href={`/protected/catalog/${book.id}`} className="group block rounded-xl border border-slate-100 p-3 transition-all hover:bg-slate-50 hover:border-slate-200">
+                    <p className="truncate text-xs font-heavy text-slate-900 group-hover:text-primary transition-colors">{book.title}</p>
+                    <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-slate-400">
+                      <span>{book.borrowed} / {book.total} loans</span>
+                      <span className={book.utilization > 50 ? "text-amber-600" : "text-slate-300"}>{book.utilization}%</span>
+                    </div>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Sidebar Pulse Feed */}
+        <div className="lg:col-span-4 h-full">
+          <Card className="rounded-2xl border-none h-full bg-slate-50/40 border-slate-200/60 shadow-sm overflow-hidden">
+             <CardContent className="p-4">
+                <OperationalPulseFeed activities={activities} />
+             </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

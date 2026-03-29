@@ -1,0 +1,9 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Host
+Host: https://lumina-lms.vercel.app
+
+# Sitemaps
+Sitemap: https://lumina-lms.vercel.app/sitemap.xml

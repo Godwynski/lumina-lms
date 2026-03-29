@@ -13,14 +13,32 @@ export const viewport: Viewport = {
   themeColor: "#0f172a",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Lumina LMS",
-  description: "Library management platform for students, staff, and administrators.",
+  title: {
+    default: "Lumina LMS",
+    template: "%s | Lumina LMS",
+  },
+  description: "Advanced Library Management System for modern institutions. Track books, manage circulation, and generate reports.",
+  keywords: ["Library Management", "LMS", "Education", "Inventory", "Books", "Digital Assets"],
+  authors: [{ name: "Lumina Team" }],
+  creator: "Lumina LMS",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: defaultUrl,
+    title: "Lumina LMS - Modern Library Management",
+    description: "Streamlined library operations for schools and organizations.",
+    siteName: "Lumina LMS",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lumina LMS",
+    description: "Modern Library Management System",
+  },
 };
 
 const appSans = Manrope({

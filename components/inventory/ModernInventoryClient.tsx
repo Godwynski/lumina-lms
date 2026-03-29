@@ -107,6 +107,7 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search title, author, ISBN"
+                aria-label="Search the catalog"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-8 rounded-md pl-8 text-xs"
@@ -205,8 +206,28 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
               <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
             ))}
             {books.length === 0 && (
-              <div className="rounded-lg border border-dashed border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground p-4">
-                No books match current filters.
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-4 py-16 text-center shadow-sm backdrop-blur-sm">
+                <div className="mb-4 rounded-full bg-slate-100 p-4 font-medium text-slate-400 ring-1 ring-slate-200/50">
+                  <Search className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-bold tracking-tight text-slate-900">No books found</h3>
+                <p className="mt-1 max-w-[280px] text-sm text-slate-500">
+                  We couldn&apos;t find any books matching your current search or filters. Try adjusting them.
+                </p>
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 rounded-full px-5 text-xs font-semibold"
+                    onClick={() => {
+                      setSearch("");
+                      setStockFilter("all");
+                      setCategoryId("all");
+                    }}
+                  >
+                    Clear Search
+                  </Button>
+                </div>
               </div>
             )}
           </div>
