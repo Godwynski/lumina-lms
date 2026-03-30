@@ -56,7 +56,8 @@ export default async function MyCardPage() {
 
   // 4. Fallback generation when trigger-created card is not visible yet.
   if (!finalCard) {
-    const card_number = `LIB-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const uuidFrag = crypto.randomUUID().split('-')[0].toUpperCase();
+    const card_number = `LIB-${new Date().getFullYear()}-${uuidFrag}`;
 
     const { data: newCard } = await supabase
       .from("library_cards")

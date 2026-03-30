@@ -46,6 +46,8 @@ export default function UsersPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0);
   const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student">("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
@@ -99,28 +101,22 @@ export default function UsersPage() {
     }
   }, [selectedUser]);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            user.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTab = activeTab === "all" || user.role === activeTab;
-      return matchesSearch && matchesTab;
-    });
-  }, [searchQuery, activeTab, users]);
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
 
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredUsers.slice(start, start + pageSize);
-  }, [filteredUsers, currentPage]);
+  const paginatedUsers = users;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, activeTab]);
+  }, [debouncedSearch, activeTab]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
+    if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
@@ -130,10 +126,24 @@ export default function UsersPage() {
       setIsLoadingUsers(true);
       setLoadError(null);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("profiles")
-          .select("*")
-          .order("created_at", { ascending: false });
+          .select("*", { count: "exact" });
+
+        if (activeTab !== "all") {
+          query = query.eq("role", activeTab);
+        }
+
+        if (debouncedSearch) {
+          query = query.or(`full_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
+        }
+
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data, error, count } = await query
+          .order("created_at", { ascending: false })
+          .range(from, to);
 
         if (error) {
           throw new Error(error.message || "Failed to load users");
@@ -142,6 +152,7 @@ export default function UsersPage() {
         const nextUsers = ((data ?? []) as ProfileRow[]).map(mapProfileToUser);
 
         setUsers(nextUsers);
+        setTotalUsers(count ?? 0);
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Failed to load users");
       } finally {
@@ -159,7 +170,7 @@ export default function UsersPage() {
     return () => {
       window.removeEventListener("lumina:profile-photo-updated", handleProfilePhotoUpdated);
     };
-  }, [supabase]);
+  }, [supabase, currentPage, debouncedSearch, activeTab]);
 
   const handleInvite = async () => {
     if (!inviteEmail) return;
@@ -330,10 +341,10 @@ export default function UsersPage() {
           </>
         )}
         pagination={
-          !isLoadingUsers && filteredUsers.length > 0 ? (
+          !isLoadingUsers && totalUsers > 0 ? (
             <CompactPagination
               page={currentPage}
-              totalItems={filteredUsers.length}
+              totalItems={totalUsers}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
             />

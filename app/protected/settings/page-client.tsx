@@ -103,12 +103,14 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
   const [selectedPhotoPreviewUrl, setSelectedPhotoPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [intelligentAlerts, setIntelligentAlerts] = useState(true);
+
   // Dirty tracking
   const [initialData, setInitialData] = useState({
     displayName: "",
     address: "",
     phone: "",
-    emailAlerts: true
+    intelligentAlerts: true
   });
 
   useEffect(() => {
@@ -128,16 +130,16 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
           const payload = (await response.json()) as {
             preferences?: {
               displayName?: string;
-              emailAlerts?: boolean;
+              intelligentAlerts?: boolean;
             };
           };
           const preferences = payload.preferences ?? {};
           if (typeof preferences.displayName === "string" && !profileName) {
             setDisplayName(preferences.displayName);
           }
-          if (typeof preferences.emailAlerts === "boolean") {
-            setEmailAlerts(preferences.emailAlerts);
-            setInitialData(prev => ({ ...prev, emailAlerts: preferences.emailAlerts || true }));
+          if (typeof preferences.intelligentAlerts === "boolean") {
+            setIntelligentAlerts(preferences.intelligentAlerts);
+            setInitialData(prev => ({ ...prev, intelligentAlerts: preferences.intelligentAlerts as boolean }));
           }
         }
       } catch {
@@ -167,7 +169,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     addressValue !== initialData.address || 
     phoneValue !== initialData.phone;
   
-  const isPrefsDirty = emailAlerts !== initialData.emailAlerts;
+  const isPrefsDirty = intelligentAlerts !== initialData.intelligentAlerts;
   const isDirty = isProfileDirty || isPrefsDirty || !!selectedPhotoBlob;
 
   const saveProfile = async () => {
@@ -215,11 +217,11 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          emailAlerts,
+          intelligentAlerts,
         }),
       });
       if (!response.ok) throw new Error("Failed to save preferences");
-      setInitialData(prev => ({ ...prev, emailAlerts }));
+      setInitialData(prev => ({ ...prev, intelligentAlerts }));
       toast.success("Preferences updated");
     } catch {
       toast.error("Failed to save preferences");
@@ -230,16 +232,16 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     const defaultName = "";
     const defaultAlerts = true;
     setDisplayName(defaultName);
-    setEmailAlerts(defaultAlerts);
+    setIntelligentAlerts(defaultAlerts);
     await fetch("/api/ui-preferences", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         displayName: defaultName,
-        emailAlerts: defaultAlerts,
+        intelligentAlerts: defaultAlerts,
       }),
     });
-    setInitialData(prev => ({ ...prev, displayName: defaultName, emailAlerts: defaultAlerts }));
+    setInitialData(prev => ({ ...prev, displayName: defaultName, intelligentAlerts: defaultAlerts }));
     toast.success("Settings reset to defaults");
   };
 
@@ -572,8 +574,8 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
                     <PremiumToggle 
                       title="Intelligent Alerts" 
                       description="Receive smart notifications for due dates and library updates."
-                      checked={emailAlerts}
-                      onChange={setEmailAlerts}
+                      checked={intelligentAlerts}
+                      onChange={setIntelligentAlerts}
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-4">

@@ -11,7 +11,8 @@ async function fetchPublicBooks(
   section?: string,
   availableOnly: boolean = false,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  sortBy: 'title' | 'author' | 'availability' = 'title'
 ) {
   const supabase = createSafeClient();
   
@@ -40,8 +41,17 @@ async function fetchPublicBooks(
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, count, error } = await dbQuery
-    .order('title', { ascending: true })
+  let finalQuery = dbQuery;
+  
+  if (sortBy === 'author') {
+    finalQuery = finalQuery.order('author', { ascending: true });
+  } else if (sortBy === 'availability') {
+    finalQuery = finalQuery.order('available_copies', { ascending: false });
+  } else {
+    finalQuery = finalQuery.order('title', { ascending: true });
+  }
+
+  const { data, count, error } = await finalQuery
     .range(from, to);
     
   if (error) throw new Error(error.message);
@@ -61,12 +71,27 @@ export const getPublicBooksCached = unstable_cache(
 );
 
 export async function reportMissingBook(bookId: string, notes?: string) {
-  // In a real app, this would insert into a 'reports' or 'tasks' table for staff
   const supabase = await createClient();
-  // Here we assume a simple tasks table exists, or we just log it if we don't have the table defined
-  // Since we didn't add a 'tasks' table in the migration, we'll just return success for now.
-  logger.warn('catalog', `Student reported missing book ID: ${bookId}`, { notes });
-  void supabase; // supabase is required for auth context in real usage
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error('Not authenticated');
+  }
+
+  const { error } = await supabase
+    .from('reports')
+    .insert({
+      book_id: bookId,
+      user_id: user.id,
+      notes,
+    });
+
+  if (error) {
+    logger.error('catalog', `Failed to insert report for book ${bookId}`, { error });
+    return { success: false, error: 'Failed to submit report' };
+  }
+
+  logger.info('catalog', `Student reported missing book ID: ${bookId}`, { notes });
   return { success: true };
 }
 

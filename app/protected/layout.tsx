@@ -12,29 +12,7 @@ export const dynamic = "force-dynamic";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
-async function NavWithRole() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const role = (await getUserRole()) as Role;
 
-  let profile = null;
-  if (user) {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    profile = profileData;
-  }
-
-  return (
-    <ProtectedNavClient
-      role={role}
-      user={user}
-      profile={profile}
-    />
-  );
-}
 
 export default async function ProtectedLayout({
   children,
@@ -66,7 +44,7 @@ export default async function ProtectedLayout({
 
         {/* Navigation: renders mobile sticky header + desktop fixed sidebar */}
         <Suspense fallback={null}>
-          <NavWithRole />
+          <ProtectedNavClient role={role} user={user} profile={profile} />
         </Suspense>
 
         {/* Main content: offset left for desktop sidebar, top for mobile header */}

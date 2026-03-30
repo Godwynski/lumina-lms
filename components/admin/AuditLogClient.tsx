@@ -116,11 +116,11 @@ export function AuditLogClient() {
   ];
 
   return (
-    <Card className="border-border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-      <CardHeader className="border-b bg-slate-50/50 space-y-4">
+    <Card className="border-border shadow-sm overflow-hidden bg-card backdrop-blur-sm">
+      <CardHeader className="border-b bg-muted/50 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <CardTitle className="text-xl font-bold flex items-center gap-2">
-            <Clock className="h-5 w-5 text-slate-400" />
+            <Clock className="h-5 w-5 text-muted-foreground" />
             Activity History
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export function AuditLogClient() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search by action or ID..." 
               value={search}
@@ -156,12 +156,12 @@ export function AuditLogClient() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-10 border-slate-200 shadow-none focus-visible:ring-slate-900"
+              className="pl-9 h-10 border-border shadow-none focus-visible:ring-ring"
             />
           </div>
           <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-            <SelectTrigger className="h-10 border-slate-200 shadow-none">
-              <Filter className="h-3.5 w-3.5 mr-2 text-slate-400" />
+            <SelectTrigger className="h-10 border-border shadow-none">
+              <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Entity Type" />
             </SelectTrigger>
             <SelectContent>
@@ -172,7 +172,7 @@ export function AuditLogClient() {
               ))}
             </SelectContent>
           </Select>
-          <div className="flex items-center justify-end px-2 text-xs text-slate-400 font-medium">
+          <div className="flex items-center justify-end px-2 text-xs text-muted-foreground font-medium">
             {data ? `${data.total} records found` : "Searching records..."}
           </div>
         </div>
@@ -181,13 +181,13 @@ export function AuditLogClient() {
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-slate-50 border-b border-slate-100">
+            <TableHeader className="bg-muted/50 border-b border-border">
               <TableRow>
-                <TableHead className="w-[180px] font-bold text-slate-500 uppercase text-[10px] tracking-wider">Timestamp</TableHead>
-                <TableHead className="w-[140px] font-bold text-slate-500 uppercase text-[10px] tracking-wider">Entity</TableHead>
-                <TableHead className="w-[140px] font-bold text-slate-500 uppercase text-[10px] tracking-wider">Action</TableHead>
-                <TableHead className="min-w-[200px] font-bold text-slate-500 uppercase text-[10px] tracking-wider">Admin</TableHead>
-                <TableHead className="w-[100px] text-right font-bold text-slate-500 uppercase text-[10px] tracking-wider">Details</TableHead>
+                <TableHead className="w-[180px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Timestamp</TableHead>
+                <TableHead className="w-[140px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Entity</TableHead>
+                <TableHead className="w-[140px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Action</TableHead>
+                <TableHead className="min-w-[200px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Admin</TableHead>
+                <TableHead className="w-[100px] text-right font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -202,7 +202,7 @@ export function AuditLogClient() {
                 <TableRow>
                   <TableCell colSpan={5} className="h-48 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 opacity-50">
-                      <Database className="h-10 w-10 text-slate-300" />
+                      <Database className="h-10 w-10 text-muted-foreground" />
                       <span className="text-sm font-medium">No results match your search.</span>
                     </div>
                   </TableCell>
@@ -211,25 +211,25 @@ export function AuditLogClient() {
               {!data && !error && Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 5 }).map((_, j) => (
-                    <TableCell key={j}><div className="h-4 w-full bg-slate-100 animate-pulse rounded" /></TableCell>
+                    <TableCell key={j}><div className="h-4 w-full bg-muted animate-pulse rounded" /></TableCell>
                   ))}
                 </TableRow>
               ))}
               {data?.logs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-slate-50/80 transition-colors group">
-                  <TableCell className="font-medium text-slate-600">
+                <TableRow key={log.id} className="hover:bg-muted/50 transition-colors group">
+                  <TableCell className="font-medium text-foreground">
                     <div className="flex flex-col">
                       <span className="text-sm">{log.created_at ? format(new Date(log.created_at), "MMM d, yyyy") : "-"}</span>
-                      <span className="text-[10px] text-slate-400 font-mono tracking-tighter">
+                      <span className="text-[10px] text-muted-foreground font-mono tracking-tighter">
                         {log.created_at ? format(new Date(log.created_at), "HH:mm:ss") : ""}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold capitalize text-slate-700">{log.entity_type}</span>
+                      <span className="text-xs font-bold capitalize text-foreground">{log.entity_type}</span>
                       {log.entity_id && (
-                        <span className="text-[10px] font-mono text-slate-400 truncate max-w-[80px]">
+                        <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[80px]">
                           #{log.entity_id.split("-")[0]}
                         </span>
                       )}
@@ -242,14 +242,14 @@ export function AuditLogClient() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                       <div className="h-7 w-7 rounded-full bg-slate-200 flex items-center justify-center border-border shadow-sm overflow-hidden border">
-                          <UserIcon className="h-4 w-4 text-slate-500" />
+                       <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center border-border shadow-sm overflow-hidden border">
+                          <UserIcon className="h-4 w-4 text-muted-foreground" />
                        </div>
                        <div className="flex flex-col min-w-0">
-                         <span className="text-xs font-bold text-slate-700 truncate">
+                         <span className="text-xs font-bold text-foreground truncate">
                             {log.profiles?.full_name || log.profiles?.email || "Unknown"}
                          </span>
-                         <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest leading-none">
+                         <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none">
                             {log.profiles?.role || "Admin"}
                          </span>
                        </div>
@@ -258,32 +258,32 @@ export function AuditLogClient() {
                   <TableCell className="text-right">
                     <Sheet>
                       <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-200 group-hover:visible">
-                          <Eye className="h-4 w-4 text-slate-400" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent hover:text-accent-foreground group-hover:visible">
+                          <Eye className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </SheetTrigger>
                       <SheetContent className="sm:max-w-xl">
                         <SheetHeader className="mb-6">
                           <SheetTitle className="text-2xl font-black">Event Insight</SheetTitle>
-                          <SheetDescription className="text-slate-500 font-medium">
+                          <SheetDescription className="text-muted-foreground font-medium">
                             Comparison of state changes for this {log.entity_type} {log.action} event.
                           </SheetDescription>
                         </SheetHeader>
                         
                         <div className="space-y-6">
                           <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">When</span>
-                                <span className="text-xs font-bold font-mono">{log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "-"}</span>
+                            <div className="p-4 bg-muted/50 rounded-xl border border-border flex flex-col gap-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">When</span>
+                                <span className="text-xs font-bold font-mono text-foreground">{log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "-"}</span>
                             </div>
-                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admin</span>
-                                <span className="text-xs font-bold truncate">{log.profiles?.full_name || log.profiles?.email}</span>
+                            <div className="p-4 bg-muted/50 rounded-xl border border-border flex flex-col gap-1">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Admin</span>
+                                <span className="text-xs font-bold truncate text-foreground">{log.profiles?.full_name || log.profiles?.email}</span>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 border-b pb-2 flex items-center gap-2">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-foreground border-b border-border pb-2 flex items-center gap-2">
                               <Database className="h-3 w-3" />
                               Data Changes
                             </h3>
@@ -306,7 +306,7 @@ export function AuditLogClient() {
           </Table>
         </div>
         {data && data.total > 0 && (
-          <div className="p-4 border-t bg-slate-50/30">
+          <div className="p-4 border-t border-border bg-muted/30">
             <CompactPagination 
               page={page}
               totalItems={data.total}

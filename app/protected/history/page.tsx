@@ -38,6 +38,11 @@ export default function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "ACTIVE" | "RETURNED" | "OVERDUE">("all");
   const [page, setPage] = useState(1);
 
+  // Reset page relative to search/filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter]);
+
   useEffect(() => {
     const loadHistory = async () => {
       setIsLoading(true);
@@ -53,10 +58,28 @@ export default function HistoryPage() {
         const from = (page - 1) * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
-        const { data: recordsData, error: recordsError, count } = await supabase
+        let query = supabase
           .from("borrowing_records")
-          .select("id, book_copy_id, status, borrowed_at, due_date, returned_at, renewal_count", { count: "exact" })
-          .eq("user_id", user.id)
+          .select(`
+            id, book_copy_id, status, borrowed_at, due_date, returned_at, renewal_count,
+            book_copies!inner (
+              books!inner (
+                id, title, author
+              )
+            )
+          `, { count: "exact" })
+          .eq("user_id", user.id);
+
+        if (statusFilter !== "all") {
+          query = query.eq("status", statusFilter);
+        }
+
+        if (searchQuery) {
+          // Since we use !inner, inner joining allows filtering on the related tables
+          query = query.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`, { referencedTable: 'book_copies.books' });
+        }
+
+        const { data: recordsData, error: recordsError, count } = await query
           .order("borrowed_at", { ascending: false })
           .range(from, to);
 
@@ -72,27 +95,17 @@ export default function HistoryPage() {
           return;
         }
 
-        const copyIds = [...new Set(recordsData.map((r) => r.book_copy_id))];
-        const { data: copiesData } = await supabase
-          .from("book_copies")
-          .select("id, book_id")
-          .in("id", copyIds);
-
-        const copyToBookMap = new Map((copiesData ?? []).map((c) => [c.id, c.book_id]));
-        const bookIds = [...new Set((copiesData ?? []).map((c) => c.book_id))];
-
-        const { data: booksData } = await supabase
-          .from("books")
-          .select("id, title, author")
-          .in("id", bookIds);
-
-        const booksMap = new Map((booksData ?? []).map((b) => [b.id, b]));
-
-        const enriched = recordsData.map((record) => {
-          const bookId = copyToBookMap.get(record.book_copy_id);
+        // The query returns nested data, we flatten it to match the type BorrowingRecord
+        const enriched = recordsData.map((record: any) => {
           return {
-            ...record,
-            books: bookId ? booksMap.get(bookId) ?? null : null,
+            id: record.id,
+            book_copy_id: record.book_copy_id,
+            status: record.status,
+            borrowed_at: record.borrowed_at,
+            due_date: record.due_date,
+            returned_at: record.returned_at,
+            renewal_count: record.renewal_count,
+            books: record.book_copies?.books || null,
           };
         });
 
@@ -105,21 +118,9 @@ export default function HistoryPage() {
     };
 
     void loadHistory();
-  }, [supabase, page]);
+  }, [supabase, page, searchQuery, statusFilter]);
 
-  const filteredRecords = useMemo(() => {
-    return records.filter((record) => {
-      const book = record.books;
-      const matchesSearch =
-        !searchQuery ||
-        book?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        book?.author?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || record.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [records, searchQuery, statusFilter]);
+  const filteredRecords = records;
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
-
+import { approveLibraryCard } from "@/lib/actions/admin";
 
 interface PendingCard {
   id: string;
@@ -84,17 +84,13 @@ export default function ApprovalsPage() {
     fetchCards();
   }, [fetchCards]);
 
-  const handleApprove = async (cardId: string) => {
+
+
+  const handleApprove = async (cardId: string, userId: string) => {
     if (processingId) return;
     setProcessingId(cardId);
     try {
-      // 1. Update card status
-      const { error: updateError } = await supabase
-        .from("library_cards")
-        .update({ status: "active" })
-        .eq("id", cardId);
-
-      if (updateError) throw updateError;
+      await approveLibraryCard(cardId, userId);
 
       setNotification({ message: "Card approved successfully.", type: "success" });
       setTimeout(() => setNotification(null), 5000);
@@ -259,7 +255,7 @@ export default function ApprovalsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         {card.status !== "active" && (
                           <Button
-                            onClick={() => handleApprove(card.id)}
+                            onClick={() => handleApprove(card.id, card.user_id)}
                             disabled={processingId === card.id}
                             className="h-8 px-3 text-xs"
                           >
