@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Zap, ShieldCheck, BarChart2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function HealthNode() {
@@ -28,7 +28,7 @@ export function HealthNode() {
         } else {
           setIsSecure(false);
         }
-      } catch (err) {
+      } catch {
         setIsSecure(false);
         setLatency(null);
       }
@@ -65,7 +65,7 @@ export function HealthNode() {
   );
 }
 
-function StatusIndicator({ icon: Icon, label, value, color }: { icon: any, label: string, value: string, color: string }) {
+function StatusIndicator({ icon: Icon, label, value, color }: { icon: LucideIcon, label: string, value: string, color: string }) {
   return (
     <div className="flex items-center gap-2">
       <Icon size={14} className={cn("shrink-0", color)} />

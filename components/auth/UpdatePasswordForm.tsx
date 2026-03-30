@@ -39,22 +39,21 @@ export function UpdatePasswordForm({
       router.push("/protected");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
-      <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+      <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
           <div className="flex items-center gap-3">
             <Logo size={20} />
-            <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Set new password</CardTitle>
-            <CardDescription className="text-sm text-slate-600">Enter a secure password to complete the reset process.</CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Set new password</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">Enter a secure password to complete the reset process.</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -68,14 +67,14 @@ export function UpdatePasswordForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300 pr-10"
+                  className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring pr-10"
                 />
                 <Button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </Button>
@@ -87,7 +86,7 @@ export function UpdatePasswordForm({
             <Button
               type="submit"
               disabled={isLoading}
-              className="h-11 w-full rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800"
+              className="h-11 w-full rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isLoading ? "Updating..." : "Update password"}

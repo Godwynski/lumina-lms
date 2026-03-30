@@ -1,6 +1,5 @@
 import { AuditLogClient } from "@/components/admin/AuditLogClient";
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata = {
   title: "Audit Logs | Lumina LMS",

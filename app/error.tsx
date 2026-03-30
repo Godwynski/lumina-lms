@@ -34,7 +34,7 @@ export default function Error({
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.4 }}
-        className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl"
+        className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
       >
         Something went wrong
       </motion.h1>
@@ -43,7 +43,7 @@ export default function Error({
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="mt-4 max-w-md text-slate-500"
+        className="mt-4 max-w-md text-muted-foreground"
       >
         An unexpected error occurred while processing your request. Our team has been notified.
       </motion.p>
@@ -53,9 +53,9 @@ export default function Error({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-6 w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-xs text-slate-600"
+          className="mt-6 w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-muted/50 p-4 text-left text-xs text-muted-foreground"
         >
-          <p className="font-mono font-bold uppercase tracking-wider text-slate-400">Error Digest: {error.digest}</p>
+          <p className="font-mono font-bold uppercase tracking-wider text-muted-foreground">Error Digest: {error.digest}</p>
           <pre className="mt-2 overflow-auto whitespace-pre-wrap font-mono uppercase">
             {error.message || "No error message available"}
           </pre>
@@ -71,7 +71,7 @@ export default function Error({
         <Button
           onClick={() => reset()}
           size="lg"
-          className="h-12 w-full rounded-2xl bg-slate-900 px-8 text-sm font-semibold shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+          className="h-12 w-full rounded-2xl bg-primary text-primary-foreground px-8 text-sm font-semibold shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
         >
           <RefreshCcw className="mr-2 h-4 w-4" />
           Try again
@@ -80,7 +80,7 @@ export default function Error({
           <Button
             variant="outline"
             size="lg"
-            className="h-12 w-full rounded-2xl border-slate-200 px-8 text-sm font-semibold hover:bg-slate-50 sm:w-auto"
+            className="h-12 w-full rounded-2xl border-input px-8 text-sm font-semibold hover:bg-muted sm:w-auto"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go to Home

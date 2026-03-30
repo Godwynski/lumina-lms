@@ -17,9 +17,7 @@ import {
   Settings2,
   Tags,
   RefreshCw,
-  ScrollText,
   Trash2,
-  AlertCircle,
   ChevronRight,
   ChevronDown,
   CheckCircle2,
@@ -94,7 +92,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
   const [displayName, setDisplayName] = useState("");
   const [addressValue, setAddressValue] = useState("");
   const [phoneValue, setPhoneValue] = useState("");
-  const [emailAlerts, setEmailAlerts] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [selectedPhotoName, setSelectedPhotoName] = useState("");

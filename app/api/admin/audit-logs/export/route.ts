@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // Build CSV content
     const headers = ["Timestamp", "Admin", "Email", "Entity", "Action", "Reason", "Old Value", "New Value"];
-    const rows = (logs || []).map((log: any) => [
+    const rows = (logs || []).map((log) => [
       log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "",
       log.profiles?.full_name || "Unknown",
       log.profiles?.email || "",

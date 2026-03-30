@@ -96,6 +96,7 @@ export default function HistoryPage() {
         }
 
         // The query returns nested data, we flatten it to match the type BorrowingRecord
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const enriched = recordsData.map((record: any) => {
           return {
             id: record.id,

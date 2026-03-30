@@ -46,7 +46,6 @@ export function LoginForm({
       router.refresh();
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -80,25 +79,25 @@ export function LoginForm({
 
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
-      <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+      <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
           <div className="flex items-center gap-3">
             <Logo size={20} />
-            <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Sign in</CardTitle>
-            <CardDescription className="text-sm text-slate-600">
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Sign in</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
               Access your library workspace.
             </CardDescription>
           </div>
-          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-100 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">Demo Accounts</p>
+          <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Demo Accounts</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 rounded-md border-slate-300 bg-white text-xs font-semibold text-slate-900 hover:bg-slate-100"
+                className="h-9 rounded-md border-border bg-background text-xs font-semibold text-foreground hover:bg-muted"
                 onClick={() => signInWithCredentials("student@lumina.test", "Password123!")}
                 disabled={isLoading}
               >
@@ -108,7 +107,7 @@ export function LoginForm({
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 rounded-md border-slate-300 bg-white text-xs font-semibold text-slate-900 hover:bg-slate-100"
+                className="h-9 rounded-md border-border bg-background text-xs font-semibold text-foreground hover:bg-muted"
                 onClick={() => signInWithCredentials("admin@lumina.test", "Password123!")}
                 disabled={isLoading}
               >
@@ -129,13 +128,13 @@ export function LoginForm({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300"
+                className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/auth/forgot-password" title="Recover your password" className="text-xs font-medium text-slate-700 hover:text-slate-900">
+                <Link href="/auth/forgot-password" title="Recover your password" className="text-xs font-medium text-muted-foreground hover:text-foreground">
                   Forgot password?
                 </Link>
               </div>
@@ -147,13 +146,13 @@ export function LoginForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300 pr-10"
+                  className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring pr-10"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:bg-slate-200"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:bg-muted"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -166,7 +165,7 @@ export function LoginForm({
             <Button
               type="submit"
               disabled={isLoading}
-              className="h-11 w-full rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800"
+              className="h-11 w-full rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isLoading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
               {isLoading ? "Signing in..." : "Sign in"}
@@ -175,31 +174,31 @@ export function LoginForm({
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-slate-200" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-widest">
-              <span className="bg-white px-3 text-slate-500">Or continue with</span>
+              <span className="bg-card px-3 text-muted-foreground">Or continue with</span>
             </div>
           </div>
 
           <Button
             type="button"
             variant="outline"
-            className="h-11 w-full rounded-lg text-sm font-semibold flex items-center justify-center gap-3 border-slate-300 bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900"
+            className="h-11 w-full rounded-lg text-sm font-semibold flex items-center justify-center gap-3 border-input bg-background text-foreground hover:bg-muted hover:text-foreground"
             onClick={handleMicrosoftLogin}
             disabled={isLoading}
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
               <MicrosoftIcon className="h-5 w-5" />
             )}
             <span>{isLoading ? "Redirecting..." : "Sign in with Microsoft"}</span>
           </Button>
         </CardContent>
-        <CardFooter className="flex justify-center border-t border-slate-200 bg-slate-50 py-4 text-sm">
-          <span className="text-slate-600">Don&apos;t have an account?</span>
-          <Link href="/auth/sign-up" className="ml-1.5 font-bold text-slate-900 hover:text-slate-700">
+        <CardFooter className="flex justify-center border-t border-border bg-muted/30 py-4 text-sm">
+          <span className="text-muted-foreground">Don&apos;t have an account?</span>
+          <Link href="/auth/sign-up" className="ml-1.5 font-bold text-foreground hover:text-foreground/80">
             Sign up
           </Link>
         </CardFooter>

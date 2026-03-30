@@ -233,16 +233,16 @@ export default async function ReportsPage({
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 animate-in fade-in duration-700">
       <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Intelligence Dashboard</h1>
-          <p className="mt-1 text-slate-500 font-medium tracking-tight">Real-time circulation trends and inventory health.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Intelligence Dashboard</h1>
+          <p className="mt-1 text-muted-foreground font-medium tracking-tight">Real-time circulation trends and inventory health.</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-100/50 p-1 rounded-xl ring-1 ring-slate-200/60">
+        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl ring-1 ring-border/50">
           {[
             { days: 30, label: "30 Days" },
             { days: 90, label: "90 Days" },
             { days: 180, label: "180 Days" },
           ].map((opt) => (
-            <Button key={opt.days} asChild size="sm" variant={rangeDays === opt.days ? "secondary" : "ghost"} className={`h-8 px-4 text-xs font-bold rounded-lg transition-all ${rangeDays === opt.days ? 'shadow-sm bg-white' : ''}`}>
+            <Button key={opt.days} asChild size="sm" variant={rangeDays === opt.days ? "secondary" : "ghost"} className={`h-8 px-4 text-xs font-bold rounded-lg transition-all ${rangeDays === opt.days ? 'shadow-sm bg-background hover:bg-background' : ''}`}>
               <Link href={buildReportsHref({ range: opt.days, categories: showAllCategories ? "all" : undefined, titles: showAllTitles ? "all" : undefined })}>
                 {opt.label}
               </Link>
@@ -253,18 +253,18 @@ export default async function ReportsPage({
 
       <section className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
         {[
-          { label: "Active Loans", value: activeLoans, icon: ClipboardList, color: "bg-indigo-50 text-indigo-600", href: "/protected/history" },
-          { label: "Overdue", value: overdueLoans, icon: Activity, color: "bg-rose-50 text-rose-600", href: "/protected/history" },
-          { label: "Monthly Circulation", value: loansThisMonth, icon: TrendingUp, color: "bg-emerald-50 text-emerald-600", href: "/protected/history" },
-          { label: "Pending Cards", value: pendingCards, icon: BookCheck, color: "bg-amber-50 text-amber-600", href: "/protected/admin/approvals" },
-          { label: "Suspended", value: suspendedCards, icon: Activity, color: "bg-slate-100 text-slate-600", href: "/protected/admin/approvals" },
+          { label: "Active Loans", value: activeLoans, icon: ClipboardList, color: "bg-indigo-500/10 text-indigo-500", href: "/protected/history" },
+          { label: "Overdue", value: overdueLoans, icon: Activity, color: "bg-rose-500/10 text-rose-500", href: "/protected/history" },
+          { label: "Monthly Circulation", value: loansThisMonth, icon: TrendingUp, color: "bg-emerald-500/10 text-emerald-500", href: "/protected/history" },
+          { label: "Pending Cards", value: pendingCards, icon: BookCheck, color: "bg-amber-500/10 text-amber-500", href: "/protected/admin/approvals" },
+          { label: "Suspended", value: suspendedCards, icon: Activity, color: "bg-muted text-muted-foreground", href: "/protected/admin/approvals" },
         ].map((stat, idx) => (
-          <Link key={idx} href={stat.href} className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md active:scale-95">
+          <Link key={idx} href={stat.href} className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 transition-all hover:border-border hover:shadow-md active:scale-95">
             <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${stat.color} transition-transform group-hover:scale-110`}>
               <stat.icon className="h-5 w-5" />
             </div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-slate-600 transition-colors">{stat.label}</p>
-            <p className="mt-1 text-2xl font-black text-slate-900 group-hover:text-primary transition-colors">{stat.value}</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">{stat.label}</p>
+            <p className="mt-1 text-2xl font-black text-foreground group-hover:text-primary transition-colors">{stat.value}</p>
           </Link>
         ))}
       </section>
@@ -272,9 +272,9 @@ export default async function ReportsPage({
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         {/* Main Charts Area */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <Card className="rounded-2xl border-slate-200/60 shadow-sm overflow-hidden border-none bg-slate-50/40">
+          <Card className="rounded-2xl border-border/60 shadow-sm overflow-hidden border-none bg-muted/40">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold uppercase tracking-[0.15em] text-slate-400">Circulation Velocity</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-[0.15em] text-muted-foreground">Circulation Velocity</CardTitle>
             </CardHeader>
             <CardContent>
               <InteractivePulseChart buckets={monthBuckets} peakValue={peakMonth} />
@@ -282,11 +282,11 @@ export default async function ReportsPage({
           </Card>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <Card className="rounded-2xl border-slate-200/60 shadow-sm border-none bg-white ring-1 ring-slate-200/60">
+            <Card className="rounded-2xl border-border/60 shadow-sm border-none bg-card ring-1 ring-border/60">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-400">Utilization by Category</CardTitle>
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Utilization by Category</CardTitle>
                 <div className="flex gap-1.5">
-                  <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold text-slate-500">
+                  <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold text-muted-foreground">
                     <Link href={buildReportsHref({ range: rangeDays, categories: showAllCategories ? undefined : "all", titles: showAllTitles ? "all" : undefined })}>
                       {showAllCategories ? "Collapse" : "Expand"}
                     </Link>
@@ -301,11 +301,11 @@ export default async function ReportsPage({
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-slate-200/60 shadow-sm border-none bg-white ring-1 ring-slate-200/60">
+            <Card className="rounded-2xl border-border/60 shadow-sm border-none bg-card ring-1 ring-border/60">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-slate-400">High Demand Titles</CardTitle>
+                <CardTitle className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">High Demand Titles</CardTitle>
                 <div className="flex gap-1.5">
-                  <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold text-slate-500">
+                  <Button asChild variant="ghost" size="sm" className="h-6 px-2 text-[10px] font-bold text-muted-foreground">
                     <Link href={buildReportsHref({ range: rangeDays, categories: showAllCategories ? "all" : undefined, titles: showAllTitles ? undefined : "all" })}>
                       {showAllTitles ? "Collapse" : "Expand"}
                     </Link>
@@ -317,11 +317,11 @@ export default async function ReportsPage({
               </CardHeader>
               <CardContent className="space-y-2">
                 {displayedTitles.map((book) => (
-                  <Link key={book.id} href={`/protected/catalog/${book.id}`} className="group block rounded-xl border border-slate-100 p-3 transition-all hover:bg-slate-50 hover:border-slate-200">
-                    <p className="truncate text-xs font-heavy text-slate-900 group-hover:text-primary transition-colors">{book.title}</p>
-                    <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-slate-400">
+                  <Link key={book.id} href={`/protected/catalog/${book.id}`} className="group block rounded-xl border border-border/50 p-3 transition-all hover:bg-muted/50 hover:border-border">
+                    <p className="truncate text-xs font-heavy text-foreground group-hover:text-primary transition-colors">{book.title}</p>
+                    <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-muted-foreground">
                       <span>{book.borrowed} / {book.total} loans</span>
-                      <span className={book.utilization > 50 ? "text-amber-600" : "text-slate-300"}>{book.utilization}%</span>
+                      <span className={book.utilization > 50 ? "text-amber-500" : "text-muted-foreground/50"}>{book.utilization}%</span>
                     </div>
                   </Link>
                 ))}
@@ -332,7 +332,7 @@ export default async function ReportsPage({
 
         {/* Sidebar Pulse Feed */}
         <div className="lg:col-span-4 h-full">
-          <Card className="rounded-2xl border-none h-full bg-slate-50/40 border-slate-200/60 shadow-sm overflow-hidden">
+          <Card className="rounded-2xl border-none h-full bg-muted/40 border-border/60 shadow-sm overflow-hidden">
              <CardContent className="p-4">
                 <OperationalPulseFeed activities={activities} />
              </CardContent>

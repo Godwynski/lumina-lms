@@ -4,7 +4,6 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
 import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

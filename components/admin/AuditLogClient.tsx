@@ -32,7 +32,6 @@ import {
   Search, 
   Download, 
   Filter, 
-  Calendar, 
   Clock, 
   User as UserIcon, 
   Database,
@@ -92,7 +91,7 @@ export function AuditLogClient() {
       });
       window.open(`/api/admin/audit-logs/export?${exportParams.toString()}`, '_blank');
       toast.success("Audit log export started");
-    } catch (err) {
+    } catch {
       toast.error("Failed to export audit logs");
     }
   };
@@ -293,7 +292,7 @@ export function AuditLogClient() {
                           {log.reason && (
                             <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                               <h4 className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Administrative Reason</h4>
-                              <p className="text-xs text-emerald-900 leading-relaxed font-medium">"{log.reason}"</p>
+                              <p className="text-xs text-emerald-900 leading-relaxed font-medium">&quot;{log.reason}&quot;</p>
                             </div>
                           )}
                         </div>
