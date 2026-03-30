@@ -61,7 +61,7 @@ async function AdminContent() {
 
 export default function AdminTestPage() {
   return (
-    <div className="flex-1 w-full flex flex-col gap-8 items-center p-4 md:p-8">
+    <div className="flex-1 w-full flex flex-col gap-8 items-center p-4 sm:p-6 md:p-8">
       <div className="text-center space-y-2">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-sm text-zinc-500">Permissions and environment access validation.</p>

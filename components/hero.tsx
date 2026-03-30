@@ -30,20 +30,20 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
     >
       <motion.div variants={itemVariants} className="mb-6 flex items-center gap-3">
         <Badge variant="secondary" className="px-3 py-1 text-xs font-medium shadow-sm">
-          <Sparkles className="mr-1.5 h-3.5 w-3.5 text-slate-500" />
+          <Sparkles className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
           {user ? 'Account Active' : 'Library Operations Platform'}
         </Badge>
       </motion.div>
 
       <motion.div variants={itemVariants} className="space-y-6 mb-10">
-        <h1 className="text-balance text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl">
+        <h1 className="text-balance text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
           {user ? (
-            <>Welcome back, <br className="hidden sm:block"/><span className="text-slate-500">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
+            <>Welcome back, <br className="hidden sm:block"/><span className="text-muted-foreground">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
           ) : (
-            <>Intelligent Library Operations for the <span className="text-slate-500">Modern Era.</span></>
+            <>Intelligent Library Operations for the <span className="text-muted-foreground">Modern Era.</span></>
           )}
         </h1>
-        <p className="text-balance text-lg text-slate-600 sm:text-xl md:max-w-2xl mx-auto">
+        <p className="text-balance text-lg text-muted-foreground sm:text-xl md:max-w-2xl mx-auto">
           {user ? (
             `You are signed in with the ${role} role and have access to your workspace.`
           ) : (
@@ -61,7 +61,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-white/50 backdrop-blur-sm">
+            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-background/80 backdrop-blur-sm">
               <Link href="/settings">
                 Account Settings
               </Link>
@@ -75,7 +75,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-white/50 backdrop-blur-sm">
+            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-background/80 backdrop-blur-sm">
               <Link href="/about">
                 Learn More
               </Link>

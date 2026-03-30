@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, FileText, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, X, Loader2, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 interface UploadInterfaceProps {
   categories: { id: string; name: string }[];
@@ -26,7 +27,7 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [publishedYear, setPublishedYear] = useState("");
-  const [type, setType] = useState("ebook");
+  const [type, setType] = useState("capstone");
   const [categoryId, setCategoryId] = useState("");
   const [accessLevel, setAccessLevel] = useState("STUDENT");
   
@@ -34,7 +35,6 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   const [uploadProgress, setUploadProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,7 +62,6 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
     setUploading(true);
     setUploadProgress(0);
     setError(null);
-    setSuccess(false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -80,25 +79,17 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
       if (event.lengthComputable) {
         const progress = (event.loaded / event.total) * 100;
         setUploadProgress(progress);
-
-        // Estimate time remaining
         const elapsedTime = (Date.now() - startTime) / 1000;
         const speed = event.loaded / elapsedTime;
         const remainingBytes = event.total - event.loaded;
         const remainingTime = remainingBytes / speed;
-
-        if (remainingTime > 60) {
-          setEstimatedTime(`${Math.round(remainingTime / 60)}m remaining`);
-        } else {
-          setEstimatedTime(`${Math.round(remainingTime)}s remaining`);
-        }
+        setEstimatedTime(remainingTime > 60 ? `${Math.round(remainingTime / 60)}m` : `${Math.round(remainingTime)}s`);
       }
     };
 
     xhr.onload = () => {
       setUploading(false);
       if (xhr.status >= 200 && xhr.status < 300) {
-        setSuccess(true);
         setFile(null);
         setTitle("");
         setAuthor("");
@@ -121,201 +112,125 @@ export function UploadInterface({ categories, onUploadSuccess, onCancel }: Uploa
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex items-center justify-between border-b border-border bg-muted p-3">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Upload Resource</h3>
-          <p className="text-xs text-muted-foreground">PDF or EPUB</p>
-        </div>
-        <FileText className="text-muted-foreground" size={18} />
+    <div className="flex flex-col gap-8">
+      {/* File Drop Section */}
+      <div 
+        className={cn(
+          "group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 bg-muted/30 p-12 transition-all hover:border-primary/40 hover:bg-muted/50",
+          file && "border-solid border-primary/20 bg-primary/[0.02]"
+        )}
+        onClick={() => !uploading && fileInputRef.current?.click()}
+      >
+        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.epub" disabled={uploading} />
+        
+        {file ? (
+          <div className="flex w-full max-w-sm flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <CheckCircle2 size={32} strokeWidth={1.5} />
+            </div>
+            <h4 className="mb-1 text-sm font-bold tracking-tight text-foreground">{file.name}</h4>
+            <p className="text-xs font-semibold text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB • Ready for ingest</p>
+            {!uploading && (
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-4 h-7 gap-1.5 font-bold text-muted-foreground hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                >
+                    <X size={14} /> Clear Selection
+                </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center transition-transform group-hover:scale-105">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground/60 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+              <CloudUpload size={32} strokeWidth={1.5} />
+            </div>
+            <h4 className="mb-1 text-sm font-bold tracking-tight text-foreground">Click to select or drag and drop</h4>
+            <p className="text-xs font-semibold text-muted-foreground">Theses & Capstones (PDF only, up to 500MB)</p>
+          </div>
+        )}
       </div>
 
-      <div className="space-y-3 p-3">
-        {error && (
-          <div className="status-danger flex items-start gap-2 rounded-lg p-2 text-xs">
-            <AlertCircle className="shrink-0 mt-0.5" size={16} />
-            <p>{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="status-success flex items-start gap-2 rounded-lg p-2 text-xs">
-            <CheckCircle2 className="shrink-0 mt-0.5" size={16} />
-            <p>Resource uploaded successfully!</p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                placeholder="e.g. Advanced Calculus"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={uploading}
-                className="h-8 rounded-md text-xs"
-              />
-            </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="author">Author *</Label>
-              <Input
-                id="author"
-                placeholder="e.g. John Doe"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                disabled={uploading}
-                className="h-8 rounded-md text-xs"
-              />
-            </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="publishedYear">Year Published</Label>
-              <Input
-                id="publishedYear"
-                placeholder="e.g. 2024"
-                value={publishedYear}
-                onChange={(e) => setPublishedYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                disabled={uploading}
-                inputMode="numeric"
-                className="h-8 rounded-md text-xs"
-              />
-            </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="type">Resource Type</Label>
-              <Select value={type} onValueChange={setType} disabled={uploading}>
-                <SelectTrigger className="h-8 rounded-md text-xs">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ebook">E-Book</SelectItem>
-                <SelectItem value="journal">Journal</SelectItem>
-                <SelectItem value="thesis">Thesis</SelectItem>
-                <SelectItem value="report">Report</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId} disabled={uploading}>
-                <SelectTrigger className="h-8 rounded-md text-xs">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="accessLevel">Access Level</Label>
-              <Select value={accessLevel} onValueChange={setAccessLevel} disabled={uploading}>
-                <SelectTrigger className="h-8 rounded-md text-xs">
-                  <SelectValue placeholder="Select access level" />
-                </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="STUDENT">Student (Public)</SelectItem>
-                <SelectItem value="STAFF">Staff Only</SelectItem>
-                <SelectItem value="LIBRARIAN">Librarian Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>File (PDF/EPUB) *</Label>
-            <div
-              className={`cursor-pointer rounded-lg border-2 border-dashed p-2.5 transition-colors ${
-                file ? "border-border bg-muted" : "border-border hover:border-border hover:bg-muted"
-              }`}
-              onClick={() => !uploading && fileInputRef.current?.click()}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".pdf,.epub"
-                disabled={uploading}
-              />
-              {file ? (
-                <div className="flex items-center gap-3 w-full">
-                  <div className="status-success rounded-md p-1.5">
-                    <CheckCircle2 size={16} />
-                  </div>
-                  <div className="flex-1 truncate">
-                    <p className="truncate text-xs font-medium text-foreground">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                  </div>
-                    <Button
-                      onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-md p-0 transition-colors hover:bg-muted"
-                    >
-                      <X size={16} />
-                    </Button>
-                </div>
-              ) : (
-                <>
-                  <Upload className="mb-1 text-muted-foreground" size={16} />
-                  <p className="text-xs font-medium text-muted-foreground">Click or drag file</p>
-                  <p className="text-xs text-muted-foreground">PDF or EPUB up to 500MB</p>
-                </>
-              )}
-            </div>
-          </div>
+      {/* Form Fields */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="space-y-2">
+            <Label htmlFor="title" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Resource Title</Label>
+            <Input id="title" placeholder="Advanced AI Studies" value={title} onChange={(e) => setTitle(e.target.value)} disabled={uploading} className="h-10 rounded-lg font-medium" />
         </div>
-
-        {uploading && (
-          <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex justify-between text-xs font-medium text-muted-foreground">
-              <span>Uploading... {Math.round(uploadProgress)}%</span>
-              <span>{estimatedTime}</span>
-            </div>
-            <Progress value={uploadProgress} className="h-2" />
-          </div>
-        )}
-
-        <div className="flex justify-end gap-2 border-t border-border pt-2.5">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setFile(null);
-              setTitle("");
-              setAuthor("");
-              setPublishedYear("");
-              setError(null);
-              setSuccess(false);
-              if (onCancel) onCancel();
-            }}
-            disabled={uploading}
-            className="h-8 rounded-md text-xs"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpload} 
-            disabled={uploading || !file || !title || !author}
-            className="h-8 min-w-[110px] rounded-md bg-primary text-xs text-primary-foreground hover:bg-primary/90"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading
-              </>
-            ) : (
-              "Upload Resource"
-            )}
-          </Button>
+        <div className="space-y-2">
+            <Label htmlFor="author" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Primary Author</Label>
+            <Input id="author" placeholder="Johnathan Miller" value={author} onChange={(e) => setAuthor(e.target.value)} disabled={uploading} className="h-10 rounded-lg font-medium" />
         </div>
+        <div className="space-y-2">
+            <Label htmlFor="publishedYear" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Publication Year</Label>
+            <Input id="publishedYear" value={publishedYear} onChange={(e) => setPublishedYear(e.target.value.replace(/\D/g, "").slice(0, 4))} disabled={uploading} className="h-10 rounded-lg font-medium" />
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="type" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Thesis Type</Label>
+            <Select value={type} onValueChange={setType} disabled={uploading}>
+                <SelectTrigger className="h-10 rounded-lg font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="capstone">Capstone Project</SelectItem>
+                  <SelectItem value="thesis">Graduate Thesis</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="category" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Academic Category</Label>
+            <Select value={categoryId} onValueChange={setCategoryId} disabled={uploading}>
+                <SelectTrigger className="h-10 rounded-lg font-medium">
+                  <SelectValue placeholder="Select faculty..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="accessLevel" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Permissions Level</Label>
+            <Select value={accessLevel} onValueChange={setAccessLevel} disabled={uploading}>
+                <SelectTrigger className="h-10 rounded-lg font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STUDENT">Student (Vault Access)</SelectItem>
+                  <SelectItem value="STAFF">Faculty Restricted</SelectItem>
+                  <SelectItem value="LIBRARIAN">Internal Admin Only</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+      </div>
+
+      {uploading && (
+        <div className="space-y-3 rounded-2xl bg-muted/40 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">Ingesting File...</p>
+            <span className="text-[10px] font-bold text-muted-foreground">{estimatedTime} remaining</span>
+          </div>
+          <Progress value={uploadProgress} className="h-2" />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-xs font-bold text-destructive">
+          <AlertCircle size={15} />
+          {error}
+        </div>
+      )}
+
+      {/* Persistence Controls */}
+      <div className="flex items-center justify-end gap-3 pt-6">
+        <Button variant="ghost" onClick={onCancel} disabled={uploading} className="h-10 rounded-xl px-6 font-bold tracking-tight opacity-60 hover:opacity-100">
+           Abort
+        </Button>
+        <Button onClick={handleUpload} disabled={uploading || !file || !title || !author} className="h-10 min-w-[140px] rounded-xl bg-primary font-bold tracking-tight shadow-lg shadow-primary/20">
+            {uploading ? <Loader2 size={16} className="animate-spin" /> : "Commit to Vault"}
+        </Button>
       </div>
     </div>
   );

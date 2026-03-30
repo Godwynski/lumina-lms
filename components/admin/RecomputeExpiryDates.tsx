@@ -84,13 +84,13 @@ export function RecomputeExpiryDates() {
 
   return (
     <div className="space-y-4">
-      <Card className="border-slate-200 bg-white p-6 shadow-sm">
+      <Card className="border-border bg-card p-6 shadow-sm">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-zinc-900">
+            <h3 className="text-lg font-semibold text-foreground">
               Recompute Card Expiry Dates
             </h3>
-            <p className="text-sm text-zinc-600 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Update all library card expiration dates based on the current card_validity_years policy.
               This retroactively recalculates expiry dates from the issue date.
             </p>
@@ -98,7 +98,7 @@ export function RecomputeExpiryDates() {
           <Button
             onClick={handleDryRun}
             disabled={loading}
-            className="rounded-lg bg-slate-900 gap-2 hover:bg-slate-800"
+            className="rounded-lg bg-primary text-primary-foreground gap-2 hover:bg-primary/90"
           >
             {loading ? (
               <>
@@ -115,7 +115,7 @@ export function RecomputeExpiryDates() {
         </div>
 
         {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+          <div className="mt-4 bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
             {error}
           </div>
         )}
@@ -134,9 +134,9 @@ export function RecomputeExpiryDates() {
 
           {!executionResult && dryRunResult && (
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700 dark:text-blue-400">
                   <p className="font-semibold">Dry Run Summary</p>
                   <p className="mt-1">
                     This will affect {dryRunResult.cardsAffected} of{" "}
@@ -148,15 +148,15 @@ export function RecomputeExpiryDates() {
                 </div>
               </div>
 
-              <div className="bg-zinc-50 rounded-lg p-3 max-h-40 overflow-y-auto">
-                <p className="text-xs font-semibold text-zinc-600 mb-2">
+              <div className="bg-muted rounded-lg p-3 max-h-40 overflow-y-auto">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">
                   Sample Changes (first {Math.min(dryRunResult.updates.length, 10)}):
                 </p>
                 <div className="space-y-1 text-xs">
                   {dryRunResult.updates.slice(0, 5).map((update) => (
-                    <div key={update.cardId} className="text-zinc-600">
+                    <div key={update.cardId} className="text-foreground">
                       <p className="font-mono">Card: {update.cardId.slice(0, 8)}...</p>
-                      <p className="text-zinc-500">
+                      <p className="text-muted-foreground">
                         {new Date(update.oldExpiry).toLocaleDateString()} →{" "}
                         {new Date(update.newExpiry).toLocaleDateString()}
                       </p>
@@ -169,9 +169,9 @@ export function RecomputeExpiryDates() {
 
           {executionResult && (
             <div className="space-y-4">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex gap-3">
-                <AlertCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-emerald-800">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 flex gap-3">
+                <AlertCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-emerald-700 dark:text-emerald-400">
                   <p className="font-semibold">✓ Completed Successfully</p>
                   <p className="mt-1">
                     Updated {executionResult.cardsAffected} library cards.
@@ -195,7 +195,7 @@ export function RecomputeExpiryDates() {
                 <Button
                   onClick={handleExecute}
                   disabled={executing}
-                  className="rounded-lg bg-slate-900 hover:bg-slate-800"
+                  className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {executing ? (
                     <>
@@ -211,7 +211,7 @@ export function RecomputeExpiryDates() {
             {executionResult && (
               <Button
                 onClick={() => setDialogOpen(false)}
-                className="w-full rounded-lg bg-slate-900 hover:bg-slate-800"
+                className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 Close
               </Button>

@@ -49,6 +49,7 @@ export default async function DigitalResourcesPage({
   let resourcesQuery = supabase
     .from("digital_resources")
     .select("*, categories(name)")
+    .or("type.ilike.%capstone%,type.ilike.%thesis%")
     .order("created_at", { ascending: false });
 
   if (query) {

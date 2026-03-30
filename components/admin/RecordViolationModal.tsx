@@ -151,7 +151,7 @@ export function RecordViolationModal({ open, onOpenChange, initialStudent, onSuc
         onOpenChange(v)
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Record School Violation</DialogTitle>
           <DialogDescription>

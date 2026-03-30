@@ -30,7 +30,7 @@ export function DashboardSearch({ role }: DashboardSearchProps) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search books, ISBN, or authors..."
-        className="h-10 w-full rounded-full border border-border bg-muted/30 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:w-64 md:w-80"
+        className="h-10 w-full rounded-full border border-border bg-muted/30 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-sm md:max-w-md"
       />
     </form>
   );

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ModernAssetCard } from "./ModernAssetCard";
-import { Search } from "lucide-react";
+import { LibraryBig } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 
@@ -16,18 +16,40 @@ type AssetGridResource = {
   created_at: string;
   updated_at?: string | null;
   published_year?: number | null;
-  categories?: {
-    name?: string | null;
-  } | null;
+  categories?: { name?: string | null }[] | null;
 };
 
 interface AssetGridProps {
   resources: AssetGridResource[] | null;
-  selectedIds: Set<string>;
-  onToggleSelect: (id: string, checked: boolean) => void;
 }
 
-export function AssetGrid({ resources, selectedIds, onToggleSelect }: AssetGridProps) {
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 30, scale: 0.98 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 15,
+      mass: 1,
+    }
+  }
+};
+
+export function AssetGrid({ resources }: AssetGridProps) {
   const normalizedResources = resources ?? [];
   const pageSize = 9;
   const [page, setPage] = useState(1);
@@ -40,34 +62,38 @@ export function AssetGrid({ resources, selectedIds, onToggleSelect }: AssetGridP
   if (!resources || resources.length === 0) {
     return (
       <EmptyState
-        icon={Search}
-        title="No assets found"
-        description="No digital assets match your current filters. Try another keyword."
+        icon={LibraryBig}
+        title="No digital assets found"
+        description="Try searching for a different keyword or upload new research papers."
       />
     );
   }
 
   return (
-    <div className="space-y-2.5">
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="space-y-6">
+      <motion.div 
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+      >
         <AnimatePresence mode="popLayout">
           {pageItems.map((resource) => (
-            <ModernAssetCard
-              key={resource.id}
-              resource={resource}
-              selected={selectedIds.has(resource.id)}
-              onSelectChange={(checked) => onToggleSelect(resource.id, checked)}
-            />
+            <motion.div key={resource.id} variants={item} layout>
+              <ModernAssetCard resource={resource} />
+            </motion.div>
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
-      <CompactPagination
-        page={page}
-        totalItems={normalizedResources.length}
-        pageSize={pageSize}
-        onPageChange={setPage}
-      />
+      <div className="flex justify-center border-t border-border/40 pt-10">
+        <CompactPagination
+          page={page}
+          totalItems={normalizedResources.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+        />
+      </div>
     </div>
   );
 }

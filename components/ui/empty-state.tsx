@@ -30,24 +30,24 @@ export function EmptyState({
   contentClassName,
 }: EmptyStateProps) {
   return (
-    <Card className={cn("w-full border-dashed border-slate-300 bg-white shadow-sm", className)}>
+    <Card className={cn("w-full border-dashed border-border bg-card shadow-sm", className)}>
       <CardContent
         className={cn(
           "flex min-h-[380px] flex-col items-center justify-center px-6 py-12 text-center sm:px-10 sm:py-16",
           contentClassName,
         )}
       >
-        <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-400">
+        <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground">
           <Icon size={38} />
         </div>
-        <h3 className="mb-2 text-2xl font-bold tracking-tight text-slate-900">{title}</h3>
-        <p className="max-w-sm text-sm leading-relaxed text-slate-500">{description}</p>
+        <h3 className="mb-2 text-2xl font-bold tracking-tight text-foreground">{title}</h3>
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
 
         {action ? (
           action.href ? (
             <Button
               asChild
-              className="mt-7 h-11 rounded-lg bg-slate-900 px-6 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-slate-800"
+              className="mt-7 h-11 rounded-lg bg-primary px-6 text-xs font-semibold uppercase tracking-[0.08em] text-primary-foreground hover:bg-primary/90"
             >
               <Link href={action.href}>
                 {action.icon ? <action.icon size={18} /> : null}
@@ -57,7 +57,7 @@ export function EmptyState({
           ) : (
             <Button
               onClick={action.onClick}
-              className="mt-7 h-11 rounded-lg bg-slate-900 px-6 text-xs font-semibold uppercase tracking-[0.08em] text-white hover:bg-slate-800"
+              className="mt-7 h-11 rounded-lg bg-primary px-6 text-xs font-semibold uppercase tracking-[0.08em] text-primary-foreground hover:bg-primary/90"
             >
               {action.icon ? <action.icon size={18} /> : null}
               {action.label}

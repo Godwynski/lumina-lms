@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
   LayoutDashboard,
@@ -38,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -66,26 +65,46 @@ import {
 import {
   Collapsible,
   CollapsibleTrigger,
+  CollapsibleContent,
 } from "@/components/ui/collapsible";
 
-type Role = "admin" | "librarian" | "staff" | "student" | null;
+type Role = "student" | "staff" | "librarian" | "admin" | null;
+
 interface Profile {
   full_name?: string | null;
   avatar_url?: string | null;
 }
 
+const ROLE_RANKS: Record<Exclude<Role, null>, number> = {
+  student: 1,
+  staff: 2,
+  librarian: 3,
+  admin: 4,
+};
+
+function hasPermission(userRole: Role, minRole?: Exclude<Role, null>, exactRoles?: Exclude<Role, null>[]): boolean {
+  if (exactRoles && exactRoles.length > 0 && userRole) {
+    return exactRoles.includes(userRole);
+  }
+  if (!minRole) return true;
+  if (!userRole) return false;
+  return ROLE_RANKS[userRole] >= ROLE_RANKS[minRole];
+}
+
 type NavItem = {
   href: string;
   label: string;
-  icon: React.ElementType;
-  roles: Exclude<Role, null>[];
+  icon?: React.ElementType;
+  minRole?: Exclude<Role, null>;
+  exactRoles?: Exclude<Role, null>[];
 };
 
 type NavGroup = {
   id: string;
   label: string;
   icon: React.ElementType;
-  roles: Exclude<Role, null>[];
+  minRole?: Exclude<Role, null>;
+  exactRoles?: Exclude<Role, null>[];
   children: NavItem[];
 };
 
@@ -93,7 +112,7 @@ const DASHBOARD_LINK: NavItem = {
   href: "/protected",
   label: "Dashboard",
   icon: LayoutDashboard,
-  roles: ["admin", "librarian", "staff", "student"],
+  minRole: "student",
 };
 
 const NAV_GROUPS: NavGroup[] = [
@@ -101,49 +120,61 @@ const NAV_GROUPS: NavGroup[] = [
     id: "library",
     label: "Library",
     icon: Library,
-    roles: ["admin", "librarian", "staff", "student"],
+    minRole: "student",
     children: [
-      { href: "/protected/catalog", label: "Inventory", icon: Library, roles: ["admin", "librarian", "staff"] },
-      { href: "/protected/student-catalog", label: "Catalog", icon: Library, roles: ["student"] },
-      { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, roles: ["admin", "librarian", "staff", "student"] },
-      { href: "/protected/circulation", label: "Circulation", icon: History, roles: ["admin", "librarian", "staff"] },
+      { href: "/protected/catalog", label: "Inventory", icon: Library, minRole: "staff" },
+      { href: "/protected/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
+      { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, minRole: "student" },
+      { href: "/protected/circulation", label: "Circulation", icon: History, minRole: "staff" },
     ],
   },
   {
     id: "management",
     label: "Administration",
     icon: Users,
-    roles: ["admin", "librarian"],
+    minRole: "librarian",
     children: [
-      { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, roles: ["admin", "librarian"] },
-      { href: "/protected/users", label: "User Directory", icon: Users, roles: ["admin", "librarian"] },
-      { href: "/protected/reports", label: "Analytics", icon: BarChart2, roles: ["admin", "librarian", "staff"] },
+      { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, minRole: "librarian" },
+      { href: "/protected/users", label: "User Directory", icon: Users, minRole: "librarian" },
+      { href: "/protected/reports", label: "Analytics", icon: BarChart2, minRole: "staff" },
     ],
   },
   {
     id: "platform",
     label: "Platform",
     icon: Server,
-    roles: ["admin", "librarian"],
+    minRole: "librarian",
     children: [
-      { href: "/protected/settings?tab=policies", label: "System Policies", icon: Settings, roles: ["admin", "librarian"] },
-      { href: "/protected/audit", label: "Audit Logs", icon: History, roles: ["admin"] },
-      { href: "/protected/settings?tab=operations", label: "Operations", icon: LayoutDashboard, roles: ["admin"] },
-      { href: "/protected/settings?tab=gdpr", label: "Compliance", icon: AlertTriangle, roles: ["admin"] },
+      { href: "/protected/settings?tab=policies", label: "System Policies", icon: Settings, minRole: "librarian" },
+      { href: "/protected/audit", label: "Audit Logs", icon: History, minRole: "admin" },
+      { href: "/protected/settings?tab=operations", label: "Operations", icon: LayoutDashboard, minRole: "admin" },
+      { href: "/protected/settings?tab=gdpr", label: "Compliance", icon: AlertTriangle, minRole: "admin" },
     ],
   },
   {
     id: "account",
     label: "Personal",
     icon: History,
-    roles: ["admin", "librarian", "staff", "student"],
+    minRole: "student",
     children: [
-      { href: "/protected/my-card", label: "Library Card", icon: CreditCard, roles: ["admin", "librarian", "staff", "student"] },
-      { href: "/protected/history", label: "Borrow History", icon: History, roles: ["admin", "librarian", "staff", "student"] },
-      { href: "/protected/violations", label: "Violations", icon: AlertTriangle, roles: ["admin", "librarian", "staff", "student"] },
+      { href: "/protected/my-card", label: "Library Card", icon: CreditCard, minRole: "student" },
+      { href: "/protected/history", label: "Borrow History", icon: History, minRole: "student" },
+      { href: "/protected/violations", label: "Violations", icon: AlertTriangle, minRole: "student" },
     ]
   }
 ];
+
+const SETTINGS_GROUP: NavGroup = {
+  id: "settings",
+  label: "Settings",
+  icon: Settings,
+  minRole: "student",
+  children: [
+    { href: "/protected/settings?tab=profile", label: "Profile" },
+    { href: "/protected/settings?tab=preferences", label: "Preferences" },
+    { href: "/protected/settings?tab=security", label: "Security" },
+  ]
+};
 
 function LuminaLogo({ size = 20 }: { size?: number }) {
   return (
@@ -205,29 +236,7 @@ export function ProtectedNav({
   const currentTab = searchParams.get("tab") || "profile";
   const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
 
-  const settingsLinks = React.useMemo(() => {
-    return [
-      { id: "profile", label: "Profile" },
-      { id: "preferences", label: "Preferences" },
-      { id: "security", label: "Security" },
-    ];
-  }, []);
-
-  const settingsTabIds = ["profile", "preferences", "security"];
-  const isSettingsActive = pathname === "/protected/settings" && settingsTabIds.includes(currentTab);
-
-  const filteredGroups = React.useMemo(() => {
-    return NAV_GROUPS.map(group => ({
-      ...group,
-      children: group.children.filter(child => normalizedRole && child.roles.includes(normalizedRole))
-    })).filter(group => {
-      const canSeeGroup = normalizedRole && group.roles.includes(normalizedRole);
-      const hasVisibleChildren = group.children.length > 0;
-      return canSeeGroup && hasVisibleChildren;
-    });
-  }, [normalizedRole]);
-
-  const isActive = (href: string) => {
+  const isActive = useCallback((href: string) => {
     if (href === "/protected") return pathname === href;
     const pathWithoutQuery = pathname.split("?")[0];
     const hrefBase = href.split("?")[0];
@@ -238,20 +247,91 @@ export function ProtectedNav({
     }
 
     return pathWithoutQuery.startsWith(hrefBase);
-  };
+  }, [pathname, currentTab]);
 
-  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    filteredGroups.forEach(group => {
-      initial[group.id] = group.children.some(child => isActive(child.href));
+  const filteredGroups = useMemo(() => {
+    return NAV_GROUPS.map(group => ({
+      ...group,
+      children: group.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
+    })).filter(group => {
+      const canSeeGroup = hasPermission(normalizedRole, group.minRole, group.exactRoles);
+      const hasVisibleChildren = group.children.length > 0;
+      return canSeeGroup && hasVisibleChildren;
     });
-    if (isSettingsActive) initial["settings"] = true;
-    return initial;
-  });
+  }, [normalizedRole]);
 
-  const toggleGroup = (groupId: string) => {
+  const allVisibleGroups = useMemo(() => {
+    const settingsGroupFiltered = {
+      ...SETTINGS_GROUP,
+      children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
+    };
+    return [settingsGroupFiltered, ...filteredGroups];
+  }, [filteredGroups, normalizedRole]);
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setOpenGroups(prev => {
+      let changed = false;
+      const next = { ...prev };
+      
+      allVisibleGroups.forEach(group => {
+        const isGroupActive = group.children.some(child => isActive(child.href));
+        if (isGroupActive && !next[group.id]) {
+          next[group.id] = true;
+          changed = true;
+        }
+      });
+      
+      return changed ? next : prev;
+    });
+  }, [pathname, searchParams, allVisibleGroups, isActive]);
+
+  const toggleGroup = useCallback((groupId: string) => {
     setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-  };
+  }, []);
+
+  const renderNavGroup = useCallback((group: NavGroup) => {
+    return (
+      <Collapsible
+        key={group.id}
+        open={openGroups[group.id] || false}
+        onOpenChange={() => toggleGroup(group.id)}
+        className="group/collapsible"
+      >
+        <SidebarMenuItem>
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton
+              tooltip={group.label}
+              isActive={group.children.some(child => isActive(child.href))}
+              onClick={(e) => {
+                e.preventDefault();
+                toggleGroup(group.id);
+              }}
+            >
+              <group.icon />
+              <span>{group.label}</span>
+              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down px-2">
+            <SidebarMenuSub>
+              {group.children.map((item) => (
+                <SidebarMenuSubItem key={item.href}>
+                  <SidebarMenuSubButton asChild isActive={isActive(item.href)}>
+                    <Link href={item.href} className="flex items-center gap-2">
+                      <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive(item.href) ? "bg-sidebar-primary" : "bg-sidebar-border")} />
+                      <span className={cn("truncate", isActive(item.href) && "font-semibold text-sidebar-primary")}>{item.label}</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    );
+  }, [openGroups, toggleGroup, isActive]);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
@@ -278,113 +358,21 @@ export function ProtectedNav({
                   tooltip={DASHBOARD_LINK.label}
                 >
                   <Link href={DASHBOARD_LINK.href}>
-                    <DASHBOARD_LINK.icon />
+                    {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon />}
                     <span>{DASHBOARD_LINK.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <Collapsible
-                  open={openGroups["settings"]}
-                  onOpenChange={() => toggleGroup("settings")}
-                  className="group/collapsible"
-                >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip="Settings"
-                        isActive={isSettingsActive}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          toggleGroup("settings");
-                        }}
-                      >
-                        <Settings />
-                        <span>Settings</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <AnimatePresence mode="wait">
-                      {openGroups["settings"] && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2, ease: "easeInOut" }}
-                        >
-                          <SidebarMenuSub>
-                            {settingsLinks.map((item) => {
-                              const href = `/protected/settings?tab=${item.id}`;
-                              const isSubActive = isSettingsActive && currentTab === item.id;
-                              return (
-                                <SidebarMenuSubItem key={item.id}>
-                                  <SidebarMenuSubButton asChild isActive={isSubActive}>
-                                    <Link href={href} className="flex items-center gap-2">
-                                      <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isSubActive ? "bg-sidebar-primary" : "bg-sidebar-border")} />
-                                      <span className={cn("truncate", isSubActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
-                                    </Link>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              );
-                            })}
-                          </SidebarMenuSub>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </SidebarMenuItem>
-                </Collapsible>
+              {renderNavGroup({
+                ...SETTINGS_GROUP,
+                children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
+              })}
             </SidebarMenu>
           </SidebarGroup>
 
           <SidebarGroup>
             <SidebarMenu>
-              {filteredGroups.map((group) => (
-                <Collapsible
-                  key={group.id}
-                  open={openGroups[group.id]}
-                  onOpenChange={() => toggleGroup(group.id)}
-                  className="group/collapsible"
-                >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip={group.label}
-                        isActive={group.children.some(child => isActive(child.href))}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          toggleGroup(group.id);
-                        }}
-                      >
-                        <group.icon />
-                        <span>{group.label}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <AnimatePresence mode="wait">
-                      {openGroups[group.id] && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2, ease: "easeInOut" }}
-                        >
-                          <SidebarMenuSub>
-                            {group.children.map((item) => (
-                              <SidebarMenuSubItem key={item.href}>
-                                <SidebarMenuSubButton asChild isActive={isActive(item.href)}>
-                                  <Link href={item.href} className="flex items-center gap-2">
-                                    <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive(item.href) ? "bg-sidebar-primary" : "bg-sidebar-border")} />
-                                    <span className={cn("truncate", isActive(item.href) && "font-semibold text-sidebar-primary")}>{item.label}</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ))}
+              {filteredGroups.map(renderNavGroup)}
             </SidebarMenu>
           </SidebarGroup>
         </nav>
@@ -400,7 +388,7 @@ export function ProtectedNav({
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={avatarUrl} alt={name} />
+                    <AvatarImage src={avatarUrl || ""} alt={name} />
                     <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-accent-foreground font-bold">
                       {initials}
                     </AvatarFallback>
@@ -421,7 +409,7 @@ export function ProtectedNav({
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1.8 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={avatarUrl} alt={name} />
+                      <AvatarImage src={avatarUrl || ""} alt={name} />
                       <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-accent-foreground font-bold">
                         {initials}
                       </AvatarFallback>

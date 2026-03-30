@@ -354,7 +354,7 @@ export default function AddBookPage() {
   };
 
   return (
-    <div className="w-full space-y-4 pb-6 md:pb-8">
+    <div className="w-full space-y-4 pb-4 sm:pb-6 md:pb-8">
       <div className="flex items-center gap-4">
         <Link href="/protected/catalog">
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-muted">
