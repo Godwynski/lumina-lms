@@ -8,7 +8,6 @@ import {
   Search,
   ShieldAlert
 } from "lucide-react";
-import { sendWelcomeEmail } from "@/lib/notifications";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,21 +96,7 @@ export default function ApprovalsPage() {
 
       if (updateError) throw updateError;
 
-      // 2. Trigger automated email
-      // Note: This requires service_role for admin tasks, but for mock purposes:
-      // In a real app, we would fetch the email from supabase.auth.admin or have it in the profiles table.
-      const targetCard = cards.find((c) => c.id === cardId);
-      const recipientEmail = targetCard?.profiles?.email;
-      if (!recipientEmail) {
-        throw new Error("Student email not found for card holder");
-      }
-
-      await sendWelcomeEmail(
-        targetCard?.profiles.full_name || "Student",
-        recipientEmail
-      );
-
-      setNotification({ message: "Card approved and email sent.", type: 'success' });
+      setNotification({ message: "Card approved successfully.", type: "success" });
       setTimeout(() => setNotification(null), 5000);
 
       // Refresh list

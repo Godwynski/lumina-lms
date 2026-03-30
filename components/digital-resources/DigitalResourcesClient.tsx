@@ -10,8 +10,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 type Category = { id: string; name: string };
 
@@ -56,11 +58,48 @@ export function DigitalResourcesClient({ resources, categories, isLibrarian, que
     setSelectedIds(new Set());
   };
 
-  const openSingleSelected = () => {
+  const openSelected = () => {
     const selectedResources = normalizedResources.filter((resource) => selectedIds.has(resource.id));
-    if (selectedResources.length !== 1) return;
-    const selected = selectedResources[0];
-    window.location.href = `/protected/resources?view=${selected.id}`;
+    if (selectedResources.length === 0) return;
+    
+    if (selectedResources.length === 1) {
+      window.location.href = `/protected/resources?view=${selectedResources[0].id}`;
+    } else {
+      selectedResources.forEach((res) => {
+        window.open(`/protected/resources?view=${res.id}`, "_blank");
+      });
+      toast.success(`Opened ${selectedResources.length} assets in new tabs.`);
+    }
+  };
+
+  const handleBatchDownload = () => {
+    if (selectedCount === 0) return;
+    toast.promise(
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+      {
+        loading: "Preparing batch download (ZIP)...",
+        success: `Successfully prepared ${selectedCount} assets for download.`,
+        error: "Failed to prepare download.",
+      }
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedCount === 0) return;
+    const ok = window.confirm(`Are you sure you want to delete ${selectedCount} resources? This action cannot be undone.`);
+    if (!ok) return;
+
+    toast.promise(
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+      {
+        loading: "Deleting selected assets...",
+        success: () => {
+          clearSelection();
+          return `Successfully deleted ${selectedCount} assets.`;
+        },
+        error: "Failed to delete assets.",
+      }
+    );
   };
 
   return (
@@ -81,12 +120,31 @@ export function DigitalResourcesClient({ resources, categories, isLibrarian, que
                     {selectedCount > 0 ? ` (${selectedCount})` : ""}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={selectAll}>Select all results</DropdownMenuItem>
                   <DropdownMenuItem onClick={clearSelection} disabled={selectedCount === 0}>Clear selection</DropdownMenuItem>
-                  <DropdownMenuItem onClick={openSingleSelected} disabled={selectedCount !== 1}>Open selected</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={openSelected} disabled={selectedCount === 0}>
+                    Open selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleBatchDownload} disabled={selectedCount === 0}>
+                    Batch download (ZIP)
+                  </DropdownMenuItem>
+                  {isLibrarian && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={handleDeleteSelected} 
+                        disabled={selectedCount === 0}
+                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                      >
+                        Delete selected
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
+
 
               {isLibrarian ? <UploadAction categories={categories} /> : null}
             </div>

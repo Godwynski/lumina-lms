@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
+
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
 import Image from 'next/image';
 import {
@@ -21,7 +23,16 @@ type CatalogCategory = {
 };
 
 function StudentCatalogData() {
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
+  const qParam = searchParams.get('q') || '';
+  const [query, setQuery] = useState(qParam);
+
+  useEffect(() => {
+    if (qParam && qParam !== query) {
+      setQuery(qParam);
+    }
+  }, [qParam, query]);
+
   const [page, setPage] = useState(1);
   const pageSize = 16;
   

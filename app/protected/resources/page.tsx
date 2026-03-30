@@ -124,21 +124,6 @@ export default async function DigitalResourcesPage({
               </CardContent>
             </Card>
 
-            <Card className="border-border bg-card shadow-sm">
-               <CardHeader>
-                 <CardTitle className="text-sm font-semibold text-foreground">Secure Access</CardTitle>
-                 <CardDescription className="text-xs leading-relaxed text-muted-foreground">
-                     Open protected resources through secure session controls.
-                   </CardDescription>
-               </CardHeader>
-               <CardContent>
-                  <Link href="/protected/resources">
-                    <Button className="h-8 w-full rounded-md bg-primary text-xs font-semibold uppercase tracking-wider text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95">
-                      Return to Vault
-                    </Button>
-                  </Link>
-                </CardContent>
-             </Card>
           </div>
         </div>
       </div>
