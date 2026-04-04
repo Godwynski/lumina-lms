@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-type Preferences = Record<string, any>;
+type Preferences = Record<string, unknown>;
 
 interface PreferencesContextType {
   preferences: Preferences;

@@ -7,26 +7,62 @@ import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
 import { getDeterministicQrUrl, resolveStudentId } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata = {
   title: "Dashboard | Lumina LMS",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function ProtectedPage() {
+  noStore();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  // 1. Get user and role concurrently
+  // Next.js cache() deduplicates the getUser call across these helpers
+  const [userResponse, role] = await Promise.all([
+    supabase.auth.getUser(),
+    getUserRole(),
+  ]);
+
+  const { data: { user } } = userResponse;
 
   if (!user) {
     return redirect("/auth/login");
   }
 
-  const role = await getUserRole();
-  const stats = await getDashboardStats({
-    userId: user.id,
-    role,
-  });
+  const faqKeys = [
+    "faq_student_q1", "faq_student_a1",
+    "faq_student_q2", "faq_student_a2",
+    "faq_student_q3", "faq_student_a3",
+    "faq_student_q4", "faq_student_a4",
+  ];
+
+  // 2. Fetch all dashboard data points in parallel
+  // This reduces the theoretical wait time from sum(queries) to max(queries)
+  const [stats, profileResult, cardResult, faqResult] = await Promise.all([
+    getDashboardStats({ userId: user.id, role }),
+    supabase
+      .from("profiles")
+      .select("full_name, student_id, department, avatar_url, address, phone")
+      .eq("id", user.id)
+      .single(),
+    role === "student"
+      ? supabase
+          .from("library_cards")
+          .select("card_number, status, expires_at")
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    role === "student"
+      ? supabase
+          .from("system_settings")
+          .select("key, value")
+          .in("key", faqKeys)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const profileData = profileResult.data;
 
   let studentCard: {
     fullName: string;
@@ -42,18 +78,9 @@ export default async function ProtectedPage() {
   } | null = null;
   let studentFaqs: { question: string; answer: string }[] = [...DEFAULT_STUDENT_FAQS];
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("full_name, student_id, department, avatar_url, address, phone")
-    .eq("id", user.id)
-    .single();
-
   if (role === "student") {
-    const { data: card } = await supabase
-      .from("library_cards")
-      .select("card_number, status, expires_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const card = cardResult.data;
+    const faqRows = faqResult.data;
 
     if (profileData) {
       const resolvedStudentId = resolveStudentId({
@@ -75,22 +102,6 @@ export default async function ProtectedPage() {
         phone: profileData.phone,
       };
     }
-
-    const faqKeys = [
-      "faq_student_q1",
-      "faq_student_a1",
-      "faq_student_q2",
-      "faq_student_a2",
-      "faq_student_q3",
-      "faq_student_a3",
-      "faq_student_q4",
-      "faq_student_a4",
-    ];
-
-    const { data: faqRows } = await supabase
-      .from("system_settings")
-      .select("key, value")
-      .in("key", faqKeys);
 
     if (faqRows && faqRows.length > 0) {
       const byKey = new Map(faqRows.map((row) => [String(row.key), String(row.value ?? "")]));

@@ -38,6 +38,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { SWRConfig } from "swr";
 import {
   Dialog,
   DialogContent,
@@ -198,17 +199,51 @@ function LuminaLogo({ size = 20 }: { size?: number }) {
   );
 }
 
+// Prefetch helper
+const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
+  if (href && !href.includes("?")) {
+    router.prefetch(href);
+  }
+};
+
+// Optimized sub-menu item to prevent re-renders when other items change
+const NavSubItem = memo(({ 
+  item, 
+  isActive, 
+  onMouseEnter 
+}: { 
+  item: NavItem; 
+  isActive: boolean; 
+  onMouseEnter: (href: string) => void;
+}) => (
+  <SidebarMenuSubItem>
+    <SidebarMenuSubButton asChild isActive={isActive}>
+      <Link 
+        href={item.href} 
+        className="flex items-center gap-2"
+        onMouseEnter={() => onMouseEnter(item.href)}
+      >
+        <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-sidebar-primary" : "bg-sidebar-border")} />
+        <span className={cn("truncate", isActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
+      </Link>
+    </SidebarMenuSubButton>
+  </SidebarMenuSubItem>
+));
+NavSubItem.displayName = "NavSubItem";
+
 // Memoized group item to prevent heavy DOM reconciliations on parent state change
 const NavGroupItem = memo(({ 
   group, 
   isOpen, 
   onToggle, 
-  isActive 
+  isActive,
+  onMouseEnter
 }: { 
   group: NavGroup; 
   isOpen: boolean; 
   onToggle: (id: string) => void;
   isActive: (href: string) => boolean;
+  onMouseEnter: (href: string) => void;
 }) => {
   const isGroupActive = group.children.some(child => isActive(child.href));
 
@@ -223,6 +258,9 @@ const NavGroupItem = memo(({
           <SidebarMenuButton
             tooltip={group.label}
             isActive={isGroupActive}
+            onMouseEnter={() => {
+              if (!isOpen) onToggle(group.id);
+            }}
             onClick={(e) => {
               e.preventDefault();
               onToggle(group.id);
@@ -235,19 +273,14 @@ const NavGroupItem = memo(({
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down px-2">
           <SidebarMenuSub>
-            {group.children.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <SidebarMenuSubItem key={item.href}>
-                  <SidebarMenuSubButton asChild isActive={active}>
-                    <Link href={item.href} className="flex items-center gap-2">
-                      <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-sidebar-primary" : "bg-sidebar-border")} />
-                      <span className={cn("truncate", active && "font-semibold text-sidebar-primary")}>{item.label}</span>
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
+            {group.children.map((item) => (
+              <NavSubItem 
+                key={item.href}
+                item={item}
+                isActive={isActive(item.href)}
+                onMouseEnter={onMouseEnter}
+              />
+            ))}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>
@@ -327,24 +360,26 @@ export function ProtectedNav({
     return [settingsGroupFiltered, ...filteredGroups];
   }, [filteredGroups, normalizedRole]);
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    setOpenGroups(prev => {
-      let changed = false;
-      const next = { ...prev };
-      
-      allVisibleGroups.forEach(group => {
-        const isGroupActive = group.children.some(child => isActive(child.href));
-        if (isGroupActive && !next[group.id]) {
-          next[group.id] = true;
-          changed = true;
-        }
-      });
-      
-      return changed ? next : prev;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    allVisibleGroups.forEach(group => {
+      if (group.children.some(child => isActive(child.href))) {
+        initial[group.id] = true;
+      }
     });
-  }, [allVisibleGroups, isActive]);
+    return initial;
+  });
+
+  // Track if we need to expand a group because of a new pathname
+  const lastPathname = React.useRef(pathname);
+  if (lastPathname.current !== pathname) {
+    lastPathname.current = pathname;
+    allVisibleGroups.forEach(group => {
+      if (group.children.some(child => isActive(child.href)) && !openGroups[group.id]) {
+        setOpenGroups(prev => ({ ...prev, [group.id]: true }));
+      }
+    });
+  }
 
   const toggleGroup = useCallback((groupId: string) => {
     setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
@@ -356,8 +391,19 @@ export function ProtectedNav({
     children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
   }), [normalizedRole]);
 
+  const handlePrefetch = useCallback((href: string) => {
+    prefetch(router, href);
+  }, [router]);
+
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
+    <SWRConfig 
+      value={{
+        revalidateOnFocus: false,
+        revalidateOnReconnect: true,
+        dedupingInterval: 5000,
+      }}
+    >
+      <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="flex h-20 shrink-0 items-center px-4">
         <Link href="/protected" className="flex items-center gap-3 group" aria-label="Lumina LMS Dashboard">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring">
@@ -391,6 +437,7 @@ export function ProtectedNav({
                 isOpen={openGroups[settingsGroupProps.id] || false}
                 onToggle={toggleGroup}
                 isActive={isActive}
+                onMouseEnter={handlePrefetch}
               />
             </SidebarMenu>
           </SidebarGroup>
@@ -404,6 +451,7 @@ export function ProtectedNav({
                   isOpen={openGroups[group.id] || false}
                   onToggle={toggleGroup}
                   isActive={isActive}
+                  onMouseEnter={handlePrefetch}
                 />
               ))}
             </SidebarMenu>
@@ -504,5 +552,6 @@ export function ProtectedNav({
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
+    </SWRConfig>
   );
 }

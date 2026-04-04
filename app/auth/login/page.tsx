@@ -3,14 +3,15 @@ import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata = {
   title: "Sign In | Lumina LMS",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
+  noStore();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

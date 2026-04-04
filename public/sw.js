@@ -2,8 +2,9 @@
 // Satisfies PWA manifest requirements and prevents 404 errors in logs.
 
 const CACHE_NAME = 'lumina-v1';
+console.log('SW loaded:', CACHE_NAME);
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 

@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BookOpen, UserCircle, QrCode } from "lucide-react";
 
@@ -14,7 +15,6 @@ export const metadata = {
   title: "Home | Lumina LMS",
 };
 
-export const dynamic = "force-dynamic";
 
 async function HeroSection() {
   const supabase = await createClient();
@@ -24,6 +24,7 @@ async function HeroSection() {
 }
 
 export default async function Home() {
+  noStore();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

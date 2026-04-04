@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     if (userId) {
       const { data, error } = await supabase
         .from('violations')
-        .select('*')
+        .select('id, user_id, violation_type, severity, points, description, incident_date, status, created_at')
         .eq('user_id', user.id)
         .eq('status', 'active')
 
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from('violations')
     .select(`
-      *,
+      id, user_id, violation_type, severity, points, description, incident_date, status, created_at,
       profiles:user_id(full_name, student_id)
     `)
     .order('created_at', { ascending: false })
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         status: 'active',
         created_by: user.id,
       })
-      .select()
+      .select('id, user_id, violation_type, severity, points, description, status')
       .single()
 
     if (error) {
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         resolution_notes: body.resolutionNotes || null,
       })
       .eq('id', violationId)
-      .select()
+      .select('id, status, resolved_at, resolved_by')
       .single()
 
     if (error) {

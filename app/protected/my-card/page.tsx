@@ -7,7 +7,6 @@ import {
   resolveStudentId,
 } from "@/lib/library-card-assets";
 
-export const dynamic = "force-dynamic";
 
 export default async function MyCardPage() {
   const supabase = await createClient();

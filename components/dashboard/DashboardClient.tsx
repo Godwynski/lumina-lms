@@ -47,6 +47,8 @@ interface DashboardProps {
   }[];
 }
 
+import { useMemo } from 'react';
+
 export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: DashboardProps) {
   // NOTE: The useState(mounted)+useEffect hydration fence has been intentionally removed.
   // All data is passed as props from the RSC page — there are no client-only APIs (window,
@@ -56,7 +58,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
-  const operationsGroups = isStudent ? [
+  const operationsGroups = useMemo(() => isStudent ? [
     {
       title: 'Library Ops',
       items: [
@@ -86,9 +88,9 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
         { title: 'Analytics', href: '/protected/reports', icon: BarChart2 },
       ]
     }
-  ];
+  ], [isStudent, canReviewApprovals]);
 
-  const queueItems = [
+  const queueItems = useMemo(() => [
     {
       label: isStudent ? 'Borrowed Books' : 'Active Borrows Now',
       value: isStudent ? stats.myActiveLoans : stats.activeLoans,
@@ -100,9 +102,9 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
       href: '/protected/admin/approvals',
       show: canReviewApprovals,
     },
-  ].filter((item) => item.show !== false);
+  ].filter((item) => item.show !== false), [isStudent, stats.myActiveLoans, stats.activeLoans, stats.pendingApprovals, canReviewApprovals]);
 
-  const attentionItems = queueItems.filter((item) => item.value > 0);
+  const attentionItems = useMemo(() => queueItems.filter((item) => item.value > 0), [queueItems]);
 
   if (isStudent) {
     return (
