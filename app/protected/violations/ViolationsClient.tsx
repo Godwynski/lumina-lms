@@ -252,7 +252,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
           </>
         }
       >
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/60">
               <th className="px-4 py-2.5 font-medium text-muted-foreground">Student</th>
@@ -355,7 +356,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
               })
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </AdminTableShell>
 
       <RecordViolationModal

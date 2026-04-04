@@ -59,7 +59,7 @@ export async function getViolations(options?: {
   let query = supabase
     .from('violations')
     .select(`
-      *,
+      id, user_id, violation_type, severity, points, description, incident_date, status, resolved_at, resolution_notes, created_at,
       profiles:user_id(full_name, student_id)
     `)
     .order('created_at', { ascending: false })
@@ -84,7 +84,7 @@ export async function getViolations(options?: {
     else if (v.status === 'resolved') stats.resolved++
   })
 
-  return { violations: data || [], stats }
+  return { violations: (data as unknown) as ViolationWithProfile[], stats }
 }
 
 export async function searchStudents(query: string) {

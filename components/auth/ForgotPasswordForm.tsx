@@ -48,24 +48,24 @@ export function ForgotPasswordForm({
   if (success) {
     return (
       <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
-        <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+        <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
           <CardHeader className="space-y-4 pb-5">
             <div className="flex items-center gap-3">
               <Logo size={20} />
-              <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
+              <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
             </div>
             <div className="flex flex-col items-center justify-center pt-4 pb-2">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-slate-300 bg-slate-100">
-                <MailCheck className="h-6 w-6 text-slate-700" />
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted/50">
+                <MailCheck className="h-6 w-6 text-muted-foreground" />
               </div>
-              <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Check your email</CardTitle>
-              <CardDescription className="mt-2 text-center text-slate-600">
-                We&apos;ve sent a password reset link to <span className="font-semibold text-slate-900">{email}</span>.
+              <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Check your email</CardTitle>
+              <CardDescription className="mt-2 text-center text-muted-foreground">
+                We&apos;ve sent a password reset link to <span className="font-semibold text-foreground">{email}</span>.
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="pb-8">
-            <Button asChild variant="outline" className="h-11 w-full rounded-lg border-slate-300">
+            <Button asChild variant="outline" className="h-11 w-full rounded-lg border-input hover:bg-muted">
               <Link href="/auth/login">
                 Return to sign in
               </Link>
@@ -78,15 +78,15 @@ export function ForgotPasswordForm({
 
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
-      <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+      <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
           <div className="flex items-center gap-3">
             <Logo size={20} />
-            <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Reset password</CardTitle>
-            <CardDescription className="text-sm text-slate-600">
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Reset password</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
               Enter your email to receive a password reset link.
             </CardDescription>
           </div>
@@ -102,7 +102,7 @@ export function ForgotPasswordForm({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300"
+                className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring"
               />
             </div>
 
@@ -111,7 +111,7 @@ export function ForgotPasswordForm({
             <Button
               type="submit"
               disabled={isLoading}
-              className="mt-2 h-11 w-full rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800"
+              className="mt-2 h-11 w-full rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isLoading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
               {isLoading ? "Sending link..." : "Send reset link"}
@@ -120,7 +120,7 @@ export function ForgotPasswordForm({
 
           <Link
             href="/auth/login"
-            className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+            className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft size={14} />
             Back to sign in

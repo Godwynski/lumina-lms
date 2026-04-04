@@ -1,17 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { UploadAction } from "./UploadAction";
 import { AssetGrid } from "./AssetGrid";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 type Category = { id: string; name: string };
 
@@ -24,7 +17,7 @@ type ResourceItem = {
   created_at: string;
   updated_at?: string | null;
   published_year?: number | null;
-  categories?: { name?: string | null } | null;
+  categories?: { name?: string | null }[] | null;
 };
 
 interface DigitalResourcesClientProps {
@@ -36,82 +29,61 @@ interface DigitalResourcesClientProps {
 
 export function DigitalResourcesClient({ resources, categories, isLibrarian, query }: DigitalResourcesClientProps) {
   const normalizedResources = resources ?? [];
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const selectedCount = selectedIds.size;
-  const toggleSelect = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-
-  const selectAll = () => {
-    setSelectedIds(new Set(normalizedResources.map((resource) => resource.id)));
-  };
-
-  const clearSelection = () => {
-    setSelectedIds(new Set());
-  };
-
-  const openSingleSelected = () => {
-    const selectedResources = normalizedResources.filter((resource) => selectedIds.has(resource.id));
-    if (selectedResources.length !== 1) return;
-    const selected = selectedResources[0];
-    window.location.href = `/protected/resources?view=${selected.id}`;
-  };
 
   return (
-    <div className="w-full pb-6 md:pb-8">
-      <div className="sticky top-0 z-30 rounded-xl border border-border bg-card/95 p-2.5 shadow-sm backdrop-blur">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-base font-semibold tracking-tight text-foreground">Digital Assets</h1>
-              <p className="text-[11px] text-muted-foreground">Visual browse with compact controls.</p>
+    <div className="w-full space-y-8 pb-12">
+      {/* Premium Header Layout */}
+      <div className="flex flex-col gap-6 pt-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-foreground sm:text-4xl">
+                Repository
+              </h1>
+              <Badge variant="outline" className="h-6 rounded-md bg-muted px-2 py-0 font-bold uppercase tracking-widest text-muted-foreground/60 border-none">
+                Vault
+              </Badge>
             </div>
-
-            <div className="flex items-center gap-1.5">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-8 rounded-md px-2.5 text-xs">
-                    Bulk Actions
-                    {selectedCount > 0 ? ` (${selectedCount})` : ""}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onClick={selectAll}>Select all results</DropdownMenuItem>
-                  <DropdownMenuItem onClick={clearSelection} disabled={selectedCount === 0}>Clear selection</DropdownMenuItem>
-                  <DropdownMenuItem onClick={openSingleSelected} disabled={selectedCount !== 1}>Open selected</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {isLibrarian ? <UploadAction categories={categories} /> : null}
-            </div>
+            <p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground">
+              Official institutional archive for Capstones, Theses, and curated academic research.
+            </p>
           </div>
 
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-            <form action="/protected/resources" method="GET" className="relative w-full sm:w-[260px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="q"
-                placeholder="Search title"
-                defaultValue={query}
-                className="h-8 rounded-md pl-8 text-xs"
+          <div className="flex items-center gap-2">
+            {isLibrarian && (
+              <UploadAction 
+                categories={categories} 
+                className="h-10 rounded-xl px-5 font-bold shadow-lg shadow-primary/10 transition-all hover:-translate-y-0.5 active:scale-95"
               />
-            </form>
+            )}
+          </div>
+        </div>
 
-            <p className="text-[11px] text-muted-foreground">
-              {normalizedResources.length} result{normalizedResources.length === 1 ? "" : "s"}
-            </p>
+        {/* Floating Search Bar with Glassmorphism */}
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/50 bg-card/50 p-1.5 shadow-sm backdrop-blur-xl dark:bg-card/30">
+          <form action="/protected/resources" method="GET" className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+            <Input
+              name="q"
+              placeholder="Filter by title (e.g. Artificial Intelligence)..."
+              defaultValue={query}
+              className="h-11 border-none bg-transparent pl-11 text-sm font-medium focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </form>
+
+          <div className="hidden h-8 w-[1px] bg-border/40 sm:block" />
+          
+          <div className="mr-3 px-3 py-1.5">
+            <span className="text-xs font-bold tabular-nums tracking-tight text-muted-foreground">
+              {normalizedResources.length} results
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 max-h-[calc(100vh-14rem)] overflow-y-auto pr-0.5">
-        <AssetGrid resources={resources} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
+      {/* Grid Container with better vertical padding */}
+      <div className="min-h-[400px]">
+        <AssetGrid resources={resources} />
       </div>
     </div>
   );

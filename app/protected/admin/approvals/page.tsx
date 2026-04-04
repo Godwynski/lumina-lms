@@ -8,13 +8,12 @@ import {
   Search,
   ShieldAlert
 } from "lucide-react";
-import { sendWelcomeEmail } from "@/lib/notifications";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
-
+import { approveLibraryCard } from "@/lib/actions/admin";
 
 interface PendingCard {
   id: string;
@@ -85,33 +84,15 @@ export default function ApprovalsPage() {
     fetchCards();
   }, [fetchCards]);
 
-  const handleApprove = async (cardId: string) => {
+
+
+  const handleApprove = async (cardId: string, userId: string) => {
     if (processingId) return;
     setProcessingId(cardId);
     try {
-      // 1. Update card status
-      const { error: updateError } = await supabase
-        .from("library_cards")
-        .update({ status: "active" })
-        .eq("id", cardId);
+      await approveLibraryCard(cardId, userId);
 
-      if (updateError) throw updateError;
-
-      // 2. Trigger automated email
-      // Note: This requires service_role for admin tasks, but for mock purposes:
-      // In a real app, we would fetch the email from supabase.auth.admin or have it in the profiles table.
-      const targetCard = cards.find((c) => c.id === cardId);
-      const recipientEmail = targetCard?.profiles?.email;
-      if (!recipientEmail) {
-        throw new Error("Student email not found for card holder");
-      }
-
-      await sendWelcomeEmail(
-        targetCard?.profiles.full_name || "Student",
-        recipientEmail
-      );
-
-      setNotification({ message: "Card approved and email sent.", type: 'success' });
+      setNotification({ message: "Card approved successfully.", type: "success" });
       setTimeout(() => setNotification(null), 5000);
 
       // Refresh list
@@ -274,7 +255,7 @@ export default function ApprovalsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         {card.status !== "active" && (
                           <Button
-                            onClick={() => handleApprove(card.id)}
+                            onClick={() => handleApprove(card.id, card.user_id)}
                             disabled={processingId === card.id}
                             className="h-8 px-3 text-xs"
                           >

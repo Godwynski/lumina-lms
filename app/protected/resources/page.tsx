@@ -7,7 +7,7 @@ import {
   FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DigitalResourcesClient } from "@/components/digital-resources/DigitalResourcesClient";
 import PDFViewerWrapper from "@/components/digital-resources/PDFViewerWrapper";
@@ -49,6 +49,7 @@ export default async function DigitalResourcesPage({
   let resourcesQuery = supabase
     .from("digital_resources")
     .select("*, categories(name)")
+    .or("type.ilike.%capstone%,type.ilike.%thesis%")
     .order("created_at", { ascending: false });
 
   if (query) {
@@ -124,21 +125,6 @@ export default async function DigitalResourcesPage({
               </CardContent>
             </Card>
 
-            <Card className="border-border bg-card shadow-sm">
-               <CardHeader>
-                 <CardTitle className="text-sm font-semibold text-foreground">Secure Access</CardTitle>
-                 <CardDescription className="text-xs leading-relaxed text-muted-foreground">
-                     Open protected resources through secure session controls.
-                   </CardDescription>
-               </CardHeader>
-               <CardContent>
-                  <Link href="/protected/resources">
-                    <Button className="h-8 w-full rounded-md bg-primary text-xs font-semibold uppercase tracking-wider text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95">
-                      Return to Vault
-                    </Button>
-                  </Link>
-                </CardContent>
-             </Card>
           </div>
         </div>
       </div>

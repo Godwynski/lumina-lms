@@ -65,22 +65,21 @@ export function SignUpForm({
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
-      <Card className="overflow-hidden border-slate-200 bg-white text-slate-900 shadow-sm">
+      <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
           <div className="flex items-center gap-3">
             <Logo size={20} />
-            <span className="text-lg font-bold tracking-tight text-slate-900">Lumina LMS</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Create account</CardTitle>
-            <CardDescription className="text-sm text-slate-600">
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Create account</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
               Join Lumina to access your digital library resources.
             </CardDescription>
           </div>
@@ -96,7 +95,7 @@ export function SignUpForm({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300"
+                className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring"
               />
             </div>
             <div className="space-y-2">
@@ -108,7 +107,7 @@ export function SignUpForm({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300"
+                className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring"
               />
             </div>
             <div className="space-y-2">
@@ -121,13 +120,13 @@ export function SignUpForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300 pr-10"
+                  className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring pr-10"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -144,13 +143,13 @@ export function SignUpForm({
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-11 rounded-lg border-slate-300 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-slate-300 pr-10"
+                  className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring pr-10"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -163,16 +162,16 @@ export function SignUpForm({
             <Button
               type="submit"
               disabled={isLoading}
-              className="mt-2 h-11 w-full rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800"
+              className="mt-2 h-11 w-full rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isLoading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center border-t border-slate-200 bg-slate-50 py-4 text-sm">
-          <span className="text-slate-600">Already have an account?</span>
-          <Link href="/auth/login" className="ml-1.5 font-bold text-slate-900 hover:text-slate-700">
+        <CardFooter className="flex justify-center border-t border-border bg-muted/30 py-4 text-sm">
+          <span className="text-muted-foreground">Already have an account?</span>
+          <Link href="/auth/login" className="ml-1.5 font-bold text-foreground hover:text-foreground/80">
             Sign in
           </Link>
         </CardFooter>

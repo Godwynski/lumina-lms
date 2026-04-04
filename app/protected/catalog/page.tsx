@@ -7,7 +7,29 @@ export const metadata = {
   description: 'Manage physical book inventory and resources.',
 };
 
-export const dynamic = 'force-dynamic';
+// Enable PPR for this route
+
+async function CatalogDataWrapper({ 
+  page, q, stock, categoryId 
+}: { 
+  page: number; q: string; stock: string; categoryId: string 
+}) {
+  const [{ data, count }, categories] = await Promise.all([
+    getBooks(q, categoryId || undefined, page, 9),
+    getCategories()
+  ]);
+
+  return (
+    <CatalogContent 
+      initialData={{ data: data || [], count: count || 0 }} 
+      categories={categories}
+      page={page} 
+      q={q} 
+      stock={stock} 
+      categoryId={categoryId}
+    />
+  );
+}
 
 export default async function CatalogPage({
   searchParams,
@@ -20,13 +42,6 @@ export default async function CatalogPage({
   const stock = params.stock || 'all';
   const categoryId = params.categoryId || '';
 
-  // Prefetch data on the server for faster initial paint
-  const [{ data, count }, categories] = await Promise.all([
-    getBooks(q, categoryId || undefined, page, 9),
-    getCategories()
-  ]);
-  const initialData = { data, count: count || 0 };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
@@ -35,13 +50,11 @@ export default async function CatalogPage({
       </div>
 
       <Suspense fallback={<CatalogSkeleton />}>
-        <CatalogContent 
-          initialData={initialData} 
-          categories={categories}
+        <CatalogDataWrapper 
           page={page} 
           q={q} 
           stock={stock} 
-          categoryId={categoryId}
+          categoryId={categoryId} 
         />
       </Suspense>
     </div>

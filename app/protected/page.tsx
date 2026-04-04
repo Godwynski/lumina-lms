@@ -2,29 +2,67 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
 import { getDashboardStats } from "@/lib/actions/dashboard";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
+import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
+
 import { getDeterministicQrUrl, resolveStudentId } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata = {
   title: "Dashboard | Lumina LMS",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function ProtectedPage() {
+  noStore();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  // 1. Get user and role concurrently
+  // Next.js cache() deduplicates the getUser call across these helpers
+  const [userResponse, role] = await Promise.all([
+    supabase.auth.getUser(),
+    getUserRole(),
+  ]);
+
+  const { data: { user } } = userResponse;
 
   if (!user) {
     return redirect("/auth/login");
   }
 
-  const role = await getUserRole();
-  const stats = await getDashboardStats({
-    userId: user.id,
-    role,
-  });
+  const faqKeys = [
+    "faq_student_q1", "faq_student_a1",
+    "faq_student_q2", "faq_student_a2",
+    "faq_student_q3", "faq_student_a3",
+    "faq_student_q4", "faq_student_a4",
+  ];
+
+  // 2. Fetch all dashboard data points in parallel
+  // This reduces the theoretical wait time from sum(queries) to max(queries)
+  const [stats, profileResult, cardResult, faqResult] = await Promise.all([
+    getDashboardStats({ userId: user.id, role }),
+    supabase
+      .from("profiles")
+      .select("full_name, student_id, department, avatar_url, address, phone")
+      .eq("id", user.id)
+      .single(),
+    role === "student"
+      ? supabase
+          .from("library_cards")
+          .select("card_number, status, expires_at")
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    role === "student"
+      ? supabase
+          .from("system_settings")
+          .select("key, value")
+          .in("key", faqKeys)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const profileData = profileResult.data;
 
   let studentCard: {
     fullName: string;
@@ -40,18 +78,9 @@ export default async function ProtectedPage() {
   } | null = null;
   let studentFaqs: { question: string; answer: string }[] = [...DEFAULT_STUDENT_FAQS];
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("full_name, student_id, department, avatar_url, address, phone")
-    .eq("id", user.id)
-    .single();
-
   if (role === "student") {
-    const { data: card } = await supabase
-      .from("library_cards")
-      .select("card_number, status, expires_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const card = cardResult.data;
+    const faqRows = faqResult.data;
 
     if (profileData) {
       const resolvedStudentId = resolveStudentId({
@@ -73,22 +102,6 @@ export default async function ProtectedPage() {
         phone: profileData.phone,
       };
     }
-
-    const faqKeys = [
-      "faq_student_q1",
-      "faq_student_a1",
-      "faq_student_q2",
-      "faq_student_a2",
-      "faq_student_q3",
-      "faq_student_a3",
-      "faq_student_q4",
-      "faq_student_a4",
-    ];
-
-    const { data: faqRows } = await supabase
-      .from("system_settings")
-      .select("key, value")
-      .in("key", faqKeys);
 
     if (faqRows && faqRows.length > 0) {
       const byKey = new Map(faqRows.map((row) => [String(row.key), String(row.value ?? "")]));
@@ -121,18 +134,8 @@ export default async function ProtectedPage() {
               : 'Core actions, queue visibility, and recent activity.'}
           </p>
         </div>
-        <div className="relative w-full max-w-sm sm:w-auto">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <input
-            type="search"
-            placeholder="Search books, ISBN, or authors..."
-            className="h-10 w-full rounded-full border border-border bg-muted/30 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:w-64 md:w-80"
-          />
-        </div>
+        <DashboardSearch role={role} />
+
       </header>
 
       <DashboardClient 

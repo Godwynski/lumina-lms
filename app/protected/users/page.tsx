@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import * as React from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, 
@@ -40,12 +41,46 @@ type ProfileRow = {
   created_at: string | null;
 };
 
+const UserTableRow = React.memo(({ user, onClick }: { user: User; onClick: (user: User) => void }) => (
+  <tr
+    className="cursor-pointer hover:bg-muted/40"
+    onClick={() => onClick(user)}
+  >
+    <td className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate font-medium text-foreground">{user.name}</p>
+          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        </div>
+      </div>
+    </td>
+    <td className="px-4 py-3">
+      <RoleBadge role={user.role} />
+    </td>
+    <td className="px-4 py-3">
+      <StatusBadge status={user.status} />
+    </td>
+    <td className="px-4 py-3 text-xs text-muted-foreground">
+      <span>{user.department}</span>
+      <span className="mx-2">-</span>
+      <span>{user.joined}</span>
+    </td>
+  </tr>
+));
+UserTableRow.displayName = "UserTableRow";
+
 export default function UsersPage() {
   const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0);
   const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student">("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
@@ -99,28 +134,22 @@ export default function UsersPage() {
     }
   }, [selectedUser]);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            user.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesTab = activeTab === "all" || user.role === activeTab;
-      return matchesSearch && matchesTab;
-    });
-  }, [searchQuery, activeTab, users]);
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
 
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredUsers.slice(start, start + pageSize);
-  }, [filteredUsers, currentPage]);
+  const paginatedUsers = users;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, activeTab]);
+  }, [debouncedSearch, activeTab]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
+    if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
@@ -130,10 +159,24 @@ export default function UsersPage() {
       setIsLoadingUsers(true);
       setLoadError(null);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("profiles")
-          .select("*")
-          .order("created_at", { ascending: false });
+          .select("*", { count: "exact" });
+
+        if (activeTab !== "all") {
+          query = query.eq("role", activeTab);
+        }
+
+        if (debouncedSearch) {
+          query = query.or(`full_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`);
+        }
+
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data, error, count } = await query
+          .order("created_at", { ascending: false })
+          .range(from, to);
 
         if (error) {
           throw new Error(error.message || "Failed to load users");
@@ -142,6 +185,7 @@ export default function UsersPage() {
         const nextUsers = ((data ?? []) as ProfileRow[]).map(mapProfileToUser);
 
         setUsers(nextUsers);
+        setTotalUsers(count ?? 0);
       } catch (error) {
         setLoadError(error instanceof Error ? error.message : "Failed to load users");
       } finally {
@@ -159,7 +203,7 @@ export default function UsersPage() {
     return () => {
       window.removeEventListener("lumina:profile-photo-updated", handleProfilePhotoUpdated);
     };
-  }, [supabase]);
+  }, [supabase, currentPage, debouncedSearch, activeTab]);
 
   const handleInvite = async () => {
     if (!inviteEmail) return;
@@ -288,6 +332,11 @@ export default function UsersPage() {
     }
   };
 
+  const handleUserClick = useCallback((u: User) => {
+    setSelectedUser(u);
+    setIsEditingUser(false);
+  }, []);
+
   return (
     <>
       <AdminTableShell
@@ -330,10 +379,10 @@ export default function UsersPage() {
           </>
         )}
         pagination={
-          !isLoadingUsers && filteredUsers.length > 0 ? (
+          !isLoadingUsers && totalUsers > 0 ? (
             <CompactPagination
               page={currentPage}
-              totalItems={filteredUsers.length}
+              totalItems={totalUsers}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
             />
@@ -358,38 +407,11 @@ export default function UsersPage() {
                 </tr>
               ) : paginatedUsers.length > 0 ? (
                 paginatedUsers.map((user) => (
-                  <tr
+                  <UserTableRow
                     key={user.id}
-                    className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setIsEditingUser(false);
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">{user.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <RoleBadge role={user.role} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={user.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      <span>{user.department}</span>
-                      <span className="mx-2">-</span>
-                      <span>{user.joined}</span>
-                    </td>
-                  </tr>
+                    user={user}
+                    onClick={handleUserClick}
+                  />
                 ))
               ) : (
                 <tr>

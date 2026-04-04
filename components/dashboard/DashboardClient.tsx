@@ -4,12 +4,13 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
 import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import MyCardContainer from '@/components/library/MyCardContainer';
+import { HealthNode } from './HealthNode';
+
 
 type RecentBook = {
   id: string;
@@ -46,6 +47,8 @@ interface DashboardProps {
   }[];
 }
 
+import { useMemo } from 'react';
+
 export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: DashboardProps) {
   // NOTE: The useState(mounted)+useEffect hydration fence has been intentionally removed.
   // All data is passed as props from the RSC page — there are no client-only APIs (window,
@@ -55,7 +58,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
-  const operationsGroups = isStudent ? [
+  const operationsGroups = useMemo(() => isStudent ? [
     {
       title: 'Library Ops',
       items: [
@@ -85,9 +88,9 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
         { title: 'Analytics', href: '/protected/reports', icon: BarChart2 },
       ]
     }
-  ];
+  ], [isStudent, canReviewApprovals]);
 
-  const queueItems = [
+  const queueItems = useMemo(() => [
     {
       label: isStudent ? 'Borrowed Books' : 'Active Borrows Now',
       value: isStudent ? stats.myActiveLoans : stats.activeLoans,
@@ -99,9 +102,9 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
       href: '/protected/admin/approvals',
       show: canReviewApprovals,
     },
-  ].filter((item) => item.show !== false);
+  ].filter((item) => item.show !== false), [isStudent, stats.myActiveLoans, stats.activeLoans, stats.pendingApprovals, canReviewApprovals]);
 
-  const attentionItems = queueItems.filter((item) => item.value > 0);
+  const attentionItems = useMemo(() => queueItems.filter((item) => item.value > 0), [queueItems]);
 
   if (isStudent) {
     return (
@@ -362,16 +365,11 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
               </Card>
            </section>
 
-           {/* Section: System Status */}
            <section className="space-y-3">
              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Health node</h2>
              <Card className="border-border/60 bg-card/40 shadow-none border-none">
-               <CardContent className="p-3 space-y-3">
-                 <StatusIndicator icon={Zap} label="Response" value="24ms" color="text-emerald-500" />
-                 <div className="h-px w-full bg-border/40" />
-                 <StatusIndicator icon={ShieldCheck} label="Firewall" value="Active" color="text-blue-500" />
-                 <div className="h-px w-full bg-border/40" />
-                 <StatusIndicator icon={BarChart2} label="Traffic" value="Normal" color="text-amber-500" />
+               <CardContent className="p-3">
+                 <HealthNode />
                </CardContent>
              </Card>
            </section>
@@ -381,12 +379,3 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
   );
 }
 
-function StatusIndicator({ icon: Icon, label, value, color }: { icon: React.ElementType, label: string, value: string, color: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon size={14} className={cn("shrink-0", color)} />
-      <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">{label}:</span>
-      <span className={cn("text-[11px] font-bold", color)}>{value}</span>
-    </div>
-  );
-}

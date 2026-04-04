@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
+
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
 import Image from 'next/image';
 import {
@@ -21,7 +23,16 @@ type CatalogCategory = {
 };
 
 function StudentCatalogData() {
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
+  const qParam = searchParams.get('q') || '';
+  const [query, setQuery] = useState(qParam);
+
+  useEffect(() => {
+    if (qParam && qParam !== query) {
+      setQuery(qParam);
+    }
+  }, [qParam, query]);
+
   const [page, setPage] = useState(1);
   const pageSize = 16;
   
@@ -43,21 +54,17 @@ function StudentCatalogData() {
 
   const { data: categories = [] } = useSWR('public-categories', () => getCategoriesCached());
 
-  const swrKey = ['student-books', query, selectedCategory, availableOnly, page, pageSize];
+  const swrKey = ['student-books', query, selectedCategory, availableOnly, page, pageSize, sortBy];
   const { data: booksData, error, isLoading } = useSWR(
     swrKey,
-    () => getPublicBooksCached(query, selectedCategory, '', availableOnly, page, pageSize),
+    () => getPublicBooksCached(query, selectedCategory, '', availableOnly, page, pageSize, sortBy),
     { keepPreviousData: true }
   );
 
   const books = booksData?.books || [];
   const totalBooks = booksData?.total || 0;
 
-  const displayBooks = [...books].sort((a, b) => {
-    if (sortBy === 'author') return a.author.localeCompare(b.author);
-    if (sortBy === 'availability') return b.available_copies - a.available_copies;
-    return a.title.localeCompare(b.title);
-  });
+  const displayBooks = [...books];
 
   if (isLoading && !booksData) return <StudentCatalogSkeleton />;
 

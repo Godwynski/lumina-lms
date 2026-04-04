@@ -2,7 +2,7 @@
 
 import { createClient, createSafeClient } from '@/lib/supabase/server';
 import { getUserRole } from '@/lib/auth-helpers';
-import { revalidatePath, unstable_cache } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { BookSchema, CategorySchema } from '../validations/catalog';
 import { logger } from '../logger';
 
@@ -25,7 +25,7 @@ async function assertStaffCatalogAccess() {
 export const getCategories = unstable_cache(
   async () => {
     const supabase = createSafeClient();
-    const { data, error } = await supabase.from('categories').select('*').order('name');
+    const { data, error } = await supabase.from('categories').select('id, name, description, created_at').order('name');
     if (error) throw new Error(error.message);
     return data;
   },
@@ -132,7 +132,7 @@ export async function createBook(bookData: unknown, copiesCount: number = 1) {
   }
 
   logger.info('catalog', `Book created: ${validated.title}`, { bookId: data.id, isbn: validated.isbn });
-  revalidatePath('/protected/catalog');
+  revalidateTag('catalog', 'default');
   return data;
 }
 
@@ -150,8 +150,8 @@ export async function updateBook(id: string, bookData: unknown) {
     
   if (error) throw new Error(error.message);
   logger.info('catalog', `Book updated: ${id}`, { updates: validated });
-  revalidatePath('/protected/catalog');
-  revalidatePath(`/protected/catalog/${id}`);
+  revalidateTag('catalog', 'default');
+  revalidateTag(`book-${id}`, 'default');
   return data;
 }
 
@@ -180,7 +180,7 @@ export async function softDeleteBook(id: string) {
     
   if (error) throw new Error(error.message);
   logger.warn('catalog', `Book soft-deleted: ${id}`);
-  revalidatePath('/protected/catalog');
+  revalidateTag('catalog', 'default');
   return data;
 }
 
@@ -190,7 +190,7 @@ export async function getBookCopies(bookId: string) {
   const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('book_copies')
-    .select('*')
+    .select('id, book_id, status, condition, qr_string, created_at')
     .eq('book_id', bookId)
     .order('created_at', { ascending: false });
     

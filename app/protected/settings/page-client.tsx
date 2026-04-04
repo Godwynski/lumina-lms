@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, memo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,7 +9,7 @@ import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountD
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
 import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { RecomputeExpiryDates } from "@/components/admin/RecomputeExpiryDates";
-import { AuditLogViewer, GDPRHardDeleteDialog } from "@/components/admin/AuditAndGDPR";
+import { GDPRHardDeleteDialog } from "@/components/admin/AuditAndGDPR";
 import {
   User,
   SlidersHorizontal,
@@ -17,9 +17,7 @@ import {
   Settings2,
   Tags,
   RefreshCw,
-  ScrollText,
   Trash2,
-  AlertCircle,
   ChevronRight,
   ChevronDown,
   CheckCircle2,
@@ -39,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NavigationGuard } from "@/components/layout/NavigationGuard";
 import { compressImage } from "@/lib/image-utils";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type Role = "admin" | "librarian" | "staff" | "student";
 
@@ -67,7 +66,6 @@ const ADMIN_TABS = [
   { id: "policies", label: "Policies", icon: Settings2, description: "Manage system-wide policies" },
   { id: "categories", label: "Categories", icon: Tags, description: "Book categories & genres" },
   { id: "operations", label: "Operations", icon: RefreshCw, description: "System maintenance tasks" },
-  { id: "audit", label: "Audit Logs", icon: ScrollText, description: "Immutable system activity trail" },
   { id: "gdpr", label: "GDPR", icon: Trash2, description: "Profile anonymization & deletion" },
 ] as const;
 
@@ -95,7 +93,6 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
   const [displayName, setDisplayName] = useState("");
   const [addressValue, setAddressValue] = useState("");
   const [phoneValue, setPhoneValue] = useState("");
-  const [emailAlerts, setEmailAlerts] = useState(true);
   const [profileSaving, setProfileSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [selectedPhotoName, setSelectedPhotoName] = useState("");
@@ -104,50 +101,38 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
   const [selectedPhotoPreviewUrl, setSelectedPhotoPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [intelligentAlerts, setIntelligentAlerts] = useState(true);
+
   // Dirty tracking
   const [initialData, setInitialData] = useState({
     displayName: "",
     address: "",
     phone: "",
-    emailAlerts: true
+    intelligentAlerts: true
   });
 
+  const { preferences, updatePreferences: updatePrefsContext } = usePreferences();
+
   useEffect(() => {
-    const loadPrefs = async () => {
-      setMounted(true);
-      const nameVal = profileName || "";
-      const addrVal = address || "";
-      const phoneVal = phone || "";
-      
-      setDisplayName(nameVal);
-      setAddressValue(addrVal);
-      setPhoneValue(phoneVal);
+    setMounted(true);
+    const nameVal = profileName || "";
+    const addrVal = address || "";
+    const phoneVal = phone || "";
+    
+    setDisplayName(nameVal);
+    setAddressValue(addrVal);
+    setPhoneValue(phoneVal);
 
-      try {
-        const response = await fetch("/api/ui-preferences", { method: "GET" });
-        if (response.ok) {
-          const payload = (await response.json()) as {
-            preferences?: {
-              displayName?: string;
-              emailAlerts?: boolean;
-            };
-          };
-          const preferences = payload.preferences ?? {};
-          if (typeof preferences.displayName === "string" && !profileName) {
-            setDisplayName(preferences.displayName);
-          }
-          if (typeof preferences.emailAlerts === "boolean") {
-            setEmailAlerts(preferences.emailAlerts);
-            setInitialData(prev => ({ ...prev, emailAlerts: preferences.emailAlerts || true }));
-          }
-        }
-      } catch {
-        // Non-blocking
+    if (preferences) {
+      if (typeof preferences.displayName === "string" && !profileName) {
+        setDisplayName(preferences.displayName);
       }
-    };
-
-    void loadPrefs();
-  }, [profileName, address, phone]);
+      if (typeof preferences.intelligentAlerts === "boolean") {
+        setIntelligentAlerts(preferences.intelligentAlerts);
+        setInitialData(prev => ({ ...prev, intelligentAlerts: preferences.intelligentAlerts as boolean }));
+      }
+    }
+  }, [profileName, address, phone, preferences]);
 
   useEffect(() => {
     setInitialData(prev => ({
@@ -168,7 +153,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     addressValue !== initialData.address || 
     phoneValue !== initialData.phone;
   
-  const isPrefsDirty = emailAlerts !== initialData.emailAlerts;
+  const isPrefsDirty = intelligentAlerts !== initialData.intelligentAlerts;
   const isDirty = isProfileDirty || isPrefsDirty || !!selectedPhotoBlob;
 
   const saveProfile = async () => {
@@ -190,11 +175,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
         throw new Error(payload.error || "Failed to save profile");
       }
 
-      await fetch("/api/ui-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: nextName }),
-      });
+      await updatePrefsContext({ displayName: nextName });
       
       setInitialData(prev => ({ 
         ...prev, 
@@ -212,15 +193,8 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
   const savePreferences = async () => {
     try {
-      const response = await fetch("/api/ui-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          emailAlerts,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to save preferences");
-      setInitialData(prev => ({ ...prev, emailAlerts }));
+      await updatePrefsContext({ intelligentAlerts });
+      setInitialData(prev => ({ ...prev, intelligentAlerts }));
       toast.success("Preferences updated");
     } catch {
       toast.error("Failed to save preferences");
@@ -231,20 +205,16 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     const defaultName = "";
     const defaultAlerts = true;
     setDisplayName(defaultName);
-    setEmailAlerts(defaultAlerts);
-    await fetch("/api/ui-preferences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        displayName: defaultName,
-        emailAlerts: defaultAlerts,
-      }),
+    setIntelligentAlerts(defaultAlerts);
+    await updatePrefsContext({
+      displayName: defaultName,
+      intelligentAlerts: defaultAlerts,
     });
-    setInitialData(prev => ({ ...prev, displayName: defaultName, emailAlerts: defaultAlerts }));
+    setInitialData(prev => ({ ...prev, displayName: defaultName, intelligentAlerts: defaultAlerts }));
     toast.success("Settings reset to defaults");
   };
 
-  const changeTab = (id: TabId) => {
+const changeTab = useCallback((id: TabId) => {
     if (isDirty && !window.confirm("You have unsaved changes. Discard them?")) {
       return;
     }
@@ -253,7 +223,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     const url = new URL(window.location.href);
     url.searchParams.set("tab", id);
     router.replace(url.pathname + url.search, { scroll: false });
-  };
+  }, [isDirty, router]);
 
   const uploadProfilePhoto = async () => {
     if (!selectedPhotoBlob) {
@@ -374,6 +344,9 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
   const activeTabMeta = useMemo(() => allTabs.find((tab) => tab.id === activeTab), [activeTab, allTabs]);
 
+const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAlerts(v), []);
+  const onMobileNavClick = useCallback(() => setMobileNavOpen(true), []);
+
   if (!mounted) return null;
 
   return (
@@ -438,7 +411,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               transition={{ duration: 0.15 }}
             >
               {activeTab === "profile" && (
-                <Section key="profile" title="Account Identity" icon={User} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="profile" title="Account Identity" icon={User} onMobileNavClick={onMobileNavClick}>
                   <div className="grid gap-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                       <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
@@ -568,13 +541,13 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               )}
 
               {activeTab === "preferences" && (
-                <Section key="preferences" title="Library Experience" icon={SlidersHorizontal} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="preferences" title="Library Experience" icon={SlidersHorizontal} onMobileNavClick={onMobileNavClick}>
                   <div className="space-y-3">
                     <PremiumToggle 
                       title="Intelligent Alerts" 
                       description="Receive smart notifications for due dates and library updates."
-                      checked={emailAlerts}
-                      onChange={setEmailAlerts}
+                      checked={intelligentAlerts}
+                      onChange={setIntelligentAlertsValue}
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-4">
@@ -598,7 +571,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
               {activeTab === "security" && (
                 <div key="security" className="space-y-5">
-                  <Section title="Account Security" icon={Lock} onMobileNavClick={() => setMobileNavOpen(true)}>
+                  <Section title="Account Security" icon={Lock} onMobileNavClick={onMobileNavClick}>
                     <p className="mb-3 text-sm text-muted-foreground">Manage your authentication methods and login credentials.</p>
                     <Button asChild variant="outline" className="h-11 w-full gap-3 rounded-lg border-border sm:w-auto px-6 font-semibold shadow-sm">
                       <Link href="/auth/update-password">
@@ -627,46 +600,28 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
               {/* Admin Views */}
               {activeTab === "policies" && canManageSystem && (
-                <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={onMobileNavClick}>
                   <PolicyConfigurationForm settings={settings} canEdit={isSuperAdmin} />
                 </Section>
               )}
 
               {activeTab === "categories" && canManageSystem && (
-                <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={onMobileNavClick}>
                   <CategoryManagement initialCategories={categories} />
                 </Section>
               )}
 
               {activeTab === "operations" && isSuperAdmin && (
                 <div key="operations" className="space-y-4">
-                  <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={() => setMobileNavOpen(true)}>
+                  <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={onMobileNavClick}>
                     <RecomputeExpiryDates />
                   </Section>
                 </div>
               )}
 
-              {activeTab === "audit" && isSuperAdmin && (
-                <Section key="audit" title="System Transparency" icon={ScrollText} onMobileNavClick={() => setMobileNavOpen(true)}>
-                  <Card className="mb-6 border-border bg-card shadow-sm">
-                    <div className="flex items-start gap-3 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted">
-                        <AlertCircle size={18} className="text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">Immutable Ledger</p>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                          Every transaction and administrative change is permanently hashed and recorded. Deletion or unauthorized modification is physically restricted at the database layer.
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                  <AuditLogViewer />
-                </Section>
-              )}
 
               {activeTab === "gdpr" && isSuperAdmin && (
-                <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={() => setMobileNavOpen(true)} danger>
+                <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={onMobileNavClick} danger>
                   <Card className="mb-6 border-border bg-card shadow-sm">
                     <div className="p-4">
                       <div className="mb-3 flex items-center gap-2">
@@ -735,7 +690,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
 /* ── UI Components ───────────────────────────────────────── */
 
-function SectionNav({
+const SectionNav = memo(({
   title,
   items,
   activeId,
@@ -745,7 +700,7 @@ function SectionNav({
   items: NavTab[];
   activeId: TabId;
   onChange: (id: TabId) => void;
-}) {
+}) => {
   if (items.length === 0) return null;
 
   return (
@@ -771,9 +726,10 @@ function SectionNav({
       </div>
     </div>
   );
-}
+});
+SectionNav.displayName = "SectionNav";
 
-function Section({ title, icon: Icon, children, danger, onMobileNavClick }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; onMobileNavClick?: () => void }) {
+const Section = memo(({ title, icon: Icon, children, danger, onMobileNavClick }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; onMobileNavClick?: () => void }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 border-b border-border pb-3">
@@ -790,18 +746,20 @@ function Section({ title, icon: Icon, children, danger, onMobileNavClick }: { ti
       <div className="animate-in fade-in slide-in-from-bottom-1 duration-400">{children}</div>
     </div>
   );
-}
+});
+Section.displayName = "Section";
 
-function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+const FieldGroup = memo(({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
     <div className="space-y-2">
       <Label className="text-xs font-bold text-foreground/80">{label}</Label>
       {children}
     </div>
   );
-}
+});
+FieldGroup.displayName = "FieldGroup";
 
-function PremiumToggle({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
+const PremiumToggle = memo(({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: (v: boolean) => void }) => {
   return (
     <Card
       role="button"
@@ -822,4 +780,5 @@ function PremiumToggle({ title, description, checked, onChange }: { title: strin
       <Switch checked={checked} onCheckedChange={onChange} onClick={(e) => e.stopPropagation()} />
     </Card>
   );
-}
+});
+PremiumToggle.displayName = "PremiumToggle";

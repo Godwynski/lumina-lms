@@ -124,7 +124,7 @@ export default function StaffBookManagementPage() {
       <div className="flex flex-col justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-sm md:flex-row md:items-center">
         <div className="flex items-center gap-4">
           <Link href="/protected/catalog">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-muted">
+            <Button variant="ghost" size="icon" className="h-11 w-11 md:h-8 md:w-8 rounded-md hover:bg-muted focus-visible:ring-2">
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </Link>
@@ -138,7 +138,7 @@ export default function StaffBookManagementPage() {
           <Button 
             onClick={handleAddCopy} 
             disabled={addCopyLoading}
-            className="h-8 rounded-md px-3 text-xs font-semibold"
+            className="h-11 md:h-8 rounded-md px-4 md:px-3 text-xs font-semibold focus-visible:ring-2"
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Add Copy
@@ -222,7 +222,7 @@ export default function StaffBookManagementPage() {
                   setCopyFilter(value as 'ALL' | BookCopy['status']);
                 }
               }}>
-                <SelectTrigger className="h-7 border-0 bg-transparent px-1 text-[11px] font-medium text-muted-foreground">
+                <SelectTrigger className="h-11 md:h-7 border-0 bg-transparent px-2 md:px-1 text-sm md:text-[11px] font-medium text-muted-foreground focus-visible:ring-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -262,7 +262,7 @@ export default function StaffBookManagementPage() {
                       if (!isBookCopyStatus(value)) return;
                       void handleStatusChange(copy.id, value);
                     }}>
-                      <SelectTrigger className="h-7 rounded-md border border-border bg-muted px-2.5 text-[11px] font-medium text-muted-foreground">
+                      <SelectTrigger className="h-11 md:h-7 rounded-md border border-border bg-muted px-4 md:px-2.5 text-sm md:text-[11px] font-medium text-muted-foreground focus-visible:ring-2">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

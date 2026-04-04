@@ -70,7 +70,7 @@ export function SelfDeleteAccountDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[460px] rounded-xl p-5">
+      <DialogContent className="sm:max-w-[460px] max-h-[90vh] overflow-y-auto rounded-xl p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive text-base">
             <Trash2 className="h-4 w-4" />
