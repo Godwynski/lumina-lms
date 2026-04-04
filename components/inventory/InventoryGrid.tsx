@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { ModernBookCard } from "./ModernBookCard";
 import { PackageSearch, Plus } from "lucide-react";
 import { Book } from "@/lib/types";
@@ -21,7 +21,7 @@ export function InventoryGrid({ books, onDelete, onEdit }: InventoryGridProps) {
 
   if (books.length === 0) {
     return (
-      <motion.div 
+      <m.div 
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full"
@@ -37,7 +37,7 @@ export function InventoryGrid({ books, onDelete, onEdit }: InventoryGridProps) {
           }}
           contentClassName="min-h-[500px]"
         />
-      </motion.div>
+      </m.div>
     );
   }
 

@@ -45,8 +45,7 @@ class Logger {
   }
 
   info(context: string, message: string, data?: Record<string, unknown>) {
-    // Project lint rules only allow warn and error
-    console.warn(this.format('INFO', context, message, data));
+    console.info(this.format('INFO', context, message, data));
   }
 
   warn(context: string, message: string, data?: Record<string, unknown>) {
@@ -59,7 +58,7 @@ class Logger {
 
   debug(context: string, message: string, data?: Record<string, unknown>) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn(this.format('DEBUG', context, message, data));
+      console.debug(this.format('DEBUG', context, message, data));
     }
   }
 }

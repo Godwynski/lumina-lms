@@ -106,13 +106,18 @@ export async function createBook(bookData: unknown, copiesCount: number = 1) {
 
   const validated = BookSchema.parse(bookData);
 
+  // Use a transaction-like approach via RPC or grouped inserts
+  // For Supabase/Postgres, an RPC is the most robust way to ensure atomicity
+  // but if RPC isn't set up, we at least need to handle the cleanup or use a single call.
+  // Here we use the standard approach but with improved error handling.
+  
   const { data, error } = await supabase
     .from('books')
     .insert([validated])
     .select()
     .single();
     
-  if (error) throw new Error(error.message);
+  if (error) throw new Error('Failed to create book record. Please check if ISBN is unique.');
 
   // Automatically create copies
   if (copiesCount > 0) {
@@ -127,7 +132,10 @@ export async function createBook(bookData: unknown, copiesCount: number = 1) {
 
     if (copiesError) {
       logger.error('catalog', `Book created but copies failed for ID: ${data.id}`, { error: copiesError.message });
-      throw new Error(`Book created but copies failed: ${copiesError.message}`);
+      // Critical Gap Fix: If copies fail, we should ideally rollback. 
+      // Since JS doesn't have cross-call transactions easily, we manually cleanup or warn.
+      await supabase.from('books').delete().eq('id', data.id);
+      throw new Error('Failed to initialize book copies. Transaction rolled back.');
     }
   }
 

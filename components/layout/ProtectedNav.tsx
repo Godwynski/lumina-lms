@@ -258,9 +258,6 @@ const NavGroupItem = memo(({
           <SidebarMenuButton
             tooltip={group.label}
             isActive={isGroupActive}
-            onMouseEnter={() => {
-              if (!isOpen) onToggle(group.id);
-            }}
             onClick={(e) => {
               e.preventDefault();
               onToggle(group.id);
@@ -327,6 +324,14 @@ export function ProtectedNav({
 
   const currentTab = searchParams.get("tab") || "profile";
   const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
+
+  // Cache user data derived from props
+  const userData = useMemo(() => ({
+    name,
+    email,
+    avatarUrl,
+    initials
+  }), [name, email, avatarUrl, initials]);
 
   const isActive = useCallback((href: string) => {
     if (href === "/protected") return pathname === href;
@@ -475,14 +480,14 @@ export function ProtectedNav({
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={avatarUrl || ""} alt={name} />
+                    <AvatarImage src={userData.avatarUrl || ""} alt={userData.name} fetchPriority="high" />
                     <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-accent-foreground font-bold">
-                      {initials}
+                      {userData.initials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-semibold">{name}</span>
-                    <span className="truncate text-xs text-muted-foreground">{email}</span>
+                    <span className="truncate font-semibold">{userData.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">{userData.email}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>

@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
 
-type CheckoutRequest = {
-  studentCardQr: string;
-  bookQr: string;
-  idempotencyKey?: string;
-  previewOnly?: boolean;
-};
+const CheckoutSchema = z.object({
+  studentCardQr: z.string().min(1),
+  bookQr: z.string().min(1),
+  idempotencyKey: z.string().optional(),
+  previewOnly: z.boolean().optional().default(false),
+});
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Unauthorized" } }, { status: 401 });
   }
 
   const { data: profile } = await supabase
@@ -26,32 +27,31 @@ export async function POST(request: Request) {
     .single();
 
   if (!profile || !["admin", "librarian", "staff"].includes(profile.role)) {
-    return NextResponse.json({ ok: false, message: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ success: false, error: { code: "FORBIDDEN", message: "Forbidden" } }, { status: 403 });
   }
 
-  let body: CheckoutRequest;
+  let body: unknown;
   try {
-    body = (await request.json()) as CheckoutRequest;
+    body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, message: "Invalid JSON payload" }, { status: 400 });
+    return NextResponse.json({ success: false, error: { code: "INVALID_JSON", message: "Invalid JSON payload" } }, { status: 400 });
   }
 
-  const studentCardQr = body.studentCardQr?.trim();
-  const bookQr = body.bookQr?.trim();
-
-  if (!studentCardQr || !bookQr) {
-    return NextResponse.json(
-      { ok: false, message: "Both student card and book QR values are required." },
-      { status: 400 },
-    );
+  const result = CheckoutSchema.safeParse(body);
+  if (!result.success) {
+    return NextResponse.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Invalid request data", details: result.error.format() } }, { status: 400 });
   }
+
+  const validated = result.data;
+  const studentCardQr = validated.studentCardQr.trim();
+  const bookQr = validated.bookQr.trim();
 
   const { data, error } = await supabase.rpc("process_qr_checkout", {
     p_librarian_id: profile.id,
     p_card_qr: studentCardQr,
     p_book_qr: bookQr,
-    p_idempotency_key: body.idempotencyKey ?? null,
-    p_preview_only: !!body.previewOnly,
+    p_idempotency_key: validated.idempotencyKey ?? null,
+    p_preview_only: validated.previewOnly,
   });
 
   if (error) {
@@ -60,28 +60,30 @@ export async function POST(request: Request) {
     if (pgCode === "55P03" || pgCode === "P2034") {
       return NextResponse.json(
         {
-          ok: false,
-          code: "COPY_LOCKED",
-          message: "This book copy was just checked out by another session. Please try a different copy.",
+          success: false,
+          error: {
+            code: "COPY_LOCKED",
+            message: "This book copy was just checked out by another session. Please try a different copy.",
+          }
         },
         { status: 409 },
       );
     }
 
     return NextResponse.json(
-      { ok: false, code: "CHECKOUT_FAILED", message: error.message || "Checkout failed." },
+      { success: false, error: { code: "CHECKOUT_FAILED", message: error.message || "Checkout failed." } },
       { status: 500 },
     );
   }
 
-  const result = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
-  if (!result.ok) {
-    logger.warn("circulation", `Checkout failed: ${result.message}`, { studentCardQr, bookQr, code: result.code });
+  const rpcResult = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
+  if (!rpcResult.ok) {
+    logger.warn("circulation", `Checkout failed: ${rpcResult.message}`, { studentCardQr, bookQr, code: rpcResult.code });
     const conflictCodes = new Set(["COPY_LOCKED", "COPY_UNAVAILABLE"]);
-    const status = conflictCodes.has(result.code ?? "") ? 409 : 400;
-    return NextResponse.json(result, { status });
+    const status = conflictCodes.has(rpcResult.code ?? "") ? 409 : 400;
+    return NextResponse.json({ success: false, error: { code: rpcResult.code, message: rpcResult.message } }, { status });
   }
 
   logger.info("circulation", "Checkout successful", { studentCardQr, bookQr, librarianId: profile.id });
-  return NextResponse.json(result, { status: 200 });
+  return NextResponse.json({ success: true, ...rpcResult }, { status: 200 });
 }

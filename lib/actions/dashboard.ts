@@ -26,13 +26,17 @@ const getCachedRecentBooks = unstable_cache(
 );
 
 export async function getDashboardStats({
-  userId,
   role,
 }: {
-  userId: string;
   role: string | null;
 }) {
   const supabase = await createClient();
+  
+  // Security Gap Fix: Derive userId from the verified session, not from props
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  const userId = user.id;
+
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 

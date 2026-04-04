@@ -8,7 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import MyCardContainer from '@/components/library/MyCardContainer';
+import dynamic from 'next/dynamic';
+
+const MyCardContainer = dynamic(() => import('@/components/library/MyCardContainer'), {
+  ssr: false,
+  loading: () => <div className="h-[200px] w-full animate-pulse rounded-xl bg-muted" />
+});
+
 import { HealthNode } from './HealthNode';
 
 

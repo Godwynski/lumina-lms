@@ -1,6 +1,6 @@
 'use server'
 
-import { createSafeClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getUserRole } from '@/lib/auth-helpers';
 import { logger } from '../logger';
 
@@ -10,10 +10,11 @@ export async function approveLibraryCard(cardId: string, userId: string) {
     throw new Error('Unauthorized');
   }
 
-  const supabase = createSafeClient();
+  // Use Admin Client for internal operations that bypass RLS or need Auth Admin API
+  const supabaseAdmin = createAdminClient();
 
   // 1. Update card status securely
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from("library_cards")
     .update({ status: "active" })
     .eq("id", cardId);
@@ -23,7 +24,7 @@ export async function approveLibraryCard(cardId: string, userId: string) {
   }
 
   // 2. Fetch email securely via auth admin
-  const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(userId);
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
   
   if (authError || !user?.email) {
     logger.warn('admin', `Card approved but could not fetch email for user ${userId}`);

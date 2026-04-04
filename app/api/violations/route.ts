@@ -1,5 +1,33 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
+
+const ViolationCreateSchema = z.object({
+  action: z.literal('create'),
+  userId: z.string().uuid(),
+  violationType: z.string().min(1),
+  severity: z.enum(['minor', 'moderate', 'severe']).default('minor'),
+  points: z.coerce.number().int().min(1).default(1),
+  description: z.string().min(1),
+  incidentDate: z.string().optional().default(() => new Date().toISOString().split('T')[0]),
+})
+
+const ViolationResolveSchema = z.object({
+  action: z.literal('resolve'),
+  violationId: z.string().uuid(),
+  resolutionNotes: z.string().optional(),
+})
+
+const ViolationDeleteSchema = z.object({
+  action: z.literal('delete'),
+  violationId: z.string().uuid(),
+})
+
+const ViolationActionSchema = z.discriminatedUnion('action', [
+  ViolationCreateSchema,
+  ViolationResolveSchema,
+  ViolationDeleteSchema,
+])
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -14,7 +42,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
 
   const { data: profile } = await supabase
@@ -32,11 +60,11 @@ export async function GET(request: Request) {
         .eq('status', 'active')
 
       if (error) {
-        return NextResponse.json({ ok: false, message: error.message }, { status: 500 })
+        return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
       }
-      return NextResponse.json({ ok: true, violations: data })
+      return NextResponse.json({ success: true, violations: data })
     }
-    return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
   if (search) {
@@ -48,9 +76,9 @@ export async function GET(request: Request) {
       .limit(20)
 
     if (error) {
-      return NextResponse.json({ ok: false, message: error.message }, { status: 500 })
+      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
     }
-    return NextResponse.json({ ok: true, students: data })
+    return NextResponse.json({ success: true, students: data })
   }
 
   let query = supabase
@@ -76,10 +104,10 @@ export async function GET(request: Request) {
   const { data, error } = await query
 
   if (error) {
-    return NextResponse.json({ ok: false, message: error.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, violations: data })
+  return NextResponse.json({ success: true, violations: data })
 }
 
 export async function POST(request: Request) {
@@ -89,7 +117,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
   }
 
   const { data: profile } = await supabase
@@ -99,22 +127,33 @@ export async function POST(request: Request) {
     .single()
 
   if (!profile || !['admin', 'librarian', 'staff'].includes(String(profile.role))) {
-    return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
   }
 
-  const body = await request.json()
-  const { action, violationId, userId, violationType, severity, points, description, incidentDate } = body
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ success: false, error: { code: 'INVALID_JSON', message: 'Invalid JSON' } }, { status: 400 })
+  }
 
-  if (action === 'create' && userId && violationType && description) {
+  const result = ViolationActionSchema.safeParse(body)
+  if (!result.success) {
+    return NextResponse.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid request data', details: result.error.format() } }, { status: 400 })
+  }
+
+  const validated = result.data
+
+  if (validated.action === 'create') {
     const { data, error } = await supabase
       .from('violations')
       .insert({
-        user_id: userId,
-        violation_type: violationType,
-        severity: severity || 'minor',
-        points: parseInt(points) || 1,
-        description,
-        incident_date: incidentDate || new Date().toISOString().split('T')[0],
+        user_id: validated.userId,
+        violation_type: validated.violationType,
+        severity: validated.severity,
+        points: validated.points,
+        description: validated.description,
+        incident_date: validated.incidentDate,
         status: 'active',
         created_by: user.id,
       })
@@ -122,41 +161,41 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      return NextResponse.json({ ok: false, message: error.message }, { status: 500 })
+      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
     }
-    return NextResponse.json({ ok: true, violation: data })
+    return NextResponse.json({ success: true, violation: data })
   }
 
-  if (action === 'resolve' && violationId) {
+  if (validated.action === 'resolve') {
     const { data, error } = await supabase
       .from('violations')
       .update({
         status: 'resolved',
         resolved_at: new Date().toISOString(),
         resolved_by: user.id,
-        resolution_notes: body.resolutionNotes || null,
+        resolution_notes: validated.resolutionNotes || null,
       })
-      .eq('id', violationId)
+      .eq('id', validated.violationId)
       .select('id, status, resolved_at, resolved_by')
       .single()
 
     if (error) {
-      return NextResponse.json({ ok: false, message: error.message }, { status: 500 })
+      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
     }
-    return NextResponse.json({ ok: true, violation: data })
+    return NextResponse.json({ success: true, violation: data })
   }
 
-  if (action === 'delete' && violationId) {
+  if (validated.action === 'delete') {
     const { error } = await supabase
       .from('violations')
       .delete()
-      .eq('id', violationId)
+      .eq('id', validated.violationId)
 
     if (error) {
-      return NextResponse.json({ ok: false, message: error.message }, { status: 500 })
+      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
     }
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ success: true })
   }
 
-  return NextResponse.json({ ok: false, message: 'Invalid action' }, { status: 400 })
+  return NextResponse.json({ success: false, error: { code: 'INVALID_ACTION', message: 'Invalid action' } }, { status: 400 })
 }

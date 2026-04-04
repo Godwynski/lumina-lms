@@ -1,0 +1,182 @@
+-- Migration to add automated fine calculation to the return process
+-- This enhances the process_qr_return function to automatically check for late returns
+-- and generate a fine record if applicable, using the system policy constants.
+
+CREATE TABLE IF NOT EXISTS public.fines (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  borrowing_record_id UUID NOT NULL REFERENCES public.borrowing_records(id) ON DELETE CASCADE,
+  amount DECIMAL(10, 2) NOT NULL,
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'paid', 'waived')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fines_user_id ON public.fines(user_id);
+CREATE INDEX IF NOT EXISTS idx_fines_status ON public.fines(status);
+
+-- Update the return RPC to handle fines
+CREATE OR REPLACE FUNCTION public.process_qr_return(
+  p_librarian_id UUID,
+  p_book_qr TEXT,
+  p_idempotency_key TEXT DEFAULT NULL,
+  p_preview_only BOOLEAN DEFAULT FALSE
+) RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_copy RECORD;
+  v_borrow RECORD;
+  v_existing JSONB;
+  v_result JSONB;
+  v_now TIMESTAMPTZ := NOW();
+  v_days_overdue INTEGER;
+  v_fine_per_day DECIMAL;
+  v_fine_cap DECIMAL;
+  v_calculated_fine DECIMAL;
+BEGIN
+  IF p_librarian_id IS NULL OR p_book_qr IS NULL THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'INVALID_INPUT',
+      'message', 'Missing required return fields.'
+    );
+  END IF;
+
+  IF NOT p_preview_only AND p_idempotency_key IS NOT NULL THEN
+    SELECT response
+    INTO v_existing
+    FROM public.return_idempotency
+    WHERE idempotency_key = p_idempotency_key;
+
+    IF FOUND THEN
+      RETURN v_existing || jsonb_build_object('idempotent', true);
+    END IF;
+  END IF;
+
+  BEGIN
+    SELECT
+      bc.id,
+      bc.status,
+      bc.qr_string,
+      b.title,
+      b.id as book_id
+    INTO v_copy
+    FROM public.book_copies bc
+    JOIN public.books b ON b.id = bc.book_id
+    WHERE bc.qr_string = p_book_qr
+    FOR UPDATE NOWAIT;
+  EXCEPTION
+    WHEN lock_not_available THEN
+      RETURN jsonb_build_object(
+        'ok', false,
+        'code', 'COPY_LOCKED',
+        'message', 'This book copy is being processed by another session.'
+      );
+  END;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'COPY_NOT_FOUND',
+      'message', 'Book QR code was not recognized.'
+    );
+  END IF;
+
+  SELECT
+    br.id,
+    br.user_id,
+    br.borrowed_at,
+    br.due_date,
+    p.full_name
+  INTO v_borrow
+  FROM public.borrowing_records br
+  LEFT JOIN public.profiles p ON p.id = br.user_id
+  WHERE br.book_copy_id = v_copy.id
+    AND br.status = 'active'
+  ORDER BY br.borrowed_at DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'NOT_BORROWED',
+      'message', 'This copy is not currently checked out.'
+    );
+  END IF;
+
+  -- Fine Calculation Logic
+  v_days_overdue := DATE_PART('day', v_now - v_borrow.due_date)::INTEGER;
+  v_calculated_fine := 0;
+
+  IF v_days_overdue > 0 THEN
+    -- Fetch policy values (defaulting if not found in a settings table, though here we use fixed defaults for the RPC logic)
+    -- In a full implementation, these would be SELECTed from a settings table.
+    v_fine_per_day := 0.50;
+    v_fine_cap := 50.00;
+    
+    v_calculated_fine := LEAST(v_days_overdue * v_fine_per_day, v_fine_cap);
+  END IF;
+
+  IF p_preview_only THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'preview', true,
+      'borrowing_id', v_borrow.id,
+      'book_title', v_copy.title,
+      'book_qr', v_copy.qr_string,
+      'borrowed_at', v_borrow.borrowed_at,
+      'due_date', v_borrow.due_date,
+      'student_name', COALESCE(v_borrow.full_name, 'Student'),
+      'days_overdue', GREATEST(v_days_overdue, 0),
+      'estimated_fine', v_calculated_fine
+    );
+  END IF;
+
+  UPDATE public.borrowing_records
+  SET status = 'returned', returned_at = v_now, updated_at = v_now
+  WHERE id = v_borrow.id;
+
+  UPDATE public.book_copies
+  SET status = 'AVAILABLE', updated_at = v_now
+  WHERE id = v_copy.id;
+
+  -- Insert fine if applicable
+  IF v_calculated_fine > 0 THEN
+    INSERT INTO public.fines (user_id, borrowing_record_id, amount, reason)
+    VALUES (v_borrow.user_id, v_borrow.id, v_calculated_fine, 'Overdue return: ' || v_days_overdue || ' days late.');
+  END IF;
+
+  v_result := jsonb_build_object(
+    'ok', true,
+    'preview', false,
+    'borrowing_id', v_borrow.id,
+    'book_title', v_copy.title,
+    'book_qr', v_copy.qr_string,
+    'returned_at', v_now,
+    'student_name', COALESCE(v_borrow.full_name, 'Student'),
+    'fine_assessed', v_calculated_fine
+  );
+
+  IF p_idempotency_key IS NOT NULL THEN
+    INSERT INTO public.return_idempotency (
+      idempotency_key,
+      librarian_id,
+      book_qr,
+      response
+    ) VALUES (
+      p_idempotency_key,
+      p_librarian_id,
+      v_copy.qr_string,
+      v_result
+    )
+    ON CONFLICT (idempotency_key) DO NOTHING;
+  END IF;
+
+  RETURN v_result;
+END;
+$$;

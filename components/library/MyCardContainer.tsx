@@ -83,6 +83,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
   const [isExporting, setIsExporting] = useState(false);
   const [showBack, setShowBack] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -96,6 +97,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
   // Client short-circuit check for existing static assets
   useEffect(() => {
     let mounted = true;
+    setIsLoadingAssets(true);
 
     const checkAssets = async () => {
       try {
@@ -130,6 +132,8 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         });
       } catch {
         // Fallback to current static URLs if status endpoint fails.
+      } finally {
+        if (mounted) setIsLoadingAssets(false);
       }
     };
 
@@ -478,7 +482,16 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
+        className="relative"
       >
+        {isLoadingAssets && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-[2px]">
+            <div className="flex flex-col items-center gap-2">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-xs font-bold uppercase tracking-widest text-primary">Loading Assets...</p>
+            </div>
+          </div>
+        )}
         <div id="library-card-front" className={showBack ? "hidden" : "block"}>
           <DigitalCard
             fullName={data.fullName}

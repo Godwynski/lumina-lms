@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { AnimationProvider } from "@/components/providers/animation-provider";
 import "./globals.css";
 
 
@@ -58,7 +59,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${appSans.className} antialiased`}>
-        {children}
+        <AnimationProvider>
+          {children}
+        </AnimationProvider>
         <Toaster position="bottom-right" richColors />
         <SpeedInsights />
       </body>

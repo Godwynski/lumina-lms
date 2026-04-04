@@ -27,9 +27,6 @@ const normalizeRole = (value: unknown): 'admin' | 'librarian' | 'staff' | 'stude
  * immediate consistency.
  */
 const fetchUserRole = async () => {
-  if (process.env.NEXT_PUBLIC_TEST_MODE === 'true') {
-    return 'admin';
-  }
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 

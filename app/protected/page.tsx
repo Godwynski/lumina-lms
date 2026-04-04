@@ -18,31 +18,19 @@ export default async function ProtectedPage() {
   noStore();
   const supabase = await createClient();
 
-  const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
-
   // 1. Get user and role concurrently
-  // Next.js cache() deduplicates the getUser call across these helpers
-  const { data: userResponse, role } = isTestMode 
-    ? { data: { user: { id: "test-user-id", email: "test@example.com" } }, role: "admin" }
-    : { 
-        data: (await supabase.auth.getUser()).data, 
-        role: await getUserRole() 
-      };
+  const [userResult, role] = await Promise.all([
+    supabase.auth.getUser(),
+    getUserRole()
+  ]);
 
-  const user = userResponse?.user;
+  const user = userResult.data?.user;
 
-  if (!user && !isTestMode) {
-    return redirect("/auth/login");
-  }
-
-  // At this point, if not isTestMode, user is guaranteed to be non-null by the redirect above.
-  // If isTestMode is true, user is manually defined.
   if (!user) {
     return redirect("/auth/login");
   }
 
-  // Cast to unknown then User to satisfy DashboardClient's expectation of a full User object 
-  // during test mode while maintaining runtime safety and avoiding 'any'.
+  // Cast to User to satisfy DashboardClient's expectation
   const dashboardUser = user as unknown as import("@supabase/supabase-js").User;
 
   const faqKeys = [
@@ -55,7 +43,7 @@ export default async function ProtectedPage() {
   // 2. Fetch all dashboard data points in parallel
   // This reduces the theoretical wait time from sum(queries) to max(queries)
   const [stats, profileResult, cardResult, faqResult] = await Promise.all([
-    getDashboardStats({ userId: user.id, role }),
+    getDashboardStats({ role }),
     supabase
       .from("profiles")
       .select("full_name, student_id, department, avatar_url, address, phone")

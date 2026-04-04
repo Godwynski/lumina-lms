@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Image from "next/image";
 import supabaseLoader from "@/lib/image-loader";
 import { 
@@ -26,7 +26,7 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
   const isOutOfStock = book.available_copies === 0;
   
   return (
-    <motion.div
+    <m.div
       layout
       initial={{ opacity: 0, scale: 0.95, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -116,13 +116,13 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
 
         {/* Tactile progress bar at the bottom */}
         <div className="absolute bottom-0 left-0 h-1 w-full bg-muted">
-          <motion.div 
+          <m.div 
             initial={{ width: 0 }}
             animate={{ width: `${(book.available_copies / (book.total_copies || 1)) * 100}%` }}
             className={`h-full ${isOutOfStock ? "status-fill-danger" : "status-fill-success"}`}
           />
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
