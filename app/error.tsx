@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { AlertCircle, ArrowLeft, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +20,7 @@ export default function Error({
 
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 text-center">
-      <motion.div
+      <m.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
@@ -28,28 +28,28 @@ export default function Error({
       >
         <AlertCircle size={40} />
         <div className="absolute -inset-1 animate-pulse rounded-3xl bg-destructive/5" />
-      </motion.div>
+      </m.div>
 
-      <motion.h1
+      <m.h1
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.4 }}
         className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
       >
         Something went wrong
-      </motion.h1>
+      </m.h1>
 
-      <motion.p
+      <m.p
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
         className="mt-4 max-w-md text-muted-foreground"
       >
         An unexpected error occurred while processing your request. Our team has been notified.
-      </motion.p>
+      </m.p>
 
       {process.env.NODE_ENV === "development" && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -59,10 +59,10 @@ export default function Error({
           <pre className="mt-2 overflow-auto whitespace-pre-wrap font-mono uppercase">
             {error.message || "No error message available"}
           </pre>
-        </motion.div>
+        </m.div>
       )}
 
-      <motion.div
+      <m.div
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.4 }}
@@ -86,7 +86,7 @@ export default function Error({
             Go to Home
           </Button>
         </Link>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
