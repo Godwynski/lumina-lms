@@ -21,6 +21,43 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }) {
   noStore();
+  if (process.env.NEXT_PUBLIC_TEST_MODE === "true") {
+    const testUser = {
+      id: "test-user-id",
+      email: "test@example.com",
+      user_metadata: { full_name: "Test Administrator" },
+      app_metadata: { role: "admin" },
+      aud: "authenticated",
+      created_at: new Date().toISOString(),
+    };
+    return (
+      <PreferencesProvider>
+        <SidebarProvider>
+          <div className="flex min-h-screen w-full bg-background text-foreground selection:bg-accent">
+            <HeartbeatBanner />
+            <Suspense fallback={null}>
+              <ProtectedNav role="admin" user={testUser as any} profile={{ full_name: "Test Administrator" } as any} />
+            </Suspense>
+            <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
+              <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 md:hidden">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <BreadcrumbNav />
+                </div>
+                <Suspense fallback={<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />}>
+                  <UserNav user={testUser as any} profile={{ full_name: "Test Administrator" } as any} role="admin" />
+                </Suspense>
+              </header>
+              <div className="mx-auto mt-10 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8">
+                {children}
+              </div>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
