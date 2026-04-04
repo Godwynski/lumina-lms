@@ -1,12 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-/**
- * /protected/admin/settings  →  merged into /protected/settings
- *
- * Any deep-links with ?tab= still work because the unified settings page
- * honours the `tab` search param.
- */
 export default async function AdminSettingsRedirect({
   searchParams,
 }: {

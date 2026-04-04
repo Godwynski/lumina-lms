@@ -19,12 +19,6 @@ interface PDFViewerProps {
   title: string;
 }
 
-type UiPreferencesResponse = {
-  preferences?: {
-    readProgress?: Record<string, number>;
-  };
-};
-
 export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
   const minScale = 0.7;
   const maxScale = 2.4;
@@ -38,8 +32,10 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
   const { preferences, updatePreferences } = usePreferences();
 
   useEffect(() => {
-    if (preferences?.readProgress?.[resourceId] !== undefined) {
-      const saved = preferences.readProgress[resourceId];
+    const prefs = preferences as Record<string, Record<string, number>>;
+    const readProgress = prefs?.readProgress;
+    if (readProgress?.[resourceId] !== undefined) {
+      const saved = readProgress[resourceId];
       if (typeof saved === "number" && saved > 0) {
         setPageNumber(saved);
       }

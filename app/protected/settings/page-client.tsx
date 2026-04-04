@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, memo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -214,7 +214,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     toast.success("Settings reset to defaults");
   };
 
-  const changeTab = (id: TabId) => {
+const changeTab = useCallback((id: TabId) => {
     if (isDirty && !window.confirm("You have unsaved changes. Discard them?")) {
       return;
     }
@@ -223,7 +223,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     const url = new URL(window.location.href);
     url.searchParams.set("tab", id);
     router.replace(url.pathname + url.search, { scroll: false });
-  };
+  }, [isDirty, router]);
 
   const uploadProfilePhoto = async () => {
     if (!selectedPhotoBlob) {
@@ -344,6 +344,9 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
   const activeTabMeta = useMemo(() => allTabs.find((tab) => tab.id === activeTab), [activeTab, allTabs]);
 
+const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAlerts(v), []);
+  const onMobileNavClick = useCallback(() => setMobileNavOpen(true), []);
+
   if (!mounted) return null;
 
   return (
@@ -408,7 +411,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               transition={{ duration: 0.15 }}
             >
               {activeTab === "profile" && (
-                <Section key="profile" title="Account Identity" icon={User} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="profile" title="Account Identity" icon={User} onMobileNavClick={onMobileNavClick}>
                   <div className="grid gap-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                       <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
@@ -538,13 +541,13 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
               )}
 
               {activeTab === "preferences" && (
-                <Section key="preferences" title="Library Experience" icon={SlidersHorizontal} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="preferences" title="Library Experience" icon={SlidersHorizontal} onMobileNavClick={onMobileNavClick}>
                   <div className="space-y-3">
                     <PremiumToggle 
                       title="Intelligent Alerts" 
                       description="Receive smart notifications for due dates and library updates."
                       checked={intelligentAlerts}
-                      onChange={setIntelligentAlerts}
+                      onChange={setIntelligentAlertsValue}
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-4">
@@ -568,7 +571,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
               {activeTab === "security" && (
                 <div key="security" className="space-y-5">
-                  <Section title="Account Security" icon={Lock} onMobileNavClick={() => setMobileNavOpen(true)}>
+                  <Section title="Account Security" icon={Lock} onMobileNavClick={onMobileNavClick}>
                     <p className="mb-3 text-sm text-muted-foreground">Manage your authentication methods and login credentials.</p>
                     <Button asChild variant="outline" className="h-11 w-full gap-3 rounded-lg border-border sm:w-auto px-6 font-semibold shadow-sm">
                       <Link href="/auth/update-password">
@@ -597,20 +600,20 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
               {/* Admin Views */}
               {activeTab === "policies" && canManageSystem && (
-                <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={onMobileNavClick}>
                   <PolicyConfigurationForm settings={settings} canEdit={isSuperAdmin} />
                 </Section>
               )}
 
               {activeTab === "categories" && canManageSystem && (
-                <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={() => setMobileNavOpen(true)}>
+                <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={onMobileNavClick}>
                   <CategoryManagement initialCategories={categories} />
                 </Section>
               )}
 
               {activeTab === "operations" && isSuperAdmin && (
                 <div key="operations" className="space-y-4">
-                  <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={() => setMobileNavOpen(true)}>
+                  <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={onMobileNavClick}>
                     <RecomputeExpiryDates />
                   </Section>
                 </div>
@@ -618,7 +621,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
 
               {activeTab === "gdpr" && isSuperAdmin && (
-                <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={() => setMobileNavOpen(true)} danger>
+                <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={onMobileNavClick} danger>
                   <Card className="mb-6 border-border bg-card shadow-sm">
                     <div className="p-4">
                       <div className="mb-3 flex items-center gap-2">
@@ -687,7 +690,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
 /* ── UI Components ───────────────────────────────────────── */
 
-function SectionNav({
+const SectionNav = memo(({
   title,
   items,
   activeId,
@@ -697,7 +700,7 @@ function SectionNav({
   items: NavTab[];
   activeId: TabId;
   onChange: (id: TabId) => void;
-}) {
+}) => {
   if (items.length === 0) return null;
 
   return (
@@ -723,9 +726,10 @@ function SectionNav({
       </div>
     </div>
   );
-}
+});
+SectionNav.displayName = "SectionNav";
 
-function Section({ title, icon: Icon, children, danger, onMobileNavClick }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; onMobileNavClick?: () => void }) {
+const Section = memo(({ title, icon: Icon, children, danger, onMobileNavClick }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; onMobileNavClick?: () => void }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 border-b border-border pb-3">
@@ -742,18 +746,20 @@ function Section({ title, icon: Icon, children, danger, onMobileNavClick }: { ti
       <div className="animate-in fade-in slide-in-from-bottom-1 duration-400">{children}</div>
     </div>
   );
-}
+});
+Section.displayName = "Section";
 
-function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+const FieldGroup = memo(({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
     <div className="space-y-2">
       <Label className="text-xs font-bold text-foreground/80">{label}</Label>
       {children}
     </div>
   );
-}
+});
+FieldGroup.displayName = "FieldGroup";
 
-function PremiumToggle({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
+const PremiumToggle = memo(({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: (v: boolean) => void }) => {
   return (
     <Card
       role="button"
@@ -774,4 +780,5 @@ function PremiumToggle({ title, description, checked, onChange }: { title: strin
       <Switch checked={checked} onCheckedChange={onChange} onClick={(e) => e.stopPropagation()} />
     </Card>
   );
-}
+});
+PremiumToggle.displayName = "PremiumToggle";

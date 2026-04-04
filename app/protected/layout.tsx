@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UserNav } from "@/components/layout/UserNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
+import { unstable_noStore as noStore } from "next/cache";
 
-export const dynamic = "force-dynamic";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
@@ -20,6 +20,7 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
+  noStore();
   const supabase = await createClient();
   const {
     data: { user },

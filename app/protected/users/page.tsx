@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import * as React from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, 
@@ -39,6 +40,38 @@ type ProfileRow = {
   department: string | null;
   created_at: string | null;
 };
+
+const UserTableRow = React.memo(({ user, onClick }: { user: User; onClick: (user: User) => void }) => (
+  <tr
+    className="cursor-pointer hover:bg-muted/40"
+    onClick={() => onClick(user)}
+  >
+    <td className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate font-medium text-foreground">{user.name}</p>
+          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        </div>
+      </div>
+    </td>
+    <td className="px-4 py-3">
+      <RoleBadge role={user.role} />
+    </td>
+    <td className="px-4 py-3">
+      <StatusBadge status={user.status} />
+    </td>
+    <td className="px-4 py-3 text-xs text-muted-foreground">
+      <span>{user.department}</span>
+      <span className="mx-2">-</span>
+      <span>{user.joined}</span>
+    </td>
+  </tr>
+));
+UserTableRow.displayName = "UserTableRow";
 
 export default function UsersPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -299,6 +332,11 @@ export default function UsersPage() {
     }
   };
 
+  const handleUserClick = useCallback((u: User) => {
+    setSelectedUser(u);
+    setIsEditingUser(false);
+  }, []);
+
   return (
     <>
       <AdminTableShell
@@ -369,38 +407,11 @@ export default function UsersPage() {
                 </tr>
               ) : paginatedUsers.length > 0 ? (
                 paginatedUsers.map((user) => (
-                  <tr
+                  <UserTableRow
                     key={user.id}
-                    className="cursor-pointer hover:bg-muted/40"
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setIsEditingUser(false);
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">{user.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <RoleBadge role={user.role} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={user.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      <span>{user.department}</span>
-                      <span className="mx-2">-</span>
-                      <span>{user.joined}</span>
-                    </td>
-                  </tr>
+                    user={user}
+                    onClick={handleUserClick}
+                  />
                 ))
               ) : (
                 <tr>
