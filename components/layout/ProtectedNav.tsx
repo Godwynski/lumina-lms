@@ -406,7 +406,7 @@ export function ProtectedNav({
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="flex h-20 shrink-0 items-center px-4">
         <Link href="/protected" className="flex items-center gap-3 group" aria-label="Lumina LMS Dashboard">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring" aria-hidden="true">
             <LuminaLogo size={20} />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
