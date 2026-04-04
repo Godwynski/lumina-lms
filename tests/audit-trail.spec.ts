@@ -43,7 +43,7 @@ test.describe('Audit Trail', () => {
     // 3. Attempt direct access to /protected/audit
     await page.goto('/protected/audit');
 
-    // 4. Should be redirected to dashboard with error or just dashboard
+    // 4. Should be redirected to dashboard with error
     await expect(page).toHaveURL(/.*protected\?error=unauthorized/);
     
     await context.close();

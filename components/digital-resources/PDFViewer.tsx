@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -34,42 +35,31 @@ export function PDFViewer({ resourceId, fileUrl, title }: PDFViewerProps) {
   const [progressLoaded, setProgressLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const response = await fetch("/api/ui-preferences");
-        if (response.ok) {
-          const payload = (await response.json()) as UiPreferencesResponse;
-          const saved = payload.preferences?.readProgress?.[resourceId];
-          if (typeof saved === "number" && saved > 0) {
-            setPageNumber(saved);
-          }
-        }
-      } finally {
-        setProgressLoaded(true);
-      }
-    };
+  const { preferences, updatePreferences } = usePreferences();
 
-    void loadProgress();
-  }, [resourceId]);
+  useEffect(() => {
+    if (preferences?.readProgress?.[resourceId] !== undefined) {
+      const saved = preferences.readProgress[resourceId];
+      if (typeof saved === "number" && saved > 0) {
+        setPageNumber(saved);
+      }
+    }
+    setProgressLoaded(true);
+  }, [resourceId, preferences]);
 
   useEffect(() => {
     if (!progressLoaded || pageNumber <= 0) return;
 
     const timeout = setTimeout(() => {
-      void fetch("/api/ui-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          readProgress: {
-            [resourceId]: pageNumber,
-          },
-        }),
+      void updatePreferences({
+        readProgress: {
+          [resourceId]: pageNumber,
+        },
       });
     }, 350);
 
     return () => clearTimeout(timeout);
-  }, [pageNumber, resourceId, progressLoaded]);
+  }, [pageNumber, resourceId, progressLoaded, updatePreferences]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);

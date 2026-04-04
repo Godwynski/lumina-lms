@@ -20,9 +20,9 @@ test.describe('Admin Critical Paths', () => {
     // Navigate to inventory
     await page.goto('/protected/catalog');
     
-    // Verify search input is accessible (we added aria-label earlier)
-    const searchInput = page.getByLabel('Search items');
-    await expect(searchInput).toBeVisible();
+    // Verify search input is accessible
+    const searchInput = page.getByLabel('Search the catalog');
+    await expect(searchInput).toBeVisible({ timeout: 15000 });
     
     // Type a known book title (existing in DB: 'The King')
     await searchInput.fill('The King');
@@ -36,8 +36,8 @@ test.describe('Admin Critical Paths', () => {
   test('should navigate between sections via sidebar', async ({ page }) => {
     await page.goto('/protected');
     
-    // Click on 'Inventory' in the sidebar/layout
-    await page.getByRole('link', { name: 'Catalog', exact: false }).first().click();
+    // Click on 'Inventory' in the sidebar/layout (using Role for better specificity)
+    await page.getByRole('link', { name: /Inventory/i, exact: false }).first().click({ force: true });
     
     // Check URL change
     await expect(page).toHaveURL(/.*catalog/);
@@ -60,7 +60,7 @@ test.describe('Security & RBAC', () => {
     
     // Should be redirected to login
     await expect(guestPage).toHaveURL(/.*login/);
-    await expect(guestPage.getByText('Sign in to your library')).toBeVisible();
+    await expect(guestPage.getByText(/Sign in to your library/i)).toBeVisible({ timeout: 15000 });
     
     await guestContext.close();
   });

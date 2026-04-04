@@ -1,0 +1,12 @@
+#TYPE Selected.System.Diagnostics.Process
+"ProcessName","CPU","WorkingSet"
+"VALORANT-Win64-Shipping","7845.6875","-1180545024"
+"AMDRSServ","791.71875","217993216"
+"audiodg","511.25","20533248"
+"brave","297.875","458567680"
+"RadeonSoftware","249.0625","113250304"
+"Riot Client","241.875","226734080"
+"brave","140.4375","344899584"
+"RiotClientServices","117.75","232775680"
+"AntigravitySetup-stable-cc6cd32816d350ee4a1ea2b4694b43f749418957.tmp","94.203125","62345216"
+"AttackShark","72","42373120"

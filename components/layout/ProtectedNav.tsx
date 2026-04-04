@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -198,6 +198,65 @@ function LuminaLogo({ size = 20 }: { size?: number }) {
   );
 }
 
+// Memoized group item to prevent heavy DOM reconciliations on parent state change
+const NavGroupItem = memo(({ 
+  group, 
+  isOpen, 
+  onToggle, 
+  isActive 
+}: { 
+  group: NavGroup; 
+  isOpen: boolean; 
+  onToggle: (id: string) => void;
+  isActive: (href: string) => boolean;
+}) => {
+  const isGroupActive = group.children.some(child => isActive(child.href));
+
+  return (
+    <Collapsible
+      open={isOpen}
+      onOpenChange={() => onToggle(group.id)}
+      className="group/collapsible"
+    >
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            tooltip={group.label}
+            isActive={isGroupActive}
+            onClick={(e) => {
+              e.preventDefault();
+              onToggle(group.id);
+            }}
+          >
+            <group.icon />
+            <span>{group.label}</span>
+            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down px-2">
+          <SidebarMenuSub>
+            {group.children.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <SidebarMenuSubItem key={item.href}>
+                  <SidebarMenuSubButton asChild isActive={active}>
+                    <Link href={item.href} className="flex items-center gap-2">
+                      <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-sidebar-primary" : "bg-sidebar-border")} />
+                      <span className={cn("truncate", active && "font-semibold text-sidebar-primary")}>{item.label}</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+});
+
+NavGroupItem.displayName = "NavGroupItem";
+
 export function ProtectedNav({
   role,
   user,
@@ -285,53 +344,17 @@ export function ProtectedNav({
       
       return changed ? next : prev;
     });
-  }, [pathname, searchParams, allVisibleGroups, isActive]);
+  }, [allVisibleGroups, isActive]);
 
   const toggleGroup = useCallback((groupId: string) => {
     setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
   }, []);
 
-  const renderNavGroup = useCallback((group: NavGroup) => {
-    return (
-      <Collapsible
-        key={group.id}
-        open={openGroups[group.id] || false}
-        onOpenChange={() => toggleGroup(group.id)}
-        className="group/collapsible"
-      >
-        <SidebarMenuItem>
-          <CollapsibleTrigger asChild>
-            <SidebarMenuButton
-              tooltip={group.label}
-              isActive={group.children.some(child => isActive(child.href))}
-              onClick={(e) => {
-                e.preventDefault();
-                toggleGroup(group.id);
-              }}
-            >
-              <group.icon />
-              <span>{group.label}</span>
-              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-            </SidebarMenuButton>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down px-2">
-            <SidebarMenuSub>
-              {group.children.map((item) => (
-                <SidebarMenuSubItem key={item.href}>
-                  <SidebarMenuSubButton asChild isActive={isActive(item.href)}>
-                    <Link href={item.href} className="flex items-center gap-2">
-                      <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive(item.href) ? "bg-sidebar-primary" : "bg-sidebar-border")} />
-                      <span className={cn("truncate", isActive(item.href) && "font-semibold text-sidebar-primary")}>{item.label}</span>
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              ))}
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </SidebarMenuItem>
-      </Collapsible>
-    );
-  }, [openGroups, toggleGroup, isActive]);
+  const dashboardActive = isActive(DASHBOARD_LINK.href);
+  const settingsGroupProps = useMemo(() => ({
+    ...SETTINGS_GROUP,
+    children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
+  }), [normalizedRole]);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
@@ -354,7 +377,7 @@ export function ProtectedNav({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={isActive(DASHBOARD_LINK.href)}
+                  isActive={dashboardActive}
                   tooltip={DASHBOARD_LINK.label}
                 >
                   <Link href={DASHBOARD_LINK.href}>
@@ -363,16 +386,26 @@ export function ProtectedNav({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {renderNavGroup({
-                ...SETTINGS_GROUP,
-                children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
-              })}
+              <NavGroupItem 
+                group={settingsGroupProps}
+                isOpen={openGroups[settingsGroupProps.id] || false}
+                onToggle={toggleGroup}
+                isActive={isActive}
+              />
             </SidebarMenu>
           </SidebarGroup>
 
           <SidebarGroup>
             <SidebarMenu>
-              {filteredGroups.map(renderNavGroup)}
+              {filteredGroups.map(group => (
+                <NavGroupItem 
+                  key={group.id}
+                  group={group}
+                  isOpen={openGroups[group.id] || false}
+                  onToggle={toggleGroup}
+                  isActive={isActive}
+                />
+              ))}
             </SidebarMenu>
           </SidebarGroup>
         </nav>

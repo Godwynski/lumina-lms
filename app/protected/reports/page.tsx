@@ -87,15 +87,15 @@ export default async function ReportsPage({
   rangeStartDate.setDate(rangeStartDate.getDate() - rangeDays + 1);
   const rangeStartIso = rangeStartDate.toISOString();
 
-  // Multi-query data fetching
   const [
     activeLoansResult,
     overdueLoansResult,
     monthlyLoansResult,
     pendingCardsResult,
     suspendedCardsResult,
-    booksResult,
-    recentActivityData,
+    categoryBooksResult,
+    topBooksResult,
+    recentActivityResult,
   ] = await Promise.all([
     supabase
       .from("borrowing_records")
@@ -119,11 +119,18 @@ export default async function ReportsPage({
       .from("library_cards")
       .select("id", { count: "exact", head: true })
       .eq("status", "suspended"),
+    // Query for category utilization (limited columns, no limit needed for 400 rows)
     supabase
       .from("books")
-      .select("id, title, author, total_copies, available_copies, categories(name)")
+      .select("total_copies, available_copies, categories(name)")
+      .eq("is_active", true),
+    // Specific query for Top 6 Books (High Demand)
+    supabase
+      .from("books")
+      .select("id, title, author, total_copies, available_copies")
       .eq("is_active", true)
-      .limit(400),
+      .order("total_copies", { ascending: false })
+      .limit(12),
     supabase
       .from("borrowing_records")
       .select(`
@@ -146,8 +153,9 @@ export default async function ReportsPage({
   const suspendedCards = suspendedCardsResult.count ?? 0;
 
   const monthlyRows = (monthlyLoansResult.data ?? []) as BorrowRow[];
-  const books = (booksResult.data ?? []) as BookRow[];
-  const activityRows = (recentActivityData.data ?? []) as unknown as ActivityRow[];
+  const categoryBooks = (categoryBooksResult.data ?? []) as any[];
+  const topBooksPool = (topBooksResult.data ?? []) as any[];
+  const activityRows = (recentActivityResult.data ?? []) as unknown as ActivityRow[];
 
   // Map activities to UI events
   const activities: ActivityEvent[] = activityRows.map(row => ({
@@ -189,7 +197,7 @@ export default async function ReportsPage({
 
   // Category Utilization Math
   const categoryMap = new Map<string, { name: string; total: number; borrowed: number }>();
-  for (const book of books) {
+  for (const book of categoryBooks) {
     const name = book.categories?.name?.trim() || "Uncategorized";
     const total = Math.max(0, Number(book.total_copies ?? 0));
     const available = Math.max(0, Number(book.available_copies ?? 0));
@@ -210,7 +218,7 @@ export default async function ReportsPage({
 
   const displayedCategories = showAllCategories ? topCategories : topCategories.slice(0, 4);
 
-  const topBooks = books
+  const topBooks = topBooksPool
     .map((book) => {
       const total = Math.max(0, Number(book.total_copies ?? 0));
       const available = Math.max(0, Number(book.available_copies ?? 0));

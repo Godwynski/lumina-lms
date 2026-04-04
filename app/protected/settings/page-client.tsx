@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { NavigationGuard } from "@/components/layout/NavigationGuard";
 import { compressImage } from "@/lib/image-utils";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type Role = "admin" | "librarian" | "staff" | "student";
 
@@ -110,42 +111,28 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     intelligentAlerts: true
   });
 
+  const { preferences, updatePreferences: updatePrefsContext } = usePreferences();
+
   useEffect(() => {
-    const loadPrefs = async () => {
-      setMounted(true);
-      const nameVal = profileName || "";
-      const addrVal = address || "";
-      const phoneVal = phone || "";
-      
-      setDisplayName(nameVal);
-      setAddressValue(addrVal);
-      setPhoneValue(phoneVal);
+    setMounted(true);
+    const nameVal = profileName || "";
+    const addrVal = address || "";
+    const phoneVal = phone || "";
+    
+    setDisplayName(nameVal);
+    setAddressValue(addrVal);
+    setPhoneValue(phoneVal);
 
-      try {
-        const response = await fetch("/api/ui-preferences", { method: "GET" });
-        if (response.ok) {
-          const payload = (await response.json()) as {
-            preferences?: {
-              displayName?: string;
-              intelligentAlerts?: boolean;
-            };
-          };
-          const preferences = payload.preferences ?? {};
-          if (typeof preferences.displayName === "string" && !profileName) {
-            setDisplayName(preferences.displayName);
-          }
-          if (typeof preferences.intelligentAlerts === "boolean") {
-            setIntelligentAlerts(preferences.intelligentAlerts);
-            setInitialData(prev => ({ ...prev, intelligentAlerts: preferences.intelligentAlerts as boolean }));
-          }
-        }
-      } catch {
-        // Non-blocking
+    if (preferences) {
+      if (typeof preferences.displayName === "string" && !profileName) {
+        setDisplayName(preferences.displayName);
       }
-    };
-
-    void loadPrefs();
-  }, [profileName, address, phone]);
+      if (typeof preferences.intelligentAlerts === "boolean") {
+        setIntelligentAlerts(preferences.intelligentAlerts);
+        setInitialData(prev => ({ ...prev, intelligentAlerts: preferences.intelligentAlerts as boolean }));
+      }
+    }
+  }, [profileName, address, phone, preferences]);
 
   useEffect(() => {
     setInitialData(prev => ({
@@ -188,11 +175,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
         throw new Error(payload.error || "Failed to save profile");
       }
 
-      await fetch("/api/ui-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: nextName }),
-      });
+      await updatePrefsContext({ displayName: nextName });
       
       setInitialData(prev => ({ 
         ...prev, 
@@ -210,14 +193,7 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
 
   const savePreferences = async () => {
     try {
-      const response = await fetch("/api/ui-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          intelligentAlerts,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to save preferences");
+      await updatePrefsContext({ intelligentAlerts });
       setInitialData(prev => ({ ...prev, intelligentAlerts }));
       toast.success("Preferences updated");
     } catch {
@@ -230,13 +206,9 @@ export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role
     const defaultAlerts = true;
     setDisplayName(defaultName);
     setIntelligentAlerts(defaultAlerts);
-    await fetch("/api/ui-preferences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        displayName: defaultName,
-        intelligentAlerts: defaultAlerts,
-      }),
+    await updatePrefsContext({
+      displayName: defaultName,
+      intelligentAlerts: defaultAlerts,
     });
     setInitialData(prev => ({ ...prev, displayName: defaultName, intelligentAlerts: defaultAlerts }));
     toast.success("Settings reset to defaults");
