@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { SWRConfig } from "swr";
 import {
   Dialog,
@@ -371,15 +371,21 @@ export function ProtectedNav({
   });
 
   // Track if we need to expand a group because of a new pathname
-  const lastPathname = React.useRef(pathname);
-  if (lastPathname.current !== pathname) {
-    lastPathname.current = pathname;
-    allVisibleGroups.forEach(group => {
-      if (group.children.some(child => isActive(child.href)) && !openGroups[group.id]) {
-        setOpenGroups(prev => ({ ...prev, [group.id]: true }));
+  useEffect(() => {
+    let changed = false;
+    const nextOpenGroups = { ...openGroups };
+
+    allVisibleGroups.forEach((group) => {
+      if (group.children.some((child) => isActive(child.href)) && !openGroups[group.id]) {
+        nextOpenGroups[group.id] = true;
+        changed = true;
       }
     });
-  }
+
+    if (changed) {
+      setOpenGroups(nextOpenGroups);
+    }
+  }, [pathname, allVisibleGroups, isActive, openGroups]);
 
   const toggleGroup = useCallback((groupId: string) => {
     setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));

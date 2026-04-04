@@ -60,21 +60,28 @@ export default async function ProtectedLayout({
   }
 
   const supabase = await createClient();
+  const [userResponse, roleResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getUserRole() as Promise<Role>,
+  ]);
+
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = userResponse;
 
   if (error || !user) {
     redirect("/auth/login");
   }
 
-  const role = (await getUserRole()) as Role;
+  // Parallelize profile fetch with role fetch already being done
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
+
+  const role = roleResult;
 
   return (
     <PreferencesProvider>
