@@ -22,18 +22,28 @@ export default async function ProtectedPage() {
 
   // 1. Get user and role concurrently
   // Next.js cache() deduplicates the getUser call across these helpers
-  const [userResponse, role] = isTestMode 
-    ? [{ data: { user: { id: "test-user-id", email: "test@example.com" } } }, "admin"]
-    : await Promise.all([
-        supabase.auth.getUser(),
-        getUserRole(),
-      ]);
+  const { data: userResponse, role } = isTestMode 
+    ? { data: { user: { id: "test-user-id", email: "test@example.com" } }, role: "admin" }
+    : { 
+        data: (await supabase.auth.getUser()).data, 
+        role: await getUserRole() 
+      };
 
-  const { data: { user } } = userResponse;
+  const user = userResponse?.user;
 
   if (!user && !isTestMode) {
     return redirect("/auth/login");
   }
+
+  // At this point, if not isTestMode, user is guaranteed to be non-null by the redirect above.
+  // If isTestMode is true, user is manually defined.
+  if (!user) {
+    return redirect("/auth/login");
+  }
+
+  // Cast to unknown then User to satisfy DashboardClient's expectation of a full User object 
+  // during test mode while maintaining runtime safety and avoiding 'any'.
+  const dashboardUser = user as unknown as import("@supabase/supabase-js").User;
 
   const faqKeys = [
     "faq_student_q1", "faq_student_a1",
@@ -143,7 +153,7 @@ export default async function ProtectedPage() {
       </header>
 
       <DashboardClient 
-        user={user} 
+        user={dashboardUser} 
         role={role} 
         stats={stats} 
         studentCard={studentCard}

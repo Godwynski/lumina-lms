@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { SWRConfig } from "swr";
 import {
   Dialog,
