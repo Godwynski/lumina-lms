@@ -8,6 +8,7 @@ import {
   UserPlus, 
   X
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,10 @@ import { Label } from "@/components/ui/label";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AdminTableShell } from "@/components/admin/AdminTableShell";
+
+const AdminTableShell = dynamic(() => import("@/components/admin/AdminTableShell").then(mod => mod.AdminTableShell), {
+  loading: () => <div className="min-h-[calc(100vh-120px)] animate-pulse bg-muted rounded-xl" />,
+});
 
 
 type User = {

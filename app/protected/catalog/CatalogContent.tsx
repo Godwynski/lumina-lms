@@ -15,7 +15,11 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Book, Category } from '@/lib/types';
-import { ModernInventoryClient } from '@/components/inventory/ModernInventoryClient';
+import dynamic from 'next/dynamic';
+
+const ModernInventoryClient = dynamic(() => import('@/components/inventory/ModernInventoryClient').then(mod => mod.ModernInventoryClient), {
+  loading: () => <CatalogSkeleton />,
+});
 
 interface CatalogContentProps {
   initialData: { data: Book[]; count: number };

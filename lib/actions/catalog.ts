@@ -3,6 +3,7 @@
 import { createClient, createSafeClient } from '@/lib/supabase/server';
 import { getUserRole } from '@/lib/auth-helpers';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { BookSchema, CategorySchema } from '../validations/catalog';
 import { logger } from '../logger';
 
@@ -23,12 +24,12 @@ async function assertStaffCatalogAccess() {
  * @returns Array of categories.
  */
 export const getCategories = unstable_cache(
-  async () => {
+  cache(async () => {
     const supabase = createSafeClient();
     const { data, error } = await supabase.from('categories').select('id, name, description, created_at').order('name');
     if (error) throw new Error(error.message);
     return data;
-  },
+  }),
   ['catalog-categories'],
   { revalidate: 3600, tags: ['categories'] }
 );
