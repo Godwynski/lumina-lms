@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : '';
+
 const nextConfig = {
   output: 'standalone',
   experimental: {
@@ -23,12 +27,14 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'lvifzwbafxpopzcgdvtt.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
-      },
+      ...(supabaseHostname
+        ? [{
+            protocol: 'https' as const,
+            hostname: supabaseHostname,
+            port: '',
+            pathname: '/storage/v1/object/public/**',
+          }]
+        : []),
       {
         protocol: 'https',
         hostname: 'covers.openlibrary.org',
@@ -49,9 +55,7 @@ const nextConfig = {
       },
     ],
   },
-  allowedDevOrigins: ['localhost', '127.0.0.1'],
-} satisfies NextConfig & {
-  allowedDevOrigins?: string[];
-};
+} satisfies NextConfig;
 
 export default nextConfig;
+

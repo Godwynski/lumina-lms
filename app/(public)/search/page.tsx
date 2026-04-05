@@ -66,13 +66,13 @@ export default function PublicSearchPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 relative min-h-screen">
-      <div className="sticky top-0 bg-white z-10 py-4 border-b flex gap-2">
+      <div className="sticky top-0 bg-background z-10 py-4 border-b border-border flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search title, author, ISBN..."
-            className="w-full pl-10 pr-4 py-2 border rounded-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border rounded-full bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -81,17 +81,17 @@ export default function PublicSearchPage() {
           onClick={() => setShowFilters(true)}
           variant="outline"
           size="icon"
-          className="p-2 border rounded-full hover:bg-gray-50"
+          className="p-2 border rounded-full hover:bg-muted"
         >
-          <Filter className="w-5 h-5 text-gray-600" />
+          <Filter className="w-5 h-5 text-muted-foreground" />
         </Button>
       </div>
 
       <div className="py-6 space-y-4">
         {books.map(book => (
           <Link key={book.id} href={`/book/${book.id}`} className="block">
-            <div className="border rounded-lg p-4 hover:shadow-md transition-shadow flex gap-4 bg-white">
-              <div className="w-16 h-24 bg-gray-200 rounded-md overflow-hidden flex-shrink-0 relative">
+            <div className="border border-border rounded-lg p-4 hover:shadow-md transition-shadow flex gap-4 bg-card">
+              <div className="w-16 h-24 bg-muted rounded-md overflow-hidden flex-shrink-0 relative">
                 {book.cover_url ? (
                   <Image
                     src={book.cover_url}
@@ -101,20 +101,20 @@ export default function PublicSearchPage() {
                     className="object-cover"
                   />
                 ) : (
-                   <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">No Cover</div>
+                   <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Cover</div>
                 )}
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-lg leading-tight">{book.title}</h3>
-                <p className="text-gray-600 text-sm mt-1">{book.author}</p>
+                <h3 className="font-bold text-lg leading-tight text-foreground">{book.title}</h3>
+                <p className="text-muted-foreground text-sm mt-1">{book.author}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {book.available_copies > 0 ? (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Available</span>
+                    <span className="text-xs status-success border px-2 py-1 rounded-full">Available</span>
                   ) : (
-                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Borrowed</span>
+                    <span className="text-xs status-danger border px-2 py-1 rounded-full">Borrowed</span>
                   )}
                   {book.section && (
-                    <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1">
+                    <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full flex items-center gap-1">
                       📍 {book.section}
                     </span>
                   )}
@@ -124,10 +124,10 @@ export default function PublicSearchPage() {
           </Link>
         ))}
 
-        {loading && <div className="text-center py-4 text-gray-500">Loading...</div>}
+        {loading && <div className="text-center py-4 text-muted-foreground">Loading...</div>}
         
         {!loading && books.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             No books found matching your criteria.
           </div>
         )}
@@ -146,12 +146,12 @@ export default function PublicSearchPage() {
       {showFilters && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setShowFilters(false)}>
           <div 
-            className="bg-white w-full max-w-md rounded-t-2xl p-6 slide-up"
+            className="bg-card w-full max-w-md rounded-t-2xl p-6 slide-up"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Filters</h2>
-              <Button onClick={() => setShowFilters(false)} variant="ghost" size="icon" className="p-2 hover:bg-gray-100 rounded-full">
+              <h2 className="text-xl font-bold text-foreground">Filters</h2>
+              <Button onClick={() => setShowFilters(false)} variant="ghost" size="icon" className="p-2 hover:bg-muted rounded-full">
                 <X className="w-5 h-5" />
               </Button>
             </div>
@@ -196,7 +196,7 @@ export default function PublicSearchPage() {
 
               <Button
                 onClick={() => setShowFilters(false)}
-                className="w-full bg-blue-600 text-white font-medium p-3 rounded-md mt-4"
+                className="w-full bg-primary text-primary-foreground font-medium p-3 rounded-md mt-4 hover:bg-primary/90"
               >
                 Apply Filters
               </Button>

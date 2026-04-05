@@ -37,15 +37,21 @@ yarn-error.log*
 # vercel
 .vercel
 
-# logs
+# logs & reports
 *_output.txt
+lint-report.txt
 node_procs.csv
 procs.csv
 procs.json
 dump.sql
 
+# testing
+/playwright-report/
+/test-results/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-/lib/generated/prisma
+# uploads (local dev)
+/uploads/

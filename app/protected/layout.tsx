@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UserNav } from "@/components/layout/UserNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
-import { unstable_noStore as noStore } from "next/cache";
 import { cookies } from "next/headers";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
@@ -20,8 +19,6 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  noStore();
-
   const supabase = await createClient();
   const [userResponse, roleResult] = await Promise.all([
     supabase.auth.getUser(),

@@ -43,7 +43,7 @@ export function daysOverdue(dueDate: string | Date): number {
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
 }
 
-// This check can be removed, it is just for tutorial purposes
+/** @internal Development safety check — verifies required env vars are set. */
 export const hasEnvVars =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;

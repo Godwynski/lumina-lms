@@ -7,10 +7,10 @@ export default function supabaseLoader({
   width: number; 
   quality?: number 
 }) {
-  const supabaseUrl = 'https://lvifzwbafxpopzcgdvtt.supabase.co';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   
   // Only optimize Supabase storage URLs
-  if (src.includes(supabaseUrl)) {
+  if (supabaseUrl && src.includes(supabaseUrl)) {
     // Convert object/public URLs to render/image/public URLs
     // From: https://.../storage/v1/object/public/covers/my-image.jpg
     // To: https://.../storage/v1/render/image/public/covers/my-image.jpg

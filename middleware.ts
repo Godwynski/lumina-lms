@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // 1. Double-layer asset bypass for maximum performance on edge
@@ -21,7 +21,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Next.js 16 Proxy Matcher:
      * Match all request paths except for:
      * - _next/static (static files)
      * - _next/image (image optimization files)

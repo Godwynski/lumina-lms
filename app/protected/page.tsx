@@ -7,7 +7,6 @@ import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
 import { getDeterministicQrUrl, resolveStudentId } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata = {
   title: "Dashboard | Lumina LMS",
@@ -15,7 +14,6 @@ export const metadata = {
 
 
 export default async function ProtectedPage() {
-  noStore();
   const supabase = await createClient();
 
   // 1. Get user and role concurrently
@@ -29,9 +27,6 @@ export default async function ProtectedPage() {
   if (!user) {
     return redirect("/auth/login");
   }
-
-  // Cast to User to satisfy DashboardClient's expectation
-  const dashboardUser = user as unknown as import("@supabase/supabase-js").User;
 
   const faqKeys = [
     "faq_student_q1", "faq_student_a1",
@@ -141,7 +136,7 @@ export default async function ProtectedPage() {
       </header>
 
       <DashboardClient 
-        user={dashboardUser} 
+        user={user} 
         role={role} 
         stats={stats} 
         studentCard={studentCard}

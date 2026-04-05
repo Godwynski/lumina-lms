@@ -2,6 +2,10 @@
 User-agent: *
 Allow: /
 
+# Disallow authenticated and API routes
+Disallow: /protected/
+Disallow: /api/
+
 # Host
 Host: https://lumina-lms.vercel.app
 

@@ -15,7 +15,7 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 async function seed() {
-  console.log('🌱 Starting database seed...');
+  console.info('🌱 Starting database seed...');
 
   // 1. Seed Categories
   const categories = [
@@ -34,7 +34,7 @@ async function seed() {
     console.error('Error seeding categories:', catError);
     return;
   }
-  console.log(`✅ Seeded ${catData.length} categories`);
+  console.info(`✅ Seeded ${catData.length} categories`);
 
   const csCat = catData.find(c => c.name === 'Computer Science')?.id;
 
@@ -69,7 +69,7 @@ async function seed() {
     console.error('Error seeding books:', bookError);
     return;
   }
-  console.log(`✅ Seeded ${bookData.length} books`);
+  console.info(`✅ Seeded ${bookData.length} books`);
 
   // 3. Seed Book Copies
   const copies = [];
@@ -85,10 +85,10 @@ async function seed() {
   if (copyError) {
     console.warn('Note: Book copies might already exist (unique QR constraint)');
   } else {
-    console.log('✅ Seeded book copies');
+    console.info('✅ Seeded book copies');
   }
 
-  console.log('✨ Seeding completed successfully!');
+  console.info('✨ Seeding completed successfully!');
 }
 
 seed().catch(err => {

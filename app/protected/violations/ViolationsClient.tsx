@@ -148,8 +148,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
       <div className="grid gap-4 md:grid-cols-4 mb-4">
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Violations</p>
@@ -159,8 +159,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
-              <Clock className="h-5 w-5 text-orange-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Active</p>
@@ -170,8 +170,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Resolved</p>
@@ -181,8 +181,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
-              <ShieldAlert className="h-5 w-5 text-yellow-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
+              <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Demerit Points</p>
@@ -206,8 +206,8 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
             <div
               className={`rounded-lg border px-4 py-3 text-sm ${
                 notice.type === 'success'
-                  ? 'border-green-200 bg-green-50 text-green-800'
-                  : 'border-red-200 bg-red-50 text-red-800'
+                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'border-destructive/20 bg-destructive/10 text-destructive'
               }`}
             >
               {notice.message}
@@ -400,7 +400,7 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
             <Button
               disabled={isPending}
               onClick={() => handleResolveViolation()}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {isPending ? 'Resolving...' : 'Confirm Resolution'}
             </Button>
