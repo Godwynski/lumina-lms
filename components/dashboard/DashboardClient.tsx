@@ -74,30 +74,30 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
     {
       title: 'Library Ops',
       items: [
-        { title: 'Book Catalog', href: '/protected/student-catalog', icon: Library },
-        { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
+        { title: 'Book Catalog', href: '/student-catalog', icon: Library },
+        { title: 'Digital Assets', href: '/resources', icon: BookOpen },
       ]
     },
     {
       title: 'Account',
       items: [
-        { title: 'Borrow History', href: '/protected/history', icon: History },
+        { title: 'Borrow History', href: '/history', icon: History },
       ]
     }
   ] : [
     {
       title: 'Library Ops',
       items: [
-        { title: 'Inventory', href: '/protected/catalog', icon: Library },
-        { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
+        { title: 'Inventory', href: '/catalog', icon: Library },
+        { title: 'Digital Assets', href: '/resources', icon: BookOpen },
       ]
     },
     {
       title: 'Management',
       items: [
-        { title: 'Users & Roles', href: '/protected/users', icon: Users },
-        ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/protected/admin/approvals', icon: ShieldCheck }] : []),
-        { title: 'Analytics', href: '/protected/reports', icon: BarChart2 },
+        { title: 'Users & Roles', href: '/users', icon: Users },
+        ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/admin/approvals', icon: ShieldCheck }] : []),
+        { title: 'Analytics', href: '/reports', icon: BarChart2 },
       ]
     }
   ], [isStudent, canReviewApprovals]);
@@ -106,12 +106,12 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
     {
       label: isStudent ? 'Borrowed Books' : 'Active Borrows Now',
       value: isStudent ? stats.myActiveLoans : stats.activeLoans,
-      href: '/protected/history',
+      href: '/history',
     },
     {
       label: 'Pending Card Approvals',
       value: stats.pendingApprovals,
-      href: '/protected/admin/approvals',
+      href: '/admin/approvals',
       show: canReviewApprovals,
     },
   ].filter((item) => item.show !== false), [isStudent, stats.myActiveLoans, stats.activeLoans, stats.pendingApprovals, canReviewApprovals]);
@@ -240,11 +240,11 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
               <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
               Latest In Library
             </h2>
-            <Link href="/protected/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
+            <Link href="/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x px-0.5">
             {stats.recentBooks.map((book) => (
-              <Link key={book.id} href={`/protected/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
+              <Link key={book.id} href={`/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
                 <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
                   {book.cover_url ? (
                     <Image 
@@ -350,13 +350,13 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
                 <History className="h-3 w-3 text-primary" />
                 Latest In Catalog
               </h2>
-              <Link href="/protected/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
+              <Link href="/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
             </div>
 
             <div className="grid gap-2">
               {stats.recentBooks.length > 0 ? (
                 stats.recentBooks.slice(0, 4).map((book) => (
-                  <Link key={book.id} href={`/protected/catalog/${book.id}`}>
+                  <Link key={book.id} href={`/catalog/${book.id}`}>
                     <Card className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
                       <CardContent className="flex items-center justify-between gap-4 p-3">
                         <div className="flex min-w-0 items-center gap-3.5">

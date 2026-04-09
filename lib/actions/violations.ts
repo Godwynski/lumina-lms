@@ -137,7 +137,7 @@ export async function createViolation(rawInput: unknown) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath('/protected/violations')
+  revalidatePath('/violations')
   return { success: true }
 }
 
@@ -152,7 +152,7 @@ export async function deleteViolation(violationId: string) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath('/protected/violations')
+  revalidatePath('/violations')
   return { success: true }
 }
 
@@ -173,6 +173,6 @@ export async function resolveViolation(violationId: string, notes?: string) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath('/protected/violations')
+  revalidatePath('/violations')
   return { success: true }
 }

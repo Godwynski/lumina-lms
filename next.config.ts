@@ -56,6 +56,30 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/settings',
+        destination: '/profile',
+        permanent: true,
+      },
+      {
+        source: '/settings/:tab',
+        destination: '/:tab',
+        permanent: true,
+      },
+      {
+        source: '/protected',
+        destination: '/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/protected/:path*',
+        destination: '/:path*',
+        permanent: true,
+      },
+    ];
+  },
 } satisfies NextConfig;
 
 export default withBundleAnalyzer({

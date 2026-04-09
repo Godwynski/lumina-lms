@@ -16,7 +16,7 @@ export default async function LoginPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
-    return redirect("/protected");
+    return redirect("/dashboard");
   }
 
   return (

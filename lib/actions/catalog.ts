@@ -217,8 +217,8 @@ export async function createBookCopy(bookId: string, condition?: string) {
     .single();
     
   if (error) throw new Error(error.message);
-  revalidatePath('/protected/catalog');
-  revalidatePath(`/protected/catalog/${bookId}`);
+  revalidatePath('/catalog');
+  revalidatePath(`/catalog/${bookId}`);
   return data;
 }
 
@@ -232,7 +232,7 @@ export async function updateBookCopyStatus(id: string, status: 'AVAILABLE' | 'BO
     .single();
     
   if (error) throw new Error(error.message);
-  revalidatePath('/protected/catalog');
-  revalidatePath(`/protected/catalog/${data.book_id}`);
+  revalidatePath('/catalog');
+  revalidatePath(`/catalog/${data.book_id}`);
   return data;
 }

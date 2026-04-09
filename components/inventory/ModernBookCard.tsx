@@ -98,7 +98,7 @@ export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) 
             <ChevronRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
           </Button>
           
-          <Link href={`/protected/catalog/${book.id}`}>
+          <Link href={`/catalog/${book.id}`}>
             <Button variant="outline" size="icon" className="h-8 w-8 rounded-md border-border text-muted-foreground hover:bg-muted hover:text-foreground">
               <Info size={16} />
             </Button>
