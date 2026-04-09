@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+import { checkStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
 import {
-  checkStaticLibraryCardAssets,
   getDeterministicProfileUrl,
   isDeterministicProfileUrl,
   resolveStudentId,

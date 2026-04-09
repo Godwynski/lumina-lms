@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BorrowingRecord } from "@/lib/actions/history";
 
 interface HistoryContentProps {
-  initialRecords: BorrowingRecord[];
-  totalCount: number;
+  historyPromise: Promise<{ records: BorrowingRecord[]; totalCount: number }>;
   page: number;
   statusFilter: string;
   searchQuery: string;
@@ -32,12 +31,12 @@ export function HistorySkeleton() {
 }
 
 export default function HistoryContent({
-  initialRecords,
-  totalCount,
+  historyPromise,
   page,
   statusFilter,
   searchQuery,
 }: HistoryContentProps) {
+  const { records, totalCount } = use(historyPromise);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -56,13 +55,13 @@ export default function HistoryContent({
 
   const getStatusBadge = (status: BorrowingRecord["status"]) => {
     switch (status) {
-      case "active":
+      case "ACTIVE":
         return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Active</Badge>;
-      case "returned":
+      case "RETURNED":
         return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Returned</Badge>;
-      case "overdue":
+      case "OVERDUE":
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Overdue</Badge>;
-      case "lost":
+      case "LOST":
         return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Lost</Badge>;
       default:
         return <Badge variant="outline" className="text-[10px] uppercase font-bold px-2 py-0.5">{status}</Badge>;
@@ -78,7 +77,7 @@ export default function HistoryContent({
   };
 
   const isOverdue = (record: BorrowingRecord) => {
-    return record.status === "active" && new Date(record.due_date) < new Date();
+    return record.status === "ACTIVE" && new Date(record.due_date) < new Date();
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / 10));
@@ -105,7 +104,7 @@ export default function HistoryContent({
               />
             </form>
             <div className="flex gap-1.5 p-1 bg-muted/30 rounded-lg border border-border/50">
-              {(["all", "active", "returned", "overdue"] as const).map((status) => (
+              {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => updateFilters({ status, page: 1 })}
@@ -116,7 +115,7 @@ export default function HistoryContent({
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  {status === "all" ? "All" : status}
+                  {status === "all" ? "All" : status.toLowerCase()}
                 </button>
               ))}
             </div>
@@ -126,7 +125,7 @@ export default function HistoryContent({
 
       <Card className="border-border bg-card shadow-sm overflow-hidden">
         <CardContent className="p-0">
-          {initialRecords.length === 0 ? (
+          {records.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <div className="status-muted mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
                 <BookOpen size={32} />
@@ -147,7 +146,7 @@ export default function HistoryContent({
             </div>
           ) : (
             <div className="divide-y divide-border/50">
-              {initialRecords.map((record) => {
+              {records.map((record) => {
                 const overdue = isOverdue(record);
                 const book = record.books;
                 return (
@@ -165,7 +164,7 @@ export default function HistoryContent({
                             by {book?.author || "Internal Entity"}
                           </p>
                         </div>
-                        <div className="shrink-0">{getStatusBadge(overdue ? "overdue" : record.status)}</div>
+                        <div className="shrink-0">{getStatusBadge(overdue ? "OVERDUE" : record.status)}</div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                         <span className="flex items-center gap-1.5">
@@ -201,7 +200,7 @@ export default function HistoryContent({
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Showing {initialRecords.length} of {totalCount} records
+            Showing {records.length} of {totalCount} records
           </p>
           <div className="flex items-center gap-3">
             <Button

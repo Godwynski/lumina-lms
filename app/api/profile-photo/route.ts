@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets";
+import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;

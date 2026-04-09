@@ -49,6 +49,12 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
   const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopy['status']>('ALL');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
 
   const handleAddCopy = async () => {
     setAddCopyLoading(true);
@@ -231,7 +237,9 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
                           {status.label}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">Added {new Date(copy.created_at).toLocaleDateString()}</p>
+                      <p className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                        Added {mounted ? new Date(copy.created_at).toLocaleDateString() : '...'}
+                      </p>
                     </div>
                   </div>
 

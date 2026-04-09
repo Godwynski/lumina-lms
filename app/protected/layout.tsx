@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
-import { HeartbeatBanner } from "@/components/layout/HeartbeatBanner";
 import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UserNav } from "@/components/layout/UserNav";
@@ -66,7 +65,6 @@ export default async function ProtectedLayout({
     <PreferencesProvider>
       <SidebarProvider defaultOpen={defaultOpen}>
         <div className="flex min-h-screen w-full bg-background text-foreground selection:bg-accent">
-          <HeartbeatBanner />
 
           {/* 
             NAVIGATION STREAMING:

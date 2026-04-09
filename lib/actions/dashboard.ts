@@ -1,7 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server';
-import { createSafeClient } from '@/lib/supabase/server';
+import { createClient, createSafeClient } from '@/lib/supabase/server';
+import { getViolations, type ViolationWithProfile } from './violations';
+import { getBorrowingHistory, type BorrowingRecord } from './history';
 import { unstable_cache } from 'next/cache';
 
 /**
@@ -29,7 +30,15 @@ export async function getDashboardStats({
   role,
 }: {
   role: string | null;
-}) {
+}): Promise<{
+  activeLoans: number;
+  pendingApprovals: number;
+  myActiveLoans: number;
+  recentBooks: { id: string; title: string; author: string; cover_url?: string | null; created_at: string }[];
+  activeLoansList?: BorrowingRecord[];
+  violationsList?: ViolationWithProfile[];
+  totalPoints?: number;
+}> {
   const supabase = await createClient();
   
   // Security Gap Fix: Derive userId from the verified session, not from props
@@ -47,31 +56,34 @@ export async function getDashboardStats({
     recentBooks,
     pendingApprovalsResult,
     myActiveLoansResult,
+    myViolationsResult,
   ] = await Promise.all([
     supabase
       .from('borrowing_records')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'active'), // Match schema lowercase enum 
+      .eq('status', 'ACTIVE'), // Match schema uppercase enum 
     getCachedRecentBooks(),
     canReviewApprovals
       ? supabase
           .from('library_cards')
           .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending')
+          .eq('status', 'PENDING')
       : Promise.resolve({ count: 0 }),
     isStudent
-      ? supabase
-          .from('borrowing_records')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('status', 'active') // Match schema lowercase enum 
-      : Promise.resolve({ count: 0 }),
+      ? getBorrowingHistory(userId, 1, 5, 'ACTIVE')
+      : Promise.resolve({ records: [], totalCount: 0 }),
+    isStudent
+      ? getViolations()
+      : Promise.resolve({ violations: [], stats: { total: 0, active: 0, resolved: 0, totalPoints: 0 }, role: '' }),
   ]);
 
   return {
     activeLoans: activeLoans || 0,
-    pendingApprovals: pendingApprovalsResult.count || 0,
-    myActiveLoans: myActiveLoansResult.count || 0,
+    pendingApprovals: (pendingApprovalsResult as { count: number }).count || 0,
+    myActiveLoans: (myActiveLoansResult as { totalCount: number }).totalCount || 0,
     recentBooks,
+    activeLoansList: (myActiveLoansResult as { records: BorrowingRecord[] }).records,
+    violationsList: (myViolationsResult as { violations: ViolationWithProfile[] }).violations,
+    totalPoints: (myViolationsResult as { stats: { totalPoints: number } }).stats?.totalPoints || 0,
   };
 }

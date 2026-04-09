@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Lumina LMS",
   },
   description: "Advanced Library Management System for modern institutions. Track books, manage circulation, and generate reports.",
-  keywords: ["Library Management", "LMS", "Education", "Inventory", "Books", "Digital Assets"],
+  keywords: ["Library Management", "LMS", "Education", "Inventory", "Books"],
   authors: [{ name: "Lumina Team" }],
   creator: "Lumina LMS",
   openGraph: {

@@ -9,16 +9,15 @@ import {
   LayoutDashboard,
   Settings,
   Library,
-  BookOpen,
   Users,
   ShieldCheck,
   BarChart2,
   History,
   AlertTriangle,
-  CreditCard,
   ChevronsUpDown,
   LogOut,
   Server,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,9 +34,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, memo, useEffect } from "react";
+import { useLogout } from "@/hooks/use-logout";
 import { SWRConfig } from "swr";
 import {
   Dialog,
@@ -125,8 +124,9 @@ const NAV_GROUPS: NavGroup[] = [
     children: [
       { href: "/protected/catalog", label: "Inventory", icon: Library, minRole: "staff" },
       { href: "/protected/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
-      { href: "/protected/resources", label: "Digital Assets", icon: BookOpen, minRole: "student" },
       { href: "/protected/circulation", label: "Circulation", icon: History, minRole: "staff" },
+      { href: "/protected/history", label: "Borrow History", icon: History, minRole: "student" },
+      { href: "/protected/violations", label: "Violations", icon: AlertTriangle, minRole: "staff" },
     ],
   },
   {
@@ -152,17 +152,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/protected/settings?tab=gdpr", label: "Compliance", icon: AlertTriangle, minRole: "admin" },
     ],
   },
-  {
-    id: "account",
-    label: "Personal",
-    icon: History,
-    minRole: "student",
-    children: [
-      { href: "/protected/my-card", label: "Library Card", icon: CreditCard, minRole: "student" },
-      { href: "/protected/history", label: "Borrow History", icon: History, minRole: "student" },
-      { href: "/protected/violations", label: "Violations", icon: AlertTriangle, minRole: "student" },
-    ]
-  }
 ];
 
 const SETTINGS_GROUP: NavGroup = {
@@ -299,17 +288,12 @@ export function ProtectedNav({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const supabase = createClient();
+  const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
-    setSigningOut(true);
-    await supabase.auth.signOut();
-    setSigningOut(false);
     setLogoutDialogOpen(false);
-    router.refresh();
-    router.push("/auth/login");
+    await logout();
   };
 
   const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
@@ -553,14 +537,26 @@ export function ProtectedNav({
                 variant="destructive"
                 className="h-9 rounded-lg"
                 onClick={handleSignOut}
-                disabled={signingOut}
+                disabled={isLoggingOut}
               >
-                {signingOut ? "Signing out..." : "Log out"}
+                Log out
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </SidebarFooter>
+
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border shadow-2xl">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="flex flex-col items-center gap-1">
+              <h3 className="text-lg font-bold">Logging out...</h3>
+              <p className="text-sm text-muted-foreground font-medium text-center">Ending your current session safely.</p>
+            </div>
+          </div>
+        </div>
+      )}
       <SidebarRail />
     </Sidebar>
     </SWRConfig>

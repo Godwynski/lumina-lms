@@ -23,11 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useLogout } from "@/hooks/use-logout";
 
 interface Profile {
   full_name?: string | null;
@@ -47,18 +46,12 @@ interface UserNavProps {
 }
 
 export function UserNav({ user, profile, role }: UserNavProps) {
-  const router = useRouter();
-  const supabase = createClient();
+  const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
-    setSigningOut(true);
-    await supabase.auth.signOut();
-    setSigningOut(false);
     setLogoutDialogOpen(false);
-    router.refresh();
-    router.push("/auth/login");
+    await logout();
   };
 
   const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
@@ -141,13 +134,25 @@ export function UserNav({ user, profile, role }: UserNavProps) {
               variant="destructive"
               className="h-9 rounded-lg"
               onClick={handleSignOut}
-              disabled={signingOut}
+              disabled={isLoggingOut}
             >
-              {signingOut ? "Signing out..." : "Log out"}
+              Log out
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border shadow-2xl">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="flex flex-col items-center gap-1">
+              <h3 className="text-lg font-bold">Logging out...</h3>
+              <p className="text-sm text-muted-foreground font-medium text-center">Ending your current session safely.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

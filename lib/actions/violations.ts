@@ -30,7 +30,7 @@ export type ViolationStats = {
   totalPoints: number
 }
 
-async function assertStaffAccess() {
+async function getAccessInfo() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -44,18 +44,29 @@ async function assertStaffAccess() {
     .eq('id', user.id)
     .single()
 
-  if (error || !profile || !['admin', 'librarian', 'staff'].includes(String(profile.role))) {
+  if (error || !profile) {
     throw new Error('Forbidden')
   }
 
   return { supabase, userId: user.id, role: profile.role }
 }
 
+async function assertStaffAccess() {
+  const { supabase, userId, role } = await getAccessInfo()
+
+  if (!['admin', 'librarian', 'staff'].includes(String(role))) {
+    throw new Error('Forbidden')
+  }
+
+  return { supabase, userId, role }
+}
+
 export async function getViolations(options?: {
   status?: string
   violationType?: string
-}): Promise<{ violations: ViolationWithProfile[]; stats: ViolationStats }> {
-  const { supabase } = await assertStaffAccess()
+}): Promise<{ violations: ViolationWithProfile[]; stats: ViolationStats; role: string }> {
+  const { supabase, userId, role } = await getAccessInfo()
+  const isStudent = role === 'student'
 
   let query = supabase
     .from('violations')
@@ -66,11 +77,15 @@ export async function getViolations(options?: {
     .order('created_at', { ascending: false })
 
   if (options?.status && options.status !== 'all') {
-    query = query.eq('status', options.status)
+    query = query.eq('status', options.status.toUpperCase())
   }
 
   if (options?.violationType && options.violationType !== 'all') {
     query = query.eq('violation_type', options.violationType)
+  }
+
+  if (isStudent) {
+    query = query.eq('user_id', userId)
   }
 
   const { data, error } = await query
@@ -81,11 +96,11 @@ export async function getViolations(options?: {
   data?.forEach((v) => {
     stats.total++
     stats.totalPoints += v.points
-    if (v.status === 'active') stats.active++
-    else if (v.status === 'resolved') stats.resolved++
+    if (v.status === 'ACTIVE') stats.active++
+    else if (v.status === 'RESOLVED') stats.resolved++
   })
 
-  return { violations: (data as unknown) as ViolationWithProfile[], stats }
+  return { violations: (data as unknown) as ViolationWithProfile[], stats, role: String(role) }
 }
 
 export async function searchStudents(query: string) {
@@ -116,7 +131,7 @@ export async function createViolation(rawInput: unknown) {
     points: validated.points,
     description: validated.description,
     incident_date: validated.incidentDate,
-    status: 'active',
+    status: 'ACTIVE',
     created_by: userId,
   })
 
@@ -150,7 +165,7 @@ export async function resolveViolation(violationId: string, notes?: string) {
   const { error } = await supabase
     .from('violations')
     .update({
-      status: 'resolved',
+      status: 'RESOLVED',
       resolved_at: new Date().toISOString(),
       resolution_notes: validated.notes || null
     })

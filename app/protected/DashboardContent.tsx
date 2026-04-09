@@ -89,6 +89,8 @@ export async function DashboardContent({ user, role }: DashboardContentProps) {
       stats={stats} 
       studentCard={studentCard as NonNullable<Parameters<typeof DashboardClient>[0]["studentCard"]>}
       studentFaqs={studentFaqs}
+      activeLoansList={stats.activeLoansList}
+      violationsList={stats.violationsList}
     />
   );
 }

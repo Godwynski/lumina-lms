@@ -2,52 +2,14 @@ import { Suspense } from "react";
 import { getBorrowingHistory } from "@/lib/actions/history";
 import HistoryContent, { HistorySkeleton } from "./HistoryContent";
 import { createClient } from "@/lib/supabase/server";
+import { type BorrowingRecord } from "@/lib/actions/history";
+
+export type BorrowingHistoryResult = { records: BorrowingRecord[]; totalCount: number };
 
 export const metadata = {
   title: "Borrow History | Lumina LMS",
   description: "Track your library borrowing timeline and returns.",
 };
-
-// Enable Partial Prerendering for this route
-
-async function HistoryDataSelector({
-  page,
-  status,
-  q,
-}: {
-  page: number;
-  status: string;
-  q: string;
-}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return (
-      <div className="p-8 text-center border-2 border-dashed rounded-xl border-border/50 text-muted-foreground font-semibold">
-        Please sign in to view your history.
-      </div>
-    );
-  }
-
-  const { records, totalCount } = await getBorrowingHistory(
-    user.id,
-    page,
-    10,
-    status,
-    q
-  );
-
-  return (
-    <HistoryContent
-      initialRecords={records}
-      totalCount={totalCount}
-      page={page}
-      statusFilter={status}
-      searchQuery={q}
-    />
-  );
-}
 
 export default async function HistoryPage({
   searchParams,
@@ -59,6 +21,26 @@ export default async function HistoryPage({
   const status = params.status || "all";
   const q = params.q || "";
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="p-8 text-center border-2 border-dashed rounded-xl border-border/50 text-muted-foreground font-semibold">
+        Please sign in to view your history.
+      </div>
+    );
+  }
+
+  // Initiate fetch but do NOT await it here
+  const historyPromise = getBorrowingHistory(
+    user.id,
+    page,
+    10,
+    status,
+    q
+  );
+
   return (
     <div className="space-y-6 w-full max-w-5xl mx-auto">
       <div className="flex flex-col gap-1 px-1">
@@ -69,7 +51,12 @@ export default async function HistoryPage({
       </div>
 
       <Suspense fallback={<HistorySkeleton />}>
-        <HistoryDataSelector page={page} status={status} q={q} />
+        <HistoryContent
+          historyPromise={historyPromise as Promise<BorrowingHistoryResult>}
+          page={page}
+          statusFilter={status}
+          searchQuery={q}
+        />
       </Suspense>
     </div>
   );

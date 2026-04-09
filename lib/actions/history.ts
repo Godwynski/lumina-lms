@@ -14,7 +14,7 @@ export type BorrowingRecord = {
   id: string;
   book_copy_id: string;
   user_id: string;
-  status: "active" | "returned" | "overdue" | "lost";
+  status: "ACTIVE" | "RETURNED" | "OVERDUE" | "LOST";
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;
@@ -46,7 +46,8 @@ export async function getBorrowingHistory(
     .eq("user_id", userId);
 
   if (statusFilter && statusFilter !== "all") {
-    query = query.eq("status", statusFilter);
+    // Normalize to uppercase to match BorrowStatus enum in Postgres
+    query = query.eq("status", statusFilter.toUpperCase());
   }
 
   if (searchQuery) {

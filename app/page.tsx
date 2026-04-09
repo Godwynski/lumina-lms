@@ -75,7 +75,7 @@ export default async function Home() {
                   <CardTitle className="text-xl font-bold text-foreground">Unified Catalog</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground leading-relaxed font-medium">
-                  Manage physical books and digital assets with advanced search and real-time availability tracking.
+                  Manage your physical collection with advanced search and real-time availability tracking.
                 </CardContent>
               </Card>
 

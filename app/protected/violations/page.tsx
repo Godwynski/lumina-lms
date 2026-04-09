@@ -2,6 +2,8 @@ import { Suspense } from 'react'
 import { getViolations } from '@/lib/actions/violations'
 import ViolationsClient from './ViolationsClient'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getUserRole } from '@/lib/auth-helpers'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
   title: 'Violations & Enforcement | Lumina LMS',
@@ -11,17 +13,24 @@ export const metadata = {
 // Enable PPR for this route
 
 async function ViolationsDataWrapper() {
-  const { violations, stats } = await getViolations()
+  const { violations, stats, role } = await getViolations()
   
   return (
     <ViolationsClient 
       initialViolations={violations || []} 
       initialStats={stats} 
+      role={role}
     />
   )
 }
 
 export default async function ViolationsPage() {
+  const role = await getUserRole()
+  
+  if (role === 'student') {
+    return redirect('/protected')
+  }
+
   return (
     <div className="w-full space-y-4 pb-4">
       <Suspense fallback={<ViolationsSkeleton />}>

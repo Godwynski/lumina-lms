@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import Image from 'next/image';
 import {
   Search,
@@ -35,18 +35,19 @@ interface Book {
 }
 
 interface StudentCatalogClientProps {
-  initialBooks: Book[];
-  initialTotal: number;
-  categories: CatalogCategory[];
+  booksPromise: Promise<{ books: Book[]; total: number; hasMore: boolean }>;
+  categoriesPromise: Promise<CatalogCategory[]>;
   initialQuery?: string;
 }
 
 export function StudentCatalogClient({ 
-  initialBooks, 
-  initialTotal, 
-  categories,
+  booksPromise, 
+  categoriesPromise,
   initialQuery = ''
 }: StudentCatalogClientProps) {
+  const initialBooksData = use(booksPromise);
+  const categories = use(categoriesPromise);
+  
   const [query, setQuery] = useState(initialQuery);
   const [page, setPage] = useState(1);
   const pageSize = 16;
@@ -73,14 +74,14 @@ export function StudentCatalogClient({
     () => getPublicBooksCached(query, selectedCategory, '', availableOnly, page, pageSize, sortBy),
     { 
         fallbackData: query === initialQuery && page === 1 && selectedCategory === '' && !availableOnly && sortBy === 'title' 
-            ? { books: initialBooks, total: initialTotal, hasMore: false } 
+            ? initialBooksData 
             : undefined,
         keepPreviousData: true 
     }
   );
 
-  const books = booksData?.books || initialBooks;
-  const totalBooks = booksData?.total || initialTotal;
+  const books = booksData?.books || initialBooksData.books;
+  const totalBooks = booksData?.total || initialBooksData.total;
 
   return (
     <AdminTableShell

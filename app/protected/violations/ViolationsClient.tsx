@@ -56,9 +56,11 @@ const SEVERITY_OPTIONS = [
 type Props = {
   initialViolations: ViolationWithProfile[]
   initialStats: ViolationStats
+  role: string
 }
 
-export default function ViolationsClient({ initialViolations, initialStats }: Props) {
+export default function ViolationsClient({ initialViolations, initialStats, role }: Props) {
+  const isStudent = role === 'student'
   const [isPending, startTransition] = useTransition()
   const [violations, setViolations] = useState(initialViolations)
   const [stats, setStats] = useState(initialStats)
@@ -185,7 +187,7 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
               <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Demerit Points</p>
+              <p className="text-sm text-muted-foreground">{isStudent ? 'My Demerit Points' : 'Demerit Points'}</p>
               <p className="text-2xl font-bold">{stats.totalPoints}</p>
             </div>
           </div>
@@ -193,14 +195,14 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
       </div>
 
       <AdminTableShell
-        title="Violation Records"
-        description="Track and manage student school violations"
-        headerActions={
+        title={isStudent ? "My Violation History" : "Violation Records"}
+        description={isStudent ? "A record of your conduct and library policy violations" : "Track and manage student school violations"}
+        headerActions={!isStudent && (
           <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Record Violation
           </Button>
-        }
+        )}
         feedback={
           notice && (
             <div
@@ -263,7 +265,7 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
               <th className="px-4 py-2.5 font-medium text-muted-foreground">Description</th>
               <th className="px-4 py-2.5 font-medium text-muted-foreground">Status</th>
               <th className="px-4 py-2.5 font-medium text-muted-foreground">Date</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Actions</th>
+              {!isStudent && <th className="px-4 py-2.5 font-medium text-muted-foreground">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -329,28 +331,30 @@ export default function ViolationsClient({ initialViolations, initialStats }: Pr
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {formatDate(v.created_at)}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {v.status === 'active' && (
+                    {!isStudent && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {v.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                              onClick={() => setResolveModalOpen(v)}
+                            >
+                              Resolve
+                            </Button>
+                          )}
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-7 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
-                            onClick={() => setResolveModalOpen(v)}
+                            variant="ghost"
+                            className="h-7 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => setDeleteConfirm(v)}
                           >
-                            Resolve
+                            Delete
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
-                          onClick={() => setDeleteConfirm(v)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 )
               })

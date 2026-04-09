@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,8 @@ const MyCardContainer = dynamic(() => import('@/components/library/MyCardContain
   ssr: false,
   loading: () => <div className="h-[200px] w-full animate-pulse rounded-xl bg-muted" />
 });
-
-import { HealthNode } from './HealthNode';
-
+import { type ViolationWithProfile } from '@/lib/actions/violations';
+import { type BorrowingRecord } from '@/lib/actions/history';
 
 type RecentBook = {
   id: string;
@@ -34,6 +33,7 @@ interface DashboardProps {
     pendingApprovals: number;
     myActiveLoans: number;
     recentBooks: RecentBook[];
+    totalPoints?: number;
   };
   studentCard?: {
     fullName: string;
@@ -51,15 +51,21 @@ interface DashboardProps {
     question: string;
     answer: string;
   }[];
+  activeLoansList?: BorrowingRecord[];
+  violationsList?: ViolationWithProfile[];
 }
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
-export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: DashboardProps) {
-  // NOTE: The useState(mounted)+useEffect hydration fence has been intentionally removed.
-  // All data is passed as props from the RSC page — there are no client-only APIs (window,
-  // localStorage) accessed at render time. The 'use client' boundary is kept only because
-  // <Collapsible> requires client-side event handling.
+export function DashboardClient({ role, stats, studentCard, studentFaqs = [], activeLoansList = [], violationsList = [] }: DashboardProps) {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // NOTE: We use a 'mounted' state to avoid hydration mismatches 
+  // caused by locale-dependent Date strings.
 
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
@@ -129,54 +135,103 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
             )}
           </Card>
 
-          {/* Compact Stats & Terminal Actions */}
-          <div className="md:col-span-4 space-y-5 h-full">
-            {/* Quick Stats */}
-            <Card className="border-border bg-card/40 shadow-sm p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
-                  <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
-                </div>
-                <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                   <History size={18} />
-                </div>
-              </div>
-            </Card>
+            {/* Activity Summary */}
+            <div className="md:col-span-4 space-y-5">
+              {/* Demerit Points Widget */}
+              {(stats.totalPoints || 0) > 0 && (
+                <Card className="border-border bg-card/40 shadow-sm p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Demerit Points</p>
+                      <p className="text-2xl font-black text-amber-600">{stats.totalPoints}</p>
+                    </div>
+                    <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600">
+                       <ShieldAlert size={18} />
+                    </div>
+                  </div>
+                </Card>
+              )}
 
-            {/* Terminal Actions */}
-            <section className="space-y-3">
-              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Library Terminal</h2>
-              <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-background shadow-md shadow-primary/5 overflow-hidden">
-                <div className="p-1 space-y-0.5">
-                  {[
-                    { title: 'Book Catalog', href: '/protected/student-catalog', icon: Library },
-                    { title: 'Borrow History', href: '/protected/history', icon: History },
-                    { title: 'Digital Resources', href: '/protected/resources', icon: BookOpen },
-                    { title: 'Manual & Guidelines', href: '/protected/my-card', icon: HelpCircle },
-                  ].map(action => (
-                    <Button
-                      key={action.title}
-                      asChild
-                      variant="ghost"
-                      className="w-full justify-between items-center h-11 px-3 hover:bg-primary/5 hover:text-primary group transition-all rounded-lg"
-                    >
-                      <Link href={action.href}>
-                         <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-background border border-border p-1.5 group-hover:border-primary/30 transition-colors shadow-sm">
-                               <action.icon size={14} className="text-muted-foreground/60 group-hover:text-primary transition-colors" />
-                            </div>
-                            <span className="text-xs font-bold tracking-tight">{action.title}</span>
-                         </div>
-                         <ArrowUpRight size={14} className="text-muted-foreground/20 group-hover:text-primary/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                      </Link>
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-            </section>
+              {/* Active Loans Summary Info */}
+              {stats.myActiveLoans > 0 && (
+                <Card className="border-border bg-card/40 shadow-sm p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
+                      <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
+                    </div>
+                    <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                       <History size={18} />
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+          </section>
+
+          {/* New Lists-Based Section */}
+          <div className="grid gap-6 md:grid-cols-2">
+             {/* My Active Borrows */}
+             {activeLoansList.length > 0 && (
+               <section className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                     <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <BookOpen className="h-3 w-3 text-primary" />
+                        My Active Borrows
+                     </h2>
+                  </div>
+                  <div className="grid gap-2">
+                    {activeLoansList.map((loan) => (
+                       <Card key={loan.id} className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
+                          <CardContent className="flex items-center justify-between gap-4 p-3">
+                             <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
+                                   <Library size={12} className="text-muted-foreground/30" />
+                                </div>
+                                <div className="min-w-0">
+                                   <p className="truncate text-xs font-bold text-foreground/90">{loan.books?.title || 'Unknown Book'}</p>
+                                   <p className="text-xs font-bold text-foreground/80 tracking-tight" suppressHydrationWarning>
+                                      {mounted ? new Date(loan.due_date).toLocaleDateString() : '...'}
+                                   </p>
+                                </div>
+                             </div>
+                             <Badge variant={loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
+                                {loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'Overdue' : 'Active'}
+                             </Badge>
+                          </CardContent>
+                       </Card>
+                    ))}
+                  </div>
+               </section>
+             )}
+
+             {/* Account Standing / Violations */}
+             {violationsList.length > 0 && (
+               <section className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                     <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <ShieldAlert className="h-3 w-3 text-amber-500" />
+                        Account Standing
+                     </h2>
+                  </div>
+                  <div className="grid gap-2">
+                    {violationsList.slice(0, 3).map((violation) => (
+                       <Card key={violation.id} className="border-border/60 bg-card/30 shadow-none">
+                          <CardContent className="flex items-center justify-between gap-4 p-2.5">
+                             <div className="min-w-0">
+                                <p className="text-[10px] font-bold text-foreground/90 leading-tight truncate">{violation.violation_type.replace('_', ' ')}</p>
+                                <p className="text-[9px] text-muted-foreground/70 truncate mt-0.5">{violation.severity} severity • {violation.points} pts</p>
+                             </div>
+                             <Badge variant="outline" className="text-[8px] border-amber-500/20 text-amber-600 bg-amber-50/50">
+                                {violation.status}
+                             </Badge>
+                          </CardContent>
+                       </Card>
+                    ))}
+                  </div>
+               </section>
+             )}
           </div>
-        </section>
 
         {/* Discovery & New Arrivals */}
         <section className="space-y-3">
@@ -319,7 +374,7 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
                         </div>
                         <div className="flex shrink-0 items-center gap-4">
                           <div className="hidden sm:block text-right">
-                            <p className="text-[10px] font-bold text-foreground/60 tracking-wider">
+                            <p className="text-[10px] font-bold text-foreground/60 tracking-wider" suppressHydrationWarning>
                                {new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </p>
                             <p className="text-[9px] text-muted-foreground/40 uppercase font-medium">Added on</p>
@@ -371,14 +426,6 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [] }: 
               </Card>
            </section>
 
-           <section className="space-y-3">
-             <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Health node</h2>
-             <Card className="border-border/60 bg-card/40 shadow-none border-none">
-               <CardContent className="p-3">
-                 <HealthNode />
-               </CardContent>
-             </Card>
-           </section>
         </aside>
       </div>
     </div>

@@ -3,28 +3,6 @@ import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-
 import { StudentCatalogClient } from './StudentCatalogClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata = {
-  title: 'Catalog | Lumina LMS',
-  description: 'Browse the library catalog and check real-time availability.',
-};
-
-async function CatalogDataFetcher({ q }: { q: string }) {
-  // Fetch initial data on the server for instant First Paint
-  const [booksData, categories] = await Promise.all([
-    getPublicBooksCached(q, '', '', false, 1, 16, 'title'),
-    getCategoriesCached()
-  ]);
-
-  return (
-    <StudentCatalogClient 
-      initialBooks={booksData.books} 
-      initialTotal={booksData.total} 
-      categories={categories}
-      initialQuery={q}
-    />
-  );
-}
-
 function CatalogSkeletonView() {
   return (
     <div className="space-y-6 animate-pulse">
@@ -42,6 +20,11 @@ function CatalogSkeletonView() {
   );
 }
 
+export const metadata = {
+  title: 'Catalog | Lumina LMS',
+  description: 'Browse the library catalog and check real-time availability.',
+};
+
 export default async function StudentCatalogPage({
   searchParams,
 }: {
@@ -50,10 +33,19 @@ export default async function StudentCatalogPage({
   const params = await searchParams;
   const q = params.q || '';
 
+  // Initiate all fetches concurrently so they run in parallel
+  // We pass these promises to the client component
+  const booksPromise = getPublicBooksCached(q, '', '', false, 1, 16, 'title');
+  const categoriesPromise = getCategoriesCached();
+
   return (
     <div className="space-y-6">
       <Suspense fallback={<CatalogSkeletonView />}>
-        <CatalogDataFetcher q={q} />
+        <StudentCatalogClient 
+          booksPromise={booksPromise} 
+          categoriesPromise={categoriesPromise}
+          initialQuery={q}
+        />
       </Suspense>
     </div>
   );

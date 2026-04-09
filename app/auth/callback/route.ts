@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets";
+import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, memo, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef, memo, useCallback, use, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { type User as SupabaseUser } from "@supabase/supabase-js";
 import { m, AnimatePresence } from "framer-motion";
 import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
@@ -11,7 +12,7 @@ import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { RecomputeExpiryDates } from "@/components/admin/RecomputeExpiryDates";
 import { GDPRHardDeleteDialog } from "@/components/admin/AuditAndGDPR";
 import {
-  User,
+  User as UserIcon,
   SlidersHorizontal,
   Lock,
   Settings2,
@@ -44,20 +45,23 @@ type Role = "admin" | "librarian" | "staff" | "student";
 type PolicySetting = { id: string; key: string; value: string; description?: string };
 type Category = { id: string; name: string; slug: string; description?: string; is_active: boolean };
 
+interface Profile {
+  role: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  address: string | null;
+  phone: string | null;
+}
+
 interface Props {
-  canManageSystem: boolean;
-  isSuperAdmin: boolean;
-  role: Role;
-  profileName: string;
-  avatarUrl: string;
-  address: string;
-  phone: string;
-  settings: PolicySetting[];
-  categories: Category[];
+  user: SupabaseUser; 
+  profilePromise: Promise<Profile | null>;
+  settingsPromise: Promise<PolicySetting[]>;
+  categoriesPromise: Promise<Category[]>;
 }
 
 const PERSONAL_TABS = [
-  { id: "profile", label: "Profile", icon: User, description: "Update your personal details" },
+  { id: "profile", label: "Profile", icon: UserIcon, description: "Update your personal details" },
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal, description: "Notification and display settings" },
   { id: "security", label: "Security", icon: Lock, description: "Password and data privacy" },
 ] as const;
@@ -81,7 +85,17 @@ type NavTab = {
   section: "personal" | "admin";
 };
 
-export default function SettingsPageClient({ canManageSystem, isSuperAdmin, role, profileName, avatarUrl, address, phone, settings, categories }: Props) {
+export default function SettingsPageClient({ profilePromise, settingsPromise, categoriesPromise }: Props) {
+  const profile = use(profilePromise);
+  
+  const role = (profile?.role as Role) || "student";
+  const canManageSystem = role === "admin" || role === "librarian";
+  const isSuperAdmin = role === "admin";
+  const profileName = typeof profile?.full_name === "string" ? profile.full_name : "";
+  const avatarUrl = typeof profile?.avatar_url === "string" ? profile.avatar_url : "";
+  const address = typeof profile?.address === "string" ? profile.address : "";
+  const phone = typeof profile?.phone === "string" ? profile.phone : "";
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
@@ -411,7 +425,7 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
               transition={{ duration: 0.15 }}
             >
               {activeTab === "profile" && (
-                <Section key="profile" title="Account Identity" icon={User} onMobileNavClick={onMobileNavClick}>
+                <Section key="profile" title="Account Identity" icon={UserIcon} onMobileNavClick={onMobileNavClick}>
                   <div className="grid gap-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                       <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
@@ -601,13 +615,17 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
               {/* Admin Views */}
               {activeTab === "policies" && canManageSystem && (
                 <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={onMobileNavClick}>
-                  <PolicyConfigurationForm settings={settings} canEdit={isSuperAdmin} />
+                  <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
+                     <PolicyStreamWrapper promise={settingsPromise} canEdit={isSuperAdmin} />
+                  </Suspense>
                 </Section>
               )}
 
               {activeTab === "categories" && canManageSystem && (
                 <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={onMobileNavClick}>
-                  <CategoryManagement initialCategories={categories} />
+                   <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
+                     <CategoryStreamWrapper promise={categoriesPromise} />
+                   </Suspense>
                 </Section>
               )}
 
@@ -686,6 +704,18 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
       />
     </div>
   );
+}
+
+/* ── Streaming Wrappers ───────────────────────────────────── */
+
+function PolicyStreamWrapper({ promise, canEdit }: { promise: Promise<PolicySetting[]>, canEdit: boolean }) {
+  const data = use(promise);
+  return <PolicyConfigurationForm settings={data} canEdit={canEdit} />;
+}
+
+function CategoryStreamWrapper({ promise }: { promise: Promise<Category[]> }) {
+  const data = use(promise);
+  return <CategoryManagement initialCategories={data} />;
 }
 
 /* ── UI Components ───────────────────────────────────────── */
