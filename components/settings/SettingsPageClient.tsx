@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, memo, useCallback, use, Suspense } from "react";
-import { useRouter } from "next/navigation";
+
 import Link from "next/link";
 import Image from "next/image";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
@@ -97,7 +97,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
   const address = typeof profile?.address === "string" ? profile.address : "";
   const phone = typeof profile?.phone === "string" ? profile.phone : "";
 
-  const router = useRouter();
+
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab || "profile");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -230,13 +230,9 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
   };
 
   const changeTab = useCallback((id: TabId) => {
-    if (isDirty && !window.confirm("You have unsaved changes. Discard them?")) {
-      return;
-    }
     setActiveTab(id);
     setMobileNavOpen(false);
-    router.push(`/${id}`, { scroll: false });
-  }, [isDirty, router]);
+  }, []);
 
   const uploadProfilePhoto = async () => {
     if (!selectedPhotoBlob) {
@@ -735,17 +731,20 @@ const SectionNav = memo(({
         {items.map(({ id, label, icon: Icon }) => (
           <Button
             key={id}
-            onClick={() => onChange(id)}
+            asChild
             variant="ghost"
             className={cn(
               "relative h-10 w-full justify-start rounded-lg px-3 py-2 text-sm font-semibold transition-all",
               activeId === id ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground hover:bg-muted"
             )}
+            onClick={() => onChange(id)}
             aria-current={activeId === id ? "page" : undefined}
           >
-            <Icon size={16} className="mr-3" />
-            <span>{label}</span>
-            {activeId === id && <m.div layoutId="nav-indicator" className="absolute left-0 w-1 h-5 bg-primary rounded-r-full" />}
+            <Link href={`/${id}`} scroll={false}>
+              <Icon size={16} className="mr-3" />
+              <span>{label}</span>
+              {activeId === id && <m.div layoutId="nav-indicator" className="absolute left-0 w-1 h-5 bg-primary rounded-r-full" />}
+            </Link>
           </Button>
         ))}
       </div>

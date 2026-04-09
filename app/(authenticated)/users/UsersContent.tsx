@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, use } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { Search, UserPlus, X } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -73,18 +73,18 @@ const UserTableRow = React.memo(({ user, onClick }: { user: User; onClick: (user
 UserTableRow.displayName = "UserTableRow";
 
 interface UsersContentProps {
-  initialUsers: User[];
-  initialCount: number;
+  usersPromise: Promise<{ users: User[]; count: number }>;
 }
 
-export function UsersContent({ initialUsers, initialCount }: UsersContentProps) {
+export function UsersContent({ usersPromise }: UsersContentProps) {
+  const initialData = use(usersPromise);
   const supabase = useMemo(() => createClient(), []);
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>(initialData.users);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [totalUsers, setTotalUsers] = useState(initialCount);
+  const [totalUsers, setTotalUsers] = useState(initialData.count);
   const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student">("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
@@ -151,6 +151,7 @@ export function UsersContent({ initialUsers, initialCount }: UsersContentProps) 
 
   useEffect(() => {
     const loadUsers = async () => {
+      // Skip very first render — initial data comes from the server via use()
       if (isInitialMount.current) {
         isInitialMount.current = false;
         return;

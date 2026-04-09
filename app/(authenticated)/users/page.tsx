@@ -28,30 +28,34 @@ async function UsersDataWrapper() {
   if (!user) redirect("/auth/login");
 
   const pageSize = 12;
-  const { data, count, error } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(0, pageSize - 1);
 
-  if (error) {
-    return <div className="status-danger p-4 rounded-xl">Failed to load users.</div>;
-  }
+  const usersPromise = Promise.resolve(
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(0, pageSize - 1)
+      .then(({ data, count, error }) => {
+        if (error) throw error;
+        const mapProfileToUser = (row: ProfileRow): User => ({
+          id: String(row.id ?? ""),
+          name: row.full_name || (row.email?.split("@")[0].split(".").map((p: string) => p[0]?.toUpperCase() + p.slice(1)).join(" ")) || "Unnamed User",
+          email: row.email || "",
+          avatarUrl: row.avatar_url || null,
+          role: (row.role as User["role"]) || "student",
+          status: row.status || "active",
+          department: row.department || "General",
+          joined: row.created_at ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown",
+        });
+        return {
+          users: (data as unknown as ProfileRow[] || []).map(mapProfileToUser),
+          count: count || 0,
+        };
+      })
+  );
 
-  const mapProfileToUser = (row: ProfileRow): User => ({
-    id: String(row.id ?? ""),
-    name: row.full_name || (row.email?.split("@")[0].split(".").map((p: string) => p[0]?.toUpperCase() + p.slice(1)).join(" ")) || "Unnamed User",
-    email: row.email || "",
-    avatarUrl: row.avatar_url || null,
-    role: (row.role as User["role"]) || "student",
-    status: row.status || "active",
-    department: row.department || "General",
-    joined: row.created_at ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown",
-  });
 
-  const initialUsers = (data as unknown as ProfileRow[] || []).map(mapProfileToUser);
-
-  return <UsersContent initialUsers={initialUsers} initialCount={count || 0} />;
+  return <UsersContent usersPromise={usersPromise} />;
 }
 
 function UsersSkeleton() {

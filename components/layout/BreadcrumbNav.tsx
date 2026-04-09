@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+
 
 // Helper to capitalize and format route segments
 function formatSegment(segment: string) {

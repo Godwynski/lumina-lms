@@ -28,14 +28,24 @@ export const metadata = {
 export default async function StudentCatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ 
+    q?: string;
+    category?: string;
+    available?: string;
+    page?: string;
+    sort?: string;
+  }>;
 }) {
   const params = await searchParams;
   const q = params.q || '';
+  const categoryId = params.category || '';
+  const availableOnly = params.available === 'true';
+  const page = parseInt(params.page || '1', 10);
+  const sortBy = (params.sort as 'title' | 'author' | 'availability') || 'title';
+  const pageSize = 16;
 
   // Initiate all fetches concurrently so they run in parallel
-  // We pass these promises to the client component
-  const booksPromise = getPublicBooksCached(q, '', '', false, 1, 16, 'title');
+  const booksPromise = getPublicBooksCached(q, categoryId, '', availableOnly, page, pageSize, sortBy);
   const categoriesPromise = getCategoriesCached();
 
   return (
@@ -44,7 +54,13 @@ export default async function StudentCatalogPage({
         <StudentCatalogClient 
           booksPromise={booksPromise} 
           categoriesPromise={categoriesPromise}
-          initialQuery={q}
+          initialFilters={{
+            q,
+            categoryId,
+            availableOnly,
+            page,
+            sortBy
+          }}
         />
       </Suspense>
     </div>

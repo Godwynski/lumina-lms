@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import useSWR from 'swr';
-import { getBooks, softDeleteBook } from '@/lib/actions/catalog';
+import { useState, use } from 'react';
+import { useRouter } from 'next/navigation';
+import { softDeleteBook } from '@/lib/actions/catalog';
 import { AlertTriangle } from 'lucide-react';
 import { toast } from "sonner";
 import {
@@ -18,11 +18,12 @@ import { Book, Category } from '@/lib/types';
 import dynamic from 'next/dynamic';
 
 const ModernInventoryClient = dynamic(() => import('@/components/inventory/ModernInventoryClient').then(mod => mod.ModernInventoryClient), {
+  ssr: false,
   loading: () => <CatalogSkeleton />,
 });
 
 interface CatalogContentProps {
-  initialData: { data: Book[]; count: number };
+  dataPromise: Promise<{ data: Book[]; count: number }>;
   categories: Category[];
   page: number;
   q: string;
@@ -44,18 +45,16 @@ export function CatalogSkeleton() {
   );
 }
 
-export function CatalogContent({ initialData, categories, page, q, stock, categoryId }: CatalogContentProps) {
-  const { data, mutate, isLoading } = useSWR(
-    ['catalog', page, q, stock, categoryId],
-    () => getBooks(q, categoryId || undefined, page, 9),
-    { fallbackData: initialData, revalidateOnMount: true }
-  );
+export function CatalogContent({ dataPromise, categories, page: _page, q: _q, stock: _stock, categoryId: _categoryId }: CatalogContentProps) {
+  const router = useRouter();
+  const data = use(dataPromise);
 
   const books = data?.data || [];
   const totalCount = data?.count || 0;
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
   const handleDeleteClick = (book: Book) => {
@@ -66,19 +65,20 @@ export function CatalogContent({ initialData, categories, page, q, stock, catego
 
   const confirmDelete = async () => {
     if (!bookToDelete) return;
+    setIsDeleting(true);
     
     try {
       await softDeleteBook(bookToDelete.id);
       setDeleteModalOpen(false);
       toast.success(`Removed "${bookToDelete.title}" from inventory`);
-      mutate();
+      router.refresh();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to delete book';
       setDeleteError(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
-
-  if (isLoading && !data) return <CatalogSkeleton />;
 
   return (
     <div className="w-full">
@@ -109,8 +109,10 @@ export function CatalogContent({ initialData, categories, page, q, stock, catego
           )}
 
           <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-2">
-            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">Remove</Button>
+            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)} disabled={isDeleting} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">
+              {isDeleting ? 'Removing...' : 'Remove'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

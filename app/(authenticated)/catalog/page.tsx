@@ -14,15 +14,13 @@ async function CatalogDataWrapper({
 }: { 
   page: number; q: string; stock: string; categoryId: string 
 }) {
-  const [{ data, count }, categories] = await Promise.all([
-    getBooks(q, categoryId || undefined, page, 9),
-    getCategories()
-  ]);
+  const categoriesPromise = getCategories();
+  const dataPromise = getBooks(q, categoryId || undefined, page, 9);
 
   return (
     <CatalogContent 
-      initialData={{ data: data || [], count: count || 0 }} 
-      categories={categories}
+      dataPromise={dataPromise} 
+      categories={await categoriesPromise}
       page={page} 
       q={q} 
       stock={stock} 

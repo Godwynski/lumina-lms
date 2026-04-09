@@ -83,7 +83,7 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
     .range(from, to);
 
   if (error) throw new Error(error.message);
-  return { data, count };
+  return { data, count: count || 0 };
 }
 
 export const getBookById = unstable_cache(

@@ -16,25 +16,27 @@ async function ApprovalsDataWrapper() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data, error } = await supabase
-    .from("library_cards")
-    .select(`
-      *,
-      profiles:user_id (
-        full_name,
-        student_id,
-        department,
-        avatar_url,
-        email
-      )
-    `)
-    .eq("status", "pending");
+  const cardsPromise = Promise.resolve(
+    supabase
+      .from("library_cards")
+      .select(`
+        *,
+        profiles:user_id (
+          full_name,
+          student_id,
+          department,
+          avatar_url,
+          email
+        )
+      `)
+      .eq("status", "pending")
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return (data as unknown as PendingCard[]) || [];
+      })
+  );
 
-  if (error) {
-    return <div className="status-danger p-4 rounded-xl">Failed to load approvals.</div>;
-  }
-
-  return <ApprovalsContent initialCards={(data as unknown as PendingCard[]) || []} />;
+  return <ApprovalsContent cardsPromise={cardsPromise} />;
 }
 
 function ApprovalsSkeleton() {

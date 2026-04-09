@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useState, useTransition, use } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -54,16 +55,16 @@ const SEVERITY_OPTIONS = [
 ]
 
 type Props = {
-  initialViolations: ViolationWithProfile[]
-  initialStats: ViolationStats
-  role: string
+  dataPromise: Promise<{ violations: ViolationWithProfile[]; stats: ViolationStats; role: string }>
 }
 
-export default function ViolationsClient({ initialViolations, initialStats, role }: Props) {
+export default function ViolationsClient({ dataPromise }: Props) {
+  const { violations: initialViolations, stats: initialStats, role } = use(dataPromise)
+  const router = useRouter()
   const isStudent = role === 'student'
   const [isPending, startTransition] = useTransition()
-  const [violations, setViolations] = useState(initialViolations)
-  const [stats, setStats] = useState(initialStats)
+  const violations = initialViolations
+  const stats = initialStats
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
@@ -74,30 +75,10 @@ export default function ViolationsClient({ initialViolations, initialStats, role
   const [deleteConfirm, setDeleteConfirm] = useState<ViolationWithProfile | null>(null)
 
   const refreshViolations = useCallback(() => {
-    startTransition(async () => {
-      try {
-        const params = new URLSearchParams()
-        if (statusFilter !== 'all') params.set('status', statusFilter)
-        if (typeFilter !== 'all') params.set('violationType', typeFilter)
-        
-        const response = await fetch(`/api/violations?${params.toString()}`)
-        const data = await response.json()
-        if (data.ok) {
-          setViolations(data.violations || [])
-          const newStats: ViolationStats = { total: 0, active: 0, resolved: 0, totalPoints: 0 }
-          data.violations?.forEach((v: ViolationWithProfile) => {
-            newStats.total++
-            newStats.totalPoints += v.points
-            if (v.status === 'active') newStats.active++
-            else if (v.status === 'resolved') newStats.resolved++
-          })
-          setStats(newStats)
-        }
-      } catch {
-        setNotice({ type: 'error', message: 'Failed to refresh violations' })
-      }
+    startTransition(() => {
+      router.refresh()
     })
-  }, [statusFilter, typeFilter])
+  }, [router])
 
   const handleResolveViolation = () => {
     if (!resolveModalOpen) return

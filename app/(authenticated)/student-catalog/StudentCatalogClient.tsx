@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect, useTransition } from 'react';
 import Image from 'next/image';
 import {
   Search,
@@ -12,8 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import Link from 'next/link';
-import useSWR from 'swr';
-import { getPublicBooksCached } from '@/lib/actions/public-catalog';
+import { useRouter } from 'next/navigation';
 
 type CatalogCategory = {
   id: string;
@@ -37,24 +36,46 @@ interface Book {
 interface StudentCatalogClientProps {
   booksPromise: Promise<{ books: Book[]; total: number; hasMore: boolean }>;
   categoriesPromise: Promise<CatalogCategory[]>;
-  initialQuery?: string;
+  initialFilters: {
+    q: string;
+    categoryId: string;
+    availableOnly: boolean;
+    page: number;
+    sortBy: 'title' | 'author' | 'availability';
+  };
 }
 
 export function StudentCatalogClient({ 
   booksPromise, 
   categoriesPromise,
-  initialQuery = ''
+  initialFilters
 }: StudentCatalogClientProps) {
-  const initialBooksData = use(booksPromise);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const initialData = use(booksPromise);
   const categories = use(categoriesPromise);
   
-  const [query, setQuery] = useState(initialQuery);
-  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState(initialFilters.q);
+  const [page, setPage] = useState(initialFilters.page);
   const pageSize = 16;
   
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [availableOnly, setAvailableOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'title' | 'author' | 'availability'>('title');
+  const [selectedCategory, setSelectedCategory] = useState(initialFilters.categoryId);
+  const [availableOnly, setAvailableOnly] = useState(initialFilters.availableOnly);
+  const [sortBy, setSortBy] = useState(initialFilters.sortBy);
+
+  // Synchronize state with URL to enable prefetching
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (selectedCategory) params.set('category', selectedCategory);
+    if (availableOnly) params.set('available', 'true');
+    if (page > 1) params.set('page', page.toString());
+    if (sortBy !== 'title') params.set('sort', sortBy);
+
+    startTransition(() => {
+      router.replace(`?${params.toString()}`, { scroll: false });
+    });
+  }, [query, selectedCategory, availableOnly, page, sortBy, router]);
 
   const handleQueryChange = (val: string) => { setQuery(val); setPage(1); };
   const handleCatChange = (val: string) => { setSelectedCategory(val === 'all' ? '' : val); setPage(1); };
@@ -68,28 +89,13 @@ export function StudentCatalogClient({
     setPage(1);
   };
 
-  const swrKey = ['student-books', query, selectedCategory, availableOnly, page, pageSize, sortBy];
-  const { data: booksData, error, isLoading } = useSWR(
-    swrKey,
-    () => getPublicBooksCached(query, selectedCategory, '', availableOnly, page, pageSize, sortBy),
-    { 
-        fallbackData: query === initialQuery && page === 1 && selectedCategory === '' && !availableOnly && sortBy === 'title' 
-            ? initialBooksData 
-            : undefined,
-        keepPreviousData: true 
-    }
-  );
-
-  const books = booksData?.books || initialBooksData.books;
-  const totalBooks = booksData?.total || initialBooksData.total;
+  const books = initialData.books || [];
+  const totalBooks = initialData.total || 0;
 
   return (
     <AdminTableShell
       title="Book Catalog"
       description="Browse available books, sections, and current shelf availability."
-      feedback={
-        error ? <div className="status-danger rounded-lg px-3 py-2 text-sm">Unable to load catalog right now. Please try again.</div> : null
-      }
       controls={
         <>
           <div className="relative w-full sm:max-w-md">
@@ -164,7 +170,7 @@ export function StudentCatalogClient({
         ) : null
       }
     >
-      <div className={isLoading ? "opacity-50 transition-opacity" : "transition-opacity"}>
+      <div className={isPending ? "opacity-50 transition-opacity" : "transition-opacity"}>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/60">

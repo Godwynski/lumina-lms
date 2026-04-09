@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
   ChevronRight,
@@ -284,7 +284,7 @@ export function ProtectedNav({
   profile?: Profile | null;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+
   const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);

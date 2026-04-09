@@ -13,13 +13,11 @@ export const metadata = {
 // Enable PPR for this route
 
 async function ViolationsDataWrapper() {
-  const { violations, stats, role } = await getViolations()
+  const dataPromise = getViolations()
   
   return (
     <ViolationsClient 
-      initialViolations={violations || []} 
-      initialStats={stats} 
-      role={role}
+      dataPromise={dataPromise}
     />
   )
 }

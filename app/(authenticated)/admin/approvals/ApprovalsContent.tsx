@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, AlertCircle, Search, ShieldAlert } from "lucide-react";
 import Image from "next/image";
@@ -26,10 +27,12 @@ export interface PendingCard {
 }
 
 interface ApprovalsContentProps {
-  initialCards: PendingCard[];
+  cardsPromise: Promise<PendingCard[]>;
 }
 
-export function ApprovalsContent({ initialCards }: ApprovalsContentProps) {
+export function ApprovalsContent({ cardsPromise }: ApprovalsContentProps) {
+  const initialCards = use(cardsPromise);
+  const router = useRouter();
   const [cards, setCards] = useState<PendingCard[]>(initialCards);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,11 +51,12 @@ export function ApprovalsContent({ initialCards }: ApprovalsContentProps) {
   };
 
   const fetchCards = React.useCallback(async () => {
-    // Skip initial fetch if filter is pending and we have initialCards
+    // If we're on pending filter and have initial cards from the server, 
+    // and we haven't manually changed things yet, we can skip the first fetch.
     if (filter === "pending" && cards === initialCards) return;
 
     setLoading(true);
-    let query = supabase
+    const { data, error } = await supabase
       .from("library_cards")
       .select(`
         *,
@@ -63,15 +67,9 @@ export function ApprovalsContent({ initialCards }: ApprovalsContentProps) {
           avatar_url,
           email
         )
-      `);
-
-    if (filter !== "all") {
-      query = query.eq("status", filter);
-    } else {
-      query = query.order("issued_at", { ascending: false });
-    }
-
-    const { data, error } = await query;
+      `)
+      .eq(filter !== "all" ? "status" : "", filter !== "all" ? filter : "")
+      .order("issued_at", { ascending: false });
 
     if (error) {
       setNotification({ message: error.message || "Failed to load records.", type: "error" });
@@ -92,6 +90,7 @@ export function ApprovalsContent({ initialCards }: ApprovalsContentProps) {
       await approveLibraryCard(cardId, userId);
       setNotification({ message: "Card approved successfully.", type: "success" });
       setTimeout(() => setNotification(null), 5000);
+      router.refresh(); // Sync server state
       setCards(cards => cards.filter(c => c.id !== cardId));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
