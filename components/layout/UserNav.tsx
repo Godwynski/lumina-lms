@@ -98,9 +98,9 @@ export function UserNav({ user, profile, role }: UserNavProps) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href="/protected/settings" className="flex w-full cursor-pointer items-center">
+              <Link href="/profile" className="flex w-full cursor-pointer items-center">
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+                <span>Profile Settings</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>

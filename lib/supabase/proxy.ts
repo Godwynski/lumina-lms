@@ -63,16 +63,16 @@ export async function updateSession(request: NextRequest) {
     : "student";
 
   // 3. RBAC Route Guards — pure in-memory, <1ms
-  if ((path.startsWith("/admin") || path.startsWith("/protected/audit")) && userRole !== "admin") {
-    return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
+  if ((path.startsWith("/admin") || path.startsWith("/audit")) && userRole !== "admin") {
+    return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
   }
 
   if (path.startsWith("/librarian") && !["admin", "librarian"].includes(userRole)) {
-    return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
+    return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
   }
 
   if (path.startsWith("/staff") && !["admin", "librarian", "staff"].includes(userRole)) {
-    return NextResponse.redirect(new URL("/protected?error=unauthorized", request.url));
+    return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
   }
 
   return supabaseResponse;

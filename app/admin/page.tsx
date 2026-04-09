@@ -52,7 +52,7 @@ async function AdminContent() {
       </CardContent>
       <CardFooter>
         <Button asChild>
-          <Link href="/protected">Go to Main Dashboard</Link>
+          <Link href="/dashboard">Go to Main Dashboard</Link>
         </Button>
       </CardFooter>
     </Card>
@@ -72,3 +72,4 @@ export default function AdminTestPage() {
     </div>
   );
 }
+

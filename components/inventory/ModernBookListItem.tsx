@@ -87,7 +87,7 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
         >
           <Pencil size={18} />
         </Button>
-        <Link href={`/protected/catalog/${book.id}`}>
+        <Link href={`/catalog/${book.id}`}>
           <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-md bg-transparent text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground shadow-none" title="Open details" aria-label="Open book details">
             <ExternalLink size={18} />
           </Button>

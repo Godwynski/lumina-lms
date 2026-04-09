@@ -8,7 +8,7 @@ test.describe('Audit Trail', () => {
     // 1. Login as Admin
     await page.goto('/auth/login');
     await page.getByRole('button', { name: 'Admin Demo' }).click({ force: true });
-    await page.waitForURL('**/protected');
+    await page.waitForURL('**/dashboard');
 
     // 2. Navigate to Audit Logs via Sidebar
     // First expand the Platform group if needed
@@ -38,13 +38,13 @@ test.describe('Audit Trail', () => {
     // 2. Login as Student
     await page.goto('/auth/login');
     await page.getByRole('button', { name: 'Student Demo' }).click({ force: true });
-    await page.waitForURL('**/protected');
+    await page.waitForURL('**/dashboard');
 
-    // 3. Attempt direct access to /protected/audit
-    await page.goto('/protected/audit');
+    // 3. Attempt direct access to /audit
+    await page.goto('/audit');
 
     // 4. Should be redirected to dashboard with error
-    await expect(page).toHaveURL(/.*protected\?error=unauthorized/);
+    await expect(page).toHaveURL(/.*dashboard\?error=unauthorized/);
     
     await context.close();
   });
@@ -53,10 +53,10 @@ test.describe('Audit Trail', () => {
     // 1. Login as Admin
     await page.goto('/auth/login');
     await page.getByRole('button', { name: 'Admin Demo' }).click({ force: true });
-    await page.waitForURL('**/protected');
+    await page.waitForURL('**/dashboard');
 
     // 2. Navigate to Audit
-    await page.goto('/protected/audit');
+    await page.goto('/audit');
 
     // 3. Click Export and check for download start (we mock the window.open or just check button)
     const exportButton = page.getByRole('button', { name: 'Export CSV' });

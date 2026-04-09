@@ -25,7 +25,7 @@ export function UtilizationChart({ categories }: UtilizationChartProps) {
           transition={{ delay: idx * 0.1, duration: 0.5 }}
         >
           <Link
-            href="/protected/catalog"
+            href="/catalog"
             className="group flex flex-col gap-2 rounded-xl border border-border/40 bg-card p-3 transition-all hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"
           >
             <div className="flex items-center justify-between gap-4">

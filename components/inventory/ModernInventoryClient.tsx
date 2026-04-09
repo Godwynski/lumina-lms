@@ -113,7 +113,7 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
                 className="h-8 rounded-md pl-8 text-xs"
               />
             </div>
-            <Link href="/protected/catalog/add">
+            <Link href="/catalog/add">
               <Button className="h-8 rounded-md px-2.5 text-xs">
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 Add Book

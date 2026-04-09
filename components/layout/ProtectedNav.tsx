@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
   ChevronRight,
@@ -18,6 +18,9 @@ import {
   LogOut,
   Server,
   Loader2,
+  UserCheck,
+  SlidersHorizontal,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -109,7 +112,7 @@ type NavGroup = {
 };
 
 const DASHBOARD_LINK: NavItem = {
-  href: "/protected",
+  href: "/dashboard",
   label: "Dashboard",
   icon: LayoutDashboard,
   minRole: "student",
@@ -122,11 +125,11 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Library,
     minRole: "student",
     children: [
-      { href: "/protected/catalog", label: "Inventory", icon: Library, minRole: "staff" },
-      { href: "/protected/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
-      { href: "/protected/circulation", label: "Circulation", icon: History, minRole: "staff" },
-      { href: "/protected/history", label: "Borrow History", icon: History, minRole: "student" },
-      { href: "/protected/violations", label: "Violations", icon: AlertTriangle, minRole: "staff" },
+      { href: "/catalog", label: "Inventory", icon: Library, minRole: "staff" },
+      { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
+      { href: "/circulation", label: "Circulation", icon: History, minRole: "staff" },
+      { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
+      { href: "/violations", label: "Violations", icon: AlertTriangle, minRole: "staff" },
     ],
   },
   {
@@ -135,9 +138,9 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Users,
     minRole: "librarian",
     children: [
-      { href: "/protected/admin/approvals", label: "Card Approvals", icon: ShieldCheck, minRole: "librarian" },
-      { href: "/protected/users", label: "User Directory", icon: Users, minRole: "librarian" },
-      { href: "/protected/reports", label: "Analytics", icon: BarChart2, minRole: "staff" },
+      { href: "/admin/approvals", label: "Card Approvals", icon: ShieldCheck, minRole: "librarian" },
+      { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
+      { href: "/reports", label: "Analytics", icon: BarChart2, minRole: "staff" },
     ],
   },
   {
@@ -146,25 +149,24 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Server,
     minRole: "librarian",
     children: [
-      { href: "/protected/settings?tab=policies", label: "System Policies", icon: Settings, minRole: "librarian" },
-      { href: "/protected/audit", label: "Audit Logs", icon: History, minRole: "admin" },
-      { href: "/protected/settings?tab=operations", label: "Operations", icon: LayoutDashboard, minRole: "admin" },
-      { href: "/protected/settings?tab=gdpr", label: "Compliance", icon: AlertTriangle, minRole: "admin" },
+      { href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian" },
+      { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
+      { href: "/operations", label: "Operations", icon: LayoutDashboard, minRole: "admin" },
+      { href: "/gdpr", label: "Compliance", icon: AlertTriangle, minRole: "admin" },
+    ],
+  },
+  {
+    id: "account",
+    label: "Configuration",
+    icon: UserCheck,
+    minRole: "student",
+    children: [
+      { href: "/profile", label: "Profile", icon: Users },
+      { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
+      { href: "/security", label: "Security", icon: Lock },
     ],
   },
 ];
-
-const SETTINGS_GROUP: NavGroup = {
-  id: "settings",
-  label: "Settings",
-  icon: Settings,
-  minRole: "student",
-  children: [
-    { href: "/protected/settings?tab=profile", label: "Profile" },
-    { href: "/protected/settings?tab=preferences", label: "Preferences" },
-    { href: "/protected/settings?tab=security", label: "Security" },
-  ]
-};
 
 function LuminaLogo({ size = 20 }: { size?: number }) {
   return (
@@ -282,7 +284,7 @@ export function ProtectedNav({
   profile?: Profile | null;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+
   const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -302,7 +304,10 @@ export function ProtectedNav({
     .toUpperCase()
     .slice(0, 2);
 
-  const currentTab = searchParams.get("tab") || "profile";
+  const currentTab = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    return segments[segments.length - 1] || "profile";
+  }, [pathname]);
   const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
 
   // Cache user data derived from props
@@ -314,9 +319,15 @@ export function ProtectedNav({
   }), [name, email, avatarUrl, initials]);
 
   const isActive = useCallback((href: string) => {
-    if (href === "/protected") return pathname === href;
     const pathWithoutQuery = pathname.split("?")[0];
     const hrefBase = href.split("?")[0];
+
+    if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
+
+    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies", "/operations", "/gdpr", "/categories"];
+    if (SETTINGS_PATHS.includes(hrefBase)) {
+      return pathWithoutQuery === hrefBase;
+    }
 
     if (href.includes("?tab=")) {
       const hrefTab = href.split("?tab=")[1].split("&")[0];
@@ -337,13 +348,7 @@ export function ProtectedNav({
     });
   }, [normalizedRole]);
 
-  const allVisibleGroups = useMemo(() => {
-    const settingsGroupFiltered = {
-      ...SETTINGS_GROUP,
-      children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
-    };
-    return [settingsGroupFiltered, ...filteredGroups];
-  }, [filteredGroups, normalizedRole]);
+  const allVisibleGroups = filteredGroups;
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -377,10 +382,6 @@ export function ProtectedNav({
   }, []);
 
   const dashboardActive = isActive(DASHBOARD_LINK.href);
-  const settingsGroupProps = useMemo(() => ({
-    ...SETTINGS_GROUP,
-    children: SETTINGS_GROUP.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
-  }), [normalizedRole]);
 
   const handlePrefetch = useCallback((href: string) => {
     prefetch(router, href);
@@ -396,7 +397,7 @@ export function ProtectedNav({
     >
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="flex h-20 shrink-0 items-center px-4">
-        <Link href="/protected" className="flex items-center gap-3 group" aria-label="Lumina LMS Platform">
+        <Link href="/dashboard" className="flex items-center gap-3 group" aria-label="Lumina LMS Platform">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring" aria-hidden="true">
             <LuminaLogo size={20} />
           </div>
@@ -423,13 +424,6 @@ export function ProtectedNav({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <NavGroupItem 
-                group={settingsGroupProps}
-                isOpen={openGroups[settingsGroupProps.id] || false}
-                onToggle={toggleGroup}
-                isActive={isActive}
-                onMouseEnter={handlePrefetch}
-              />
 
               {filteredGroups.map(group => (
                 <NavGroupItem 
@@ -491,9 +485,9 @@ export function ProtectedNav({
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href="/protected/settings" className="flex w-full cursor-pointer items-center">
+                    <Link href="/profile" className="flex w-full cursor-pointer items-center">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
+                      <span>Profile Settings</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

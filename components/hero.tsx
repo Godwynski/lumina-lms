@@ -56,13 +56,13 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
         {user ? (
           <>
             <Button asChild size="lg" className="rounded-full font-semibold shadow-md px-8 h-12">
-              <Link href="/protected">
+              <Link href="/dashboard">
                 Go to Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-background/80 backdrop-blur-sm">
-              <Link href="/settings">
+              <Link href="/profile">
                 Account Settings
               </Link>
             </Button>

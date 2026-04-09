@@ -14,52 +14,99 @@ const MyCardContainer = dynamic(() => import('@/components/library/MyCardContain
   ssr: false,
   loading: () => <div className="h-[200px] w-full animate-pulse rounded-xl bg-muted" />
 });
-import { type ViolationWithProfile } from '@/lib/actions/violations';
-import { type BorrowingRecord } from '@/lib/actions/history';
+import { useMemo, useState, useEffect, use } from 'react';
+import { resolveStudentId, getDeterministicQrUrl } from "@/lib/library-card-assets";
+import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
+import type { ViolationWithProfile } from '@/lib/actions/violations';
+import type { BorrowingRecord } from '@/lib/actions/history';
 
-type RecentBook = {
-  id: string;
-  title: string;
-  author: string;
-  cover_url?: string | null;
-  created_at: string;
+type ProfileData = {
+  full_name: string | null;
+  student_id: string | null;
+  department: string | null;
+  avatar_url: string | null;
+  address: string | null;
+  phone: string | null;
+};
+
+type CardData = { card_number: string; status: string; expires_at: string } | null;
+
+type FaqRow = { key: string; value: string | null };
+
+type DashboardStats = {
+  activeLoans: number;
+  pendingApprovals: number;
+  myActiveLoans: number;
+  recentBooks: { id: string; title: string; author: string; cover_url?: string | null; created_at: string }[];
+  activeLoansList?: BorrowingRecord[];
+  violationsList?: ViolationWithProfile[];
+  totalPoints?: number;
 };
 
 interface DashboardProps {
   user: User;
   role: string | null;
-  stats: {
-    activeLoans: number;
-    pendingApprovals: number;
-    myActiveLoans: number;
-    recentBooks: RecentBook[];
-    totalPoints?: number;
-  };
-  studentCard?: {
-    fullName: string;
-    studentId: string;
-    cardNumber: string;
-    department: string;
-    status: "active" | "pending" | "suspended" | "expired";
-    expiryDate: string;
-    avatarUrl: string | null;
-    qrUrl: string | null;
-    address?: string;
-    phone?: string;
-  } | null;
-  studentFaqs?: {
-    question: string;
-    answer: string;
-  }[];
-  activeLoansList?: BorrowingRecord[];
-  violationsList?: ViolationWithProfile[];
+  statsPromise: Promise<DashboardStats>;
+  profilePromise: Promise<{ data: ProfileData | null }>;
+  cardPromise: Promise<{ data: CardData }>;
+  faqPromise: Promise<{ data: FaqRow[] | null }>;
 }
 
-import { useMemo, useState, useEffect } from 'react';
-
-export function DashboardClient({ role, stats, studentCard, studentFaqs = [], activeLoansList = [], violationsList = [] }: DashboardProps) {
+export function DashboardClient({ user, role, statsPromise, profilePromise, cardPromise, faqPromise }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
   
+  // Unwrap promises using the 'use' hook
+  const stats = use(statsPromise);
+  const profileResult = use(profilePromise);
+  const cardResult = use(cardPromise);
+  const faqResult = use(faqPromise);
+
+  const profileData = profileResult.data;
+  const activeLoansList = stats.activeLoansList || [];
+  const violationsList = stats.violationsList || [];
+
+  // Data resolution logic (moved from server to allow granular streaming if needed)
+  const { studentCard, studentFaqs } = useMemo(() => {
+    let card = null;
+    let faqs = [...DEFAULT_STUDENT_FAQS];
+
+    if (role === "student" && profileData) {
+      const studentCardData = cardResult.data;
+      const faqRows = faqResult.data;
+
+      const resolvedStudentId = resolveStudentId({
+        studentId: profileData.student_id,
+        fallbackEmail: user.email,
+        userId: user.id,
+      });
+
+      card = {
+        fullName: profileData.full_name || "Student",
+        studentId: resolvedStudentId || profileData.student_id || "N/A",
+        cardNumber: studentCardData?.card_number || "Pending assignment",
+        department: profileData.department || "General",
+        status: (studentCardData?.status as "active" | "pending" | "suspended" | "expired") || "pending",
+        expiryDate: studentCardData?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+        avatarUrl: profileData.avatar_url,
+        qrUrl: resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null,
+        address: profileData.address || undefined,
+        phone: profileData.phone || undefined,
+      };
+
+      if (faqRows && faqRows.length > 0) {
+        const byKey = new Map(faqRows.map((row: FaqRow) => [String(row.key), String(row.value ?? "")]));
+        const pairs = [];
+        for (let i = 1; i <= 4; i += 1) {
+          const question = byKey.get(`faq_student_q${i}`) || DEFAULT_STUDENT_FAQS[i - 1]?.question || "";
+          const answer = byKey.get(`faq_student_a${i}`) || DEFAULT_STUDENT_FAQS[i - 1]?.answer || "";
+          if (question.trim() && answer.trim()) pairs.push({ question, answer });
+        }
+        if (pairs.length > 0) faqs = pairs;
+      }
+    }
+    return { studentCard: card, studentFaqs: faqs };
+  }, [role, profileData, cardResult, faqResult, user]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -74,30 +121,30 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
     {
       title: 'Library Ops',
       items: [
-        { title: 'Book Catalog', href: '/protected/student-catalog', icon: Library },
-        { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
+        { title: 'Book Catalog', href: '/student-catalog', icon: Library },
+        { title: 'Digital Assets', href: '/resources', icon: BookOpen },
       ]
     },
     {
       title: 'Account',
       items: [
-        { title: 'Borrow History', href: '/protected/history', icon: History },
+        { title: 'Borrow History', href: '/history', icon: History },
       ]
     }
   ] : [
     {
       title: 'Library Ops',
       items: [
-        { title: 'Inventory', href: '/protected/catalog', icon: Library },
-        { title: 'Digital Assets', href: '/protected/resources', icon: BookOpen },
+        { title: 'Inventory', href: '/catalog', icon: Library },
+        { title: 'Digital Assets', href: '/resources', icon: BookOpen },
       ]
     },
     {
       title: 'Management',
       items: [
-        { title: 'Users & Roles', href: '/protected/users', icon: Users },
-        ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/protected/admin/approvals', icon: ShieldCheck }] : []),
-        { title: 'Analytics', href: '/protected/reports', icon: BarChart2 },
+        { title: 'Users & Roles', href: '/users', icon: Users },
+        ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/admin/approvals', icon: ShieldCheck }] : []),
+        { title: 'Analytics', href: '/reports', icon: BarChart2 },
       ]
     }
   ], [isStudent, canReviewApprovals]);
@@ -106,12 +153,12 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
     {
       label: isStudent ? 'Borrowed Books' : 'Active Borrows Now',
       value: isStudent ? stats.myActiveLoans : stats.activeLoans,
-      href: '/protected/history',
+      href: '/history',
     },
     {
       label: 'Pending Card Approvals',
       value: stats.pendingApprovals,
-      href: '/protected/admin/approvals',
+      href: '/admin/approvals',
       show: canReviewApprovals,
     },
   ].filter((item) => item.show !== false), [isStudent, stats.myActiveLoans, stats.activeLoans, stats.pendingApprovals, canReviewApprovals]);
@@ -240,11 +287,11 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
               <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
               Latest In Library
             </h2>
-            <Link href="/protected/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
+            <Link href="/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x px-0.5">
             {stats.recentBooks.map((book) => (
-              <Link key={book.id} href={`/protected/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
+              <Link key={book.id} href={`/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
                 <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
                   {book.cover_url ? (
                     <Image 
@@ -350,13 +397,13 @@ export function DashboardClient({ role, stats, studentCard, studentFaqs = [], ac
                 <History className="h-3 w-3 text-primary" />
                 Latest In Catalog
               </h2>
-              <Link href="/protected/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
+              <Link href="/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
             </div>
 
             <div className="grid gap-2">
               {stats.recentBooks.length > 0 ? (
                 stats.recentBooks.slice(0, 4).map((book) => (
-                  <Link key={book.id} href={`/protected/catalog/${book.id}`}>
+                  <Link key={book.id} href={`/catalog/${book.id}`}>
                     <Card className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
                       <CardContent className="flex items-center justify-between gap-4 p-3">
                         <div className="flex min-w-0 items-center gap-3.5">

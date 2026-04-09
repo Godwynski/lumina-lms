@@ -4,7 +4,7 @@ test.describe('Admin Critical Paths', () => {
   
   test('should load the Intelligence Dashboard', async ({ page }) => {
     // Navigate to reports directly using shared auth state
-    await page.goto('/protected/reports');
+    await page.goto('/reports');
     
     // Verify the dashboard title exists
     await expect(page.getByRole('heading', { name: 'Intelligence Dashboard' })).toBeVisible();
@@ -18,7 +18,7 @@ test.describe('Admin Critical Paths', () => {
 
   test('should search and filter books in inventory', async ({ page }) => {
     // Navigate to inventory
-    await page.goto('/protected/catalog');
+    await page.goto('/catalog');
     
     // Verify search input is accessible
     const searchInput = page.getByLabel('Search the catalog');
@@ -34,7 +34,7 @@ test.describe('Admin Critical Paths', () => {
   });
 
   test('should navigate between sections via sidebar', async ({ page }) => {
-    await page.goto('/protected');
+    await page.goto('/dashboard');
     
     // Click on 'Inventory' in the sidebar/layout (using Role for better specificity)
     await page.getByRole('link', { name: /Inventory/i, exact: false }).first().click({ force: true });
@@ -44,7 +44,7 @@ test.describe('Admin Critical Paths', () => {
     
     // Go back to dashboard via logo/brand
     await page.getByRole('link', { name: 'Lumina LMS', exact: false }).first().click();
-    await expect(page).toHaveURL(/.*protected/);
+    await expect(page).toHaveURL(/.*dashboard/);
   });
 
 });
@@ -56,7 +56,7 @@ test.describe('Security & RBAC', () => {
     const guestContext = await browser.newContext({ storageState: undefined });
     const guestPage = await guestContext.newPage();
     
-    await guestPage.goto('/protected');
+    await guestPage.goto('/dashboard');
     
     // Should be redirected to login
     await expect(guestPage).toHaveURL(/.*login/);

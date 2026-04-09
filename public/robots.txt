@@ -3,7 +3,19 @@ User-agent: *
 Allow: /
 
 # Disallow authenticated and API routes
-Disallow: /protected/
+Disallow: /dashboard/
+Disallow: /profile/
+Disallow: /preferences/
+Disallow: /security/
+Disallow: /policies/
+Disallow: /categories/
+Disallow: /operations/
+Disallow: /gdpr/
+Disallow: /catalog/
+Disallow: /student-catalog/
+Disallow: /reports/
+Disallow: /audit/
+Disallow: /circulation/
 Disallow: /api/
 
 # Host

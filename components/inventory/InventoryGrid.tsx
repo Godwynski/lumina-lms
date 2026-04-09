@@ -31,7 +31,7 @@ export function InventoryGrid({ books, onDelete, onEdit }: InventoryGridProps) {
           title="Vault is Empty"
           description="No physical assets were found matching your criteria. Start by populating your catalog."
           action={{
-            href: "/protected/catalog/add",
+            href: "/catalog/add",
             label: "Initialize First Entry",
             icon: Plus,
           }}
