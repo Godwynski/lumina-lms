@@ -237,20 +237,16 @@ const NavGroupItem = memo(({
   const isGroupActive = group.children.some(child => isActive(child.href));
 
   return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={() => onToggle(group.id)}
-      className="group/collapsible"
-    >
-      <SidebarMenuItem>
+    <SidebarMenuItem>
+      <Collapsible
+        open={isOpen}
+        onOpenChange={() => onToggle(group.id)}
+        className="group/collapsible"
+      >
         <CollapsibleTrigger asChild>
           <SidebarMenuButton
             tooltip={group.label}
             isActive={isGroupActive}
-            onClick={(e) => {
-              e.preventDefault();
-              onToggle(group.id);
-            }}
           >
             <group.icon />
             <span>{group.label}</span>
@@ -269,8 +265,8 @@ const NavGroupItem = memo(({
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+      </Collapsible>
+    </SidebarMenuItem>
   );
 });
 
@@ -400,7 +396,7 @@ export function ProtectedNav({
     >
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="flex h-20 shrink-0 items-center px-4">
-        <Link href="/protected" className="flex items-center gap-3 group" aria-label="Lumina LMS Dashboard">
+        <Link href="/protected" className="flex items-center gap-3 group" aria-label="Lumina LMS Platform">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring" aria-hidden="true">
             <LuminaLogo size={20} />
           </div>
@@ -421,9 +417,9 @@ export function ProtectedNav({
                   isActive={dashboardActive}
                   tooltip={DASHBOARD_LINK.label}
                 >
-                  <Link href={DASHBOARD_LINK.href}>
-                    {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon />}
-                    <span>{DASHBOARD_LINK.label}</span>
+                  <Link href={DASHBOARD_LINK.href} className="flex items-center w-full">
+                    {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon className="shrink-0" />}
+                    <span className="truncate">{DASHBOARD_LINK.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -434,11 +430,7 @@ export function ProtectedNav({
                 isActive={isActive}
                 onMouseEnter={handlePrefetch}
               />
-            </SidebarMenu>
-          </SidebarGroup>
 
-          <SidebarGroup>
-            <SidebarMenu>
               {filteredGroups.map(group => (
                 <NavGroupItem 
                   key={group.id}
