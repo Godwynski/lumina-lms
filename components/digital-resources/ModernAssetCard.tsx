@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { 
   FileText, 
   BookText,
@@ -49,7 +49,7 @@ export function ModernAssetCard({ resource }: AssetCardProps) {
   const TypeIcon = getTypeIcon(resource.type);
 
   return (
-    <motion.div
+    <m.div
       layout
       whileHover={{ y: -4 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
@@ -125,6 +125,6 @@ export function ModernAssetCard({ resource }: AssetCardProps) {
 
         </CardContent>
       </Card>
-    </motion.div>
+    </m.div>
   );
 }

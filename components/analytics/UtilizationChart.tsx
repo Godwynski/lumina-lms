@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Link from "next/link";
 
 interface CategoryUtilization {
@@ -18,7 +18,7 @@ export function UtilizationChart({ categories }: UtilizationChartProps) {
   return (
     <div className="space-y-3">
       {categories.map((c, idx) => (
-        <motion.div
+        <m.div
           key={c.name}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -38,7 +38,7 @@ export function UtilizationChart({ categories }: UtilizationChartProps) {
             </div>
 
             <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted/60 ring-1 ring-inset ring-black/5">
-              <motion.div
+              <m.div
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.max(0, c.utilization)}%` }}
                 transition={{ delay: (idx * 0.1) + 0.5, duration: 1.2, ease: "easeOut" }}
@@ -59,7 +59,7 @@ export function UtilizationChart({ categories }: UtilizationChartProps) {
               </span>
             </div>
           </Link>
-        </motion.div>
+        </m.div>
       ))}
 
       {categories.length === 0 && (

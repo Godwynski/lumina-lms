@@ -1,51 +1,19 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { getPublicBookById, reportMissingBook } from '@/lib/actions/public-catalog';
-import { ChevronLeft, MapPin, AlertCircle, BookOpen, Hash, Tag } from 'lucide-react';
-import { Book } from '@/lib/types';
+import Link from 'next/link';
+import { getPublicBookById } from '@/lib/actions/public-catalog';
+import { ChevronLeft, MapPin, BookOpen, Hash, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ReportMissingButton } from '@/components/common/ReportMissingButton';
 
-export default function PublicBookDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+export default async function PublicBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
   
-  const [book, setBook] = useState<Book | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [reported, setReported] = useState(false);
-
-  useEffect(() => {
-    async function loadBook() {
-      try {
-        const data = await getPublicBookById(id);
-        setBook(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (id) loadBook();
-  }, [id]);
-
-  const handleReportMissing = async () => {
-    setReportSubmitting(true);
-    try {
-      await reportMissingBook(id, 'User reported book missing from shelf.');
-      setReported(true);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setReportSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading book details...</div>;
+  let book = null;
+  try {
+    book = await getPublicBookById(id);
+  } catch (err) {
+    console.error(err);
   }
 
   if (!book) {
@@ -55,12 +23,14 @@ export default function PublicBookDetailPage() {
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8">
       <Button
-        onClick={() => router.push('/')}
+        asChild
         variant="ghost"
         className="flex items-center text-muted-foreground hover:text-foreground mb-6 px-0"
       >
-        <ChevronLeft className="w-5 h-5 mr-1" />
-        Back to Search
+        <Link href="/">
+          <ChevronLeft className="w-5 h-5 mr-1" />
+          Back to Search
+        </Link>
       </Button>
 
       <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8 flex flex-col md:flex-row gap-8">
@@ -116,7 +86,7 @@ export default function PublicBookDetailPage() {
               <span className="font-medium mr-2">Category:</span>
               {Array.isArray(book.categories) 
                 ? book.categories[0]?.name 
-                : book.categories?.name || 'Uncategorized'}
+                : (book.categories as { name?: string })?.name || 'Uncategorized'}
             </div>
           </div>
 
@@ -134,26 +104,11 @@ export default function PublicBookDetailPage() {
           )}
 
           <div className="pt-6">
-            {!reported ? (
-              <Button
-                onClick={handleReportMissing}
-                disabled={reportSubmitting || book.available_copies === 0}
-                variant="outline"
-                className="flex items-center justify-center w-full py-3 px-4 border-destructive/30 text-destructive bg-destructive/5 rounded-lg hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <AlertCircle className="w-5 h-5 mr-2" />
-                {reportSubmitting ? 'Submitting...' : "I can't find this book on the shelf"}
-              </Button>
-            ) : (
-              <div className="status-success border p-4 rounded-lg flex items-center justify-center">
-                <p className="text-sm font-medium">Thank you! A librarian has been notified to check the shelf.</p>
-              </div>
-            )}
-            {book.available_copies === 0 && !reported && (
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                This book is currently checked out, so it will not be on the shelf.
-              </p>
-            )}
+            <ReportMissingButton
+              bookId={id}
+              disabled={book.available_copies === 0}
+              userType="public"
+            />
           </div>
         </div>
       </div>

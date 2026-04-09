@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeFilterInput } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { format } from "date-fns";
 
@@ -36,7 +37,8 @@ export async function GET(request: NextRequest) {
     }
     
     if (queryParam) {
-      query = query.or(`entity_type.ilike.%${queryParam}%,action.ilike.%${queryParam}%`);
+      const safe = sanitizeFilterInput(queryParam);
+      query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%`);
     }
 
     const { data: logs, error } = await query;

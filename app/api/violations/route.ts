@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeFilterInput } from '@/lib/utils'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, student_id, role')
-      .or(`full_name.ilike.%${search}%,student_id.ilike.%${search}%`)
+      .or(`full_name.ilike.%${sanitizeFilterInput(search)}%,student_id.ilike.%${sanitizeFilterInput(search)}%`)
       .eq('role', 'student')
       .limit(20)
 

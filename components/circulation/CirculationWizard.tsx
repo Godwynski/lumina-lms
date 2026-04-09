@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from "framer-motion";
 import { RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CirculationStepper } from './CirculationStepper';
@@ -271,7 +271,7 @@ export function CirculationWizard() {
         <main className="lg:col-span-9 bg-card border border-border rounded-3xl p-8 shadow-sm relative overflow-hidden">
            <AnimatePresence mode="wait">
              {isConfirmed ? (
-                <motion.div
+                <m.div
                   key="success"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -285,9 +285,9 @@ export function CirculationWizard() {
                       : `The resource has been successfully returned and inventory record updated.`}
                     onReset={handleReset}
                   />
-                </motion.div>
+                </m.div>
              ) : currentStep === 1 ? (
-                <motion.div
+                <m.div
                   key="step1"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -303,9 +303,9 @@ export function CirculationWizard() {
                     isProcessing={isProcessing}
                     actionLabel="Process"
                   />
-                </motion.div>
+                </m.div>
              ) : currentStep === 2 && mode === 'checkout' ? (
-                <motion.div
+                <m.div
                   key="step2-checkout"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -319,9 +319,9 @@ export function CirculationWizard() {
                     isProcessing={isProcessing}
                     actionLabel="Verify"
                   />
-                </motion.div>
+                </m.div>
              ) : (
-                <motion.div
+                <m.div
                   key="review"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -354,7 +354,7 @@ export function CirculationWizard() {
                         {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
                      </Button>
                   </div>
-                </motion.div>
+                </m.div>
              )}
            </AnimatePresence>
 

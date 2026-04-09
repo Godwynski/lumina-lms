@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useState } from "react";
 
 interface Bucket {
@@ -34,13 +34,13 @@ export function InteractivePulseChart({ buckets, peakValue }: InteractivePulseCh
           Circulation Velocity
         </h3>
         {hoveredIndex !== null && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             className="text-[11px] font-bold text-primary"
           >
             {buckets[hoveredIndex].value} loans in {buckets[hoveredIndex].label}
-          </motion.div>
+          </m.div>
         )}
       </div>
 
@@ -61,7 +61,7 @@ export function InteractivePulseChart({ buckets, peakValue }: InteractivePulseCh
           ))}
 
           {/* Trend Line */}
-          <motion.polyline
+          <m.polyline
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 1 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
@@ -84,7 +84,7 @@ export function InteractivePulseChart({ buckets, peakValue }: InteractivePulseCh
                 onMouseLeave={() => setHoveredIndex(null)}
                 className="cursor-pointer"
               >
-                <motion.circle
+                <m.circle
                   initial={{ scale: 0 }}
                   animate={{ scale: hoveredIndex === idx ? 2 : 1 }}
                   cx={x}

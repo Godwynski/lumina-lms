@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeFilterInput } from '@/lib/utils'
 import { revalidatePath } from 'next/cache'
 import { ViolationSchema, ResolutionSchema } from '../validations/violations'
 
@@ -95,7 +96,7 @@ export async function searchStudents(query: string) {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, student_id, role')
-    .or(`full_name.ilike.%${query}%,student_id.ilike.%${query}%`)
+    .or(`full_name.ilike.%${sanitizeFilterInput(query)}%,student_id.ilike.%${sanitizeFilterInput(query)}%`)
     .eq('role', 'student')
     .limit(20)
 

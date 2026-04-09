@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { ModernAssetCard } from "./ModernAssetCard";
 import { LibraryBig } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -71,7 +71,7 @@ export function AssetGrid({ resources }: AssetGridProps) {
 
   return (
     <div className="space-y-6">
-      <motion.div 
+      <m.div 
         variants={container}
         initial="hidden"
         animate="show"
@@ -79,12 +79,12 @@ export function AssetGrid({ resources }: AssetGridProps) {
       >
         <AnimatePresence mode="popLayout">
           {pageItems.map((resource) => (
-            <motion.div key={resource.id} variants={item} layout>
+            <m.div key={resource.id} variants={item} layout>
               <ModernAssetCard resource={resource} />
-            </motion.div>
+            </m.div>
           ))}
         </AnimatePresence>
-      </motion.div>
+      </m.div>
 
       <div className="flex justify-center border-t border-border/40 pt-10">
         <CompactPagination

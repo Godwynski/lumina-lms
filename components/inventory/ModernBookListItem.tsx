@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { Book as BookIcon, MapPin, Trash2, Package, CircleOff, AlertTriangle, CheckCircle2, Pencil, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -17,7 +17,7 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
   const isLowStock = !isOutOfStock && book.available_copies <= 2;
   
   return (
-    <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="group relative flex min-w-[700px] flex-row items-center gap-4 rounded-lg border border-border bg-card pr-3 transition-all hover:bg-muted">
+    <m.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="group relative flex min-w-[700px] flex-row items-center gap-4 rounded-lg border border-border bg-card pr-3 transition-all hover:bg-muted">
       
       {/* Pinned Title & Context Column */}
       <div className="sticky left-0 z-10 flex min-w-[280px] flex-1 shrink-0 items-center justify-start gap-4 bg-card py-2.5 pl-3 pr-4 shadow-[12px_0_15px_-10px_rgba(0,0,0,0.06)] transition-colors group-hover:bg-muted">
@@ -105,6 +105,6 @@ export function ModernBookListItem({ book, onDelete, onEdit }: ModernBookListIte
       </div>
 
       <div className="pointer-events-none absolute left-0 top-0 h-full w-1 bg-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-    </motion.div>
+    </m.div>
   );
 }

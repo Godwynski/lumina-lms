@@ -14,7 +14,8 @@ import {
   PulseFeedSkeleton 
 } from "@/components/analytics/AnalyticsSkeletons";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, BookCheck, ClipboardList, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { QuickStats, QuickStatsSkeleton } from "./QuickStats";
 
 export const metadata = {
   title: "Analytics | Lumina LMS",
@@ -49,14 +50,6 @@ export default async function ReportsPage({
   const rangeStartDate = new Date(now);
   rangeStartDate.setDate(rangeStartDate.getDate() - rangeDays + 1);
 
-  // Quick stats can stay on server for instant view
-  const [activeLoans, overdueLoans, pendingCards, suspendedCards] = await Promise.all([
-    supabase.from("borrowing_records").select("id", { count: "exact", head: true }).in("status", ["active", "ACTIVE"]),
-    supabase.from("borrowing_records").select("id", { count: "exact", head: true }).in("status", ["active", "ACTIVE"]).lt("due_date", now.toISOString()),
-    supabase.from("library_cards").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("library_cards").select("id", { count: "exact", head: true }).eq("status", "suspended"),
-  ]);
-
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 animate-in fade-in duration-700">
       <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b pb-6">
@@ -73,21 +66,9 @@ export default async function ReportsPage({
         </div>
       </section>
 
-      <section className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
-        {[
-          { label: "Active Loans", value: activeLoans.count ?? 0, icon: ClipboardList, color: "bg-indigo-500/10 text-indigo-500", href: "/protected/history" },
-          { label: "Overdue", value: overdueLoans.count ?? 0, icon: Activity, color: "bg-rose-500/10 text-rose-500", href: "/protected/history" },
-          { label: "Circulation", value: "Live", icon: TrendingUp, color: "bg-emerald-500/10 text-emerald-500", href: "/protected/history" },
-          { label: "Pending", value: pendingCards.count ?? 0, icon: BookCheck, color: "bg-amber-500/10 text-amber-500", href: "/protected/admin/approvals" },
-          { label: "Suspended", value: suspendedCards.count ?? 0, icon: Activity, color: "bg-muted text-muted-foreground", href: "/protected/admin/approvals" },
-        ].map((stat, idx) => (
-          <Link key={idx} href={stat.href} className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 transition-all hover:border-border hover:shadow-md active:scale-95">
-            <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${stat.color} transition-transform group-hover:scale-110`}><stat.icon className="h-5 w-5" /></div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-            <p className="mt-1 text-2xl font-black text-foreground">{stat.value}</p>
-          </Link>
-        ))}
-      </section>
+      <Suspense fallback={<QuickStatsSkeleton />}>
+        <QuickStats />
+      </Suspense>
 
       <div className="grid gap-6 lg:grid-cols-12 items-start">
         <div className="lg:col-span-8 flex flex-col gap-6">
@@ -123,4 +104,3 @@ export default async function ReportsPage({
     </div>
   );
 }
-

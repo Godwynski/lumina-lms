@@ -62,3 +62,17 @@ export const getURL = () => {
   url = url.charAt(url.length - 1) === "/" ? url : `${url}/`;
   return url;
 };
+
+/**
+ * Sanitize user input before interpolating into PostgREST filter strings
+ * (`.or()`, `.ilike()`, etc.). Strips characters that could break out of the
+ * value position and inject additional filter operators.
+ *
+ * Characters removed: ( ) , . : \ * "
+ *
+ * @example
+ *   query.or(`name.ilike.%${sanitizeFilterInput(raw)}%`)
+ */
+export function sanitizeFilterInput(input: string): string {
+  return input.replace(/[(),.:*\\"]/g, '').trim();
+}

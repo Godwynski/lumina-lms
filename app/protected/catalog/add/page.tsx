@@ -356,11 +356,11 @@ export default function AddBookPage() {
   return (
     <div className="w-full space-y-4 pb-4 sm:pb-6 md:pb-8">
       <div className="flex items-center gap-4">
-        <Link href="/protected/catalog">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-muted">
+        <Button asChild variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-muted">
+          <Link href="/protected/catalog">
             <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <div>
           <h1 className="text-lg font-semibold leading-tight text-foreground">Add Book</h1>
           <p className="text-xs text-muted-foreground">Enter details or scan ISBN.</p>
@@ -552,10 +552,10 @@ export default function AddBookPage() {
               <Button 
                 type="button" 
                 variant="outline"
-                onClick={() => router.push('/protected/catalog')}
+                asChild
                 className="h-9 rounded-md px-4 text-xs font-semibold"
               >
-                Cancel
+                <Link href="/protected/catalog">Cancel</Link>
               </Button>
             </div>
           </form>

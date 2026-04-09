@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef, memo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
 import { CategoryManagement } from "@/components/admin/CategoryManagement";
@@ -352,7 +352,7 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
   return (
     <div className="w-full pb-20 md:pb-8">
       <NavigationGuard isDirty={isDirty} />
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-4 border-b border-border pb-4"
@@ -373,7 +373,7 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
             <p className="text-sm text-muted-foreground">Manage profile, preferences, security, and system configuration.</p>
           </div>
         </div>
-      </motion.div>
+      </m.div>
 
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetContent side="left" className="w-[86%] max-w-xs border-r border-border bg-card p-0">
@@ -403,7 +403,7 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
       <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-4 lg:gap-6">
         <main className="min-w-0">
           <AnimatePresence mode="wait">
-            <motion.div
+            <m.div
               key={activeTab}
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -647,14 +647,14 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
                   <GDPRHardDeleteDialog />
                 </Section>
               )}
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </main>
       </div>
 
       <AnimatePresence>
         {activeTab === "profile" && isProfileDirty && (
-          <motion.div 
+          <m.div 
             initial={{ y: 100 }}
             animate={{ y: 0 }}
             exit={{ y: 100 }}
@@ -676,7 +676,7 @@ const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAler
                 Discard
               </Button>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -720,7 +720,7 @@ const SectionNav = memo(({
           >
             <Icon size={16} className="mr-3" />
             <span>{label}</span>
-            {activeId === id && <motion.div layoutId="nav-indicator" className="absolute left-0 w-1 h-5 bg-primary rounded-r-full" />}
+            {activeId === id && <m.div layoutId="nav-indicator" className="absolute left-0 w-1 h-5 bg-primary rounded-r-full" />}
           </Button>
         ))}
       </div>

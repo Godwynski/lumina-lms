@@ -51,7 +51,7 @@ export async function getDashboardStats({
     supabase
       .from('borrowing_records')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'ACTIVE'), // Fixed: was ['active', 'ACTIVE']; enum migration is applied
+      .eq('status', 'active'), // Match schema lowercase enum 
     getCachedRecentBooks(),
     canReviewApprovals
       ? supabase
@@ -64,7 +64,7 @@ export async function getDashboardStats({
           .from('borrowing_records')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'ACTIVE') // Fixed: canonical enum value
+          .eq('status', 'active') // Match schema lowercase enum 
       : Promise.resolve({ count: 0 }),
   ]);
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DigitalCard from "./DigitalCard";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { toPng } from "html-to-image";
 import { Download, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -332,7 +332,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
           </div>
         </div>
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
@@ -408,7 +408,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               />
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     );
   }
@@ -478,7 +478,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         </div>
       </div>
 
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
@@ -560,7 +560,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             />
           </div>
         </div>
-      </motion.div>
+      </m.div>
 
       <p className="mt-2 text-[11px] text-muted-foreground sm:hidden">
         Tip: Rotate your phone to landscape for the best card preview.

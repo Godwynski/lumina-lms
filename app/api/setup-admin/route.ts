@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { safeCompare } from '@/lib/server-utils';
 
 export async function POST(request: Request) {
   try {
     const { email, password, secret } = await request.json();
 
     // Check against a secret configured in environment variables to prevent abuse
-    if (secret !== process.env.ADMIN_SETUP_SECRET) {
+    // Use constant-time comparison to prevent timing attacks
+    if (!process.env.ADMIN_SETUP_SECRET || !safeCompare(secret, process.env.ADMIN_SETUP_SECRET)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -20,6 +22,16 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    // 0. Prevent re-running if an admin already exists
+    const { count: adminCount } = await supabaseAdmin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'admin');
+
+    if (adminCount && adminCount > 0) {
+      return NextResponse.json({ error: 'Admin already initialized' }, { status: 403 });
+    }
 
     // 1. Create the user in auth.users
     const { data: userAuthData, error: userAuthError } = await supabaseAdmin.auth.admin.createUser({

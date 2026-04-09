@@ -1,13 +1,9 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { getPublicBookById, reportMissingBook } from '@/lib/actions/public-catalog';
+import Link from 'next/link';
+import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { 
   ChevronLeft, 
   MapPin, 
-  AlertCircle, 
   BookOpen, 
   CheckCircle2,
   Clock,
@@ -16,56 +12,17 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
-import type { Book } from '@/lib/types';
+import { ReportMissingButton } from '@/components/common/ReportMissingButton';
 
-type StudentBook = Book & {
-  section?: string | null;
-  tags?: string[];
-};
-
-export default function StudentBookDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+export default async function StudentBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
   
-  const [book, setBook] = useState<StudentBook | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [reported, setReported] = useState(false);
-
-  useEffect(() => {
-    async function loadBook() {
-      try {
-        const data = await getPublicBookById(id);
-        setBook(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (id) loadBook();
-  }, [id]);
-
-  const handleReportMissing = async () => {
-    setReportSubmitting(true);
-    try {
-      await reportMissingBook(id, 'Student reported book missing from shelf.');
-      setReported(true);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setReportSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 p-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-sm font-medium text-muted-foreground">Loading book details...</p>
-      </div>
-    );
+  let book = null;
+  try {
+    book = await getPublicBookById(id);
+  } catch (err) {
+    console.error(err);
   }
 
   if (!book) {
@@ -74,8 +31,8 @@ export default function StudentBookDetailPage() {
         title="Book Catalog"
         description="Browse available books, sections, and current shelf availability."
         headerActions={
-          <Button onClick={() => router.push('/protected/student-catalog')} variant="outline" className="h-8 px-3 text-xs">
-            Back
+          <Button asChild variant="outline" className="h-8 px-3 text-xs">
+            <Link href="/protected/student-catalog">Back</Link>
           </Button>
         }
       >
@@ -89,17 +46,12 @@ export default function StudentBookDetailPage() {
       title="Book Details"
       description="View metadata and shelf availability for this catalog entry."
       headerActions={
-        <Button onClick={() => router.push('/protected/student-catalog')} variant="outline" className="h-8 px-3 text-xs">
-          <ChevronLeft className="mr-1 h-3.5 w-3.5" />
-          Back
+        <Button asChild variant="outline" className="h-8 px-3 text-xs">
+          <Link href="/protected/catalog">
+            <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+            Back
+          </Link>
         </Button>
-      }
-      feedback={
-        reported ? (
-          <div className="status-success rounded-md px-3 py-2 text-sm">
-            Librarian notified. Thank you for reporting this shelf issue.
-          </div>
-        ) : null
       }
     >
       <div className="grid gap-4 p-4 md:grid-cols-[200px_1fr] md:p-6">
@@ -155,7 +107,7 @@ export default function StudentBookDetailPage() {
               <p className="mt-1 text-sm text-foreground">
                 {Array.isArray(book.categories)
                   ? book.categories[0]?.name || 'Uncategorized'
-                  : book.categories?.name || 'Uncategorized'}
+                  : (book.categories as { name?: string })?.name || 'Uncategorized'}
               </p>
             </div>
             <div className="rounded-md border border-border p-3">
@@ -203,22 +155,11 @@ export default function StudentBookDetailPage() {
             </div>
           </div>
 
-          {!reported && (
-            <div className="pt-1">
-              <Button
-                onClick={handleReportMissing}
-                disabled={reportSubmitting || book.available_copies === 0}
-                variant="outline"
-                className="h-9 w-full justify-center gap-2 text-xs"
-              >
-                <AlertCircle className="h-3.5 w-3.5" />
-                {reportSubmitting ? 'Sending alert...' : "I can't find this book"}
-              </Button>
-              {book.available_copies === 0 && (
-                <p className="mt-2 text-xs text-muted-foreground">This book is currently checked out. Reporting is disabled for now.</p>
-              )}
-            </div>
-          )}
+          <ReportMissingButton 
+            bookId={id} 
+            disabled={book.available_copies === 0} 
+            userType="student" 
+          />
         </div>
       </div>
     </AdminTableShell>

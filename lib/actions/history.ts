@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeFilterInput } from "@/lib/utils";
 import { unstable_cache } from "next/cache";
 
 export type BookInfo = {
@@ -13,7 +14,7 @@ export type BorrowingRecord = {
   id: string;
   book_copy_id: string;
   user_id: string;
-  status: "ACTIVE" | "RETURNED" | "OVERDUE" | "LOST";
+  status: "active" | "returned" | "overdue" | "lost";
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;
@@ -49,7 +50,7 @@ export async function getBorrowingHistory(
   }
 
   if (searchQuery) {
-    query = query.or(`title.ilike.%${searchQuery}%,author.ilike.%${searchQuery}%`, { referencedTable: 'book_copies.books' });
+    query = query.or(`title.ilike.%${sanitizeFilterInput(searchQuery)}%,author.ilike.%${sanitizeFilterInput(searchQuery)}%`, { referencedTable: 'book_copies.books' });
   }
 
   const { data, error, count } = await query

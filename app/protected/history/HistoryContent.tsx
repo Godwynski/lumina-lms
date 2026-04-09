@@ -56,13 +56,13 @@ export default function HistoryContent({
 
   const getStatusBadge = (status: BorrowingRecord["status"]) => {
     switch (status) {
-      case "ACTIVE":
+      case "active":
         return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Active</Badge>;
-      case "RETURNED":
+      case "returned":
         return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Returned</Badge>;
-      case "OVERDUE":
+      case "overdue":
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Overdue</Badge>;
-      case "LOST":
+      case "lost":
         return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Lost</Badge>;
       default:
         return <Badge variant="outline" className="text-[10px] uppercase font-bold px-2 py-0.5">{status}</Badge>;
@@ -78,7 +78,7 @@ export default function HistoryContent({
   };
 
   const isOverdue = (record: BorrowingRecord) => {
-    return record.status === "ACTIVE" && new Date(record.due_date) < new Date();
+    return record.status === "active" && new Date(record.due_date) < new Date();
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / 10));
@@ -105,7 +105,7 @@ export default function HistoryContent({
               />
             </form>
             <div className="flex gap-1.5 p-1 bg-muted/30 rounded-lg border border-border/50">
-              {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
+              {(["all", "active", "returned", "overdue"] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => updateFilters({ status, page: 1 })}
@@ -165,7 +165,7 @@ export default function HistoryContent({
                             by {book?.author || "Internal Entity"}
                           </p>
                         </div>
-                        <div className="shrink-0">{getStatusBadge(overdue ? "OVERDUE" : record.status)}</div>
+                        <div className="shrink-0">{getStatusBadge(overdue ? "overdue" : record.status)}</div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                         <span className="flex items-center gap-1.5">

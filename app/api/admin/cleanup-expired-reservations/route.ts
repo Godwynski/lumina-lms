@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { safeCompare } from "@/lib/server-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,11 +10,13 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Allow either authenticated user or internal/cron call
-    const authHeader = request.headers.get("authorization");
+    // Use constant-time comparison to prevent timing attacks
+    const authHeader = request.headers.get("authorization") || "";
+    const cronSecret = process.env.INTERNAL_CRON_SECRET;
     const hasInternalAuth = Boolean(
-      authHeader &&
-        process.env.INTERNAL_CRON_SECRET &&
-        authHeader === `Bearer ${process.env.INTERNAL_CRON_SECRET}`
+      cronSecret &&
+        authHeader.startsWith("Bearer ") &&
+        safeCompare(authHeader.substring(7), cronSecret)
     );
 
     if (!user?.id && !hasInternalAuth) {

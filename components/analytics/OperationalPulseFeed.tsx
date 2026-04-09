@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { BookMarked, UserCircle, MoveRight, Receipt, Clock, Undo2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -31,7 +31,7 @@ export function OperationalPulseFeed({ activities }: OperationalPulseFeedProps) 
 
       <div className="flex flex-col gap-2">
         {activities.map((event, idx) => (
-          <motion.div
+          <m.div
             key={event.id}
             initial={{ opacity: 0, y: 10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -71,7 +71,7 @@ export function OperationalPulseFeed({ activities }: OperationalPulseFeedProps) 
                 </span>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         ))}
 
         {activities.length === 0 && (

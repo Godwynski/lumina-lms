@@ -1,19 +1,11 @@
-import { AuditLogClient } from "@/components/admin/AuditLogClient";
 import { Suspense } from "react";
-import { getUserRole } from "@/lib/auth-helpers";
-import { redirect } from "next/navigation";
+import { AuditContentContainer } from "./AuditContentContainer";
 
 export const metadata = {
   title: "Audit Logs | Lumina LMS",
 };
 
 export default async function AuditPage() {
-  const role = await getUserRole();
-  
-  if (role !== 'admin') {
-    return redirect("/protected?error=unauthorized");
-  }
-
   return (
     <div className="flex flex-col gap-8 p-8 max-w-7xl mx-auto min-h-screen">
       <div className="flex flex-col gap-2">
@@ -29,9 +21,7 @@ export default async function AuditPage() {
       </div>
 
       <Suspense fallback={<AuditSkeleton />}>
-        <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
-          <AuditLogClient />
-        </div>
+        <AuditContentContainer />
       </Suspense>
     </div>
   );

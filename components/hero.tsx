@@ -1,7 +1,7 @@
 'use client';
 
 import type { User } from '@supabase/supabase-js';
-import { motion } from 'framer-motion';
+import { m } from "framer-motion";
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -22,20 +22,20 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
   };
 
   return (
-    <motion.div 
+    <m.div 
       variants={containerVariants}
       initial="hidden"
       animate="visible"
       className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-12 md:py-24"
     >
-      <motion.div variants={itemVariants} className="mb-6 flex items-center gap-3">
+      <m.div variants={itemVariants} className="mb-6 flex items-center gap-3">
         <Badge variant="secondary" className="px-3 py-1 text-xs font-medium shadow-sm">
           <Sparkles className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
           {user ? 'Account Active' : 'Library Operations Platform'}
         </Badge>
-      </motion.div>
+      </m.div>
 
-      <motion.div variants={itemVariants} className="space-y-6 mb-10">
+      <m.div variants={itemVariants} className="space-y-6 mb-10">
         <h1 className="text-balance text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
           {user ? (
             <>Welcome back, <br className="hidden sm:block"/><span className="text-muted-foreground">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
@@ -50,9 +50,9 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
             'Streamline physical and digital resource management with role-based access, smart circulation, and unified identity.'
           )}
         </p>
-      </motion.div>
+      </m.div>
 
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-center">
+      <m.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-center">
         {user ? (
           <>
             <Button asChild size="lg" className="rounded-full font-semibold shadow-md px-8 h-12">
@@ -82,7 +82,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
             </Button>
           </>
         )}
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }
