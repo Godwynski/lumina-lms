@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Suspense } from "react";
 import { getUserRole } from "@/lib/auth-helpers";
 import { createClient } from "@/lib/supabase/server";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";

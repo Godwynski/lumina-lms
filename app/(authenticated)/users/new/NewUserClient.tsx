@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserPlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export function NewUserClient() {
       if (profileError) throw profileError;
       if (!profile) throw new Error("No account found for that email. They must sign in first.");
 
-      const { data: updated, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("profiles")
         .update({
           role: inviteRole,
