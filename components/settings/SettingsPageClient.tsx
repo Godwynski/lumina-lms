@@ -10,7 +10,6 @@ import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountD
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
 import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { RecomputeExpiryDates } from "@/components/admin/RecomputeExpiryDates";
-import { GDPRHardDeleteDialog } from "@/components/admin/AuditAndGDPR";
 import {
   User as UserIcon,
   SlidersHorizontal,
@@ -21,8 +20,6 @@ import {
   Trash2,
   ChevronRight,
   ChevronDown,
-  CheckCircle2,
-  ShieldCheck,
   UserCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -71,7 +68,6 @@ const ADMIN_TABS = [
   { id: "policies", label: "Policies", icon: Settings2, description: "Manage system-wide policies" },
   { id: "categories", label: "Categories", icon: Tags, description: "Book categories & genres" },
   { id: "operations", label: "Operations", icon: RefreshCw, description: "System maintenance tasks" },
-  { id: "gdpr", label: "GDPR", icon: Trash2, description: "Profile anonymization & deletion" },
 ] as const;
 
 type TabId =
@@ -589,7 +585,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
 
                   <Section title="Privacy Control" icon={Trash2} danger>
                     <p className="mb-4 text-sm text-red-700/80 leading-relaxed">
-                      Permanently anonymize your profile data. Once initiated, this action cannot be reversed under GDPR compliance.
+                      Permanently delete your profile. Note that some transaction history and library logs will be kept for compliance and record-keeping.
                     </p>
                     <Button 
                       variant="destructive" 
@@ -597,7 +593,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
                       className="h-10 rounded-lg gap-3 bg-red-600 hover:bg-red-700 font-bold px-6 shadow-sm"
                     >
                       <Trash2 size={16} />
-                      Request Erasure
+                      Permanently Delete My Account
                     </Button>
                   </Section>
                 </div>
@@ -629,33 +625,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
               )}
 
 
-              {activeTab === "gdpr" && isSuperAdmin && (
-                <Section key="gdpr" title="Right to Erasure" icon={Trash2} onMobileNavClick={onMobileNavClick} danger>
-                  <Card className="mb-6 border-border bg-card shadow-sm">
-                    <div className="p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                        <h4 className="text-sm font-semibold text-foreground">Erasure Workflow</h4>
-                      </div>
-                      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <CheckCircle2 size={12} /> PII Scrubbing (Automatic)
-                        </li>
-                        <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <CheckCircle2 size={12} /> Transaction Preservation
-                        </li>
-                        <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <CheckCircle2 size={12} /> Audit Trail Mapping
-                        </li>
-                        <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <CheckCircle2 size={12} /> External Sync Cleanup
-                        </li>
-                      </ul>
-                    </div>
-                  </Card>
-                  <GDPRHardDeleteDialog />
-                </Section>
-              )}
+              {/* Anonymization tools removed */}
             </m.div>
           </AnimatePresence>
         </main>

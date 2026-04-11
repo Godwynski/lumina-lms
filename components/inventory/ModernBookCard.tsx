@@ -2,127 +2,98 @@
 
 import { m } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import supabaseLoader from "@/lib/image-loader";
 import { 
   Book as BookIcon, 
   MapPin, 
   Layers, 
-  Trash2, 
-  Info,
-  ChevronRight
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
 import { Book } from "@/lib/types";
 
 interface ModernBookCardProps {
   book: Book;
-  onDelete: (book: Book) => void;
-  onEdit: (book: Book) => void;
 }
 
-export function ModernBookCard({ book, onDelete, onEdit }: ModernBookCardProps) {
+export function ModernBookCard({ book }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   
   return (
-    <m.div
-      layout
-      initial={{ opacity: 0, scale: 0.95, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="group h-full"
-    >
-      <div className="relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5 shadow-sm transition-colors hover:bg-muted">
-        
-        <div className="mb-2 flex items-start gap-2">
+    <Link href={`/catalog/${book.id}`} className="group h-full block">
+      <m.div
+        layout
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all group-hover:bg-accent/50 group-hover:border-primary/30 group-hover:shadow-lg"
+      >
+        <div className="mb-3 flex items-start gap-4">
           <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-foreground transition-colors group-hover:text-foreground">
-                  {book.title}
-                </h3>
-                <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground">by {book.author}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider">
-                  {book.available_copies} / {book.total_copies} Available
-                </Badge>
-                <span className="text-[9px] font-semibold uppercase tracking-tight text-muted-foreground">
-                  {book.section || "General"}
-                </span>
-              </div>
+            <div className="mb-2">
+              <h3 className="line-clamp-2 text-sm font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
+                {book.title}
+              </h3>
+              <p className="mt-1 truncate text-xs font-semibold text-muted-foreground/80">by {book.author}</p>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <MapPin size={11} />
-                <span className="font-medium uppercase tracking-wide text-[10px]">Floor/Row:</span>
-                <span className="truncate text-foreground">{book.location || "Central Shelf"}</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-muted/20 p-1.5 rounded-lg">
+                <MapPin size={11} className="text-primary/70" />
+                <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">Location:</span>
+                <span className="truncate text-foreground/90 font-medium">{book.location || "Central Shelf"}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Layers size={11} />
-                <span className="font-medium uppercase tracking-wide text-[10px]">ID:</span>
-                <span className="truncate font-mono text-foreground">{book.isbn || "INTERNAL-STOCK"}</span>
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground px-1.5">
+                <Layers size={11} className="text-primary/70" />
+                <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">ISBN:</span>
+                <span className="truncate font-mono text-foreground/80">{book.isbn || "INTERNAL-STOCK"}</span>
               </div>
             </div>
           </div>
 
-          <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+          <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 group-hover:shadow-md">
             {book.cover_url ? (
               <Image 
                 loader={supabaseLoader}
                 src={book.cover_url} 
                 alt={book.title} 
                 fill 
-                className="object-cover transition-transform duration-500 group-hover:scale-110" 
-                sizes="(max-width: 768px) 30vw, (max-width: 1200px) 15vw, 10vw"
+                className="object-cover" 
+                sizes="80px"
                 loading="lazy"
               />
             ) : (
-              <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground"}`}>
-                <BookIcon size={14} />
+              <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground/40"}`}>
+                <BookIcon size={20} />
+              </div>
+            )}
+            {isOutOfStock && (
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
+                 <span className="text-[8px] font-black uppercase tracking-tighter text-destructive rotate-[-15deg] border-2 border-destructive px-1 py-0.5 rounded-sm">OUT</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center gap-1 border-t border-border pt-2.5">
-          <Button 
-            onClick={() => onEdit(book)}
-            className="group/btn flex h-8 flex-1 items-center justify-center gap-1 rounded-md bg-primary text-[11px] font-semibold text-primary-foreground transition-all hover:bg-primary/90"
-          >
-            Edit
-            <ChevronRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
-          </Button>
-          
-          <Link href={`/catalog/${book.id}`}>
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-md border-border text-muted-foreground hover:bg-muted hover:text-foreground">
-              <Info size={16} />
-            </Button>
-          </Link>
-
-          <Button 
-            onClick={() => onDelete(book)}
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 size={16} />
-          </Button>
+        <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
+          <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[9px] font-black uppercase tracking-widest transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            {book.available_copies} / {book.total_copies} In Pool
+          </Badge>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 transition-colors group-hover:text-primary/60">
+            {book.section || "General"}
+          </span>
         </div>
 
         {/* Tactile progress bar at the bottom */}
-        <div className="absolute bottom-0 left-0 h-1 w-full bg-muted">
+        <div className="absolute bottom-0 left-0 h-1 w-full bg-muted/20">
           <m.div 
             initial={{ width: 0 }}
             animate={{ width: `${(book.available_copies / (book.total_copies || 1)) * 100}%` }}
-            className={`h-full ${isOutOfStock ? "status-fill-danger" : "status-fill-success"}`}
+            className={`h-full transition-colors duration-500 ${isOutOfStock ? "bg-destructive" : "bg-primary group-hover:bg-primary-foreground"}`}
           />
         </div>
-      </div>
-    </m.div>
+      </m.div>
+    </Link>
   );
 }

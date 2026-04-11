@@ -1,19 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { softDeleteBook } from '@/lib/actions/catalog';
-import { AlertTriangle } from 'lucide-react';
-import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { use } from 'react';
 import { Book, Category } from '@/lib/types';
 import dynamic from 'next/dynamic';
 
@@ -45,77 +32,19 @@ export function CatalogSkeleton() {
   );
 }
 
-export function CatalogContent({ dataPromise, categories, page: _page, q: _q, stock: _stock, categoryId: _categoryId }: CatalogContentProps) {
-  const router = useRouter();
+export function CatalogContent({ dataPromise, categories }: CatalogContentProps) {
   const data = use(dataPromise);
 
   const books = data?.data || [];
   const totalCount = data?.count || 0;
   
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
-
-  const handleDeleteClick = (book: Book) => {
-    setBookToDelete(book);
-    setDeleteError('');
-    setDeleteModalOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!bookToDelete) return;
-    setIsDeleting(true);
-    
-    try {
-      await softDeleteBook(bookToDelete.id);
-      setDeleteModalOpen(false);
-      toast.success(`Removed "${bookToDelete.title}" from inventory`);
-      router.refresh();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to delete book';
-      setDeleteError(message);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <div className="w-full">
       <ModernInventoryClient 
         books={books || []} 
         totalItems={totalCount} 
         categories={categories}
-        onDelete={handleDeleteClick} 
       />
-
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="rounded-xl border-border p-4 shadow-sm sm:max-w-[420px]">
-          <DialogHeader>
-            <div className="status-danger mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
-              <AlertTriangle size={20} />
-            </div>
-            <DialogTitle className="text-center text-base font-semibold tracking-tight text-foreground">Remove from inventory?</DialogTitle>
-            <DialogDescription className="pt-2 text-center text-sm leading-relaxed text-muted-foreground">
-              You are about to remove <span className="font-semibold text-foreground">&quot;{bookToDelete?.title}&quot;</span>. This can be restored later.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {deleteError && (
-            <div className="status-danger mt-2 flex items-center gap-2 rounded-lg p-2 text-xs">
-              <AlertTriangle className="w-5 h-5 shrink-0" />
-              {deleteError}
-            </div>
-          )}
-
-          <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-2">
-            <Button variant="ghost" onClick={() => setDeleteModalOpen(false)} disabled={isDeleting} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting} className="h-8 flex-1 rounded-md text-xs font-semibold uppercase tracking-wider">
-              {isDeleting ? 'Removing...' : 'Remove'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

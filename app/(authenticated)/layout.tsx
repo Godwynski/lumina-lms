@@ -7,6 +7,7 @@ import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UserNav } from "@/components/layout/UserNav";
 import { ProtectedNav } from "@/components/layout/ProtectedNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
+import { MobileBar } from "@/components/layout/MobileBar";
 import { cookies } from "next/headers";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
@@ -33,8 +34,8 @@ async function NavAndProfileWrapper() {
   return (
     <>
       <ProtectedNav role={role} user={user} profile={profile} />
-      {/* Mobile Header UserNav (only visible on mobile) */}
-      <div className="md:hidden flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4">
+      {/* Mobile Header (simplified with bottom nav handling core links) */}
+      <div className="md:hidden sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <BreadcrumbNav />
@@ -76,15 +77,17 @@ export default async function ProtectedLayout({
           </Suspense>
 
           <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
-            {/* Desktop Header Content (Breadcrumbs) */}
-            <header className="hidden md:flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 transition-[width,height] ease-linear">
-              <SidebarTrigger className="-ml-1" />
+            {/* Desktop Header Content (Breadcrumbs) - Unified and Clean */}
+            <header className="sticky top-0 z-40 hidden md:flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-md px-6 transition-all duration-200">
+              <SidebarTrigger className="-ml-2 h-9 w-9" />
+              <div className="h-4 w-px bg-border" />
               <BreadcrumbNav />
             </header>
             
-            <div className="mx-auto mt-10 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8">
+            <div className="mx-auto mt-10 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8 pb-32 md:pb-6">
               {children}
             </div>
+            <MobileBar />
           </SidebarInset>
         </div>
       </SidebarProvider>

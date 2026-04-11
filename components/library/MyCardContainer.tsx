@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import DigitalCard from "./DigitalCard";
 import { m } from "framer-motion";
-import { toPng } from "html-to-image";
 import { Download, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +45,7 @@ const captureCardPng = async (node: HTMLElement) => {
   }
 
   try {
+    const { toPng } = await import("html-to-image");
     return await toPng(node, {
       pixelRatio: 2,
       cacheBust: true,

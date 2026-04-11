@@ -10,7 +10,6 @@ import {
   Settings,
   Library,
   Users,
-  ShieldCheck,
   BarChart2,
   History,
   AlertTriangle,
@@ -138,7 +137,6 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Users,
     minRole: "librarian",
     children: [
-      { href: "/admin/approvals", label: "Card Approvals", icon: ShieldCheck, minRole: "librarian" },
       { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
       { href: "/reports", label: "Analytics", icon: BarChart2, minRole: "staff" },
     ],
@@ -152,7 +150,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian" },
       { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
       { href: "/operations", label: "Operations", icon: LayoutDashboard, minRole: "admin" },
-      { href: "/gdpr", label: "Compliance", icon: AlertTriangle, minRole: "admin" },
     ],
   },
   {
@@ -215,7 +212,7 @@ const NavSubItem = memo(({
         onMouseEnter={() => onMouseEnter(item.href)}
       >
         <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-sidebar-primary" : "bg-sidebar-border")} />
-        <span className={cn("truncate", isActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
+        <span className={cn("truncate group-data-[collapsible=icon]:hidden", isActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
       </Link>
     </SidebarMenuSubButton>
   </SidebarMenuSubItem>
@@ -251,8 +248,8 @@ const NavGroupItem = memo(({
             isActive={isGroupActive}
           >
             <group.icon />
-            <span>{group.label}</span>
-            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            <span className="group-data-[collapsible=icon]:hidden">{group.label}</span>
+            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down px-2">
@@ -324,7 +321,7 @@ export function ProtectedNav({
 
     if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
 
-    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies", "/operations", "/gdpr", "/categories"];
+    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies", "/operations", "/categories"];
     if (SETTINGS_PATHS.includes(hrefBase)) {
       return pathWithoutQuery === hrefBase;
     }
@@ -396,7 +393,7 @@ export function ProtectedNav({
       }}
     >
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
-      <SidebarHeader className="flex h-20 shrink-0 items-center px-4">
+      <SidebarHeader className="flex h-20 shrink-0 items-center px-4 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:justify-center">
         <Link href="/dashboard" className="flex items-center gap-3 group" aria-label="Lumina LMS Platform">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring" aria-hidden="true">
             <LuminaLogo size={20} />
@@ -418,9 +415,9 @@ export function ProtectedNav({
                   isActive={dashboardActive}
                   tooltip={DASHBOARD_LINK.label}
                 >
-                  <Link href={DASHBOARD_LINK.href} className="flex items-center w-full">
+                  <Link href={DASHBOARD_LINK.href} className="flex items-center w-full group-data-[collapsible=icon]:justify-center">
                     {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon className="shrink-0" />}
-                    <span className="truncate">{DASHBOARD_LINK.label}</span>
+                    <span className="truncate group-data-[collapsible=icon]:hidden">{DASHBOARD_LINK.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
