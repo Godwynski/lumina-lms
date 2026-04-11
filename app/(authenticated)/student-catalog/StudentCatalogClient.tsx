@@ -109,12 +109,12 @@ export function StudentCatalogClient({
             />
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-2 pb-1">
             <Select
               value={selectedCategory || 'all'}
               onValueChange={handleCatChange}
             >
-              <SelectTrigger className="h-8 min-w-[170px] px-2.5 text-xs">
+              <SelectTrigger className="h-8 min-w-[150px] px-2.5 text-xs">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
@@ -132,15 +132,15 @@ export function StudentCatalogClient({
               variant={availableOnly ? 'default' : 'outline'}
               size="sm"
               onClick={handleAvailableToggle}
-              className="h-8 px-3 text-xs"
+              className="h-8 px-3 text-xs shrink-0"
             >
               Available only
             </Button>
 
-            <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0">
               <ArrowUpDown className="h-3.5 w-3.5" />
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'title' | 'author' | 'availability')}>
-                <SelectTrigger className="h-8 min-w-[140px] px-2.5 text-xs">
+                <SelectTrigger className="h-8 min-w-[120px] px-2.5 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,8 +170,50 @@ export function StudentCatalogClient({
         ) : null
       }
     >
-      <div className={isPending ? "opacity-50 transition-opacity" : "transition-opacity"}>
-        <table className="w-full text-left text-sm">
+      <div className={isPending ? "opacity-50 transition-opacity w-full overflow-hidden" : "transition-opacity w-full overflow-hidden"}>
+        <div className="md:hidden flex flex-col divide-y divide-border">
+          {books.length > 0 ? (
+            books.map((book: Book) => (
+              <div key={book.id} className="p-4 flex gap-4 hover:bg-muted/40 transition-colors">
+                <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
+                  {book.cover_url ? (
+                    <Image src={book.cover_url} alt={book.title} fill sizes="56px" className="object-cover" />
+                  ) : null}
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <p className="truncate font-medium text-foreground leading-tight">{book.title}</p>
+                    <p className="truncate text-xs text-muted-foreground mt-0.5">{book.author}</p>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                     <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-none ${
+                        book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {book.available_copies}/{book.total_copies} available
+                    </span>
+                    <Link href={`/student-catalog/${book.id}`}>
+                      <Button variant="outline" size="sm" className="h-7 px-3 text-[10px] font-semibold">
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                  <Search className="h-8 w-8 opacity-20" />
+                  <p>No books matching your criteria.</p>
+                  <Button variant="link" onClick={clearFilters} className="h-auto p-0 text-xs">Clear all filters</Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <table className="hidden md:table w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/60">
               <th className="px-4 py-2.5 font-medium text-muted-foreground">Title</th>

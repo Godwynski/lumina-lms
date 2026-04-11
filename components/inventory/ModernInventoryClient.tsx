@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,17 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { ModernBookListItem } from "./ModernBookListItem";
 import { InventoryGrid } from "./InventoryGrid";
-import { EditBookMetadataDialog } from "./EditBookMetadataDialog";
 import { Book, Category } from "@/lib/types";
 
 interface ModernInventoryClientProps {
   books: Book[];
   totalItems: number;
   categories: Category[];
-  onDelete: (book: Book) => void;
 }
 
-export function ModernInventoryClient({ books, totalItems, categories, onDelete }: ModernInventoryClientProps) {
+export function ModernInventoryClient({ books, totalItems, categories }: ModernInventoryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -30,8 +27,6 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
   const [viewMode, setViewMode] = useState<"list" | "grid">((searchParams.get("view") as "list" | "grid" | null) || "grid");
   const [stockFilter, setStockFilter] = useState<"all" | "in" | "out" | "low">((searchParams.get("stock") as "all" | "in" | "out" | "low" | null) || "all");
   const [sortBy, setSortBy] = useState<"title_asc" | "title_desc" | "availability_desc" | "availability_asc">((searchParams.get("sort") as "title_asc" | "title_desc" | "availability_desc" | "availability_asc" | null) || "title_asc");
-  const [bookToEdit, setBookToEdit] = useState<Book | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [page, setPage] = useState(parseInt(searchParams.get("page") || "1", 10));
   const [categoryId, setCategoryId] = useState(searchParams.get("categoryId") || "all");
 
@@ -50,31 +45,8 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
     });
   }, [search, viewMode, stockFilter, sortBy, page, router, categoryId]);
 
-  const handleEditClick = (book: Book) => {
-    setBookToEdit(book);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleEditSuccess = () => {
-    toast.success("Inventory record updated successfully");
-    setIsEditDialogOpen(false);
-    startTransition(() => {
-      router.refresh();
-    });
-  };
-
   const pageSize = viewMode === "list" ? 10 : 9;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, stockFilter, sortBy, viewMode]);
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
 
   useEffect(() => {
     setPage(1);
@@ -203,7 +175,7 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
         <div className="overflow-x-auto pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-thin">
           <div className="space-y-2 min-w-[700px] pr-2">
             {books.map((book) => (
-              <ModernBookListItem key={book.id} book={book} onDelete={onDelete} onEdit={handleEditClick} />
+              <ModernBookListItem key={book.id} book={book} />
             ))}
             {books.length === 0 && (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-4 py-16 text-center shadow-sm backdrop-blur-sm">
@@ -233,7 +205,7 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
           </div>
         </div>
       ) : (
-        <InventoryGrid books={books} onDelete={onDelete} onEdit={handleEditClick} />
+        <InventoryGrid books={books} />
       )}
 
       {totalItems > 0 && (
@@ -244,13 +216,6 @@ export function ModernInventoryClient({ books, totalItems, categories, onDelete 
           onPageChange={setPage}
         />
       )}
-
-      <EditBookMetadataDialog
-        book={bookToEdit}
-        isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        onSuccess={handleEditSuccess}
-      />
     </div>
   );
 }

@@ -9,16 +9,11 @@ import * as React from "react";
 
 interface InventoryGridProps {
   books: Book[];
-  onDelete: (book: Book) => void;
-  onEdit: (book: Book) => void;
 }
 
 const MemoizedBookCard = React.memo(ModernBookCard);
 
-export function InventoryGrid({ books, onDelete, onEdit }: InventoryGridProps) {
-  const handleDelete = React.useCallback((book: Book) => onDelete(book), [onDelete]);
-  const handleEdit = React.useCallback((book: Book) => onEdit(book), [onEdit]);
-
+export function InventoryGrid({ books }: InventoryGridProps) {
   if (books.length === 0) {
     return (
       <m.div 
@@ -45,7 +40,7 @@ export function InventoryGrid({ books, onDelete, onEdit }: InventoryGridProps) {
     <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
       <AnimatePresence mode="popLayout">
         {books.map((book) => (
-          <MemoizedBookCard key={book.id} book={book} onDelete={handleDelete} onEdit={handleEdit} />
+          <MemoizedBookCard key={book.id} book={book} />
         ))}
       </AnimatePresence>
     </div>

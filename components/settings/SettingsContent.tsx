@@ -45,7 +45,7 @@ export async function SettingsContent({ user, activeTab }: SettingsContentProps)
       profilePromise={profilePromise as Promise<Profile | null>}
       settingsPromise={settingsPromise as Promise<PolicySetting[]>}
       categoriesPromise={categoriesPromise as Promise<Category[]>}
-      initialTab={activeTab as ("profile" | "preferences" | "security" | "policies" | "categories" | "operations" | "gdpr" | undefined)}
+      initialTab={activeTab as ("profile" | "preferences" | "security" | "policies" | "categories" | "operations" | undefined)}
     />
   );
 }

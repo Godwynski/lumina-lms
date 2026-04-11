@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { getBookCopies, createBookCopy, updateBookCopyStatus } from '@/lib/actions/catalog';
+import { getBookCopies, createBookCopy, updateBookCopyStatus, updateBook, softDeleteBook } from '@/lib/actions/catalog';
 import {
   ChevronLeft,
   Plus,
@@ -17,9 +17,18 @@ import {
   History,
   QrCode,
   Filter,
+  Edit3,
+  Trash2,
+  Save,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import Link from 'next/link';
@@ -42,10 +51,24 @@ interface StaffBookManagementClientProps {
 }
 
 export function StaffBookManagementClient({ initialBook, initialCopies }: StaffBookManagementClientProps) {
+  const router = useRouter();
   const [book, setBook] = useState<Book>(initialBook);
   const [copies, setCopies] = useState<BookCopy[]>(initialCopies);
   
   const [addCopyLoading, setAddCopyLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: initialBook.title,
+    author: initialBook.author,
+    isbn: initialBook.isbn || '',
+    section: initialBook.section || '',
+    location: initialBook.location || '',
+  });
+
   const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopy['status']>('ALL');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -54,7 +77,6 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
   useEffect(() => {
     setMounted(true);
   }, []);
-
 
   const handleAddCopy = async () => {
     setAddCopyLoading(true);
@@ -67,10 +89,40 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
         total_copies: (prev.total_copies || 0) + 1, 
         available_copies: (prev.available_copies || 0) + 1 
       }));
+      toast.success('Added new copy to inventory');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to add copy');
     } finally {
       setAddCopyLoading(false);
+    }
+  };
+
+  const handleUpdateBook = async () => {
+    setUpdateLoading(true);
+    try {
+      await updateBook(book.id, editForm);
+      setBook(prev => ({ ...prev, ...editForm }));
+      setIsEditing(false);
+      toast.success('Book metadata updated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update book');
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const handleDeleteBook = async () => {
+    setDeleteLoading(true);
+    try {
+      await softDeleteBook(book.id);
+      toast.success('Book removed from inventory');
+      router.push('/catalog');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete book');
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -85,8 +137,10 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
         ...prev,
         available_copies: availCount
       }));
+      toast.success('Copy status updated');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to update status');
     }
   };
 
@@ -118,15 +172,60 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={handleAddCopy} 
-            disabled={addCopyLoading}
-            className="h-11 md:h-8 rounded-md px-4 md:px-3 text-xs font-semibold focus-visible:ring-2"
-          >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Add Copy
-          </Button>
+        <div className="flex items-center gap-2">
+          {showDeleteConfirm ? (
+            <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
+               <span className="text-[10px] font-bold text-destructive uppercase mr-1">Confirm removal?</span>
+               <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={handleDeleteBook}
+                disabled={deleteLoading}
+                className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider"
+               >
+                 {deleteLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Yes, Purge'}
+               </Button>
+               <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider"
+               >
+                 Cancel
+               </Button>
+            </div>
+          ) : (
+            <>
+              <Button 
+                variant="outline"
+                onClick={() => setIsEditing(!isEditing)}
+                className={`h-8 rounded-md px-3 text-xs font-semibold focus-visible:ring-2 ${isEditing ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : ''}`}
+              >
+                {isEditing ? <X className="mr-1.5 h-3.5 w-3.5" /> : <Edit3 className="mr-1.5 h-3.5 w-3.5" />}
+                {isEditing ? 'Cancel Edit' : 'Modify Records'}
+              </Button>
+
+              <Button 
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="h-8 border-destructive/20 text-destructive hover:bg-destructive/5 hover:border-destructive/40 rounded-md px-3 text-xs font-semibold focus-visible:ring-2"
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                Purge from Vault
+              </Button>
+
+              <div className="mx-1 h-4 w-[1px] bg-border" />
+
+              <Button 
+                onClick={handleAddCopy} 
+                disabled={addCopyLoading}
+                className="h-8 rounded-md px-3 text-xs font-semibold focus-visible:ring-2"
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Add Copy
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -134,46 +233,106 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
         {/* Book Info Sidebar */}
         <div className="space-y-3 lg:col-span-4 xl:col-span-3">
           <div className="overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm">
-            <div className="mb-3 flex items-start gap-3">
-              <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-                {book.cover_url ? (
-                  <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized={true} />
-                ) : (
-                  <BookOpen className="h-full w-full p-3 text-muted-foreground" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="line-clamp-2 text-sm font-semibold text-foreground">{book.title}</p>
-                <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-medium">ISBN:</span> {book.isbn || 'Unknown'}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-medium">Category:</span> {Array.isArray(book.categories) ? book.categories[0]?.name : (book.categories as { name?: string })?.name || 'Unassigned'}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-medium">Section:</span> {book.section || 'N/A'}
-              </div>
-            </div>
-
-            {book.tags && book.tags.length > 0 && (
-              <div className="mt-3 border-t border-border pt-3">
-                <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tags</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {book.tags.map((tag: string, i: number) => (
-                    <span key={i} className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                      {tag}
-                    </span>
-                  ))}
+            {isEditing ? (
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="space-y-3">
+                   <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Asset Title</Label>
+                      <Input 
+                        value={editForm.title} 
+                        onChange={e => setEditForm({...editForm, title: e.target.value})}
+                        className="h-9 text-xs border-primary/20 bg-primary/5 focus-visible:ring-primary/30"
+                      />
+                   </div>
+                   <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Primary Author</Label>
+                      <Input 
+                        value={editForm.author} 
+                        onChange={e => setEditForm({...editForm, author: e.target.value})}
+                        className="h-9 text-xs border-primary/20 bg-primary/5 focus-visible:ring-primary/30"
+                      />
+                   </div>
+                   <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">ISBN</Label>
+                        <Input 
+                          value={editForm.isbn} 
+                          onChange={e => setEditForm({...editForm, isbn: e.target.value})}
+                          className="h-9 text-xs bg-muted/50"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Classification</Label>
+                        <Input 
+                          value={editForm.section} 
+                          onChange={e => setEditForm({...editForm, section: e.target.value})}
+                          className="h-9 text-xs bg-muted/50"
+                        />
+                      </div>
+                   </div>
+                   <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Precise Location</Label>
+                      <Input 
+                        value={editForm.location} 
+                        onChange={e => setEditForm({...editForm, location: e.target.value})}
+                        className="h-9 text-xs bg-muted/50"
+                      />
+                   </div>
                 </div>
+                
+                <Button 
+                  onClick={handleUpdateBook} 
+                  disabled={updateLoading}
+                  className="w-full h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {updateLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save All Changes
+                </Button>
               </div>
+            ) : (
+              <>
+                <div className="mb-3 flex items-start gap-3">
+                  <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                    {book.cover_url ? (
+                      <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized={true} />
+                    ) : (
+                      <BookOpen className="h-full w-full p-3 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold text-foreground">{book.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium">ISBN:</span> {book.isbn || 'Unknown'}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium">Category:</span> {Array.isArray(book.categories) ? book.categories[0]?.name : (book.categories as { name?: string })?.name || 'Unassigned'}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="font-medium">Section:</span> {book.section || 'N/A'}
+                  </div>
+                </div>
+
+                {book.tags && book.tags.length > 0 && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tags</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {book.tags.map((tag: string, i: number) => (
+                        <span key={i} className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -196,7 +355,7 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
         </div>
 
         {/* Inventory List */}
-          <div className="space-y-2.5 lg:col-span-8 xl:col-span-9">
+        <div className="space-y-2.5 lg:col-span-8 xl:col-span-9">
           <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
             <h2 className="text-sm font-semibold text-foreground">Copies ({visibleCopies.length}/{copies.length})</h2>
             <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card p-1.5 shadow-sm">
@@ -245,8 +404,9 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Select value={copy.status} onValueChange={(value) => {
-                      if (!isBookCopyStatus(value)) return;
-                      void handleStatusChange(copy.id, value);
+                      if (isBookCopyStatus(value)) {
+                        void handleStatusChange(copy.id, value);
+                      }
                     }}>
                       <SelectTrigger className="h-11 md:h-7 rounded-md border border-border bg-muted px-4 md:px-2.5 text-sm md:text-[11px] font-medium text-muted-foreground focus-visible:ring-2">
                         <SelectValue />

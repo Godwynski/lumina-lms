@@ -2,17 +2,15 @@
 
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
-import { m, AnimatePresence } from "framer-motion";
-import { Search, UserPlus, X } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { cn, sanitizeFilterInput } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { CompactPagination } from "@/components/ui/compact-pagination";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
 
 const AdminTableShell = dynamic(() => import("@/components/admin/AdminTableShell").then(mod => mod.AdminTableShell), {
   loading: () => <div className="min-h-[calc(100vh-120px)] animate-pulse bg-muted rounded-xl" />,
@@ -42,7 +40,7 @@ type ProfileRow = {
 
 const UserTableRow = React.memo(({ user, onClick }: { user: User; onClick: (user: User) => void }) => (
   <tr
-    className="cursor-pointer hover:bg-muted/40"
+    className="cursor-pointer hover:bg-muted/40 hidden md:table-row"
     onClick={() => onClick(user)}
   >
     <td className="px-4 py-3">
@@ -77,6 +75,7 @@ interface UsersContentProps {
 }
 
 export function UsersContent({ usersPromise }: UsersContentProps) {
+  const router = useRouter();
   const initialData = use(usersPromise);
   const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState<User[]>(initialData.users);
@@ -86,10 +85,6 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
   const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student">("all");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEditingUser, setIsEditingUser] = useState(false);
-  const [isAddingUser, setIsAddingUser] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
@@ -117,12 +112,6 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
         : "Unknown",
   });
 
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("student");
-  const [inviteDept, setInviteDept] = useState("");
-  const [editRole, setEditRole] = useState<User["role"]>("student");
-  const [editStatus, setEditStatus] = useState("active");
-  
   const roleFilterLabels: Record<string, string> = {
     all: "All",
     admin: "Admin",
@@ -130,13 +119,6 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
     staff: "Staff",
     student: "Student",
   };
-
-  useEffect(() => {
-    if (selectedUser) {
-      setEditRole(selectedUser.role);
-      setEditStatus(selectedUser.status);
-    }
-  }, [selectedUser]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -151,7 +133,6 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
 
   useEffect(() => {
     const loadUsers = async () => {
-      // Skip very first render — initial data comes from the server via use()
       if (isInitialMount.current) {
         isInitialMount.current = false;
         return;
@@ -195,85 +176,9 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
     void loadUsers();
   }, [supabase, currentPage, debouncedSearch, activeTab, pageSize]);
 
-  const handleInvite = async () => {
-    if (!inviteEmail) return;
-    setIsSaving(true);
-    try {
-      const email = inviteEmail.trim().toLowerCase();
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-      if (!profile) throw new Error("No account found for that email.");
-
-      const { data: updated, error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          role: inviteRole,
-          status: "pending",
-          department: inviteDept.trim() || "General",
-        })
-        .eq("id", profile.id)
-        .select("*")
-        .single();
-
-      if (updateError) throw updateError;
-
-      if (updated) {
-        const nextUser = mapProfileToUser(updated as ProfileRow);
-        setUsers((prev) => [nextUser, ...prev.filter((u) => u.id !== nextUser.id)]);
-      }
-
-      setIsSaving(false);
-      setIsAddingUser(false);
-      setInviteEmail("");
-      setInviteDept("");
-    } catch (error) {
-      setIsSaving(false);
-      setLoadError(error instanceof Error ? error.message : "Failed to invite user");
-    }
-  };
-
-  const handleUpdateProfile = async (updatedData: Partial<User>) => {
-    setIsSaving(true);
-    if (!selectedUser) return;
-
-    try {
-      const patch = {
-        full_name: updatedData.name,
-        email: updatedData.email?.trim().toLowerCase(),
-        role: updatedData.role,
-        status: updatedData.status?.trim().toLowerCase(),
-        department: updatedData.department?.trim() || "General",
-      };
-
-      const { data: updated, error } = await supabase
-        .from("profiles")
-        .update(patch)
-        .eq("id", selectedUser.id)
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      const nextUser = updated ? mapProfileToUser(updated as ProfileRow) : { ...selectedUser, ...updatedData };
-      setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? nextUser : u)));
-      setSelectedUser(nextUser);
-      setIsEditingUser(false);
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Failed to update profile");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleUserClick = useCallback((u: User) => {
-    setSelectedUser(u);
-    setIsEditingUser(false);
-  }, []);
+    router.push(`/users/${u.id}`);
+  }, [router]);
 
   return (
     <>
@@ -282,7 +187,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
         description="Manage users, role assignment, and account status."
         className="min-h-[calc(100vh-120px)]"
         headerActions={(
-          <Button onClick={() => setIsAddingUser(true)} className="w-full sm:w-auto">
+          <Button onClick={() => router.push('/users/new')} className="w-full sm:w-auto">
             <UserPlus size={16} className="mr-2" />
             Invite user
           </Button>
@@ -302,7 +207,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex w-full flex-wrap gap-1 sm:w-auto">
+            <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
               {(["all", "admin", "librarian", "staff", "student"] as const).map((tab) => (
                 <Button
                   key={tab}
@@ -347,13 +252,39 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
                   </td>
                 </tr>
               ) : users.length > 0 ? (
-                users.map((user) => (
-                  <UserTableRow
-                    key={user.id}
-                    user={user}
-                    onClick={handleUserClick}
-                  />
-                ))
+                <>
+                  {users.map((user) => (
+                    <UserTableRow
+                      key={user.id}
+                      user={user}
+                      onClick={handleUserClick}
+                    />
+                  ))}
+                  {users.map((user) => (
+                    <tr key={`mobile-${user.id}`} className="md:hidden border-b border-border hover:bg-muted/40 cursor-pointer" onClick={() => handleUserClick(user)}>
+                      <td colSpan={4} className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate font-medium text-foreground text-sm">{user.name}</p>
+                              <StatusBadge status={user.status} />
+                            </div>
+                            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                              <RoleBadge role={user.role} />
+                              <span>•</span>
+                              <span className="truncate">{user.department}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               ) : (
                 <tr>
                   <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -364,204 +295,6 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
             </tbody>
           </table>
       </AdminTableShell>
-
-      <AnimatePresence>
-        {selectedUser && (
-          <div className="fixed inset-0 z-[100] flex justify-end">
-            <m.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/30"
-              onClick={() => setSelectedUser(null)}
-            />
-            <m.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 230 }}
-              className="relative flex h-full w-full max-w-md flex-col bg-card"
-            >
-              {/* ... Drawer header and content ... */}
-              <div className="flex items-center justify-between border-b border-border p-4">
-                <h2 className="text-base font-semibold text-foreground">User details</h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingUser((prev) => !prev)}>
-                    {isEditingUser ? "Cancel" : "Edit"}
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedUser(null)}>
-                    <X size={18} />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4">
-                {isEditingUser ? (
-                  <form
-                    className="space-y-4"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.currentTarget);
-                      const roleValue = formData.get("role") as User["role"];
-                      
-                      handleUpdateProfile({
-                        name: String(formData.get("name") ?? selectedUser.name),
-                        email: String(formData.get("email") ?? selectedUser.email),
-                        role: roleValue || selectedUser.role,
-                        status: editStatus,
-                        department: String(formData.get("department") ?? selectedUser.department),
-                      });
-                    }}
-                  >
-                    <div className="space-y-1.5">
-                      <Label>Name</Label>
-                      <Input name="name" defaultValue={selectedUser.name} required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Email</Label>
-                      <Input name="email" type="email" defaultValue={selectedUser.email} required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Role</Label>
-                      <Select value={editRole} onValueChange={(value) => setEditRole(value as User["role"])}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="z-[130]">
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="librarian">Librarian</SelectItem>
-                          <SelectItem value="staff">Staff</SelectItem>
-                          <SelectItem value="student">Student</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <input type="hidden" name="role" value={editRole} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Status</Label>
-                      <Select value={editStatus} onValueChange={setEditStatus}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="z-[130]">
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Department</Label>
-                      <Input name="department" defaultValue={selectedUser.department} />
-                    </div>
-                    <Button type="submit" disabled={isSaving} className="w-full">
-                      {isSaving ? "Saving..." : "Save changes"}
-                    </Button>
-                  </form>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={selectedUser.avatarUrl ?? undefined} alt={selectedUser.name} className="object-cover" />
-                        <AvatarFallback>{selectedUser.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold text-foreground">{selectedUser.name}</p>
-                        <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-md border border-border p-3">
-                        <p className="text-xs text-muted-foreground">Role</p>
-                        <div className="mt-1">
-                          <RoleBadge role={selectedUser.role} />
-                        </div>
-                      </div>
-                      <div className="rounded-md border border-border p-3">
-                        <p className="text-xs text-muted-foreground">Status</p>
-                        <div className="mt-1">
-                          <StatusBadge status={selectedUser.status} />
-                        </div>
-                      </div>
-                      <div className="rounded-md border border-border p-3">
-                        <p className="text-xs text-muted-foreground">Department</p>
-                        <p className="mt-1 text-foreground">{selectedUser.department}</p>
-                      </div>
-                      <div className="rounded-md border border-border p-3">
-                        <p className="text-xs text-muted-foreground">Joined</p>
-                        <p className="mt-1 text-foreground">{selectedUser.joined}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </m.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isAddingUser && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <m.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setIsAddingUser(false)}
-            />
-            <m.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              className="relative w-full max-w-md rounded-lg border border-border bg-card p-4 shadow-lg"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-foreground">Invite user</h3>
-                <Button variant="ghost" size="icon" onClick={() => setIsAddingUser(false)}>
-                  <X size={18} />
-                </Button>
-              </div>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="name@organization.com"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Role</Label>
-                  <Select value={inviteRole} onValueChange={setInviteRole}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[130]">
-                      <SelectItem value="librarian">Librarian</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Department</Label>
-                  <Input
-                    type="text"
-                    value={inviteDept}
-                    onChange={(e) => setInviteDept(e.target.value)}
-                    placeholder="Computer Science"
-                  />
-                </div>
-              </div>
-              <Button onClick={handleInvite} disabled={!inviteEmail || isSaving} className="mt-4 w-full">
-                {isSaving ? "Sending..." : "Send invitation"}
-              </Button>
-            </m.div>
-          </div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

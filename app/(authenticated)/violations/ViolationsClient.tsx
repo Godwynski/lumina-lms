@@ -199,16 +199,16 @@ export default function ViolationsClient({ dataPromise }: Props) {
         }
         controls={
           <>
-            <div className="relative flex-1 sm:max-w-md">
+            <div className="relative w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by student name, ID, or description..."
+                placeholder="Search by name, ID, or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <div className="flex flex-wrap gap-1 sm:w-auto">
+            <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
               {(['all', 'active', 'resolved', 'appealed'] as const).map((tab) => (
                 <Button
                   key={tab}
@@ -220,11 +220,11 @@ export default function ViolationsClient({ dataPromise }: Props) {
                 </Button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full sm:w-auto">
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="rounded-md border border-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm sm:w-auto h-8"
               >
                 <option value="all">All Types</option>
                 {VIOLATION_TYPES.map(type => (
@@ -235,8 +235,70 @@ export default function ViolationsClient({ dataPromise }: Props) {
           </>
         }
       >
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left text-sm">
+        <div className="w-full overflow-hidden">
+          <div className="md:hidden flex flex-col divide-y divide-border">
+            {isPending ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Loading...</div>
+            ) : filteredViolations.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">No violations found</div>
+            ) : (
+              filteredViolations.map((v) => {
+                const typeInfo = getTypeInfo(v.violation_type)
+                const sevInfo = getSeverityInfo(v.severity)
+                const TypeIcon = typeInfo.icon
+                return (
+                  <div key={v.id} className="p-4 flex flex-col gap-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                       <div className="min-w-0">
+                         <p className="font-medium text-foreground truncate">{v.profiles?.full_name || 'Unknown'}</p>
+                         <p className="text-xs text-muted-foreground truncate">{v.profiles?.student_id || 'N/A'}</p>
+                       </div>
+                       <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide shrink-0 ${
+                          v.status === 'active'
+                            ? 'bg-orange-100 text-orange-800'
+                            : v.status === 'resolved'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {v.status === 'active' && <Clock className="h-3 w-3" />}
+                        {v.status === 'resolved' && <CheckCircle2 className="h-3 w-3" />}
+                        {v.status}
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2 text-xs bg-muted/40 rounded p-2">
+                      <span className={`inline-flex items-center gap-1 font-medium ${typeInfo.color}`}>
+                        <TypeIcon className="h-3.5 w-3.5" />
+                        {typeInfo.label}
+                      </span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${sevInfo.color}`}>
+                        {sevInfo.label}
+                      </span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="font-medium">{v.points} pts</span>
+                    </div>
+
+                    <p className="text-sm text-foreground">{v.description}</p>
+                    <p className="text-xs text-muted-foreground text-right">{formatDate(v.created_at)}</p>
+
+                    {!isStudent && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-border mt-1">
+                          {v.status === 'active' && (
+                            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200" onClick={() => setResolveModalOpen(v)}>Resolve</Button>
+                          )}
+                          <Button size="sm" variant="ghost" className={`${v.status === 'active' ? 'flex-1' : 'w-full'} h-8 text-xs text-red-600 hover:bg-red-50 hover:text-red-700`} onClick={() => setDeleteConfirm(v)}>Delete</Button>
+                        </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          <table className="hidden md:table w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/60">
               <th className="px-4 py-2.5 font-medium text-muted-foreground">Student</th>

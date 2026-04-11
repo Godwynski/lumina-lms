@@ -145,7 +145,7 @@ export function ApprovalsContent({ cardsPromise }: ApprovalsContentProps) {
       title="Card Approvals"
       description="Review and update student library card status quickly."
       headerActions={(
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
           {(["pending", "active", "suspended", "all"] as const).map((f) => (
             <Button
               key={f}
@@ -195,7 +195,77 @@ export function ApprovalsContent({ cardsPromise }: ApprovalsContentProps) {
         ) : null
       }
     >
-      <table className="w-full text-left text-sm">
+      <div className="md:hidden flex flex-col divide-y divide-border">
+        {loading ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 animate-pulse">
+               <span className="h-2 w-2 rounded-full bg-primary" />
+               <span>Loading records...</span>
+            </div>
+          </div>
+        ) : paginatedCards.length > 0 ? (
+          paginatedCards.map((card) => (
+            <div key={card.id} className="flex flex-col gap-3 p-4 hover:bg-muted/40 transition-colors">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                    {card.profiles?.avatar_url ? (
+                      <Image src={card.profiles.avatar_url} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-muted-foreground">
+                        {card.profiles?.full_name?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-foreground">{card.profiles?.full_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{card.profiles?.student_id}</p>
+                  </div>
+                </div>
+                <CardStatusBadge status={card.status} />
+              </div>
+              <div className="flex items-center justify-between rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                <div>
+                  <p className="font-medium text-foreground">{card.card_number}</p>
+                  <p>{card.profiles?.department}</p>
+                </div>
+                <div className="text-right">
+                  <p>Issued</p>
+                  <p className="font-medium text-foreground">{new Date(card.issued_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                {card.status !== "active" && (
+                  <Button
+                    onClick={() => handleApprove(card.id, card.user_id)}
+                    disabled={processingId === card.id}
+                    className="h-8 flex-1 text-xs"
+                  >
+                    {processingId === card.id ? "Processing..." : card.status === "pending" ? "Approve" : "Re-activate"}
+                  </Button>
+                )}
+                {card.status === "active" && (
+                  <Button
+                    onClick={() => handleSuspend(card.id)}
+                    disabled={processingId === card.id}
+                    variant="outline"
+                    className="h-8 flex-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <ShieldAlert className="mr-1.5 h-3.5 w-3.5" />
+                    Suspend
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            No results found.
+          </div>
+        )}
+      </div>
+
+      <table className="hidden md:table w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 <th className="px-4 py-2.5 font-medium text-muted-foreground">Student</th>

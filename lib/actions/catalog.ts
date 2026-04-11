@@ -141,7 +141,7 @@ export async function createBook(bookData: unknown, copiesCount: number = 1) {
   }
 
   logger.info('catalog', `Book created: ${validated.title}`, { bookId: data.id, isbn: validated.isbn });
-  revalidateTag('catalog');
+  revalidateTag('catalog', 'default');
   return data;
 }
 
@@ -159,8 +159,8 @@ export async function updateBook(id: string, bookData: unknown) {
     
   if (error) throw new Error(error.message);
   logger.info('catalog', `Book updated: ${id}`, { updates: validated });
-  revalidateTag('catalog');
-  revalidateTag(`book-${id}`);
+  revalidateTag('catalog', 'default');
+  revalidateTag(`book-${id}`, 'default');
   return data;
 }
 
@@ -189,7 +189,7 @@ export async function softDeleteBook(id: string) {
     
   if (error) throw new Error(error.message);
   logger.warn('catalog', `Book soft-deleted: ${id}`);
-  revalidateTag('catalog');
+  revalidateTag('catalog', 'default');
   return data;
 }
 

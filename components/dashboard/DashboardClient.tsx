@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, ShieldCheck, History, HelpCircle, Zap, Users, BarChart2, ChevronDown, ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import dynamic from 'next/dynamic';
+import { CirculationWizard } from '@/components/circulation/CirculationWizard';
 
 const MyCardContainer = dynamic(() => import('@/components/library/MyCardContainer'), {
   ssr: false,
@@ -111,43 +111,8 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     setMounted(true);
   }, []);
 
-  // NOTE: We use a 'mounted' state to avoid hydration mismatches 
-  // caused by locale-dependent Date strings.
-
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
-
-  const operationsGroups = useMemo(() => isStudent ? [
-    {
-      title: 'Library Ops',
-      items: [
-        { title: 'Book Catalog', href: '/student-catalog', icon: Library },
-        { title: 'Digital Assets', href: '/resources', icon: BookOpen },
-      ]
-    },
-    {
-      title: 'Account',
-      items: [
-        { title: 'Borrow History', href: '/history', icon: History },
-      ]
-    }
-  ] : [
-    {
-      title: 'Library Ops',
-      items: [
-        { title: 'Inventory', href: '/catalog', icon: Library },
-        { title: 'Digital Assets', href: '/resources', icon: BookOpen },
-      ]
-    },
-    {
-      title: 'Management',
-      items: [
-        { title: 'Users & Roles', href: '/users', icon: Users },
-        ...(canReviewApprovals ? [{ title: 'Card Approvals', href: '/admin/approvals', icon: ShieldCheck }] : []),
-        { title: 'Analytics', href: '/reports', icon: BarChart2 },
-      ]
-    }
-  ], [isStudent, canReviewApprovals]);
 
   const queueItems = useMemo(() => [
     {
@@ -343,137 +308,118 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     );
   }
 
+
+  // STAFF / ADMIN DASHBOARD
   return (
-    <div className="space-y-6 pb-10 overflow-x-hidden">
-      <div className="grid gap-6 md:grid-cols-12 items-start">
-        {/* Main Column: Tasks & Activity */}
-        <div className="md:col-span-8 space-y-6">
-          {/* Section: Needs Attention */}
-          <section className="space-y-3">
-             <div className="flex items-center justify-between px-1">
-                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-                  Priority Queue
-                </h2>
-                <Badge variant="outline" className="text-[9px] font-medium border-border/60">Real-time alerts</Badge>
-              </div>
-            {attentionItems.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {attentionItems.map((item) => (
-                  <Link key={item.label} href={item.href}>
-                    <Card className="border-border bg-card/40 shadow-sm transition-all hover:bg-muted/50 hover:border-primary/30 group p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{item.label}</p>
-                          <p className="mt-1 text-2xl font-black text-foreground">{item.value}</p>
-                        </div>
-                        <div className="rounded-xl bg-primary/10 p-2 text-primary group-hover:scale-110 transition-transform">
-                          <ArrowUpRight size={18} />
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 p-6">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-full bg-emerald-100 p-2.5 shadow-sm">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-emerald-900 leading-tight">Zero Backlog</h3>
-                    <p className="text-xs text-emerald-700/80 mt-0.5">All administrative queues are currently clear.</p>
-                  </div>
+    <div className="space-y-10 pb-14 overflow-x-hidden">
+      {/* SECTION 1: MAIN TERMINAL (Circulation) */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <div className="space-y-1">
+             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Master Operations</h2>
+             <h1 className="text-2xl font-black text-foreground">Circulation Control</h1>
+          </div>
+          <Badge variant="outline" className="h-6 rounded-full border-primary/20 bg-primary/5 text-[10px] font-bold text-primary px-3 uppercase tracking-wider">
+            Live Terminal
+          </Badge>
+        </div>
+        
+        <Card className="border-border/40 bg-card/30 shadow-2xl shadow-primary/5 rounded-[2rem] overflow-hidden">
+          <CardContent className="p-0">
+             <div className="bg-gradient-to-b from-primary/5 to-transparent p-1">
+                <div className="rounded-[1.8rem] border border-border/40 bg-card p-6 sm:p-10 shadow-inner">
+                   <CirculationWizard />
                 </div>
-              </div>
-            )}
-          </section>
+             </div>
+          </CardContent>
+        </Card>
+      </section>
 
-          {/* Section: Recent Catalog Activity */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <History className="h-3 w-3 text-primary" />
-                Latest In Catalog
-              </h2>
-              <Link href="/catalog" className="text-[10px] font-bold text-primary hover:underline">Full Inventory</Link>
+      <div className="grid gap-10 md:grid-cols-12 items-start">
+        {/* SECTION 2: ATTENTION ITEMS */}
+        <div className="md:col-span-5 space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Attention Items</h2>
+            <Badge variant="outline" className="text-[9px] font-bold border-border/60">Real-time alerts</Badge>
+          </div>
+          
+          {attentionItems.length > 0 ? (
+            <div className="grid gap-3">
+              {attentionItems.map((item) => (
+                <Link key={item.label} href={item.href}>
+                  <Card className="border-border/60 bg-card/40 shadow-sm transition-all hover:bg-muted/50 hover:border-primary/30 group p-4 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                           {item.label === 'Pending Card Approvals' ? 'New Member Applications' : 'Borrowed Books Now'}
+                        </p>
+                        <p className="text-3xl font-black text-foreground tracking-tighter">{item.value}</p>
+                      </div>
+                      <div className="rounded-2xl bg-primary/10 p-3 text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                        <ArrowUpRight size={20} />
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
             </div>
+          ) : (
+            <div className="rounded-[2rem] border-2 border-dashed border-emerald-500/10 bg-emerald-500/5 p-10 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 text-emerald-600">
+                <CheckCircle2 size={24} />
+              </div>
+              <h3 className="text-sm font-bold text-emerald-900 uppercase tracking-widest">Everything is Clear</h3>
+              <p className="text-xs text-emerald-700/60 mt-2 font-medium">No pending applications or urgent tasks at the moment.</p>
+            </div>
+          )}
+        </div>
 
-            <div className="grid gap-2">
+        {/* SECTION 3: RECENT UPDATES */}
+        <div className="md:col-span-7 space-y-4">
+           <div className="flex items-center justify-between px-1">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Recent Catalog Activity</h2>
+              <Link href="/catalog" className="text-[10px] font-bold text-primary hover:tracking-widest transition-all">View Full Vault</Link>
+           </div>
+
+           <div className="grid gap-2">
               {stats.recentBooks.length > 0 ? (
-                stats.recentBooks.slice(0, 4).map((book) => (
+                stats.recentBooks.slice(0, 5).map((book) => (
                   <Link key={book.id} href={`/catalog/${book.id}`}>
-                    <Card className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
+                    <Card className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20 rounded-xl group/item">
                       <CardContent className="flex items-center justify-between gap-4 p-3">
-                        <div className="flex min-w-0 items-center gap-3.5">
-                          <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 text-[10px] font-bold text-foreground/80 overflow-hidden relative shadow-sm">
+                        <div className="flex min-w-0 items-center gap-4">
+                          <div className="flex h-12 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/20 overflow-hidden relative shadow-sm group-hover/item:scale-110 transition-transform">
                             {book.cover_url ? (
-                              <Image src={book.cover_url} alt={book.title} fill sizes="30px" className="object-cover" unoptimized={book.cover_url.startsWith('http')} />
+                              <Image src={book.cover_url} alt={book.title} fill sizes="40px" className="object-cover" unoptimized={book.cover_url.startsWith('http')} />
                             ) : (
-                              <BookMarked size={14} className="text-muted-foreground/30" />
+                              <BookMarked size={16} className="text-muted-foreground/30" />
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-foreground/90">{book.title}</p>
-                            <p className="truncate text-xs text-muted-foreground/60">{book.author}</p>
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="truncate text-sm font-black text-foreground/90 group-hover/item:text-primary transition-colors">{book.title}</p>
+                            <p className="truncate text-[11px] font-bold text-muted-foreground/60">{book.author}</p>
                           </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-4">
+                        <div className="flex shrink-0 items-center gap-6">
                           <div className="hidden sm:block text-right">
-                            <p className="text-[10px] font-bold text-foreground/60 tracking-wider" suppressHydrationWarning>
+                            <p className="text-[10px] font-black text-foreground/40 uppercase tracking-tighter">Listed On</p>
+                            <p className="text-[11px] font-black text-foreground/80" suppressHydrationWarning>
                                {new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </p>
-                            <p className="text-[9px] text-muted-foreground/40 uppercase font-medium">Added on</p>
                           </div>
-                          <div className="bg-muted p-1.5 rounded-lg">
-                             <ArrowUpRight size={14} className="text-muted-foreground/40" />
-                          </div>
+                          <ChevronDown size={16} className="text-muted-foreground/20 -rotate-90 group-hover/item:text-primary transition-colors" />
                         </div>
                       </CardContent>
                     </Card>
                   </Link>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
-                  <BookMarked size={32} className="mx-auto text-muted-foreground/10 mb-3" />
-                  <p className="text-sm font-medium text-muted-foreground/40">No recent catalog entries found.</p>
+                <div className="rounded-2xl border border-dashed border-border p-10 text-center bg-muted/10">
+                  <p className="text-xs font-bold text-muted-foreground uppercase opacity-40">The vault is quiet.</p>
                 </div>
               )}
-            </div>
-          </section>
+           </div>
         </div>
-
-        {/* Sidebar Column: Actions & Infrastructure */}
-        <aside className="md:col-span-4 space-y-6">
-           {/* Section: Quick Actions */}
-           <section className="space-y-3">
-              <h2 className="px-1 text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Terminal Commands</h2>
-              <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-background shadow-md shadow-primary/5 overflow-hidden">
-                <div className="p-1 space-y-0.5">
-                  {operationsGroups.flatMap(group => group.items).map(action => (
-                    <Button
-                      key={action.title}
-                      asChild
-                      variant="ghost"
-                      className="w-full justify-between items-center h-11 px-3 hover:bg-primary/5 hover:text-primary group transition-all rounded-lg"
-                    >
-                      <Link href={action.href}>
-                         <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-background border border-border p-1.5 group-hover:border-primary/30 transition-colors shadow-sm">
-                               <action.icon size={14} className="text-muted-foreground/60 group-hover:text-primary transition-colors" />
-                            </div>
-                            <span className="text-xs font-bold tracking-tight">{action.title}</span>
-                         </div>
-                         <ArrowUpRight size={14} className="text-muted-foreground/20 group-hover:text-primary/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                      </Link>
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-           </section>
-
-        </aside>
       </div>
     </div>
   );
