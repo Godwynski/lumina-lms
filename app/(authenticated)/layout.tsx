@@ -7,44 +7,12 @@ import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { UserNav } from "@/components/layout/UserNav";
 import { ProtectedNav } from "@/components/layout/ProtectedNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
-import { MobileBar } from "@/components/layout/MobileBar";
 import { cookies } from "next/headers";
+import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
-// This internal component handles the profile and role data fetching.
-// Wrapping it in Suspense allows the main layout shell to render instantly.
-async function NavAndProfileWrapper() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
 
-  const [roleResult, profileResult] = await Promise.all([
-    getUserRole() as Promise<Role>,
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single(),
-  ]);
-
-  const role = roleResult;
-  const profile = profileResult.data;
-
-  return (
-    <>
-      <ProtectedNav role={role} user={user} profile={profile} />
-      {/* Mobile Header (simplified with bottom nav handling core links) */}
-      <div className="md:hidden sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
-            <BreadcrumbNav />
-          </div>
-          <UserNav user={user} profile={profile} role={role} />
-      </div>
-    </>
-  );
-}
 
 export default async function ProtectedLayout({
   children,
@@ -62,34 +30,58 @@ export default async function ProtectedLayout({
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
+  // Fetch full profile and role in parallel to avoid waterfalls. 
+  // Gatekeeper needs this anyway, so doing it at the top level is required.
+  const [roleResult, profileResult] = await Promise.all([
+    getUserRole() as Promise<Role>,
+    supabase.from("profiles").select("*").eq("id", user.id).single()
+  ]);
+
+  const role = roleResult;
+  const profile = profileResult.data;
+
+  const isAccessBlocked = 
+    profile?.status === "PENDING" || 
+    profile?.status === "SUSPENDED" || 
+    profile?.status === "INACTIVE";
+
+  // Librarians and Admins should be able to access the system to manage users
+  const isPrivileged = profile?.role === "admin" || profile?.role === "librarian";
+
+  if (isAccessBlocked && !isPrivileged) {
+    return <AccountPendingScreen />;
+  }
+
   return (
     <PreferencesProvider>
       <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full bg-background text-foreground selection:bg-accent">
+        <ProtectedNav role={role} user={user} profile={profile} />
 
-          {/* 
-            NAVIGATION STREAMING:
-            We render the SidebarProvider and main layout immediately.
-            The navigation items and user profile details stream in via Suspense.
-          */}
-          <Suspense fallback={<div className="w-64 border-r bg-sidebar animate-pulse" />}>
-            <NavAndProfileWrapper />
-          </Suspense>
-
-          <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
-            {/* Desktop Header Content (Breadcrumbs) - Unified and Clean */}
-            <header className="sticky top-0 z-40 hidden md:flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-md px-6 transition-all duration-200">
-              <SidebarTrigger className="-ml-2 h-9 w-9" />
-              <div className="h-4 w-px bg-border" />
-              <BreadcrumbNav />
-            </header>
-            
-            <div className="mx-auto mt-10 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8 pb-32 md:pb-6">
-              {children}
+        <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
+          {/* Mobile Header Content */}
+          <div className="md:hidden sticky top-0 z-40 flex w-full h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4">
+            <div className="flex flex-1 items-center gap-3 overflow-hidden">
+              <SidebarTrigger className="shrink-0" />
+              <div className="truncate">
+                <BreadcrumbNav />
+              </div>
             </div>
-            <MobileBar />
-          </SidebarInset>
-        </div>
+            <div className="ml-2 shrink-0">
+              <UserNav user={user} profile={profile} role={role} />
+            </div>
+          </div>
+
+          {/* Desktop Header Content */}
+          <header className="sticky top-0 z-40 hidden md:flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-md px-6 transition-all duration-200">
+            <SidebarTrigger className="-ml-2 h-9 w-9" />
+            <div className="h-4 w-px bg-border" />
+            <BreadcrumbNav />
+          </header>
+          
+          <div className="mx-auto mt-4 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8 pb-10 md:pb-6">
+            {children}
+          </div>
+        </SidebarInset>
       </SidebarProvider>
     </PreferencesProvider>
   );

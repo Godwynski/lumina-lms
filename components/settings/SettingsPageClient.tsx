@@ -9,7 +9,6 @@ import { m, AnimatePresence } from "framer-motion";
 import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
 import { CategoryManagement } from "@/components/admin/CategoryManagement";
-import { RecomputeExpiryDates } from "@/components/admin/RecomputeExpiryDates";
 import {
   User as UserIcon,
   SlidersHorizontal,
@@ -619,7 +618,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
               {activeTab === "operations" && isSuperAdmin && (
                 <div key="operations" className="space-y-4">
                   <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={onMobileNavClick}>
-                    <RecomputeExpiryDates />
+                    <AnnualResetTool />
                   </Section>
                 </div>
               )}
@@ -775,4 +774,55 @@ const PremiumToggle = memo(({ title, description, checked, onChange }: { title: 
     </Card>
   );
 });
+function AnnualResetTool() {
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleReset = async () => {
+    if (!confirm("CRITICAL ACTION: This will suspend ALL student accounts for the new school year. They will need manual activation by a librarian to regain access. Proceed?")) {
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const res = await fetch("/api/admin/annual-reset", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Annual reset complete. Students must now show ID for re-activation.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Reset failed");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-muted/30 p-4">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+            <RefreshCw className={cn("h-5 w-5 text-primary", isResetting && "animate-spin")} />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold">Annual School Year Reset</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed italic">
+              Batch suspends all student accounts. Recommended at the start of every academic year to ensure only valid students maintain library privileges.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button 
+            onClick={handleReset} 
+            disabled={isResetting}
+            variant="outline"
+            className="h-9 gap-2 border-primary/20 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-colors"
+          >
+            {isResetting ? "Executing Reset..." : "Execute Batch Reset"}
+            <ChevronRight size={14} />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 PremiumToggle.displayName = "PremiumToggle";

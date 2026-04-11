@@ -10,7 +10,6 @@ import {
   Settings,
   Library,
   Users,
-  BarChart2,
   History,
   AlertTriangle,
   ChevronsUpDown,
@@ -138,7 +137,6 @@ const NAV_GROUPS: NavGroup[] = [
     minRole: "librarian",
     children: [
       { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
-      { href: "/reports", label: "Analytics", icon: BarChart2, minRole: "staff" },
     ],
   },
   {
@@ -437,7 +435,7 @@ export function ProtectedNav({
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-2">
+      <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-2 hidden md:flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
