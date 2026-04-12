@@ -196,11 +196,13 @@ const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
 const NavSubItem = memo(({ 
   item, 
   isActive, 
-  onMouseEnter 
+  onMouseEnter,
+  onNavigate
 }: { 
   item: NavItem; 
   isActive: boolean; 
   onMouseEnter: (href: string) => void;
+  onNavigate: (href: string) => void;
 }) => (
   <SidebarMenuSubItem>
     <SidebarMenuSubButton asChild isActive={isActive}>
@@ -208,8 +210,9 @@ const NavSubItem = memo(({
         href={item.href} 
         className="flex items-center gap-2"
         onMouseEnter={() => onMouseEnter(item.href)}
+        onClick={() => onNavigate(item.href)}
       >
-        <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-sidebar-primary" : "bg-sidebar-border")} />
+        <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-sidebar-primary animate-pulse" : "bg-sidebar-border")} />
         <span className={cn("truncate group-data-[collapsible=icon]:hidden", isActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
       </Link>
     </SidebarMenuSubButton>
@@ -223,13 +226,15 @@ const NavGroupItem = memo(({
   isOpen, 
   onToggle, 
   isActive,
-  onMouseEnter
+  onMouseEnter,
+  onNavigate
 }: { 
   group: NavGroup; 
   isOpen: boolean; 
   onToggle: (id: string) => void;
   isActive: (href: string) => boolean;
   onMouseEnter: (href: string) => void;
+  onNavigate: (href: string) => void;
 }) => {
   const isGroupActive = group.children.some(child => isActive(child.href));
 
@@ -258,6 +263,7 @@ const NavGroupItem = memo(({
                 item={item}
                 isActive={isActive(item.href)}
                 onMouseEnter={onMouseEnter}
+                onNavigate={onNavigate}
               />
             ))}
           </SidebarMenuSub>
@@ -305,6 +311,23 @@ export function ProtectedNav({
   }, [pathname]);
   const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
 
+  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Pro-tip: Clear pending route when natively navigated
+    setPendingRoute(null);
+  }, [pathname]);
+
+  const handleNavigate = useCallback((href: string) => {
+    if (pathname === href) return;
+    const pathWithoutQuery = pathname.split("?")[0];
+    const hrefBase = href.split("?")[0];
+    // If we're already on the base path and it's not a tab switch, we ignore to avoid flicker.
+    if (pathWithoutQuery === hrefBase && !href.includes("?tab=")) return;
+    
+    setPendingRoute(href);
+  }, [pathname]);
+
   // Cache user data derived from props
   const userData = useMemo(() => ({
     name,
@@ -314,6 +337,8 @@ export function ProtectedNav({
   }), [name, email, avatarUrl, initials]);
 
   const isActive = useCallback((href: string) => {
+    if (pendingRoute === href) return true;
+
     const pathWithoutQuery = pathname.split("?")[0];
     const hrefBase = href.split("?")[0];
 
@@ -330,7 +355,7 @@ export function ProtectedNav({
     }
 
     return pathWithoutQuery.startsWith(hrefBase);
-  }, [pathname, currentTab]);
+  }, [pathname, currentTab, pendingRoute]);
 
   const filteredGroups = useMemo(() => {
     return NAV_GROUPS.map(group => ({
@@ -413,7 +438,7 @@ export function ProtectedNav({
                   isActive={dashboardActive}
                   tooltip={DASHBOARD_LINK.label}
                 >
-                  <Link href={DASHBOARD_LINK.href} className="flex items-center w-full group-data-[collapsible=icon]:justify-center">
+                  <Link href={DASHBOARD_LINK.href} className="flex items-center w-full group-data-[collapsible=icon]:justify-center" onClick={() => handleNavigate(DASHBOARD_LINK.href)}>
                     {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon className="shrink-0" />}
                     <span className="truncate group-data-[collapsible=icon]:hidden">{DASHBOARD_LINK.label}</span>
                   </Link>
@@ -428,6 +453,7 @@ export function ProtectedNav({
                   onToggle={toggleGroup}
                   isActive={isActive}
                   onMouseEnter={handlePrefetch}
+                  onNavigate={handleNavigate}
                 />
               ))}
             </SidebarMenu>
@@ -480,7 +506,7 @@ export function ProtectedNav({
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex w-full cursor-pointer items-center">
+                    <Link href="/profile" className="flex w-full cursor-pointer items-center" onClick={() => handleNavigate("/profile")}>
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Profile Settings</span>
                     </Link>
