@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -47,10 +48,10 @@ export function UpdatePasswordForm({
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
             <Logo size={20} />
             <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-          </div>
+          </Link>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Set new password</CardTitle>
             <CardDescription className="text-sm text-muted-foreground">Enter a secure password to complete the reset process.</CardDescription>

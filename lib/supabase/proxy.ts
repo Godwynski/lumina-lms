@@ -4,9 +4,11 @@ import { hasEnvVars } from "../utils";
 
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const isAuthRoute = path.startsWith("/auth");
+  const publicAuthPaths = ["/login", "/sign-up", "/forgot-password", "/update-password", "/confirm", "/error", "/callback", "/sign-up-success"];
+  const isAuthRoute = publicAuthPaths.some(p => path.startsWith(p));
   const isApiRoute = path.startsWith("/api");
-  const isPublicRoute = path === "/" || isAuthRoute || isApiRoute;
+  const isBookRoute = path.startsWith("/book");
+  const isPublicRoute = path === "/" || isAuthRoute || isApiRoute || isBookRoute;
 
   let supabaseResponse = NextResponse.next({ request });
 
@@ -52,7 +54,7 @@ export async function updateSession(request: NextRequest) {
   // 1. Unauthenticated → redirect to login
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
+    url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 

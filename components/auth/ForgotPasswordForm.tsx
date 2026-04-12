@@ -50,10 +50,10 @@ export function ForgotPasswordForm({
       <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
         <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
           <CardHeader className="space-y-4 pb-5">
-            <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
               <Logo size={20} />
               <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-            </div>
+            </Link>
             <div className="flex flex-col items-center justify-center pt-4 pb-2">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted/50">
                 <MailCheck className="h-6 w-6 text-muted-foreground" />
@@ -66,7 +66,7 @@ export function ForgotPasswordForm({
           </CardHeader>
           <CardContent className="pb-8">
             <Button asChild variant="outline" className="h-11 w-full rounded-lg border-input hover:bg-muted">
-              <Link href="/auth/login">
+              <Link href="/login">
                 Return to sign in
               </Link>
             </Button>
@@ -80,10 +80,10 @@ export function ForgotPasswordForm({
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
             <Logo size={20} />
             <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-          </div>
+          </Link>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Reset password</CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
@@ -119,7 +119,7 @@ export function ForgotPasswordForm({
           </form>
 
           <Link
-            href="/auth/login"
+            href="/login"
             className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft size={14} />

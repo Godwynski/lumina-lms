@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/layout/Logo";
+import { MicrosoftIcon } from "@/components/ui/microsoft-icon";
 import { AuthErrorAlert } from "@/components/auth/auth-feedback";
 import {
   Card,
@@ -69,14 +70,36 @@ export function SignUpForm({
     }
   };
 
+  const handleMicrosoftLogin = async () => {
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          scopes: "email profile",
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred");
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
             <Logo size={20} />
             <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-          </div>
+          </Link>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Create account</CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
@@ -168,10 +191,34 @@ export function SignUpForm({
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-widest">
+              <span className="bg-card px-3 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-lg text-sm font-semibold flex items-center justify-center gap-3 border-input bg-background text-foreground hover:bg-muted hover:text-foreground"
+            onClick={handleMicrosoftLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : (
+              <MicrosoftIcon className="h-5 w-5" />
+            )}
+            <span>{isLoading ? "Redirecting..." : "Sign up with Microsoft"}</span>
+          </Button>
         </CardContent>
         <CardFooter className="flex justify-center border-t border-border bg-muted/30 py-4 text-sm">
           <span className="text-muted-foreground">Already have an account?</span>
-          <Link href="/auth/login" className="ml-1.5 font-bold text-foreground hover:text-foreground/80">
+          <Link href="/login" className="ml-1.5 font-bold text-foreground hover:text-foreground/80">
             Sign in
           </Link>
         </CardFooter>

@@ -81,40 +81,15 @@ export function LoginForm({
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
             <Logo size={20} />
             <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-          </div>
+          </Link>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Sign in</CardTitle>
             <CardDescription className="text-sm text-muted-foreground">
               Access your library workspace.
             </CardDescription>
-          </div>
-          <div className="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Demo Accounts</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 rounded-md border-border bg-background text-xs font-semibold text-foreground hover:bg-muted"
-                onClick={() => signInWithCredentials("student@lumina.test", "Password123!")}
-                disabled={isLoading}
-              >
-                {isLoading ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : null}
-                Student Demo
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 rounded-md border-border bg-background text-xs font-semibold text-foreground hover:bg-muted"
-                onClick={() => signInWithCredentials("admin@lumina.test", "Password123!")}
-                disabled={isLoading}
-              >
-                {isLoading ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : null}
-                Admin Demo
-              </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -134,7 +109,7 @@ export function LoginForm({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/auth/forgot-password" title="Recover your password" className="text-xs font-medium text-muted-foreground hover:text-foreground">
+                <Link href="/forgot-password" title="Recover your password" className="text-xs font-medium text-muted-foreground hover:text-foreground">
                   Forgot password?
                 </Link>
               </div>
@@ -195,10 +170,38 @@ export function LoginForm({
             )}
             <span>{isLoading ? "Redirecting..." : "Sign in with Microsoft"}</span>
           </Button>
+
+          <div className="mt-8 space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Demo Access</span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Admin", email: "admin@lumina.test" },
+                { label: "Librarian", email: "librarian@lumina.test" },
+                { label: "Staff", email: "staff@lumina.test" },
+                { label: "Student", email: "student@lumina.test" },
+              ].map((role) => (
+                <Button
+                  key={role.email}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 rounded-md border border-dashed border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:border-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-primary transition-all duration-300"
+                  onClick={() => signInWithCredentials(role.email, "Password123!")}
+                  disabled={isLoading}
+                >
+                  {role.label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center border-t border-border bg-muted/30 py-4 text-sm">
           <span className="text-muted-foreground">Don&apos;t have an account?</span>
-          <Link href="/auth/sign-up" className="ml-1.5 font-bold text-foreground hover:text-foreground/80">
+          <Link href="/sign-up" className="ml-1.5 font-bold text-foreground hover:text-foreground/80">
             Sign up
           </Link>
         </CardFooter>

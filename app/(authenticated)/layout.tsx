@@ -8,6 +8,7 @@ import { ProtectedNav } from "@/components/layout/ProtectedNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
 import { cookies } from "next/headers";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
+import { MainHeader } from "@/components/layout/MainHeader";
 
 type Role = "admin" | "librarian" | "staff" | "student" | null;
 
@@ -71,11 +72,7 @@ export default async function ProtectedLayout({
           </div>
 
           {/* Desktop Header Content */}
-          <header className="sticky top-0 z-40 hidden md:flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-md px-6 transition-all duration-200">
-            <SidebarTrigger className="-ml-2 h-9 w-9" />
-            <div className="h-4 w-px bg-border" />
-            <BreadcrumbNav />
-          </header>
+          <MainHeader />
           
           <div className="mx-auto mt-4 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8 pb-10 md:pb-6">
             {children}

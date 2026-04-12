@@ -10,7 +10,6 @@ export const metadata = {
 export default function UpdatePasswordPage() {
   return (
     <AuthPageShell
-      badge="Security Maintenance"
       title="Set a new password for your account."
       description="Use a strong password with letters, numbers, and symbols to maintain account security."
     >

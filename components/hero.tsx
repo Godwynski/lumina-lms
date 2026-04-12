@@ -2,10 +2,9 @@
 
 import type { User } from '@supabase/supabase-js';
 import { m } from "framer-motion";
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export function Hero({ user, role }: { user: User | null; role: string | null }) {
   const containerVariants = {
@@ -28,12 +27,6 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
       animate="visible"
       className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-12 md:py-24"
     >
-      <m.div variants={itemVariants} className="mb-6 flex items-center gap-3">
-        <Badge variant="secondary" className="px-3 py-1 text-xs font-medium shadow-sm">
-          <Sparkles className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-          {user ? 'Account Active' : 'Library Operations Platform'}
-        </Badge>
-      </m.div>
 
       <m.div variants={itemVariants} className="space-y-6 mb-10">
         <h1 className="text-balance text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
@@ -61,23 +54,13 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-background/80 backdrop-blur-sm">
-              <Link href="/profile">
-                Account Settings
-              </Link>
-            </Button>
           </>
         ) : (
           <>
             <Button asChild size="lg" className="rounded-full font-semibold shadow-md px-8 h-12">
-              <Link href="/auth/login">
+              <Link href="/login">
                 Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="rounded-full font-semibold px-8 h-12 bg-background/80 backdrop-blur-sm">
-              <Link href="/search">
-                Learn More
               </Link>
             </Button>
           </>
