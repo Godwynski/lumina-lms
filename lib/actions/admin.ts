@@ -1,8 +1,10 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getUserRole } from '@/lib/auth-helpers';
 import { logger } from '../logger';
+import { logAuditActivity } from '@/lib/audit';
 
 export async function approveLibraryCard(cardId: string, userId: string) {
   const role = await getUserRole();
@@ -32,6 +34,18 @@ export async function approveLibraryCard(cardId: string, userId: string) {
     // In a real app we'd trigger an email system here
     logger.info('admin', `Card approved. Notification would be sent to ${user.email}`);
   }
+
+  // AUDIT LOGGING
+  const supabase = await createClient();
+  const { data: { user: adminUser } } = await supabase.auth.getUser();
+  
+  await logAuditActivity(
+    adminUser?.id || null, 
+    "library_card",
+    cardId,
+    "approve",
+    `Approved card for user ${userId}`
+  );
 
   return { success: true };
 }

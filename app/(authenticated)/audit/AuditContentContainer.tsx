@@ -10,7 +10,7 @@ export async function AuditContentContainer() {
   }
 
   return (
-    <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+    <div className="w-full">
       <AuditLogClient />
     </div>
   );

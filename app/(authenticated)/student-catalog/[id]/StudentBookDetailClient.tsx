@@ -2,9 +2,7 @@
 
 import { use } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { 
-  ChevronLeft, 
   MapPin, 
   BookOpen, 
   CheckCircle2,
@@ -23,7 +21,7 @@ interface BookDetail {
   section: string | null;
   available_copies: number;
   total_copies: number;
-  categories: any;
+  categories: { name?: string } | { name?: string }[] | null;
   tags: string[] | null;
 }
 

@@ -2,15 +2,6 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -21,28 +12,19 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetTrigger 
-} from "@/components/ui/sheet";
-import { 
   Search, 
   Download, 
   Filter, 
-  Clock, 
   User as UserIcon, 
   Database,
   RefreshCw,
-  Eye
+  Calendar
 } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
-import { AuditDiffViewer } from "./AuditDiffViewer";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -52,8 +34,6 @@ interface AuditLog {
   entity_type: string;
   entity_id: string | null;
   action: string;
-  old_value: string | null;
-  new_value: string | null;
   reason: string | null;
   created_at: string;
   profiles: {
@@ -96,48 +76,39 @@ export function AuditLogClient() {
     }
   };
 
-  const getActionColor = (action: string) => {
-    const a = action.toLowerCase();
-    if (a.includes("create")) return "bg-green-100 text-green-700 border-green-200";
-    if (a.includes("delete")) return "bg-red-100 text-red-700 border-red-200";
-    if (a.includes("update") || a.includes("edit")) return "bg-amber-100 text-amber-700 border-amber-200";
-    return "bg-slate-100 text-slate-700 border-slate-200";
-  };
-
   const entityTypes = [
     "all",
     "book",
+    "book_copy",
     "profile",
-    "borrow_record",
-    "reservation",
+    "borrowing_record",
+    "library_card",
     "violation",
     "setting",
+    "system"
   ];
 
   return (
-    <Card className="border-border shadow-sm overflow-hidden bg-card backdrop-blur-sm">
-      <CardHeader className="border-b bg-muted/50 space-y-4">
+    <div className="w-full space-y-6">
+      <div className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <CardTitle className="text-xl font-bold flex items-center gap-2">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            Activity History
-          </CardTitle>
-          <div className="flex items-center gap-2">
+          {/* Header Title Removed as the page already has a big title */}
+          <div className="flex items-center gap-2 w-full md:w-auto ml-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => mutate()}
               disabled={isValidating}
-              className="h-9 rounded-lg"
+              className="h-9 rounded-lg flex-1 md:flex-none bg-background shadow-xs"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isValidating ? "animate-spin" : ""}`} />
+              <RefreshCw className={cn("h-4 w-4 mr-2", isValidating && "animate-spin")} />
               Refresh
             </Button>
             <Button
               variant="default"
               size="sm"
               onClick={handleExport}
-              className="h-9 rounded-lg shadow-sm"
+              className="h-9 rounded-lg shadow-sm flex-1 md:flex-none"
             >
               <Download className="h-4 w-4 mr-2" />
               Export CSV
@@ -149,163 +120,135 @@ export function AuditLogClient() {
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by action or ID..." 
+              placeholder="Search by action or specific entity ID..." 
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-10 border-border shadow-none focus-visible:ring-ring"
+              className="pl-9 h-10 border-border shadow-none focus-visible:ring-ring bg-background"
             />
           </div>
           <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-            <SelectTrigger className="h-10 border-border shadow-none">
+            <SelectTrigger className="h-10 border-border shadow-none bg-background">
               <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Entity Type" />
             </SelectTrigger>
             <SelectContent>
               {entityTypes.map(t => (
                 <SelectItem key={t} value={t} className="capitalize">
-                  {t.replace("_", " ")}
+                  {t === "all" ? "All Entities" : t.replace(/_/g, " ")}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="flex items-center justify-end px-2 text-xs text-muted-foreground font-medium">
+          <div className="flex items-center justify-end px-2 text-xs text-muted-foreground font-medium bg-muted/50 rounded-lg p-2 md:p-0 md:bg-transparent">
             {data ? `${data.total} records found` : "Searching records..."}
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/50 border-b border-border">
-              <TableRow>
-                <TableHead className="w-[180px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Timestamp</TableHead>
-                <TableHead className="w-[140px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Entity</TableHead>
-                <TableHead className="w-[140px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Action</TableHead>
-                <TableHead className="min-w-[200px] font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Admin</TableHead>
-                <TableHead className="w-[100px] text-right font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {error && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-red-500 font-medium">
-                    Failed to load audit logs. Please check your permissions.
-                  </TableCell>
-                </TableRow>
-              )}
-              {data?.logs.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 opacity-50">
-                      <Database className="h-10 w-10 text-muted-foreground" />
-                      <span className="text-sm font-medium">No results match your search.</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-              {!data && !error && Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <TableCell key={j}><div className="h-4 w-full bg-muted animate-pulse rounded" /></TableCell>
-                  ))}
-                </TableRow>
-              ))}
-              {data?.logs.map((log) => (
-                <TableRow key={log.id} className="hover:bg-muted/50 transition-colors group">
-                  <TableCell className="font-medium text-foreground">
-                    <div className="flex flex-col">
-                      <span className="text-sm">{log.created_at ? format(new Date(log.created_at), "MMM d, yyyy") : "-"}</span>
-                      <span className="text-[10px] text-muted-foreground font-mono tracking-tighter">
-                        {log.created_at ? format(new Date(log.created_at), "HH:mm:ss") : ""}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold capitalize text-foreground">{log.entity_type}</span>
-                      {log.entity_id && (
-                        <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[80px]">
-                          #{log.entity_id.split("-")[0]}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`font-black text-[10px] uppercase tracking-wide border-2 ${getActionColor(log.action)}`}>
-                      {log.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                       <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center border-border shadow-sm overflow-hidden border">
-                          <UserIcon className="h-4 w-4 text-muted-foreground" />
-                       </div>
-                       <div className="flex flex-col min-w-0">
-                         <span className="text-xs font-bold text-foreground truncate">
-                            {log.profiles?.full_name || log.profiles?.email || "Unknown"}
-                         </span>
-                         <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none">
-                            {log.profiles?.role || "Admin"}
-                         </span>
-                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent hover:text-accent-foreground group-hover:visible">
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent className="sm:max-w-xl">
-                        <SheetHeader className="mb-6">
-                          <SheetTitle className="text-2xl font-black">Event Insight</SheetTitle>
-                          <SheetDescription className="text-muted-foreground font-medium">
-                            Comparison of state changes for this {log.entity_type} {log.action} event.
-                          </SheetDescription>
-                        </SheetHeader>
-                        
-                        <div className="space-y-6">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-muted/50 rounded-xl border border-border flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">When</span>
-                                <span className="text-xs font-bold font-mono text-foreground">{log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "-"}</span>
-                            </div>
-                            <div className="p-4 bg-muted/50 rounded-xl border border-border flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Admin</span>
-                                <span className="text-xs font-bold truncate text-foreground">{log.profiles?.full_name || log.profiles?.email}</span>
-                            </div>
+      <div className="pt-2">
+        <div className="p-4 md:p-8">
+          {error && (
+            <div className="p-8 text-center text-red-500 font-medium bg-red-50 rounded-xl border border-red-100">
+              Failed to load audit logs. Please check your permissions.
+            </div>
+          )}
+
+          {data?.logs.length === 0 && (
+            <div className="h-48 flex flex-col items-center justify-center gap-2 opacity-50 bg-muted/20 rounded-xl border border-border border-dashed">
+              <Database className="h-10 w-10 text-muted-foreground" />
+              <span className="text-sm font-medium">No results match your search.</span>
+            </div>
+          )}
+
+          {!data && !error && (
+            <div className="space-y-6 relative border-l-2 border-muted pl-6 ml-4">
+               {Array.from({ length: 4 }).map((_, i) => (
+                 <div key={i} className="relative">
+                   <div className="absolute -left-[31px] top-2 h-4 w-4 rounded-full bg-muted animate-pulse ring-4 ring-background" />
+                   <div className="h-28 w-full bg-muted animate-pulse rounded-xl" />
+                 </div>
+               ))}
+            </div>
+          )}
+
+          {data && data.logs.length > 0 && (
+            <div className="relative border-l-[3px] border-border/60 pl-6 ml-2 md:ml-6 space-y-8 py-2">
+              {data.logs.map((log) => {
+                const date = log.created_at ? new Date(log.created_at) : new Date();
+
+                return (
+                  <div key={log.id} className="relative group">
+                    {/* Timeline Node */}
+                    <div className="absolute -left-[31px] md:-left-[31px] top-4 h-3.5 w-3.5 rounded-full border-2 border-primary bg-background ring-4 ring-background z-10 group-hover:scale-125 group-hover:bg-primary transition-all shadow-sm" />
+                    
+                    {/* Card Container Element */}
+                    <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm hover:shadow-md transition-all hover:border-primary/20 space-y-4">
+                      
+                      {/* Header Row: Actor & Timestamp */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">
+                            <UserIcon className="h-5 w-5" />
                           </div>
-
-                          <div className="space-y-2">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-foreground border-b border-border pb-2 flex items-center gap-2">
-                              <Database className="h-3 w-3" />
-                              Data Changes
-                            </h3>
-                            <AuditDiffViewer oldValue={log.old_value} newValue={log.new_value} />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-bold text-card-foreground truncate">
+                              {log.profiles?.full_name || log.profiles?.email || "System Actor"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-tight">
+                              {log.profiles?.role || "Admin Role"}
+                            </span>
                           </div>
+                        </div>
 
-                          {log.reason && (
-                            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                              <h4 className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Administrative Reason</h4>
-                              <p className="text-xs text-emerald-900 leading-relaxed font-medium">&quot;{log.reason}&quot;</p>
-                            </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-full w-fit">
+                          <Calendar className="h-3 w-3" />
+                          <span className="font-semibold">{formatDistanceToNow(date, { addSuffix: true })}</span>
+                          <span className="hidden md:inline mx-1 opacity-50">&bull;</span>
+                          <span className="hidden md:inline font-mono tracking-tighter opacity-70">
+                            {format(date, "MMM d, HH:mm")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Main Content Row: Reason & Tags */}
+                      <div className="flex flex-col gap-3">
+                        {log.reason ? (
+                           <h3 className="text-sm md:text-base text-foreground font-medium leading-relaxed">
+                            {log.reason}
+                           </h3>
+                        ) : (
+                           <h3 className="text-sm md:text-base text-muted-foreground italic leading-relaxed">
+                             System performed {log.action} on {log.entity_type}.
+                           </h3>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="font-bold text-[10px] uppercase tracking-wider bg-secondary/60 text-secondary-foreground border-transparent px-2.5">
+                            {log.entity_type.replace(/_/g, " ")}
+                          </Badge>
+                          <Badge variant="outline" className="font-black text-[10px] uppercase tracking-wide border-primary/30 text-primary bg-primary/5 px-2.5 shadow-sm">
+                            {log.action.replace(/_/g, " ")}
+                          </Badge>
+                          {log.entity_id && (
+                            <span className="text-[10px] font-mono text-muted-foreground/60 tracking-wider truncate max-w-[120px] bg-muted px-2 py-0.5 rounded-md">
+                              #{log.entity_id.split("-")[0]}
+                            </span>
                           )}
                         </div>
-                      </SheetContent>
-                    </Sheet>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+
         {data && data.total > 0 && (
-          <div className="p-4 border-t border-border bg-muted/30">
+          <div className="py-6 mt-8 border-t border-border/50">
             <CompactPagination 
               page={page}
               totalItems={data.total}
@@ -314,7 +257,7 @@ export function AuditLogClient() {
             />
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

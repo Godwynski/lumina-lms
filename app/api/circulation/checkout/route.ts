@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { logAuditActivity } from "@/lib/audit";
 import { z } from "zod";
 
 const CheckoutSchema = z.object({
@@ -76,7 +77,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const rpcResult = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
+  const rpcResult = (data ?? {}) as { 
+    ok?: boolean; 
+    code?: string; 
+    message?: string;
+    borrowing_id?: string;
+    book_title?: string;
+    student_name?: string;
+  };
   if (!rpcResult.ok) {
     logger.warn("circulation", `Checkout failed: ${rpcResult.message}`, { studentCardQr, bookQr, code: rpcResult.code });
     const conflictCodes = new Set(["COPY_LOCKED", "COPY_UNAVAILABLE"]);
@@ -85,5 +93,16 @@ export async function POST(request: Request) {
   }
 
   logger.info("circulation", "Checkout successful", { studentCardQr, bookQr, librarianId: profile.id });
+  
+  if (!validated.previewOnly) {
+    await logAuditActivity(
+      profile.id,
+      "borrowing_record",
+      rpcResult.borrowing_id || null,
+      "checkout",
+      `Checked out book '${rpcResult.book_title}' to ${rpcResult.student_name} (QR: ${bookQr})`
+    );
+  }
+  
   return NextResponse.json({ success: true, ...rpcResult }, { status: 200 });
 }
