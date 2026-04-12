@@ -24,7 +24,7 @@ export default async function ProtectedLayout({
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const cookieStore = await cookies();
