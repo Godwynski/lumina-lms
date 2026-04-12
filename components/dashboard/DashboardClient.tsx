@@ -111,7 +111,6 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
   }, []);
 
   const isStudent = role === 'student';
-  const canReviewApprovals = role === 'admin' || role === 'librarian';
 
   if (isStudent) {
     return (

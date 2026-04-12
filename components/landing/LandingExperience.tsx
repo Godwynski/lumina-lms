@@ -2,7 +2,6 @@
 
 import { m } from "framer-motion";
 import { 
-  BookOpen, 
   ShieldCheck, 
   Zap, 
   ArrowRight,
