@@ -29,7 +29,7 @@ export default async function PublicBookDetailPage({ params }: { params: Promise
       >
         <Link href="/">
           <ChevronLeft className="w-5 h-5 mr-1" />
-          Back to Search
+          Back to Library
         </Link>
       </Button>
 

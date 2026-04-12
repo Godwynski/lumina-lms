@@ -21,6 +21,7 @@ import {
   Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/layout/Logo";
 import {
   Avatar,
   AvatarFallback,
@@ -62,6 +63,8 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
@@ -163,27 +166,6 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-function LuminaLogo({ size = 20 }: { size?: number }) {
-  return (
-    <div className="relative flex items-center justify-center">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="relative z-10 text-sidebar-foreground"
-      >
-        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-        <circle cx="12" cy="12" r="3" className="fill-sidebar-foreground/10" />
-      </svg>
-    </div>
-  );
-}
 
 // Prefetch helper
 const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
@@ -236,6 +218,7 @@ const NavGroupItem = memo(({
   onMouseEnter: (href: string) => void;
   onNavigate: (href: string) => void;
 }) => {
+  const { state, setOpen } = useSidebar();
   const isGroupActive = group.children.some(child => isActive(child.href));
 
   return (
@@ -249,6 +232,11 @@ const NavGroupItem = memo(({
           <SidebarMenuButton
             tooltip={group.label}
             isActive={isGroupActive}
+            onClick={() => {
+              if (state === "collapsed") {
+                setOpen(true);
+              }
+            }}
           >
             <group.icon />
             <span className="group-data-[collapsible=icon]:hidden">{group.label}</span>
@@ -416,12 +404,15 @@ export function ProtectedNav({
       }}
     >
       <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
-      <SidebarHeader className="flex h-20 shrink-0 items-center px-4 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:justify-center">
-        <Link href="/dashboard" className="flex items-center gap-3 group" aria-label="Lumina LMS Platform">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm transition-all duration-200 group-hover:border-sidebar-ring" aria-hidden="true">
-            <LuminaLogo size={20} />
-          </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+      <SidebarHeader className="flex flex-row h-16 shrink-0 items-center gap-4 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
+        <SidebarTrigger className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors group-data-[collapsible=icon]:flex" />
+        <Link 
+          href="/dashboard" 
+          className="flex items-center gap-3 shrink-0 group-data-[collapsible=icon]:hidden" 
+          aria-label="Lumina LMS Platform"
+        >
+          <Logo size={20} className="scale-90 shrink-0" />
+          <div className="flex flex-col whitespace-nowrap">
             <span className="leading-none text-base font-bold tracking-tight text-sidebar-foreground">Lumina</span>
             <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/70">LMS Platform</span>
           </div>

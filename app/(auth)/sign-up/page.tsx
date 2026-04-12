@@ -21,7 +21,6 @@ export default async function SignUpPage() {
 
   return (
     <AuthPageShell
-      badge="New Account Provisioning"
       title="Create your account to access library services."
       description="Register to use book search, borrowing features, and digital resource access in the Lumina platform."
     >

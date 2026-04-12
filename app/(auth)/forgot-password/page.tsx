@@ -10,7 +10,6 @@ export const metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthPageShell
-      badge="Credential Recovery"
       title="Reset your password securely."
       description="Enter your email address and we will send a verification link to complete the reset process."
     >

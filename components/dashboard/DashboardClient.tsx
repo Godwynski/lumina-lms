@@ -7,9 +7,7 @@ import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, Hel
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import dynamic from 'next/dynamic';
-import { CirculationWizard } from '@/components/circulation/CirculationWizard';
 
 const MyCardContainer = dynamic(() => import('@/components/library/MyCardContainer'), {
   ssr: false,
@@ -297,70 +295,8 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
   // STAFF / ADMIN DASHBOARD
   return (
     <div className="space-y-8 pb-14 w-full min-w-0 flex flex-col overflow-hidden">
-      {/* QUICK ACTIONS HEADER */}
-      <section className="w-full min-w-0">
-        <div className="grid grid-cols-3 gap-2 md:gap-4 w-full pb-6 border-b border-border/40">
-           {/* Circulation Modal Action */}
-           <Sheet>
-              <SheetTrigger asChild>
-                 <Card className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 p-2 sm:p-3 md:px-5 md:py-3 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer shadow-sm relative overflow-hidden group rounded-2xl w-full min-w-0">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="bg-primary/20 p-2 md:p-2.5 rounded-xl text-primary transition-transform group-hover:scale-110 shrink-0">
-                       <History size={20} className="-scale-x-100" />
-                    </div>
-                    <div className="text-center md:text-left min-w-0 w-full overflow-hidden">
-                      <p className="text-[10px] sm:text-xs md:text-sm font-black text-primary leading-tight truncate">Circulation</p>
-                      <p className="text-[9px] md:text-[10px] font-bold text-primary/70 uppercase tracking-widest hidden md:block truncate">Issue & Return</p>
-                    </div>
-                 </Card>
-              </SheetTrigger>
-              <SheetContent side="right" className="sm:max-w-xl md:max-w-3xl w-full p-0 border-l border-border/50">
-                 <SheetHeader className="p-6 border-b border-border/40 bg-muted/10">
-                    <SheetTitle>Live Terminal</SheetTitle>
-                    <SheetDescription>Process book checkouts and returns instantly.</SheetDescription>
-                 </SheetHeader>
-                 <div className="h-full overflow-y-auto bg-card p-6 pb-24">
-                    <CirculationWizard />
-                 </div>
-              </SheetContent>
-           </Sheet>
 
-           {/* Approval Action */}
-           {canReviewApprovals ? (
-              <Link href="/admin/approvals" className="h-full block">
-                 <Card className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 p-2 sm:p-3 md:px-5 md:py-3 border-border hover:bg-muted/50 transition-all cursor-pointer shadow-none rounded-2xl group h-full w-full min-w-0">
-                    <div className="bg-muted p-2 md:p-2.5 rounded-xl text-muted-foreground group-hover:bg-amber-500/10 group-hover:text-amber-600 transition-colors shrink-0">
-                       <CheckCircle2 size={20} />
-                    </div>
-                    <div className="text-center md:text-left min-w-0 w-full overflow-hidden">
-                      <p className="text-[10px] sm:text-xs md:text-sm font-bold group-hover:text-foreground transition-colors leading-tight truncate">Approvals</p>
-                      <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden md:block truncate">
-                        {stats.pendingApprovals > 0 ? (
-                           <span className="text-amber-500">{stats.pendingApprovals} Pending</span>
-                        ) : 'Up to date'}
-                      </p>
-                    </div>
-                 </Card>
-              </Link>
-           ) : (
-                <div /> // Placeholder if no permission to maintain grid
-           )}
-           
-           <Link href="/catalog" className="h-full block">
-              <Card className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 p-2 sm:p-3 md:px-5 md:py-3 border-border hover:bg-muted/50 transition-all cursor-pointer shadow-none rounded-2xl group h-full w-full min-w-0">
-                 <div className="bg-muted p-2 md:p-2.5 rounded-xl text-muted-foreground group-hover:bg-foreground group-hover:text-background transition-colors shrink-0">
-                    <BookMarked size={20} />
-                 </div>
-                 <div className="text-center md:text-left min-w-0 w-full overflow-hidden">
-                   <p className="text-[10px] sm:text-xs md:text-sm font-bold group-hover:text-foreground transition-colors leading-tight truncate">Inventory</p>
-                   <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden md:block truncate">Manage Items</p>
-                 </div>
-              </Card>
-           </Link>
-        </div>
-      </section>
-
-      <div className="grid gap-8 md:grid-cols-2 items-start mt-2 w-full min-w-0">
+      <div className="grid gap-8 md:grid-cols-2 items-start w-full min-w-0">
         {/* LEFT COLUMN: ACTION REQUIRED */}
         <div className="space-y-6 min-w-0 w-full overflow-hidden">
            <div className="flex items-center justify-between px-1">

@@ -21,7 +21,6 @@ export default async function LoginPage() {
 
   return (
     <AuthPageShell
-      badge="Secure Workspace Access"
       title="Sign in to your library operations account."
       description="Use your assigned credentials to access catalog, circulation, and administrative tools."
     >
