@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { logAuditActivity } from "@/lib/audit";
 
 type ReturnRequest = {
   bookQr: string;
@@ -68,7 +69,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = (data ?? {}) as { ok?: boolean; code?: string; message?: string };
+  const result = (data ?? {}) as { 
+    ok?: boolean; 
+    code?: string; 
+    message?: string;
+    book_title?: string;
+    student_name?: string;
+  };
   if (!result.ok) {
     logger.warn("circulation", `Return failed: ${result.message}`, { bookQr, code: result.code });
     const conflictCodes = new Set(["COPY_LOCKED"]);
@@ -77,5 +84,16 @@ export async function POST(request: Request) {
   }
 
   logger.info("circulation", "Return successful", { bookQr, librarianId: profile.id });
+  
+  if (!body.previewOnly) {
+    await logAuditActivity(
+      profile.id,
+      "book_copy",
+      null, // Don't have exact borrow UUID here, tracking by QR in the reason
+      "return",
+      `Returned book '${result.book_title}' from ${result.student_name} (QR: ${bookQr})`
+    );
+  }
+  
   return NextResponse.json(result, { status: 200 });
 }

@@ -6,6 +6,7 @@ import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import { BookSchema, CategorySchema } from '../validations/catalog';
 import { logger } from '../logger';
+import { logAuditActivity } from '@/lib/audit';
 
 async function assertStaffCatalogAccess() {
   const role = await getUserRole();
@@ -46,6 +47,10 @@ export async function createCategory(name: string, description?: string) {
     .single();
     
   if (error) throw new Error(error.message);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(user?.id, "system", data.id, "create_category", `Created category: ${validated.name}`);
+  
   return data;
 }
 
@@ -142,6 +147,10 @@ export async function createBook(bookData: unknown, copiesCount: number = 1) {
 
   logger.info('catalog', `Book created: ${validated.title}`, { bookId: data.id, isbn: validated.isbn });
   revalidateTag('catalog', 'default');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(user?.id, "book", data.id, "create", `Created book: ${validated.title} with ${copiesCount} copies`);
+  
   return data;
 }
 
@@ -161,6 +170,10 @@ export async function updateBook(id: string, bookData: unknown) {
   logger.info('catalog', `Book updated: ${id}`, { updates: validated });
   revalidateTag('catalog', 'default');
   revalidateTag(`book-${id}`, 'default');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(user?.id, "book", id, "update", `Updated book properties`);
+  
   return data;
 }
 
@@ -190,6 +203,10 @@ export async function softDeleteBook(id: string) {
   if (error) throw new Error(error.message);
   logger.warn('catalog', `Book soft-deleted: ${id}`);
   revalidateTag('catalog', 'default');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(user?.id, "book", id, "soft_delete", `Soft deleted book`);
+  
   return data;
 }
 
@@ -219,6 +236,10 @@ export async function createBookCopy(bookId: string, condition?: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/catalog');
   revalidatePath(`/catalog/${bookId}`);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(user?.id, "book_copy", data.id, "create", `Created new copy for book ${bookId}`);
+  
   return data;
 }
 
@@ -234,5 +255,9 @@ export async function updateBookCopyStatus(id: string, status: 'AVAILABLE' | 'BO
   if (error) throw new Error(error.message);
   revalidatePath('/catalog');
   revalidatePath(`/catalog/${data.book_id}`);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(user?.id, "book_copy", id, "update_status", `Updated copy status to ${status}`);
+  
   return data;
 }
