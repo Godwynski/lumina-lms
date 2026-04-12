@@ -3,17 +3,17 @@ import { test, expect } from '@playwright/test';
 test.describe('Admin Critical Paths', () => {
   
   test('should load the Intelligence Dashboard', async ({ page }) => {
-    // Navigate to reports directly using shared auth state
-    await page.goto('/reports');
+    // Navigate to dashboard directly using shared auth state
+    await page.goto('/dashboard');
     
     // Verify the dashboard title exists
-    await expect(page.getByRole('heading', { name: 'Intelligence Dashboard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Operations Dashboard' })).toBeVisible();
     
-    // Check for the "Operational Pulse" widget
-    await expect(page.getByText('Operational Pulse')).toBeVisible();
+    // Check for the "Action Required" widget
+    await expect(page.getByText('Action Required')).toBeVisible();
     
-    // Check for chart interactivity area (using heading to differentiate from tooltip labels)
-    await expect(page.getByRole('heading', { name: 'Circulation Velocity' })).toBeVisible();
+    // Check for catalog activity
+    await expect(page.getByText('Recent Catalog Activity')).toBeVisible();
   });
 
   test('should search and filter books in inventory', async ({ page }) => {
@@ -27,8 +27,9 @@ test.describe('Admin Critical Paths', () => {
     // Type a known book title (existing in DB: 'The King')
     await searchInput.fill('The King');
     
-    // Since search is likely debounced or server-side, we wait a moment
-    // or look for a specific feedback or reduced list
+    // Ensure "The King" book item appears in results
+    await expect(page.getByText('The King', { exact: false }).first()).toBeVisible();
+    
     // Let's check for "The Pragmatic Programmer" or just that "No books found" is NOT visible
     await expect(page.getByText('No books found')).not.toBeVisible();
   });
@@ -36,14 +37,16 @@ test.describe('Admin Critical Paths', () => {
   test('should navigate between sections via sidebar', async ({ page }) => {
     await page.goto('/dashboard');
     
-    // Click on 'Inventory' in the sidebar/layout (using Role for better specificity)
+    // Click on 'Inventory' in the sidebar    // Expand groups if needed 
+    // Navigate to Inventory (Library group)
+    await page.getByRole('button', { name: 'Library' }).click({ force: true });
     await page.getByRole('link', { name: /Inventory/i, exact: false }).first().click({ force: true });
     
     // Check URL change
     await expect(page).toHaveURL(/.*catalog/);
     
     // Go back to dashboard via logo/brand
-    await page.getByRole('link', { name: 'Lumina LMS', exact: false }).first().click();
+    await page.getByLabel('Lumina LMS Platform').first().click();
     await expect(page).toHaveURL(/.*dashboard/);
   });
 

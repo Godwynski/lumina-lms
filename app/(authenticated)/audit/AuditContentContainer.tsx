@@ -6,7 +6,7 @@ export async function AuditContentContainer() {
   const role = await getUserRole();
   
   if (role !== 'admin') {
-    redirect("/protected?error=unauthorized");
+    redirect("/dashboard?error=unauthorized");
   }
 
   return (

@@ -23,7 +23,7 @@ export default async function ProtectedPage() {
   const user = userResult.data?.user;
 
   if (!user) {
-    return redirect("/auth/login");
+    return redirect("/login");
   }
 
   return (
