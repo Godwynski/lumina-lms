@@ -52,13 +52,13 @@ interface Props {
 }
 
 const PERSONAL_TABS = [
-  { id: "profile", label: "Profile", icon: UserIcon, description: "Update your personal details" },
+  { id: "profile", label: "Profile Settings", icon: UserIcon, description: "Update your personal details" },
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal, description: "Notification and display settings" },
   { id: "security", label: "Security", icon: Lock, description: "Password and data privacy" },
 ] as const;
 
 const ADMIN_TABS = [
-  { id: "policies", label: "Policies", icon: Settings2, description: "Manage system-wide policies" },
+  { id: "policies", label: "System Policies", icon: Settings2, description: "Manage system-wide policies" },
   { id: "operations", label: "Operations", icon: RefreshCw, description: "System maintenance tasks" },
 ] as const;
 
@@ -347,7 +347,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, in
       <m.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 border-b border-border pb-4 hidden md:block"
+        className="mb-2 border-b border-border pb-2 hidden md:block"
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
@@ -357,9 +357,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, in
               </Badge>
             </div>
             
-            <div className="flex items-center gap-1.5 text-base md:text-xl font-semibold tracking-tight text-foreground">
-               <span>{activeTabMeta?.label || "Profile Details"}</span>
-            </div>
+
             <p className="text-sm text-muted-foreground">{activeTabMeta?.description || "Manage your settings and configuration."}</p>
           </div>
         </div>
@@ -367,7 +365,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, in
 
 
 
-      <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-4 lg:gap-6">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-4 lg:gap-6">
         <main className="min-w-0">
           <AnimatePresence mode="wait">
             <m.div

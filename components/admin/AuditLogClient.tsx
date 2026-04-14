@@ -91,8 +91,10 @@ export function AuditLogClient() {
   return (
     <div className="w-full space-y-6">
       <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Header Title Removed as the page already has a big title */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4 mb-4">
+          <div className="hidden md:block">
+            <p className="text-sm text-muted-foreground">Historical ledger of administrative actions and system modifications.</p>
+          </div>
           <div className="flex items-center gap-2 w-full md:w-auto ml-auto">
             <Button
               variant="outline"
@@ -148,8 +150,8 @@ export function AuditLogClient() {
         </div>
       </div>
 
-      <div className="pt-2">
-        <div className="p-4 md:p-8">
+      <div className="pt-0">
+        <div className="py-2">
           {error && (
             <div className="p-8 text-center text-red-500 font-medium bg-red-50 rounded-xl border border-red-100">
               Failed to load audit logs. Please check your permissions.

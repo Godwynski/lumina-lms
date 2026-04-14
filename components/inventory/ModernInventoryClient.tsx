@@ -66,12 +66,11 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
   );
 
   return (
-    <div className="w-full space-y-3 pb-5 md:pb-7">
-      <div className="sticky top-2 z-20 rounded-xl border border-border bg-card/90 p-2.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
+    <div className="w-full space-y-2 pb-5 md:pb-7">
+      <div className="sticky top-0 z-20 rounded-xl border border-border bg-card/90 p-2.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="hidden md:block">
-            <h1 className="text-base font-semibold tracking-tight text-foreground">Book Catalog</h1>
-            <p className="text-[11px] text-muted-foreground">Search, filter, and maintain inventory records.</p>
+            <p className="text-sm text-muted-foreground">Manage and track library resources, copies, and conditions.</p>
           </div>
 
           <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">

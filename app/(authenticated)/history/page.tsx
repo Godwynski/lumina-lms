@@ -42,14 +42,7 @@ export default async function HistoryPage({
   );
 
   return (
-    <div className="space-y-6 w-full max-w-5xl mx-auto">
-      <div className="hidden md:flex flex-col gap-1 px-1">
-        <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">Archives & Timeline</h1>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-70">
-          Historical records of your library interactions and resource utilization.
-        </p>
-      </div>
-
+    <div className="space-y-4 w-full">
       <Suspense fallback={<HistorySkeleton />}>
         <HistoryContent
           historyPromise={historyPromise as Promise<BorrowingHistoryResult>}

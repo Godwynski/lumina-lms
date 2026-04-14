@@ -30,7 +30,7 @@ export default async function ViolationsPage() {
   }
 
   return (
-    <div className="w-full space-y-4 pb-4">
+    <div className="w-full space-y-4">
       <Suspense fallback={<ViolationsSkeleton />}>
         <ViolationsDataWrapper />
       </Suspense>

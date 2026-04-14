@@ -74,7 +74,7 @@ export default async function ProtectedLayout({
           {/* Desktop Header Content */}
           <MainHeader />
           
-          <div className="mx-auto mt-4 w-full max-w-7xl p-4 md:mt-0 md:p-6 lg:p-8 pb-10 md:pb-6">
+          <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
             {children}
           </div>
         </SidebarInset>

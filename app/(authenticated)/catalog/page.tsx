@@ -41,12 +41,7 @@ export default async function CatalogPage({
   const categoryId = params.categoryId || '';
 
   return (
-    <div className="space-y-6">
-      <div className="hidden md:flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Inventory Workspace</h1>
-        <p className="text-muted-foreground">Manage and track library resources, copies, and conditions.</p>
-      </div>
-
+    <div className="space-y-4">
       <Suspense fallback={<CatalogSkeleton />}>
         <CatalogDataWrapper 
           page={page} 

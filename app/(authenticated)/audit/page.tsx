@@ -8,19 +8,7 @@ export const metadata = {
 
 export default async function AuditPage() {
   return (
-    <div className="flex flex-col gap-8 p-8 max-w-7xl mx-auto min-h-screen">
-      <div className="hidden md:flex flex-col gap-2">
-        <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-          <span className="p-2 bg-primary/10 text-primary rounded-xl ring-1 ring-primary/20 rotate-[2deg] shadow-sm">
-            <ClipboardList className="w-8 h-8" />
-          </span>
-          Audit Trail
-        </h1>
-        <p className="text-muted-foreground font-medium font-serif italic">
-          Comprehensive ledger of all administrative system changes and actions.
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-4 w-full">
       <Suspense fallback={<AuditSkeleton />}>
         <AuditContentContainer />
       </Suspense>
