@@ -3,14 +3,13 @@
 import { useCallback, useState, useTransition, use } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  AlertTriangle,
   CheckCircle2,
   Clock,
+  Download,
+  FileText,
   Plus,
   Search,
-  ShieldAlert,
-  Trash2,
-  XCircle
+  Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,51 +27,30 @@ import { RecordViolationModal } from '@/components/admin/RecordViolationModal'
 import {
   deleteViolation,
   resolveViolation,
+  referToGuidance,
   type ViolationWithProfile,
   type ViolationStats,
 } from '@/lib/actions/violations'
-
-const VIOLATION_TYPES = [
-  { value: 'late_return', label: 'Late Return', icon: Clock, color: 'text-yellow-600', points: 1 },
-  { value: 'damaged_book', label: 'Damaged Book', icon: Trash2, color: 'text-orange-600', points: 3 },
-  { value: 'lost_book', label: 'Lost Book', icon: XCircle, color: 'text-red-600', points: 5 },
-  { value: 'noise', label: 'Noise Violation', icon: AlertTriangle, color: 'text-blue-600', points: 1 },
-  { value: 'food_drink', label: 'Food/Drink in Library', icon: AlertTriangle, color: 'text-blue-600', points: 1 },
-  { value: 'disruptive_behavior', label: 'Disruptive Behavior', icon: ShieldAlert, color: 'text-red-600', points: 2 },
-  { value: 'theft', label: 'Theft/Tampering', icon: ShieldAlert, color: 'text-red-800', points: 5 },
-  { value: 'talking_loudly', label: 'Talking Loudly', icon: AlertTriangle, color: 'text-blue-600', points: 1 },
-  { value: 'phone_usage', label: 'Phone Usage', icon: AlertTriangle, color: 'text-yellow-600', points: 1 },
-  { value: 'unauthorized_area', label: 'Unauthorized Area', icon: XCircle, color: 'text-orange-600', points: 2 },
-  { value: 'policy_violation', label: 'Policy Violation', icon: ShieldAlert, color: 'text-red-600', points: 2 },
-  { value: 'other', label: 'Other', icon: AlertTriangle, color: 'text-gray-600', points: 1 },
-]
-
-const SEVERITY_OPTIONS = [
-  { value: 'minor', label: 'Minor', color: 'bg-yellow-100 text-yellow-800', points: 1 },
-  { value: 'moderate', label: 'Moderate', color: 'bg-orange-100 text-orange-800', points: 2 },
-  { value: 'major', label: 'Major', color: 'bg-red-100 text-red-800', points: 3 },
-  { value: 'severe', label: 'Severe', color: 'bg-red-200 text-red-900', points: 5 },
-]
+import { ViolationTicket } from '@/components/admin/ViolationTicket'
 
 type Props = {
   dataPromise: Promise<{ violations: ViolationWithProfile[]; stats: ViolationStats; role: string }>
 }
 
 export default function ViolationsClient({ dataPromise }: Props) {
-  const { violations: initialViolations, stats: initialStats, role } = use(dataPromise)
+  const { violations: initialViolations, role } = use(dataPromise)
   const router = useRouter()
   const isStudent = role === 'student'
   const [isPending, startTransition] = useTransition()
   const violations = initialViolations
-  const stats = initialStats
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [resolveModalOpen, setResolveModalOpen] = useState<ViolationWithProfile | null>(null)
   const [resolveNotes, setResolveNotes] = useState('')
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<ViolationWithProfile | null>(null)
+  const [isExporting, setIsExporting] = useState<string | null>(null)
 
   const refreshViolations = useCallback(() => {
     startTransition(() => {
@@ -97,89 +75,78 @@ export default function ViolationsClient({ dataPromise }: Props) {
     })
   }
 
-  const handleDeleteViolation = () => {
-    if (!deleteConfirm) return
-
+  const handleReferToGuidance = (violationId: string) => {
     startTransition(async () => {
       try {
-        await deleteViolation(deleteConfirm.id)
-        setNotice({ type: 'success', message: 'Violation deleted successfully' })
+        await referToGuidance(violationId)
+        setNotice({ type: 'success', message: 'Violation referred to Guidance Office' })
         void refreshViolations()
       } catch {
-        setNotice({ type: 'error', message: 'Failed to delete violation' })
-      } finally {
-        setDeleteConfirm(null)
+        setNotice({ type: 'error', message: 'Failed to refer violation' })
       }
     })
   }
 
+  const handleExportTicket = async (v: ViolationWithProfile) => {
+    if (isExporting) return
+    setIsExporting(v.id)
+    
+    try {
+      // Small timeout to ensure the ticket is rendered in the DOM before capture
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const { toPng } = await import('html-to-image')
+      const elementId = `ticket-${v.case_number?.replace(/[^a-zA-Z0-9]/g, '-')}`
+      const el = document.getElementById(elementId)
+      
+      if (!el) throw new Error('Ticket element not found')
+      
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      })
+      
+      const link = document.createElement('a')
+      link.download = `referral-ticket-${v.case_number || v.id}.png`
+      link.href = dataUrl
+      link.click()
+    } catch {
+      setNotice({ type: 'error', message: 'Failed to generate ticket' })
+    } finally {
+      setIsExporting(null)
+    }
+  }
+
   const filteredViolations = violations.filter((v) => {
     const searchLower = searchQuery.toLowerCase()
-    return (
-      !searchQuery ||
+    const matchesStatus = statusFilter === 'all' || v.status?.toLowerCase() === statusFilter.toLowerCase()
+    
+    const matchesSearch = !searchQuery ||
       v.profiles?.full_name?.toLowerCase().includes(searchLower) ||
       v.profiles?.student_id?.toLowerCase().includes(searchLower) ||
+      v.case_number?.toLowerCase().includes(searchLower) ||
+      v.violation_type.toLowerCase().includes(searchLower) ||
       v.description.toLowerCase().includes(searchLower)
-    )
+
+      return matchesStatus && matchesSearch
   })
 
-  const getTypeInfo = (type: string) => VIOLATION_TYPES.find(t => t.value === type) || VIOLATION_TYPES[0]
-  const getSeverityInfo = (sev: string) => SEVERITY_OPTIONS.find(s => s.value === sev) || SEVERITY_OPTIONS[0]
+  const getSeverityColor = (sev: string) => {
+    switch(sev.toLowerCase()) {
+      case 'severe': return 'bg-red-200 text-red-900 border-red-300'
+      case 'major': return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'moderate': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      default: return 'bg-blue-100 text-blue-800 border-blue-200'
+    }
+  }
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-4 mb-4">
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Violations</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
-              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Active</p>
-              <p className="text-2xl font-bold">{stats.active}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Resolved</p>
-              <p className="text-2xl font-bold">{stats.resolved}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
-              <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{isStudent ? 'My Demerit Points' : 'Demerit Points'}</p>
-              <p className="text-2xl font-bold">{stats.totalPoints}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <AdminTableShell
-        title="Violations"
-        description={isStudent ? "A record of library policy violations and demerit points" : "Track and manage library policy violations"}
+        title="Violations Management"
+        description="Official school violation activity and referral log."
         headerActions={!isStudent && (
-          <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto">
+          <Button onClick={() => setCreateModalOpen(true)} size="sm" className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Record Violation
           </Button>
@@ -209,28 +176,16 @@ export default function ViolationsClient({ dataPromise }: Props) {
               />
             </div>
             <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
-              {(['all', 'active', 'resolved', 'appealed'] as const).map((tab) => (
+              {(['all', 'active', 'referred', 'resolved'] as const).map((tab) => (
                 <Button
                   key={tab}
                   onClick={() => setStatusFilter(tab)}
                   variant={statusFilter === tab ? 'default' : 'outline'}
                   className="h-8 px-3 text-xs capitalize"
                 >
-                  {tab === 'all' ? 'All Status' : tab}
+                  {tab === 'all' ? 'All Records' : tab}
                 </Button>
               ))}
-            </div>
-            <div className="flex w-full sm:w-auto">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm sm:w-auto h-8"
-              >
-                <option value="all">All Types</option>
-                {VIOLATION_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
             </div>
           </>
         }
@@ -242,16 +197,15 @@ export default function ViolationsClient({ dataPromise }: Props) {
             ) : filteredViolations.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">No violations found</div>
             ) : (
-              filteredViolations.map((v) => {
-                const typeInfo = getTypeInfo(v.violation_type)
-                const sevInfo = getSeverityInfo(v.severity)
-                const TypeIcon = typeInfo.icon
-                return (
+              filteredViolations.map((v) => (
                   <div key={v.id} className="p-4 flex flex-col gap-3 hover:bg-muted/40 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                        <div className="min-w-0">
-                         <p className="font-medium text-foreground truncate">{v.profiles?.full_name || 'Unknown'}</p>
-                         <p className="text-xs text-muted-foreground truncate">{v.profiles?.student_id || 'N/A'}</p>
+                         <div className="flex items-center gap-2">
+                           <p className="font-medium text-foreground truncate">{v.profiles?.full_name || 'Unknown'}</p>
+                           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-muted rounded border">{v.case_number}</span>
+                         </div>
+                         <p className="text-xs text-muted-foreground truncate">{v.profiles?.email || 'N/A'}</p>
                        </div>
                        <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide shrink-0 ${
@@ -269,13 +223,10 @@ export default function ViolationsClient({ dataPromise }: Props) {
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2 text-xs bg-muted/40 rounded p-2">
-                      <span className={`inline-flex items-center gap-1 font-medium ${typeInfo.color}`}>
-                        <TypeIcon className="h-3.5 w-3.5" />
-                        {typeInfo.label}
-                      </span>
+                      <span className="font-bold uppercase text-foreground">{v.violation_type}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${sevInfo.color}`}>
-                        {sevInfo.label}
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide border ${getSeverityColor(v.severity)}`}>
+                        {v.severity}
                       </span>
                       <span className="text-muted-foreground">•</span>
                       <span className="font-medium">{v.points} pts</span>
@@ -286,29 +237,48 @@ export default function ViolationsClient({ dataPromise }: Props) {
 
                     {!isStudent && (
                         <div className="flex items-center gap-2 pt-2 border-t border-border mt-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex-1 h-8 text-[11px] font-bold uppercase tracking-wider gap-2" 
+                            onClick={() => handleExportTicket(v)}
+                            disabled={!!isExporting}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            {isExporting === v.id ? 'Exporting...' : 'Export Ticket'}
+                          </Button>
                           {v.status === 'active' && (
-                            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200" onClick={() => setResolveModalOpen(v)}>Resolve</Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex-1 h-8 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50" 
+                              onClick={() => handleReferToGuidance(v.id)}
+                            >
+                              Refer
+                            </Button>
                           )}
-                          <Button size="sm" variant="ghost" className={`${v.status === 'active' ? 'flex-1' : 'w-full'} h-8 text-xs text-red-600 hover:bg-red-50 hover:text-red-700`} onClick={() => setDeleteConfirm(v)}>Delete</Button>
+                          {v.status === 'active' && (
+                            <Button size="sm" variant="outline" className="flex-1 h-8 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50" onClick={() => setResolveModalOpen(v)}>Resolve</Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="h-8 text-[11px] font-bold text-red-600 hover:bg-red-50" onClick={() => setDeleteConfirm(v)}>Delete</Button>
                         </div>
                     )}
                   </div>
-                )
-              })
+              ))
             )}
           </div>
 
           <table className="hidden md:table w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted/60">
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Student</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Type</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Severity</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Points</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Description</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Date</th>
-              {!isStudent && <th className="px-4 py-2.5 font-medium text-muted-foreground">Actions</th>}
+            <tr className="border-b border-border bg-muted/30">
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Case #</th>
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Student</th>
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Violation Name</th>
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Severity</th>
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Pts</th>
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Status</th>
+              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Date</th>
+              {!isStudent && <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -325,63 +295,79 @@ export default function ViolationsClient({ dataPromise }: Props) {
                 </td>
               </tr>
             ) : (
-              filteredViolations.map((v) => {
-                const typeInfo = getTypeInfo(v.violation_type)
-                const sevInfo = getSeverityInfo(v.severity)
-                const TypeIcon = typeInfo.icon
-                return (
-                  <tr key={v.id} className="hover:bg-muted/40">
+              filteredViolations.map((v) => (
+                  <tr key={v.id} className="hover:bg-muted/40 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-muted rounded border whitespace-nowrap">{v.case_number}</span>
+                    </td>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium text-foreground">{v.profiles?.full_name || 'Unknown'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {v.profiles?.student_id || 'N/A'}
+                        <p className="font-bold text-foreground text-xs uppercase tracking-tight">{v.profiles?.full_name || 'Unknown'}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium">
+                          {v.profiles?.email || 'N/A'}
                         </p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 text-xs font-medium ${typeInfo.color}`}>
-                        <TypeIcon className="h-3.5 w-3.5" />
-                        {typeInfo.label}
+                      <span className="font-black text-[11px] uppercase tracking-tight text-foreground block max-w-[150px] truncate">
+                        {v.violation_type}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${sevInfo.color}`}>
-                        {sevInfo.label}
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${getSeverityColor(v.severity)}`}>
+                        {v.severity}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium">
-                      {v.points} {v.points === 1 ? 'pt' : 'pts'}
-                    </td>
-                    <td className="px-4 py-3 max-w-[200px] truncate text-xs">
-                      {v.description}
+                    <td className="px-4 py-3 font-black text-xs">
+                      {v.points}
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
                           v.status === 'active'
                             ? 'bg-orange-100 text-orange-800'
-                            : v.status === 'resolved'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-blue-100 text-blue-800'
+                            : v.status === 'referred'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
                         }`}
                       >
-                        {v.status === 'active' && <Clock className="h-3 w-3" />}
-                        {v.status === 'resolved' && <CheckCircle2 className="h-3 w-3" />}
-                        {v.status.charAt(0).toUpperCase() + v.status.slice(1)}
+                        {v.status === 'active' && <Clock className="h-2.5 w-2.5" />}
+                        {v.status === 'referred' && <FileText className="h-2.5 w-2.5" />}
+                        {v.status === 'resolved' && <CheckCircle2 className="h-2.5 w-2.5" />}
+                        {v.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                    <td className="px-4 py-3 text-[10px] font-medium text-muted-foreground">
                       {formatDate(v.created_at)}
                     </td>
                     {!isStudent && (
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"
+                            onClick={() => handleExportTicket(v)}
+                            title="Export Ticket"
+                            disabled={!!isExporting}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </Button>
                           {v.status === 'active' && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                              className="h-7 text-[10px] font-bold px-3 uppercase tracking-wider text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all"
+                              onClick={() => handleReferToGuidance(v.id)}
+                            >
+                              Refer
+                            </Button>
+                          )}
+                          {v.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[10px] font-bold px-3 uppercase tracking-wider text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
                               onClick={() => setResolveModalOpen(v)}
                             >
                               Resolve
@@ -390,17 +376,17 @@ export default function ViolationsClient({ dataPromise }: Props) {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                            className="h-7 w-7 p-0 flex items-center justify-center text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                             onClick={() => setDeleteConfirm(v)}
+                            title="Delete"
                           >
-                            Delete
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </td>
                     )}
                   </tr>
-                )
-              })
+              ))
             )}
           </tbody>
           </table>
@@ -455,7 +441,7 @@ export default function ViolationsClient({ dataPromise }: Props) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+      <Dialog open={!!deleteConfirm} onOpenChange={(v) => !v && setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Violation</DialogTitle>
@@ -464,21 +450,44 @@ export default function ViolationsClient({ dataPromise }: Props) {
             </DialogDescription>
           </DialogHeader>
           {deleteConfirm && (
-            <div className="rounded-lg border border-border bg-muted p-3">
-              <p className="font-medium">{deleteConfirm.profiles?.full_name}</p>
-              <p className="text-sm text-muted-foreground">{deleteConfirm.description}</p>
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+              <p className="font-medium text-destructive">{deleteConfirm.profiles?.full_name}</p>
+              <p className="text-sm text-muted-foreground">{deleteConfirm.violation_type}</p>
             </div>
           )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" disabled={isPending} onClick={() => handleDeleteViolation()}>
-              {isPending ? 'Deleting...' : 'Delete Violation'}
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => {
+                if (!deleteConfirm) return
+                startTransition(async () => {
+                  try {
+                    await deleteViolation(deleteConfirm.id)
+                    setNotice({ type: 'success', message: 'Violation deleted successfully' })
+                    void refreshViolations()
+                  } catch {
+                    setNotice({ type: 'error', message: 'Failed to delete violation' })
+                  } finally {
+                    setDeleteConfirm(null)
+                  }
+                })
+              }}
+            >
+              {isPending ? 'Deleting...' : 'Delete Record'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
+        {isExporting && violations.find(v => v.id === isExporting) && (
+          <ViolationTicket data={violations.find(v => v.id === isExporting)!} />
+        )}
+      </div>
     </>
   )
 }

@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { AuditContentContainer } from "./AuditContentContainer";
-import { ClipboardList } from "lucide-react";
 
 export const metadata = {
   title: "Audit Logs | Lumina LMS",

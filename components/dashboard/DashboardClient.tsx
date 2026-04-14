@@ -3,9 +3,12 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { cancelReservation } from '@/lib/actions/reservations';
+import { toast } from 'sonner';
+import { useTransition } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import dynamic from 'next/dynamic';
 
@@ -32,6 +35,16 @@ type CardData = { card_number: string; status: string; expires_at: string } | nu
 
 type FaqRow = { key: string; value: string | null };
 
+interface Reservation {
+  id: string;
+  status: string;
+  queue_position: number;
+  books: {
+    title: string;
+    cover_url: string | null;
+  } | null;
+}
+
 type DashboardStats = {
   activeLoans: number;
   pendingApprovals: number;
@@ -49,16 +62,19 @@ interface DashboardProps {
   profilePromise: Promise<{ data: ProfileData | null }>;
   cardPromise: Promise<{ data: CardData }>;
   faqPromise: Promise<{ data: FaqRow[] | null }>;
+  reservationsPromise: Promise<Reservation[]>;
 }
 
-export function DashboardClient({ user, role, statsPromise, profilePromise, cardPromise, faqPromise }: DashboardProps) {
+export function DashboardClient({ user, role, statsPromise, profilePromise, cardPromise, faqPromise, reservationsPromise }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
+  const [isPending, startTransition] = useTransition();
   
   // Unwrap promises using the 'use' hook
   const stats = use(statsPromise);
   const profileResult = use(profilePromise);
   const cardResult = use(cardPromise);
   const faqResult = use(faqPromise);
+  const reservations = use(reservationsPromise);
 
   const profileData = profileResult.data;
   const activeLoansList = stats.activeLoansList || [];
@@ -111,6 +127,18 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
   }, []);
 
   const isStudent = role === 'student';
+
+  const handleCancelReservation = (id: string, title: string) => {
+    if (!confirm(`Cancel reservation for "${title}"?`)) return;
+    startTransition(async () => {
+      try {
+        const res = await cancelReservation(id);
+        if (res.success) toast.success("Reservation cancelled.");
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "Cancellation failed");
+      }
+    });
+  };
 
   if (isStudent) {
     return (
@@ -226,6 +254,64 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                </section>
              )}
           </div>
+
+          {/* My Pending Reservations */}
+          {reservations.length > 0 && (
+            <section className="space-y-3">
+               <div className="flex items-center justify-between px-1 text-primary">
+                  <h2 className="text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-2">
+                     <Bookmark className="h-3 w-3" />
+                     Reservations & Holds
+                  </h2>
+               </div>
+               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                 {reservations.map((res) => (
+                   <Card key={res.id} className={`border-border/60 shadow-none transition-all ${res.status === 'READY' ? 'bg-primary/5 border-primary/30 ring-1 ring-primary/20' : 'bg-card/30'}`}>
+                      <CardContent className="flex items-center justify-between gap-4 p-3">
+                         <div className="flex min-w-0 items-center gap-3">
+                           <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
+                              {res.books?.cover_url ? (
+                                 <Image src={res.books.cover_url} alt="" fill className="object-cover" sizes="30px" />
+                              ) : (
+                                 <Library size={12} className="text-muted-foreground/30" />
+                              )}
+                           </div>
+                           <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-foreground/90">{res.books?.title || 'Unknown Book'}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                 {res.status === 'READY' ? (
+                                   <p className="text-[10px] font-bold text-primary flex items-center gap-1">
+                                      <Zap size={10} className="fill-primary" />
+                                      Ready for Pickup
+                                   </p>
+                                 ) : (
+                                   <p className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                      <Clock size={10} />
+                                      Position: {res.queue_position}
+                                   </p>
+                                 )}
+                              </div>
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <Badge variant={res.status === 'READY' ? 'default' : 'outline'} className="text-[9px] px-1.5 py-0 h-5">
+                              {res.status}
+                           </Badge>
+                           <button 
+                             onClick={() => handleCancelReservation(res.id, res.books?.title || "Unknown Book")}
+                             disabled={isPending}
+                             className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                             title="Cancel Reservation"
+                           >
+                             <XCircle size={14} />
+                           </button>
+                         </div>
+                      </CardContent>
+                   </Card>
+                 ))}
+               </div>
+            </section>
+          )}
 
         {/* Discovery & New Arrivals */}
         <section className="space-y-3">
@@ -363,7 +449,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                               <BookMarked size={14} className="text-muted-foreground/30" />
                             )}
                           </div>
-                          <div className="min-w-0">
+                           <div className="min-w-0">
                             <p className="truncate text-sm font-extrabold text-foreground group-hover/item:text-primary transition-colors">{book.title}</p>
                             <p className="truncate text-[11px] font-bold text-muted-foreground/60">{book.author}</p>
                           </div>
@@ -392,4 +478,3 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     </div>
   );
 }
-

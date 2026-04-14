@@ -64,7 +64,7 @@ export function LoginForm({
         provider: "azure",
         options: {
           scopes: "email profile",
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/callback`,
           queryParams: {
             prompt: "select_account",
           },

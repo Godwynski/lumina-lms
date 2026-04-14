@@ -1,4 +1,5 @@
 import { getDashboardStats } from "@/lib/actions/dashboard";
+import { getMyReservations } from "@/lib/actions/reservations";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
@@ -41,6 +42,10 @@ export async function DashboardContent({ user, role }: DashboardContentProps) {
         .in("key", faqKeys)
     : Promise.resolve({ data: null });
 
+  const reservationsPromise = role === "student"
+    ? getMyReservations()
+    : Promise.resolve([]);
+
   // 2. We pass the promises to the client component
   // The client will use the 'use()' hook to unwrap them
   return (
@@ -51,6 +56,7 @@ export async function DashboardContent({ user, role }: DashboardContentProps) {
       profilePromise={Promise.resolve(profilePromise)}
       cardPromise={Promise.resolve(cardPromise)}
       faqPromise={Promise.resolve(faqPromise)}
+      reservationsPromise={reservationsPromise}
     />
   );
 }

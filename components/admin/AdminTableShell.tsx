@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 type AdminTableShellProps = {
   title: string;
-  description: string;
+  description: ReactNode;
   headerActions?: ReactNode;
   feedback?: ReactNode;
   controls?: ReactNode;
@@ -26,8 +26,9 @@ export function AdminTableShell({
   return (
     <div className={cn("mx-auto flex w-full max-w-7xl flex-col gap-2", className)}>
       <div className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="hidden md:block">
-          <p className="text-sm text-muted-foreground">{description}</p>
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+          <div className="text-sm text-muted-foreground hidden md:block">{description}</div>
         </div>
         {headerActions}
       </div>

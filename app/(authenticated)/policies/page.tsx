@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { SettingsContent } from "@/components/settings/SettingsContent";
+import { PoliciesSection } from "@/components/settings/sections/PoliciesSection";
 import { redirect } from "next/navigation";
 
 export default async function PoliciesPage() {
@@ -10,5 +10,26 @@ export default async function PoliciesPage() {
     redirect("/auth/login");
   }
 
-  return <SettingsContent user={user} activeTab="policies" />;
+  const profilePromise = supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+    .then(res => res.data);
+
+  const settingsPromise = supabase
+    .from("system_settings")
+    .select("*")
+    .order("key")
+    .then(res => res.data || []);
+
+  const profile = await profilePromise;
+
+  return (
+    <PoliciesSection 
+      role={profile?.role || "student"} 
+      settingsPromise={settingsPromise} 
+    />
+  );
 }
+

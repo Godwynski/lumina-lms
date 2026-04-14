@@ -45,11 +45,6 @@ function ViolationsSkeleton() {
         <Skeleton className="h-9 w-64 rounded-lg bg-muted/60" />
         <Skeleton className="mt-2 h-4 w-96 rounded-md bg-muted/40" />
       </div>
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-24 rounded-2xl border border-border/40 bg-muted/20" />
-        ))}
-      </div>
       <div className="rounded-2xl border border-border/40 bg-muted/10 h-96 shadow-inner" />
     </div>
   )

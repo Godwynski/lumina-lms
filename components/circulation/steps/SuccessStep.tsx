@@ -1,15 +1,17 @@
 'use client';
 
-import { CheckCircle2, RefreshCcw } from 'lucide-react';
+import { CheckCircle2, RefreshCcw, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SuccessStepProps {
   title: string;
   message: string;
   onReset: () => void;
+  reservationReady?: boolean;
+  reservedFor?: string;
 }
 
-export function SuccessStep({ title, message, onReset }: SuccessStepProps) {
+export function SuccessStep({ title, message, onReset, reservationReady, reservedFor }: SuccessStepProps) {
   return (
     <div className="flex flex-col items-center justify-center py-10 space-y-6 animate-in zoom-in-95 fade-in duration-500">
       <div className="relative">
@@ -25,6 +27,19 @@ export function SuccessStep({ title, message, onReset }: SuccessStepProps) {
           {message}
         </p>
       </div>
+
+      {reservationReady && (
+        <div className="w-full max-w-md bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom-2 duration-700">
+          <div className="bg-primary rounded-xl p-2.5 text-white shadow-lg shadow-primary/30">
+            <Bookmark className="h-5 w-5 fill-white" />
+          </div>
+          <div className="text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Hold Fulfillment</p>
+            <p className="text-sm font-bold text-primary leading-tight mt-0.5">Place on Hold Shelf for:</p>
+            <p className="text-xs font-medium text-primary/80 truncate">{reservedFor || 'Reserved Student'}</p>
+          </div>
+        </div>
+      )}
 
       <Button 
         onClick={onReset}

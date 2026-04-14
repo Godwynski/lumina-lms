@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { SettingsContent } from "@/components/settings/SettingsContent";
+import { SecuritySection } from "@/components/settings/sections/SecuritySection";
 import { redirect } from "next/navigation";
 
 export default async function SecurityPage() {
@@ -10,5 +10,12 @@ export default async function SecurityPage() {
     redirect("/auth/login");
   }
 
-  return <SettingsContent user={user} activeTab="security" />;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  return <SecuritySection role={profile?.role || "student"} />;
 }
+

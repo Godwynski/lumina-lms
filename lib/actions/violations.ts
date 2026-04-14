@@ -17,15 +17,20 @@ export type ViolationWithProfile = {
   resolved_at: string | null
   resolution_notes: string | null
   created_at: string
+  case_number: string | null
+  action_taken: string | null
+  evidence_url: string | null
   profiles: {
     full_name: string
-    student_id: string
+    email: string
+    student_id: string | null
   } | null
 }
 
 export type ViolationStats = {
   total: number
   active: number
+  referred: number
   resolved: number
   totalPoints: number
 }
@@ -72,7 +77,8 @@ export async function getViolations(options?: {
     .from('violations')
     .select(`
       id, user_id, violation_type, severity, points, description, incident_date, status, resolved_at, resolution_notes, created_at,
-      profiles:user_id(full_name, student_id)
+      case_number, action_taken, evidence_url,
+      profiles:user_id(full_name, email, student_id)
     `)
     .order('created_at', { ascending: false })
 
@@ -92,11 +98,12 @@ export async function getViolations(options?: {
 
   if (error) throw new Error(error.message)
 
-  const stats: ViolationStats = { total: 0, active: 0, resolved: 0, totalPoints: 0 }
+  const stats: ViolationStats = { total: 0, active: 0, referred: 0, resolved: 0, totalPoints: 0 }
   data?.forEach((v) => {
     stats.total++
     stats.totalPoints += v.points
     if (v.status === 'ACTIVE') stats.active++
+    else if (v.status === 'REFERRED') stats.referred++
     else if (v.status === 'RESOLVED') stats.resolved++
   })
 
@@ -110,8 +117,8 @@ export async function searchStudents(query: string) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, student_id, role')
-    .or(`full_name.ilike.%${sanitizeFilterInput(query)}%,student_id.ilike.%${sanitizeFilterInput(query)}%`)
+    .select('id, full_name, email, role')
+    .or(`full_name.ilike.%${sanitizeFilterInput(query)}%,email.ilike.%${sanitizeFilterInput(query)}%`)
     .eq('role', 'student')
     .limit(20)
 
@@ -124,6 +131,15 @@ export async function createViolation(rawInput: unknown) {
 
   const validated = ViolationSchema.parse(rawInput)
 
+  // Generate Case Number: REF-YYYY-0001
+  const currentYear = new Date().getFullYear()
+  const { count } = await supabase
+    .from('violations')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', `${currentYear}-01-01`)
+  
+  const caseNumber = `REF-${currentYear}-${String((count || 0) + 1).padStart(4, '0')}`
+
   const { error } = await supabase.from('violations').insert({
     user_id: validated.userId,
     violation_type: validated.violationType,
@@ -133,12 +149,14 @@ export async function createViolation(rawInput: unknown) {
     incident_date: validated.incidentDate,
     status: 'ACTIVE',
     created_by: userId,
+    case_number: caseNumber,
+    // Note: action_taken and evidence_url can be updated later if needed
   })
 
   if (error) throw new Error(error.message)
 
   revalidatePath('/violations')
-  return { success: true }
+  return { success: true, caseNumber }
 }
 
 export async function deleteViolation(violationId: string) {
@@ -170,6 +188,22 @@ export async function resolveViolation(violationId: string, notes?: string) {
       resolution_notes: validated.notes || null
     })
     .eq('id', validated.violationId)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/violations')
+  return { success: true }
+}
+export async function referToGuidance(violationId: string) {
+  await assertStaffAccess()
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('violations')
+    .update({
+      status: 'REFERRED',
+    })
+    .eq('id', violationId)
 
   if (error) throw new Error(error.message)
 

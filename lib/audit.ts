@@ -10,6 +10,7 @@ export type AuditEntityType =
   | "library_card" 
   | "fine" 
   | "violation"
+  | "reservation"
   | "system";
 
 /**

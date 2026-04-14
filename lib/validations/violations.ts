@@ -2,11 +2,11 @@ import { z } from "zod";
 
 export const ViolationSchema = z.object({
   userId: z.string().uuid("Invalid user ID"),
-  violationType: z.string().min(1, "Violation type is required"),
-  severity: z.enum(["low", "medium", "high", "critical"]),
+  violationType: z.string().min(1, "Violation/Offense name is required"),
+  severity: z.enum(["minor", "moderate", "major", "severe"]),
   points: z.number().int().min(0).max(100),
-  description: z.string().min(1, "Description is required"),
-  incidentDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)),
+  description: z.string().optional().or(z.literal("")),
+  incidentDate: z.string().min(1, "Incident date is required"),
 });
 
 export const ResolutionSchema = z.object({

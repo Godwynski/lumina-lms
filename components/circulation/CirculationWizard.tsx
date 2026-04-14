@@ -64,6 +64,7 @@ export function CirculationWizard() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [reservationData, setReservationData] = useState<{ ready: boolean; studentName?: string }>({ ready: false });
 
   const currentStep = useMemo(() => {
     if (isConfirmed) return 4;
@@ -114,6 +115,7 @@ export function CirculationWizard() {
     setNotice(null);
     setIsProcessing(false);
     setIsConfirmed(false);
+    setReservationData({ ready: false });
   }, []);
 
   const switchMode = (newMode: FlowMode) => {
@@ -217,7 +219,12 @@ export function CirculationWizard() {
           }),
         });
         const payload = await res.json();
-        if (payload.ok) setIsConfirmed(true);
+        if (payload.ok) {
+           if (payload.reservation_ready) {
+             setReservationData({ ready: true, studentName: payload.reserved_for });
+           }
+           setIsConfirmed(true);
+        }
         else setNotice({ tone: 'error', text: payload.message || 'Failed to confirm return.' });
       }
     } catch {
@@ -284,6 +291,8 @@ export function CirculationWizard() {
                       ? `The resource has been successfully assigned to ${activeStudent?.fullName}. Due date: ${pendingCheckout?.dueDate}.`
                       : `The resource has been successfully returned and inventory record updated.`}
                     onReset={handleReset}
+                    reservationReady={reservationData.ready}
+                    reservedFor={reservationData.studentName}
                   />
                 </m.div>
              ) : currentStep === 1 ? (

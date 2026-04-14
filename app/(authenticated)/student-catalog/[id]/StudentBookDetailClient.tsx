@@ -11,6 +11,7 @@ import {
   ScanLine
 } from 'lucide-react';
 import { ReportMissingButton } from '@/components/common/ReportMissingButton';
+import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
 
 interface BookDetail {
   id: string;
@@ -144,11 +145,17 @@ export function StudentBookDetailClient({
           </div>
         </div>
 
-        <ReportMissingButton 
-          bookId={id} 
-          disabled={book.available_copies === 0} 
-          userType="student" 
-        />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ReserveTitleButton 
+            bookId={id} 
+            isAvailable={book.available_copies > 0} 
+          />
+          <ReportMissingButton 
+            bookId={id} 
+            disabled={book.available_copies === 0} 
+            userType="student" 
+          />
+        </div>
       </div>
     </div>
   );

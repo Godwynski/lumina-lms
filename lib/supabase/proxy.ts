@@ -65,6 +65,16 @@ export async function updateSession(request: NextRequest) {
     : "student";
 
   // 3. RBAC Route Guards — pure in-memory, <1ms
+  const isStudent = userRole === "student";
+
+  // Strict check for root-level paths that are staff-only
+  const restrictedRootPaths = ["/users", "/catalog", "/circulation", "/violations", "/policies", "/operations", "/audit"];
+  const isAccessingRestrictedRoot = restrictedRootPaths.some(p => path === p || path.startsWith(`${p}/`));
+
+  if (isStudent && isAccessingRestrictedRoot) {
+    return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
+  }
+
   if ((path.startsWith("/admin") || path.startsWith("/audit")) && userRole !== "admin") {
     return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));
   }

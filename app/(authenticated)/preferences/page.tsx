@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { SettingsContent } from "@/components/settings/SettingsContent";
+import { PreferencesSection } from "@/components/settings/sections/PreferencesSection";
 import { redirect } from "next/navigation";
 
 export default async function PreferencesPage() {
@@ -10,5 +10,12 @@ export default async function PreferencesPage() {
     redirect("/auth/login");
   }
 
-  return <SettingsContent user={user} activeTab="preferences" />;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  return <PreferencesSection role={profile?.role || "student"} />;
 }
+

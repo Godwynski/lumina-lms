@@ -75,6 +75,8 @@ export async function POST(request: Request) {
     message?: string;
     book_title?: string;
     student_name?: string;
+    reservation_ready?: boolean;
+    reserved_for?: string;
   };
   if (!result.ok) {
     logger.warn("circulation", `Return failed: ${result.message}`, { bookQr, code: result.code });
@@ -85,14 +87,74 @@ export async function POST(request: Request) {
 
   logger.info("circulation", "Return successful", { bookQr, librarianId: profile.id });
   
+  
   if (!body.previewOnly) {
     await logAuditActivity(
       profile.id,
       "book_copy",
-      null, // Don't have exact borrow UUID here, tracking by QR in the reason
+      null, 
       "return",
       `Returned book '${result.book_title}' from ${result.student_name} (QR: ${bookQr})`
     );
+
+    // --- RESERVATION INTERCEPT ---
+    // 1. Fetch book_id and copies details
+    const { data: copyInfo } = await supabase
+      .from('book_copies')
+      .select('id, book_id')
+      .eq('qr_string', bookQr)
+      .single();
+
+    if (copyInfo) {
+      // 2. Check for the oldest active reservation
+      const { data: nextReservation } = await supabase
+        .from('reservations')
+        .select('id, user_id')
+        .eq('book_id', copyInfo.book_id)
+        .eq('status', 'ACTIVE')
+        .order('queue_position', { ascending: true })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (nextReservation) {
+        // 3. Mark copy as RESERVED and reservation as READY
+        const holdDaysStr = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'hold_expiry_days')
+          .single()
+          .then(res => res.data?.value || '7');
+        
+        const holdDays = parseInt(holdDaysStr, 10);
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + holdDays);
+
+        await supabase
+          .from('book_copies')
+          .update({ status: 'RESERVED' })
+          .eq('id', copyInfo.id);
+
+        await supabase
+          .from('reservations')
+          .update({ 
+            status: 'READY', 
+            fulfilled_at: new Date().toISOString(),
+            hold_expires_at: expiryDate.toISOString()
+          })
+          .eq('id', nextReservation.id);
+
+        // Notify the librarian
+        const { data: student } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', nextReservation.user_id)
+          .single();
+
+        result.reservation_ready = true;
+        result.reserved_for = student?.full_name || 'Reserved Student';
+      }
+    }
   }
   
   return NextResponse.json(result, { status: 200 });

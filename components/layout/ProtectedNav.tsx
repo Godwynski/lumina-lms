@@ -14,11 +14,11 @@ import {
   AlertTriangle,
   ChevronsUpDown,
   LogOut,
-  Server,
   Loader2,
   UserCheck,
   SlidersHorizontal,
   Lock,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/layout/Logo";
@@ -134,30 +134,22 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: "management",
+    id: "administration",
     label: "Administration",
-    icon: Users,
+    icon: Shield,
     minRole: "librarian",
     children: [
       { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
-    ],
-  },
-  {
-    id: "platform",
-    label: "Platform",
-    icon: Server,
-    minRole: "librarian",
-    children: [
       { href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian" },
       { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
-      { href: "/operations", label: "Operations", icon: LayoutDashboard, minRole: "admin" },
+      { href: "/operations", label: "Operations Dashboard", icon: LayoutDashboard, minRole: "admin" },
     ],
   },
   {
     id: "account",
-    label: "Configuration",
+    label: "Admin Configuration",
     icon: UserCheck,
-    minRole: "student",
+    minRole: "librarian",
     children: [
       { href: "/profile", label: "Profile", icon: Users },
       { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
@@ -192,7 +184,10 @@ const NavSubItem = memo(({
         href={item.href} 
         className="flex items-center gap-2"
         onMouseEnter={() => onMouseEnter(item.href)}
-        onClick={() => onNavigate(item.href)}
+        onClick={(e) => {
+          e.currentTarget.blur();
+          onNavigate(item.href);
+        }}
       >
         <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-sidebar-primary animate-pulse" : "bg-sidebar-border")} />
         <span className={cn("truncate group-data-[collapsible=icon]:hidden", isActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
@@ -325,7 +320,11 @@ export function ProtectedNav({
   }), [name, email, avatarUrl, initials]);
 
   const isActive = useCallback((href: string) => {
-    if (pendingRoute === href) return true;
+    // If we have a pending route, that is the ONLY item that can be active.
+    // This immediately deselects the old item.
+    if (pendingRoute !== null) {
+      return pendingRoute === href;
+    }
 
     const pathWithoutQuery = pathname.split("?")[0];
     const hrefBase = href.split("?")[0];
@@ -429,7 +428,14 @@ export function ProtectedNav({
                   isActive={dashboardActive}
                   tooltip={DASHBOARD_LINK.label}
                 >
-                  <Link href={DASHBOARD_LINK.href} className="flex items-center w-full group-data-[collapsible=icon]:justify-center" onClick={() => handleNavigate(DASHBOARD_LINK.href)}>
+                  <Link 
+                    href={DASHBOARD_LINK.href} 
+                    className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      handleNavigate(DASHBOARD_LINK.href);
+                    }}
+                  >
                     {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon className="shrink-0" />}
                     <span className="truncate group-data-[collapsible=icon]:hidden">{DASHBOARD_LINK.label}</span>
                   </Link>
@@ -497,7 +503,14 @@ export function ProtectedNav({
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex w-full cursor-pointer items-center" onClick={() => handleNavigate("/profile")}>
+                    <Link 
+                      href="/profile" 
+                      className="flex w-full cursor-pointer items-center" 
+                      onClick={(e) => {
+                        e.currentTarget.blur();
+                        handleNavigate("/profile");
+                      }}
+                    >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Profile Settings</span>
                     </Link>
