@@ -13,6 +13,7 @@ import { CompactPagination } from '@/components/ui/compact-pagination';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
 
 type CatalogCategory = {
   id: string;
@@ -36,6 +37,7 @@ interface Book {
 interface StudentCatalogClientProps {
   booksPromise: Promise<{ books: Book[]; total: number; hasMore: boolean }>;
   categoriesPromise: Promise<CatalogCategory[]>;
+  reservationsPromise: Promise<{ books: { id: string } | { id: string }[] | null }[]>;
   initialFilters: {
     q: string;
     categoryId: string;
@@ -48,12 +50,20 @@ interface StudentCatalogClientProps {
 export function StudentCatalogClient({ 
   booksPromise, 
   categoriesPromise,
+  reservationsPromise,
   initialFilters
 }: StudentCatalogClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const initialData = use(booksPromise);
   const categories = use(categoriesPromise);
+  const reservations = use(reservationsPromise);
+  
+  // Set of book IDs that the user has already reserved
+  const reservedBookIds = new Set(reservations.map((r: { books: { id: string } | { id: string }[] | null }) => {
+    if (Array.isArray(r.books)) return r.books[0]?.id;
+    return r.books?.id;
+  }).filter(Boolean));
   
   const [query, setQuery] = useState(initialFilters.q);
   const [page, setPage] = useState(initialFilters.page);
@@ -177,7 +187,7 @@ export function StudentCatalogClient({
               <div key={book.id} className="p-4 flex gap-4 hover:bg-muted/40 transition-colors">
                 <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
                   {book.cover_url ? (
-                    <Image src={book.cover_url} alt={book.title} fill sizes="56px" className="object-cover" />
+                    <Image src={book.cover_url} alt={book.title} fill sizes="56px" className="object-cover" unoptimized />
                   ) : null}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
@@ -185,20 +195,29 @@ export function StudentCatalogClient({
                     <p className="truncate font-medium text-foreground leading-tight">{book.title}</p>
                     <p className="truncate text-xs text-muted-foreground mt-0.5">{book.author}</p>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                     <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-none ${
-                        book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}
-                    >
-                      {book.available_copies}/{book.total_copies} available
-                    </span>
-                    <Link href={`/student-catalog/${book.id}`}>
-                      <Button variant="outline" size="sm" className="h-7 px-3 text-[10px] font-semibold">
-                        View
-                      </Button>
-                    </Link>
-                  </div>
+                    <div className="flex items-center gap-2 mt-2">
+                       <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-none ${
+                          book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                      >
+                        {book.available_copies}/{book.total_copies} available
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Link href={`/student-catalog/${book.id}`}>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] font-semibold">
+                            View
+                          </Button>
+                        </Link>
+                         <ReserveTitleButton 
+                          bookId={book.id} 
+                          isAvailable={book.available_copies > 0}
+                          hasExistingReservation={reservedBookIds.has(book.id)}
+                          size="sm"
+                          className="h-7 px-2 text-[10px]"
+                        />
+                      </div>
+                    </div>
                 </div>
               </div>
             ))
@@ -230,7 +249,7 @@ export function StudentCatalogClient({
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="relative h-10 w-8 overflow-hidden rounded border border-border bg-muted">
                         {book.cover_url ? (
-                          <Image src={book.cover_url} alt={book.title} fill sizes="32px" className="object-cover" />
+                          <Image src={book.cover_url} alt={book.title} fill sizes="32px" className="object-cover" unoptimized />
                         ) : null}
                       </div>
                       <div className="min-w-0">
@@ -250,11 +269,21 @@ export function StudentCatalogClient({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Link href={`/student-catalog/${book.id}`}>
-                      <Button variant="outline" size="sm" className="h-8 px-4 text-xs font-semibold shadow-sm transition-all hover:bg-primary hover:text-primary-foreground">
-                        Open Detail
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-center gap-2">
+                      <Link href={`/student-catalog/${book.id}`}>
+                        <Button variant="outline" size="sm" className="h-8 px-4 text-xs font-semibold shadow-sm transition-all hover:bg-muted/60">
+                          Detail
+                        </Button>
+                      </Link>
+                      <ReserveTitleButton 
+                        bookId={book.id} 
+                        isAvailable={book.available_copies > 0}
+                        hasExistingReservation={reservedBookIds.has(book.id)}
+                        variant="default"
+                        size="sm"
+                        className="h-8 text-[11px]"
+                      />
+                    </div>
                   </td>
                 </tr>
               ))

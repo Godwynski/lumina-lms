@@ -63,12 +63,24 @@ async function fetchPublicBooks(
   };
 }
 
-// Cached version of the public book search
-export const getPublicBooksCached = unstable_cache(
-  fetchPublicBooks,
-  ['public-books-search'],
-  { revalidate: 60, tags: ['public-books'] }
-);
+// Cached version: each unique set of filters gets its own cache entry
+export async function getPublicBooksCached(
+  query: string,
+  categoryId?: string,
+  section?: string,
+  availableOnly: boolean = false,
+  page: number = 1,
+  limit: number = 20,
+  sortBy: 'title' | 'author' | 'availability' = 'title'
+) {
+  return unstable_cache(
+    () => fetchPublicBooks(query, categoryId, section, availableOnly, page, limit, sortBy),
+    // Dynamic cache key — each unique combination of params is cached separately
+    ['public-books', query, categoryId ?? '', section ?? '', String(availableOnly), String(page), String(limit), sortBy],
+    { revalidate: 60, tags: ['public-books'] }
+  )();
+}
+
 
 export async function reportMissingBook(bookId: string, notes?: string) {
   const supabase = await createClient();

@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock, Ticket, CalendarDays, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import dynamic from 'next/dynamic';
 
@@ -39,7 +41,9 @@ interface Reservation {
   id: string;
   status: string;
   queue_position: number;
+  hold_expires_at: string | null;
   books: {
+    id: string;
     title: string;
     cover_url: string | null;
   } | null;
@@ -128,12 +132,16 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
 
   const isStudent = role === 'student';
 
+  const router = useRouter();
+
   const handleCancelReservation = (id: string, title: string) => {
-    if (!confirm(`Cancel reservation for "${title}"?`)) return;
     startTransition(async () => {
       try {
         const res = await cancelReservation(id);
-        if (res.success) toast.success("Reservation cancelled.");
+        if (res.success) {
+          toast.success(`Reservation for "${title}" cancelled.`);
+          router.refresh();
+        }
       } catch (e: unknown) {
         toast.error(e instanceof Error ? e.message : "Cancellation failed");
       }
@@ -255,63 +263,134 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
              )}
           </div>
 
-          {/* My Pending Reservations */}
-          {reservations.length > 0 && (
-            <section className="space-y-3">
-               <div className="flex items-center justify-between px-1 text-primary">
-                  <h2 className="text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-2">
-                     <Bookmark className="h-3 w-3" />
-                     Reservations & Holds
-                  </h2>
-               </div>
-               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                 {reservations.map((res) => (
-                   <Card key={res.id} className={`border-border/60 shadow-none transition-all ${res.status === 'READY' ? 'bg-primary/5 border-primary/30 ring-1 ring-primary/20' : 'bg-card/30'}`}>
-                      <CardContent className="flex items-center justify-between gap-4 p-3">
-                         <div className="flex min-w-0 items-center gap-3">
-                           <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
-                              {res.books?.cover_url ? (
-                                 <Image src={res.books.cover_url} alt="" fill className="object-cover" sizes="30px" />
-                              ) : (
-                                 <Library size={12} className="text-muted-foreground/30" />
-                              )}
-                           </div>
-                           <div className="min-w-0">
-                              <p className="truncate text-xs font-bold text-foreground/90">{res.books?.title || 'Unknown Book'}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                 {res.status === 'READY' ? (
-                                   <p className="text-[10px] font-bold text-primary flex items-center gap-1">
-                                      <Zap size={10} className="fill-primary" />
-                                      Ready for Pickup
-                                   </p>
-                                 ) : (
-                                   <p className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                                      <Clock size={10} />
-                                      Position: {res.queue_position}
-                                   </p>
-                                 )}
+          {/* ── My Reservations & Holds ─────────────────────────────────── */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
+                <Ticket className="h-3 w-3" />
+                My Reservations & Holds
+              </h2>
+              {reservations.length > 0 && (
+                <span className="text-[9px] font-bold text-muted-foreground/60">
+                  {reservations.length} active
+                </span>
+              )}
+            </div>
+
+            {reservations.length === 0 ? (
+              /* Empty State */
+              <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-muted/10 py-10 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/20">
+                  <Bookmark className="h-5 w-5 text-muted-foreground/20" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground/50">No active reservations</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground/40">Reserve a book from the catalog and it will appear here.</p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="mt-1 h-8 px-4 text-xs rounded-xl">
+                  <Link href="/student-catalog">
+                    <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+                    Browse Catalog
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {reservations.map((res) => {
+                  const isReady = res.status === 'READY';
+                  const deadline = res.hold_expires_at
+                    ? new Date(res.hold_expires_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                    : null;
+
+                  return (
+                    <Card
+                      key={res.id}
+                      className={`relative overflow-hidden border shadow-sm transition-all ${
+                        isReady
+                          ? 'border-emerald-300/60 bg-gradient-to-br from-emerald-50/60 to-transparent ring-1 ring-emerald-300/30'
+                          : 'border-border/50 bg-card/60 hover:border-primary/20'
+                      }`}
+                    >
+                      {/* Glowing left accent */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
+                        isReady ? 'bg-emerald-500' : 'bg-primary/30'
+                      }`} />
+
+                      <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-start">
+                        {/* Cover thumbnail */}
+                        <a href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
+                          <div className="relative h-14 w-10 rounded-lg border border-border/60 bg-muted/20 overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
+                            {res.books?.cover_url ? (
+                              <Image src={res.books.cover_url} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="40px" unoptimized />
+                            ) : (
+                              <div className="flex h-full items-center justify-center">
+                                <Library size={14} className="text-muted-foreground/20" />
                               </div>
-                           </div>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <Badge variant={res.status === 'READY' ? 'default' : 'outline'} className="text-[9px] px-1.5 py-0 h-5">
-                              {res.status}
-                           </Badge>
-                           <button 
-                             onClick={() => handleCancelReservation(res.id, res.books?.title || "Unknown Book")}
-                             disabled={isPending}
-                             className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-                             title="Cancel Reservation"
-                           >
-                             <XCircle size={14} />
-                           </button>
-                         </div>
+                            )}
+                          </div>
+                        </a>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <a href={`/student-catalog/${res.books?.id ?? ''}`} className="group">
+                            <p className="truncate text-xs font-black text-foreground/90 group-hover:text-primary transition-colors leading-snug">
+                              {res.books?.title || 'Unknown Book'}
+                            </p>
+                          </a>
+
+                          {isReady ? (
+                            <div className="mt-1 space-y-0.5">
+                              <p className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                Ready for Pickup!
+                              </p>
+                              {deadline && (
+                                <p className="text-[10px] font-bold text-emerald-600/70 flex items-center gap-1">
+                                  <CalendarDays className="h-3 w-3" />
+                                  Claim by {deadline}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="mt-1 space-y-0.5">
+                              <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Queue position #{res.queue_position}
+                              </p>
+                              <p className="text-[9px] text-muted-foreground/50">
+                                You&apos;ll be notified when ready.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Badge
+                            variant={isReady ? 'default' : 'outline'}
+                            className={`text-[9px] px-1.5 py-0 h-5 ${
+                              isReady ? 'bg-emerald-500 hover:bg-emerald-500 text-white border-transparent' : ''
+                            }`}
+                          >
+                            {isReady ? 'READY' : 'IN QUEUE'}
+                          </Badge>
+                          <button
+                            onClick={() => handleCancelReservation(res.id, res.books?.title || 'Unknown Book')}
+                            disabled={isPending}
+                            title="Cancel this reservation"
+                            className="group flex items-center gap-1 text-[9px] font-bold text-muted-foreground/50 hover:text-destructive transition-colors disabled:opacity-30"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Cancel
+                          </button>
+                        </div>
                       </CardContent>
-                   </Card>
-                 ))}
-               </div>
-            </section>
-          )}
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
         {/* Discovery & New Arrivals */}
         <section className="space-y-3">
@@ -478,3 +557,4 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     </div>
   );
 }
+

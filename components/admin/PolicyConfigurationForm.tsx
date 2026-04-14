@@ -97,7 +97,7 @@ export function PolicyConfigurationForm({
     }
   };
 
-  const borrowKeys = ["default_loan_period_days", "max_borrow_limit", "max_renewal_count", "hold_expiry_days", "renewal_period_days"];
+  const borrowKeys = ["default_loan_period_days", "max_borrow_limit", "max_renewal_count", "max_reservations_per_student", "hold_expiry_days", "renewal_period_days"];
   const fineKeys = ["overdue_fine_per_day", "fine_cap_amount"];
   const faqKeys = Object.keys(DEFAULT_POLICIES).filter(k => k.startsWith("faq_"));
 

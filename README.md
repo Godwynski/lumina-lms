@@ -56,10 +56,9 @@ Lumina is engineered for sub-second perceived latency using a "Streaming First" 
     Create a `.env.local` file with your Supabase credentials.
 
 3.  **Database Initialization**:
-    ```bash
-    npx supabase db push
-    npm run seed
-    ```
+    For a fresh installation, we recommend using the unified schema and sample data:
+    *   Apply `supabase/schema_clean_install.sql` in your Supabase SQL Editor.
+    *   (Optional) Apply `supabase/sample_data.sql` to seed the database with test users and books.
 
 4.  **Launch Platform**:
     ```bash

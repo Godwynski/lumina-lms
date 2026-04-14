@@ -43,7 +43,8 @@ export async function DashboardContent({ user, role }: DashboardContentProps) {
     : Promise.resolve({ data: null });
 
   const reservationsPromise = role === "student"
-    ? getMyReservations()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? (getMyReservations() as unknown as Promise<any[]>)
     : Promise.resolve([]);
 
   // 2. We pass the promises to the client component

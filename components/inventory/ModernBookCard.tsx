@@ -3,7 +3,6 @@
 import { m } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import supabaseLoader from "@/lib/image-loader";
 import { 
   Book as BookIcon, 
   MapPin, 
@@ -55,13 +54,13 @@ export function ModernBookCard({ book }: ModernBookCardProps) {
           <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 group-hover:shadow-md">
             {book.cover_url ? (
               <Image 
-                loader={supabaseLoader}
                 src={book.cover_url} 
                 alt={book.title} 
                 fill 
                 className="object-cover" 
                 sizes="80px"
                 loading="lazy"
+                unoptimized
               />
             ) : (
               <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground/40"}`}>

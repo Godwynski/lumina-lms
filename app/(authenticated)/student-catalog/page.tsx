@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
+import { getMyReservations } from '@/lib/actions/reservations';
 import { StudentCatalogClient } from './StudentCatalogClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -47,6 +48,7 @@ export default async function StudentCatalogPage({
   // Initiate all fetches concurrently so they run in parallel
   const booksPromise = getPublicBooksCached(q, categoryId, '', availableOnly, page, pageSize, sortBy);
   const categoriesPromise = getCategoriesCached();
+  const reservationsPromise = getMyReservations();
 
   return (
     <div className="space-y-6">
@@ -54,6 +56,7 @@ export default async function StudentCatalogPage({
         <StudentCatalogClient 
           booksPromise={booksPromise} 
           categoriesPromise={categoriesPromise}
+          reservationsPromise={reservationsPromise}
           initialFilters={{
             q,
             categoryId,
