@@ -9,7 +9,7 @@ export const metadata = {
 export default async function AuditPage() {
   return (
     <div className="flex flex-col gap-8 p-8 max-w-7xl mx-auto min-h-screen">
-      <div className="flex flex-col gap-2">
+      <div className="hidden md:flex flex-col gap-2">
         <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
           <span className="p-2 bg-primary/10 text-primary rounded-xl ring-1 ring-primary/20 rotate-[2deg] shadow-sm">
             <ClipboardList className="w-8 h-8" />

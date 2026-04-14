@@ -29,7 +29,7 @@ export default async function ProtectedPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {role === 'student' ? 'Student Dashboard' : 'Operations Dashboard'}
           </h1>

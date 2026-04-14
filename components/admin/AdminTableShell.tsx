@@ -26,7 +26,7 @@ export function AdminTableShell({
   return (
     <div className={cn("mx-auto flex w-full max-w-7xl flex-col gap-4", className)}>
       <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>

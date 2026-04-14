@@ -332,7 +332,7 @@ export function ProtectedNav({
 
     if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
 
-    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies", "/operations", "/categories"];
+    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies", "/operations"];
     if (SETTINGS_PATHS.includes(hrefBase)) {
       return pathWithoutQuery === hrefBase;
     }

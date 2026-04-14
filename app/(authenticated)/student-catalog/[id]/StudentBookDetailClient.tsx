@@ -81,7 +81,7 @@ export function StudentBookDetailClient({
       </div>
 
       <div className="space-y-4">
-        <div>
+        <div className="hidden md:block">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{book.title}</h2>
           <p className="text-sm text-muted-foreground">{book.author}</p>
         </div>
