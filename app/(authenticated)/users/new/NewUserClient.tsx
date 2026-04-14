@@ -63,7 +63,7 @@ export function NewUserClient() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-foreground">Invite User</h1>
-          <p className="text-sm text-muted-foreground">Add a new user to the system.</p>
+          <p className="text-sm text-muted-foreground hidden md:block">Add a new user to the system.</p>
         </div>
       </div>
 

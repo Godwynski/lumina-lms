@@ -183,8 +183,8 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
   return (
     <>
       <AdminTableShell
-        title="Users & Roles"
-        description="Manage users, role assignment, and account status."
+        title="User Directory"
+        description="Manage members, role assignment, and account status."
         className="min-h-[calc(100vh-120px)]"
         headerActions={(
           <Button onClick={() => router.push('/users/new')} className="w-full sm:w-auto">

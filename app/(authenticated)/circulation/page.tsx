@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CirculationPage() {
   return (
-    <div className="container py-8">
+    <div className="w-full">
       <Suspense fallback={<CirculationPageSkeleton />}>
         <CirculationWizard />
       </Suspense>

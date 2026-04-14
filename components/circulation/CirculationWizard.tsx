@@ -228,10 +228,10 @@ export function CirculationWizard() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Circulation Desk</h1>
+    <div className="max-w-7xl mx-auto space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-3">
+        <div className="hidden md:block">
+
           <p className="text-sm text-muted-foreground mt-1">Guided workflow for library resource transactions.</p>
         </div>
 

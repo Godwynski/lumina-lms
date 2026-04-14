@@ -293,7 +293,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
 
   // STAFF / ADMIN DASHBOARD
   return (
-    <div className="space-y-8 pb-14 w-full min-w-0 flex flex-col overflow-hidden">
+    <div className="space-y-4 pb-14 w-full min-w-0 flex flex-col overflow-hidden">
 
       <div className="grid gap-8 md:grid-cols-2 items-start w-full min-w-0">
         {/* LEFT COLUMN: ACTION REQUIRED */}

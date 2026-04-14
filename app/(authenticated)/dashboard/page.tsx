@@ -27,12 +27,10 @@ export default async function ProtectedPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {role === 'student' ? 'Student Dashboard' : 'Operations Dashboard'}
-          </h1>
+    <div className="flex flex-col gap-4">
+      <header className="flex flex-col gap-4 border-b border-border/50 pb-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="hidden md:block">
+
           <p className="text-sm text-muted-foreground">
             {role === 'student' 
               ? `Welcome back. Here's your library at a glance.`

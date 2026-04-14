@@ -166,7 +166,7 @@ export function StaffBookManagementClient({ initialBook, initialCopies }: StaffB
               <ChevronLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
+          <div className="hidden md:block">
             <h1 className="text-lg font-semibold text-foreground">{book.title}</h1>
             <p className="text-xs text-muted-foreground">{book.author} - ID: {book.id.slice(0, 8)}</p>
           </div>

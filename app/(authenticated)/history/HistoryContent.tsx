@@ -84,6 +84,11 @@ export default function HistoryContent({
 
   return (
     <div className="space-y-4 w-full">
+      <div className="flex items-center justify-between border-b border-border/50 pb-2 px-1">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-70">
+          Historical records of your library interactions and resource utilization.
+        </p>
+      </div>
       <Card className="border-border bg-card shadow-sm overflow-hidden">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">

@@ -8,17 +8,14 @@ import { type User as SupabaseUser } from "@supabase/supabase-js";
 import { m, AnimatePresence } from "framer-motion";
 import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
-import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import {
   User as UserIcon,
   SlidersHorizontal,
   Lock,
   Settings2,
-  Tags,
   RefreshCw,
   Trash2,
   ChevronRight,
-  ChevronDown,
   UserCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -28,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -39,7 +35,6 @@ import { usePreferences } from "@/components/providers/PreferencesProvider";
 type Role = "admin" | "librarian" | "staff" | "student";
 
 type PolicySetting = { id: string; key: string; value: string; description?: string };
-type Category = { id: string; name: string; slug: string; description?: string; is_active: boolean };
 
 interface Profile {
   role: string | null;
@@ -53,19 +48,17 @@ interface Props {
   user: SupabaseUser; 
   profilePromise: Promise<Profile | null>;
   settingsPromise: Promise<PolicySetting[]>;
-  categoriesPromise: Promise<Category[]>;
   initialTab?: TabId;
 }
 
 const PERSONAL_TABS = [
-  { id: "profile", label: "Profile", icon: UserIcon, description: "Update your personal details" },
+  { id: "profile", label: "Profile Settings", icon: UserIcon, description: "Update your personal details" },
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal, description: "Notification and display settings" },
   { id: "security", label: "Security", icon: Lock, description: "Password and data privacy" },
 ] as const;
 
 const ADMIN_TABS = [
-  { id: "policies", label: "Policies", icon: Settings2, description: "Manage system-wide policies" },
-  { id: "categories", label: "Categories", icon: Tags, description: "Book categories & genres" },
+  { id: "policies", label: "System Policies", icon: Settings2, description: "Manage system-wide policies" },
   { id: "operations", label: "Operations", icon: RefreshCw, description: "System maintenance tasks" },
 ] as const;
 
@@ -81,7 +74,7 @@ type NavTab = {
   section: "personal" | "admin";
 };
 
-export default function SettingsPageClient({ profilePromise, settingsPromise, categoriesPromise, initialTab }: Props) {
+export default function SettingsPageClient({ profilePromise, settingsPromise, initialTab }: Props) {
   const profile = use(profilePromise);
   
   const role = (profile?.role as Role) || "student";
@@ -96,7 +89,6 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab || "profile");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Personal settings state
   const [displayName, setDisplayName] = useState("");
@@ -224,10 +216,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
     toast.success("Settings reset to defaults");
   };
 
-  const changeTab = useCallback((id: TabId) => {
-    setActiveTab(id);
-    setMobileNavOpen(false);
-  }, []);
+
 
   const uploadProfilePhoto = async () => {
     if (!selectedPhotoBlob) {
@@ -329,7 +318,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
   const visibleAdminTabs = useMemo(() => {
     if (!canManageSystem) return [] as Array<(typeof ADMIN_TABS)[number]>;
     if (isSuperAdmin) return ADMIN_TABS;
-    return ADMIN_TABS.filter((tab) => tab.id === "policies" || tab.id === "categories");
+    return ADMIN_TABS.filter((tab) => tab.id === "policies");
   }, [canManageSystem, isSuperAdmin]);
 
   const allTabs = useMemo(() => {
@@ -349,7 +338,6 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
   const activeTabMeta = useMemo(() => allTabs.find((tab) => tab.id === activeTab), [activeTab, allTabs]);
 
   const setIntelligentAlertsValue = useCallback((v: boolean) => setIntelligentAlerts(v), []);
-  const onMobileNavClick = useCallback(() => setMobileNavOpen(true), []);
 
   if (!mounted) return null;
 
@@ -359,7 +347,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
       <m.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 border-b border-border pb-4"
+        className="mb-2 border-b border-border pb-2 hidden md:block"
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1.5">
@@ -369,40 +357,15 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
               </Badge>
             </div>
             
-            <div className="flex items-center gap-1.5 text-base md:text-xl font-semibold tracking-tight text-foreground">
-               <span>{activeTabMeta?.label || "Profile Details"}</span>
-            </div>
+
             <p className="text-sm text-muted-foreground">{activeTabMeta?.description || "Manage your settings and configuration."}</p>
           </div>
         </div>
       </m.div>
 
-      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent side="left" className="w-[86%] max-w-xs border-r border-border bg-card p-0">
-          <SheetHeader className="border-b border-border">
-            <SheetTitle className="text-base">Navigation</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 p-4">
-            <SectionNav
-              title="Personal"
-              items={allTabs.filter((t) => t.section === "personal")}
-              activeId={activeTab}
-              onChange={changeTab}
-            />
 
-            {canManageSystem && (
-              <SectionNav
-                title="System Administration"
-                items={allTabs.filter((t) => t.section === "admin")}
-                activeId={activeTab}
-                onChange={changeTab}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
 
-      <div className="mx-auto grid max-w-5xl grid-cols-1 items-start gap-4 lg:gap-6">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-4 lg:gap-6">
         <main className="min-w-0">
           <AnimatePresence mode="wait">
             <m.div
@@ -413,7 +376,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
               transition={{ duration: 0.15 }}
             >
               {activeTab === "profile" && (
-                <Section key="profile" title="Account Identity" icon={UserIcon} onMobileNavClick={onMobileNavClick}>
+                <Section key="profile" title="Account Identity" icon={UserIcon} hideHeaderOnMobile>
                   <div className="grid gap-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                       <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
@@ -541,7 +504,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
               )}
 
               {activeTab === "preferences" && (
-                <Section key="preferences" title="Library Experience" icon={SlidersHorizontal} onMobileNavClick={onMobileNavClick}>
+                <Section key="preferences" title="Library Experience" icon={SlidersHorizontal} hideHeaderOnMobile>
                   <div className="space-y-3">
                     <PremiumToggle 
                       title="Intelligent Alerts" 
@@ -571,7 +534,7 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
 
               {activeTab === "security" && (
                 <div key="security" className="space-y-5">
-                  <Section title="Account Security" icon={Lock} onMobileNavClick={onMobileNavClick}>
+                  <Section title="Account Security" icon={Lock} hideHeaderOnMobile>
                     <p className="mb-3 text-sm text-muted-foreground">Manage your authentication methods and login credentials.</p>
                     <Button asChild variant="outline" className="h-11 w-full gap-3 rounded-lg border-border sm:w-auto px-6 font-semibold shadow-sm">
                       <Link href="/auth/update-password">
@@ -600,24 +563,18 @@ export default function SettingsPageClient({ profilePromise, settingsPromise, ca
 
               {/* Admin Views */}
               {activeTab === "policies" && canManageSystem && (
-                <Section key="policies" title="Policy Control Center" icon={Settings2} onMobileNavClick={onMobileNavClick}>
+                <Section key="policies" title="Policy Control Center" icon={Settings2} hideHeaderOnMobile>
                   <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
                      <PolicyStreamWrapper promise={settingsPromise} canEdit={isSuperAdmin} />
                   </Suspense>
                 </Section>
               )}
 
-              {activeTab === "categories" && canManageSystem && (
-                <Section key="categories" title="Catalog Architecture" icon={Tags} onMobileNavClick={onMobileNavClick}>
-                   <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
-                     <CategoryStreamWrapper promise={categoriesPromise} />
-                   </Suspense>
-                </Section>
-              )}
+              {/* Categories tab removed */}
 
               {activeTab === "operations" && isSuperAdmin && (
                 <div key="operations" className="space-y-4">
-                  <Section title="Fleet Maintenance" icon={RefreshCw} onMobileNavClick={onMobileNavClick}>
+                  <Section title="Fleet Maintenance" icon={RefreshCw} hideHeaderOnMobile>
                     <AnnualResetTool />
                   </Section>
                 </div>
@@ -673,68 +630,23 @@ function PolicyStreamWrapper({ promise, canEdit }: { promise: Promise<PolicySett
   return <PolicyConfigurationForm settings={data} canEdit={canEdit} />;
 }
 
-function CategoryStreamWrapper({ promise }: { promise: Promise<Category[]> }) {
-  const data = use(promise);
-  return <CategoryManagement initialCategories={data} />;
-}
+
 
 /* ── UI Components ───────────────────────────────────────── */
 
-const SectionNav = memo(({
-  title,
-  items,
-  activeId,
-  onChange,
-}: {
-  title: string;
-  items: NavTab[];
-  activeId: TabId;
-  onChange: (id: TabId) => void;
-}) => {
-  if (items.length === 0) return null;
 
-  return (
-    <div className="space-y-2">
-      <h3 className="px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{title}</h3>
-      <div className="flex flex-col gap-1">
-        {items.map(({ id, label, icon: Icon }) => (
-          <Button
-            key={id}
-            asChild
-            variant="ghost"
-            className={cn(
-              "relative h-10 w-full justify-start rounded-lg px-3 py-2 text-sm font-semibold transition-all",
-              activeId === id ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground hover:bg-muted"
-            )}
-            onClick={() => onChange(id)}
-            aria-current={activeId === id ? "page" : undefined}
-          >
-            <Link href={`/${id}`} scroll={false}>
-              <Icon size={16} className="mr-3" />
-              <span>{label}</span>
-              {activeId === id && <m.div layoutId="nav-indicator" className="absolute left-0 w-1 h-5 bg-primary rounded-r-full" />}
-            </Link>
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-});
-SectionNav.displayName = "SectionNav";
 
-const Section = memo(({ title, icon: Icon, children, danger, onMobileNavClick }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; onMobileNavClick?: () => void }) => {
+const Section = memo(({ title, icon: Icon, children, danger, hideHeaderOnMobile }: { title: string; icon: LucideIcon; children: React.ReactNode; danger?: boolean; hideHeaderOnMobile?: boolean }) => {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 border-b border-border pb-3">
+    <div className={cn("space-y-3 md:space-y-4", hideHeaderOnMobile && "md:mt-4")}>
+      <div className={cn(
+        "flex items-center gap-3 border-b border-border pb-2 md:pb-3",
+        hideHeaderOnMobile && "hidden md:flex"
+      )}>
         <div className={cn("rounded-lg p-1.5", danger ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground")}>
           <Icon size={16} />
         </div>
         <h2 className={cn("flex-1 text-base font-bold tracking-tight", danger ? "text-red-900" : "text-foreground")}>{title}</h2>
-        {onMobileNavClick && (
-          <button onClick={onMobileNavClick} className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted lg:hidden shadow-sm" aria-label="Browse sections">
-            <ChevronDown size={14} />
-          </button>
-        )}
       </div>
       <div className="animate-in fade-in slide-in-from-bottom-1 duration-400">{children}</div>
     </div>

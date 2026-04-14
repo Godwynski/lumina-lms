@@ -115,7 +115,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
         <Button variant="ghost" size="icon" onClick={() => router.push('/users')} className="-ml-2 shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 hidden md:block">
           <h1 className="text-2xl font-bold text-foreground truncate">{user.name}</h1>
           <p className="text-sm text-muted-foreground truncate">{user.email}</p>
         </div>

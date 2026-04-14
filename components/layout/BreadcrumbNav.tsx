@@ -4,9 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 
+// Explicit mapping for professional labels
+const ROUTE_LABELS: Record<string, string> = {
+  "catalog": "Inventory",
+  "student-catalog": "Catalog",
+  "circulation": "Circulation Desk",
+  "history": "Borrow History",
+  "violations": "Violations",
+  "users": "User Directory",
+  "policies": "System Policies",
+  "audit": "Audit Logs",
+  "operations": "Operations",
+  "profile": "Profile Settings",
+  "preferences": "Preferences",
+  "security": "Security",
+};
+
 // Helper to capitalize and format route segments
 function formatSegment(segment: string) {
-  // e.g., "student-catalog" -> "Student Catalog"
+  if (ROUTE_LABELS[segment]) return ROUTE_LABELS[segment];
+
   return segment
     .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

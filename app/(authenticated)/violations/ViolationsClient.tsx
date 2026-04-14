@@ -176,8 +176,8 @@ export default function ViolationsClient({ dataPromise }: Props) {
       </div>
 
       <AdminTableShell
-        title={isStudent ? "My Violation History" : "Violation Records"}
-        description={isStudent ? "A record of your conduct and library policy violations" : "Track and manage student school violations"}
+        title="Violations"
+        description={isStudent ? "A record of library policy violations and demerit points" : "Track and manage library policy violations"}
         headerActions={!isStudent && (
           <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
