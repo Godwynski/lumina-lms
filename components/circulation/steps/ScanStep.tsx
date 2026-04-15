@@ -31,12 +31,13 @@ export function ScanStep({
     setCameraOpen,
     cameraSupported,
     cameraIssue,
-    videoRef,
+    scannerId,
   } = useScanner({
     onScan: async (val) => {
       await onScan(val);
     },
-    isProcessing
+    isProcessing,
+    scannerId: 'circulation-scanner'
   });
 
   const handleManualSubmit = async () => {
@@ -62,11 +63,9 @@ export function ScanStep({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
           <div className="relative aspect-video overflow-hidden rounded-2xl border border-border bg-black shadow-inner">
-            <video 
-              ref={videoRef} 
-              className="h-full w-full object-cover" 
-              muted 
-              playsInline 
+            <div 
+              id={scannerId} 
+              className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
             />
             
             {/* Scanner Overlay UI */}

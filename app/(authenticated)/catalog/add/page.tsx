@@ -12,16 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import { compressImage } from '@/lib/image-utils';
 
-type BarcodeLike = { rawValue?: string };
-type BarcodeDetectorLike = {
-  detect: (source: ImageBitmapSource) => Promise<BarcodeLike[]>;
-};
-
-type WindowWithDetector = Window & {
-  BarcodeDetector?: new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
-};
-
-const SCAN_DEBOUNCE_MS = 1200;
+import { useScanner } from '@/hooks/use-scanner';
+import { Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 export default function AddBookPage() {
   const router = useRouter();
@@ -29,9 +21,6 @@ export default function AddBookPage() {
   const [isbnLoading, setIsbnLoading] = useState(false);
   const [error, setError] = useState('');
   const [scanNotice, setScanNotice] = useState('');
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [cameraSupported, setCameraSupported] = useState(false);
-  const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -48,12 +37,6 @@ export default function AddBookPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const detectorRef = useRef<BarcodeDetectorLike | null>(null);
-  const lastAcceptedScanRef = useRef<{ value: string; at: number } | null>(null);
 
   const normalizeIsbn = useCallback((value: string) => {
     const trimmed = value.trim().toUpperCase().replace(/^ISBN(?:-1[03])?:?\s*/, '');
@@ -129,44 +112,17 @@ export default function AddBookPage() {
     }
   }, [formData.isbn]);
 
-  const stopScanner = useCallback(() => {
-    if (frameRef.current) {
-      cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setCameraOpen(false);
-  }, []);
-
-  const requestCameraPermission = useCallback(async () => {
-    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-      setScanNotice('Camera API is unavailable in this browser.');
-      return;
-    }
-
-    try {
-      const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      media.getTracks().forEach((track) => track.stop());
-      setCameraPermission('granted');
-      setScanNotice('Camera permission granted. Start scanner to capture ISBN barcode.');
-    } catch {
-      setCameraPermission('denied');
-      setScanNotice('Camera permission denied. Allow camera access in browser settings.');
-    }
-  }, []);
-
-  const handleScannedCode = useCallback(
-    async (rawValue: string) => {
-      const now = Date.now();
-      const last = lastAcceptedScanRef.current;
-      if (last && last.value === rawValue && now - last.at < SCAN_DEBOUNCE_MS) {
-        return;
-      }
-      lastAcceptedScanRef.current = { value: rawValue, at: now };
-
+  const {
+    cameraOpen,
+    setCameraOpen,
+    cameraSupported,
+    cameraPermission,
+    cameraIssue,
+    stopCamera,
+    requestCameraPermission,
+    scannerId
+  } = useScanner({
+    onScan: async (rawValue) => {
       const isbn = normalizeIsbn(rawValue);
       if (!isbn) {
         setScanNotice('Scanned code is not a valid ISBN-10 or ISBN-13.');
@@ -175,11 +131,20 @@ export default function AddBookPage() {
 
       setFormData((prev) => ({ ...prev, isbn }));
       setScanNotice(`Scanned ISBN ${isbn}. Looking up book data...`);
-      stopScanner();
+      void stopCamera();
       await handleIsbnLookup(isbn);
     },
-    [handleIsbnLookup, normalizeIsbn, stopScanner],
-  );
+    isProcessing: loading || isbnLoading,
+    scannerId: 'isbn-scanner',
+    formats: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+    ]
+  });
+
 
   useEffect(() => {
     async function loadCategories() {
@@ -193,85 +158,6 @@ export default function AddBookPage() {
     void loadCategories();
   }, []);
 
-  useEffect(() => {
-    const detectorCtor = (window as WindowWithDetector).BarcodeDetector;
-    setCameraSupported(
-      !!navigator.mediaDevices &&
-        typeof navigator.mediaDevices.getUserMedia === 'function' &&
-        !!detectorCtor,
-    );
-  }, []);
-
-  useEffect(() => {
-    if (!cameraOpen || !cameraSupported) return;
-
-    let mounted = true;
-    const detectorCtor = (window as WindowWithDetector).BarcodeDetector;
-    if (detectorCtor) {
-      detectorRef.current = new detectorCtor({
-        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'],
-      });
-    }
-
-    const start = async () => {
-      try {
-        const media = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } },
-          audio: false,
-        });
-
-        if (!mounted) {
-          media.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = media;
-        setCameraPermission('granted');
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = media;
-          await videoRef.current.play();
-        }
-
-        const tick = async () => {
-          if (!mounted || !videoRef.current || !detectorRef.current) return;
-
-          try {
-            if (videoRef.current.readyState >= 2) {
-              const codes = await detectorRef.current.detect(videoRef.current);
-              const first = codes.find((code) => !!code.rawValue?.trim());
-              if (first?.rawValue) {
-                await handleScannedCode(first.rawValue);
-              }
-            }
-          } catch {
-            // Keep scanner loop alive.
-          }
-
-          frameRef.current = requestAnimationFrame(tick);
-        };
-
-        frameRef.current = requestAnimationFrame(tick);
-      } catch {
-        setCameraPermission('denied');
-        setScanNotice('Unable to access camera. You can still enter ISBN manually.');
-        stopScanner();
-      }
-    };
-
-    void start();
-
-    return () => {
-      mounted = false;
-      stopScanner();
-    };
-  }, [cameraOpen, cameraSupported, handleScannedCode, stopScanner]);
-
-  useEffect(() => {
-    return () => {
-      stopScanner();
-    };
-  }, [stopScanner]);
 
   useEffect(() => {
     if (!coverFile) {
@@ -417,14 +303,17 @@ export default function AddBookPage() {
                         type="button"
                         variant={cameraOpen ? 'destructive' : 'outline'}
                         className="h-8 rounded-md text-xs"
-                        onClick={() => (cameraOpen ? stopScanner() : setCameraOpen(true))}
+                        onClick={() => (cameraOpen ? void stopCamera() : setCameraOpen(true))}
                       >
                         <Camera className="mr-2 h-4 w-4" />
                         {cameraOpen ? 'Stop ISBN Scanner' : 'Start ISBN Scanner'}
                       </Button>
                     </div>
-                    <div className="relative overflow-hidden rounded-md border border-border bg-primary">
-                      <video ref={videoRef} className="h-36 w-full object-cover" muted playsInline />
+                    <div className="relative overflow-hidden rounded-md border border-border bg-primary aspect-video">
+                      <div 
+                        id={scannerId} 
+                        className="h-full w-full [&>video]:h-full [&>video]:w-full [&>video]:object-cover" 
+                      />
                       {!cameraOpen && (
                         <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 text-zinc-100">
                           <div className="text-center">
@@ -437,7 +326,7 @@ export default function AddBookPage() {
                   </div>
                 )}
                 {!cameraSupported && (
-                  <p className="text-[11px] text-muted-foreground">Camera scanner unsupported in this browser. Manual ISBN still works.</p>
+                  <p className="text-[11px] text-destructive font-medium">{cameraIssue || 'Camera scanner unsupported in this browser.'}</p>
                 )}
                 {scanNotice && <p className="text-[11px] text-muted-foreground">{scanNotice}</p>}
                 <p className="text-[11px] text-muted-foreground">Retrieves title, author, and cover from Open Library API.</p>
