@@ -229,6 +229,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   const book = use(bookPromise);
   const availability = use(availabilityPromise);
   const [isPending, startTransition] = useTransition();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   if (!book) {
     return (
@@ -274,8 +275,6 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   const handleReserveSuccess = () => {
     router.refresh();
   };
-
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   return (
     <div className="p-4 md:p-6 space-y-5">

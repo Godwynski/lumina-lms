@@ -243,7 +243,8 @@ export async function getBookCopies(bookId: string) {
     const activeRes = raws.find(
       (r: { status: string }) => r.status === 'READY' || r.status === 'ACTIVE'
     ) ?? null;
-    const { reservations: _drop, ...rest } = copy as typeof copy & { reservations: unknown };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { reservations, ...rest } = copy;
     return { ...rest, reservation: activeRes };
   });
 }

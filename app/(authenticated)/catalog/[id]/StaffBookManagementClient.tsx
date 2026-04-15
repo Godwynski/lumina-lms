@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   getBookCopies,
@@ -32,7 +32,6 @@ import {
   Loader2,
   Clock,
   UserCircle2,
-  BadgeCheck,
   XCircle,
   Users,
   ArrowRight,
@@ -349,7 +348,6 @@ export function StaffBookManagementClient({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [mounted, setMounted] = useState(false);
-  const [, startTransition] = useTransition();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -367,7 +365,7 @@ export function StaffBookManagementClient({
     setAddCopyLoading(true);
     try {
       await createBookCopy(initialBook.id, 'New Condition');
-      const updatedCopies = await refreshAll();
+      await refreshAll();
       setBook(prev => ({
         ...prev,
         total_copies: (prev.total_copies || 0) + 1,
@@ -425,7 +423,7 @@ export function StaffBookManagementClient({
     }
   };
 
-  const handleCancelReservationFromCopy = async (reservationId: string, copyId: string) => {
+  const handleCancelReservationFromCopy = async (reservationId: string, _copyId: string) => {
     setCancellingResId(reservationId);
     try {
       await staffCancelReservation(reservationId, book.id);
