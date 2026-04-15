@@ -126,17 +126,23 @@ function ReservationQueuePanel({
     }
   };
 
-  const reserver = (entry: ReservationQueueEntry) =>
-    entry.profiles as {
+  const reserver = (entry: ReservationQueueEntry) => {
+    const p = entry.profiles;
+    const profile = Array.isArray(p) ? p[0] : p;
+    return profile as {
       id: string;
       full_name: string | null;
       email: string | null;
       student_id: string | null;
       avatar_url: string | null;
     } | null;
+  };
 
-  const copyInfo = (entry: ReservationQueueEntry) =>
-    entry.book_copies as { qr_string: string } | null;
+  const copyInfo = (entry: ReservationQueueEntry) => {
+    const bc = entry.book_copies;
+    const copy = Array.isArray(bc) ? bc[0] : bc;
+    return copy as { qr_string: string } | null;
+  };
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
