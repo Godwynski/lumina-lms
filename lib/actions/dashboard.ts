@@ -37,7 +37,6 @@ export async function getDashboardStats({
   recentBooks: { id: string; title: string; author: string; cover_url?: string | null; created_at: string }[];
   activeLoansList?: BorrowingRecord[];
   violationsList?: ViolationWithProfile[];
-  totalPoints?: number;
 }> {
   const supabase = await createClient();
   
@@ -74,7 +73,7 @@ export async function getDashboardStats({
       : Promise.resolve({ records: [], totalCount: 0 }),
     isStudent
       ? getViolations()
-      : Promise.resolve({ violations: [], stats: { total: 0, active: 0, resolved: 0, totalPoints: 0 }, role: '' }),
+      : Promise.resolve({ violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }),
   ]);
 
   return {
@@ -84,6 +83,5 @@ export async function getDashboardStats({
     recentBooks,
     activeLoansList: (myActiveLoansResult as { records: BorrowingRecord[] }).records,
     violationsList: (myViolationsResult as { violations: ViolationWithProfile[] }).violations,
-    totalPoints: (myViolationsResult as { stats: { totalPoints: number } }).stats?.totalPoints || 0,
   };
 }

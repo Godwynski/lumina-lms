@@ -47,7 +47,7 @@ Fetches violation records and statistics for the active user or all users (staff
 
 ### `POST /api/violations`
 Create a new violation record (Staff only).
-- **Body:** `{ userId: string, violationType: string, points: number, severity: string }`
+- **Body:** `{ userId: string, violationType: string, description?: string, incidentDate: string }`
 
 ---
 

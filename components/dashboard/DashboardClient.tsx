@@ -56,7 +56,6 @@ type DashboardStats = {
   recentBooks: { id: string; title: string; author: string; cover_url?: string | null; created_at: string }[];
   activeLoansList?: BorrowingRecord[];
   violationsList?: ViolationWithProfile[];
-  totalPoints?: number;
 };
 
 interface DashboardProps {
@@ -167,20 +166,6 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
 
             {/* Activity Summary */}
             <div className="md:col-span-4 space-y-5">
-              {/* Demerit Points Widget */}
-              {(stats.totalPoints || 0) > 0 && (
-                <Card className="border-border bg-card/40 shadow-sm p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Demerit Points</p>
-                      <p className="text-2xl font-black text-amber-600">{stats.totalPoints}</p>
-                    </div>
-                    <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600">
-                       <ShieldAlert size={18} />
-                    </div>
-                  </div>
-                </Card>
-              )}
 
               {/* Active Loans Summary Info */}
               {stats.myActiveLoans > 0 && (
@@ -250,7 +235,9 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                           <CardContent className="flex items-center justify-between gap-4 p-2.5">
                              <div className="min-w-0">
                                 <p className="text-[10px] font-bold text-foreground/90 leading-tight truncate">{violation.violation_type.replace('_', ' ')}</p>
-                                <p className="text-[9px] text-muted-foreground/70 truncate mt-0.5">{violation.severity} severity • {violation.points} pts</p>
+                                <p className="text-[9px] text-muted-foreground/70 truncate mt-0.5" suppressHydrationWarning>
+                                   {mounted ? new Date(violation.incident_date).toLocaleDateString() : '...'}
+                                </p>
                              </div>
                              <Badge variant="outline" className="text-[8px] border-amber-500/20 text-amber-600 bg-amber-50/50">
                                 {violation.status}
