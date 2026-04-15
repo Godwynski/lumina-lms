@@ -272,7 +272,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
     });
   };
 
-  const handleReserveSuccess = () => {
+  const handleReserveSuccess = (_queuePosition: number, _status: 'READY' | 'ACTIVE') => {
     router.refresh();
   };
 

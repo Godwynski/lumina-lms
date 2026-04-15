@@ -1,7 +1,6 @@
 "use client"
 
 import { Logo } from "@/components/layout/Logo"
-import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 
 interface ViolationTicketProps {
@@ -9,8 +8,6 @@ interface ViolationTicketProps {
     case_number: string | null
     violation_type: string
     description: string
-    points: number
-    severity: string
     incident_date: string
     profiles: {
       full_name: string
@@ -102,19 +99,7 @@ export function ViolationTicket({ data }: ViolationTicketProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-8">
-          <div>
-            <Label text="Demerit Points" />
-            <p className="text-3xl font-black">{data.points} pts</p>
-          </div>
-          <div>
-            <Label text="Severity" />
-            <div className="mt-2">
-              <Badge className="bg-black text-white hover:bg-black uppercase px-4 py-1.5 text-xs font-bold rounded-none">
-                {data.severity}
-              </Badge>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-8">
           <div>
             <Label text="Form Status" />
             <p className="mt-2 text-sm font-bold uppercase tracking-widest text-green-600 font-mono">REFERRED_TO_GUIDANCE</p>

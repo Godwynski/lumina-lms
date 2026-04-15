@@ -15,7 +15,7 @@ interface ReserveTitleButtonProps {
   isReady?: boolean;
   queuePosition?: number | null;
   holdExpiresAt?: string | null;
-  onReserveSuccess?: () => void;
+  onReserveSuccess?: (queuePosition: number, status: 'READY' | 'ACTIVE') => void;
   variant?: "default" | "outline" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
@@ -114,14 +114,17 @@ export function ReserveTitleButton({
           nextAvailableDate: fresh.nextAvailableDate
         });
 
+        const finalStatus: 'READY' | 'ACTIVE' = fresh.isReady ? 'READY' : 'ACTIVE';
+        const finalPos = fresh.queuePosition ?? queuePos;
+
         toast.success(
           fresh.isReady
             ? `Reserved! Your copy is ready for pickup.`
             : `Reserved! You are at position ${queuePos} in the queue.`
         );
 
-        // Notify parent so it can refresh the page (StatusBanner, Cancel button, etc.)
-        onReserveSuccess?.();
+        // Notify parent so it can update the list row instantly
+        onReserveSuccess?.(finalPos, finalStatus);
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : 'Failed to place reservation');
       }

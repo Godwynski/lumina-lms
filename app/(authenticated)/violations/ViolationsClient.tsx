@@ -131,15 +131,6 @@ export default function ViolationsClient({ dataPromise }: Props) {
       return matchesStatus && matchesSearch
   })
 
-  const getSeverityColor = (sev: string) => {
-    switch(sev.toLowerCase()) {
-      case 'severe': return 'bg-red-200 text-red-900 border-red-300'
-      case 'major': return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'moderate': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      default: return 'bg-blue-100 text-blue-800 border-blue-200'
-    }
-  }
-
   return (
     <>
       <AdminTableShell
@@ -224,12 +215,6 @@ export default function ViolationsClient({ dataPromise }: Props) {
                     
                     <div className="flex flex-wrap items-center gap-2 text-xs bg-muted/40 rounded p-2">
                       <span className="font-bold uppercase text-foreground">{v.violation_type}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide border ${getSeverityColor(v.severity)}`}>
-                        {v.severity}
-                      </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="font-medium">{v.points} pts</span>
                     </div>
 
                     <p className="text-sm text-foreground">{v.description}</p>
@@ -274,8 +259,6 @@ export default function ViolationsClient({ dataPromise }: Props) {
               <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Case #</th>
               <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Student</th>
               <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Violation Name</th>
-              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Severity</th>
-              <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Pts</th>
               <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Status</th>
               <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider">Date</th>
               {!isStudent && <th className="px-4 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wider text-right">Actions</th>}
@@ -313,15 +296,7 @@ export default function ViolationsClient({ dataPromise }: Props) {
                         {v.violation_type}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${getSeverityColor(v.severity)}`}>
-                        {v.severity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-black text-xs">
-                      {v.points}
-                    </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
                           v.status === 'active'

@@ -23,13 +23,6 @@ type Student = {
   email: string
 }
 
-const SEVERITY_OPTIONS = [
-  { value: 'minor', label: 'Minor' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'major', label: 'Major' },
-  { value: 'severe', label: 'Severe' },
-]
-
 interface RecordViolationModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -45,9 +38,7 @@ export function RecordViolationModal({ open, onOpenChange, initialStudent, onSuc
   const [studentResults, setStudentResults] = useState<Student[]>([])
   
   const [newViolation, setNewViolation] = useState({
-    violationType: '',
-    severity: 'minor',
-    points: 1,
+    violationType: 'Unreturned Book',
     description: '',
     incidentDate: new Date().toISOString().split('T')[0],
   })
@@ -83,9 +74,7 @@ export function RecordViolationModal({ open, onOpenChange, initialStudent, onSuc
     setStudentSearch('')
     setStudentResults([])
     setNewViolation({
-      violationType: '',
-      severity: 'minor',
-      points: 1,
+      violationType: 'Unreturned Book',
       description: '',
       incidentDate: new Date().toISOString().split('T')[0],
     })
@@ -101,8 +90,6 @@ export function RecordViolationModal({ open, onOpenChange, initialStudent, onSuc
         await createViolation({
           userId: selectedStudent.id,
           violationType: newViolation.violationType,
-          severity: newViolation.severity,
-          points: newViolation.points,
           description: newViolation.description,
           incidentDate: newViolation.incidentDate,
         })
@@ -190,54 +177,30 @@ export function RecordViolationModal({ open, onOpenChange, initialStudent, onSuc
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <Label htmlFor="violationType">Violation / Offense Name *</Label>
-              <Input
+              <Label htmlFor="violationType">Violation / Offense Type *</Label>
+              <select
                 id="violationType"
-                placeholder="e.g., Bringing food inside, Unauthorized desk usage..."
                 value={newViolation.violationType}
                 onChange={(e) => setNewViolation(prev => ({ ...prev, violationType: e.target.value }))}
-                className="mt-1"
-              />
+                className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="Unreturned Book">Unreturned Book</option>
+                <option value="Damaged Book">Damaged Book</option>
+              </select>
               <p className="mt-1 text-[10px] text-muted-foreground italic">
-                Librarian/Admin: Specify the exact nature of the offense. This will appear on the Guidance Referral Ticket.
+                Librarian/Admin: Select the nature of the offense. Note: Violations are restricted to library-related issues.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <Label htmlFor="points">Demerit Points *</Label>
-              <Input
-                id="points"
-                type="number"
-                min={0}
-                max={100}
-                value={newViolation.points}
-                onChange={(e) => setNewViolation(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Severity</Label>
-              <select
-                value={newViolation.severity}
-                onChange={(e) => setNewViolation(prev => ({ ...prev, severity: e.target.value }))}
-                className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                {SEVERITY_OPTIONS.map(sev => (
-                  <option key={sev.value} value={sev.value}>{sev.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Incident Date</Label>
-              <Input
-                type="date"
-                value={newViolation.incidentDate}
-                onChange={(e) => setNewViolation(prev => ({ ...prev, incidentDate: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
+          <div>
+            <Label>Incident Date</Label>
+            <Input
+              type="date"
+              value={newViolation.incidentDate}
+              onChange={(e) => setNewViolation(prev => ({ ...prev, incidentDate: e.target.value }))}
+              className="mt-1"
+            />
           </div>
 
           <div>

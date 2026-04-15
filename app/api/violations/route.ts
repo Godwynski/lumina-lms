@@ -6,9 +6,7 @@ import { z } from 'zod'
 const ViolationCreateSchema = z.object({
   action: z.literal('create'),
   userId: z.string().uuid(),
-  violationType: z.string().min(1),
-  severity: z.enum(['minor', 'moderate', 'severe']).default('minor'),
-  points: z.coerce.number().int().min(1).default(1),
+  violationType: z.enum(['Unreturned Book', 'Damaged Book']),
   description: z.string().min(1),
   incidentDate: z.string().optional().default(() => new Date().toISOString().split('T')[0]),
 })
@@ -56,7 +54,7 @@ export async function GET(request: Request) {
     if (userId) {
       const { data, error } = await supabase
         .from('violations')
-        .select('id, user_id, violation_type, severity, points, description, incident_date, status, created_at')
+        .select('id, user_id, violation_type, description, incident_date, status, created_at')
         .eq('user_id', user.id)
         .eq('status', 'active')
 
@@ -85,7 +83,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from('violations')
     .select(`
-      id, user_id, violation_type, severity, points, description, incident_date, status, created_at,
+      id, user_id, violation_type, description, incident_date, status, created_at,
       profiles:user_id(full_name, student_id)
     `)
     .order('created_at', { ascending: false })
@@ -151,14 +149,12 @@ export async function POST(request: Request) {
       .insert({
         user_id: validated.userId,
         violation_type: validated.violationType,
-        severity: validated.severity,
-        points: validated.points,
         description: validated.description,
         incident_date: validated.incidentDate,
         status: 'active',
         created_by: user.id,
       })
-      .select('id, user_id, violation_type, severity, points, description, status')
+      .select('id, user_id, violation_type, description, status')
       .single()
 
     if (error) {

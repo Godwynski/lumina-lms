@@ -9,8 +9,6 @@ export type ViolationWithProfile = {
   id: string
   user_id: string
   violation_type: string
-  severity: string
-  points: number
   description: string
   incident_date: string
   status: string
@@ -32,7 +30,6 @@ export type ViolationStats = {
   active: number
   referred: number
   resolved: number
-  totalPoints: number
 }
 
 async function getAccessInfo() {
@@ -76,7 +73,7 @@ export async function getViolations(options?: {
   let query = supabase
     .from('violations')
     .select(`
-      id, user_id, violation_type, severity, points, description, incident_date, status, resolved_at, resolution_notes, created_at,
+      id, user_id, violation_type, description, incident_date, status, resolved_at, resolution_notes, created_at,
       case_number, action_taken, evidence_url,
       profiles:user_id(full_name, email, student_id)
     `)
@@ -98,10 +95,9 @@ export async function getViolations(options?: {
 
   if (error) throw new Error(error.message)
 
-  const stats: ViolationStats = { total: 0, active: 0, referred: 0, resolved: 0, totalPoints: 0 }
+  const stats: ViolationStats = { total: 0, active: 0, referred: 0, resolved: 0 }
   data?.forEach((v) => {
     stats.total++
-    stats.totalPoints += v.points
     if (v.status === 'ACTIVE') stats.active++
     else if (v.status === 'REFERRED') stats.referred++
     else if (v.status === 'RESOLVED') stats.resolved++
@@ -143,14 +139,11 @@ export async function createViolation(rawInput: unknown) {
   const { error } = await supabase.from('violations').insert({
     user_id: validated.userId,
     violation_type: validated.violationType,
-    severity: validated.severity,
-    points: validated.points,
     description: validated.description,
     incident_date: validated.incidentDate,
     status: 'ACTIVE',
     created_by: userId,
     case_number: caseNumber,
-    // Note: action_taken and evidence_url can be updated later if needed
   })
 
   if (error) throw new Error(error.message)

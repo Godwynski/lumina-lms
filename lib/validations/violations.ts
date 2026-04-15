@@ -2,9 +2,7 @@ import { z } from "zod";
 
 export const ViolationSchema = z.object({
   userId: z.string().uuid("Invalid user ID"),
-  violationType: z.string().min(1, "Violation/Offense name is required"),
-  severity: z.enum(["minor", "moderate", "major", "severe"]),
-  points: z.number().int().min(0).max(100),
+  violationType: z.enum(["Unreturned Book", "Damaged Book"]),
   description: z.string().optional().or(z.literal("")),
   incidentDate: z.string().min(1, "Incident date is required"),
 });

@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
         BOOK_NOT_FOUND: 404,
         DUPLICATE: 409,
         DUPLICATE_ACTIVE_RESERVATION: 409,
+        RESERVATION_LIMIT: 409,
         SUSPENDED: 403,
       };
 
