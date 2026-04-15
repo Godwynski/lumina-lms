@@ -208,41 +208,78 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- UNIFIED ATOMIC RESERVATION
+-- If an AVAILABLE copy exists → READY immediately (copy → RESERVED, hold timer starts).
+-- If no copies available → ACTIVE queue (promoted when a copy is returned).
 CREATE OR REPLACE FUNCTION public.create_reservation_atomic(
     p_actor_id UUID,
     p_book_id UUID,
     p_target_user_id UUID DEFAULT NULL
 ) RETURNS JSONB AS $$
 DECLARE
-    v_target_id UUID := COALESCE(p_target_user_id, p_actor_id);
-    v_queue_pos INTEGER;
-    v_res_id UUID;
-    v_status TEXT;
+    v_target_id      UUID    := COALESCE(p_target_user_id, p_actor_id);
+    v_queue_pos      INTEGER;
+    v_res_id         UUID;
+    v_profile_status TEXT;
+    v_copy_id        UUID;
+    v_hold_days      INTEGER;
+    v_expiry         TIMESTAMPTZ;
 BEGIN
-    -- Authorization check
-    SELECT status INTO v_status FROM public.profiles WHERE id = v_target_id;
-    IF v_status = 'SUSPENDED' THEN
+    -- 1. Authorization: block suspended accounts
+    SELECT status INTO v_profile_status FROM public.profiles WHERE id = v_target_id;
+    IF v_profile_status = 'SUSPENDED' THEN
         RETURN jsonb_build_object('ok', false, 'code', 'SUSPENDED', 'message', 'User account is suspended.');
     END IF;
 
-    -- Lock book for queue operations
+    -- 2. Serialize queue operations with an advisory lock on this book
     PERFORM pg_advisory_xact_lock(hashtextextended(p_book_id::text, 0));
 
-    -- Check for duplicate active reservation
-    IF EXISTS (SELECT 1 FROM public.reservations WHERE user_id = v_target_id AND book_id = p_book_id AND status IN ('ACTIVE', 'READY')) THEN
-        RETURN jsonb_build_object('ok', false, 'code', 'DUPLICATE', 'message', 'User already has an active hold on this book.');
+    -- 3. Reject duplicates
+    IF EXISTS (
+        SELECT 1 FROM public.reservations
+        WHERE user_id = v_target_id AND book_id = p_book_id AND status IN ('ACTIVE', 'READY')
+    ) THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'DUPLICATE', 'message', 'You already have an active reservation for this book.');
     END IF;
 
-    -- Calculate next queue position
-    SELECT COALESCE(MAX(queue_position), 0) + 1 INTO v_queue_pos
-    FROM public.reservations WHERE book_id = p_book_id AND status = 'ACTIVE';
+    -- 4. Try to find an AVAILABLE copy to assign immediately
+    SELECT id INTO v_copy_id
+    FROM public.book_copies
+    WHERE book_id = p_book_id AND status = 'AVAILABLE'
+    ORDER BY created_at ASC
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED;
 
-    -- Create reservation
-    INSERT INTO public.reservations (user_id, book_id, queue_position, status)
-    VALUES (v_target_id, p_book_id, v_queue_pos, 'ACTIVE')
-    RETURNING id INTO v_res_id;
+    IF v_copy_id IS NOT NULL THEN
+        -- Fast path: copy available → READY immediately
+        SELECT COALESCE(value::INTEGER, 3) INTO v_hold_days
+        FROM public.system_settings WHERE key = 'hold_expiry_days';
 
-    RETURN jsonb_build_object('ok', true, 'reservation_id', v_res_id, 'queue_position', v_queue_pos);
+        v_expiry := NOW() + make_interval(days => v_hold_days);
+
+        UPDATE public.book_copies SET status = 'RESERVED', updated_at = NOW() WHERE id = v_copy_id;
+
+        INSERT INTO public.reservations (user_id, book_id, copy_id, queue_position, status, hold_expires_at)
+        VALUES (v_target_id, p_book_id, v_copy_id, 1, 'READY', v_expiry)
+        RETURNING id INTO v_res_id;
+
+        RETURN jsonb_build_object(
+            'ok', true, 'reservation_id', v_res_id,
+            'status', 'READY', 'copy_id', v_copy_id, 'hold_expires_at', v_expiry
+        );
+    ELSE
+        -- Slow path: no copies available → join queue
+        SELECT COALESCE(MAX(queue_position), 0) + 1 INTO v_queue_pos
+        FROM public.reservations WHERE book_id = p_book_id AND status = 'ACTIVE';
+
+        INSERT INTO public.reservations (user_id, book_id, queue_position, status)
+        VALUES (v_target_id, p_book_id, v_queue_pos, 'ACTIVE')
+        RETURNING id INTO v_res_id;
+
+        RETURN jsonb_build_object(
+            'ok', true, 'reservation_id', v_res_id,
+            'status', 'ACTIVE', 'queue_position', v_queue_pos
+        );
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 

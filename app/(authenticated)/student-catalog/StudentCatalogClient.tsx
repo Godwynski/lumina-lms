@@ -4,13 +4,16 @@ import { useState, use, useEffect, useTransition } from 'react';
 import Image from 'next/image';
 import {
   Search,
-  ArrowUpDown
+  ArrowUpDown,
+  Ticket,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
@@ -34,10 +37,16 @@ interface Book {
   categories: { name: string | null }[];
 }
 
+interface ReservationRow {
+  status: string;
+  queue_position: number;
+  books: { id: string } | { id: string }[] | null;
+}
+
 interface StudentCatalogClientProps {
   booksPromise: Promise<{ books: Book[]; total: number; hasMore: boolean }>;
   categoriesPromise: Promise<CatalogCategory[]>;
-  reservationsPromise: Promise<{ books: { id: string } | { id: string }[] | null }[]>;
+  reservationsPromise: Promise<ReservationRow[]>;
   initialFilters: {
     q: string;
     categoryId: string;
@@ -59,11 +68,14 @@ export function StudentCatalogClient({
   const categories = use(categoriesPromise);
   const reservations = use(reservationsPromise);
   
-  // Set of book IDs that the user has already reserved
-  const reservedBookIds = new Set(reservations.map((r: { books: { id: string } | { id: string }[] | null }) => {
-    if (Array.isArray(r.books)) return r.books[0]?.id;
-    return r.books?.id;
-  }).filter(Boolean));
+  // Map of book IDs → reservation info for ownership indicators
+  const reservedBooksMap = new Map<string, { status: string; queuePosition: number }>();
+  for (const r of reservations) {
+    const bookId = Array.isArray(r.books) ? r.books[0]?.id : r.books?.id;
+    if (bookId) {
+      reservedBooksMap.set(bookId, { status: r.status, queuePosition: r.queue_position });
+    }
+  }
   
   const [query, setQuery] = useState(initialFilters.q);
   const [page, setPage] = useState(initialFilters.page);
@@ -184,7 +196,7 @@ export function StudentCatalogClient({
         <div className="md:hidden flex flex-col divide-y divide-border">
           {books.length > 0 ? (
             books.map((book: Book) => (
-              <div key={book.id} className="p-4 flex gap-4 hover:bg-muted/40 transition-colors">
+              <div key={book.id} className={`p-4 flex gap-4 transition-colors ${reservedBooksMap.has(book.id) ? 'bg-primary/[0.04] hover:bg-primary/[0.07] border-l-2 border-l-primary/40' : 'hover:bg-muted/40'}`}>
                 <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
                   {book.cover_url ? (
                     <Image src={book.cover_url} alt={book.title} fill sizes="56px" className="object-cover" unoptimized />
@@ -192,7 +204,25 @@ export function StudentCatalogClient({
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
-                    <p className="truncate font-medium text-foreground leading-tight">{book.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium text-foreground leading-tight">{book.title}</p>
+                      {reservedBooksMap.has(book.id) && (() => {
+                        const info = reservedBooksMap.get(book.id)!;
+                        const isReady = info.status === 'READY';
+                        return (
+                          <Badge
+                            variant={isReady ? 'default' : 'outline'}
+                            className={`shrink-0 text-[8px] px-1.5 py-0 h-4 gap-1 font-black ${
+                              isReady
+                                ? 'bg-emerald-500 hover:bg-emerald-500 text-white border-transparent'
+                                : 'border-primary/30 text-primary bg-primary/5'
+                            }`}
+                          >
+                            {isReady ? <><Sparkles className="h-2.5 w-2.5" /> Pickup Ready</> : <><Ticket className="h-2.5 w-2.5" /> Queue #{info.queuePosition}</>}
+                          </Badge>
+                        );
+                      })()}
+                    </div>
                     <p className="truncate text-xs text-muted-foreground mt-0.5">{book.author}</p>
                   </div>
                     <div className="flex items-center gap-2 mt-2">
@@ -212,7 +242,7 @@ export function StudentCatalogClient({
                          <ReserveTitleButton 
                           bookId={book.id} 
                           isAvailable={book.available_copies > 0}
-                          hasExistingReservation={reservedBookIds.has(book.id)}
+                          hasExistingReservation={reservedBooksMap.has(book.id)}
                           size="sm"
                           className="h-7 px-2 text-[10px]"
                         />
@@ -244,7 +274,7 @@ export function StudentCatalogClient({
           <tbody className="divide-y divide-border">
             {books.length > 0 ? (
               books.map((book: Book) => (
-                <tr key={book.id} className="hover:bg-muted/40">
+                <tr key={book.id} className={reservedBooksMap.has(book.id) ? 'bg-primary/[0.04] hover:bg-primary/[0.07]' : 'hover:bg-muted/40'}>
                   <td className="px-4 py-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="relative h-10 w-8 overflow-hidden rounded border border-border bg-muted">
@@ -253,7 +283,25 @@ export function StudentCatalogClient({
                         ) : null}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">{book.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-medium text-foreground">{book.title}</p>
+                          {reservedBooksMap.has(book.id) && (() => {
+                            const info = reservedBooksMap.get(book.id)!;
+                            const isReady = info.status === 'READY';
+                            return (
+                              <Badge
+                                variant={isReady ? 'default' : 'outline'}
+                                className={`shrink-0 text-[9px] px-1.5 py-0 h-[18px] gap-1 font-black ${
+                                  isReady
+                                    ? 'bg-emerald-500 hover:bg-emerald-500 text-white border-transparent'
+                                    : 'border-primary/30 text-primary bg-primary/5'
+                                }`}
+                              >
+                                {isReady ? <><Sparkles className="h-2.5 w-2.5" /> Pickup Ready</> : <><Ticket className="h-2.5 w-2.5" /> Your Queue #{info.queuePosition}</>}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
                         <p className="truncate text-xs text-muted-foreground">ISBN: {book.isbn || 'N/A'}</p>
                       </div>
                     </div>
@@ -278,7 +326,7 @@ export function StudentCatalogClient({
                       <ReserveTitleButton 
                         bookId={book.id} 
                         isAvailable={book.available_copies > 0}
-                        hasExistingReservation={reservedBookIds.has(book.id)}
+                        hasExistingReservation={reservedBooksMap.has(book.id)}
                         variant="default"
                         size="sm"
                         className="h-8 text-[11px]"

@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
       code?: string;
       message?: string;
       reservation_id?: string;
+      status?: 'READY' | 'ACTIVE';
       queue_position?: number;
+      copy_id?: string;
       hold_expires_at?: string;
       hold_expiry_days?: number;
     };
@@ -69,7 +71,9 @@ export async function POST(request: NextRequest) {
         UNAUTHORIZED: 401,
         TARGET_USER_NOT_FOUND: 404,
         BOOK_NOT_FOUND: 404,
+        DUPLICATE: 409,
         DUPLICATE_ACTIVE_RESERVATION: 409,
+        SUSPENDED: 403,
       };
 
       return NextResponse.json(

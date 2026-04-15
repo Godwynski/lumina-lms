@@ -1,6 +1,5 @@
 import { createClient } from './supabase/server';
 import { cache } from 'react';
-import { unstable_cache } from 'next/cache';
 
 const normalizeRole = (value: unknown): 'admin' | 'librarian' | 'staff' | 'student' | null => {
   if (typeof value !== 'string') return null;
@@ -25,18 +24,22 @@ const normalizeRole = (value: unknown): 'admin' | 'librarian' | 'staff' | 'stude
  * user's role via the profiles table directly (not via the Admin API), the session role will
  * be stale until the token refreshes. Always use the Admin API to change roles to ensure
  * immediate consistency.
+ *
+ * Cached per-request via React's cache() to avoid redundant auth lookups within one request.
+ * We intentionally do NOT use unstable_cache() here because role checks depend on cookies()
+ * (the user's session) which cannot be accessed inside an unstable_cache scope in Next.js 15.
  */
-const fetchUserRole = async () => {
+export const getUserRole = cache(async () => {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return null;
-  }
+  if (userError || !user) return null;
 
+  // Fast path: role is in the JWT app_metadata (set by Admin API)
   const metadataRole = normalizeRole(user.app_metadata?.role);
   if (metadataRole) return metadataRole;
 
+  // Slow path: fall back to DB profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -47,23 +50,4 @@ const fetchUserRole = async () => {
   if (profileRole) return profileRole;
 
   return 'student';
-};
-
-/**
- * Returns the role for the currently authenticated user.
- * Cached per-request via React cache() and cross-request via Next.js unstable_cache().
- */
-export const getUserRole = cache(async () => {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) return null;
-
-  // Cross-request cache for 5 minutes keyed by user ID
-  return await unstable_cache(
-    async () => fetchUserRole(),
-    [`user-role-${user.id}`],
-    { revalidate: 300, tags: [`user-${user.id}`] }
-  )();
 });
-

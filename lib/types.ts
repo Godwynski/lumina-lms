@@ -27,8 +27,29 @@ export interface Book {
 export interface BookCopy {
   id: string;
   book_id: string;
-  status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST';
+  status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
   qr_string: string;
   condition?: string;
   created_at: string;
 }
+
+export interface ReservationReserver {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  student_id: string | null;
+}
+
+export interface CopyReservation {
+  id: string;
+  status: 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
+  queue_position: number;
+  hold_expires_at: string | null;
+  profiles: ReservationReserver | null;
+}
+
+export interface BookCopyWithReservation extends Omit<BookCopy, 'status'> {
+  status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
+  reservation: CopyReservation | null;
+}
+

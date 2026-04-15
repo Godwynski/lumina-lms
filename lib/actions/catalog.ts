@@ -217,12 +217,79 @@ export async function getBookCopies(bookId: string) {
   const supabase = await assertStaffCatalogAccess();
   const { data, error } = await supabase
     .from('book_copies')
-    .select('id, book_id, status, condition, qr_string, created_at')
+    .select(`
+      id, book_id, status, condition, qr_string, created_at,
+      reservations!copy_id (
+        id,
+        status,
+        queue_position,
+        hold_expires_at,
+        profiles!user_id (
+          id,
+          full_name,
+          email,
+          student_id
+        )
+      )
+    `)
     .eq('book_id', bookId)
     .order('created_at', { ascending: false });
-    
+
   if (error) throw new Error(error.message);
-  return data;
+
+  // Normalize: attach only the active reservation (READY or ACTIVE with copy_id assigned)  
+  return (data ?? []).map((copy) => {
+    const raws = Array.isArray(copy.reservations) ? copy.reservations : copy.reservations ? [copy.reservations] : [];
+    const activeRes = raws.find(
+      (r: { status: string }) => r.status === 'READY' || r.status === 'ACTIVE'
+    ) ?? null;
+    const { reservations: _drop, ...rest } = copy as typeof copy & { reservations: unknown };
+    return { ...rest, reservation: activeRes };
+  });
+}
+
+export async function staffCancelReservation(reservationId: string, bookId: string) {
+  const supabase = await assertStaffCatalogAccess();
+
+  // Fetch reservation to know its copy_id and status so we can release it
+  const { data: reservation, error: fetchError } = await supabase
+    .from('reservations')
+    .select('id, user_id, book_id, status, copy_id')
+    .eq('id', reservationId)
+    .single();
+
+  if (fetchError || !reservation) throw new Error('Reservation not found');
+
+  const { error } = await supabase
+    .from('reservations')
+    .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+    .eq('id', reservationId);
+
+  if (error) throw new Error(error.message);
+
+  // If the reservation was READY (copy is RESERVED), release the copy back to AVAILABLE
+  if (reservation.status === 'READY' && reservation.copy_id) {
+    await supabase
+      .from('book_copies')
+      .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
+      .eq('id', reservation.copy_id);
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  await logAuditActivity(
+    user?.id,
+    'reservation',
+    reservationId,
+    'staff_cancel',
+    `Staff cancelled reservation for book ${bookId}`
+  );
+
+  revalidatePath(`/catalog/${bookId}`);
+  revalidatePath('/catalog');
+  revalidatePath('/student-catalog');
+  revalidatePath('/dashboard');
+
+  return { success: true };
 }
 
 export async function createBookCopy(bookId: string, condition?: string) {
@@ -261,3 +328,42 @@ export async function updateBookCopyStatus(id: string, status: 'AVAILABLE' | 'BO
   
   return data;
 }
+
+/**
+ * Fetches the full reservation queue for a book (READY + ACTIVE), enriched with
+ * the reserver's profile: name, student ID, email, avatar_url.
+ * READY entries appear first (the current hold), then ACTIVE sorted by queue_position.
+ */
+export async function getBookReservationQueue(bookId: string) {
+  const supabase = await assertStaffCatalogAccess();
+
+  const { data, error } = await supabase
+    .from('reservations')
+    .select(`
+      id,
+      status,
+      queue_position,
+      hold_expires_at,
+      reserved_at,
+      copy_id,
+      profiles!user_id (
+        id,
+        full_name,
+        email,
+        student_id,
+        avatar_url
+      ),
+      book_copies!copy_id (
+        qr_string
+      )
+    `)
+    .eq('book_id', bookId)
+    .in('status', ['READY', 'ACTIVE'])
+    .order('status', { ascending: false }) // READY before ACTIVE alphabetically
+    .order('queue_position', { ascending: true })
+    .order('reserved_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+

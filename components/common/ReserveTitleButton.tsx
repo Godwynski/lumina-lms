@@ -15,6 +15,7 @@ interface ReserveTitleButtonProps {
   isReady?: boolean;
   queuePosition?: number | null;
   holdExpiresAt?: string | null;
+  onReserveSuccess?: () => void;
   variant?: "default" | "outline" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
@@ -29,6 +30,7 @@ export function ReserveTitleButton({
   isReady: initialIsReady,
   queuePosition: initialPos,
   holdExpiresAt: initialExpires,
+  onReserveSuccess,
   variant = "default",
   size = "default",
   className
@@ -117,6 +119,9 @@ export function ReserveTitleButton({
             ? `Reserved! Your copy is ready for pickup.`
             : `Reserved! You are at position ${queuePos} in the queue.`
         );
+
+        // Notify parent so it can refresh the page (StatusBanner, Cancel button, etc.)
+        onReserveSuccess?.();
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : 'Failed to place reservation');
       }
@@ -161,7 +166,7 @@ export function ReserveTitleButton({
         ) : (
           <Gift className="h-4 w-4" />
         )}
-        {isPending ? 'Reserving...' : inQueue ? 'Reserved' : 'Reserve for Pickup'}
+        {isPending ? 'Reserving...' : inQueue ? 'Your Reserve' : 'Reserve for Pickup'}
       </Button>
     );
   }
@@ -182,7 +187,7 @@ export function ReserveTitleButton({
       ) : (
         <Bookmark className="h-4 w-4" />
       )}
-      {isPending ? 'Processing...' : inQueue ? `In Queue (Pos #${pos || 1})` : 'Reserve to Borrow'}
+      {isPending ? 'Processing...' : inQueue ? `Your Queue #${pos || 1}` : 'Reserve to Borrow'}
     </Button>
   );
 }

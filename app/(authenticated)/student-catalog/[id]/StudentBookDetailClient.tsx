@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useTransition } from 'react';
+import { use, useState, useTransition } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -17,6 +17,7 @@ import {
   Sparkles,
   Library,
   ArrowRight,
+  XCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
@@ -25,6 +26,15 @@ import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 interface BookDetail {
   id: string;
@@ -248,7 +258,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   const handleCancelReservation = () => {
     const resId = availability.reservationId;
     if (!resId) return;
-    if (!confirm('Cancel your reservation for this book?')) return;
+    setCancelDialogOpen(false);
     
     startTransition(async () => {
       try {
@@ -260,6 +270,12 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
       }
     });
   };
+
+  const handleReserveSuccess = () => {
+    router.refresh();
+  };
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -412,14 +428,15 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               queuePosition={availability.queuePosition}
               holdExpiresAt={availability.holdExpiresAt}
               nextAvailableDate={availability.nextAvailableDate}
+              onReserveSuccess={handleReserveSuccess}
               className="h-11 px-6 text-sm shadow-md"
             />
-            {availability.hasReservation && !availability.isReady && (
+            {availability.hasReservation && (
               <Button
                 variant="outline"
                 size="default"
                 disabled={isPending}
-                onClick={handleCancelReservation}
+                onClick={() => setCancelDialogOpen(true)}
                 className="h-11 px-5 text-sm text-destructive border-destructive/30 hover:bg-destructive/5"
               >
                 {isPending ? 'Cancelling…' : 'Cancel Reservation'}
@@ -431,6 +448,45 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               userType="student"
             />
           </div>
+
+          {/* Cancel Confirmation Dialog */}
+          <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                  <XCircle className="h-6 w-6 text-destructive" />
+                </div>
+                <DialogTitle className="text-center">Cancel Reservation?</DialogTitle>
+                <DialogDescription className="text-center">
+                  {availability.isReady ? (
+                    <>
+                      Your copy of <span className="font-semibold text-foreground">&ldquo;{book.title}&rdquo;</span> is currently held for you.
+                      Cancelling will release it back to the shelf for anyone to borrow.
+                    </>
+                  ) : (
+                    <>
+                      You&apos;ll lose your queue position for <span className="font-semibold text-foreground">&ldquo;{book.title}&rdquo;</span>. You can always reserve again later.
+                    </>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex gap-2 sm:justify-center pt-2">
+                <DialogClose asChild>
+                  <Button variant="outline" className="flex-1 sm:flex-none">
+                    Keep Reservation
+                  </Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelReservation}
+                  disabled={isPending}
+                  className="flex-1 sm:flex-none"
+                >
+                  {isPending ? 'Cancelling…' : 'Yes, Cancel'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Help hints */}
           <div className="grid gap-2 sm:grid-cols-2 pt-1">
