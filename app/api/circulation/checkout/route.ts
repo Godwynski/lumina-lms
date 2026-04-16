@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { logAuditActivity } from "@/lib/audit";
 import { z } from "zod";
