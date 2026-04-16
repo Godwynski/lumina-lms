@@ -171,67 +171,22 @@ export function PolicyConfigurationForm({
 
   return (
     <div className="space-y-8">
-      {/* Identity Block - Policy Context */}
-      <div className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-sm">
-        <div className="absolute right-0 top-0 h-32 w-32 -translate-y-12 translate-x-12 opacity-5">
-           <AlertCircle size={128} className="text-primary" />
-        </div>
-        
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 shadow-inner">
-               <AlertCircle className="h-7 w-7 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-xl font-black tracking-tight text-foreground">System Policies</h2>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                  canEdit ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
-                )}>
-                  {canEdit ? "Administrative Mode" : "Read-Only Access"}
-                </span>
-                <span className="text-xs text-muted-foreground/60">•</span>
-                <p className="text-xs text-muted-foreground">Core operational rules & limits</p>
-              </div>
-            </div>
+      {/* Feedback Messages */}
+      <div className="space-y-4">
+        {error && (
+          <div className="status-danger flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-sm animate-in fade-in slide-in-from-top-2">
+            <AlertCircle size={18} className="shrink-0" />
+            <p className="font-semibold">{error}</p>
           </div>
+        )}
 
-          {canEdit && (
-            <Button
-              onClick={handleSaveAll}
-              disabled={loading || changedKeys.length === 0}
-              className="h-11 rounded-2xl px-6 text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Commit Changes
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+        {saved && (
+          <div className="status-success flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4 text-sm animate-in fade-in slide-in-from-top-2 text-emerald-700">
+            <Check size={18} className="shrink-0" />
+            <p className="font-semibold">All policies updated successfully.</p>
+          </div>
+        )}
       </div>
-
-      {error && (
-        <div className="status-danger flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-sm animate-in fade-in slide-in-from-top-2">
-          <AlertCircle size={18} className="shrink-0" />
-          <p className="font-semibold">{error}</p>
-        </div>
-      )}
-
-      {saved && (
-        <div className="status-success flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4 text-sm animate-in fade-in slide-in-from-top-2 text-emerald-700">
-          <Check size={18} className="shrink-0" />
-          <p className="font-semibold">All policies updated successfully.</p>
-        </div>
-      )}
 
       <Tabs defaultValue="borrow" className="w-full">
         <div className="flex justify-start">

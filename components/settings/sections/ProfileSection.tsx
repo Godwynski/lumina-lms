@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { User as UserIcon, UserCheck } from "lucide-react";
+import { UserCheck } from "lucide-react";
 import { m, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -134,7 +134,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
 
   return (
     <SettingsShell isDirty={isDirty}>
-      <Section title="Account Identity" icon={UserIcon} hideHeaderOnMobile>
+      <Section>
         <div className="grid gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">

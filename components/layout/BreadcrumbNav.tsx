@@ -35,6 +35,13 @@ const DYNAMIC_SEGMENT_LABELS: Record<string, string> = {
 function formatSegment(segment: string, parentSegment?: string) {
   if (ROUTE_LABELS[segment]) return ROUTE_LABELS[segment];
 
+  // Specific contextual overrides for "new" segments
+  if (segment === "new") {
+    if (parentSegment === "users") return "Invite User";
+    if (parentSegment === "catalog") return "Add Asset";
+    return "New Entry";
+  }
+
   // Detect UUID-like dynamic segments and show a contextual label
   if (UUID_RE.test(segment) && parentSegment) {
     return DYNAMIC_SEGMENT_LABELS[parentSegment] || "Details";

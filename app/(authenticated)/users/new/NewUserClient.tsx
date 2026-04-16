@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,19 +65,7 @@ export function NewUserClient() {
 
   return (
     <SettingsShell isDirty={isDirty}>
-      <div className="flex flex-col gap-6">
-        
-        {/* -- Header -- */}
-        <div className="flex items-center gap-4 border-b border-border pb-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/users')} className="-ml-2 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-foreground">Grant System Access</h1>
-            <p className="text-xs text-muted-foreground truncate">Elevate an existing account to library privileges</p>
-          </div>
-        </div>
-
+      <div className="flex flex-col gap-6 pt-2">
         {error && (
           <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
             {error}

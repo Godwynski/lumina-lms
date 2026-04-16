@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -50,7 +49,7 @@ export function PreferencesSection({ role: _role }: PreferencesSectionProps) {
 
   return (
     <SettingsShell isDirty={isDirty}>
-      <Section title="Library Experience" icon={SlidersHorizontal} hideHeaderOnMobile>
+      <Section>
         <div className="grid gap-6">
           <div className="space-y-3">
             <PremiumToggle 

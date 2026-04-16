@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   getBookCopies,
-  createBookCopy,
   updateBookCopyStatus,
   updateBook,
   softDeleteBook,
@@ -12,7 +11,6 @@ import {
   getBookReservationQueue,
 } from '@/lib/actions/catalog';
 import {
-  Plus,
   MapPin,
   Hash,
   Tag,
@@ -328,7 +326,7 @@ export function StaffBookManagementClient({
   const [copies, setCopies] = useState<BookCopyWithReservation[]>(initialCopies);
   const [reservationQueue, setReservationQueue] = useState<ReservationQueueEntry[]>(initialReservationQueue);
 
-  const [addCopyLoading, setAddCopyLoading] = useState(false);
+
   const [updateLoading, setUpdateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -360,24 +358,7 @@ export function StaffBookManagementClient({
     return updatedCopies as BookCopyWithReservation[];
   };
 
-  const handleAddCopy = async () => {
-    setAddCopyLoading(true);
-    try {
-      await createBookCopy(initialBook.id, 'New Condition');
-      await refreshAll();
-      setBook(prev => ({
-        ...prev,
-        total_copies: (prev.total_copies || 0) + 1,
-        available_copies: (prev.available_copies || 0) + 1,
-      }));
-      toast.success('Added new copy to inventory');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to add copy');
-    } finally {
-      setAddCopyLoading(false);
-    }
-  };
+
 
   const handleUpdateBook = async () => {
     setUpdateLoading(true);

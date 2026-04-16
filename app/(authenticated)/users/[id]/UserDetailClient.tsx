@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon } from "lucide-react";
+import { UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,19 +97,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
 
   return (
     <SettingsShell isDirty={isDirty}>
-      <div className="flex flex-col gap-6">
-        
-        {/* -- Identity Header -- */}
-        <div className="flex items-center gap-4 border-b border-border pb-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/users')} className="-ml-2 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-foreground truncate">User Management</h1>
-            <p className="text-xs text-muted-foreground truncate">Refining library access for {user.name}</p>
-          </div>
-        </div>
-
+      <div className="flex flex-col gap-6 pt-2">
         {error && (
           <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
             {error}

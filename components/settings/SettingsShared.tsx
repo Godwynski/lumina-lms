@@ -17,23 +17,25 @@ export const Section = memo(({
   danger, 
   hideHeaderOnMobile 
 }: { 
-  title: string; 
-  icon: LucideIcon; 
+  title?: string; 
+  icon?: LucideIcon; 
   children: React.ReactNode; 
   danger?: boolean; 
   hideHeaderOnMobile?: boolean 
 }) => {
   return (
     <div className={cn("space-y-3 md:space-y-4", hideHeaderOnMobile && "md:mt-4")}>
-      <div className={cn(
-        "flex items-center gap-3 border-b border-border pb-2 md:pb-3",
-        hideHeaderOnMobile && "hidden md:flex"
-      )}>
-        <div className={cn("rounded-lg p-1.5", danger ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground")}>
-          <Icon size={16} />
+      {title && Icon && (
+        <div className={cn(
+          "flex items-center gap-3 border-b border-border pb-2 md:pb-3",
+          hideHeaderOnMobile && "hidden md:flex"
+        )}>
+          <div className={cn("rounded-lg p-1.5", danger ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground")}>
+            <Icon size={16} />
+          </div>
+          <h2 className={cn("flex-1 text-base font-bold tracking-tight", danger ? "text-red-900" : "text-foreground")}>{title}</h2>
         </div>
-        <h2 className={cn("flex-1 text-base font-bold tracking-tight", danger ? "text-red-900" : "text-foreground")}>{title}</h2>
-      </div>
+      )}
       <div className="animate-in fade-in slide-in-from-bottom-1 duration-400">{children}</div>
     </div>
   );

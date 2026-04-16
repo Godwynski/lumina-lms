@@ -1,9 +1,6 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { getBookAvailabilityStatus } from '@/lib/actions/reservations';
-import { ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { StudentBookDetailClient } from './StudentBookDetailClient';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,16 +54,7 @@ async function StudentBookDetailLoader({ params }: { params: Promise<{ id: strin
 
 export default function StudentBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <AdminTableShell
-      headerActions={
-        <Button asChild variant="outline" className="h-8 px-3 text-xs">
-          <Link href="/student-catalog">
-            <ChevronLeft className="mr-1 h-3.5 w-3.5" />
-            Back to Catalog
-          </Link>
-        </Button>
-      }
-    >
+    <AdminTableShell>
       <Suspense fallback={<BookDetailSkeleton />}>
         <StudentBookDetailLoader params={params} />
       </Suspense>

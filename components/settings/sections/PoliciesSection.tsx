@@ -1,7 +1,6 @@
 "use client";
 
 import { use, Suspense } from "react";
-import { Settings2 } from "lucide-react";
 import { Section } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
 import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
@@ -18,7 +17,7 @@ export function PoliciesSection({ role, settingsPromise }: PoliciesSectionProps)
 
   return (
     <SettingsShell>
-      <Section title="Policy Control Center" icon={Settings2} hideHeaderOnMobile>
+      <Section>
         <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
            <PolicyStreamWrapper promise={settingsPromise} canEdit={isSuperAdmin} />
         </Suspense>

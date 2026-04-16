@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilterInput } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
+import { connection } from "next/server";
+
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const supabase = await createClient();
     const { data: user } = await supabase.auth.getUser();
