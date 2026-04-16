@@ -18,7 +18,7 @@ async function UserDetailLoader({ params }: { params: Promise<{ id: string }> })
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  if (!user) redirect("/login");
 
   const { data, error } = await supabase
     .from("profiles")

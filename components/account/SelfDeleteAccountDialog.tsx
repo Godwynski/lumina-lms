@@ -53,7 +53,7 @@ export function SelfDeleteAccountDialog({
       }
 
       // Account deleted successfully, user will be signed out and redirected
-      window.location.href = "/auth/login";
+      window.location.href = "/login";
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

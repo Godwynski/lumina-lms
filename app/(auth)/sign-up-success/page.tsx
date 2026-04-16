@@ -20,7 +20,7 @@ export default function SignUpSuccessPage() {
         </p>
 
         <Link
-          href="/auth/login"
+          href="/login"
           className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-8 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
         >
           Return to sign in

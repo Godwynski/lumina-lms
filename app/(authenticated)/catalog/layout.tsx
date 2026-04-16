@@ -12,7 +12,7 @@ export default async function CatalogLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/login');
+    redirect('/login');
   }
 
   const { data: profile } = await supabase

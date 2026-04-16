@@ -63,7 +63,7 @@ export function useScanner({
       }
       setCameraIssue('No cameras found on this device.');
       return false;
-    } catch (error) {
+    } catch {
       setCameraPermission('denied');
       setCameraIssue('Camera access denied. Please enable camera permissions in your browser.');
       return false;
@@ -88,7 +88,7 @@ export function useScanner({
           setCameraSupported(true);
           setCameraIssue(null);
         }
-      } catch (err) {
+      } catch {
         // If getCameras fails, assume unsupported/no-camera
         setCameraSupported(false);
         setCameraIssue('Could not detect camera hardware.');
@@ -105,9 +105,9 @@ export function useScanner({
     let html5QrCode: Html5Qrcode | null = null;
     
     try {
-      html5QrCode = new Html5Qrcode(scannerId);
+      html5QrCode = new Html5Qrcode(scannerId, { formats });
       scannerRef.current = html5QrCode;
-    } catch (e) {
+    } catch {
       setCameraSupported(false);
       return;
     }
@@ -147,12 +147,12 @@ export function useScanner({
           setCameraPermission('granted');
           setCameraIssue(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!mounted) return;
         
         // Only log if it's an unexpected error type
         // Hardware/Permission errors are handled in UI
-        const errorMessage = err?.message || String(err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
         const isHardwareError = errorMessage.includes('NotReadableError') || 
                                errorMessage.includes('Starting video source failed') ||
                                errorMessage.includes('Permission denied');
@@ -162,7 +162,7 @@ export function useScanner({
         }
         
         setCameraPermission('denied');
-        setCameraIssue(isHardwareError ? 'Camera hardware is busy or unavailable.' : (err?.message || 'Failed to start camera.'));
+        setCameraIssue(isHardwareError ? 'Camera hardware is busy or unavailable.' : (errorMessage || 'Failed to start camera.'));
         setCameraOpen(false);
       }
     };
@@ -173,7 +173,7 @@ export function useScanner({
       mounted = false;
       void stopCamera();
     };
-  }, [cameraOpen, cameraSupported, scannerId, stopCamera]);
+  }, [cameraOpen, cameraSupported, scannerId, stopCamera, formats]);
 
   return {
     cameraOpen,

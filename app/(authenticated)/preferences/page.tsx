@@ -7,7 +7,7 @@ export default async function PreferencesPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const { data: profile } = await supabase

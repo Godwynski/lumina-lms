@@ -25,7 +25,7 @@ async function AdminContent() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return redirect('/auth/login');
+    return redirect('/login');
   }
 
   const role = await getUserRole();

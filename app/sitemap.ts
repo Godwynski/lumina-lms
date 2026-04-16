@@ -11,13 +11,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: `${baseUrl}/auth/login`,
+      url: `${baseUrl}/login`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/auth/sign-up`,
+      url: `${baseUrl}/sign-up`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,

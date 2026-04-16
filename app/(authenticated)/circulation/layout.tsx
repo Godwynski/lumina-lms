@@ -12,7 +12,7 @@ export default async function CirculationLayout({
   } = await supabase.auth.getUser();
 
   if (!user?.id) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const { data: profile } = await supabase

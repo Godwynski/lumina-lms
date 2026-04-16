@@ -21,7 +21,7 @@ export function useLogout() {
       // Use window.location.href for a clean redirected state
       // This is often more reliable than router.push when session state 
       // is being cleared across the whole app.
-      window.location.href = "/auth/login";
+      window.location.href = "/login";
     } catch (error) {
       console.error("Error during logout:", error);
       setIsLoggingOut(false);
