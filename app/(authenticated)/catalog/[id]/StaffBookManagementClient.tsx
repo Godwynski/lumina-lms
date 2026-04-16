@@ -44,9 +44,9 @@ import { useRouter } from 'next/navigation';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
-import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { Section, FieldGroup } from '@/components/settings/SettingsShared';
 import { cn } from '@/lib/utils';
+import type { Book, BookCopyWithReservation } from '@/lib/types';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -476,16 +476,7 @@ export function StaffBookManagementClient({
                 className={`h-8 rounded-md px-3 text-xs font-semibold ${isEditing ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : ''}`}
               >
                 {isEditing ? <X className="mr-1.5 h-3.5 w-3.5" /> : <Edit3 className="mr-1.5 h-3.5 w-3.5" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddCopy}
-                disabled={addCopyLoading}
-                className="h-8 rounded-md px-3 text-xs font-semibold"
-              >
-                {addCopyLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
-                Add Copy
+                {isEditing ? 'Cancel' : 'Edit Asset'}
               </Button>
             </>
           )}
