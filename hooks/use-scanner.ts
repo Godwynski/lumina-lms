@@ -105,7 +105,7 @@ export function useScanner({
     let html5QrCode: Html5Qrcode | null = null;
     
     try {
-      html5QrCode = new Html5Qrcode(scannerId, { formats });
+      html5QrCode = new Html5Qrcode(scannerId, { formatsToSupport: formats, verbose: false } as any);
       scannerRef.current = html5QrCode;
     } catch {
       setCameraSupported(false);
