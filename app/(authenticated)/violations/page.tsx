@@ -13,29 +13,29 @@ export const metadata = {
 // Enable PPR for this route
 
 async function ViolationsDataWrapper() {
-  const dataPromise = getViolations()
+  const role = await getUserRole();
+  
+  if (role === 'student') {
+    return redirect('/dashboard');
+  }
+
+  const dataPromise = getViolations();
   
   return (
     <ViolationsClient 
       dataPromise={dataPromise}
     />
-  )
+  );
 }
 
-export default async function ViolationsPage() {
-  const role = await getUserRole()
-  
-  if (role === 'student') {
-    return redirect('/dashboard')
-  }
-
+export default function ViolationsPage() {
   return (
     <div className="w-full space-y-4">
       <Suspense fallback={<ViolationsSkeleton />}>
         <ViolationsDataWrapper />
       </Suspense>
     </div>
-  )
+  );
 }
 
 function ViolationsSkeleton() {

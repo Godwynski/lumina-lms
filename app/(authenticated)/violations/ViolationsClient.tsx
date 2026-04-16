@@ -134,14 +134,6 @@ export default function ViolationsClient({ dataPromise }: Props) {
   return (
     <>
       <AdminTableShell
-        title="Violations Management"
-        description="Official school violation activity and referral log."
-        headerActions={!isStudent && (
-          <Button onClick={() => setCreateModalOpen(true)} size="sm" className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Record Violation
-          </Button>
-        )}
         feedback={
           notice && (
             <div
@@ -178,6 +170,13 @@ export default function ViolationsClient({ dataPromise }: Props) {
                 </Button>
               ))}
             </div>
+            <div className="flex-1" />
+            {!isStudent && (
+              <Button onClick={() => setCreateModalOpen(true)} size="sm" className="h-8 w-full sm:w-auto px-4 font-bold uppercase tracking-tight">
+                <Plus className="mr-2 h-3.5 w-3.5" />
+                Record Violation
+              </Button>
+            )}
           </>
         }
       >

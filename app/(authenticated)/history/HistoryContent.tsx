@@ -83,15 +83,10 @@ export default function HistoryContent({
   const totalPages = Math.max(1, Math.ceil(totalCount / 10));
 
   return (
-    <div className="space-y-4 w-full">
-      <div className="flex items-center justify-between border-b border-border/50 pb-2 px-1">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-70">
-          Historical records of your library interactions and resource utilization.
-        </p>
-      </div>
+    <div className="space-y-3 w-full">
       <Card className="border-border bg-card shadow-sm overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
@@ -99,22 +94,22 @@ export default function HistoryContent({
               }}
               className="relative w-full sm:max-w-xs"
             >
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
               <Input
                 type="text"
-                placeholder="Search history..."
+                placeholder="Find in timeline..."
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                className="h-10 rounded-lg pl-9 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                className="h-9 rounded-lg pl-9 bg-muted/20 border-border/50 focus:bg-background transition-all text-xs font-medium"
               />
             </form>
-            <div className="flex gap-1.5 p-1 bg-muted/30 rounded-lg border border-border/50">
+            <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-xl border border-border/50">
               {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => updateFilters({ status, page: 1 })}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all",
+                    "rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all",
                     statusFilter === status
                       ? "bg-primary text-primary-foreground shadow-sm scale-105"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"

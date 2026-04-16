@@ -2,15 +2,14 @@ import { getDashboardStats } from "@/lib/actions/dashboard";
 import { getMyReservations } from "@/lib/actions/reservations";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { createClient } from "@/lib/supabase/server";
-import type { User } from "@supabase/supabase-js";
+import { getUserRole } from "@/lib/auth-helpers";
 
-interface DashboardContentProps {
-  user: User;
-  role: string | null;
-}
-
-export async function DashboardContent({ user, role }: DashboardContentProps) {
+export async function DashboardContent() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const role = await getUserRole();
+
+  if (!user) return null;
 
   const faqKeys = [
     "faq_student_q1", "faq_student_a1",

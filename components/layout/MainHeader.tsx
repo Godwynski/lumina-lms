@@ -1,5 +1,7 @@
 "use client"
 
+import { Suspense } from "react"
+
 import { useSidebar } from "@/components/ui/sidebar"
 import { Logo } from "@/components/layout/Logo"
 import Link from "next/link"
@@ -32,7 +34,9 @@ export function MainHeader() {
         </div>
         
         <div className="flex-1 truncate">
-          <BreadcrumbNav />
+          <Suspense fallback={<div className="h-4 w-32 animate-pulse bg-muted/40 rounded" />}>
+            <BreadcrumbNav />
+          </Suspense>
         </div>
       </div>
     </header>

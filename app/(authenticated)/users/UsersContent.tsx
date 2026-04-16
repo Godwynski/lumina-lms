@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
 import { Search, UserPlus } from "lucide-react";
-import dynamic from "next/dynamic";
 import { cn, sanitizeFilterInput } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,10 +10,7 @@ import { Input } from "@/components/ui/input";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-
-const AdminTableShell = dynamic(() => import("@/components/admin/AdminTableShell").then(mod => mod.AdminTableShell), {
-  loading: () => <div className="min-h-[calc(100vh-120px)] animate-pulse bg-muted rounded-xl" />,
-});
+import { AdminTableShell } from "@/components/admin/AdminTableShell";
 
 export type User = {
   id: string;
@@ -183,15 +179,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
   return (
     <>
       <AdminTableShell
-        title="User Directory"
-        description="Manage members, role assignment, and account status."
         className="min-h-[calc(100vh-120px)]"
-        headerActions={(
-          <Button onClick={() => router.push('/users/new')} className="w-full sm:w-auto">
-            <UserPlus size={16} className="mr-2" />
-            Invite user
-          </Button>
-        )}
         feedback={
           loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
         }
@@ -219,6 +207,15 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
                 </Button>
               ))}
             </div>
+            <div className="flex-1" />
+            <Button 
+              onClick={() => router.push('/users/new')} 
+              size="sm" 
+              className="h-8 w-full sm:w-auto px-4 font-bold uppercase tracking-tight"
+            >
+              <UserPlus size={14} className="mr-2" />
+              Invite user
+            </Button>
           </>
         )}
         pagination={

@@ -167,8 +167,6 @@ export function StudentCatalogClient({
 
   return (
     <AdminTableShell
-      title="Book Catalog"
-      description="Browse available books, sections, and current shelf availability."
       controls={
         <>
           <div className="relative w-full sm:max-w-md">

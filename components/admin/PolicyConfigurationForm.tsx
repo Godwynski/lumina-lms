@@ -10,6 +10,7 @@ import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 
 interface PolicySetting {
   id: string;
@@ -114,15 +115,15 @@ export function PolicyConfigurationForm({
       .join(" ");
 
     return (
-      <Card key={key} className="border-border bg-card p-4 shadow-sm">
+      <Card key={key} className="border-border bg-card p-5 shadow-sm transition-all hover:border-primary/20">
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-semibold text-foreground">{labelText}</Label>
-            <p className="mt-0.5 text-xs text-muted-foreground">{config.description}</p>
+            <Label className="text-[11px] font-bold uppercase tracking-wider text-foreground">{labelText}</Label>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{config.description}</p>
           </div>
           
           {isSlider ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5 pt-2">
               <Slider
                 max={15}
                 step={1}
@@ -131,21 +132,21 @@ export function PolicyConfigurationForm({
                 disabled={loading || !canEdit}
                 className="flex-1"
               />
-              <span className="w-8 text-right text-sm font-medium">{formData[key] || "0"}</span>
+              <span className="min-w-[2rem] text-right text-sm font-black text-primary">{formData[key] || "0"}</span>
             </div>
           ) : isFaqA ? (
             <Textarea
               value={formData[key] || ""}
               onChange={(e) => handleChange(key, e.target.value)}
               disabled={loading || !canEdit}
-              className="min-h-[80px]"
+              className="min-h-[100px] resize-none border-border/50 bg-muted/20 text-xs leading-relaxed focus:bg-background transition-all"
               placeholder={config.value}
             />
           ) : (
-            <div className="relative">
+            <div className="relative pt-1">
               {isCurrency && (
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <DollarSign className="h-3.5 w-3.5 text-muted-foreground/50" />
                 </div>
               )}
               <Input
@@ -155,7 +156,10 @@ export function PolicyConfigurationForm({
                 value={formData[key] || ""}
                 onChange={(e) => handleChange(key, e.target.value)}
                 disabled={loading || !canEdit}
-                className={`h-9 rounded-md w-full ${isCurrency ? "pl-9" : ""}`}
+                className={cn(
+                  "h-10 rounded-lg w-full text-xs font-medium border-border/50 bg-muted/20 focus:bg-background transition-all",
+                  isCurrency ? "pl-9" : "px-3"
+                )}
                 placeholder={config.value}
               />
             </div>
@@ -165,92 +169,116 @@ export function PolicyConfigurationForm({
     );
   };
 
-  const actionHeader = (
-    <div className="flex items-start justify-between gap-2 rounded-lg border border-border bg-muted px-4 py-3">
-      <div className="flex gap-3">
-        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="text-sm text-muted-foreground">
-          <p className="mb-0.5 font-semibold text-foreground">System Policies</p>
-          <p>
-            {canEdit
-              ? "Modify the core rules and limits. Changes take effect immediately."
-              : "Read-only access. Only admins can modify policy values."}
-          </p>
+  return (
+    <div className="space-y-8">
+      {/* Identity Block - Policy Context */}
+      <div className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <div className="absolute right-0 top-0 h-32 w-32 -translate-y-12 translate-x-12 opacity-5">
+           <AlertCircle size={128} className="text-primary" />
+        </div>
+        
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 shadow-inner">
+               <AlertCircle className="h-7 w-7 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-black tracking-tight text-foreground">System Policies</h2>
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                  canEdit ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
+                )}>
+                  {canEdit ? "Administrative Mode" : "Read-Only Access"}
+                </span>
+                <span className="text-xs text-muted-foreground/60">•</span>
+                <p className="text-xs text-muted-foreground">Core operational rules & limits</p>
+              </div>
+            </div>
+          </div>
+
+          {canEdit && (
+            <Button
+              onClick={handleSaveAll}
+              disabled={loading || changedKeys.length === 0}
+              className="h-11 rounded-2xl px-6 text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Commit Changes
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
-      {canEdit && (
-        <Button
-          onClick={handleSaveAll}
-          disabled={loading || changedKeys.length === 0}
-          className="h-9 rounded-md px-4 text-sm font-medium"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="space-y-4">
-      {actionHeader}
 
       {error && (
-        <div className="status-danger rounded-lg px-4 py-3 text-sm">
-          {error}
+        <div className="status-danger flex items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-sm animate-in fade-in slide-in-from-top-2">
+          <AlertCircle size={18} className="shrink-0" />
+          <p className="font-semibold">{error}</p>
         </div>
       )}
 
       {saved && (
-        <div className="status-success flex items-center gap-2 rounded-lg px-4 py-3 text-sm">
-          <Check className="h-4 w-4" />
-          Policies updated successfully.
+        <div className="status-success flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-5 py-4 text-sm animate-in fade-in slide-in-from-top-2 text-emerald-700">
+          <Check size={18} className="shrink-0" />
+          <p className="font-semibold">All policies updated successfully.</p>
         </div>
       )}
 
       <Tabs defaultValue="borrow" className="w-full">
-        <TabsList className="mb-4 inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
-          <TabsTrigger value="borrow" className="rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Borrow Rules</TabsTrigger>
-          <TabsTrigger value="fines" className="rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Fines & Penalties</TabsTrigger>
-          <TabsTrigger value="faqs" className="rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Student FAQs</TabsTrigger>
-        </TabsList>
+        <div className="flex justify-start">
+          <TabsList className="mb-6 h-11 items-center rounded-2xl bg-muted/50 p-1 border border-border/40">
+            <TabsTrigger value="borrow" className="rounded-xl px-5 py-1.5 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-background data-[state=active]:shadow-sm">Borrow Rules</TabsTrigger>
+            <TabsTrigger value="fines" className="rounded-xl px-5 py-1.5 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-background data-[state=active]:shadow-sm">Fines & Penalties</TabsTrigger>
+            <TabsTrigger value="faqs" className="rounded-xl px-5 py-1.5 text-xs font-bold uppercase tracking-wider data-[state=active]:bg-background data-[state=active]:shadow-sm">Student FAQs</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="borrow" className="focus-visible:outline-none">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             {borrowKeys.map((key) => renderField(key))}
           </div>
         </TabsContent>
 
         <TabsContent value="fines" className="focus-visible:outline-none">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             {fineKeys.map((key) => renderField(key))}
           </div>
         </TabsContent>
 
         <TabsContent value="faqs" className="focus-visible:outline-none">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             {faqKeys.map((key) => renderField(key))}
           </div>
         </TabsContent>
       </Tabs>
       
+      {/* Floating Save Indicator */}
       {canEdit && changedKeys.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-border bg-background p-2 shadow-lg sm:left-auto sm:right-6 sm:-translate-x-0">
-          <div className="flex items-center gap-3 px-2">
-            <span className="text-sm font-medium text-foreground">Unsaved policies ({changedKeys.length})</span>
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-300">
+          <div className="flex items-center gap-4 rounded-3xl border border-border bg-background/95 p-2 px-3 shadow-2xl backdrop-blur-md">
+            <div className="flex items-center gap-2 pl-3">
+               <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+               <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                 {changedKeys.length} Modified Rules
+               </span>
+            </div>
             <Button
               onClick={handleSaveAll}
-              disabled={loading}
+              disabled={loading || changedKeys.length === 0}
               size="sm"
-              className="rounded-full px-4"
+              className="h-10 rounded-xl px-4 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-primary/20"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+              {loading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Check className="mr-2 h-3 w-3" />}
+              {loading ? "Committing..." : "Commit Changes"}
             </Button>
           </div>
         </div>

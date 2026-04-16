@@ -6,7 +6,7 @@ import {
   resolveStudentId,
 } from "@/lib/library-card-assets";
 
-export const dynamic = "force-dynamic";
+
 
 export const GET = withAuthApi(async (request, { user, profile }) => {
   const studentId = resolveStudentId({

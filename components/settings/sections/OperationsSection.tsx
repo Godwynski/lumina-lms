@@ -8,13 +8,9 @@ interface OperationsSectionProps {
   role: string;
 }
 
-export function OperationsSection({ role }: OperationsSectionProps) {
+export function OperationsSection({ role: _role }: OperationsSectionProps) {
   return (
-    <SettingsShell 
-      title="Operations" 
-      description="System maintenance and bulk tasks" 
-      role={role}
-    >
+    <SettingsShell>
       <Section title="Fleet Maintenance" icon={RefreshCw} hideHeaderOnMobile>
         <AnnualResetTool />
       </Section>

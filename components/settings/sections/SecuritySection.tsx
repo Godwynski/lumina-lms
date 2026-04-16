@@ -12,39 +12,49 @@ interface SecuritySectionProps {
   role: string;
 }
 
-export function SecuritySection({ role }: SecuritySectionProps) {
+export function SecuritySection({ role: _role }: SecuritySectionProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
-    <SettingsShell 
-      title="Security" 
-      description="Password and data privacy" 
-      role={role}
-    >
-      <div className="space-y-5">
+    <SettingsShell>
+      <div className="grid gap-6">
         <Section title="Account Security" icon={Lock} hideHeaderOnMobile>
-          <p className="mb-3 text-sm text-muted-foreground">Manage your authentication methods and login credentials.</p>
-          <Button asChild variant="outline" className="h-11 w-full gap-3 rounded-lg border-border sm:w-auto px-6 font-semibold shadow-sm">
-            <Link href="/auth/update-password">
-              <Lock size={16} />
-              Update password
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </Link>
-          </Button>
+          <div className="rounded-xl border border-border bg-muted/40 p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-foreground">Authentication Credentials</p>
+                <p className="text-xs text-muted-foreground">Manage your secure entry and identity validation methods.</p>
+              </div>
+              <Button asChild variant="outline" className="h-10 gap-3 rounded-lg border-border px-6 font-bold shadow-sm hover:bg-background">
+                <Link href="/auth/update-password">
+                  <Lock size={14} />
+                  Update Password
+                  <ChevronRight size={14} className="text-muted-foreground" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </Section>
 
-        <Section title="Privacy Control" icon={Trash2} danger>
-          <p className="mb-4 text-sm text-red-700/80 leading-relaxed">
-            Permanently delete your profile. Note that some transaction history and library logs will be kept for compliance and record-keeping.
-          </p>
-          <Button 
-            variant="destructive" 
-            onClick={() => setDeleteDialogOpen(true)}
-            className="h-10 rounded-lg gap-3 bg-red-600 hover:bg-red-700 font-bold px-6 shadow-sm"
-          >
-            <Trash2 size={16} />
-            Permanently Delete My Account
-          </Button>
+        <Section title="Privacy & Termination" icon={Trash2} danger>
+          <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+              <div className="max-w-md">
+                <p className="text-sm font-bold text-red-900">Permanent Account Deletion</p>
+                <p className="text-xs text-red-700/80 leading-relaxed mt-1">
+                  Permanently remove your profile from the library system. Some transaction logs will remain for institutional compliance.
+                </p>
+              </div>
+              <Button 
+                variant="destructive" 
+                onClick={() => setDeleteDialogOpen(true)}
+                className="h-10 rounded-lg gap-2 bg-red-600 hover:bg-red-700 font-bold px-6 shadow-md"
+              >
+                <Trash2 size={16} />
+                Delete Profile
+              </Button>
+            </div>
+          </div>
         </Section>
       </div>
 

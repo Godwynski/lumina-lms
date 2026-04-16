@@ -22,9 +22,10 @@ import {
 } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Badge } from "@/components/ui/badge";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AdminTableShell } from "./AdminTableShell";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -82,43 +83,36 @@ export function AuditLogClient() {
     "book_copy",
     "profile",
     "borrowing_record",
-    "library_card",
-    "violation",
-    "setting",
-    "system"
   ];
 
   return (
-    <div className="w-full space-y-6">
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4 mb-4">
-          <div className="hidden md:block">
-            <p className="text-sm text-muted-foreground">Historical ledger of administrative actions and system modifications.</p>
-          </div>
-          <div className="flex items-center gap-2 w-full md:w-auto ml-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => mutate()}
-              disabled={isValidating}
-              className="h-9 rounded-lg flex-1 md:flex-none bg-background shadow-xs"
-            >
-              <RefreshCw className={cn("h-4 w-4 mr-2", isValidating && "animate-spin")} />
-              Refresh
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleExport}
-              className="h-9 rounded-lg shadow-sm flex-1 md:flex-none"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-          </div>
+    <AdminTableShell
+      className="min-h-[calc(100vh-140px)]"
+      headerActions={
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutate()}
+            disabled={isValidating}
+            className="h-8 rounded-lg bg-background shadow-xs text-xs"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5 mr-2", isValidating && "animate-spin")} />
+            Refresh
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleExport}
+            className="h-8 rounded-lg shadow-sm text-xs font-bold uppercase tracking-tight"
+          >
+            <Download className="h-3.5 w-3.5 mr-2" />
+            Export CSV
+          </Button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      }
+      controls={
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -148,118 +142,101 @@ export function AuditLogClient() {
             {data ? `${data.total} records found` : "Searching records..."}
           </div>
         </div>
-      </div>
+      }
+      pagination={
+        data && data.total > 0 ? (
+          <CompactPagination 
+            page={page}
+            totalItems={data.total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        ) : null
+      }
+    >
+      <div className="py-2">
+        {error && (
+          <div className="p-8 text-center text-red-500 font-medium bg-red-50 rounded-xl border border-red-100">
+            Failed to load audit logs. Please check your permissions.
+          </div>
+        )}
 
-      <div className="pt-0">
-        <div className="py-2">
-          {error && (
-            <div className="p-8 text-center text-red-500 font-medium bg-red-50 rounded-xl border border-red-100">
-              Failed to load audit logs. Please check your permissions.
-            </div>
-          )}
+        {data?.logs.length === 0 && (
+          <div className="h-48 flex flex-col items-center justify-center gap-2 opacity-50 bg-muted/20 rounded-xl border border-border border-dashed">
+            <Database className="h-10 w-10 text-muted-foreground" />
+            <span className="text-sm font-medium">No results match your search.</span>
+          </div>
+        )}
 
-          {data?.logs.length === 0 && (
-            <div className="h-48 flex flex-col items-center justify-center gap-2 opacity-50 bg-muted/20 rounded-xl border border-border border-dashed">
-              <Database className="h-10 w-10 text-muted-foreground" />
-              <span className="text-sm font-medium">No results match your search.</span>
-            </div>
-          )}
+        {!data && !error && (
+          <div className="space-y-6 relative border-l-2 border-muted pl-6 ml-4">
+             {Array.from({ length: 4 }).map((_, i) => (
+               <div key={i} className="relative">
+                 <div className="absolute -left-[31px] top-2 h-4 w-4 rounded-full bg-muted animate-pulse ring-4 ring-background" />
+                 <div className="h-28 w-full bg-muted animate-pulse rounded-xl" />
+               </div>
+             ))}
+          </div>
+        )}
 
-          {!data && !error && (
-            <div className="space-y-6 relative border-l-2 border-muted pl-6 ml-4">
-               {Array.from({ length: 4 }).map((_, i) => (
-                 <div key={i} className="relative">
-                   <div className="absolute -left-[31px] top-2 h-4 w-4 rounded-full bg-muted animate-pulse ring-4 ring-background" />
-                   <div className="h-28 w-full bg-muted animate-pulse rounded-xl" />
-                 </div>
-               ))}
-            </div>
-          )}
+        {data && data.logs.length > 0 && (
+          <div className="relative border-l-[3px] border-border/60 pl-6 ml-2 md:ml-6 space-y-8 py-2">
+            {data.logs.map((log) => {
+              const date = log.created_at ? new Date(log.created_at) : new Date();
 
-          {data && data.logs.length > 0 && (
-            <div className="relative border-l-[3px] border-border/60 pl-6 ml-2 md:ml-6 space-y-8 py-2">
-              {data.logs.map((log) => {
-                const date = log.created_at ? new Date(log.created_at) : new Date();
-
-                return (
-                  <div key={log.id} className="relative group">
-                    {/* Timeline Node */}
-                    <div className="absolute -left-[31px] md:-left-[31px] top-4 h-3.5 w-3.5 rounded-full border-2 border-primary bg-background ring-4 ring-background z-10 group-hover:scale-125 group-hover:bg-primary transition-all shadow-sm" />
-                    
-                    {/* Card Container Element */}
-                    <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm hover:shadow-md transition-all hover:border-primary/20 space-y-4">
-                      
-                      {/* Header Row: Actor & Timestamp */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">
-                            <UserIcon className="h-5 w-5" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-bold text-card-foreground truncate">
-                              {log.profiles?.full_name || log.profiles?.email || "System Actor"}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-tight">
-                              {log.profiles?.role || "Admin Role"}
-                            </span>
-                          </div>
+              return (
+                <div key={log.id} className="relative group">
+                  <div className="absolute -left-[31px] md:-left-[31px] top-4 h-3.5 w-3.5 rounded-full border-2 border-primary bg-background ring-4 ring-background z-10 group-hover:scale-125 group-hover:bg-primary transition-all shadow-sm" />
+                  
+                  <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm hover:shadow-md transition-all hover:border-primary/20 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">
+                          <UserIcon className="h-5 w-5" />
                         </div>
-
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-full w-fit">
-                          <Calendar className="h-3 w-3" />
-                          <span className="font-semibold">{formatDistanceToNow(date, { addSuffix: true })}</span>
-                          <span className="hidden md:inline mx-1 opacity-50">&bull;</span>
-                          <span className="hidden md:inline font-mono tracking-tighter opacity-70">
-                            {format(date, "MMM d, HH:mm")}
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-bold text-card-foreground truncate">
+                            {log.profiles?.full_name || log.profiles?.email || "System Actor"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-tight">
+                            {log.profiles?.role || "Admin Role"}
                           </span>
                         </div>
                       </div>
 
-                      {/* Main Content Row: Reason & Tags */}
-                      <div className="flex flex-col gap-3">
-                        {log.reason ? (
-                           <h3 className="text-sm md:text-base text-foreground font-medium leading-relaxed">
-                            {log.reason}
-                           </h3>
-                        ) : (
-                           <h3 className="text-sm md:text-base text-muted-foreground italic leading-relaxed">
-                             System performed {log.action} on {log.entity_type}.
-                           </h3>
-                        )}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-full w-fit">
+                        <Calendar className="h-3 w-3" />
+                        <span className="font-semibold">{formatDistanceToNow(date, { addSuffix: true })}</span>
+                      </div>
+                    </div>
 
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="font-bold text-[10px] uppercase tracking-wider bg-secondary/60 text-secondary-foreground border-transparent px-2.5">
-                            {log.entity_type.replace(/_/g, " ")}
-                          </Badge>
-                          <Badge variant="outline" className="font-black text-[10px] uppercase tracking-wide border-primary/30 text-primary bg-primary/5 px-2.5 shadow-sm">
-                            {log.action.replace(/_/g, " ")}
-                          </Badge>
-                          {log.entity_id && (
-                            <span className="text-[10px] font-mono text-muted-foreground/60 tracking-wider truncate max-w-[120px] bg-muted px-2 py-0.5 rounded-md">
-                              #{log.entity_id.split("-")[0]}
-                            </span>
-                          )}
-                        </div>
+                    <div className="flex flex-col gap-3">
+                      {log.reason ? (
+                         <h3 className="text-sm md:text-base text-foreground font-medium leading-relaxed">
+                          {log.reason}
+                         </h3>
+                      ) : (
+                         <h3 className="text-sm md:text-base text-muted-foreground italic leading-relaxed">
+                           System performed {log.action} on {log.entity_type}.
+                         </h3>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="font-bold text-[10px] uppercase tracking-wider bg-secondary/60 text-secondary-foreground border-transparent px-2.5">
+                          {log.entity_type.replace(/_/g, " ")}
+                        </Badge>
+                        <Badge variant="outline" className="font-black text-[10px] uppercase tracking-wide border-primary/30 text-primary bg-primary/5 px-2.5 shadow-sm">
+                          {log.action.replace(/_/g, " ")}
+                        </Badge>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {data && data.total > 0 && (
-          <div className="py-6 mt-8 border-t border-border/50">
-            <CompactPagination 
-              page={page}
-              totalItems={data.total}
-              pageSize={pageSize}
-              onPageChange={setPage}
-            />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
-    </div>
+    </AdminTableShell>
   );
 }

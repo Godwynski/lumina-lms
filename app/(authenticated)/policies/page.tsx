@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { PoliciesSection } from "@/components/settings/sections/PoliciesSection";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-export default async function PoliciesPage() {
+async function PoliciesPageContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -30,6 +31,14 @@ export default async function PoliciesPage() {
       role={profile?.role || "student"} 
       settingsPromise={settingsPromise} 
     />
+  );
+}
+
+export default function PoliciesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
+      <PoliciesPageContent />
+    </Suspense>
   );
 }
 

@@ -10,10 +10,16 @@ export const metadata = {
 // Enable PPR for this route
 
 async function CatalogDataWrapper({ 
-  page, q, stock, categoryId 
+  searchParams 
 }: { 
-  page: number; q: string; stock: string; categoryId: string 
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }> 
 }) {
+  const params = await searchParams;
+  const page = parseInt(params.page || '1', 10);
+  const q = params.q || '';
+  const stock = params.stock || 'all';
+  const categoryId = params.categoryId || '';
+
   const categoriesPromise = getCategories();
   const dataPromise = getBooks(q, categoryId || undefined, page, 9);
 
@@ -29,26 +35,15 @@ async function CatalogDataWrapper({
   );
 }
 
-export default async function CatalogPage({
+export default function CatalogPage({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }>;
 }) {
-  const params = await searchParams;
-  const page = parseInt(params.page || '1', 10);
-  const q = params.q || '';
-  const stock = params.stock || 'all';
-  const categoryId = params.categoryId || '';
-
   return (
     <div className="space-y-4">
       <Suspense fallback={<CatalogSkeleton />}>
-        <CatalogDataWrapper 
-          page={page} 
-          q={q} 
-          stock={stock} 
-          categoryId={categoryId} 
-        />
+        <CatalogDataWrapper searchParams={searchParams} />
       </Suspense>
     </div>
   );

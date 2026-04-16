@@ -13,7 +13,7 @@ interface PreferencesSectionProps {
   role: string;
 }
 
-export function PreferencesSection({ role }: PreferencesSectionProps) {
+export function PreferencesSection({ role: _role }: PreferencesSectionProps) {
   const { preferences, updatePreferences: updatePrefsContext } = usePreferences();
   
   const [intelligentAlerts, setIntelligentAlerts] = useState(true);
@@ -49,33 +49,36 @@ export function PreferencesSection({ role }: PreferencesSectionProps) {
   };
 
   return (
-    <SettingsShell 
-      title="Preferences" 
-      description="Notification and display settings" 
-      role={role}
-      isDirty={isDirty}
-    >
+    <SettingsShell isDirty={isDirty}>
       <Section title="Library Experience" icon={SlidersHorizontal} hideHeaderOnMobile>
-        <div className="space-y-3">
-          <PremiumToggle 
-            title="Intelligent Alerts" 
-            description="Receive smart notifications for due dates and library updates."
-            checked={intelligentAlerts}
-            onChange={setIntelligentAlerts}
-          />
-        </div>
-        <div className="flex items-center gap-3 pt-4">
-          <Button 
-            variant="default" 
-            onClick={savePreferences} 
-            disabled={!isDirty}
-            className={cn("h-10 flex-1 rounded-lg sm:flex-none sm:px-8 font-bold shadow-md", !isDirty && "opacity-50")}
-          >
-            Save Preferences
-          </Button>
-          <Button variant="outline" onClick={clearLocalPreferences} className="h-10 rounded-lg border-border text-muted-foreground font-bold px-6">
-            Reset Defaults
-          </Button>
+        <div className="grid gap-6">
+          <div className="space-y-3">
+            <PremiumToggle 
+              title="Intelligent Alerts" 
+              description="Receive smart notifications for due dates, reservation availability, and account status."
+              checked={intelligentAlerts}
+              onChange={setIntelligentAlerts}
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3 mt-2">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={clearLocalPreferences} 
+                className="h-10 rounded-lg border-border text-muted-foreground font-bold px-6 hover:bg-background"
+              >
+                Reset Defaults
+              </Button>
+            </div>
+            <Button
+              onClick={savePreferences}
+              disabled={!isDirty}
+              className={cn("h-10 rounded-lg px-8 font-bold shadow-md transition-all")}
+            >
+              Save Preferences
+            </Button>
+          </div>
         </div>
       </Section>
     </SettingsShell>

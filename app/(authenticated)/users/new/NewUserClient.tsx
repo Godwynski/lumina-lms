@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { SettingsShell } from "@/components/settings/SettingsShell";
+import { Section, FieldGroup } from "@/components/settings/SettingsShared";
 
 export function NewUserClient() {
   const router = useRouter();
@@ -17,6 +20,8 @@ export function NewUserClient() {
   const [inviteDept, setInviteDept] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isDirty = inviteEmail.length > 0 || inviteDept.length > 0;
 
   const handleInvite = async () => {
     if (!inviteEmail) return;
@@ -46,47 +51,57 @@ export function NewUserClient() {
 
       if (updateError) throw updateError;
       
+      toast.success(`Access granted to ${email}`);
       router.push("/users");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to invite user");
+      const msg = err instanceof Error ? err.message : "Failed to invite user";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl mx-auto p-4 md:p-6 lg:p-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/users')} className="-ml-2 shrink-0">
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Invite User</h1>
-          <p className="text-sm text-muted-foreground hidden md:block">Add a new user to the system.</p>
+    <SettingsShell isDirty={isDirty}>
+      <div className="flex flex-col gap-6">
+        
+        {/* -- Header -- */}
+        <div className="flex items-center gap-4 border-b border-border pb-4">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/users')} className="-ml-2 shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-foreground">Grant System Access</h1>
+            <p className="text-xs text-muted-foreground truncate">Elevate an existing account to library privileges</p>
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         {error && (
-          <div className="mb-6 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
             {error}
           </div>
         )}
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Email Address</Label>
-            <Input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="name@organization.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              The user must have already signed up to the system via SSO or Email initially.
-            </p>
-          </div>
+        <div className="grid gap-6">
+          <Section title="Access Details" icon={Mail} hideHeaderOnMobile>
+            <div className="flex flex-col gap-4">
+              <FieldGroup label="Target Email Address">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input 
+                    value={inviteEmail} 
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="name@organization.com"
+                    className="h-10 rounded-lg pl-9 text-sm"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  The user must have already signed up to the system via SSO or Email initially.
+                </p>
+              </FieldGroup>
+            </div>
+          </Section>
           <div className="space-y-2">
             <Label>Assign Role</Label>
             <Select value={inviteRole} onValueChange={setInviteRole}>
@@ -120,6 +135,6 @@ export function NewUserClient() {
           </div>
         </div>
       </div>
-    </div>
+    </SettingsShell>
   );
 }

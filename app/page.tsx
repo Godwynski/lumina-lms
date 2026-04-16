@@ -8,7 +8,6 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -23,17 +22,22 @@ async function HeroSection() {
   return <Hero user={user} role={role} />;
 }
 
-export default async function Home() {
-  noStore();
+async function AuthRedirect() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
     return redirect("/dashboard");
   }
+  return null;
+}
 
+export default function Home() {
   return (
     <main className="min-h-screen bg-background selection:bg-muted/40 overflow-x-hidden">
+      <Suspense fallback={null}>
+        <AuthRedirect />
+      </Suspense>
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-0 bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] opacity-30 [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
       

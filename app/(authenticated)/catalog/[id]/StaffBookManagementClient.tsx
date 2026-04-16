@@ -12,7 +12,6 @@ import {
   getBookReservationQueue,
 } from '@/lib/actions/catalog';
 import {
-  ChevronLeft,
   Plus,
   MapPin,
   Hash,
@@ -26,7 +25,6 @@ import {
   QrCode,
   Filter,
   Edit3,
-  Trash2,
   Save,
   X,
   Loader2,
@@ -39,15 +37,16 @@ import {
   BookMarked,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
-import Link from 'next/link';
+import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
+import { Section, FieldGroup } from '@/components/settings/SettingsShared';
+import { cn } from '@/lib/utils';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -457,19 +456,9 @@ export function StaffBookManagementClient({
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   return (
-    <div className="w-full space-y-4 pb-6 md:pb-8">
-      {/* ── Header ── */}
-      <div className="flex flex-col justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-sm md:flex-row md:items-center">
-        <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="icon" className="h-11 w-11 md:h-8 md:w-8 rounded-md hover:bg-muted">
-            <Link href="/catalog"><ChevronLeft className="h-4 w-4" /></Link>
-          </Button>
-          <div className="hidden md:block">
-            <h1 className="text-lg font-semibold text-foreground">{book.title}</h1>
-            <p className="text-xs text-muted-foreground">{book.author} · ID: {book.id.slice(0, 8)}</p>
-          </div>
-        </div>
-
+    <AdminTableShell
+      className="pb-6 md:pb-8"
+      headerActions={
         <div className="flex items-center gap-2">
           {showDeleteConfirm ? (
             <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
@@ -487,123 +476,149 @@ export function StaffBookManagementClient({
                 className={`h-8 rounded-md px-3 text-xs font-semibold ${isEditing ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : ''}`}
               >
                 {isEditing ? <X className="mr-1.5 h-3.5 w-3.5" /> : <Edit3 className="mr-1.5 h-3.5 w-3.5" />}
-                {isEditing ? 'Cancel Edit' : 'Modify Records'}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="h-8 border-destructive/20 text-destructive hover:bg-destructive/5 hover:border-destructive/40 rounded-md px-3 text-xs font-semibold"
+                size="sm"
+                onClick={handleAddCopy}
+                disabled={addCopyLoading}
+                className="h-8 rounded-md px-3 text-xs font-semibold"
               >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />Purge from Vault
-              </Button>
-              <div className="mx-1 h-4 w-[1px] bg-border" />
-              <Button onClick={handleAddCopy} disabled={addCopyLoading} className="h-8 rounded-md px-3 text-xs font-semibold">
-                <Plus className="mr-1.5 h-3.5 w-3.5" />Add Copy
+                {addCopyLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
+                Add Copy
               </Button>
             </>
           )}
         </div>
-      </div>
+      }
+    >
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
 
-      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-12">
+
         {/* ── Sidebar ── */}
-        <div className="space-y-3 lg:col-span-4 xl:col-span-3">
-          {/* Book info card */}
-          <div className="overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm">
-            {isEditing ? (
-              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Asset Title</Label>
-                    <Input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} className="h-9 text-xs border-primary/20 bg-primary/5" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Primary Author</Label>
-                    <Input value={editForm.author} onChange={e => setEditForm({ ...editForm, author: e.target.value })} className="h-9 text-xs border-primary/20 bg-primary/5" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">ISBN</Label>
-                      <Input value={editForm.isbn} onChange={e => setEditForm({ ...editForm, isbn: e.target.value })} className="h-9 text-xs bg-muted/50" />
+        <div className="space-y-6 lg:col-span-4 xl:col-span-3">
+          {/* Book Identity Section */}
+          <Section title="Asset Metadata" icon={BookMarked} hideHeaderOnMobile>
+            <div className="overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm">
+              {isEditing ? (
+                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="space-y-4">
+                    <FieldGroup label="Asset Title">
+                      <Input 
+                        value={editForm.title} 
+                        onChange={e => setEditForm({ ...editForm, title: e.target.value })} 
+                        className="h-9 rounded-lg text-xs border-primary/20 bg-primary/5" 
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Primary Author">
+                      <Input 
+                        value={editForm.author} 
+                        onChange={e => setEditForm({ ...editForm, author: e.target.value })} 
+                        className="h-9 rounded-lg text-xs border-primary/20 bg-primary/5" 
+                      />
+                    </FieldGroup>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <FieldGroup label="ISBN">
+                        <Input value={editForm.isbn} onChange={e => setEditForm({ ...editForm, isbn: e.target.value })} className="h-9 rounded-lg text-xs bg-muted/50" />
+                      </FieldGroup>
+                      <FieldGroup label="Category">
+                        <Input value={editForm.section} onChange={e => setEditForm({ ...editForm, section: e.target.value })} className="h-9 rounded-lg text-xs bg-muted/50" />
+                      </FieldGroup>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Classification</Label>
-                      <Input value={editForm.section} onChange={e => setEditForm({ ...editForm, section: e.target.value })} className="h-9 text-xs bg-muted/50" />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Precise Location</Label>
-                    <Input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="h-9 text-xs bg-muted/50" />
-                  </div>
-                </div>
-                <Button onClick={handleUpdateBook} disabled={updateLoading} className="w-full h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
-                  {updateLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
-                  Save All Changes
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="mb-3 flex items-start gap-3">
-                  <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
-                    {book.cover_url
-                      ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
-                      : <BookOpen className="h-full w-full p-3 text-muted-foreground" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="line-clamp-2 text-sm font-semibold text-foreground">{book.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Hash className="h-3.5 w-3.5" /><span className="font-medium">ISBN:</span>{book.isbn || 'Unknown'}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Tag className="h-3.5 w-3.5" /><span className="font-medium">Category:</span>
-                    {Array.isArray(book.categories) ? book.categories[0]?.name : (book.categories as { name?: string })?.name || 'Unassigned'}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" /><span className="font-medium">Section:</span>{book.section || 'N/A'}
-                  </div>
-                </div>
-                {book.tags && book.tags.length > 0 && (
-                  <div className="mt-3 border-t border-border pt-3">
-                    <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tags</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {book.tags.map((tag, i) => (
-                        <span key={i} className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
 
-          {/* Copy snapshot */}
-          <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-            <h3 className="mb-2 flex items-center gap-2 text-[11px] font-semibold text-foreground">
-              <QrCode className="h-3.5 w-3.5" />Copy Snapshot
-            </h3>
-            <div className="space-y-1.5 rounded-lg border border-border bg-muted p-2.5">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground font-medium">Total:</span>
-                <span className="text-foreground font-semibold">{book.total_copies}</span>
+                    <FieldGroup label="Precise Location">
+                      <div className="relative">
+                        <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="h-9 rounded-lg pl-8 text-xs bg-muted/50" />
+                      </div>
+                    </FieldGroup>
+                  </div>
+                  <Button onClick={handleUpdateBook} disabled={updateLoading} className="w-full h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
+                    {updateLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Metadata
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 flex items-start gap-4">
+                    <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40 shadow-sm">
+                      {book.cover_url
+                        ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
+                        : <BookOpen className="h-full w-full p-4 text-muted-foreground" />}
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="line-clamp-2 text-sm font-bold text-foreground leading-snug">{book.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+                      <div className="pt-2">
+                         <span className={cn(
+                           "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                           book.available_copies > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                         )}>
+                           {book.available_copies > 0 ? "In Stock" : "Unavailable"}
+                         </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><Hash size={12} /> ISBN</span>
+                      <span className="text-foreground font-semibold">{book.isbn || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><Tag size={12} /> Category</span>
+                      <span className="text-foreground font-semibold">
+                        {Array.isArray(book.categories) ? book.categories[0]?.name : (book.categories as { name?: string })?.name || 'Unassigned'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><MapPin size={12} /> Section</span>
+                      <span className="text-foreground font-semibold">{book.section || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  {book.tags && book.tags.length > 0 && (
+                    <div className="mt-4 border-t border-border pt-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {book.tags.map((tag, i) => (
+                          <span key={i} className="rounded-md border border-border/50 bg-muted/60 px-2 py-0.5 text-[9px] font-medium text-muted-foreground uppercase">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </Section>
+
+          {/* Availability Status Section */}
+          <Section title="Inventory Control" icon={QrCode}>
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-border bg-muted/40 p-3 text-center">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</p>
+                  <p className="text-xl font-bold text-foreground">{book.total_copies}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/40 p-3 text-center">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avail</p>
+                  <p className="text-xl font-bold text-primary">{book.available_copies}</p>
+                </div>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground font-medium">Available:</span>
-                <span className="text-foreground font-semibold">{book.available_copies}</span>
-              </div>
+
               {reservationQueue.length > 0 && (
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-muted-foreground font-medium flex items-center gap-1">
-                    <BookMarked className="h-3 w-3" />In Queue:
+                <div className="mt-3 flex items-center justify-between rounded-lg border border-violet-100 bg-violet-50/50 p-2 px-3">
+                  <div className="flex items-center gap-2">
+                    <BookMarked className="h-3.5 w-3.5 text-violet-500" />
+                    <span className="text-[11px] font-bold text-violet-700">Waiting Queue</span>
+                  </div>
+                  <span className="rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                    {reservationQueue.length}
                   </span>
-                  <span className="font-semibold text-violet-600">{reservationQueue.length}</span>
                 </div>
               )}
             </div>
-          </div>
+          </Section>
 
           {/* Reservation Queue Panel */}
           {reservationQueue.length > 0 && (
@@ -750,6 +765,6 @@ export function StaffBookManagementClient({
           )}
         </div>
       </div>
-    </div>
+    </AdminTableShell>
   );
 }

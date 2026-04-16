@@ -133,12 +133,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   };
 
   return (
-    <SettingsShell 
-      title="Profile Settings" 
-      description="Update your personal details and identity" 
-      role={role}
-      isDirty={isDirty}
-    >
+    <SettingsShell isDirty={isDirty}>
       <Section title="Account Identity" icon={UserIcon} hideHeaderOnMobile>
         <div className="grid gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">

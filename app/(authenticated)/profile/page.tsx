@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { ProfileSection } from "@/components/settings/sections/ProfileSection";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-export default async function ProfilePage() {
+async function ProfileContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -26,6 +27,14 @@ export default async function ProfilePage() {
         phone: profile?.phone || null,
       }} 
     />
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="p-8 animate-pulse space-y-8"><div className="h-8 w-48 bg-muted rounded" /><div className="h-96 w-full bg-muted rounded" /></div>}>
+      <ProfileContent />
+    </Suspense>
   );
 }
 

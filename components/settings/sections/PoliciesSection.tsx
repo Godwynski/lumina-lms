@@ -17,11 +17,7 @@ export function PoliciesSection({ role, settingsPromise }: PoliciesSectionProps)
   const isSuperAdmin = role === "admin";
 
   return (
-    <SettingsShell 
-      title="System Policies" 
-      description="Manage system-wide rules and limits" 
-      role={role}
-    >
+    <SettingsShell>
       <Section title="Policy Control Center" icon={Settings2} hideHeaderOnMobile>
         <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
            <PolicyStreamWrapper promise={settingsPromise} canEdit={isSuperAdmin} />

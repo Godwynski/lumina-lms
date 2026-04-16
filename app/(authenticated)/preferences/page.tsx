@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { PreferencesSection } from "@/components/settings/sections/PreferencesSection";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-export default async function PreferencesPage() {
+async function PreferencesPageContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -17,5 +18,13 @@ export default async function PreferencesPage() {
     .single();
 
   return <PreferencesSection role={profile?.role || "student"} />;
+}
+
+export default function PreferencesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
+      <PreferencesPageContent />
+    </Suspense>
+  );
 }
 

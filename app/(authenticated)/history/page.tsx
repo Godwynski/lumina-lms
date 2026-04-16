@@ -11,10 +11,10 @@ export const metadata = {
   description: "Track your library borrowing timeline and returns.",
 };
 
-export default async function HistoryPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; status?: string; q?: string }>;
+async function HistoryPageContent({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ page?: string; status?: string; q?: string }> 
 }) {
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
@@ -32,7 +32,6 @@ export default async function HistoryPage({
     );
   }
 
-  // Initiate fetch but do NOT await it here
   const historyPromise = getBorrowingHistory(
     user.id,
     page,
@@ -42,14 +41,24 @@ export default async function HistoryPage({
   );
 
   return (
+    <HistoryContent
+      historyPromise={historyPromise as Promise<BorrowingHistoryResult>}
+      page={page}
+      statusFilter={status}
+      searchQuery={q}
+    />
+  );
+}
+
+export default function HistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; status?: string; q?: string }>;
+}) {
+  return (
     <div className="space-y-4 w-full">
       <Suspense fallback={<HistorySkeleton />}>
-        <HistoryContent
-          historyPromise={historyPromise as Promise<BorrowingHistoryResult>}
-          page={page}
-          statusFilter={status}
-          searchQuery={q}
-        />
+        <HistoryPageContent searchParams={searchParams} />
       </Suspense>
     </div>
   );

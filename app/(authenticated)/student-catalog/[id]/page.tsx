@@ -39,17 +39,25 @@ function BookDetailSkeleton() {
   );
 }
 
-export default async function StudentBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
+async function StudentBookDetailLoader({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Kick off both data fetches concurrently — neither is awaited here
+  // Kick off both data fetches concurrently
   const bookPromise = getPublicBookById(id);
   const availabilityPromise = getBookAvailabilityStatus(id);
 
   return (
+    <StudentBookDetailClient
+      bookPromise={bookPromise}
+      availabilityPromise={availabilityPromise}
+      id={id}
+    />
+  );
+}
+
+export default function StudentBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
     <AdminTableShell
-      title="Book Details"
-      description="Availability, copy status, and your reservation at a glance."
       headerActions={
         <Button asChild variant="outline" className="h-8 px-3 text-xs">
           <Link href="/student-catalog">
@@ -60,11 +68,7 @@ export default async function StudentBookDetailPage({ params }: { params: Promis
       }
     >
       <Suspense fallback={<BookDetailSkeleton />}>
-        <StudentBookDetailClient
-          bookPromise={bookPromise}
-          availabilityPromise={availabilityPromise}
-          id={id}
-        />
+        <StudentBookDetailLoader params={params} />
       </Suspense>
     </AdminTableShell>
   );

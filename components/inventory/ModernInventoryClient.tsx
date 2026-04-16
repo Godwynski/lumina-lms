@@ -67,30 +67,24 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
 
   return (
     <div className="w-full space-y-2 pb-5 md:pb-7">
-      <div className="sticky top-0 z-20 rounded-xl border border-border bg-card/90 p-2.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="hidden md:block">
-            <p className="text-sm text-muted-foreground">Manage and track library resources, copies, and conditions.</p>
+      <div className="sticky top-0 z-20 rounded-xl border border-border bg-card/90 p-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
+        <div className="flex items-center justify-between gap-2">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search title, author, ISBN"
+              aria-label="Search the catalog"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 rounded-md pl-8 text-xs"
+            />
           </div>
-
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-            <div className="relative w-full sm:w-[240px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search title, author, ISBN"
-                aria-label="Search the catalog"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 rounded-md pl-8 text-xs"
-              />
-            </div>
-            <Link href="/catalog/add">
-              <Button className="h-8 rounded-md px-2.5 text-xs">
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Book
-              </Button>
-            </Link>
-          </div>
+          <Link href="/catalog/add" className="shrink-0">
+            <Button className="h-8 rounded-md px-3 text-xs font-bold uppercase tracking-tight">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add Book
+            </Button>
+          </Link>
         </div>
       </div>
 

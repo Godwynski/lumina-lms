@@ -3,15 +3,18 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { NewUserClient } from "./NewUserClient";
 
-export default async function NewUserPage() {
+async function NewUserContent() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Optional: check admin status
+  return <NewUserClient />;
+}
+
+export default function NewUserPage() {
   return (
     <Suspense fallback={<div className="p-8"><div className="h-32 w-full animate-pulse bg-muted rounded-xl" /></div>}>
-      <NewUserClient />
+      <NewUserContent />
     </Suspense>
   );
 }

@@ -1,27 +1,16 @@
 import { getBookById, getBookCopies, getBookReservationQueue } from '@/lib/actions/catalog';
 import { StaffBookManagementClient } from './StaffBookManagementClient';
-import type { Book, BookCopyWithReservation } from '@/lib/types';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { BookCopyWithReservation } from '@/lib/types';
 
-export default async function StaffBookManagementPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
-  
-  let book: Book | null = null;
-  let copies: BookCopyWithReservation[] = [];
-  let reservationQueue: Awaited<ReturnType<typeof getBookReservationQueue>> = [];
-  
-  try {
-    const [bookData, copiesData, queueData] = await Promise.all([
-      getBookById(id),
-      getBookCopies(id),
-      getBookReservationQueue(id),
-    ]);
-    book = bookData;
-    copies = copiesData as BookCopyWithReservation[];
-    reservationQueue = queueData;
-  } catch (err) {
-    console.error(err);
-  }
+async function BookManagementContent({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [book, copies, reservationQueue] = await Promise.all([
+    getBookById(id),
+    getBookCopies(id),
+    getBookReservationQueue(id),
+  ]);
 
   if (!book) {
     return <div className="p-12 text-center text-muted-foreground">Book not found.</div>;
@@ -30,8 +19,33 @@ export default async function StaffBookManagementPage({ params }: { params: Prom
   return (
     <StaffBookManagementClient 
       initialBook={book} 
-      initialCopies={copies}
+      initialCopies={copies as BookCopyWithReservation[]}
       initialReservationQueue={reservationQueue}
     />
+  );
+}
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-10 w-64 rounded-lg" />
+        <Skeleton className="h-4 w-96 rounded-md" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Skeleton className="h-64 md:col-span-1 rounded-xl" />
+        <Skeleton className="h-64 md:col-span-2 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+export default function StaffBookManagementPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <div className="w-full">
+      <Suspense fallback={<PageSkeleton />}>
+        <BookManagementContent params={params} />
+      </Suspense>
+    </div>
   );
 }

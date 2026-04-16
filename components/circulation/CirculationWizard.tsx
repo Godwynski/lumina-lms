@@ -235,36 +235,33 @@ export function CirculationWizard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-3">
-        <div className="hidden md:block">
-
-          <p className="text-sm text-muted-foreground mt-1">Guided workflow for library resource transactions.</p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-muted/50 p-1.5 rounded-2xl border border-border/50">
+    <div className="max-w-[1450px] mx-auto space-y-3">
+      {/* Action Bar - Low Profile */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/50 backdrop-blur-sm">
           <Button
             variant={mode === 'checkout' ? 'default' : 'ghost'}
-            className="h-9 rounded-xl px-4 text-xs font-semibold shadow-sm"
+            className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
             onClick={() => switchMode('checkout')}
           >
             Checkout
           </Button>
           <Button
             variant={mode === 'return' ? 'default' : 'ghost'}
-            className="h-9 rounded-xl px-4 text-xs font-semibold shadow-sm"
+            className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
             onClick={() => switchMode('return')}
           >
             Return
           </Button>
-          <div className="w-px h-4 bg-border/50 mx-1" />
+          <div className="w-px h-3 bg-border/40 mx-1" />
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
+            className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"
             onClick={handleReset}
+            title="Reset Workflow"
           >
-            <RefreshCcw className="h-4 w-4" />
+            <RefreshCcw className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>

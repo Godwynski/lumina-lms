@@ -26,7 +26,7 @@ export const metadata = {
   description: 'Browse the library catalog and check real-time availability.',
 };
 
-export default async function StudentCatalogPage({
+async function StudentCatalogLoader({
   searchParams,
 }: {
   searchParams: Promise<{ 
@@ -51,20 +51,36 @@ export default async function StudentCatalogPage({
   const reservationsPromise = getMyReservations();
 
   return (
+    <StudentCatalogClient 
+      booksPromise={booksPromise} 
+      categoriesPromise={categoriesPromise}
+      reservationsPromise={reservationsPromise}
+      initialFilters={{
+        q,
+        categoryId,
+        availableOnly,
+        page,
+        sortBy
+      }}
+    />
+  );
+}
+
+export default function StudentCatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ 
+    q?: string;
+    category?: string;
+    available?: string;
+    page?: string;
+    sort?: string;
+  }>;
+}) {
+  return (
     <div className="space-y-6">
       <Suspense fallback={<CatalogSkeletonView />}>
-        <StudentCatalogClient 
-          booksPromise={booksPromise} 
-          categoriesPromise={categoriesPromise}
-          reservationsPromise={reservationsPromise}
-          initialFilters={{
-            q,
-            categoryId,
-            availableOnly,
-            page,
-            sortBy
-          }}
-        />
+        <StudentCatalogLoader searchParams={searchParams} />
       </Suspense>
     </div>
   );
