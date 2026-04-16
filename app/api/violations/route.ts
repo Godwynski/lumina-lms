@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { sanitizeFilterInput } from '@/lib/utils'
-import { NextResponse } from 'next/server'
+import { withAuthApi, apiSuccess, apiError } from '@/lib/api-utils'
 import { z } from 'zod'
 
 const ViolationCreateSchema = z.object({
@@ -28,7 +28,7 @@ const ViolationActionSchema = z.discriminatedUnion('action', [
   ViolationDeleteSchema,
 ])
 
-export async function GET(request: Request) {
+export const GET = withAuthApi(async (request, { user, role }) => {
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
   const status = searchParams.get('status')
@@ -36,36 +36,23 @@ export async function GET(request: Request) {
   const search = searchParams.get('search')
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const isStaff = ['admin', 'librarian', 'staff'].includes(role)
 
-  if (!user) {
-    return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
+  if (!isStaff) {
+    // Students can only see their own active violations
+    const { data, error } = await supabase
+      .from('violations')
+      .select('id, user_id, violation_type, description, incident_date, status, created_at')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['admin', 'librarian', 'staff'].includes(String(profile.role))) {
-    if (userId) {
-      const { data, error } = await supabase
-        .from('violations')
-        .select('id, user_id, violation_type, description, incident_date, status, created_at')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-
-      if (error) {
-        return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
-      }
-      return NextResponse.json({ success: true, violations: data })
+    if (error) {
+      return apiError(error.message, 'DATABASE_ERROR', 500)
     }
-    return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
+    return apiSuccess({ violations: data })
   }
 
+  // Staff search logic
   if (search) {
     const { data, error } = await supabase
       .from('profiles')
@@ -75,9 +62,9 @@ export async function GET(request: Request) {
       .limit(20)
 
     if (error) {
-      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
+      return apiError(error.message, 'DATABASE_ERROR', 500)
     }
-    return NextResponse.json({ success: true, students: data })
+    return apiSuccess({ students: data })
   }
 
   let query = supabase
@@ -103,42 +90,25 @@ export async function GET(request: Request) {
   const { data, error } = await query
 
   if (error) {
-    return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
+    return apiError(error.message, 'DATABASE_ERROR', 500)
   }
 
-  return NextResponse.json({ success: true, violations: data })
-}
+  return apiSuccess({ violations: data })
+})
 
-export async function POST(request: Request) {
+export const POST = withAuthApi(async (request, { user }) => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } }, { status: 401 })
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['admin', 'librarian', 'staff'].includes(String(profile.role))) {
-    return NextResponse.json({ success: false, error: { code: 'FORBIDDEN', message: 'Forbidden' } }, { status: 403 })
-  }
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ success: false, error: { code: 'INVALID_JSON', message: 'Invalid JSON' } }, { status: 400 })
+    return apiError('Invalid JSON', 'INVALID_JSON', 400)
   }
 
   const result = ViolationActionSchema.safeParse(body)
   if (!result.success) {
-    return NextResponse.json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid request data', details: result.error.format() } }, { status: 400 })
+    return apiError('Invalid request data', 'VALIDATION_ERROR', 400, result.error.format())
   }
 
   const validated = result.data
@@ -158,9 +128,9 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
+      return apiError(error.message, 'DATABASE_ERROR', 500)
     }
-    return NextResponse.json({ success: true, violation: data })
+    return apiSuccess({ violation: data })
   }
 
   if (validated.action === 'resolve') {
@@ -177,9 +147,9 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
+      return apiError(error.message, 'DATABASE_ERROR', 500)
     }
-    return NextResponse.json({ success: true, violation: data })
+    return apiSuccess({ violation: data })
   }
 
   if (validated.action === 'delete') {
@@ -189,10 +159,11 @@ export async function POST(request: Request) {
       .eq('id', validated.violationId)
 
     if (error) {
-      return NextResponse.json({ success: false, error: { code: 'DATABASE_ERROR', message: error.message } }, { status: 500 })
+      return apiError(error.message, 'DATABASE_ERROR', 500)
     }
-    return NextResponse.json({ success: true })
+    return apiSuccess({ success: true })
   }
 
-  return NextResponse.json({ success: false, error: { code: 'INVALID_ACTION', message: 'Invalid action' } }, { status: 400 })
-}
+  return apiError('Invalid action', 'INVALID_ACTION', 400)
+}, { requireStaff: true })
+

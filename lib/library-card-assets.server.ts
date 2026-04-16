@@ -51,11 +51,18 @@ export async function checkStaticLibraryCardAssets(opts: {
   };
 }
 
+let bucketExistsChecked = false;
+
 async function ensureBucketExists() {
+  if (bucketExistsChecked) return;
+  
   const admin = createAdminClient();
   const { error } = await admin.storage.getBucket(CARD_ASSET_BUCKET);
 
-  if (!error) return;
+  if (!error) {
+    bucketExistsChecked = true;
+    return;
+  }
 
   const isMissing =
     (error as { statusCode?: number }).statusCode === 404 ||
@@ -77,6 +84,8 @@ async function ensureBucketExists() {
   if (createError && !/already exists/i.test(createError.message)) {
     throw createError;
   }
+  
+  bucketExistsChecked = true;
 }
 
 async function ensureQrImage(opts: {

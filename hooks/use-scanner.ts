@@ -46,12 +46,22 @@ export function useScanner({
           console.error('Failed to stop scanner:', err);
         }
       }
-      // Re-create the element if it was cleared by the library
-      // html5-qrcode sometimes modifies the DOM in ways that need reset
       scannerRef.current = null;
     }
     setCameraOpen(false);
   }, []);
+
+  const clearLastScan = useCallback(() => {
+    lastScanRef.current = null;
+  }, []);
+
+  const toggleCamera = useCallback(() => {
+    if (cameraOpen) {
+      void stopCamera();
+    } else {
+      setCameraOpen(true);
+    }
+  }, [cameraOpen, stopCamera]);
 
   const requestCameraPermission = useCallback(async (): Promise<boolean> => {
     try {
@@ -88,10 +98,10 @@ export function useScanner({
           setCameraSupported(true);
           setCameraIssue(null);
         }
-      } catch {
-        // If getCameras fails, assume unsupported/no-camera
+      } catch (err) {
         setCameraSupported(false);
-        setCameraIssue('Could not detect camera hardware.');
+        const msg = err instanceof Error ? err.message : String(err);
+        setCameraIssue(`Could not detect camera hardware: ${msg}`);
       }
     };
 
@@ -107,8 +117,10 @@ export function useScanner({
     try {
       html5QrCode = new Html5Qrcode(scannerId, { formatsToSupport: formats, verbose: false });
       scannerRef.current = html5QrCode;
-    } catch {
+    } catch (err) {
+      console.error('Failed to initialize Html5Qrcode:', err);
       setCameraSupported(false);
+      setCameraIssue('Failed to initialize scanner library.');
       return;
     }
 
@@ -120,28 +132,30 @@ export function useScanner({
           aspectRatio: 1.0,
         };
 
-        await html5QrCode!.start(
-          { facingMode: 'environment' },
-          config,
-          async (decodedText) => {
-            if (!mounted) return;
+        if (html5QrCode) {
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            async (decodedText) => {
+              if (!mounted) return;
 
-            // Debounce and process scan
-            const now = Date.now();
-            if (
-              isProcessingRef.current || 
-              (lastScanRef.current?.value === decodedText && now - lastScanRef.current.time < 2000)
-            ) {
-              return;
+              // Debounce and process scan
+              const now = Date.now();
+              if (
+                isProcessingRef.current || 
+                (lastScanRef.current?.value === decodedText && now - lastScanRef.current.time < 2000)
+              ) {
+                return;
+              }
+
+              lastScanRef.current = { value: decodedText, time: now };
+              await onScanRef.current(decodedText);
+            },
+            () => {
+               // scan failure, usually just "not found in frame"
             }
-
-            lastScanRef.current = { value: decodedText, time: now };
-            await onScanRef.current(decodedText);
-          },
-          () => {
-             // scan failure, usually just "not found in frame"
-          }
-        );
+          );
+        }
 
         if (mounted) {
           setCameraPermission('granted');
@@ -151,19 +165,21 @@ export function useScanner({
         if (!mounted) return;
         
         // Only log if it's an unexpected error type
-        // Hardware/Permission errors are handled in UI
         const errorMessage = err instanceof Error ? err.message : String(err);
         const isHardwareError = errorMessage.includes('NotReadableError') || 
                                errorMessage.includes('Starting video source failed') ||
-                               errorMessage.includes('Permission denied');
+                               errorMessage.includes('Permission denied') ||
+                               errorMessage.includes('NotAllowedError');
         
         if (!isHardwareError) {
-          console.error('Scanner unexpected error:', err);
+          console.error('Scanner start error:', err);
         }
         
         setCameraPermission('denied');
         setCameraIssue(isHardwareError ? 'Camera hardware is busy or unavailable.' : (errorMessage || 'Failed to start camera.'));
-        setCameraOpen(false);
+        
+        // Explicit cleanup on fail
+        void stopCamera();
       }
     };
 
@@ -183,6 +199,8 @@ export function useScanner({
     cameraIssue,
     stopCamera,
     requestCameraPermission,
+    clearLastScan,
+    toggleCamera,
     scannerId,
   };
 }
