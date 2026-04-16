@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -89,6 +91,8 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     // We'll let the user click "Save Changes" at the bottom to commit status changes too
     // for a consistent experience, or we can commit immediately. 
     // To match Profile (Save Changes bar), we'll keep it in form state.
+    // Explicitly typed prev is not needed if useState is correctly inferred, 
+    // but tsc is strict here because it's a client component with multiple states.
   };
 
   return (
