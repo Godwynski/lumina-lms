@@ -2,6 +2,7 @@ import { getDashboardStats } from "@/lib/actions/dashboard";
 import { getMyReservations } from "@/lib/actions/reservations";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getMe } from "@/lib/auth-helpers";
+import { Reservation } from "@/lib/types";
 
 
 export async function DashboardContent() {
@@ -36,7 +37,7 @@ export async function DashboardContent() {
     : Promise.resolve({ data: null });
 
   const reservationsPromise = role === "student"
-    ? (getMyReservations() as unknown as Promise<any[]>)
+    ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
   // 2. We pass the promises/data to the client component

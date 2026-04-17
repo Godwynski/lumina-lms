@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 
 type UiPreferencesRow = {
   preferences: Record<string, unknown> | null;
@@ -11,7 +10,7 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
+
 
 export const GET = withAuthApi(async (req, { user, supabase }) => {
   const { data, error } = await supabase

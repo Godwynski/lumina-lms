@@ -24,36 +24,16 @@ import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import type { ViolationWithProfile } from '@/lib/actions/violations';
 import type { BorrowingRecord } from '@/lib/actions/history';
 
-type ProfileData = {
-  full_name: string | null;
-  student_id: string | null;
-  department: string | null;
-  avatar_url: string | null;
-  address: string | null;
-  phone: string | null;
-};
-
 type CardData = { card_number: string; status: string; expires_at: string } | null;
-
 type FaqRow = { key: string; value: string | null };
 
-interface Reservation {
-  id: string;
-  status: string;
-  queue_position: number;
-  hold_expires_at: string | null;
-  books: {
-    id: string;
-    title: string;
-    cover_url: string | null;
-  } | null;
-}
+import { Reservation, ProfileData } from '@/lib/types';
 
 type DashboardStats = {
   activeLoans: number;
   pendingApprovals: number;
   myActiveLoans: number;
-  recentBooks: { id: string; title: string; author: string; cover_url?: string | null; created_at: string }[];
+  recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
   activeLoansList?: BorrowingRecord[];
   violationsList?: ViolationWithProfile[];
 };

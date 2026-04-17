@@ -36,7 +36,7 @@ export async function getDashboardStats({
   activeLoans: number;
   pendingApprovals: number;
   myActiveLoans: number;
-  recentBooks: { id: string; title: string; author: string; cover_url?: string | null; created_at: string }[];
+  recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
   activeLoansList?: BorrowingRecord[];
   violationsList?: ViolationWithProfile[];
 }> {
@@ -53,7 +53,7 @@ export async function getDashboardStats({
   const safeWrap = async <T>(promise: Promise<T>, defaultValue: T): Promise<T> => {
     try {
       return await promise;
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
       return defaultValue;
     }
@@ -67,20 +67,24 @@ export async function getDashboardStats({
     myViolationsResult,
   ] = await Promise.all([
     safeWrap(
-      supabase
-        .from('borrowing_records')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'ACTIVE'),
-      { count: 0, error: null }
+      Promise.resolve(
+        supabase
+          .from('borrowing_records')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'ACTIVE')
+      ),
+      { count: 0, data: [], error: null, status: 200, statusText: 'OK', success: true }
     ),
-    safeWrap(getCachedRecentBooks(), []),
+    safeWrap(getCachedRecentBooks(), [] as { id: string; title: string; author: string; cover_url: string | null; created_at: string }[]),
     canReviewApprovals
       ? safeWrap(
-          supabase
-            .from('library_cards')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'PENDING'),
-          { count: 0, error: null }
+          Promise.resolve(
+            supabase
+              .from('library_cards')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'PENDING')
+          ),
+          { count: 0, data: [], error: null, status: 200, statusText: 'OK', success: true }
         )
       : Promise.resolve({ count: 0 }),
     isStudent

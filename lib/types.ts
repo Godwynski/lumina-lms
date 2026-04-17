@@ -53,3 +53,24 @@ export interface BookCopyWithReservation extends Omit<BookCopy, 'status'> {
   reservation: CopyReservation | null;
 }
 
+export interface Reservation {
+  id: string;
+  status: string;
+  queue_position: number;
+  hold_expires_at: string | null;
+  books: {
+    id: string;
+    title: string;
+    cover_url: string | null;
+  } | null;
+}
+
+export type ProfileData = {
+  full_name: string | null;
+  student_id: string | null;
+  department: string | null;
+  avatar_url: string | null;
+  address: string | null;
+  phone: string | null;
+};
+

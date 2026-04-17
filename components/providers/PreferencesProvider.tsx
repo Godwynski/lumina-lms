@@ -24,8 +24,8 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         const data = await response.json();
         setPreferences(data.preferences || {});
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') return;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') return;
       console.error("Failed to fetch UI preferences:", error);
     } finally {
       setLoading(false);
