@@ -1,9 +1,10 @@
 'use server'
-
-import { createClient, createSafeClient } from '@/lib/supabase/server';
+ 
+import { createSafeClient } from '@/lib/supabase/server';
 import { getViolations, type ViolationWithProfile } from './violations';
 import { getBorrowingHistory, type BorrowingRecord } from './history';
 import { unstable_cache } from 'next/cache';
+import { getMe } from '@/lib/auth-helpers';
 
 /**
  * Cache the recentBooks query for 1 hour.
@@ -26,6 +27,7 @@ const getCachedRecentBooks = unstable_cache(
   { revalidate: 3600, tags: ['books'] },
 );
 
+
 export async function getDashboardStats({
   role,
 }: {
@@ -38,43 +40,64 @@ export async function getDashboardStats({
   activeLoansList?: BorrowingRecord[];
   violationsList?: ViolationWithProfile[];
 }> {
-  const supabase = await createClient();
+  const me = await getMe();
+  if (!me) throw new Error("Unauthorized");
   
-  // Security Gap Fix: Derive userId from the verified session, not from props
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { user, supabase } = me;
   const userId = user.id;
 
   const isStudent = role === 'student';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
-  // recentBooks is cached for 1 hour — no user data, changes infrequently.
-  // The user-specific counts are always fresh (no cache).
+  // Helper to wrap promises with default values on error (e.g. AbortError)
+  const safeWrap = async <T>(promise: Promise<T>, defaultValue: T): Promise<T> => {
+    try {
+      return await promise;
+    } catch (err) {
+      console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
+      return defaultValue;
+    }
+  };
+
   const [
-    { count: activeLoans },
+    activeLoansResult,
     recentBooks,
     pendingApprovalsResult,
     myActiveLoansResult,
     myViolationsResult,
   ] = await Promise.all([
-    supabase
-      .from('borrowing_records')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'ACTIVE'), // Match schema uppercase enum 
-    getCachedRecentBooks(),
+    safeWrap(
+      supabase
+        .from('borrowing_records')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'ACTIVE'),
+      { count: 0, error: null }
+    ),
+    safeWrap(getCachedRecentBooks(), []),
     canReviewApprovals
-      ? supabase
-          .from('library_cards')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'PENDING')
+      ? safeWrap(
+          supabase
+            .from('library_cards')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'PENDING'),
+          { count: 0, error: null }
+        )
       : Promise.resolve({ count: 0 }),
     isStudent
-      ? getBorrowingHistory(userId, 1, 5, 'ACTIVE')
+      ? safeWrap(
+          getBorrowingHistory(userId, 1, 5, 'ACTIVE'),
+          { records: [], totalCount: 0 }
+        )
       : Promise.resolve({ records: [], totalCount: 0 }),
     isStudent
-      ? getViolations()
+      ? safeWrap(
+          getViolations(),
+          { violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }
+        )
       : Promise.resolve({ violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }),
   ]);
+
+  const activeLoans = (activeLoansResult as { count: number | null }).count || 0;
 
   return {
     activeLoans: activeLoans || 0,

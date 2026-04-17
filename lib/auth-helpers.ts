@@ -40,7 +40,8 @@ export const getMe = cache(async () => {
     profile,
     role: role as UserRole,
     isStaff: ['admin', 'librarian', 'staff'].includes(role),
-    isAdmin: role === 'admin'
+    isAdmin: role === 'admin',
+    supabase
   };
 });
 

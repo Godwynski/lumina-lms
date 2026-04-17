@@ -60,7 +60,7 @@ export function withAuthApi(
         return apiError("Unauthorized", "UNAUTHORIZED", 401);
       }
 
-      const { user, profile, role, isStaff } = me;
+      const { user, profile, role, isStaff, supabase } = me;
 
       if (options.requireStaff && !isStaff) {
         return apiError("Forbidden: Staff access required", "FORBIDDEN", 403);
@@ -74,7 +74,6 @@ export function withAuthApi(
         );
       }
 
-      const supabase = await createClient();
       return await handler(req, {
         ...context,
         user,
@@ -90,6 +89,13 @@ export function withAuthApi(
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
+      const isAbortError = error instanceof Error && (error.name === 'AbortError' || (error as any).code === 20);
+
+      if (isAbortError) {
+        // Quietly log aborts as they are expected when users navigate away or connections close
+        logger.info("api", `Request aborted: ${req.url}`);
+        return new NextResponse(null, { status: 499 }); // Client Closed Request
+      }
 
       logger.error("api", `Unhandled API error: ${errorMessage}`, {
         url: req.url,

@@ -1,15 +1,14 @@
 import { getDashboardStats } from "@/lib/actions/dashboard";
 import { getMyReservations } from "@/lib/actions/reservations";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
-import { createClient } from "@/lib/supabase/server";
-import { getUserRole } from "@/lib/auth-helpers";
+import { getMe } from "@/lib/auth-helpers";
+
 
 export async function DashboardContent() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const role = await getUserRole();
-
-  if (!user) return null;
+  const me = await getMe();
+  if (!me) return null;
+  
+  const { user, role, profile, supabase } = me;
 
   const faqKeys = [
     "faq_student_q1", "faq_student_a1",
@@ -18,13 +17,8 @@ export async function DashboardContent() {
     "faq_student_q4", "faq_student_a4",
   ];
 
-  // 1. Kick off all promises concurrently
+  // 1. Kick off relevant promises concurrently
   const statsPromise = getDashboardStats({ role });
-  const profilePromise = supabase
-    .from("profiles")
-    .select("full_name, student_id, department, avatar_url, address, phone")
-    .eq("id", user.id)
-    .single();
 
   const cardPromise = role === "student"
     ? supabase
@@ -42,18 +36,16 @@ export async function DashboardContent() {
     : Promise.resolve({ data: null });
 
   const reservationsPromise = role === "student"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? (getMyReservations() as unknown as Promise<any[]>)
     : Promise.resolve([]);
 
-  // 2. We pass the promises to the client component
-  // The client will use the 'use()' hook to unwrap them
+  // 2. We pass the promises/data to the client component
   return (
     <DashboardClient 
       user={user} 
       role={role} 
       statsPromise={statsPromise}
-      profilePromise={Promise.resolve(profilePromise)}
+      profilePromise={Promise.resolve({ data: profile, error: null })}
       cardPromise={Promise.resolve(cardPromise)}
       faqPromise={Promise.resolve(faqPromise)}
       reservationsPromise={reservationsPromise}

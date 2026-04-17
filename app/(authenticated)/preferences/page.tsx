@@ -1,23 +1,17 @@
-import { createClient } from "@/lib/supabase/server";
 import { PreferencesSection } from "@/components/settings/sections/PreferencesSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { getMe } from "@/lib/auth-helpers";
+
 
 async function PreferencesPageContent() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const me = await getMe();
 
-  if (!user) {
+  if (!me) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  return <PreferencesSection role={profile?.role || "student"} />;
+  return <PreferencesSection role={me.role} />;
 }
 
 export default function PreferencesPage() {

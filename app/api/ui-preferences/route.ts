@@ -11,16 +11,9 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuthApi(async (req, { user, supabase }) => {
   const { data, error } = await supabase
     .from("ui_preferences")
     .select("preferences")
@@ -28,25 +21,16 @@ export async function GET() {
     .maybeSingle<UiPreferencesRow>();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError(error.message, "DATABASE_ERROR", 500);
   }
 
-  return NextResponse.json({ preferences: data?.preferences ?? {} });
-}
+  return apiSuccess({ preferences: data?.preferences ?? {} });
+});
 
-export async function PATCH(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PATCH = withAuthApi(async (request, { user, supabase }) => {
   const payload = await request.json();
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return apiError("Invalid payload", "INVALID_PAYLOAD", 400);
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -56,7 +40,7 @@ export async function PATCH(request: Request) {
     .maybeSingle<UiPreferencesRow>();
 
   if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 500 });
+    return apiError(existingError.message, "DATABASE_ERROR", 500);
   }
 
   const currentPreferences = asRecord(existing?.preferences);
@@ -83,8 +67,8 @@ export async function PATCH(request: Request) {
   );
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError(error.message, "DATABASE_ERROR", 500);
   }
 
-  return NextResponse.json({ preferences: nextPreferences });
-}
+  return apiSuccess({ preferences: nextPreferences });
+});

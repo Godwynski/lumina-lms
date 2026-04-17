@@ -17,14 +17,15 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [preferences, setPreferences] = useState<Preferences>({});
   const [loading, setLoading] = useState(true);
 
-  const fetchPreferences = useCallback(async () => {
+  const fetchPreferences = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/ui-preferences");
+      const response = await fetch("/api/ui-preferences", { signal });
       if (response.ok) {
         const data = await response.json();
         setPreferences(data.preferences || {});
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') return;
       console.error("Failed to fetch UI preferences:", error);
     } finally {
       setLoading(false);
@@ -32,7 +33,9 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    fetchPreferences();
+    const controller = new AbortController();
+    fetchPreferences(controller.signal);
+    return () => controller.abort();
   }, [fetchPreferences]);
 
   const updatePreferences = async (newPrefs: Preferences) => {
