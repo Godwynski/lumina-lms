@@ -1,7 +1,7 @@
 import { getUserRole } from "@/lib/auth-helpers";
 import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
 import { Suspense } from "react";
-import { DashboardContent } from "../DashboardContent";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import DashboardLoading from "./loading";
 
 export const metadata = {

@@ -7,16 +7,18 @@ import { AuthGate } from "./_components/AuthGate";
 import { StreamedNav } from "./_components/StreamedNav";
 import { StreamedUserNav } from "./_components/StreamedUserNav";
 import { NavSkeleton } from "./_components/Skeletons";
+import { getPreferences } from "@/lib/auth-helpers";
 
-export default function ProtectedLayout({
+export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const defaultOpen = true; // Use a static default for the instant shell.
+  const preferencesPromise = getPreferences();
 
   return (
-    <PreferencesProvider>
+    <PreferencesProvider initialPreferences={preferencesPromise}>
       <SidebarProvider defaultOpen={defaultOpen}>
         {/* Sidebar streams in independently */}
         <Suspense fallback={<NavSkeleton />}>

@@ -13,7 +13,6 @@ import Link from 'next/link';
 import { compressImage } from '@/lib/image-utils';
 
 import { useScanner } from '@/hooks/use-scanner';
-import { Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 export default function AddBookPage() {
   const router = useRouter();
@@ -137,11 +136,11 @@ export default function AddBookPage() {
     isProcessing: loading || isbnLoading,
     scannerId: 'isbn-scanner',
     formats: [
-      Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.UPC_A,
-      Html5QrcodeSupportedFormats.UPC_E,
+      9,  // EAN_13
+      10, // EAN_8
+      5,  // CODE_128
+      14, // UPC_A
+      15, // UPC_E
     ]
   });
 
@@ -218,16 +217,21 @@ export default function AddBookPage() {
       const tagsArray = formData.tags.split(',').map(tag => tag.trim()).filter(Boolean);
 
       // Save book
-      await createBook({
-        title: formData.title,
-        author: formData.author,
-        isbn: formData.isbn || null,
-        category_id: formData.categoryId || null,
-        tags: tagsArray,
-        location: formData.location,
-        section: formData.section,
-        cover_url: finalCoverUrl,
-      }, formData.copies);
+      const result = await createBook({
+        bookData: {
+          title: formData.title,
+          author: formData.author,
+          isbn: formData.isbn || null,
+          category_id: formData.categoryId || null,
+          tags: tagsArray,
+          location: formData.location,
+          section: formData.section,
+          cover_url: finalCoverUrl,
+        },
+        copiesCount: formData.copies
+      });
+
+      if (!result.success) throw new Error(result.error);
 
       router.refresh();
       router.push('/catalog');

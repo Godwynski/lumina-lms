@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMe, UserRole } from './auth-helpers';
 import { logger } from './logger';
+import { isAbortError } from './error-utils';
 import { SupabaseClient, User } from '@supabase/supabase-js';
 
 export type ApiResponse<T = unknown> = {
@@ -88,11 +89,9 @@ export function withAuthApi(
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      const isAbortError = error instanceof Error && (error.name === 'AbortError' || (error as { code?: number }).code === 20);
-
-      if (isAbortError) {
+      if (isAbortError(error)) {
         // Quietly log aborts as they are expected when users navigate away or connections close
-        logger.info("api", `Request aborted: ${req.url}`);
+        logger.debug("api", `Request aborted: ${req.url}`);
         return new NextResponse(null, { status: 499 }); // Client Closed Request
       }
 

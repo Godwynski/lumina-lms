@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { isAbortError } from "@/lib/error-utils";
 
 type Preferences = Record<string, unknown>;
 
@@ -13,9 +14,23 @@ interface PreferencesContextType {
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
 
-export function PreferencesProvider({ children }: { children: React.ReactNode }) {
-  const [preferences, setPreferences] = useState<Preferences>({});
-  const [loading, setLoading] = useState(true);
+export function PreferencesProvider({ 
+  children,
+  initialPreferences = {}
+}: { 
+  children: React.ReactNode;
+  initialPreferences?: Preferences | Promise<Preferences>;
+}) {
+  const isPromise = initialPreferences && typeof (initialPreferences as Record<string, unknown>).then === 'function';
+
+  const [preferences, setPreferences] = useState<Preferences>(
+    isPromise ? {} : (initialPreferences as Preferences)
+  );
+  const [loading, setLoading] = useState(
+    isPromise || 
+    !initialPreferences || 
+    Object.keys(initialPreferences as Preferences).length === 0
+  );
 
   const fetchPreferences = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -25,7 +40,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         setPreferences(data.preferences || {});
       }
     } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'AbortError') return;
+      if (isAbortError(error)) return;
       console.error("Failed to fetch UI preferences:", error);
     } finally {
       setLoading(false);
@@ -33,10 +48,33 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
+    // If we have a promise-like object, resolve it and update state.
+    if (initialPreferences && typeof (initialPreferences as Record<string, unknown>).then === 'function') {
+      const promise = Promise.resolve(initialPreferences as Preferences | Promise<Preferences>);
+      promise.then((resolved) => {
+        if (resolved && Object.keys(resolved as Preferences).length > 0) {
+          setPreferences(resolved as Preferences);
+          setLoading(false);
+        } else {
+          fetchPreferences();
+        }
+      }).catch((err) => {
+        console.error("[PREFERENCES-PROVIDER] Promise hydration failed:", err);
+        fetchPreferences();
+      });
+      return;
+    }
+
+    // If we have initial preferences from the server, we don't need to fetch on mount.
+    if (initialPreferences && Object.keys(initialPreferences as Preferences).length > 0) {
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     fetchPreferences(controller.signal);
     return () => controller.abort();
-  }, [fetchPreferences]);
+  }, [fetchPreferences, initialPreferences]);
 
   const updatePreferences = async (newPrefs: Preferences) => {
     // Optimistic update

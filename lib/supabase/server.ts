@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { cache } from "react";
 
 /**
@@ -11,6 +10,7 @@ import { cache } from "react";
  * a single request, preventing redundant cookie lookups and potential re-auth overhead.
  */
 export const createClient = cache(async () => {
+  const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
 
   return createServerClient(

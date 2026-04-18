@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { sanitizeFilterInput } from '@/lib/utils'
 import { revalidatePath } from 'next/cache'
 import { ViolationSchema, ResolutionSchema } from '../validations/violations'
+import { isAbortError } from '../error-utils'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 export type ViolationWithProfile = {
   id: string
@@ -66,8 +68,9 @@ async function assertStaffAccess() {
 export async function getViolations(options?: {
   status?: string
   violationType?: string
+  preFetchedAuth?: { supabase: SupabaseClient; userId: string; role: string }
 }): Promise<{ violations: ViolationWithProfile[]; stats: ViolationStats; role: string }> {
-  const { supabase, userId, role } = await getAccessInfo()
+  const { supabase, userId, role } = options?.preFetchedAuth || await getAccessInfo()
   const isStudent = role === 'student'
 
   let query = supabase
@@ -92,11 +95,16 @@ export async function getViolations(options?: {
   }
 
   const { data, error } = await query
+  if (error) {
+    if (isAbortError(error)) {
+      return { violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: String(role) }
+    }
+    console.error("[VIOLATIONS] Failed to fetch violations:", error);
+    throw error;
+  }
 
-  if (error) throw new Error(error.message)
-
-  const stats: ViolationStats = { total: 0, active: 0, referred: 0, resolved: 0 }
-  data?.forEach((v) => {
+  const stats: ViolationStats = { total: 0, active: 0, referred: 0, resolved: 0 };
+  (data as { status: string }[] | null)?.forEach((v: { status: string }) => {
     stats.total++
     if (v.status === 'ACTIVE') stats.active++
     else if (v.status === 'REFERRED') stats.referred++

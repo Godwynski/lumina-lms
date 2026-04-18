@@ -2,6 +2,7 @@
  * Centralized Structured Logging Utility
  * Ensures consistent log formatting across Server Actions and API Routes.
  */
+import { isAbortError } from './error-utils';
 
 type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 
@@ -30,7 +31,12 @@ class Logger {
     if (data) entry.data = data;
     
     if (error) {
-      if (error instanceof Error) {
+      if (isAbortError(error)) {
+        entry.error = {
+          name: 'AbortError',
+          message: 'Operation aborted (expected)',
+        };
+      } else if (error instanceof Error) {
         entry.error = {
           name: error.name,
           message: error.message,

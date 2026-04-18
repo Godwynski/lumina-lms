@@ -1,15 +1,14 @@
-'use server'
-
-import { createClient, createSafeClient } from '@/lib/supabase/server';
-import { getUserRole } from '@/lib/auth-helpers';
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { createSafeAction } from './action-utils';
 import { cache } from 'react';
 import { BookSchema, CategorySchema } from '../validations/catalog';
 import { logger } from '../logger';
-import { logAuditActivity } from '@/lib/audit';
+import { createClient, createSafeClient } from '@/lib/supabase/server';
+import { z } from 'zod';
 
 async function assertStaffCatalogAccess() {
-  const role = await getUserRole();
+  const { getMe } = await import('@/lib/auth-helpers');
+  const me = await getMe();
+  const role = me?.role;
 
   if (!role || !['admin', 'librarian', 'staff'].includes(role)) {
     throw new Error('Unauthorized or Forbidden');
@@ -24,35 +23,41 @@ async function assertStaffCatalogAccess() {
  * Fetches all inventory categories. Results are cached via Next.js unstable_cache.
  * @returns Array of categories.
  */
-export const getCategories = unstable_cache(
-  cache(async () => {
-    const supabase = createSafeClient();
-    const { data, error } = await supabase.from('categories').select('id, name, description, created_at').order('name');
+export const getCategories = async () => {
+  const { unstable_cache } = await import('next/cache');
+  return unstable_cache(
+    cache(async () => {
+      const supabase = createSafeClient();
+      const { data, error } = await supabase.from('categories').select('id, name, description, created_at').order('name');
+      if (error) throw new Error(error.message);
+      return data;
+    }),
+    ['catalog-categories'],
+    { revalidate: 3600, tags: ['categories'] }
+  )();
+};
+
+export const createCategory = createSafeAction(
+  CategorySchema,
+  async ({ name, description }, { supabase }) => {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([{ name, description }])
+      .select()
+      .single();
+      
     if (error) throw new Error(error.message);
-    return data;
-  }),
-  ['catalog-categories'],
-  { revalidate: 3600, tags: ['categories'] }
-);
-
-export async function createCategory(name: string, description?: string) {
-  const supabase = await assertStaffCatalogAccess();
-
-  const validated = CategorySchema.parse({ name, description });
-
-  const { data, error } = await supabase
-    .from('categories')
-    .insert([{ name: validated.name, description: validated.description }])
-    .select()
-    .single();
     
-  if (error) throw new Error(error.message);
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(user?.id, "system", data.id, "create_category", `Created category: ${validated.name}`);
-  
-  return data;
-}
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('categories', 'default');
+    return data;
+  },
+  { 
+    auditAction: "create_category", 
+    auditEntity: "system", 
+    allowedRoles: ['admin', 'librarian', 'staff'] 
+  }
+);
 
 // --- Books ---
 
@@ -91,124 +96,137 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
   return { data, count: count || 0 };
 }
 
-export const getBookById = unstable_cache(
-  async (id: string) => {
-    const supabase = createSafeClient();
+export const getBookById = async (id: string) => {
+  const { unstable_cache } = await import('next/cache');
+  return unstable_cache(
+    async (id: string) => {
+      const supabase = createSafeClient();
+      const { data, error } = await supabase
+        .from('books')
+        .select(`*, categories(name)`)
+        .eq('id', id)
+        .single();
+        
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    ['catalog-book-detail'],
+    { revalidate: 3600, tags: ['books'] }
+  )(id);
+};
+
+const CreateBookSchema = z.object({
+  bookData: BookSchema,
+  copiesCount: z.number().min(0).default(1)
+});
+
+export const createBook = createSafeAction(
+  CreateBookSchema,
+  async ({ bookData, copiesCount }, { supabase }) => {
     const { data, error } = await supabase
       .from('books')
-      .select(`*, categories(name)`)
+      .insert([bookData])
+      .select()
+      .single();
+      
+    if (error) throw new Error('Failed to create book record. Please check if ISBN is unique.');
+
+    // Automatically create copies
+    if (copiesCount > 0) {
+      const copies = Array.from({ length: copiesCount }).map(() => ({
+        book_id: data.id,
+        status: 'AVAILABLE'
+      }));
+
+      const { error: copiesError } = await supabase
+        .from('book_copies')
+        .insert(copies);
+
+      if (copiesError) {
+        logger.error('catalog', `Book created but copies failed for ID: ${data.id}`, { error: copiesError.message });
+        await supabase.from('books').delete().eq('id', data.id);
+        throw new Error('Failed to initialize book copies. Transaction rolled back.');
+      }
+    }
+
+    logger.info('catalog', `Book created: ${bookData.title}`, { bookId: data.id, isbn: bookData.isbn });
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('catalog', 'default');
+    revalidateTag('books', 'default');
+    
+    return data;
+  },
+  { 
+    auditAction: "create", 
+    auditEntity: "book", 
+    allowedRoles: ['admin', 'librarian', 'staff'] 
+  }
+);
+
+export const updateBook = createSafeAction(
+  z.object({ id: z.string(), bookData: BookSchema.partial() }),
+  async ({ id, bookData }, { supabase }) => {
+    const { data, error } = await supabase
+      .from('books')
+      .update(bookData)
       .eq('id', id)
+      .select()
       .single();
       
     if (error) throw new Error(error.message);
+    
+    logger.info('catalog', `Book updated: ${id}`, { updates: bookData });
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('catalog', 'default');
+    revalidateTag(`book-${id}`, 'default');
+    
     return data;
   },
-  ['catalog-book-detail'],
-  { revalidate: 3600, tags: ['books'] }
+  { 
+    auditAction: "update", 
+    auditEntity: "book", 
+    allowedRoles: ['admin', 'librarian', 'staff'] 
+  }
 );
 
-export async function createBook(bookData: unknown, copiesCount: number = 1) {
-  const supabase = await assertStaffCatalogAccess();
-
-  const validated = BookSchema.parse(bookData);
-
-  // Use a transaction-like approach via RPC or grouped inserts
-  // For Supabase/Postgres, an RPC is the most robust way to ensure atomicity
-  // but if RPC isn't set up, we at least need to handle the cleanup or use a single call.
-  // Here we use the standard approach but with improved error handling.
-  
-  const { data, error } = await supabase
-    .from('books')
-    .insert([validated])
-    .select()
-    .single();
-    
-  if (error) throw new Error('Failed to create book record. Please check if ISBN is unique.');
-
-  // Automatically create copies
-  if (copiesCount > 0) {
-    const copies = Array.from({ length: copiesCount }).map(() => ({
-      book_id: data.id,
-      status: 'AVAILABLE'
-    }));
-
-    const { error: copiesError } = await supabase
+export const softDeleteBook = createSafeAction(
+  z.string(),
+  async (id, { supabase }) => {
+    // Check for active borrowed copies
+    const { count, error: countError } = await supabase
       .from('book_copies')
-      .insert(copies);
-
-    if (copiesError) {
-      logger.error('catalog', `Book created but copies failed for ID: ${data.id}`, { error: copiesError.message });
-      // Critical Gap Fix: If copies fail, we should ideally rollback. 
-      // Since JS doesn't have cross-call transactions easily, we manually cleanup or warn.
-      await supabase.from('books').delete().eq('id', data.id);
-      throw new Error('Failed to initialize book copies. Transaction rolled back.');
+      .select('*', { count: 'exact', head: true })
+      .eq('book_id', id)
+      .eq('status', 'BORROWED');
+      
+    if (countError) throw new Error(countError.message);
+    
+    if (count && count > 0) {
+      throw new Error('Cannot delete book: There are active borrowed copies.');
     }
+
+    const { data, error } = await supabase
+      .from('books')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) throw new Error(error.message);
+    
+    logger.warn('catalog', `Book soft-deleted: ${id}`);
+    const { revalidateTag } = await import('next/cache');
+    revalidateTag('catalog', 'default');
+    revalidateTag('books', 'default');
+    
+    return data;
+  },
+  { 
+    auditAction: "soft_delete", 
+    auditEntity: "book", 
+    allowedRoles: ['admin', 'librarian', 'staff'] 
   }
-
-  logger.info('catalog', `Book created: ${validated.title}`, { bookId: data.id, isbn: validated.isbn });
-  revalidateTag('catalog', 'default');
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(user?.id, "book", data.id, "create", `Created book: ${validated.title} with ${copiesCount} copies`);
-  
-  return data;
-}
-
-export async function updateBook(id: string, bookData: unknown) {
-  const supabase = await assertStaffCatalogAccess();
-
-  const validated = BookSchema.partial().parse(bookData);
-
-  const { data, error } = await supabase
-    .from('books')
-    .update(validated)
-    .eq('id', id)
-    .select()
-    .single();
-    
-  if (error) throw new Error(error.message);
-  logger.info('catalog', `Book updated: ${id}`, { updates: validated });
-  revalidateTag('catalog', 'default');
-  revalidateTag(`book-${id}`, 'default');
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(user?.id, "book", id, "update", `Updated book properties`);
-  
-  return data;
-}
-
-export async function softDeleteBook(id: string) {
-  const supabase = await assertStaffCatalogAccess();
-  
-  // Check for active borrowed copies
-  const { count, error: countError } = await supabase
-    .from('book_copies')
-    .select('*', { count: 'exact', head: true })
-    .eq('book_id', id)
-    .eq('status', 'BORROWED');
-    
-  if (countError) throw new Error(countError.message);
-  
-  if (count && count > 0) {
-    throw new Error('Cannot delete book: There are active borrowed copies.');
-  }
-
-  const { data, error } = await supabase
-    .from('books')
-    .update({ is_active: false })
-    .eq('id', id)
-    .select()
-    .single();
-    
-  if (error) throw new Error(error.message);
-  logger.warn('catalog', `Book soft-deleted: ${id}`);
-  revalidateTag('catalog', 'default');
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(user?.id, "book", id, "soft_delete", `Soft deleted book`);
-  
-  return data;
-}
+);
 
 
 // --- Book Copies ---
@@ -239,96 +257,110 @@ export async function getBookCopies(bookId: string) {
 
   // Normalize: attach only the active reservation (READY or ACTIVE with copy_id assigned)  
   return (data ?? []).map((copy) => {
-    const raws = Array.isArray(copy.reservations) ? copy.reservations : copy.reservations ? [copy.reservations] : [];
+    const copyData = copy as Record<string, unknown>;
+    const raws = Array.isArray(copyData.reservations) ? copyData.reservations : copyData.reservations ? [copyData.reservations] : [];
     const activeRes = raws.find(
       (r: { status: string }) => r.status === 'READY' || r.status === 'ACTIVE'
     ) ?? null;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { reservations, ...rest } = copy;
+    const rest = { ...copyData };
+    delete rest.reservations;
     return { ...rest, reservation: activeRes };
   });
 }
 
-export async function staffCancelReservation(reservationId: string, bookId: string) {
-  const supabase = await assertStaffCatalogAccess();
+export const staffCancelReservation = createSafeAction(
+  z.object({ reservationId: z.string(), bookId: z.string() }),
+  async ({ reservationId, bookId }, { supabase }) => {
+    // Fetch reservation to know its copy_id and status so we can release it
+    const { data: reservation, error: fetchError } = await supabase
+      .from('reservations')
+      .select('id, user_id, book_id, status, copy_id')
+      .eq('id', reservationId)
+      .single();
 
-  // Fetch reservation to know its copy_id and status so we can release it
-  const { data: reservation, error: fetchError } = await supabase
-    .from('reservations')
-    .select('id, user_id, book_id, status, copy_id')
-    .eq('id', reservationId)
-    .single();
+    if (fetchError || !reservation) throw new Error('Reservation not found');
 
-  if (fetchError || !reservation) throw new Error('Reservation not found');
+    const { error } = await supabase
+      .from('reservations')
+      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+      .eq('id', reservationId);
 
-  const { error } = await supabase
-    .from('reservations')
-    .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
-    .eq('id', reservationId);
+    if (error) throw new Error(error.message);
 
-  if (error) throw new Error(error.message);
+    // If the reservation was READY (copy is RESERVED), release the copy back to AVAILABLE
+    if (reservation.status === 'READY' && reservation.copy_id) {
+      await supabase
+        .from('book_copies')
+        .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
+        .eq('id', reservation.copy_id);
+    }
 
-  // If the reservation was READY (copy is RESERVED), release the copy back to AVAILABLE
-  if (reservation.status === 'READY' && reservation.copy_id) {
-    await supabase
-      .from('book_copies')
-      .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
-      .eq('id', reservation.copy_id);
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/catalog/${bookId}`);
+    revalidatePath('/catalog');
+    revalidatePath('/student-catalog');
+    revalidatePath('/dashboard');
+
+    return { success: true };
+  },
+  {
+    auditAction: "staff_cancel",
+    auditEntity: "reservation",
+    allowedRoles: ['admin', 'librarian', 'staff']
   }
+);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(
-    user?.id,
-    'reservation',
-    reservationId,
-    'staff_cancel',
-    `Staff cancelled reservation for book ${bookId}`
-  );
-
-  revalidatePath(`/catalog/${bookId}`);
-  revalidatePath('/catalog');
-  revalidatePath('/student-catalog');
-  revalidatePath('/dashboard');
-
-  return { success: true };
-}
-
-export async function createBookCopy(bookId: string, condition?: string) {
-  const supabase = await assertStaffCatalogAccess();
-  const { data, error } = await supabase
-    .from('book_copies')
-    .insert([{ book_id: bookId, condition }])
-    .select()
-    .single();
+export const createBookCopy = createSafeAction(
+  z.object({ bookId: z.string(), condition: z.string().optional() }),
+  async ({ bookId, condition }, { supabase }) => {
+    const { data, error } = await supabase
+      .from('book_copies')
+      .insert([{ book_id: bookId, condition }])
+      .select()
+      .single();
+      
+    if (error) throw new Error(error.message);
     
-  if (error) throw new Error(error.message);
-  revalidatePath('/catalog');
-  revalidatePath(`/catalog/${bookId}`);
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(user?.id, "book_copy", data.id, "create", `Created new copy for book ${bookId}`);
-  
-  return data;
-}
-
-export async function updateBookCopyStatus(id: string, status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST') {
-  const supabase = await assertStaffCatalogAccess();
-  const { data, error } = await supabase
-    .from('book_copies')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/catalog');
+    revalidatePath(`/catalog/${bookId}`);
     
-  if (error) throw new Error(error.message);
-  revalidatePath('/catalog');
-  revalidatePath(`/catalog/${data.book_id}`);
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  await logAuditActivity(user?.id, "book_copy", id, "update_status", `Updated copy status to ${status}`);
-  
-  return data;
-}
+    return data;
+  },
+  { 
+    auditAction: "create", 
+    auditEntity: "book_copy", 
+    allowedRoles: ['admin', 'librarian', 'staff'] 
+  }
+);
+
+export const updateBookCopyStatus = createSafeAction(
+  z.object({ 
+    id: z.string(), 
+    status: z.enum(['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'LOST']) 
+  }),
+  async ({ id, status }, { supabase }) => {
+    const { data, error } = await supabase
+      .from('book_copies')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) throw new Error(error.message);
+    
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/catalog');
+    revalidatePath(`/catalog/${data.book_id}`);
+    
+    return data;
+  },
+  { 
+    auditAction: "update_status", 
+    auditEntity: "book_copy", 
+    allowedRoles: ['admin', 'librarian', 'staff'] 
+  }
+);
 
 /**
  * Fetches the full reservation queue for a book (READY + ACTIVE), enriched with

@@ -5,6 +5,7 @@ import { getViolations, type ViolationWithProfile } from './violations';
 import { getBorrowingHistory, type BorrowingRecord } from './history';
 import { unstable_cache } from 'next/cache';
 import { getMe } from '@/lib/auth-helpers';
+import { isAbortError } from '@/lib/error-utils';
 
 /**
  * Cache the recentBooks query for 1 hour.
@@ -54,7 +55,9 @@ export async function getDashboardStats({
     try {
       return await promise;
     } catch (err: unknown) {
-      console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
+      if (!isAbortError(err)) {
+        console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
+      }
       return defaultValue;
     }
   };
@@ -89,13 +92,13 @@ export async function getDashboardStats({
       : Promise.resolve({ count: 0 }),
     isStudent
       ? safeWrap(
-          getBorrowingHistory(userId, 1, 5, 'ACTIVE'),
+          getBorrowingHistory(userId, 1, 5, 'ACTIVE', undefined, supabase),
           { records: [], totalCount: 0 }
         )
       : Promise.resolve({ records: [], totalCount: 0 }),
     isStudent
       ? safeWrap(
-          getViolations(),
+          getViolations({ preFetchedAuth: { supabase, userId, role: String(role) } }),
           { violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }
         )
       : Promise.resolve({ violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }),

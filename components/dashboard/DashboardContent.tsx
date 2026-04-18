@@ -4,7 +4,10 @@ import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getMe } from "@/lib/auth-helpers";
 import { Reservation } from "@/lib/types";
 
-
+/**
+ * Server Component that orchestrates various data promises for the dashboard.
+ * It uses the 'getMe' helper which is cached per-request.
+ */
 export async function DashboardContent() {
   const me = await getMe();
   if (!me) return null;
@@ -18,37 +21,40 @@ export async function DashboardContent() {
     "faq_student_q4", "faq_student_a4",
   ];
 
-  // 1. Kick off relevant promises concurrently
+  // Kick off stats data promise for the appropriate role
   const statsPromise = getDashboardStats({ role });
 
+  // Optional: Library card for students
   const cardPromise = role === "student"
     ? supabase
         .from("library_cards")
         .select("card_number, status, expires_at")
         .eq("user_id", user.id)
         .maybeSingle()
-    : Promise.resolve({ data: null });
+    : Promise.resolve({ data: null, error: null });
 
+  // Optional: FAQ items for students
   const faqPromise = role === "student"
     ? supabase
         .from("system_settings")
         .select("key, value")
         .in("key", faqKeys)
-    : Promise.resolve({ data: null });
+    : Promise.resolve({ data: null, error: null });
 
+  // Optional: Fetch current reservations for students
   const reservationsPromise = role === "student"
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
-  // 2. We pass the promises/data to the client component
+  // Pass promises to the client component for rendering with Suspense/use() where needed
   return (
     <DashboardClient 
       user={user} 
       role={role} 
       statsPromise={statsPromise}
       profilePromise={Promise.resolve({ data: profile, error: null })}
-      cardPromise={Promise.resolve(cardPromise)}
-      faqPromise={Promise.resolve(faqPromise)}
+      cardPromise={cardPromise as unknown as Promise<{ data: { card_number: string; status: string; expires_at: string } | null }>}
+      faqPromise={faqPromise as unknown as Promise<{ data: { key: string; value: string | null }[] | null }>}
       reservationsPromise={reservationsPromise}
     />
   );

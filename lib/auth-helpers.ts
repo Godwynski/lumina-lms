@@ -46,6 +46,29 @@ export const getMe = cache(async () => {
 });
 
 /**
+ * Returns the currently authenticated user's UI preferences.
+ * Wrapped in React cache() for request-level memoization.
+ */
+export const getPreferences = cache(async () => {
+  const me = await getMe();
+  if (!me) return {};
+
+  const { supabase, user } = me;
+  const { data, error } = await supabase
+    .from('ui_preferences')
+    .select('preferences')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[AUTH-HELPERS] Failed to fetch preferences:', error.message);
+    return {};
+  }
+
+  return (data?.preferences as Record<string, unknown>) ?? {};
+});
+
+/**
  * Returns the role for the currently authenticated user.
  */
 export const getUserRole = cache(async () => {

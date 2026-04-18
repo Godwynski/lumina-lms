@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilterInput } from "@/lib/utils";
 import { unstable_cache } from "next/cache";
+import { isAbortError } from "../error-utils";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export type BookInfo = {
   id: string;
@@ -27,9 +29,10 @@ export async function getBorrowingHistory(
   page: number = 1,
   pageSize: number = 10,
   statusFilter?: string,
-  searchQuery?: string
+  searchQuery?: string,
+  preFetchedSupabase?: SupabaseClient
 ) {
-  const supabase = await createClient();
+  const supabase = preFetchedSupabase || await createClient();
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -59,8 +62,11 @@ export async function getBorrowingHistory(
     .range(from, to);
 
   if (error) {
+    if (isAbortError(error)) {
+      return { records: [], totalCount: 0 };
+    }
     console.error("Failed to fetch borrowing history:", error);
-    throw new Error(error.message);
+    throw error;
   }
 
   const enriched = (data || []).map((record: Record<string, unknown>) => ({

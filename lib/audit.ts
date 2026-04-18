@@ -1,6 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
-import { after } from "next/server";
 
 export type AuditEntityType = 
   | "profile" 
@@ -35,6 +34,7 @@ export async function logAuditActivity(
     // Important since some workflows use service_role to wipe data and auth.uid() is null contextually.
     const supabase = createAdminClient();
 
+    const { after } = await import("next/server");
     after(async () => {
       const { error } = await supabase
         .from("audit_logs")

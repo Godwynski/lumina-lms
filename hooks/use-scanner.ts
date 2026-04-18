@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import type { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 interface UseScannerProps {
   onScan: (value: string) => Promise<void>;
   isProcessing: boolean;
   scannerId?: string;
-  formats?: Html5QrcodeSupportedFormats[];
+  formats?: number[];
 }
 
 /**
@@ -18,7 +18,7 @@ export function useScanner({
   onScan, 
   isProcessing, 
   scannerId = 'qr-reader',
-  formats = [Html5QrcodeSupportedFormats.QR_CODE]
+  formats = [0] // 0 is Html5QrcodeSupportedFormats.QR_CODE
 }: UseScannerProps) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraSupported, setCameraSupported] = useState(true); // Default to true, will check on mount
@@ -65,6 +65,8 @@ export function useScanner({
 
   const requestCameraPermission = useCallback(async (): Promise<boolean> => {
     try {
+      // @ts-ignore - dynamic import resolution in build environment
+      const { Html5Qrcode } = await import('html5-qrcode');
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
         setCameraPermission('granted');
@@ -90,6 +92,8 @@ export function useScanner({
       }
 
       try {
+        // @ts-ignore - dynamic import resolution in build environment
+        const { Html5Qrcode } = await import('html5-qrcode');
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
           setCameraSupported(false);
@@ -114,15 +118,19 @@ export function useScanner({
     let mounted = true;
     let html5QrCode: Html5Qrcode | null = null;
     
-    try {
-      html5QrCode = new Html5Qrcode(scannerId, { formatsToSupport: formats, verbose: false });
-      scannerRef.current = html5QrCode;
-    } catch (err) {
-      console.error('Failed to initialize Html5Qrcode:', err);
-      setCameraSupported(false);
-      setCameraIssue('Failed to initialize scanner library.');
-      return;
-    }
+    const initScanner = async () => {
+      try {
+        // @ts-ignore - dynamic import resolution in build environment
+        const { Html5Qrcode } = await import('html5-qrcode');
+        html5QrCode = new Html5Qrcode(scannerId, { formatsToSupport: formats as unknown as Html5QrcodeSupportedFormats[], verbose: false });
+        scannerRef.current = html5QrCode;
+        await start();
+      } catch (err) {
+        console.error('Failed to initialize Html5Qrcode:', err);
+        setCameraSupported(false);
+        setCameraIssue('Failed to initialize scanner library.');
+      }
+    };
 
     const start = async () => {
       try {
@@ -136,14 +144,13 @@ export function useScanner({
           await html5QrCode.start(
             { facingMode: 'environment' },
             config,
-            async (decodedText) => {
+            async (decodedText: string) => {
               if (!mounted) return;
 
               // Debounce and process scan
               const now = Date.now();
               if (
-                isProcessingRef.current || 
-                (lastScanRef.current?.value === decodedText && now - lastScanRef.current.time < 2000)
+                isProcessingRef.current || (lastScanRef.current?.value === decodedText && now - (lastScanRef.current?.time ?? 0) < 2000)
               ) {
                 return;
               }
@@ -183,7 +190,7 @@ export function useScanner({
       }
     };
 
-    void start();
+    void initScanner();
 
     return () => {
       mounted = false;

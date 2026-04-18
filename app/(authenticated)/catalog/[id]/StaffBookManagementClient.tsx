@@ -112,7 +112,8 @@ function ReservationQueuePanel({
   const handleCancel = async (entry: ReservationQueueEntry) => {
     setCancellingId(entry.id);
     try {
-      await staffCancelReservation(entry.id, bookId);
+      const result = await staffCancelReservation({ reservationId: entry.id, bookId });
+      if (!result.success) throw new Error(result.error);
       toast.success(`Reservation cancelled for ${(entry.profiles as { full_name?: string } | null)?.full_name ?? 'student'}`);
       onCancelled(entry.id);
     } catch (err) {
@@ -363,7 +364,8 @@ export function StaffBookManagementClient({
   const handleUpdateBook = async () => {
     setUpdateLoading(true);
     try {
-      await updateBook(book.id, editForm);
+      const result = await updateBook({ id: book.id, bookData: editForm });
+      if (!result.success) throw new Error(result.error);
       setBook(prev => ({ ...prev, ...editForm }));
       setIsEditing(false);
       toast.success('Book metadata updated');
@@ -377,7 +379,8 @@ export function StaffBookManagementClient({
   const handleDeleteBook = async () => {
     setDeleteLoading(true);
     try {
-      await softDeleteBook(book.id);
+      const result = await softDeleteBook(book.id);
+      if (!result.success) throw new Error(result.error);
       toast.success('Book removed from inventory');
       router.push('/catalog');
     } catch (err) {
@@ -390,7 +393,8 @@ export function StaffBookManagementClient({
 
   const handleStatusChange = async (copyId: string, newStatus: EditableStatus) => {
     try {
-      await updateBookCopyStatus(copyId, newStatus);
+      const result = await updateBookCopyStatus({ id: copyId, status: newStatus });
+      if (!result.success) throw new Error(result.error);
       const updatedCopies = await refreshAll();
       setBook(prev => ({
         ...prev,
@@ -406,7 +410,8 @@ export function StaffBookManagementClient({
   const handleCancelReservationFromCopy = async (reservationId: string, _copyId: string) => {
     setCancellingResId(reservationId);
     try {
-      await staffCancelReservation(reservationId, book.id);
+      const result = await staffCancelReservation({ reservationId, bookId: book.id });
+      if (!result.success) throw new Error(result.error);
       const updatedCopies = await refreshAll();
       setBook(prev => ({
         ...prev,
