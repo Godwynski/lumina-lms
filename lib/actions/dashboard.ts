@@ -53,9 +53,10 @@ export async function getDashboardStats({
     try {
       return await promise;
     } catch (err: unknown) {
-      if (!isAbortError(err)) {
-        console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
+      if (isAbortError(err)) {
+        throw err; // Re-throw so Next.js can stop the stream
       }
+      console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
       return defaultValue;
     }
   };

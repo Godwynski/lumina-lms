@@ -63,7 +63,7 @@ export async function getBorrowingHistory(
 
   if (error) {
     if (isAbortError(error)) {
-      return { records: [], totalCount: 0 };
+      throw error;
     }
     console.error("Failed to fetch borrowing history:", error);
     throw error;

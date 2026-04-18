@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { logAuditActivity } from "@/lib/audit";
@@ -132,6 +133,8 @@ export async function POST(request: NextRequest) {
       `Updated policy: ${key}`,
       reason || `Updated ${key} to ${value}`
     );
+
+    revalidatePath("/policies", "page");
 
     return NextResponse.json(result);
   } catch (error) {

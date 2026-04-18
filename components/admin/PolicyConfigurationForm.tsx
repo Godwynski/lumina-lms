@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ export function PolicyConfigurationForm({
   settings: PolicySetting[];
   canEdit: boolean;
 }) {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("circulation");
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
 
@@ -93,6 +95,7 @@ export function PolicyConfigurationForm({
         }
       }
 
+      router.refresh();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
