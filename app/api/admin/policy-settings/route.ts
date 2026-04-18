@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { logAuditActivity } from "@/lib/audit";
+import { isAbortError } from "@/lib/error-utils";
 
 function isValidPolicyValue(key: string, value: string) {
   const numberLikeKeys = ["days", "limit", "count", "years", "fine", "amount"];
@@ -39,6 +40,9 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (error) {
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499 });
+    }
     console.error("Error fetching settings:", error);
     return NextResponse.json(
       { error: "Failed to fetch settings" },
@@ -131,6 +135,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499 });
+    }
     console.error("Error updating setting:", error);
     return NextResponse.json(
       { error: "Failed to update setting" },

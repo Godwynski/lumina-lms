@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilterInput } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { connection } from "next/server";
+import { isAbortError } from "@/lib/error-utils";
 
 
 export async function GET(request: NextRequest) {
@@ -74,6 +75,9 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499 }); // Client Closed Request
+    }
     console.error("Error fetching audit logs:", error);
     return NextResponse.json(
       { error: "Failed to fetch audit logs" },

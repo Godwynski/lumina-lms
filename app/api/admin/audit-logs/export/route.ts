@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilterInput } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { format } from "date-fns";
+import { isAbortError } from "@/lib/error-utils";
 import { connection } from "next/server";
 
 
@@ -73,6 +74,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499 });
+    }
     console.error("Error exporting audit logs:", error);
     return NextResponse.json(
       { error: "Failed to export audit logs" },

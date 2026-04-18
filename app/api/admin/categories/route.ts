@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { isAbortError } from "@/lib/error-utils";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 function toSlug(value: string) {
   return value
@@ -40,6 +42,9 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (error) {
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499 });
+    }
     console.error("Error fetching categories:", error);
     return NextResponse.json(
       { error: "Failed to fetch categories" },
@@ -90,8 +95,14 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    revalidateTag("categories", "default");
+    revalidatePath("/catalog", "page");
+
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499 });
+    }
     console.error("Error creating category:", error);
     return NextResponse.json(
       { error: "Failed to create category" },
