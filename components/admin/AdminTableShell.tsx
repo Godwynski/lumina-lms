@@ -11,6 +11,7 @@ type AdminTableShellProps = {
   children: ReactNode;
   pagination?: ReactNode;
   className?: string;
+  variant?: 'default' | 'ghost';
 };
 
 export function AdminTableShell({
@@ -22,11 +23,17 @@ export function AdminTableShell({
   children,
   pagination,
   className,
+  variant = 'default',
 }: AdminTableShellProps) {
+  const isGhost = variant === 'ghost';
+
   return (
     <div className={cn("mx-auto flex w-full max-w-[1450px] flex-col gap-3", className)}>
       {(title || headerActions) && (
-        <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className={cn(
+          "flex flex-col gap-4 pb-4 sm:flex-row sm:items-end sm:justify-between",
+          !isGhost && "border-b border-border/50"
+        )}>
           <div className="flex flex-col gap-1">
             {title && <h1 className="text-2xl font-black tracking-tight text-foreground">{title}</h1>}
             {description && <div className="text-sm font-medium text-muted-foreground hidden md:block opacity-70 leading-relaxed">{description}</div>}
@@ -45,11 +52,23 @@ export function AdminTableShell({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-300">
+      <div className={cn(
+        "overflow-hidden transition-all duration-300",
+        isGhost 
+          ? "rounded-none border-none bg-transparent shadow-none" 
+          : "rounded-2xl border border-border bg-card shadow-sm"
+      )}>
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/10">
           {children}
         </div>
-        {pagination ? <div className="border-t border-border bg-muted/10 p-2.5">{pagination}</div> : null}
+        {pagination ? (
+          <div className={cn(
+            "p-2.5",
+            isGhost ? "mt-4" : "border-t border-border bg-muted/10"
+          )}>
+            {pagination}
+          </div>
+        ) : null}
       </div>
     </div>
   );

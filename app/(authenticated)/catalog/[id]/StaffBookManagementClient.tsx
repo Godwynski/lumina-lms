@@ -142,7 +142,7 @@ function ReservationQueuePanel({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden transition-all hover:shadow-md">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-2">
         <div className="flex items-center gap-2">
@@ -443,6 +443,7 @@ export function StaffBookManagementClient({
 
   return (
     <AdminTableShell
+      variant="ghost"
       className="pb-6 md:pb-8"
       headerActions={
         <div className="flex items-center gap-2">
@@ -476,7 +477,7 @@ export function StaffBookManagementClient({
         <div className="space-y-6 lg:col-span-4 xl:col-span-3">
           {/* Book Identity Section */}
           <Section title="Asset Metadata" icon={BookMarked} hideHeaderOnMobile>
-            <div className="overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:shadow-md">
               {isEditing ? (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                   <div className="space-y-4">
@@ -571,7 +572,7 @@ export function StaffBookManagementClient({
 
           {/* Availability Status Section */}
           <Section title="Inventory Control" icon={QrCode}>
-            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:shadow-md">
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-center">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</p>
@@ -612,7 +613,7 @@ export function StaffBookManagementClient({
         <div className="space-y-2.5 lg:col-span-8 xl:col-span-9">
           <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
             <h2 className="text-sm font-semibold text-foreground">Copies ({visibleCopies.length}/{copies.length})</h2>
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card p-1.5 shadow-sm">
+            <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-card p-1.5 shadow-sm">
               <Filter className="h-3.5 w-3.5 text-muted-foreground" />
               <Select value={copyFilter} onValueChange={(v) => {
                 if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
@@ -642,7 +643,7 @@ export function StaffBookManagementClient({
               const isCancelling = cancellingResId === res?.id;
 
               return (
-                <div key={copy.id} className="flex flex-col justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm md:flex-row md:items-center">
+                <div key={copy.id} className="flex flex-col justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 py-2.5 shadow-sm transition-all hover:border-border/70 md:flex-row md:items-center">
                   <div className="flex items-center gap-3">
                     <div className={`h-8 w-8 shrink-0 rounded-md ${statusCfg.bg} flex items-center justify-center`}>
                       <StatusIcon className={`h-4 w-4 ${statusCfg.color}`} />
