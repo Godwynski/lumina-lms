@@ -11,7 +11,6 @@ import {
   Library,
   Users,
   History,
-  AlertTriangle,
   ChevronsUpDown,
   LogOut,
   Loader2,
@@ -130,7 +129,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
       { href: "/circulation", label: "Circulation Desk", icon: History, minRole: "staff" },
       { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
-      { href: "/violations", label: "Violations", icon: AlertTriangle, minRole: "staff" },
     ],
   },
   {
@@ -142,7 +140,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
       { href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian" },
       { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
-      { href: "/operations", label: "Operations Dashboard", icon: LayoutDashboard, minRole: "admin" },
     ],
   },
   {
@@ -153,7 +150,7 @@ const NAV_GROUPS: NavGroup[] = [
     children: [
       { href: "/profile", label: "Profile", icon: Users },
       { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
-      { href: "/security", label: "Security", icon: Lock },
+      { href: "/security", label: "Governance & Security", icon: Lock },
     ],
   },
 ];
@@ -331,7 +328,7 @@ export function ProtectedNav({
 
     if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
 
-    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies", "/operations"];
+    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
     if (SETTINGS_PATHS.includes(hrefBase)) {
       return pathWithoutQuery === hrefBase;
     }

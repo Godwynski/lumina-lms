@@ -6,9 +6,7 @@ export type AuditEntityType =
   | "book" 
   | "book_copy" 
   | "borrowing_record" 
-  | "library_card" 
-  | "fine" 
-  | "violation"
+  | "library_card"
   | "reservation"
   | "system";
 

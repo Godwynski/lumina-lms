@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
+import { logAuditActivity } from "@/lib/audit";
 
 function isValidPolicyValue(key: string, value: string) {
   const numberLikeKeys = ["days", "limit", "count", "years", "fine", "amount"];
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
       typeof body.description === "string"
         ? body.description.trim()
         : DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.description;
+    const reason = typeof body.reason === "string" ? body.reason.trim() : null;
 
     if (!key || !value) {
       return NextResponse.json(
@@ -117,6 +119,15 @@ export async function POST(request: NextRequest) {
       if (error) throw error;
       result = data;
     }
+
+    // Log the change
+    await logAuditActivity(
+      user.user.id,
+      "system",
+      result.id,
+      `Updated policy: ${key}`,
+      reason || `Updated ${key} to ${value}`
+    );
 
     return NextResponse.json(result);
   } catch (error) {

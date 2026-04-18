@@ -13,12 +13,12 @@ Handle the physical movement of books and digital resource management.
 ### `POST /api/circulation/checkout`
 Checks out a book copy to a user.
 - **Body:** `{ copyId: string, userId: string }`
-- **Logic:** Enforces `max_borrow_limit` and checks for active penalties.
+- **Logic:** Enforces `max_borrow_limit`.
 
 ### `POST /api/circulation/return`
 Processes a returned book.
 - **Body:** `{ copyId: string }`
-- **Logic:** Updates copy status to `AVAILABLE` and calculates any overdue fines.
+- **Logic:** Updates copy status to `AVAILABLE`.
 
 ### `POST /api/circulation/renewal`
 Extends the due date for an active loan.
@@ -39,15 +39,8 @@ Uploads and updates the user's profile picture.
 
 ---
 
-## ⚖️ Violations & Penalties
-System for tracking student misconduct and calculating fines.
 
-### `GET /api/violations`
-Fetches violation records and statistics for the active user or all users (staff).
 
-### `POST /api/violations`
-Create a new violation record (Staff only).
-- **Body:** `{ userId: string, violationType: string, description?: string, incidentDate: string }`
 
 ---
 
@@ -55,7 +48,7 @@ Create a new violation record (Staff only).
 Global system configuration and maintenance.
 
 ### `POST /api/admin/policy-settings`
-Update global library policies (e.g., loan period, fine amount).
+Update global library policies (e.g., loan period).
 
 ### `POST /api/admin/cleanup-expired-reservations`
 Background task to release books that were held but never collected.

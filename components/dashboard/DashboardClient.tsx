@@ -21,7 +21,6 @@ const MyCardContainer = dynamic(() => import('@/components/library/MyCardContain
 import { useMemo, useState, useEffect, use } from 'react';
 import { resolveStudentId, getDeterministicQrUrl } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
-import type { ViolationWithProfile } from '@/lib/actions/violations';
 import type { BorrowingRecord } from '@/lib/actions/history';
 
 type CardData = { card_number: string; status: string; expires_at: string } | null;
@@ -35,7 +34,6 @@ type DashboardStats = {
   myActiveLoans: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
   activeLoansList?: BorrowingRecord[];
-  violationsList?: ViolationWithProfile[];
 };
 
 interface DashboardProps {
@@ -61,7 +59,6 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
 
   const profileData = profileResult.data;
   const activeLoansList = stats.activeLoansList || [];
-  const violationsList = stats.violationsList || [];
 
   // Data resolution logic (moved from server to allow granular streaming if needed)
   const { studentCard, studentFaqs } = useMemo(() => {
@@ -192,35 +189,6 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                              </div>
                              <Badge variant={loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
                                 {loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'Overdue' : 'Active'}
-                             </Badge>
-                          </CardContent>
-                       </Card>
-                    ))}
-                  </div>
-               </section>
-             )}
-
-             {/* Account Standing / Violations */}
-             {violationsList.length > 0 && (
-               <section className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                     <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <ShieldAlert className="h-3 w-3 text-amber-500" />
-                        Account Standing
-                     </h2>
-                  </div>
-                  <div className="grid gap-2">
-                    {violationsList.slice(0, 3).map((violation) => (
-                       <Card key={violation.id} className="border-border/60 bg-card/30 shadow-none">
-                          <CardContent className="flex items-center justify-between gap-4 p-2.5">
-                             <div className="min-w-0">
-                                <p className="text-[10px] font-bold text-foreground/90 leading-tight truncate">{violation.violation_type.replace('_', ' ')}</p>
-                                <p className="text-[9px] text-muted-foreground/70 truncate mt-0.5" suppressHydrationWarning>
-                                   {mounted ? new Date(violation.incident_date).toLocaleDateString() : '...'}
-                                </p>
-                             </div>
-                             <Badge variant="outline" className="text-[8px] border-amber-500/20 text-amber-600 bg-amber-50/50">
-                                {violation.status}
                              </Badge>
                           </CardContent>
                        </Card>

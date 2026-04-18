@@ -504,7 +504,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
                 Loan Policy
               </p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Check your dashboard for loan periods, renewal limits, and any active violations that may affect your borrowing.
+                Check your dashboard for loan periods, renewal limits, and current borrowing status.
               </p>
             </div>
           </div>

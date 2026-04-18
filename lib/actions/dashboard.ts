@@ -1,7 +1,6 @@
 'use server'
  
 import { createSafeClient } from '@/lib/supabase/server';
-import { getViolations, type ViolationWithProfile } from './violations';
 import { getBorrowingHistory, type BorrowingRecord } from './history';
 import { unstable_cache } from 'next/cache';
 import { getMe } from '@/lib/auth-helpers';
@@ -39,7 +38,6 @@ export async function getDashboardStats({
   myActiveLoans: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
   activeLoansList?: BorrowingRecord[];
-  violationsList?: ViolationWithProfile[];
 }> {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -67,7 +65,6 @@ export async function getDashboardStats({
     recentBooks,
     pendingApprovalsResult,
     myActiveLoansResult,
-    myViolationsResult,
   ] = await Promise.all([
     safeWrap(
       Promise.resolve(
@@ -96,12 +93,6 @@ export async function getDashboardStats({
           { records: [], totalCount: 0 }
         )
       : Promise.resolve({ records: [], totalCount: 0 }),
-    isStudent
-      ? safeWrap(
-          getViolations({ preFetchedAuth: { supabase, userId, role: String(role) } }),
-          { violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }
-        )
-      : Promise.resolve({ violations: [], stats: { total: 0, active: 0, referred: 0, resolved: 0 }, role: '' }),
   ]);
 
   const activeLoans = (activeLoansResult as { count: number | null }).count || 0;
@@ -112,6 +103,5 @@ export async function getDashboardStats({
     myActiveLoans: (myActiveLoansResult as { totalCount: number }).totalCount || 0,
     recentBooks,
     activeLoansList: (myActiveLoansResult as { records: BorrowingRecord[] }).records,
-    violationsList: (myViolationsResult as { violations: ViolationWithProfile[] }).violations,
   };
 }

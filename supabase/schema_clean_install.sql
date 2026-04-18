@@ -123,32 +123,7 @@ CREATE TABLE IF NOT EXISTS public.reservations (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Fines (NEW Table - Fixes L-01)
-CREATE TABLE IF NOT EXISTS public.fines (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) NOT NULL,
-    borrowing_record_id UUID REFERENCES public.borrowing_records(id),
-    amount NUMERIC(10,2) NOT NULL DEFAULT 0,
-    reason TEXT NOT NULL,
-    status TEXT DEFAULT 'UNPAID' CHECK (status IN ('UNPAID', 'PAID', 'PARTIAL', 'WAIVED')),
-    paid_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
 
--- Violations (Demerit Points)
-CREATE TABLE IF NOT EXISTS public.violations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) NOT NULL,
-    violation_type TEXT NOT NULL,
-    severity TEXT DEFAULT 'minor',
-    points INTEGER DEFAULT 1,
-    description TEXT,
-    incident_date DATE DEFAULT CURRENT_DATE,
-    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'appealed', 'expired')),
-    created_by UUID REFERENCES public.profiles(id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
 
 -- System Settings
 CREATE TABLE IF NOT EXISTS public.system_settings (
@@ -478,7 +453,5 @@ $$ LANGUAGE plpgsql;
 INSERT INTO public.system_settings (key, value, description) VALUES
 ('max_borrow_limit', '5', 'Max books a student can borrow at once'),
 ('loan_period_days', '14', 'Standard loan duration in days'),
-('hold_expiry_days', '3', 'Days a student has to pick up a reserved book'),
-('max_outstanding_fines', '100', 'Fine amount threshold for blocking borrowing'),
-('max_violation_points', '10', 'Demerit points threshold for automatic suspension')
+('hold_expiry_days', '3', 'Days a student has to pick up a reserved book')
 ON CONFLICT (key) DO NOTHING;

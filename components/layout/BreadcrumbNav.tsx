@@ -10,7 +10,6 @@ const ROUTE_LABELS: Record<string, string> = {
   "student-catalog": "Catalog",
   "circulation": "Circulation Desk",
   "history": "Borrow History",
-  "violations": "Violations",
   "users": "User Directory",
   "policies": "System Policies",
   "audit": "Audit Logs",
@@ -27,7 +26,6 @@ const DYNAMIC_SEGMENT_LABELS: Record<string, string> = {
   "student-catalog": "Book Details",
   "catalog": "Book Details",
   "users": "User Profile",
-  "violations": "Violation Details",
   "audit": "Log Entry",
 };
 
