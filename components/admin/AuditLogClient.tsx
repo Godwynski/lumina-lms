@@ -112,34 +112,36 @@ export function AuditLogClient() {
         </div>
       }
       controls={
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full p-1">
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
             <Input 
-              placeholder="Search by action or specific entity ID..." 
+              placeholder="Search actions or entity IDs..." 
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-10 border-border shadow-none focus-visible:ring-ring bg-background"
+              className="pl-9 h-10 border-border/40 shadow-none focus-visible:ring-ring bg-muted/10 rounded-xl text-xs font-bold"
             />
           </div>
           <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-            <SelectTrigger className="h-10 border-border shadow-none bg-background">
-              <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Entity Type" />
+            <SelectTrigger className="h-10 border-border/40 shadow-none bg-muted/10 rounded-xl text-xs font-bold">
+              <div className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground/50" />
+                <SelectValue placeholder="Entity Type" />
+              </div>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl border-border/40 shadow-xl">
               {entityTypes.map(t => (
-                <SelectItem key={t} value={t} className="capitalize">
+                <SelectItem key={t} value={t} className="capitalize text-xs font-bold py-2.5">
                   {t === "all" ? "All Entities" : t.replace(/_/g, " ")}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="flex items-center justify-end px-2 text-xs text-muted-foreground font-medium bg-muted/50 rounded-lg p-2 md:p-0 md:bg-transparent">
-            {data ? `${data.total} records found` : "Searching records..."}
+          <div className="flex items-center justify-end px-3 text-[10px] text-muted-foreground/60 font-black uppercase tracking-widest bg-muted/20 rounded-xl">
+            {data ? `${data.total} Records` : "Indexing..."}
           </div>
         </div>
       }
@@ -188,7 +190,7 @@ export function AuditLogClient() {
                 <div key={log.id} className="relative group">
                   <div className="absolute -left-[31px] md:-left-[31px] top-4 h-3.5 w-3.5 rounded-full border-2 border-primary bg-background ring-4 ring-background z-10 group-hover:scale-125 group-hover:bg-primary transition-all shadow-sm" />
                   
-                  <div className="rounded-xl border border-border bg-card p-4 md:p-5 shadow-sm hover:shadow-md transition-all hover:border-primary/20 space-y-4">
+                  <div className="rounded-2xl border border-border/40 bg-card/40 p-4 md:p-5 shadow-none hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/20 backdrop-blur-sm space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">

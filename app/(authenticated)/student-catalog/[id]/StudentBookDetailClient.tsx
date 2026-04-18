@@ -86,15 +86,15 @@ function StatusBanner({
       : null;
 
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-300/60 bg-gradient-to-r from-emerald-50 to-emerald-50/30 px-4 py-3.5 shadow-sm">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600">
-          <Sparkles className="h-4.5 w-4.5" />
+      <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4 backdrop-blur-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 shadow-inner">
+          <Sparkles className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-emerald-700 leading-tight">Your copy is ready for pickup!</p>
+          <p className="text-sm font-black text-emerald-700 uppercase tracking-tight leading-tight">Copy Ready for Pickup</p>
           {deadline && (
-            <p className="mt-0.5 text-xs font-semibold text-emerald-600/80">
-              Must be claimed by <span className="font-black">{deadline}</span>
+            <p className="mt-0.5 text-[11px] font-bold text-emerald-600/70">
+              Claim at the desk by <span className="text-emerald-700 font-black underline decoration-emerald-500/30 underline-offset-2">{deadline}</span>
             </p>
           )}
         </div>
@@ -107,16 +107,16 @@ function StatusBanner({
 
   if (availability.hasReservation && availability.queuePosition) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-transparent px-4 py-3.5 shadow-sm">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Ticket className="h-4.5 w-4.5" />
+      <div className="flex items-center gap-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 backdrop-blur-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-inner">
+          <Ticket className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-primary leading-tight">
-            You&apos;re #{availability.queuePosition} in the queue
+          <p className="text-sm font-black text-primary uppercase tracking-tight leading-tight">
+            Queue Position #{availability.queuePosition}
           </p>
-          <p className="mt-0.5 text-xs font-medium text-muted-foreground">
-            We&apos;ll notify you when a copy becomes available for your pickup.
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground/70">
+            We&apos;ll notify you when a copy is assigned to you.
           </p>
         </div>
       </div>
@@ -125,16 +125,16 @@ function StatusBanner({
 
   if (isAvailable) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50/60 to-transparent px-4 py-3.5 shadow-sm">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-          <CheckCircle2 className="h-4.5 w-4.5" />
+      <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 px-4 py-4 backdrop-blur-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 shadow-inner">
+          <CheckCircle2 className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-emerald-700 leading-tight">
-            {book.available_copies} {book.available_copies === 1 ? 'copy' : 'copies'} available now
+          <p className="text-sm font-black text-emerald-700 uppercase tracking-tight leading-tight">
+            {book.available_copies} {book.available_copies === 1 ? 'copy' : 'copies'} on shelf
           </p>
-          <p className="mt-0.5 text-xs font-medium text-muted-foreground">
-            Reserve your copy so it&apos;s held for you when you visit.
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground/70">
+            Reserve to secure this title for your next visit.
           </p>
         </div>
       </div>
@@ -150,17 +150,17 @@ function StatusBanner({
     : null;
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-gradient-to-r from-amber-50/60 to-transparent px-4 py-3.5 shadow-sm">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-        <Clock className="h-4.5 w-4.5" />
+    <div className="flex items-center gap-4 rounded-2xl border border-amber-500/10 bg-amber-500/5 px-4 py-4 backdrop-blur-sm">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 shadow-inner">
+        <Clock className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-black text-amber-700 leading-tight">All copies are currently borrowed</p>
-        <p className="mt-0.5 text-xs font-semibold text-amber-600/80">
+        <p className="text-sm font-black text-amber-700 uppercase tracking-tight leading-tight">Currently Unavailable</p>
+        <p className="mt-0.5 text-[11px] font-bold text-amber-600/70">
           {returnDate ? (
-            <>Next copy expected back <span className="font-black">{returnDate}</span></>
+            <>Estimated availability <span className="text-amber-700 font-black">{returnDate}</span></>
           ) : (
-            'Join the queue — you\'ll be notified when a copy is returned.'
+            'Join the queue to be first in line when a copy returns.'
           )}
         </p>
       </div>
@@ -212,12 +212,12 @@ function MetaTile({
   value: React.ReactNode;
 }) {
   return (
-    <div className="group rounded-xl border border-border/60 bg-card/60 p-3 shadow-sm transition-colors hover:border-primary/20 hover:bg-muted/30">
-      <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-1.5">
+    <div className="group rounded-2xl border border-border/40 bg-card/20 p-4 shadow-none transition-all hover:border-primary/20 hover:bg-muted/30 backdrop-blur-sm">
+      <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mb-2">
         <Icon className="h-3 w-3" />
         {label}
       </p>
-      <p className="text-sm font-bold text-foreground/90 leading-snug">{value || '—'}</p>
+      <p className="text-sm font-black text-foreground uppercase tracking-tight leading-snug">{value || '—'}</p>
     </div>
   );
 }
@@ -286,8 +286,8 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
 
         {/* Left: Cover */}
-        <div className="shrink-0 mx-auto md:mx-0 space-y-3">
-          <div className="relative h-[280px] w-[190px] overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-lg shadow-black/8">
+        <div className="shrink-0 mx-auto md:mx-0 space-y-4">
+          <div className="relative h-[280px] w-[190px] overflow-hidden rounded-2xl border border-border/40 bg-muted/20 shadow-none backdrop-blur-sm">
             {book.cover_url ? (
               <Image
                 src={book.cover_url}
@@ -352,7 +352,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
           </div>
 
           {/* Copy Meter */}
-          <div className="rounded-xl border border-border/60 bg-card/60 p-3 shadow-sm">
+          <div className="rounded-2xl border border-border/40 bg-card/20 p-4 shadow-none backdrop-blur-sm">
             <CopyMeter available={book.available_copies} total={book.total_copies} />
           </div>
 

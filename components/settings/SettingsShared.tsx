@@ -74,7 +74,7 @@ export const PremiumToggle = memo(({
           onChange(!checked);
         }
       }}
-      className="group flex w-full cursor-pointer items-center justify-between rounded-xl border-border bg-card p-4 text-left shadow-sm transition-all hover:bg-muted/50"
+      className="group flex w-full cursor-pointer items-center justify-between rounded-xl border-border/40 bg-card p-4 text-left shadow-sm transition-all hover:bg-muted/50 hover:shadow-md"
     >
       <div className="max-w-[80%]">
         <h4 className="text-sm font-bold text-foreground">{title}</h4>
@@ -109,7 +109,7 @@ export function AnnualResetTool() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-muted/30 p-4">
+      <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
         <div className="flex items-start gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
             <RefreshCw className={cn("h-5 w-5 text-primary", isResetting && "animate-spin")} />

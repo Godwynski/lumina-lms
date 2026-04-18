@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use, useEffect, useTransition, useCallback } from 'react';
+import { useState, use, useEffect, useTransition, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Search,
@@ -13,29 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
+import { LuminaTable, type LuminaColumn } from '@/components/common/LuminaTable';
 import { Badge } from '@/components/ui/badge';
+import { Book, Category as CatalogCategory } from '@/lib/types';
 import Link from 'next/link';
+import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
 
-type CatalogCategory = {
-  id: string;
-  name: string;
-};
-
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  isbn: string | null;
-  category_id: string | null;
-  tags: string[] | null;
-  section: string | null;
-  cover_url: string | null;
-  total_copies: number;
-  available_copies: number;
-  categories: { name: string | null }[];
-}
 
 interface ReservationRow {
   status: string;
@@ -145,7 +130,7 @@ export function StudentCatalogClient({
   const books = initialData.books || [];
   const totalBooks = initialData.total || 0;
 
-  const renderBadge = (bookId: string) => {
+  const renderBadge = useCallback((bookId: string) => {
     if (!reservedBooksMap.has(bookId)) return null;
     const info = reservedBooksMap.get(bookId)!;
     const isReady = info.status === 'READY';
@@ -163,7 +148,74 @@ export function StudentCatalogClient({
           : <><Ticket className="h-2.5 w-2.5" /> Your Queue #{info.queuePosition}</>}
       </Badge>
     );
-  };
+  }, [reservedBooksMap]);
+
+  const columns = useMemo<LuminaColumn<Book>[]>(() => [
+    {
+      header: 'Title',
+      cell: (book) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative h-10 w-8 overflow-hidden rounded border border-border bg-muted">
+            {book.cover_url ? (
+              <Image src={book.cover_url} alt={book.title} fill sizes="32px" className="object-cover" unoptimized />
+            ) : null}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="truncate font-medium text-foreground">{book.title}</p>
+              {renderBadge(book.id)}
+            </div>
+            <p className="truncate text-xs text-muted-foreground">ISBN: {book.isbn || 'N/A'}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'Author',
+      headerClassName: 'text-center',
+      className: 'text-sm text-foreground text-center',
+      accessor: 'author'
+    },
+    {
+      header: 'Availability',
+      headerClassName: 'text-center',
+      className: 'text-center',
+      cell: (book) => (
+        <span
+          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold leading-none ${
+            book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+          }`}
+        >
+          {book.available_copies}/{book.total_copies}
+        </span>
+      )
+    },
+    {
+      header: 'Action',
+      headerClassName: 'text-center',
+      className: 'text-center',
+      cell: (book) => (
+        <div className="flex items-center justify-center gap-2">
+          <Link href={`/student-catalog/${book.id}`}>
+            <Button variant="outline" size="sm" className="h-8 px-4 text-xs font-semibold shadow-sm transition-all hover:bg-muted/60">
+              Detail
+            </Button>
+          </Link>
+          <ReserveTitleButton
+            bookId={book.id}
+            isAvailable={book.available_copies > 0}
+            hasExistingReservation={reservedBooksMap.has(book.id)}
+            variant="default"
+            size="sm"
+            className="h-8 text-[11px]"
+            onReserveSuccess={(queuePosition, status) =>
+              handleReserveSuccess(book.id, queuePosition, status)
+            }
+          />
+        </div>
+      )
+    }
+  ], [reservedBooksMap, handleReserveSuccess, renderBadge]);
 
   return (
     <AdminTableShell
@@ -241,140 +293,61 @@ export function StudentCatalogClient({
         ) : null
       }
     >
-      <div className={isPending ? "opacity-50 transition-opacity w-full overflow-hidden" : "transition-opacity w-full overflow-hidden"}>
-        {/* ── Mobile view ── */}
-        <div className="md:hidden flex flex-col divide-y divide-border">
-          {books.length > 0 ? (
-            books.map((book: Book) => (
-              <div key={book.id} className={`p-4 flex gap-4 transition-colors ${reservedBooksMap.has(book.id) ? 'bg-primary/[0.04] hover:bg-primary/[0.07] border-l-2 border-l-primary/40' : 'hover:bg-muted/40'}`}>
-                <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
-                  {book.cover_url ? (
-                    <Image src={book.cover_url} alt={book.title} fill sizes="56px" className="object-cover" unoptimized />
-                  ) : null}
-                </div>
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-medium text-foreground leading-tight">{book.title}</p>
-                      {renderBadge(book.id)}
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground mt-0.5">{book.author}</p>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-none ${
-                        book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}
-                    >
-                      {book.available_copies}/{book.total_copies} available
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Link href={`/student-catalog/${book.id}`}>
-                        <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] font-semibold">
-                          View
-                        </Button>
-                      </Link>
-                      <ReserveTitleButton
-                        bookId={book.id}
-                        isAvailable={book.available_copies > 0}
-                        hasExistingReservation={reservedBooksMap.has(book.id)}
-                        size="sm"
-                        className="h-7 px-2 text-[10px]"
-                        onReserveSuccess={(queuePosition, status) =>
-                          handleReserveSuccess(book.id, queuePosition, status)
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
+      <div className={cn("transition-opacity w-full overflow-hidden", isPending && "opacity-50")}>
+        <LuminaTable
+          data={books}
+          columns={columns}
+          isLoading={isPending}
+          emptyState={{
+            title: "No books found",
+            description: "No books matching your criteria were found. Try adjusting your search filters.",
+            icon: Search,
+          }}
+          renderMobileRow={(book) => (
+            <div className={`flex gap-4 p-0.5 ${reservedBooksMap.has(book.id) ? 'relative' : ''}`}>
+              <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
+                {book.cover_url ? (
+                  <Image src={book.cover_url} alt={book.title} fill sizes="56px" className="object-cover" unoptimized />
+                ) : null}
               </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              <div className="flex flex-col items-center gap-2">
-                <Search className="h-8 w-8 opacity-20" />
-                <p>No books matching your criteria.</p>
-                <Button variant="link" onClick={clearFilters} className="h-auto p-0 text-xs">Clear all filters</Button>
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-medium text-foreground leading-tight">{book.title}</p>
+                    {renderBadge(book.id)}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground mt-0.5">{book.author}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold leading-none ${
+                        book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    {book.available_copies}/{book.total_copies} available
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Link href={`/student-catalog/${book.id}`}>
+                      <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] font-semibold">
+                        View
+                      </Button>
+                    </Link>
+                    <ReserveTitleButton
+                      bookId={book.id}
+                      isAvailable={book.available_copies > 0}
+                      hasExistingReservation={reservedBooksMap.has(book.id)}
+                      size="sm"
+                      className="h-7 px-2 text-[10px]"
+                      onReserveSuccess={(queuePosition, status) =>
+                        handleReserveSuccess(book.id, queuePosition, status)
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
-        </div>
-
-        {/* ── Desktop table ── */}
-        <table className="hidden md:table w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/60">
-              <th className="px-4 py-2.5 font-medium text-muted-foreground">Title</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center">Author</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center">Availability</th>
-              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {books.length > 0 ? (
-              books.map((book: Book) => (
-                <tr key={book.id} className={reservedBooksMap.has(book.id) ? 'bg-primary/[0.04] hover:bg-primary/[0.07]' : 'hover:bg-muted/40'}>
-                  <td className="px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="relative h-10 w-8 overflow-hidden rounded border border-border bg-muted">
-                        {book.cover_url ? (
-                          <Image src={book.cover_url} alt={book.title} fill sizes="32px" className="object-cover" unoptimized />
-                        ) : null}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-medium text-foreground">{book.title}</p>
-                          {renderBadge(book.id)}
-                        </div>
-                        <p className="truncate text-xs text-muted-foreground">ISBN: {book.isbn || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-foreground text-center">{book.author}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold leading-none ${
-                        book.available_copies > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}
-                    >
-                      {book.available_copies}/{book.total_copies}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Link href={`/student-catalog/${book.id}`}>
-                        <Button variant="outline" size="sm" className="h-8 px-4 text-xs font-semibold shadow-sm transition-all hover:bg-muted/60">
-                          Detail
-                        </Button>
-                      </Link>
-                      <ReserveTitleButton
-                        bookId={book.id}
-                        isAvailable={book.available_copies > 0}
-                        hasExistingReservation={reservedBooksMap.has(book.id)}
-                        variant="default"
-                        size="sm"
-                        className="h-8 text-[11px]"
-                        onReserveSuccess={(queuePosition, status) =>
-                          handleReserveSuccess(book.id, queuePosition, status)
-                        }
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-4 py-20 text-center text-sm text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <Search className="h-8 w-8 opacity-20" />
-                    <p>No books matching your criteria.</p>
-                    <Button variant="link" onClick={clearFilters} className="h-auto p-0 text-xs">Clear all filters</Button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        />
       </div>
     </AdminTableShell>
   );

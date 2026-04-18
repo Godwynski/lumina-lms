@@ -146,7 +146,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
 
               {/* Active Loans Summary Info */}
               {stats.myActiveLoans > 0 && (
-                <Card className="border-border bg-card/40 shadow-sm p-4">
+                <Card className="border-border/40 bg-card/20 shadow-none p-4 backdrop-blur-sm">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
@@ -174,7 +174,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                   </div>
                   <div className="grid gap-2">
                     {activeLoansList.map((loan) => (
-                       <Card key={loan.id} className="border-border/60 bg-card/30 shadow-none transition-all hover:bg-muted/40 hover:border-primary/20">
+                       <Card key={loan.id} className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 backdrop-blur-sm">
                           <CardContent className="flex items-center justify-between gap-4 p-3">
                              <div className="flex min-w-0 items-center gap-3">
                                 <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
@@ -240,10 +240,10 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                   return (
                     <Card
                       key={res.id}
-                      className={`relative overflow-hidden border shadow-sm transition-all ${
+                      className={`relative overflow-hidden border shadow-none transition-all ${
                         isReady
-                          ? 'border-emerald-300/60 bg-gradient-to-br from-emerald-50/60 to-transparent ring-1 ring-emerald-300/30'
-                          : 'border-border/50 bg-card/60 hover:border-primary/20'
+                          ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-50/40 to-transparent ring-1 ring-emerald-300/20'
+                          : 'border-border/40 bg-card/20 hover:border-primary/20 backdrop-blur-sm'
                       }`}
                     >
                       {/* Glowing left accent */}
@@ -338,7 +338,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
           </div>
           <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x px-0.5">
             {stats.recentBooks.map((book) => (
-              <Link key={book.id} href={`/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card border border-border/50 rounded-xl overflow-hidden hover:border-primary/40 transition-all shadow-sm">
+              <Link key={book.id} href={`/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card/40 border border-border/40 rounded-xl overflow-hidden hover:border-primary/30 transition-all shadow-none backdrop-blur-sm">
                 <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
                   {book.cover_url ? (
                     <Image 
@@ -366,7 +366,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
         {/* Compressed FAQs / Help */}
         {studentFaqs && studentFaqs.length > 0 && (
           <section className="pt-2">
-            <Collapsible className="bg-card/30 border border-border/40 rounded-xl overflow-hidden shadow-sm">
+            <Collapsible className="bg-card/20 border border-border/40 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-3.5 w-3.5 text-primary" />
@@ -453,7 +453,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
               {stats.recentBooks.length > 0 ? (
                 stats.recentBooks.slice(0, 5).map((book) => (
                   <Link key={book.id} href={`/catalog/${book.id}`}>
-                    <Card className="border-border/60 bg-card/40 shadow-none transition-all hover:bg-muted/40 hover:border-primary/30 rounded-[1rem] group/item py-2 px-3 w-full min-w-0">
+                    <Card className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 rounded-[1.25rem] group/item py-2.5 px-3.5 w-full min-w-0 backdrop-blur-sm">
                       <CardContent className="flex items-center justify-between gap-4 p-0 w-full min-w-0">
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="flex h-12 w-9 shrink-0 items-center justify-center rounded border border-border bg-muted/30 overflow-hidden relative group-hover/item:shadow-sm transition-transform">

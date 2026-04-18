@@ -28,7 +28,7 @@ async function AdminContent() {
   const { user, role } = me;
 
   return (
-    <Card className="w-full max-w-3xl border-zinc-200/70 shadow-lg bg-white/50 backdrop-blur-sm">
+    <Card className="w-full max-w-3xl border-border/40 bg-card/20 shadow-none backdrop-blur-sm rounded-[2rem]">
       <CardHeader className="space-y-4 pb-8">
         <div className="flex items-center justify-between">
           <Badge variant="outline" className="w-fit rounded-full px-4 py-1 text-[10px] font-bold uppercase tracking-widest bg-zinc-100/50">
@@ -39,23 +39,23 @@ async function AdminContent() {
             <div className="h-8 w-8 rounded-full border-2 border-white bg-indigo-500 flex items-center justify-center text-[10px] text-white font-bold">L</div>
           </div>
         </div>
-        <div className="space-y-1">
-          <CardTitle className="text-3xl font-extrabold tracking-tight text-zinc-900">Control Center Access</CardTitle>
-          <CardDescription className="text-base text-zinc-500">
-            Secure administrative interface for Lumina LMS infrastructure.
+        <div className="space-y-2">
+          <CardTitle className="text-3xl font-black tracking-tighter text-foreground">Control Center</CardTitle>
+          <CardDescription className="text-sm font-bold text-muted-foreground/60 uppercase tracking-widest">
+            Secure Infrastructure Gateway
           </CardDescription>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-6">
-        <div className="p-6 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-4">
-          <div className="p-3 rounded-xl bg-green-100 text-green-700">
+        <div className="p-6 rounded-2xl bg-muted/20 border border-border/40 flex items-start gap-4 backdrop-blur-sm">
+          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 shadow-inner">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div className="space-y-1">
-            <h4 className="font-semibold text-zinc-900">Security Access Verified</h4>
-            <p className="text-sm text-zinc-600 leading-relaxed">
-              Your identity has been confirmed. You are signed in as <span className="font-semibold text-zinc-900">{user.email}</span> with active <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-200 text-zinc-800">{role}</span> privileges.
+            <h4 className="font-bold text-foreground">Identity Verified</h4>
+            <p className="text-xs font-medium text-muted-foreground leading-relaxed">
+              Active session for <span className="font-black text-foreground">{user.email}</span> with <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20">{role}</span> privileges.
             </p>
           </div>
         </div>
@@ -72,8 +72,8 @@ async function AdminContent() {
         </div>
       </CardContent>
 
-      <CardFooter className="pt-6 border-t border-zinc-100 flex items-center justify-between">
-        <p className="text-xs text-zinc-400">Environment: production</p>
+      <CardFooter className="pt-6 border-t border-border/20 flex items-center justify-between">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">ENV: production</p>
         <Button asChild className="rounded-xl shadow-blue-500/20 shadow-lg">
           <Link href="/dashboard" className="flex items-center gap-2">
             Main Dashboard <ArrowRight className="h-4 w-4" />

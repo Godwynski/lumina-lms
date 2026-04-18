@@ -3,6 +3,7 @@
 import { createClient, createSafeClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
 import { logger } from '../logger';
+import { fetchBooksCore, fetchCategoriesCore } from './books-core';
 
 // Data fetching function for search, intended to be wrapped by cache
 async function fetchPublicBooks(
@@ -14,53 +15,16 @@ async function fetchPublicBooks(
   limit: number = 20,
   sortBy: 'title' | 'author' | 'availability' = 'title'
 ) {
-  const supabase = createSafeClient();
-  
-  // Data Masking: Explicitly select safe fields for students/public
-  let dbQuery = supabase
-    .from('books')
-    .select('id, title, author, isbn, category_id, tags, section, cover_url, total_copies, available_copies, categories(name)', { count: 'exact' })
-    .eq('is_active', true);
-  
-  if (query) {
-    dbQuery = dbQuery.textSearch('search_vector', query.split(' ').join(' | '));
-  }
-  
-  if (categoryId) {
-    dbQuery = dbQuery.eq('category_id', categoryId);
-  }
-
-  if (section) {
-    dbQuery = dbQuery.eq('section', section);
-  }
-
-  if (availableOnly) {
-    dbQuery = dbQuery.gt('available_copies', 0);
-  }
-  
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-
-  let finalQuery = dbQuery;
-  
-  if (sortBy === 'author') {
-    finalQuery = finalQuery.order('author', { ascending: true });
-  } else if (sortBy === 'availability') {
-    finalQuery = finalQuery.order('available_copies', { ascending: false });
-  } else {
-    finalQuery = finalQuery.order('title', { ascending: true });
-  }
-
-  const { data, count, error } = await finalQuery
-    .range(from, to);
-    
-  if (error) throw new Error(error.message);
-  
-  return { 
-    books: data || [], 
-    total: count || 0,
-    hasMore: count ? from + (data?.length || 0) < count : false
-  };
+  return fetchBooksCore({
+    query,
+    categoryId,
+    section,
+    availableOnly,
+    page,
+    pageSize: limit,
+    sortBy,
+    sortOrder: sortBy === 'availability' ? 'desc' : 'asc'
+  }, 'id, title, author, isbn, category_id, tags, section, cover_url, total_copies, available_copies, categories(name)');
 }
 
 // Cached version: each unique set of filters gets its own cache entry
@@ -108,14 +72,7 @@ export async function reportMissingBook(bookId: string, notes?: string) {
 }
 
 export async function getCategories() {
-  const supabase = createSafeClient();
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name')
-    .order('name');
-    
-  if (error) throw new Error(error.message);
-  return data;
+  return fetchCategoriesCore();
 }
 
 export async function getPublicBookById(id: string) {

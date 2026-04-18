@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, use } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Search, BookOpen, Clock, CheckCircle2, AlertCircle, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, BookOpen, Clock, CheckCircle2, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BorrowingRecord } from "@/lib/actions/history";
+import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
 interface HistoryContentProps {
   historyPromise: Promise<{ records: BorrowingRecord[]; totalCount: number }>;
@@ -53,20 +52,7 @@ export default function HistoryContent({
     router.push(`/history?${params.toString()}`);
   };
 
-  const getStatusBadge = (status: BorrowingRecord["status"]) => {
-    switch (status) {
-      case "ACTIVE":
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Active</Badge>;
-      case "RETURNED":
-        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Returned</Badge>;
-      case "OVERDUE":
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Overdue</Badge>;
-      case "LOST":
-        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100 border-none shadow-none text-[10px] uppercase font-bold px-2 py-0.5">Lost</Badge>;
-      default:
-        return <Badge variant="outline" className="text-[10px] uppercase font-bold px-2 py-0.5">{status}</Badge>;
-    }
-  };
+// Redundant badge logic removed, using centralized StatusBadge
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -80,153 +66,121 @@ export default function HistoryContent({
     return record.status === "ACTIVE" && new Date(record.due_date) < new Date();
   };
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / 10));
-
-  return (
-    <div className="space-y-3 w-full">
-      <Card className="border-border bg-card shadow-sm overflow-hidden">
-        <CardContent className="p-3">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                updateFilters({ q: localSearch, page: 1 });
-              }}
-              className="relative w-full sm:max-w-xs"
-            >
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-              <Input
-                type="text"
-                placeholder="Find in timeline..."
-                value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
-                className="h-9 rounded-lg pl-9 bg-muted/20 border-border/50 focus:bg-background transition-all text-xs font-medium"
-              />
-            </form>
-            <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-xl border border-border/50">
-              {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => updateFilters({ status, page: 1 })}
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all",
-                    statusFilter === status
-                      ? "bg-primary text-primary-foreground shadow-sm scale-105"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  {status === "all" ? "All" : status.toLowerCase()}
-                </button>
-              ))}
-            </div>
+  const columns: LuminaColumn<BorrowingRecord>[] = [
+    {
+      header: "Resource",
+      accessor: (record) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover:bg-background transition-colors">
+            {record.books?.title?.charAt(0) || "?"}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border bg-card shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          {records.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <div className="status-muted mb-4 flex h-16 w-16 items-center justify-center rounded-2xl">
-                <BookOpen size={32} />
-              </div>
-              <p className="text-sm font-semibold text-foreground italic">
-                {searchQuery || statusFilter !== "all"
-                  ? "No matching records found."
-                  : "Start your library journey today!"}
-              </p>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="mt-4 text-xs h-8"
-                onClick={() => updateFilters({ q: "", status: "all", page: 1 })}
-              >
-                Clear all filters
-              </Button>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/50">
-              {records.map((record) => {
-                const overdue = isOverdue(record);
-                const book = record.books;
-                return (
-                  <div key={record.id} className="flex items-start gap-4 p-5 transition-colors hover:bg-muted/30 group">
-                    <div className="flex h-12 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50 text-[10px] font-black text-muted-foreground uppercase tracking-widest transition-transform group-hover:scale-105">
-                      {book?.title?.charAt(0) || "?"}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-foreground">
-                            {book?.title || "Unknown Title"}
-                          </p>
-                          <p className="truncate text-[11px] font-medium text-muted-foreground">
-                            by {book?.author || "Internal Entity"}
-                          </p>
-                        </div>
-                        <div className="shrink-0">{getStatusBadge(overdue ? "OVERDUE" : record.status)}</div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        <span className="flex items-center gap-1.5">
-                          <Calendar size={12} className="text-primary/70" />
-                          {formatDate(record.borrowed_at)}
-                        </span>
-                        <span className={cn("flex items-center gap-1.5", overdue ? "text-destructive" : "")}>
-                          <Clock size={12} className={cn("opacity-70", overdue ? "text-destructive" : "text-primary/70")} />
-                          {formatDate(record.due_date)}
-                        </span>
-                        {record.returned_at && (
-                          <span className="flex items-center gap-1.5 text-emerald-600">
-                            <CheckCircle2 size={12} className="opacity-70" />
-                            {formatDate(record.returned_at)}
-                          </span>
-                        )}
-                        {overdue && (
-                          <span className="flex items-center gap-1.5 text-destructive animate-pulse">
-                            <AlertCircle size={12} />
-                            Critical Overdue
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Showing {records.length} of {totalCount} records
-          </p>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-muted"
-              disabled={page <= 1}
-              onClick={() => updateFilters({ page: page - 1 })}
-            >
-              <ChevronLeft size={14} className="mr-1" />
-              Prev
-            </Button>
-            <span className="text-[10px] font-black uppercase tracking-widest text-foreground bg-muted px-2 py-1 rounded">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-muted"
-              disabled={page >= totalPages}
-              onClick={() => updateFilters({ page: page + 1 })}
-            >
-              Next
-              <ChevronRight size={14} className="ml-1" />
-            </Button>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-foreground">
+              {record.books?.title || "Unknown Title"}
+            </p>
+            <p className="truncate text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+              {record.books?.author || "Internal Entity"}
+            </p>
           </div>
         </div>
-      )}
+      ),
+      mobileMain: true
+    },
+    {
+      header: "Borrowed",
+      accessor: (record) => (
+        <div className="flex items-center gap-2">
+          <Calendar size={14} className="text-muted-foreground" />
+          <span className="text-[11px] font-bold text-foreground">{formatDate(record.borrowed_at)}</span>
+        </div>
+      )
+    },
+    {
+      header: "Due Date",
+      accessor: (record) => {
+        const overdue = isOverdue(record);
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Clock size={14} className={cn("text-muted-foreground", overdue && "text-destructive")} />
+              <span className={cn("text-[11px] font-bold", overdue ? "text-destructive" : "text-foreground")}>
+                {formatDate(record.due_date)}
+              </span>
+            </div>
+            {record.returned_at && (
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600">
+                <CheckCircle2 size={12} />
+                Returned {formatDate(record.returned_at)}
+              </div>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      header: "Status",
+      accessor: (record) => {
+        const overdue = isOverdue(record);
+        return <StatusBadge status={overdue ? "OVERDUE" : record.status} />;
+      }
+    }
+  ];
+
+  return (
+    <div className="space-y-4 w-full">
+      {/* Header Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm font-sans">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateFilters({ q: localSearch, page: 1 });
+          }}
+          className="relative w-full sm:max-w-xs"
+        >
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <Input
+            type="text"
+            placeholder="Search timeline..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            className="h-10 rounded-xl pl-9 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
+          />
+        </form>
+        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/40">
+          {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => updateFilters({ status, page: 1 })}
+              className={cn(
+                "rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                statusFilter === status
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+            >
+              {status === "all" ? "All" : status.toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <LuminaTable
+        data={records}
+        columns={columns}
+        totalCount={totalCount}
+        page={page}
+        pageSize={10}
+        onPageChange={(p) => updateFilters({ page: p })}
+        emptyState={{
+          title: searchQuery || statusFilter !== "all" ? "No matches found" : "Timeline empty",
+          description: searchQuery || statusFilter !== "all" ? "Try reframing your search strategy." : "Your borrowing history will appear here.",
+          icon: BookOpen,
+          action: {
+            label: "Clear All Filters",
+            onClick: () => updateFilters({ q: "", status: "all", page: 1 })
+          }
+        }}
+      />
     </div>
   );
 }

@@ -67,7 +67,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
 
   return (
     <div className="w-full space-y-2 pb-5 md:pb-7">
-      <div className="sticky top-0 z-20 rounded-xl border border-border bg-card/90 p-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/75">
+      <div className="sticky top-0 z-20 rounded-xl border border-border/40 bg-card/80 p-2 shadow-sm backdrop-blur-xl">
         <div className="flex items-center justify-between gap-2">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -88,7 +88,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border/40 bg-card/40 p-1.5 shadow-sm">
         {quickFilters.map((filter) => (
           <Button
             key={filter.key}
@@ -171,7 +171,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
               <ModernBookListItem key={book.id} book={book} />
             ))}
             {books.length === 0 && (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-4 py-16 text-center shadow-sm backdrop-blur-sm">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/30 px-4 py-16 text-center shadow-none backdrop-blur-sm">
                 <div className="mb-4 rounded-full bg-slate-100 p-4 font-medium text-slate-400 ring-1 ring-slate-200/50">
                   <Search className="h-8 w-8" />
                 </div>

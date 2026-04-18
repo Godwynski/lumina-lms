@@ -110,7 +110,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
           <Section title="User Identity" icon={UserIcon} hideHeaderOnMobile>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
               {/* Avatar block */}
-              <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-border/40 bg-muted/20 p-4 sm:w-48">
                 <Avatar className="h-24 w-24 rounded-xl border-2 border-background shadow-md">
                   <AvatarImage src={user.avatarUrl || undefined} alt={form.name} className="object-cover" />
                   <AvatarFallback className="rounded-xl bg-muted text-lg font-bold">
@@ -192,7 +192,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
               </FieldGroup>
             </div>
 
-            <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4">
+            <div className="mt-4 rounded-xl border border-border/40 bg-muted/20 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card shadow-sm">
                   <Calendar className="h-4 w-4 text-primary" />

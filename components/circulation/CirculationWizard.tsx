@@ -238,7 +238,7 @@ export function CirculationWizard() {
     <div className="max-w-[1450px] mx-auto space-y-3">
       {/* Action Bar - Low Profile */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/50 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/40 backdrop-blur-sm">
           <Button
             variant={mode === 'checkout' ? 'default' : 'ghost'}
             className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
@@ -267,12 +267,12 @@ export function CirculationWizard() {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
-        <aside className="lg:col-span-3 lg:sticky lg:top-8 bg-card border border-border rounded-3xl p-6 shadow-sm">
+        <aside className="lg:col-span-3 lg:sticky lg:top-8 bg-card/40 border border-border/40 rounded-3xl p-6 shadow-none">
           <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-6">Workflow Progress</h4>
           <CirculationStepper steps={steps} currentStep={currentStep} />
         </aside>
 
-        <main className="lg:col-span-9 bg-card border border-border rounded-3xl p-8 shadow-sm relative overflow-hidden">
+        <main className="lg:col-span-9 bg-card/40 border border-border/40 rounded-3xl p-8 shadow-none relative overflow-hidden">
            <AnimatePresence mode="wait">
              {isConfirmed ? (
                 <m.div
@@ -343,7 +343,7 @@ export function CirculationWizard() {
                     borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
                   />
                   
-                  <div className="flex gap-3 justify-end pt-6 border-t border-border">
+                  <div className="flex gap-3 justify-end pt-6 border-t border-border/40">
                      <Button 
                         variant="ghost" 
                         onClick={handleReset} 
