@@ -292,38 +292,34 @@ export function CirculationWizard() {
                     reservedFor={reservationData.studentName}
                   />
                 </m.div>
-             ) : currentStep === 1 ? (
+             ) : (currentStep === 1 || (currentStep === 2 && mode === 'checkout')) ? (
                 <m.div
-                  key="step1"
+                  key="scanning-flow"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
                   <ScanStep 
-                    title={mode === 'checkout' ? 'Identify Student' : 'Identify Resource'}
-                    description={mode === 'checkout' 
-                        ? 'Scan the student library card or enter their card number manually.' 
-                        : 'Scan the book copy QR code to begin the return process.'}
-                    placeholder={mode === 'checkout' ? 'Enter Card ID' : 'Enter Book QR'}
+                    title={
+                      currentStep === 1 
+                        ? (mode === 'checkout' ? 'Identify Student' : 'Identify Resource')
+                        : 'Scan Resource'
+                    }
+                    description={
+                      currentStep === 1
+                        ? (mode === 'checkout' 
+                            ? 'Scan the student library card or enter their card number manually.' 
+                            : 'Scan the book copy QR code to begin the return process.')
+                        : `Borrower: ${activeStudent?.fullName}. Now scan the book copy QR.`
+                    }
+                    placeholder={
+                      currentStep === 1
+                        ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Book QR')
+                        : 'Enter Book QR'
+                    }
                     onScan={processScan}
                     isProcessing={isProcessing}
-                    actionLabel="Process"
-                  />
-                </m.div>
-             ) : currentStep === 2 && mode === 'checkout' ? (
-                <m.div
-                  key="step2-checkout"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <ScanStep 
-                    title="Scan Resource"
-                    description={`Borrower: ${activeStudent?.fullName}. Now scan the book copy QR.`}
-                    placeholder="Enter Book QR"
-                    onScan={processScan}
-                    isProcessing={isProcessing}
-                    actionLabel="Verify"
+                    actionLabel={currentStep === 1 ? 'Process' : 'Verify'}
                   />
                 </m.div>
              ) : (

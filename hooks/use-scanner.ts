@@ -26,6 +26,7 @@ export function useScanner({
   const [cameraIssue, setCameraIssue] = useState<string | null>(null);
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isInitializingRef = useRef(false);
   const lastScanRef = useRef<{ value: string; time: number } | null>(null);
   
   // Use refs for props that change frequently to avoid restarting the camera
@@ -119,16 +120,33 @@ export function useScanner({
     let html5QrCode: Html5Qrcode | null = null;
     
     const initScanner = async () => {
+      if (isInitializingRef.current || scannerRef.current?.isScanning) return;
+      isInitializingRef.current = true;
+
       try {
         // @ts-ignore - dynamic import resolution in build environment
         const { Html5Qrcode } = await import('html5-qrcode');
-        html5QrCode = new Html5Qrcode(scannerId, { formatsToSupport: formats as unknown as Html5QrcodeSupportedFormats[], verbose: false });
+        
+        // Clean up any existing stale instance first safely
+        if (scannerRef.current) {
+          try {
+            if (scannerRef.current.isScanning) await scannerRef.current.stop();
+          } catch {}
+          scannerRef.current = null;
+        }
+
+        html5QrCode = new Html5Qrcode(scannerId, { 
+          formatsToSupport: formats as unknown as Html5QrcodeSupportedFormats[], 
+          verbose: false 
+        });
         scannerRef.current = html5QrCode;
         await start();
       } catch (err) {
         console.error('Failed to initialize Html5Qrcode:', err);
         setCameraSupported(false);
         setCameraIssue('Failed to initialize scanner library.');
+      } finally {
+        isInitializingRef.current = false;
       }
     };
 
@@ -185,8 +203,11 @@ export function useScanner({
         setCameraPermission('denied');
         setCameraIssue(isHardwareError ? 'Camera hardware is busy or unavailable.' : (errorMessage || 'Failed to start camera.'));
         
-        // Explicit cleanup on fail
-        void stopCamera();
+        // Explicit cleanup on fail, but don't reset cameraOpen immediately if it's just busy
+        // This helps prevent flickers if the browser is just slow to release the last session
+        if (!isHardwareError) {
+           void stopCamera();
+        }
       }
     };
 

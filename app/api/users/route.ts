@@ -1,5 +1,6 @@
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
+import { logAuditActivity } from "@/lib/audit";
 
 const MANAGER_ROLES: UserRole[] = ["admin", "librarian", "staff"];
 
@@ -53,7 +54,7 @@ export const GET = withAuthApi(
 );
 
 export const POST = withAuthApi(
-  async (request, { supabase }) => {
+  async (request, { supabase, user }) => {
     let body: { email?: unknown; role?: unknown; department?: unknown };
     try {
       body = await request.json();
@@ -121,6 +122,14 @@ export const POST = withAuthApi(
       return apiError(updateError.message, "DATABASE_ERROR", 400);
     }
 
+    await logAuditActivity(
+      user.id,
+      "profile",
+      profile.id,
+      "role_updated",
+      `Upgraded user ${email} to ${role} (status set to pending)`
+    );
+
     return apiSuccess({
       user: mapProfileToUser(updated as Record<string, unknown>),
     });
@@ -129,7 +138,7 @@ export const POST = withAuthApi(
 );
 
 export const PATCH = withAuthApi(
-  async (request, { supabase }) => {
+  async (request, { supabase, user }) => {
     let body: {
       id?: unknown;
       name?: unknown;
@@ -218,6 +227,14 @@ export const PATCH = withAuthApi(
     if (updateError) {
       return apiError(updateError.message, "DATABASE_ERROR", 400);
     }
+
+    await logAuditActivity(
+      user.id,
+      "profile",
+      id,
+      "profile_updated",
+      `Modified user profile fields: ${Object.keys(updates).join(", ")}`
+    );
 
     return apiSuccess({
       user: mapProfileToUser(updated as Record<string, unknown>),

@@ -1,0 +1,1 @@
+Technology has changed the way libraries work, making it much faster to track books and share information compared to old paper methods. Instead of searching through boxes of cards, computers now let us check if a book is available in just a few seconds. This project follows that trend by bringing digital tools to the STI College Alabang library.

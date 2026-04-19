@@ -1,7 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { isAbortError } from "@/lib/error-utils";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { assertRole } from "@/lib/auth-helpers";
+import { logAuditActivity } from "@/lib/audit";
 
 function toSlug(value: string) {
   return value
@@ -13,26 +14,7 @@ function toSlug(value: string) {
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || !["admin", "librarian"].includes(String(profile.role))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
+    const { supabase } = await assertRole(["admin", "librarian"]);
     const { data, error } = await supabase
       .from("categories")
       .select("*")
@@ -55,23 +37,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
-
-    if (!user?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin/librarian role
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.user.id)
-      .single();
-
-    if (!["admin", "librarian"].includes(profile?.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const { user, supabase } = await assertRole(["admin", "librarian"]);
 
     const body = await request.json();
     const rawName = typeof body.name === "string" ? body.name.trim() : "";
@@ -94,6 +60,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    await logAuditActivity(
+      user.id,
+      "system",
+      data.id,
+      "category_created",
+      `Created book category: ${name}`
+    );
 
     revalidateTag("categories", "default");
     revalidatePath("/catalog", "page");
