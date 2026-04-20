@@ -11,9 +11,6 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
-    "test": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
     "seed": "ts-node -T scripts/seed.ts"
   },
   "dependencies": {
@@ -55,25 +52,20 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.2",
-    "@playwright/test": "^1.58.2",
-    "@testing-library/jest-dom": "^6.9.1",
     "@types/dotenv": "^6.1.1",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.20",
     "dotenv": "^17.4.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.2",
-    "jsdom": "^29.0.1",
     "postcss": "^8",
     "supabase": "^2.81.3",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
-    "typescript": "^5",
-    "vitest": "^4.1.2"
+    "typescript": "^5"
   }
 }
