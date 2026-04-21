@@ -3,11 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UsersContent, User } from "./UsersContent";
 
-export default async function UsersPage() {
+export default function UsersPage() {
   return (
-    <Suspense fallback={<UsersSkeleton />}>
-      <UsersDataWrapper />
-    </Suspense>
+    <div className="space-y-6">
+
+      <Suspense fallback={<UsersSkeleton />}>
+        <UsersDataWrapper />
+      </Suspense>
+    </div>
   );
 }
 

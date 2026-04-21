@@ -3,30 +3,30 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock, Ticket, CalendarDays, Sparkles } from 'lucide-react';
+import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock, Ticket, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
-import { useTransition } from 'react';
+import { useTransition, useMemo, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import dynamic from 'next/dynamic';
+import { resolveStudentId, getDeterministicQrUrl } from "@/lib/library-card-assets";
+import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
+import { createClient } from '@/lib/supabase/client';
+import { Reservation, ProfileData } from '@/lib/types';
+import type { BorrowingRecord } from '@/lib/actions/history';
+import { LiveActivityTicker } from './LiveActivityTicker';
 
 const MyCardContainer = dynamic(() => import('@/components/library/MyCardContainer'), {
   ssr: false,
   loading: () => <div className="h-[200px] w-full animate-pulse rounded-xl bg-muted" />
 });
-import { useMemo, useState, useEffect, use } from 'react';
-import { resolveStudentId, getDeterministicQrUrl } from "@/lib/library-card-assets";
-import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
-import type { BorrowingRecord } from '@/lib/actions/history';
 
 type CardData = { card_number: string; status: string; expires_at: string } | null;
 type FaqRow = { key: string; value: string | null };
-
-import { Reservation, ProfileData } from '@/lib/types';
 
 type DashboardStats = {
   activeLoans: number;
@@ -49,8 +49,9 @@ interface DashboardProps {
 export function DashboardClient({ user, role, statsPromise, profilePromise, cardPromise, faqPromise, reservationsPromise }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   
-  // Unwrap promises using the 'use' hook
+  // Unwrap promises using 'use' hook
   const stats = use(statsPromise);
   const profileResult = use(profilePromise);
   const cardResult = use(cardPromise);
@@ -60,7 +61,32 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
   const profileData = profileResult.data;
   const activeLoansList = stats.activeLoansList || [];
 
-  // Data resolution logic (moved from server to allow granular streaming if needed)
+  // Real-time synchronization
+  useEffect(() => {
+    const supabase = createClient();
+    
+    const channel = supabase
+      .channel('dashboard-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
+        router.refresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'library_cards' }, () => {
+        router.refresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
+        router.refresh();
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [router]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { studentCard, studentFaqs } = useMemo(() => {
     let card = null;
     let faqs = [...DEFAULT_STUDENT_FAQS];
@@ -102,14 +128,6 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     return { studentCard: card, studentFaqs: faqs };
   }, [role, profileData, cardResult, faqResult, user]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isStudent = role === 'student';
-
-  const router = useRouter();
-
   const handleCancelReservation = (id: string, title: string) => {
     startTransition(async () => {
       try {
@@ -124,11 +142,13 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     });
   };
 
+  const isStudent = role === 'student';
+
   if (isStudent) {
     return (
-      <div className="space-y-6 pb-14 overflow-x-hidden">
+      <div className="space-y-6 pb-14 overflow-x-hidden relative">
+        <LiveActivityTicker />
         <section className="grid gap-6 md:grid-cols-12 items-start">
-          {/* Main Hero: The Digital Card */}
           <Card className="md:col-span-8 border-none bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-md overflow-hidden relative p-5 sm:p-7">
             {studentCard ? (
               <MyCardContainer initialData={studentCard} variant="dashboard" />
@@ -141,193 +161,143 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
             )}
           </Card>
 
-            {/* Activity Summary */}
-            <div className="md:col-span-4 space-y-5">
+          <div className="md:col-span-4 space-y-5">
+            {stats.myActiveLoans > 0 && (
+              <Card className="border-border/40 bg-card/20 shadow-none p-4 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
+                    <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
+                  </div>
+                  <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                     <History size={18} />
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        </section>
 
-              {/* Active Loans Summary Info */}
-              {stats.myActiveLoans > 0 && (
-                <Card className="border-border/40 bg-card/20 shadow-none p-4 backdrop-blur-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
-                      <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
-                    </div>
-                    <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                       <History size={18} />
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </div>
-          </section>
+        <div className="grid gap-6 md:grid-cols-2">
+           {activeLoansList.length > 0 && (
+             <section className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                   <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <BookOpen className="h-3 w-3 text-primary" />
+                      My Active Borrows
+                   </h2>
+                </div>
+                <div className="grid gap-2">
+                  {activeLoansList.map((loan) => (
+                     <Card key={loan.id} className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 backdrop-blur-sm">
+                        <CardContent className="flex items-center justify-between gap-4 p-3">
+                           <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
+                                 <Library size={12} className="text-muted-foreground/30" />
+                              </div>
+                              <div className="min-w-0">
+                                 <p className="truncate text-xs font-bold text-foreground/90">{loan.books?.title || 'Unknown Book'}</p>
+                                 <p className="text-xs font-bold text-foreground/80 tracking-tight" suppressHydrationWarning>
+                                    {mounted ? new Date(loan.due_date).toLocaleDateString() : '...'}
+                                 </p>
+                              </div>
+                           </div>
+                           <Badge variant={loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
+                              {loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'Overdue' : 'Active'}
+                           </Badge>
+                        </CardContent>
+                     </Card>
+                  ))}
+                </div>
+             </section>
+           )}
+        </div>
 
-          {/* New Lists-Based Section */}
-          <div className="grid gap-6 md:grid-cols-2">
-             {/* My Active Borrows */}
-             {activeLoansList.length > 0 && (
-               <section className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                     <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <BookOpen className="h-3 w-3 text-primary" />
-                        My Active Borrows
-                     </h2>
-                  </div>
-                  <div className="grid gap-2">
-                    {activeLoansList.map((loan) => (
-                       <Card key={loan.id} className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 backdrop-blur-sm">
-                          <CardContent className="flex items-center justify-between gap-4 p-3">
-                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
-                                   <Library size={12} className="text-muted-foreground/30" />
-                                </div>
-                                <div className="min-w-0">
-                                   <p className="truncate text-xs font-bold text-foreground/90">{loan.books?.title || 'Unknown Book'}</p>
-                                   <p className="text-xs font-bold text-foreground/80 tracking-tight" suppressHydrationWarning>
-                                      {mounted ? new Date(loan.due_date).toLocaleDateString() : '...'}
-                                   </p>
-                                </div>
-                             </div>
-                             <Badge variant={loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
-                                {loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'Overdue' : 'Active'}
-                             </Badge>
-                          </CardContent>
-                       </Card>
-                    ))}
-                  </div>
-               </section>
-             )}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
+              <Ticket className="h-3 w-3" />
+              My Reservations & Holds
+            </h2>
+            {reservations.length > 0 && (
+              <span className="text-[9px] font-bold text-muted-foreground/60">
+                {reservations.length} active
+              </span>
+            )}
           </div>
 
-          {/* ── My Reservations & Holds ─────────────────────────────────── */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-                <Ticket className="h-3 w-3" />
-                My Reservations & Holds
-              </h2>
-              {reservations.length > 0 && (
-                <span className="text-[9px] font-bold text-muted-foreground/60">
-                  {reservations.length} active
-                </span>
-              )}
-            </div>
-
-            {reservations.length === 0 ? (
-              /* Empty State */
-              <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-muted/10 py-10 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/20">
-                  <Bookmark className="h-5 w-5 text-muted-foreground/20" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground/50">No active reservations</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground/40">Reserve a book from the catalog and it will appear here.</p>
-                </div>
-                <Button asChild variant="outline" size="sm" className="mt-1 h-8 px-4 text-xs rounded-xl">
-                  <Link href="/student-catalog">
-                    <BookOpen className="mr-1.5 h-3.5 w-3.5" />
-                    Browse Catalog
-                  </Link>
-                </Button>
+          {reservations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-muted/10 py-10 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/20">
+                <Bookmark className="h-5 w-5 text-muted-foreground/20" />
               </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {reservations.map((res) => {
-                  const isReady = res.status === 'READY';
-                  const deadline = res.hold_expires_at
-                    ? new Date(res.hold_expires_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                    : null;
+              <div>
+                <p className="text-sm font-bold text-foreground/50">No active reservations</p>
+                <p className="mt-0.5 text-xs text-muted-foreground/40">Reserve a book from the catalog and it will appear here.</p>
+              </div>
+              <Button asChild variant="outline" size="sm" className="mt-1 h-8 px-4 text-xs rounded-xl">
+                <Link href="/student-catalog">
+                  <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+                  Browse Catalog
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {reservations.map((res) => {
+                const isReady = res.status === 'READY';
+                const deadline = res.hold_expires_at
+                  ? new Date(res.hold_expires_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                  : null;
 
-                  return (
-                    <Card
-                      key={res.id}
-                      className={`relative overflow-hidden border shadow-none transition-all ${
-                        isReady
-                          ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-50/40 to-transparent ring-1 ring-emerald-300/20'
-                          : 'border-border/40 bg-card/20 hover:border-primary/20 backdrop-blur-sm'
-                      }`}
-                    >
-                      {/* Glowing left accent */}
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
-                        isReady ? 'bg-emerald-500' : 'bg-primary/30'
-                      }`} />
-
-                      <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-start">
-                        {/* Cover thumbnail */}
-                        <a href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
-                          <div className="relative h-14 w-10 rounded-lg border border-border/60 bg-muted/20 overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
-                            {res.books?.cover_url ? (
-                              <Image src={res.books.cover_url} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="40px" unoptimized />
-                            ) : (
-                              <div className="flex h-full items-center justify-center">
-                                <Library size={14} className="text-muted-foreground/20" />
-                              </div>
-                            )}
-                          </div>
-                        </a>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <a href={`/student-catalog/${res.books?.id ?? ''}`} className="group">
-                            <p className="truncate text-xs font-black text-foreground/90 group-hover:text-primary transition-colors leading-snug">
-                              {res.books?.title || 'Unknown Book'}
-                            </p>
-                          </a>
-
-                          {isReady ? (
-                            <div className="mt-1 space-y-0.5">
-                              <p className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-1">
-                                <Sparkles className="h-3 w-3" />
-                                Ready for Pickup!
-                              </p>
-                              {deadline && (
-                                <p className="text-[10px] font-bold text-emerald-600/70 flex items-center gap-1">
-                                  <CalendarDays className="h-3 w-3" />
-                                  Claim by {deadline}
-                                </p>
-                              )}
-                            </div>
+                return (
+                  <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-50/40 to-transparent' : 'border-border/40 bg-card/20 backdrop-blur-sm'}`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${isReady ? 'bg-emerald-500' : 'bg-primary/30'}`} />
+                    <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-start">
+                      <Link href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
+                        <div className="relative h-14 w-10 rounded-lg border border-border/60 bg-muted/20 overflow-hidden shadow-sm">
+                          {res.books?.cover_url ? (
+                            <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized />
                           ) : (
-                            <div className="mt-1 space-y-0.5">
-                              <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Queue position #{res.queue_position}
-                              </p>
-                              <p className="text-[9px] text-muted-foreground/50">
-                                You&apos;ll be notified when ready.
-                              </p>
+                            <div className="flex h-full items-center justify-center">
+                              <Library size={14} className="text-muted-foreground/20" />
                             </div>
                           )}
                         </div>
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/student-catalog/${res.books?.id ?? ''}`}>
+                          <p className="truncate text-xs font-black text-foreground/90 leading-snug">
+                            {res.books?.title || 'Unknown Book'}
+                          </p>
+                        </Link>
+                        {isReady ? (
+                          <div className="mt-1 space-y-0.5 text-emerald-600 font-bold text-[10px]">
+                            <p className="flex items-center gap-1"><Sparkles size={12} /> Ready for Pickup!</p>
+                            {deadline && <p>Claim by {deadline}</p>}
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                            <Clock size={12} /> Queue position #{res.queue_position}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Badge variant={isReady ? 'default' : 'outline'} className={`text-[9px] px-1.5 py-0 h-5 ${isReady ? 'bg-emerald-500' : ''}`}>
+                          {isReady ? 'READY' : 'IN QUEUE'}
+                        </Badge>
+                        <button onClick={() => handleCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="text-[9px] font-bold text-muted-foreground/50 hover:text-destructive flex items-center gap-1 disabled:opacity-30">
+                          <XCircle size={14} /> Cancel
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-                        {/* Actions */}
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <Badge
-                            variant={isReady ? 'default' : 'outline'}
-                            className={`text-[9px] px-1.5 py-0 h-5 ${
-                              isReady ? 'bg-emerald-500 hover:bg-emerald-500 text-white border-transparent' : ''
-                            }`}
-                          >
-                            {isReady ? 'READY' : 'IN QUEUE'}
-                          </Badge>
-                          <button
-                            onClick={() => handleCancelReservation(res.id, res.books?.title || 'Unknown Book')}
-                            disabled={isPending}
-                            title="Cancel this reservation"
-                            className="group flex items-center gap-1 text-[9px] font-bold text-muted-foreground/50 hover:text-destructive transition-colors disabled:opacity-30"
-                          >
-                            <XCircle className="h-3.5 w-3.5" />
-                            Cancel
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-        {/* Discovery & New Arrivals */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -341,14 +311,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
               <Link key={book.id} href={`/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card/40 border border-border/40 rounded-xl overflow-hidden hover:border-primary/30 transition-all shadow-none backdrop-blur-sm">
                 <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
                   {book.cover_url ? (
-                    <Image 
-                      src={book.cover_url} 
-                      alt={book.title} 
-                      fill 
-                      sizes="130px" 
-                      className="object-cover group-hover:scale-110 transition-transform duration-700" 
-                      unoptimized={book.cover_url.startsWith('http')}
-                    />
+                    <Image src={book.cover_url} alt={book.title} fill sizes="130px" className="object-cover group-hover:scale-110 transition-transform duration-700" unoptimized />
                   ) : (
                     <BookMarked size={24} className="text-muted-foreground/10 group-hover:scale-125 transition-transform duration-700" />
                   )}
@@ -363,23 +326,18 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
           </div>
         </section>
 
-        {/* Compressed FAQs / Help */}
-        {studentFaqs && studentFaqs.length > 0 && (
+        {studentFaqs?.length > 0 && (
           <section className="pt-2">
             <Collapsible className="bg-card/20 border border-border/40 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Support & FAQs</span>
-                </div>
-                <ChevronDown size={14} className="text-muted-foreground" />
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                <div className="flex items-center gap-2"><HelpCircle size={14} className="text-primary" /> Support & FAQs</div>
+                <ChevronDown size={14} />
               </CollapsibleTrigger>
               <CollapsibleContent className="px-3 pb-3 space-y-2 border-t border-border/20 pt-3">
                 {studentFaqs.map((faq, index) => (
                   <div key={index} className="space-y-1">
                     <p className="text-xs font-bold text-foreground/90">{faq.question}</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">{faq.answer}</p>
-                    {index < studentFaqs.length - 1 && <div className="h-px w-full bg-border/10 my-2" />}
                   </div>
                 ))}
               </CollapsibleContent>
@@ -390,36 +348,23 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     );
   }
 
-
   // STAFF / ADMIN DASHBOARD
   return (
-    <div className="space-y-4 pb-14 w-full min-w-0 flex flex-col overflow-hidden">
-
-      <div className="grid gap-8 md:grid-cols-2 items-start w-full min-w-0">
-        {/* LEFT COLUMN: ACTION REQUIRED */}
-        <div className="space-y-6 min-w-0 w-full overflow-hidden">
-           <div className="flex items-center justify-between px-1">
-             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
-                Action Required
-             </h2>
-           </div>
-           
+    <div className="space-y-6 pb-14 w-full relative overflow-hidden">
+      <LiveActivityTicker />
+      <div className="grid gap-8 md:grid-cols-2 items-start">
+        <div className="space-y-6">
+           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Action Required
+           </h2>
            <div className="grid gap-3">
-              {/* Only show pending approvals explicitly in the urgent feed here, 
-                  plus any overdue/flagged items if we add them to 'violationsList' or similar in the future */}
               {stats.pendingApprovals > 0 ? (
                  <Link href="/admin/approvals">
-                   <Card className="border-amber-500/30 bg-amber-500/5 shadow-sm hover:bg-amber-500/10 transition-colors p-4 rounded-2xl group relative overflow-hidden">
-                     <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12 transiton-transform group-hover:scale-[1.7]">
-                       <Users size={64} className="text-amber-500" />
-                     </div>
+                   <Card className="border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors p-4 rounded-2xl group relative overflow-hidden shadow-none">
                      <div className="flex items-start gap-4">
-                        <div className="bg-amber-500/20 p-2 rounded-lg text-amber-600">
-                           <Users size={20} />
-                        </div>
+                        <div className="bg-amber-500/20 p-2 rounded-lg text-amber-600"><Users size={20} /></div>
                         <div>
-                           <p className="font-bold text-amber-700">Account Approvals</p>
+                           <p className="font-bold text-amber-700 leading-tight">Account Approvals</p>
                            <p className="text-xs font-medium text-amber-700/70 mt-1">
                               You have {stats.pendingApprovals} new library card applications waiting for validation.
                            </p>
@@ -429,9 +374,7 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
                  </Link>
               ) : (
                 <div className="rounded-[2rem] border-2 border-dashed border-border/60 bg-muted/10 p-8 text-center flex flex-col items-center">
-                  <div className="mx-auto w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3 text-emerald-600">
-                    <CheckCircle2 size={20} />
-                  </div>
+                  <CheckCircle2 size={24} className="text-emerald-500/40 mb-3" />
                   <h3 className="text-sm font-bold text-foreground">All Clear</h3>
                   <p className="text-xs text-muted-foreground mt-1">No urgent issues or pending requests.</p>
                 </div>
@@ -439,52 +382,39 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
            </div>
         </div>
 
-        {/* RIGHT COLUMN: RECENT ADDITIONS */}
-        <div className="space-y-6 min-w-0 w-full overflow-hidden">
+        <div className="space-y-6">
            <div className="flex items-center justify-between px-1">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                 <Zap className="h-3.5 w-3.5 text-primary" />
-                 Recent Catalog Activity
+                 <Zap className="h-3.5 w-3.5 text-primary" /> Recent Catalog Activity
               </h2>
               <Link href="/catalog" className="text-[10px] font-bold text-primary hover:tracking-widest transition-all">View All</Link>
            </div>
-
            <div className="grid gap-2">
               {stats.recentBooks.length > 0 ? (
                 stats.recentBooks.slice(0, 5).map((book) => (
                   <Link key={book.id} href={`/catalog/${book.id}`}>
-                    <Card className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 rounded-[1.25rem] group/item py-2.5 px-3.5 w-full min-w-0 backdrop-blur-sm">
-                      <CardContent className="flex items-center justify-between gap-4 p-0 w-full min-w-0">
+                    <Card className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 rounded-[1.25rem] group/item p-3 backdrop-blur-sm">
+                      <div className="flex items-center justify-between gap-4">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-12 w-9 shrink-0 items-center justify-center rounded border border-border bg-muted/30 overflow-hidden relative group-hover/item:shadow-sm transition-transform">
+                          <div className="flex h-12 w-9 shrink-0 items-center justify-center rounded border border-border bg-muted/30 overflow-hidden relative group-hover/item:shadow-sm">
                             {book.cover_url ? (
-                              <Image src={book.cover_url} alt={book.title} fill sizes="40px" className="object-cover" unoptimized={book.cover_url.startsWith('http')} />
+                              <Image src={book.cover_url} alt={book.title} fill sizes="40px" className="object-cover" unoptimized />
                             ) : (
                               <BookMarked size={14} className="text-muted-foreground/30" />
                             )}
                           </div>
                            <div className="min-w-0">
-                            <p className="truncate text-sm font-extrabold text-foreground group-hover/item:text-primary transition-colors">{book.title}</p>
+                            <p className="truncate text-sm font-extrabold text-foreground group-hover/item:text-primary transition-colors leading-tight">{book.title}</p>
                             <p className="truncate text-[11px] font-bold text-muted-foreground/60">{book.author}</p>
                           </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-4">
-                          <div className="hidden sm:block text-right">
-                            <p className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-tight">Added</p>
-                            <p className="text-[11px] font-bold text-foreground/80" suppressHydrationWarning>
-                               {new Date(book.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </p>
-                          </div>
-                          <ArrowUpRight size={16} className="text-muted-foreground/30 group-hover/item:text-primary group-hover/item:translate-x-1 group-hover/item:-translate-y-1 transition-all" />
-                        </div>
-                      </CardContent>
+                        <ArrowUpRight size={16} className="text-muted-foreground/30 group-hover/item:text-primary group-hover/item:translate-x-1 group-hover/item:-translate-y-1 transition-all" />
+                      </div>
                     </Card>
                   </Link>
                 ))
               ) : (
-                <div className="rounded-[2rem] border border-dashed border-border p-10 text-center bg-muted/10">
-                  <p className="text-xs font-bold text-muted-foreground uppercase opacity-40">The inventory is quiet.</p>
-                </div>
+                <div className="rounded-[2rem] border border-dashed border-border p-10 text-center bg-muted/10 opacity-40 uppercase text-[10px] font-black tracking-widest text-muted-foreground">The inventory is quiet.</div>
               )}
            </div>
         </div>
@@ -492,4 +422,3 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
     </div>
   );
 }
-

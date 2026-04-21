@@ -42,7 +42,8 @@ function PageSkeleton() {
 
 export default function StaffBookManagementPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
+
       <Suspense fallback={<PageSkeleton />}>
         <BookManagementContent params={params} />
       </Suspense>

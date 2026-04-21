@@ -86,7 +86,12 @@ async function AdminContent() {
 
 export default function AdminPage() {
   return (
-    <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[70vh] p-4 md:p-8">
+    <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[70vh] p-4 md:p-8 space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-black tracking-tighter text-foreground">Infrastructure Gateway</h1>
+        <p className="text-sm font-bold text-muted-foreground/60 uppercase tracking-widest">Administrative Control & Oversight</p>
+      </div>
+
       <Suspense fallback={
         <Card className="w-full max-w-3xl">
           <CardContent className="p-12 flex flex-col items-center justify-center space-y-4">

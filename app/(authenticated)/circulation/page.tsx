@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CirculationPage() {
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
+
       <Suspense fallback={<CirculationPageSkeleton />}>
         <CirculationWizard />
       </Suspense>

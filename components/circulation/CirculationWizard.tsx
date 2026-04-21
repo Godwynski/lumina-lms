@@ -194,7 +194,10 @@ export function CirculationWizard() {
   };
 
   const confirmAction = async () => {
-    setIsProcessing(true);
+    // Optimistic UI: Transition to success screen immediately
+    setIsConfirmed(true);
+    setNotice(null);
+
     try {
       if (mode === 'checkout' && activeStudent && pendingCheckout) {
         const res = await fetch('/api/circulation/checkout', {
@@ -207,8 +210,10 @@ export function CirculationWizard() {
           }),
         });
         const payload = await res.json();
-        if (payload.ok) setIsConfirmed(true);
-        else setNotice({ tone: 'error', text: payload.message || 'Failed to confirm checkout.' });
+        if (!payload.ok) {
+          setIsConfirmed(false);
+          setNotice({ tone: 'error', text: payload.message || 'Failed to confirm checkout.' });
+        }
       } else if (mode === 'return' && pendingReturn) {
         const res = await fetch('/api/circulation/return', {
           method: 'POST',
@@ -223,14 +228,14 @@ export function CirculationWizard() {
            if (payload.reservation_ready) {
              setReservationData({ ready: true, studentName: payload.reserved_for });
            }
-           setIsConfirmed(true);
+        } else {
+          setIsConfirmed(false);
+          setNotice({ tone: 'error', text: payload.message || 'Failed to confirm return.' });
         }
-        else setNotice({ tone: 'error', text: payload.message || 'Failed to confirm return.' });
       }
     } catch {
-      setNotice({ tone: 'error', text: 'Network failure during confirmation.' });
-    } finally {
-      setIsProcessing(false);
+      setIsConfirmed(false);
+      setNotice({ tone: 'error', text: 'Network failure during confirmation. Transaction might still be pending.' });
     }
   };
 

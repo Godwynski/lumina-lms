@@ -1,7 +1,6 @@
-@tailwind base;
-
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 @layer base {
   :root {
@@ -40,10 +39,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     background-image: linear-gradient(to bottom, hsl(210 20% 99%), hsl(210 20% 98%));
   }
@@ -61,16 +61,7 @@
 }
 
 
-@theme inline {
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
+
 @layer utilities {
   .status-success {
     border-color: hsl(var(--status-success) / 0.35);
@@ -135,6 +126,23 @@
   .slide-up {
     animation: slideUp 0.3s ease-out;
   }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .animate-shake {
+    animation: shake 0.2s ease-in-out 0s 2;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -150,8 +158,13 @@
 
 /* Status badge utilities — dark-mode safe */
 .status-success {
-  @apply bg-emerald-500/10 text-emerald-700 dark:text-emerald-400;
+  background-color: rgb(16 185 129 / 0.1);
+  color: rgb(4 120 87);
 }
 .status-danger {
-  @apply bg-destructive/10 text-destructive;
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+.dark .status-success {
+  color: rgb(52 211 153);
 }

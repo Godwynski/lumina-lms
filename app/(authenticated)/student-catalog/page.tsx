@@ -79,6 +79,7 @@ export default function StudentCatalogPage({
 }) {
   return (
     <div className="space-y-6">
+
       <Suspense fallback={<CatalogSkeletonView />}>
         <StudentCatalogLoader searchParams={searchParams} />
       </Suspense>

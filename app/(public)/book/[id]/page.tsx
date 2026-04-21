@@ -4,6 +4,7 @@ import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { ChevronLeft, MapPin, BookOpen, Hash, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportMissingButton } from '@/components/common/ReportMissingButton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense } from 'react';
 
 async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string }> }) {
@@ -120,12 +121,21 @@ export default function PublicBookDetailPage({ params }: { params: Promise<{ id:
 
       <Suspense fallback={
         <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8 flex flex-col md:flex-row gap-8 animate-pulse">
-          <div className="w-full md:w-1/3 aspect-[2/3] bg-muted rounded-lg" />
+          <div className="w-full md:w-1/3 aspect-[2/3] bg-muted rounded-lg opacity-40" />
           <div className="flex-1 space-y-6">
-            <div className="h-8 w-3/4 bg-muted rounded" />
-            <div className="h-6 w-1/4 bg-muted rounded" />
-            <div className="h-10 w-full bg-muted rounded" />
-            <div className="h-32 w-full bg-muted rounded" />
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-3/4 rounded-lg opacity-30" />
+              <Skeleton className="h-6 w-1/4 rounded-md opacity-20" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-24 rounded-full opacity-10" />
+              <Skeleton className="h-8 w-32 rounded-full opacity-10" />
+            </div>
+            <div className="space-y-2 py-4 border-y border-border/50">
+              <Skeleton className="h-4 w-full rounded opacity-10" />
+              <Skeleton className="h-4 w-2/3 rounded opacity-10" />
+            </div>
+            <Skeleton className="h-12 w-48 rounded-xl opacity-20" />
           </div>
         </div>
       }>

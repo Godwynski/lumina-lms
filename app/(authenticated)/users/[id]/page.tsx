@@ -4,11 +4,14 @@ import { redirect, notFound } from "next/navigation";
 import { UserDetailClient } from "./UserDetailClient";
 import type { User } from "../UsersContent";
 
-export default async function UserDetailPage(props: { params: Promise<{ id: string }> }) {
+export default function UserDetailPage(props: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<div className="p-8"><div className="h-64 w-full animate-pulse bg-muted rounded-xl" /></div>}>
-      <UserDetailLoader params={props.params} />
-    </Suspense>
+    <div className="space-y-6">
+
+      <Suspense fallback={<div className="p-8"><div className="h-64 w-full animate-pulse bg-muted rounded-xl" /></div>}>
+        <UserDetailLoader params={props.params} />
+      </Suspense>
+    </div>
   );
 }
 

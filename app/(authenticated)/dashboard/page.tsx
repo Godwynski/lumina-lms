@@ -11,14 +11,7 @@ export const metadata = {
 async function DashboardHeader() {
   const role = await getUserRole();
   return (
-    <header className="flex flex-col gap-4 border-b border-border/50 pb-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="hidden md:block">
-        <p className="text-sm text-muted-foreground">
-          {role === 'student' 
-            ? `Welcome back. Here's your library at a glance.`
-            : 'Core actions, queue visibility, and recent activity.'}
-        </p>
-      </div>
+    <header className="flex items-center justify-end border-b border-border/10 pb-2 sm:h-14">
       <DashboardSearch role={role} />
     </header>
   );

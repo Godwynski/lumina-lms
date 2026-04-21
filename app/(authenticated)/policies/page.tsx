@@ -36,9 +36,10 @@ async function PoliciesPageContent() {
 
 export default function PoliciesPage() {
   return (
-    <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
-      <PoliciesPageContent />
-    </Suspense>
+    <div className="w-full">
+      <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
+        <PoliciesPageContent />
+      </Suspense>
+    </div>
   );
 }
-

@@ -5,9 +5,10 @@ export const metadata = {
   title: "Audit Logs | Lumina LMS",
 };
 
-export default async function AuditPage() {
+export default function AuditPage() {
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="space-y-6 w-full">
+
       <Suspense fallback={<AuditSkeleton />}>
         <AuditContentContainer />
       </Suspense>

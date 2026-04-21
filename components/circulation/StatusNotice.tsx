@@ -30,6 +30,7 @@ export function StatusNotice({ notice, className }: StatusNoticeProps) {
     <div 
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-2xl border animate-in fade-in zoom-in-95 duration-300",
+        notice.tone === 'error' && "animate-shake",
         toneStyles[notice.tone],
         className
       )}

@@ -16,9 +16,12 @@ async function PreferencesPageContent() {
 
 export default function PreferencesPage() {
   return (
-    <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
-      <PreferencesPageContent />
-    </Suspense>
+    <div className="space-y-6 w-full">
+
+      <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
+        <PreferencesPageContent />
+      </Suspense>
+    </div>
   );
 }
 

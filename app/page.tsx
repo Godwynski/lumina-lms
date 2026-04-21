@@ -62,7 +62,16 @@ export default function Home() {
         </header>
 
         <div className="flex-1 flex flex-col items-center">
-          <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><Skeleton className="h-96 w-full max-w-4xl rounded-3xl" /></div>}>
+          <Suspense fallback={
+            <div className="min-h-[70vh] w-full flex flex-col items-center justify-center gap-8 px-6">
+              <Skeleton className="h-16 w-[300px] sm:w-[500px] rounded-2xl opacity-20" />
+              <Skeleton className="h-6 w-[250px] sm:w-[400px] rounded-xl opacity-10" />
+              <div className="flex gap-4">
+                <Skeleton className="h-12 w-32 rounded-full opacity-20" />
+                <Skeleton className="h-12 w-32 rounded-full opacity-10" />
+              </div>
+            </div>
+          }>
             <HeroSection />
           </Suspense>
         </div>

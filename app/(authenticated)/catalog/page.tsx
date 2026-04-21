@@ -42,6 +42,7 @@ export default function CatalogPage({
 }) {
   return (
     <div className="space-y-4">
+      
       <Suspense fallback={<CatalogSkeleton />}>
         <CatalogDataWrapper searchParams={searchParams} />
       </Suspense>

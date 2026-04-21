@@ -54,7 +54,10 @@ async function StudentBookDetailLoader({ params }: { params: Promise<{ id: strin
 
 export default function StudentBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <AdminTableShell>
+    <AdminTableShell 
+      title="Resource Explorer" 
+      description="Detailed catalog entry, availability status, and location info."
+    >
       <Suspense fallback={<BookDetailSkeleton />}>
         <StudentBookDetailLoader params={params} />
       </Suspense>

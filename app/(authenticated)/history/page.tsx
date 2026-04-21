@@ -56,7 +56,8 @@ export default function HistoryPage({
   searchParams: Promise<{ page?: string; status?: string; q?: string }>;
 }) {
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-6 w-full">
+
       <Suspense fallback={<HistorySkeleton />}>
         <HistoryPageContent searchParams={searchParams} />
       </Suspense>

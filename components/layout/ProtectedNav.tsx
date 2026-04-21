@@ -20,6 +20,7 @@ import {
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
 import { Logo } from "@/components/layout/Logo";
 import {
   Avatar,
@@ -46,6 +47,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogPortal,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -555,15 +557,22 @@ export function ProtectedNav({
       </SidebarFooter>
 
       {isLoggingOut && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border shadow-2xl">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <div className="flex flex-col items-center gap-1">
-              <h3 className="text-lg font-bold">Logging out...</h3>
-              <p className="text-sm text-muted-foreground font-medium text-center">Ending your current session safely.</p>
+        <Dialog open={isLoggingOut}>
+          <DialogPortal>
+            <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background backdrop-blur-xl animate-in fade-in duration-500">
+              <div className="flex flex-col items-center gap-6 p-12 rounded-3xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
+                <div className="relative">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
+                  <Loader2 className="absolute inset-0 h-12 w-12 animate-spin text-primary [animation-duration:3s]" />
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <h3 className="text-2xl font-bold tracking-tight">Logging out...</h3>
+                  <p className="text-base text-muted-foreground font-medium text-center balance opacity-80">Ending your current session safely.</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </DialogPortal>
+        </Dialog>
       )}
       <SidebarRail />
     </Sidebar>

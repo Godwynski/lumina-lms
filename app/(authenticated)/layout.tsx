@@ -8,6 +8,7 @@ import { StreamedNav } from "./_components/StreamedNav";
 import { StreamedUserNav } from "./_components/StreamedUserNav";
 import { NavSkeleton } from "./_components/Skeletons";
 import { getPreferences } from "@/lib/auth-helpers";
+import NavAnimatePresence from "./NavAnimatePresence";
 
 export default async function ProtectedLayout({
   children,
@@ -49,13 +50,11 @@ export default async function ProtectedLayout({
           </Suspense>
           
           <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
-            {/* 
-                The AuthGate ensures we are authenticated before rendering children. 
-                Wrapping it in Suspense allows the parent shell to render immediately.
-            */}
             <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-32 w-full bg-muted rounded" /></div>}>
               <AuthGate>
-                {children}
+                <NavAnimatePresence>
+                  {children}
+                </NavAnimatePresence>
               </AuthGate>
             </Suspense>
           </div>

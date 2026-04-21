@@ -13,8 +13,11 @@ async function NewUserContent() {
 
 export default function NewUserPage() {
   return (
-    <Suspense fallback={<div className="p-8"><div className="h-32 w-full animate-pulse bg-muted rounded-xl" /></div>}>
-      <NewUserContent />
-    </Suspense>
+    <div className="w-full space-y-6">
+
+      <Suspense fallback={<div className="p-8"><div className="h-64 w-full animate-pulse bg-muted rounded-xl" /></div>}>
+        <NewUserContent />
+      </Suspense>
+    </div>
   );
 }

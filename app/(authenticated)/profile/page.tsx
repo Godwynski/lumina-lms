@@ -32,9 +32,12 @@ async function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<div className="p-8 animate-pulse space-y-8"><div className="h-8 w-48 bg-muted rounded" /><div className="h-96 w-full bg-muted rounded" /></div>}>
-      <ProfileContent />
-    </Suspense>
+    <div className="space-y-6 w-full">
+
+      <Suspense fallback={<div className="p-8 animate-pulse space-y-8"><div className="h-8 w-48 bg-muted rounded" /><div className="h-96 w-full bg-muted rounded" /></div>}>
+        <ProfileContent />
+      </Suspense>
+    </div>
   );
 }
 
