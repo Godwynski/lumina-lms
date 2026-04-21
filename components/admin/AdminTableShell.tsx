@@ -58,8 +58,12 @@ export function AdminTableShell({
           ? "rounded-none border-none bg-transparent shadow-none" 
           : "rounded-2xl border border-border bg-card shadow-sm"
       )}>
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/10">
-          {children}
+        <div className="relative group/table overflow-hidden">
+          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/10 px-0.5">
+            {children}
+          </div>
+          {/* Subtle mobile scroll indicator gradient */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card/80 to-transparent opacity-0 sm:hidden group-hover/table:opacity-100 transition-opacity" />
         </div>
         {pagination ? (
           <div className={cn(

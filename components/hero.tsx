@@ -28,8 +28,8 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
       className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-12 md:py-24"
     >
 
-      <m.div variants={itemVariants} className="space-y-6 mb-10">
-        <h1 className="text-balance text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
+      <m.div variants={itemVariants} className="space-y-6 mb-10 w-full">
+        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
           {user ? (
             <>Welcome back, <br className="hidden sm:block"/><span className="text-muted-foreground">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
           ) : (

@@ -47,7 +47,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogPortal,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -558,8 +557,8 @@ export function ProtectedNav({
 
       {isLoggingOut && (
         <Dialog open={isLoggingOut}>
-          <DialogPortal>
-            <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background backdrop-blur-xl animate-in fade-in duration-500">
+          <DialogContent className="border-none bg-transparent p-0 shadow-none outline-none ring-0 focus:ring-0 [&>button]:hidden">
+            <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl animate-in fade-in duration-500">
               <div className="flex flex-col items-center gap-6 p-12 rounded-3xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
                 <div className="relative">
                   <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
@@ -571,7 +570,7 @@ export function ProtectedNav({
                 </div>
               </div>
             </div>
-          </DialogPortal>
+          </DialogContent>
         </Dialog>
       )}
       <SidebarRail />

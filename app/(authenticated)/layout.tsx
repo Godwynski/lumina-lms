@@ -29,7 +29,7 @@ export default async function ProtectedLayout({
         <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
           {/* Mobile Header Content - Streamed */}
           <Suspense fallback={<div className="h-14 border-b flex items-center md:hidden px-4"><div className="h-4 w-32 animate-pulse bg-muted rounded" /></div>}>
-            <div className="md:hidden sticky top-0 z-40 flex w-full h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4">
+            <div className="md:hidden sticky top-0 z-40 flex w-full h-[52px] shrink-0 items-center justify-between border-b border-border bg-background/90 backdrop-blur-md px-3.5 shadow-sm">
               <div className="flex flex-1 items-center gap-3 overflow-hidden">
                 <SidebarTrigger className="shrink-0" />
                 <div className="truncate text-sm font-semibold tracking-tight">

@@ -67,9 +67,8 @@ export function PublicCatalog() {
   return (
     <div id="catalog" className="w-full max-w-6xl mx-auto px-4 py-8 space-y-8">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-left w-full md:w-auto">
-          <h2 className="text-3xl font-bold text-foreground">Library Catalog</h2>
-          <p className="text-muted-foreground">Find and browse available resources</p>
+        <div className="hidden md:block text-left w-full md:w-auto">
+          {/* Header removed for minimalist aesthetic, only kept for semantic hidden usage or replaced with layout breadcrumbs if needed */}
         </div>
         
         <div className="flex w-full md:w-auto items-center gap-2">
@@ -168,7 +167,7 @@ export function PublicCatalog() {
       {showFilters && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm transition-all duration-300" onClick={() => setShowFilters(false)}>
           <div 
-            className="bg-card w-full max-w-lg rounded-t-[2.5rem] p-8 pb-12 shadow-2xl animate-in slide-in-from-bottom-full duration-300 ease-out"
+            className="bg-card w-full max-w-lg rounded-t-[2.5rem] p-6 md:p-8 pb-12 shadow-2xl animate-in slide-in-from-bottom-full duration-300 ease-out"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-8">

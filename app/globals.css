@@ -143,6 +143,14 @@
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
+
+  @keyframes scan {
+    0%, 100% { top: 32px; }
+    50% { top: calc(100% - 32px); }
+  }
+  .animate-scan {
+    animation: scan 3s linear infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

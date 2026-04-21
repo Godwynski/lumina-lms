@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, QrCode, ScanLine } from 'lucide-react';
+import { Camera, QrCode, ScanLine, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
@@ -26,97 +26,124 @@ export function ScanStep({
   const [manualValue, setManualValue] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   
-  const {
-    cameraOpen,
-    setCameraOpen,
-    cameraSupported,
-    cameraIssue,
-    scannerId,
-  } = useScanner({
-    onScan: async (val) => {
-      await onScan(val);
-    },
-    isProcessing,
-    scannerId: 'circulation-scanner'
-  });
+    const {
+        cameraOpen,
+        setCameraOpen,
+        cameraSupported,
+        cameraIssue,
+        scannerId,
+        switchCamera,
+        hasMultipleCameras,
+    } = useScanner({
+        onScan: async (val) => {
+            await onScan(val);
+        },
+        isProcessing,
+        scannerId: 'circulation-scanner'
+    });
 
-  const handleManualSubmit = async () => {
-    if (!manualValue.trim() || isProcessing) return;
-    await onScan(manualValue.trim());
-    setManualValue('');
-  };
+    const handleManualSubmit = async () => {
+        if (!manualValue.trim() || isProcessing) return;
+        await onScan(manualValue.trim());
+        setManualValue('');
+    };
 
-  useEffect(() => {
-    manualInputRef.current?.focus();
-  }, []);
+    useEffect(() => {
+        manualInputRef.current?.focus();
+    }, []);
 
-  return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <ScanLine className="h-5 w-5 text-primary" />
-          {title}
-        </h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3">
-          <div className="relative aspect-video overflow-hidden rounded-2xl border border-border bg-black shadow-inner">
-            <div 
-              id={scannerId} 
-              className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
-            />
-            
-            {/* Scanner Overlay UI */}
-            <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none">
-                <div className="h-full w-full border-2 border-primary/50 rounded-lg relative">
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary" />
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary" />
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary" />
-                </div>
+    return (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex flex-col gap-1">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <ScanLine className="h-5 w-5 text-primary" />
+                    {title}
+                </h3>
+                <p className="text-sm text-muted-foreground">{description}</p>
             </div>
 
-            {!cameraOpen && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm transition-all duration-300">
-                <QrCode className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm font-medium">Scanner is idle</p>
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  className="mt-4 h-8 rounded-full"
-                  onClick={() => setCameraOpen(true)}
-                  disabled={!cameraSupported}
-                >
-                  <Camera className="mr-2 h-3.5 w-3.5" />
-                  Start Scanner
-                </Button>
-              </div>
-            )}
+            <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-3">
+                    <div className="relative aspect-square overflow-hidden rounded-3xl border border-border bg-black shadow-2xl">
+                        <div 
+                            id={scannerId} 
+                            className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
+                        />
+                        
+                        {/* Minimalism Scanning Brackets */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute top-8 left-8 w-12 h-12 border-t-2 border-l-2 border-primary/60 rounded-tl-xl" />
+                            <div className="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-primary/60 rounded-tr-xl" />
+                            <div className="absolute bottom-8 left-8 w-12 h-12 border-b-2 border-l-2 border-primary/60 rounded-bl-xl" />
+                            <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-primary/60 rounded-br-xl" />
+                        </div>
 
-            {cameraOpen && (
-                 <div className="absolute bottom-4 right-4 animate-in fade-in zoom-in">
-                    <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        className="h-8 rounded-full shadow-lg"
-                        onClick={() => setCameraOpen(false)}
-                    >
-                        Stop
-                    </Button>
-                </div>
-            )}
-            
-            {cameraIssue && !cameraOpen && (
-                 <div className="absolute top-4 inset-x-4">
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-2 text-[10px] text-destructive flex items-center gap-2">
-                        <span>{cameraIssue}</span>
+                        {/* Scanner Scanning Line Animation */}
+                        {cameraOpen && !isProcessing && (
+                             <div className="absolute top-0 inset-x-8 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent animate-scan shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                        )}
+
+                        {/* Processing Shimmer */}
+                        {isProcessing && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40 backdrop-blur-[2px] animate-pulse">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                                    <span className="text-xs font-bold tracking-widest uppercase text-primary">Identifying...</span>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {!cameraOpen && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-md transition-all duration-300">
+                                <div className="p-6 rounded-full bg-muted/20 mb-4">
+                                    <QrCode className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                                <p className="text-sm font-semibold tracking-tight">Scanner Hardware Ready</p>
+                                <Button 
+                                    variant="default" 
+                                    size="lg" 
+                                    className="mt-6 h-12 rounded-2xl px-8 shadow-xl shadow-primary/20"
+                                    onClick={() => setCameraOpen(true)}
+                                    disabled={!cameraSupported}
+                                >
+                                    <Camera className="mr-2 h-4 w-4" />
+                                    Launch Scanner
+                                </Button>
+                            </div>
+                        )}
+
+                        {cameraOpen && (
+                             <div className="absolute bottom-6 inset-x-6 flex justify-between items-center animate-in fade-in slide-in-from-bottom-4">
+                                <Button 
+                                    variant="secondary" 
+                                    size="icon" 
+                                    className={`h-12 w-12 rounded-2xl backdrop-blur-xl bg-background/40 border-white/10 shadow-2xl ${!hasMultipleCameras ? 'invisible' : ''}`}
+                                    onClick={switchCamera}
+                                    title="Switch Camera"
+                                >
+                                    <RefreshCcw className="h-5 w-5" />
+                                </Button>
+
+                                <Button 
+                                    variant="destructive" 
+                                    className="h-12 rounded-2xl px-6 backdrop-blur-xl bg-destructive shadow-2xl border-none font-bold"
+                                    onClick={() => setCameraOpen(false)}
+                                >
+                                    Stop
+                                </Button>
+                            </div>
+                        )}
+                        
+                        {cameraIssue && !cameraOpen && (
+                             <div className="absolute top-6 inset-x-6">
+                                <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-xl rounded-2xl p-4 text-[11px] text-destructive flex items-center gap-3">
+                                    <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                                    <span className="font-medium">{cameraIssue}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-            )}
-          </div>
-        </div>
 
         <div className="flex flex-col justify-center space-y-4">
           <div className="space-y-2">

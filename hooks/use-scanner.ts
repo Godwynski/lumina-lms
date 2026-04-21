@@ -21,15 +21,16 @@ export function useScanner({
   formats = [0] // 0 is Html5QrcodeSupportedFormats.QR_CODE
 }: UseScannerProps) {
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [cameraSupported, setCameraSupported] = useState(true); // Default to true, will check on mount
+  const [cameraSupported, setCameraSupported] = useState(true);
   const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const [cameraIssue, setCameraIssue] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isInitializingRef = useRef(false);
   const lastScanRef = useRef<{ value: string; time: number } | null>(null);
   
-  // Use refs for props that change frequently to avoid restarting the camera
   const onScanRef = useRef(onScan);
   const isProcessingRef = useRef(isProcessing);
 
@@ -64,12 +65,24 @@ export function useScanner({
     }
   }, [cameraOpen, stopCamera]);
 
+  const switchCamera = useCallback(async () => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
+    
+    if (cameraOpen) {
+      // If camera is open, we need to restart it with the new facingMode
+      await stopCamera();
+      // Give it a small timeout to ensure the hardware is released
+      setTimeout(() => setCameraOpen(true), 200);
+    }
+  }, [facingMode, cameraOpen, stopCamera]);
+
   const requestCameraPermission = useCallback(async (): Promise<boolean> => {
     try {
-      // @ts-ignore - dynamic import resolution in build environment
       const { Html5Qrcode } = await import('html5-qrcode');
-      const devices = await Html5Qrcode.getCameras();
-      if (devices && devices.length > 0) {
+      const cameras = await Html5Qrcode.getCameras();
+      setDevices(cameras);
+      if (cameras && cameras.length > 0) {
         setCameraPermission('granted');
         setCameraIssue(null);
         return true;
@@ -83,7 +96,6 @@ export function useScanner({
     }
   }, []);
 
-  // Check support and hardware on mount
   useEffect(() => {
     const checkSupport = async () => {
       if (!window.isSecureContext && window.location.hostname !== 'localhost') {
@@ -93,10 +105,10 @@ export function useScanner({
       }
 
       try {
-        // @ts-ignore - dynamic import resolution in build environment
         const { Html5Qrcode } = await import('html5-qrcode');
-        const devices = await Html5Qrcode.getCameras();
-        if (!devices || devices.length === 0) {
+        const cameras = await Html5Qrcode.getCameras();
+        setDevices(cameras);
+        if (!cameras || cameras.length === 0) {
           setCameraSupported(false);
           setCameraIssue('No camera hardware detected on this device.');
         } else {
@@ -124,10 +136,8 @@ export function useScanner({
       isInitializingRef.current = true;
 
       try {
-        // @ts-ignore - dynamic import resolution in build environment
         const { Html5Qrcode } = await import('html5-qrcode');
         
-        // Clean up any existing stale instance first safely
         if (scannerRef.current) {
           try {
             if (scannerRef.current.isScanning) await scannerRef.current.stop();
@@ -152,20 +162,25 @@ export function useScanner({
 
     const start = async () => {
       try {
+        // Detect device environment
+        
         const config = {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
+          fps: 15, // Slightly higher FPS for snappier response
+          qrbox: (viewWidth: number, viewHeight: number) => {
+            const min = Math.min(viewWidth, viewHeight);
+            const boxSize = Math.floor(min * 0.7); // 70% of viewport
+            return { width: boxSize, height: boxSize };
+          },
           aspectRatio: 1.0,
         };
 
         if (html5QrCode) {
           await html5QrCode.start(
-            { facingMode: 'environment' },
+            { facingMode: facingMode },
             config,
             async (decodedText: string) => {
               if (!mounted) return;
 
-              // Debounce and process scan
               const now = Date.now();
               if (
                 isProcessingRef.current || (lastScanRef.current?.value === decodedText && now - (lastScanRef.current?.time ?? 0) < 2000)
@@ -174,11 +189,10 @@ export function useScanner({
               }
 
               lastScanRef.current = { value: decodedText, time: now };
+              // We stop scanning internally if requested, but use-scanner usually stays open until manually closed
               await onScanRef.current(decodedText);
             },
-            () => {
-               // scan failure, usually just "not found in frame"
-            }
+            () => {}
           );
         }
 
@@ -189,7 +203,6 @@ export function useScanner({
       } catch (err: unknown) {
         if (!mounted) return;
         
-        // Only log if it's an unexpected error type
         const errorMessage = err instanceof Error ? err.message : String(err);
         const isHardwareError = errorMessage.includes('NotReadableError') || 
                                errorMessage.includes('Starting video source failed') ||
@@ -203,8 +216,6 @@ export function useScanner({
         setCameraPermission('denied');
         setCameraIssue(isHardwareError ? 'Camera hardware is busy or unavailable.' : (errorMessage || 'Failed to start camera.'));
         
-        // Explicit cleanup on fail, but don't reset cameraOpen immediately if it's just busy
-        // This helps prevent flickers if the browser is just slow to release the last session
         if (!isHardwareError) {
            void stopCamera();
         }
@@ -217,7 +228,7 @@ export function useScanner({
       mounted = false;
       void stopCamera();
     };
-  }, [cameraOpen, cameraSupported, scannerId, stopCamera, formats]);
+  }, [cameraOpen, cameraSupported, scannerId, stopCamera, formats, facingMode]);
 
   return {
     cameraOpen,
@@ -229,6 +240,9 @@ export function useScanner({
     requestCameraPermission,
     clearLastScan,
     toggleCamera,
+    switchCamera,
+    facingMode,
+    hasMultipleCameras: devices.length > 1,
     scannerId,
   };
 }

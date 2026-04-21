@@ -19,11 +19,11 @@ export function ModernBookListItem({ book }: ModernBookListItemProps) {
         layout 
         initial={{ opacity: 0, x: -10 }} 
         animate={{ opacity: 1, x: 0 }} 
-        className="relative flex min-w-[700px] flex-row items-center gap-4 rounded-xl border border-border bg-card pr-4 transition-all hover:bg-muted hover:border-primary/20 hover:shadow-sm"
+        className="relative flex min-w-max flex-row items-center gap-4 rounded-xl border border-border bg-card pr-4 transition-all hover:bg-muted hover:border-primary/20 hover:shadow-sm sm:min-w-[700px]"
       >
         
         {/* Pinned Title & Context Column */}
-        <div className="sticky left-0 z-10 flex min-w-[320px] flex-1 shrink-0 items-center justify-start gap-4 bg-card py-3 pl-4 pr-6 shadow-[12px_0_15px_-10px_rgba(0,0,0,0.06)] transition-colors group-hover:bg-muted group-hover:shadow-none">
+        <div className="sticky left-0 z-10 flex min-w-[280px] flex-1 shrink-0 items-center justify-start gap-3 bg-card py-3 pl-4 pr-6 shadow-[10px_0_15px_-10px_rgba(0,0,0,0.06)] transition-colors group-hover:bg-muted group-hover:shadow-none sm:min-w-[320px] sm:gap-4">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-500 ring-1 ring-border/50 ${
             isOutOfStock 
             ? "bg-destructive/10 text-destructive shadow-sm" 

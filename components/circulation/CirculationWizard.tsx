@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, m } from "framer-motion";
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, User, CheckCircle2, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CirculationStepper } from './CirculationStepper';
 import { ScanStep } from './steps/ScanStep';
 import { ReviewStep } from './steps/ReviewStep';
@@ -52,6 +53,35 @@ const RETURN_STEPS = [
   { id: 2, label: 'Validate Loan' },
 ];
 
+function MemberPreview({ student }: { student: ActiveStudent }) {
+  return (
+    <m.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center gap-4"
+    >
+      <Avatar className="h-12 w-12 border-2 border-primary/20 bg-background shadow-sm">
+        <AvatarFallback>
+          <User className="h-6 w-6 text-primary/60" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-bold truncate">{student.fullName}</h4>
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+            {student.status}
+          </span>
+        </div>
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+          <Bookmark className="h-3 w-3" />
+          {student.studentId}
+        </p>
+      </div>
+      <CheckCircle2 className="h-5 w-5 text-primary animate-in zoom-in duration-500" />
+    </m.div>
+  );
+}
+
 export function CirculationWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,6 +112,14 @@ export function CirculationWizard() {
 
   const playScanCue = useCallback((type: 'success' | 'error') => {
     if (typeof window === 'undefined') return;
+
+    // Haptic Feedback
+    if (type === 'success' && 'vibrate' in navigator) {
+      navigator.vibrate([10, 50, 10]);
+    } else if (type === 'error' && 'vibrate' in navigator) {
+      navigator.vibrate(200);
+    }
+
     const win = window as unknown as { AudioContext: typeof AudioContext; webkitAudioContext: typeof AudioContext };
     const AudioCtx = win.AudioContext || win.webkitAudioContext;
     if (!AudioCtx) return;
@@ -304,6 +342,10 @@ export function CirculationWizard() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
+                  {activeStudent && mode === 'checkout' && (
+                    <MemberPreview student={activeStudent} />
+                  )}
+                  
                   <ScanStep 
                     title={
                       currentStep === 1 
@@ -315,7 +357,7 @@ export function CirculationWizard() {
                         ? (mode === 'checkout' 
                             ? 'Scan the student library card or enter their card number manually.' 
                             : 'Scan the book copy QR code to begin the return process.')
-                        : `Borrower: ${activeStudent?.fullName}. Now scan the book copy QR.`
+                        : 'Student verified. Now scan the book copy QR code to proceed.'
                     }
                     placeholder={
                       currentStep === 1

@@ -78,10 +78,11 @@ export function BreadcrumbNav() {
 
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
-      <h1 className="truncate text-sm font-semibold tracking-tight text-foreground md:text-base">{title}</h1>
+      <h1 className="truncate text-sm font-bold tracking-tight text-foreground md:text-base">{title}</h1>
       {backHref && backLabel && (
-        <Link href={backHref} className="ml-1 hidden text-xs text-muted-foreground hover:text-foreground sm:inline">
-          Back to {backLabel}
+        <Link href={backHref} className="ml-1 hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:inline-flex items-center gap-1 opacity-60 hover:opacity-100">
+          <div className="h-1 w-1 rounded-full bg-border" />
+          {backLabel}
         </Link>
       )}
     </nav>
