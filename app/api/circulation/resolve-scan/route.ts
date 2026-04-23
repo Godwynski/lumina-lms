@@ -14,10 +14,12 @@ type CardScanRow = {
     | {
         full_name: string | null;
         student_id: string | null;
+        status: string | null;
       }[]
     | {
         full_name: string | null;
         student_id: string | null;
+        status: string | null;
       }
     | null;
 };
@@ -80,7 +82,8 @@ export async function POST(request: Request) {
         user_id,
         profiles:user_id (
           full_name,
-          student_id
+          student_id,
+          status
         )
       `)
       .eq("card_number", scanValue)
@@ -93,6 +96,23 @@ export async function POST(request: Request) {
     if (card) {
       const typedCard = card as CardScanRow;
       const profile = Array.isArray(typedCard.profiles) ? typedCard.profiles[0] : typedCard.profiles;
+      
+      // Early validation for student status
+      if (typedCard.status?.toUpperCase() !== "ACTIVE") {
+        return NextResponse.json(
+          { ok: false, message: "Library card is not active." },
+          { status: 400 }
+        );
+      }
+
+      const profileStatus = profile?.status?.toUpperCase() ?? "ACTIVE";
+      if (profileStatus !== "ACTIVE") {
+        return NextResponse.json(
+          { ok: false, message: `Student account is ${profileStatus.toLowerCase()}.` },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json({
         ok: true,
         type: "student",
