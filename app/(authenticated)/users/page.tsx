@@ -27,7 +27,8 @@ interface ProfileRow {
 
 async function UsersDataWrapper() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) redirect("/login");
 
   const pageSize = 12;

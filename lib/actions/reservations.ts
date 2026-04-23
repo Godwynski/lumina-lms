@@ -101,7 +101,8 @@ export async function getBookAvailabilityStatus(bookId: string) {
   // on every catalog page load. It is triggered on reservation placement
   // and via the heartbeat route.
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
 
   // 1. Get earliest due date for this book
   const { data: loans, error } = await supabase
@@ -125,14 +126,14 @@ export async function getBookAvailabilityStatus(bookId: string) {
 
   let userRes = null;
   if (user) {
-    const { data } = await supabase
+    const { data: reservationData } = await supabase
       .from('reservations')
       .select('id, status, hold_expires_at, queue_position')
       .eq('user_id', user.id)
       .eq('book_id', bookId)
       .in('status', ['ACTIVE', 'READY'])
       .maybeSingle();
-    userRes = data;
+    userRes = reservationData;
     
     if (userRes) {
       hasReservation = true;
@@ -242,7 +243,8 @@ export const cancelReservation = createSafeAction(
 
 export async function getMyReservations() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
 
   if (!user) return [];
 

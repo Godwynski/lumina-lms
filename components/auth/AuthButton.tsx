@@ -7,9 +7,8 @@ import { UserNav } from "@/components/layout/UserNav";
 export async function AuthButton() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   const role = user ? await getUserRole() : null;
 
   let profile = null;

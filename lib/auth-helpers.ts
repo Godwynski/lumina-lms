@@ -18,7 +18,8 @@ export const normalizeUserRole = (value: unknown): UserRole | null => {
  */
 export const getMe = cache(async () => {
   const supabase = await createClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data, error: userError } = await supabase.auth.getUser();
+  const user = data?.user;
 
   if (userError || !user) return null;
 

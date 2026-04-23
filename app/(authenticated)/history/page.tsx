@@ -22,7 +22,8 @@ async function HistoryPageContent({
   const q = params.q || "";
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
 
   if (!user) {
     return (

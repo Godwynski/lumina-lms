@@ -17,14 +17,16 @@ export const metadata = {
 
 async function HeroSection() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   const role = user ? await getUserRole() : null;
   return <Hero user={user} role={role} />;
 }
 
 async function AuthRedirect() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
 
   if (user) {
     return redirect("/dashboard");
