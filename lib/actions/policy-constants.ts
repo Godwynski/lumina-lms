@@ -42,8 +42,8 @@ export const DEFAULT_POLICIES = {
   faq_student_a2: { value: "Open the book details and use the report action. The librarian queue will be notified for shelf verification.", description: "Student FAQ #2 answer", category: "support", icon: "MessageSquare" },
   faq_student_q3: { value: "Can I use the card on my phone only?", description: "Student FAQ #3 question", category: "support", icon: "HelpCircle" },
   faq_student_a3: { value: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed.", description: "Student FAQ #3 answer", category: "support", icon: "MessageSquare" },
-  faq_student_q4: { value: "Where can I see my current loans?", description: "Student FAQ #4 question", category: "support", icon: "HelpCircle" },
-  faq_student_a4: { value: "Use Loan History from the dashboard quick actions to review active and past borrowing records.", description: "Student FAQ #4 answer", category: "support", icon: "MessageSquare" },
+  faq_student_q4: { value: "Where can I see my current borrows?", description: "Student FAQ #4 question", category: "support", icon: "HelpCircle" },
+  faq_student_a4: { value: "Use Borrow History from the dashboard quick actions to review active and past borrowing records.", description: "Student FAQ #4 answer", category: "support", icon: "MessageSquare" },
 };
 
 export const DEFAULT_STUDENT_FAQS = [

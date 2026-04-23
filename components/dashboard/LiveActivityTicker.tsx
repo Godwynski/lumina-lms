@@ -74,7 +74,7 @@ export function LiveActivityTicker() {
             </div>
             <div className="flex-1 min-w-0">
                <p className="text-[10px] font-black uppercase tracking-widest opacity-50">
-                  {event.type === 'borrow' ? 'Loan Processed' : 
+                  {event.type === 'borrow' ? 'Borrow Processed' : 
                    event.type === 'return' ? 'Return Confirmed' : 'New Arrival'}
                </p>
                <p className="text-xs font-bold truncate pr-4 text-foreground/90">{event.title}</p>

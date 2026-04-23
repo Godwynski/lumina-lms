@@ -50,7 +50,7 @@ const CHECKOUT_STEPS = [
 
 const RETURN_STEPS = [
   { id: 1, label: 'Identify Resource' },
-  { id: 2, label: 'Validate Loan' },
+  { id: 2, label: 'Validate Borrow' },
 ];
 
 function MemberPreview({ student }: { student: ActiveStudent }) {

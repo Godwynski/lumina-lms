@@ -501,10 +501,10 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
             <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
               <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
                 <CalendarDays className="h-3 w-3" />
-                Loan Policy
+                Borrow Policy
               </p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Check your dashboard for loan periods, renewal limits, and current borrowing status.
+                Check your dashboard for borrow periods, renewal limits, and current borrowing status.
               </p>
             </div>
           </div>

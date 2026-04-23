@@ -53,7 +53,7 @@ export function PolicySimulationPanel({ formData }: SimulationProps) {
                 <p className="text-[11px] font-medium text-foreground">{format(dueDate, 'MMM dd, yyyy')}</p>
                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  <span>Initial Period: {loanPeriod} days</span>
+                  <span>Borrow Period: {loanPeriod} days</span>
                 </div>
               </div>
             </div>

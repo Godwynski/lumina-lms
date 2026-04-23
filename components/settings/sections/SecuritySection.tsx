@@ -24,15 +24,21 @@ export function SecuritySection({ role }: SecuritySectionProps) {
           <div className="rounded-xl border border-border bg-muted/40 p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground leading-relaxed font-medium">Protect your account by regularly updating your credentials.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                  {role === "student" 
+                    ? "Your account credentials are managed by the school system. Contact the administrator for security concerns."
+                    : "Protect your account by regularly updating your credentials."}
+                </p>
               </div>
-              <Button asChild variant="outline" className="h-10 gap-3 rounded-lg border-border px-6 font-bold shadow-sm hover:bg-background">
-                <Link href="/auth/update-password">
-                  <Lock size={14} />
-                  Update Password
-                  <ChevronRight size={14} className="text-muted-foreground" />
-                </Link>
-              </Button>
+              {role !== "student" && (
+                <Button asChild variant="outline" className="h-10 gap-3 rounded-lg border-border px-6 font-bold shadow-sm hover:bg-background">
+                  <Link href="/auth/update-password">
+                    <Lock size={14} />
+                    Update Password
+                    <ChevronRight size={14} className="text-muted-foreground" />
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </Section>
