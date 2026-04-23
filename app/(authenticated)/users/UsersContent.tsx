@@ -25,6 +25,7 @@ export type User = {
   status: string;
   department: string;
   joined: string;
+  student_id: string | null;
 };
 
 type ProfileRow = {
@@ -143,6 +144,11 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
       )
     },
     {
+      header: "ID",
+      className: "w-[120px]",
+      cell: (user) => <span className="font-mono text-xs font-medium">{user.student_id || "N/A"}</span>
+    },
+    {
       header: "Role",
       cell: (user) => <RoleBadge role={user.role} />
     },
@@ -233,8 +239,10 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
                   <StatusBadge status={user.status} />
                 </div>
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="mt-2 flex items-center flex-wrap gap-2 text-xs text-muted-foreground">
                   <RoleBadge role={user.role} />
+                  <span className="opacity-40">•</span>
+                  <span className="font-mono">{user.student_id || "No ID"}</span>
                   <span className="opacity-40">•</span>
                   <span className="truncate">{user.department}</span>
                 </div>

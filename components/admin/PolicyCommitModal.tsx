@@ -27,7 +27,7 @@ export function PolicyCommitModal({
 }: CommitModalProps) {
   const [reason, setReason] = useState("");
 
-  const formatKey = (key: string) => key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const formatKey = (key: string) => key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').replace("Loan", "Borrow");
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

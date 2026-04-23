@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/layout/Logo";
 import { MicrosoftIcon } from "@/components/ui/microsoft-icon";
 import { AuthErrorAlert } from "@/components/auth/auth-feedback";
+import { resolveStudentId } from "@/lib/library-card-assets";
 import {
   Card,
   CardContent,
@@ -34,6 +35,8 @@ export function SignUpForm({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const studentIdPreview = resolveStudentId({ email });
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +125,14 @@ export function SignUpForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="email">Email address</Label>
+                {studentIdPreview && (
+                  <span className="text-[10px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full animate-in fade-in slide-in-from-right-1">
+                    Your ID: {studentIdPreview}
+                  </span>
+                )}
+              </div>
               <Input
                 id="email"
                 type="email"

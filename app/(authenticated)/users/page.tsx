@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { UsersContent, User } from "./UsersContent";
+import { UsersContent } from "./UsersContent";
+import { mapProfileToUser } from "@/lib/utils/mappers";
 
 export default function UsersPage() {
   return (
@@ -14,16 +15,6 @@ export default function UsersPage() {
   );
 }
 
-interface ProfileRow {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-  role: string | null;
-  status: string | null;
-  department: string | null;
-  created_at: string | null;
-}
 
 async function UsersDataWrapper() {
   const supabase = await createClient();
@@ -41,18 +32,8 @@ async function UsersDataWrapper() {
       .range(0, pageSize - 1)
       .then(({ data, count, error }) => {
         if (error) throw error;
-        const mapProfileToUser = (row: ProfileRow): User => ({
-          id: String(row.id ?? ""),
-          name: row.full_name || (row.email?.split("@")[0].split(".").map((p: string) => p[0]?.toUpperCase() + p.slice(1)).join(" ")) || "Unnamed User",
-          email: row.email || "",
-          avatarUrl: row.avatar_url || null,
-          role: (row.role as User["role"]) || "student",
-          status: row.status || "active",
-          department: row.department || "General",
-          joined: row.created_at ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown",
-        });
         return {
-          users: (data as unknown as ProfileRow[] || []).map(mapProfileToUser),
+          users: (data || []).map((row) => mapProfileToUser(row as Record<string, unknown>)),
           count: count || 0,
         };
       })

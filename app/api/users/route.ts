@@ -23,6 +23,7 @@ function mapProfileToUser(row: Record<string, unknown>) {
     email,
     role: normalizeUserRole(row.role as string),
     status: typeof row.status === "string" ? row.status : "active",
+    student_id: typeof row.student_id === "string" ? row.student_id : null,
     department:
       typeof row.department === "string" && row.department.trim()
         ? row.department
@@ -146,6 +147,7 @@ export const PATCH = withAuthApi(
       role?: unknown;
       status?: unknown;
       department?: unknown;
+      student_id?: unknown;
     };
 
     try {
@@ -177,6 +179,14 @@ export const PATCH = withAuthApi(
       Object.prototype.hasOwnProperty.call(profile, "full_name")
     ) {
       updates.full_name = nextName;
+    }
+
+    const nextStudentId = typeof body.student_id === "string" ? body.student_id.trim() : null;
+    if (
+      nextStudentId !== null &&
+      "student_id" in profile
+    ) {
+      updates.student_id = nextStudentId || null;
     }
 
     const nextEmail =

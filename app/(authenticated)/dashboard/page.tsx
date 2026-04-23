@@ -17,7 +17,11 @@ async function DashboardHeader() {
   );
 }
 
-export default function ProtectedPage() {
+export default function ProtectedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }>;
+}) {
   return (
     <div className="flex flex-col gap-4">
       <Suspense fallback={<div className="h-16 w-full animate-pulse bg-muted rounded-lg" />}>
@@ -30,7 +34,7 @@ export default function ProtectedPage() {
         and the content below streams in via Suspense. 
       */}
       <Suspense fallback={<DashboardLoading />}>
-        <DashboardContent />
+        <DashboardContent searchParams={searchParams} />
       </Suspense>
     </div>
   );

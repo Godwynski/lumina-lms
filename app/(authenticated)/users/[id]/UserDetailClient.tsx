@@ -28,13 +28,15 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     role: initialUser.role,
     status: initialUser.status,
     department: initialUser.department,
+    student_id: initialUser.student_id || "",
   });
 
   const isDirty = 
     form.name !== initialUser.name ||
     form.role !== initialUser.role ||
     form.status !== initialUser.status ||
-    form.department !== initialUser.department;
+    form.department !== initialUser.department ||
+    form.student_id !== (initialUser.student_id || "");
 
   const handleUpdateProfile = async () => {
     setIsSaving(true);
@@ -46,6 +48,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
         role: form.role,
         status: form.status.trim().toUpperCase(),
         department: form.department.trim() || "General",
+        student_id: form.student_id.trim() || null,
       };
 
       const { data: updated, error: updateError } = await supabase
@@ -70,7 +73,8 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
         email: updated.email,
         role: updated.role,
         status: updated.status,
-        department: updated.department
+        department: updated.department,
+        student_id: updated.student_id
       } : { ...user, ...form };
       
       setUser(nextUser);
@@ -189,6 +193,20 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                     <SelectItem value="suspended">Suspended Access</SelectItem>
                   </SelectContent>
                 </Select>
+              </FieldGroup>
+
+              <FieldGroup label="Library ID Number (Auto-extracted)">
+                <div className="relative">
+                  <Input 
+                    value={form.student_id} 
+                    onChange={e => setForm(prev => ({ ...prev, student_id: e.target.value }))}
+                    placeholder="e.g. 123456"
+                    className="h-10 rounded-lg text-sm font-mono"
+                  />
+                  {!form.student_id && (
+                    <p className="mt-1 text-[10px] text-destructive">Required for circulation and ID cards</p>
+                  )}
+                </div>
               </FieldGroup>
             </div>
 

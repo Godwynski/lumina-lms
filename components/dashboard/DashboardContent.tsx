@@ -1,5 +1,6 @@
 import { getDashboardStats } from "@/lib/actions/dashboard";
 import { getMyReservations } from "@/lib/actions/reservations";
+import { getBooks, getCategories } from '@/lib/actions/catalog';
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getMe } from "@/lib/auth-helpers";
 import { Reservation } from "@/lib/types";
@@ -8,7 +9,11 @@ import { Reservation } from "@/lib/types";
  * Server Component that orchestrates various data promises for the dashboard.
  * It uses the 'getMe' helper which is cached per-request.
  */
-export async function DashboardContent() {
+export async function DashboardContent({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }> 
+}) {
   const me = await getMe();
   if (!me) return null;
   
@@ -46,6 +51,20 @@ export async function DashboardContent() {
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
+  // Staff Inventory Data
+  const params = await searchParams;
+  const page = parseInt(params.page || '1', 10);
+  const q = params.q || '';
+  const categoryId = params.categoryId || '';
+
+  const inventoryCategoriesPromise = role !== "student" 
+    ? getCategories() 
+    : Promise.resolve([]);
+    
+  const inventoryBooksPromise = role !== "student"
+    ? getBooks(q, categoryId || undefined, page, 9)
+    : Promise.resolve({ data: [], count: 0 });
+
   // Pass promises to the client component for rendering with Suspense/use() where needed
   return (
     <DashboardClient 
@@ -56,6 +75,8 @@ export async function DashboardContent() {
       cardPromise={cardPromise as unknown as Promise<{ data: { card_number: string; status: string; expires_at: string } | null }>}
       faqPromise={faqPromise as unknown as Promise<{ data: { key: string; value: string | null }[] | null }>}
       reservationsPromise={reservationsPromise}
+      inventoryBooksPromise={inventoryBooksPromise}
+      inventoryCategoriesPromise={inventoryCategoriesPromise}
     />
   );
 }

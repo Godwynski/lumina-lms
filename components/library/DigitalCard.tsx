@@ -56,6 +56,7 @@ export default function DigitalCard({
         phone={phone}
         exportMode={exportMode}
         cardId={cardId}
+        studentId={studentId}
       />
     );
   }
@@ -151,6 +152,7 @@ function CardFront({
 
           <div className="flex min-w-0 flex-col justify-center gap-4 sm:gap-6">
             <FieldLine label="Name" value={fullName} />
+            <FieldLine label="ID Number" value={studentId} />
             <FieldLine label="Program" value={department} />
             <FieldLine label="Valid Until" value={formattedExpiry} />
             <div className="text-right font-serif text-[9px] text-foreground sm:text-[10px]">Card No: {cardNumber}</div>
@@ -200,9 +202,10 @@ function CardBack({
   phone,
   exportMode,
   cardId,
+  studentId,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId"
+  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId" | "studentId"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -226,7 +229,11 @@ function CardBack({
           </div>
         </div>
 
-        <div className="grid h-[calc(100%-58px)] grid-rows-[auto_1fr_auto] gap-2 p-2.5 sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4">
+        <div className="grid h-[calc(100%-58px)] grid-rows-[auto_auto_1fr_auto] gap-2 p-2.5 sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4">
+          <div className="flex items-center justify-between border-b border-foreground pb-1">
+             <p className="text-[10px] font-bold text-foreground uppercase tracking-wider">Student ID: <span className="font-mono">{studentId}</span></p>
+             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Card No: {cardNumber}</p>
+          </div>
           <div className="grid gap-1.5">
             <div>
               <p className="text-[11px] font-medium text-foreground sm:text-xs">Address:</p>

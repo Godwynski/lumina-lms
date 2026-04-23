@@ -11,11 +11,15 @@ function parseStudentIdFromEmail(email?: string | null) {
   if (!email) return null;
 
   const localPart = email.split("@")[0];
-  const parts = localPart.split(".");
-  if (parts.length < 2) return null;
+  
+  // 1. Try to find the first sequence of digits (e.g., 376375 from neri.376375)
+  const digitMatch = localPart.match(/\d+/);
+  if (digitMatch) {
+    return sanitizeStudentId(digitMatch[0]);
+  }
 
-  const candidate = parts[parts.length - 1];
-  return candidate ? sanitizeStudentId(candidate) : null;
+  // 2. If no digits (Teacher case), use the local part (e.g., johnrenaund.baybay)
+  return sanitizeStudentId(localPart);
 }
 
 export function fileNamesFor(studentId: string) {

@@ -16,7 +16,7 @@ export function DashboardSearch({ role }: DashboardSearchProps) {
     e.preventDefault();
     if (!query.trim()) return;
 
-    const path = role === 'student' ? '/student-catalog' : '/catalog';
+    const path = role === 'student' ? '/student-catalog' : '/dashboard';
     router.push(`${path}?q=${encodeURIComponent(query.trim())}`);
   };
 

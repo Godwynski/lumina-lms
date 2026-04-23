@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { ArrowUpRight, BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock, Ticket, Sparkles } from 'lucide-react';
+import { BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock, Ticket, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cancelReservation } from '@/lib/actions/reservations';
@@ -16,9 +16,14 @@ import dynamic from 'next/dynamic';
 import { resolveStudentId, getDeterministicQrUrl } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import { createClient } from '@/lib/supabase/client';
-import { Reservation, ProfileData } from '@/lib/types';
+import { Reservation, ProfileData, Book, Category } from '@/lib/types';
 import type { BorrowingRecord } from '@/lib/actions/history';
 import { LiveActivityTicker } from './LiveActivityTicker';
+
+const ModernInventoryClient = dynamic(() => import('@/components/inventory/ModernInventoryClient').then(mod => mod.ModernInventoryClient), {
+  ssr: false,
+  loading: () => <div className="h-[400px] w-full animate-pulse rounded-xl bg-muted" />
+});
 
 const MyCardContainer = dynamic(() => import('@/components/library/MyCardContainer'), {
   ssr: false,
@@ -44,9 +49,21 @@ interface DashboardProps {
   cardPromise: Promise<{ data: CardData }>;
   faqPromise: Promise<{ data: FaqRow[] | null }>;
   reservationsPromise: Promise<Reservation[]>;
+  inventoryBooksPromise: Promise<{ data: Book[]; count: number }>;
+  inventoryCategoriesPromise: Promise<Category[]>;
 }
 
-export function DashboardClient({ user, role, statsPromise, profilePromise, cardPromise, faqPromise, reservationsPromise }: DashboardProps) {
+export function DashboardClient({ 
+  user, 
+  role, 
+  statsPromise, 
+  profilePromise, 
+  cardPromise, 
+  faqPromise, 
+  reservationsPromise,
+  inventoryBooksPromise,
+  inventoryCategoriesPromise
+}: DashboardProps) {
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -57,6 +74,8 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
   const cardResult = use(cardPromise);
   const faqResult = use(faqPromise);
   const reservations = use(reservationsPromise);
+  const inventoryData = use(inventoryBooksPromise);
+  const inventoryCategories = use(inventoryCategoriesPromise);
 
   const profileData = profileResult.data;
   const activeLoansList = stats.activeLoansList || [];
@@ -351,74 +370,50 @@ export function DashboardClient({ user, role, statsPromise, profilePromise, card
   // STAFF / ADMIN DASHBOARD
   return (
     <div className="space-y-6 pb-14 w-full relative overflow-hidden">
-      <LiveActivityTicker />
-      <div className="grid gap-8 md:grid-cols-2 items-start">
-        <div className="space-y-6">
-           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
-              <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Action Required
-           </h2>
-           <div className="grid gap-3">
-              {stats.pendingApprovals > 0 ? (
-                 <Link href="/admin/approvals">
-                   <Card className="border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors p-4 rounded-2xl group relative overflow-hidden shadow-none">
-                     <div className="flex items-start gap-4">
-                        <div className="bg-amber-500/20 p-2 rounded-lg text-amber-600"><Users size={20} /></div>
-                        <div>
-                           <p className="font-bold text-amber-700 leading-tight">Account Approvals</p>
-                           <p className="text-xs font-medium text-amber-700/70 mt-1">
-                              You have {stats.pendingApprovals} new library card applications waiting for validation.
-                           </p>
-                        </div>
-                     </div>
-                   </Card>
-                 </Link>
-              ) : (
-                <div className="rounded-[2rem] border-2 border-dashed border-border/60 bg-muted/10 p-8 text-center flex flex-col items-center">
-                  <CheckCircle2 size={24} className="text-emerald-500/40 mb-3" />
-                  <h3 className="text-sm font-bold text-foreground">All Clear</h3>
-                  <p className="text-xs text-muted-foreground mt-1">No urgent issues or pending requests.</p>
-                </div>
-              )}
-           </div>
-        </div>
-
-        <div className="space-y-6">
-           <div className="flex items-center justify-between px-1">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                 <Zap className="h-3.5 w-3.5 text-primary" /> Recent Catalog Activity
-              </h2>
-              <Link href="/catalog" className="text-[10px] font-bold text-primary hover:tracking-widest transition-all">View All</Link>
-           </div>
-           <div className="grid gap-2">
-              {stats.recentBooks.length > 0 ? (
-                stats.recentBooks.slice(0, 5).map((book) => (
-                  <Link key={book.id} href={`/catalog/${book.id}`}>
-                    <Card className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 rounded-[1.25rem] group/item p-3 backdrop-blur-sm">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-12 w-9 shrink-0 items-center justify-center rounded border border-border bg-muted/30 overflow-hidden relative group-hover/item:shadow-sm">
-                            {book.cover_url ? (
-                              <Image src={book.cover_url} alt={book.title} fill sizes="40px" className="object-cover" unoptimized />
-                            ) : (
-                              <BookMarked size={14} className="text-muted-foreground/30" />
-                            )}
-                          </div>
-                           <div className="min-w-0">
-                            <p className="truncate text-sm font-extrabold text-foreground group-hover/item:text-primary transition-colors leading-tight">{book.title}</p>
-                            <p className="truncate text-[11px] font-bold text-muted-foreground/60">{book.author}</p>
-                          </div>
-                        </div>
-                        <ArrowUpRight size={16} className="text-muted-foreground/30 group-hover/item:text-primary group-hover/item:translate-x-1 group-hover/item:-translate-y-1 transition-all" />
+      
+      <section className="space-y-6">
+         <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
+            <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Action Required
+         </h2>
+         <div className="grid gap-3">
+            {stats.pendingApprovals > 0 ? (
+               <Link href="/admin/approvals">
+                 <Card className="border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors p-4 rounded-2xl group relative overflow-hidden shadow-none">
+                   <div className="flex items-start gap-4">
+                      <div className="bg-amber-500/20 p-2 rounded-lg text-amber-600"><Users size={20} /></div>
+                      <div>
+                         <p className="font-bold text-amber-700 leading-tight">Account Approvals</p>
+                         <p className="text-xs font-medium text-amber-700/70 mt-1">
+                            You have {stats.pendingApprovals} new library card applications waiting for validation.
+                         </p>
                       </div>
-                    </Card>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-[2rem] border border-dashed border-border p-10 text-center bg-muted/10 opacity-40 uppercase text-[10px] font-black tracking-widest text-muted-foreground">The inventory is quiet.</div>
-              )}
-           </div>
-        </div>
-      </div>
+                   </div>
+                 </Card>
+               </Link>
+            ) : (
+              <div className="rounded-[2rem] border-2 border-dashed border-border/60 bg-muted/10 p-8 text-center flex flex-col items-center">
+                <CheckCircle2 size={24} className="text-emerald-500/40 mb-3" />
+                <h3 className="text-sm font-bold text-foreground">All Clear</h3>
+                <p className="text-xs text-muted-foreground mt-1">No urgent issues or pending requests.</p>
+              </div>
+            )}
+         </div>
+      </section>
+
+      <section className="space-y-6">
+         <div className="flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+               <Library className="h-3.5 w-3.5 text-primary" /> Inventory Management
+            </h2>
+         </div>
+         <div className="w-full">
+            <ModernInventoryClient 
+              books={inventoryData.data || []} 
+              totalItems={inventoryData.count || 0} 
+              categories={inventoryCategories}
+            />
+         </div>
+      </section>
     </div>
   );
 }

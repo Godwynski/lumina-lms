@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { UserDetailClient } from "./UserDetailClient";
-import type { User } from "../UsersContent";
+import { mapProfileToUser } from "@/lib/utils/mappers";
 
 export default function UserDetailPage(props: { params: Promise<{ id: string }> }) {
   return (
@@ -33,16 +33,7 @@ async function UserDetailLoader({ params }: { params: Promise<{ id: string }> })
   if (error || !data) notFound();
   
   const row = data;
-  const mappedUser: User = {
-    id: String(row.id ?? ""),
-    name: row.full_name || (row.email?.split("@")[0].split(".").map((p: string) => p[0]?.toUpperCase() + p.slice(1)).join(" ")) || "Unnamed User",
-    email: row.email || "",
-    avatarUrl: row.avatar_url || null,
-    role: (row.role as User["role"]) || "student",
-    status: row.status || "active",
-    department: row.department || "General",
-    joined: row.created_at ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Unknown",
-  };
+  const mappedUser = mapProfileToUser(row as Record<string, unknown>);
 
   return <UserDetailClient initialUser={mappedUser} />;
 }

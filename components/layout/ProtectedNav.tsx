@@ -126,7 +126,6 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Library,
     minRole: "student",
     children: [
-      { href: "/catalog", label: "Inventory", icon: Library, minRole: "staff" },
       { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
       { href: "/circulation", label: "Circulation Desk", icon: History, minRole: "staff" },
       { href: "/history", label: "Borrow History", icon: History, minRole: "student" },

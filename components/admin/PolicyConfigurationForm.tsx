@@ -110,7 +110,7 @@ export function PolicyConfigurationForm({
     const Icon = ICONS[config.icon as keyof typeof ICONS] || HelpCircle;
     const isSlider = key === "max_borrow_limit" || key === "max_renewal_count";
     const isDays = key.includes("days");
-    const labelText = key.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    const labelText = key.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ").replace("Loan", "Borrow");
 
     return (
       <Card key={key} className="group relative border-border/50 bg-card/40 p-6 shadow-none transition-all hover:bg-card hover:border-primary/20 rounded-3xl">
