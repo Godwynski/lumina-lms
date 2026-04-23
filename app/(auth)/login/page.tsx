@@ -22,10 +22,7 @@ async function AuthRedirect() {
 
 export default function LoginPage() {
   return (
-    <AuthPageShell
-      title="Sign in to your library operations account."
-      description="Use your assigned credentials to access catalog, circulation, and administrative tools."
-    >
+    <AuthPageShell>
       <Suspense fallback={null}>
         <AuthRedirect />
       </Suspense>
