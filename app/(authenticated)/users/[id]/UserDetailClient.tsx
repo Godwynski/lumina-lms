@@ -60,7 +60,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
       if (form.status !== initialUser.status) {
         await supabase
           .from("library_cards")
-          .update({ status: form.status.toUpperCase() })
+          .update({ status: form.status.toLowerCase() })
           .eq("user_id", user.id);
       }
 

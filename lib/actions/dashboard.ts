@@ -83,7 +83,7 @@ export async function getDashboardStats({
             supabase
               .from('library_cards')
               .select('*', { count: 'exact', head: true })
-              .eq('status', 'PENDING')
+              .eq('status', 'pending')
           ),
           { count: 0, data: [], error: null, status: 200, statusText: 'OK', success: true }
         )
