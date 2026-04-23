@@ -7,7 +7,9 @@ import { AuthGate } from "./_components/AuthGate";
 import { StreamedNav } from "./_components/StreamedNav";
 import { StreamedUserNav } from "./_components/StreamedUserNav";
 import { NavSkeleton } from "./_components/Skeletons";
-import { getPreferences } from "@/lib/auth-helpers";
+import { getMe, getPreferences } from "@/lib/auth-helpers";
+import { redirect } from "next/navigation";
+import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
 import NavAnimatePresence from "./NavAnimatePresence";
 
 export default async function ProtectedLayout({
@@ -15,6 +17,25 @@ export default async function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const me = await getMe();
+
+  if (!me) {
+    redirect("/login");
+  }
+
+  const { profile, role } = me;
+
+  const isAccessBlocked = 
+    profile?.status === "PENDING" || 
+    profile?.status === "SUSPENDED" || 
+    profile?.status === "INACTIVE";
+
+  const isPrivileged = role === "admin" || role === "librarian";
+
+  if (isAccessBlocked && !isPrivileged) {
+    return <AccountPendingScreen />;
+  }
+
   const defaultOpen = true; // Use a static default for the instant shell.
   const preferencesPromise = getPreferences();
 
