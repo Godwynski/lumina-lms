@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,60 +21,42 @@ interface ModernInventoryClientProps {
 export function ModernInventoryClient({ books, totalItems, categories }: ModernInventoryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
-  const [search, setSearch] = useState(searchParams.get("q") || "");
-  const [viewMode, setViewMode] = useState<"list" | "grid">((searchParams.get("view") as "list" | "grid" | null) || "grid");
-  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out" | "low">((searchParams.get("stock") as "all" | "in" | "out" | "low" | null) || "all");
-  const [sortBy, setSortBy] = useState<"title_asc" | "title_desc" | "availability_desc" | "availability_asc">((searchParams.get("sort") as "title_asc" | "title_desc" | "availability_desc" | "availability_asc" | null) || "title_asc");
-  const [page, setPage] = useState(parseInt(searchParams.get("page") || "1", 10));
-  const [categoryId, setCategoryId] = useState(searchParams.get("categoryId") || "all");
+  // Derived values from URL
+  const viewMode = (searchParams.get("view") as "list" | "grid") || "grid";
+  const sortBy = (searchParams.get("sort") as "title_asc" | "title_desc" | "availability_desc" | "availability_asc") || "title_asc";
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const categoryId = searchParams.get("categoryId") || "all";
 
-  // Sync state to URL
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set("q", search);
-    if (viewMode !== "grid") params.set("view", viewMode);
-    if (stockFilter !== "all") params.set("stock", stockFilter);
-    if (categoryId !== "all") params.set("categoryId", categoryId);
-    if (sortBy !== "title_asc") params.set("sort", sortBy);
-    if (page !== 1) params.set("page", page.toString());
+  const pageSize = viewMode === "list" ? 10 : 9;
+
+  // Centralized navigation helper
+  const updateParams = (updates: Record<string, string | number | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
     
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || (key === "page" && value === 1)) {
+        params.delete(key);
+      } else {
+        params.set(key, value.toString());
+      }
+    });
+
+    // Reset page on filter change unless explicitly setting page
+    if (!updates.page) {
+      params.delete("page");
+    }
+
     startTransition(() => {
       router.replace(`?${params.toString()}`, { scroll: false });
     });
-  }, [search, viewMode, stockFilter, sortBy, page, router, categoryId]);
+  };
 
-  // Sync state from URL (for external changes like header search)
-  useEffect(() => {
-    const q = searchParams.get("q") || "";
-    if (q !== search) setSearch(q);
-    
-    const stock = searchParams.get("stock") as "all" | "in" | "out" | "low" | null;
-    if (stock && stock !== stockFilter) setStockFilter(stock);
-
-    const cat = searchParams.get("categoryId") || "all";
-    if (cat !== categoryId) setCategoryId(cat);
-
-    const sort = searchParams.get("sort") as typeof sortBy | null;
-    if (sort && sort !== sortBy) setSortBy(sort);
-
-    const p = parseInt(searchParams.get("page") || "1", 10);
-    if (p !== page) setPage(p);
-  }, [searchParams, categoryId, page, search, sortBy, stockFilter]);
-
-  const pageSize = viewMode === "list" ? 10 : 9;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, stockFilter, sortBy, viewMode]);
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
+  const setCategoryId = (id: string) => updateParams({ categoryId: id });
+  const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
+  const setViewMode = (view: typeof viewMode) => updateParams({ view });
+  const setPage = (p: number) => updateParams({ page: p });
 
 
   return (
@@ -161,42 +143,42 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
         </div>
       </div>
 
-      {viewMode === "list" ? (
-        <div className="overflow-x-auto pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-thin">
-          <div className="space-y-2 min-w-[700px] pr-2">
-            {books.map((book) => (
-              <ModernBookListItem key={book.id} book={book} />
-            ))}
-            {books.length === 0 && (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/30 px-4 py-16 text-center shadow-none backdrop-blur-sm">
-                <div className="mb-4 rounded-full bg-slate-100 p-4 font-medium text-slate-400 ring-1 ring-slate-200/50">
-                  <Search className="h-8 w-8" />
+      <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>
+        {viewMode === "list" ? (
+          <div className="overflow-x-auto pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-thin">
+            <div className="space-y-2 min-w-[700px] pr-2">
+              {books.map((book) => (
+                <ModernBookListItem key={book.id} book={book} />
+              ))}
+              {books.length === 0 && (
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/30 px-4 py-16 text-center shadow-none backdrop-blur-sm">
+                  <div className="mb-4 rounded-full bg-slate-100 p-4 font-medium text-slate-400 ring-1 ring-slate-200/50">
+                    <Search className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-bold tracking-tight text-slate-900">No books found</h3>
+                  <p className="mt-1 max-w-[280px] text-sm text-slate-500">
+                    We couldn&apos;t find any books matching your current search or filters. Try adjusting them.
+                  </p>
+                  <div className="mt-6 flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 rounded-full px-5 text-xs font-semibold"
+                      onClick={() => {
+                        updateParams({ q: null, stock: "all", categoryId: "all" });
+                      }}
+                    >
+                      Clear Search
+                    </Button>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold tracking-tight text-slate-900">No books found</h3>
-                <p className="mt-1 max-w-[280px] text-sm text-slate-500">
-                  We couldn&apos;t find any books matching your current search or filters. Try adjusting them.
-                </p>
-                <div className="mt-6 flex gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 rounded-full px-5 text-xs font-semibold"
-                    onClick={() => {
-                      setSearch("");
-                      setStockFilter("all");
-                      setCategoryId("all");
-                    }}
-                  >
-                    Clear Search
-                  </Button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      ) : (
-        <InventoryGrid books={books} />
-      )}
+        ) : (
+          <InventoryGrid books={books} />
+        )}
+      </div>
 
       {totalItems > 0 && (
         <CompactPagination

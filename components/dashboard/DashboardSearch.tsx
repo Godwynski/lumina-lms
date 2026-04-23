@@ -1,32 +1,48 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Search, Loader2 } from 'lucide-react';
+import { useState, useEffect, useTransition } from 'react';
 import { cn } from "@/lib/utils";
 
 interface DashboardSearchProps {
-  role: string | null;
+  role?: string | null;
 }
 
-export function DashboardSearch({ role }: DashboardSearchProps) {
+export function DashboardSearch({ role: _role }: DashboardSearchProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [isPending, setIsPending] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
+  // Sync internal state when URL changes externally
   useEffect(() => {
-    setQuery(searchParams.get('q') || '');
-  }, [searchParams]);
+    const q = searchParams.get('q') || '';
+    if (q !== query) setQuery(q);
+  }, [searchParams, query]);
+
+  // Debounce search updates to the URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (query.trim()) {
+        params.set('q', query.trim());
+      } else {
+        params.delete('q');
+      }
+      params.delete('page'); // Reset page on search
+
+      startTransition(() => {
+        router.replace(`?${params.toString()}`, { scroll: false });
+      });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query, router, searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-
-    const path = role === 'student' ? '/student-catalog' : '/dashboard';
-    setIsPending(true);
-    router.push(`${path}?q=${encodeURIComponent(query.trim())}`);
-    setIsPending(false);
+    // No-op as we use the useEffect debounce for searching
   };
 
   return (
@@ -41,15 +57,16 @@ export function DashboardSearch({ role }: DashboardSearchProps) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className={cn(
-          "h-10 w-full rounded-2xl border-2 border-border/40 bg-background/80 pl-10 pr-4 text-sm font-medium transition-all duration-300",
+          "h-10 w-full rounded-2xl border-2 border-border/40 bg-background/80 pl-10 pr-10 text-sm font-medium transition-all duration-300",
           "placeholder:text-muted-foreground/50",
           "hover:border-primary/30 hover:bg-background/90 hover:shadow-md",
-          "focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-background focus:shadow-lg"
+          "focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-background focus:shadow-lg",
+          isPending && "opacity-80"
         )}
       />
       {isPending && (
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <Loader2 className="h-4 w-4 animate-spin text-primary/50" />
         </div>
       )}
     </form>
