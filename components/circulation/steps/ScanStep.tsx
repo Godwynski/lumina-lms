@@ -154,10 +154,10 @@ export function ScanStep({
               <Input
                 ref={manualInputRef}
                 value={manualValue}
-                onChange={(e) => setManualValue(e.target.value)}
+                onChange={(e) => setManualValue(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
                 placeholder={placeholder}
-                className="h-10 rounded-xl bg-muted/40 border-border focus:ring-primary/20"
+                className="h-10 rounded-xl bg-muted/40 border-border focus:ring-primary/20 uppercase"
               />
               <Button 
                 onClick={handleManualSubmit}
