@@ -9,11 +9,19 @@ export const metadata = {
 
 // Enable PPR for this route
 
+import { getMe } from '@/lib/auth-helpers';
+import { redirect } from 'next/navigation';
+
 async function CatalogDataWrapper({ 
   searchParams 
 }: { 
   searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }> 
 }) {
+  const me = await getMe();
+  if (me?.role === 'admin' || me?.role === 'librarian') {
+    redirect('/dashboard');
+  }
+
   const params = await searchParams;
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';

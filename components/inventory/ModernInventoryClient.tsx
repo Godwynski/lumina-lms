@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Plus, ArrowUpDown } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { ModernBookListItem } from "./ModernBookListItem";
 import { InventoryGrid } from "./InventoryGrid";
 import { Book, Category } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface ModernInventoryClientProps {
   books: Book[];
@@ -75,47 +76,32 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
     }
   }, [page, totalPages]);
 
-  const quickFilters = useMemo(
-    () => [
-      { key: "all" as const, label: "All", count: totalItems },
-    ],
-    [totalItems],
-  );
 
   return (
-    <div className="w-full space-y-2 pb-5 md:pb-7">
-      <div className="sticky top-14 z-20 flex flex-wrap items-center gap-1.5 rounded-xl border border-border/40 bg-card/80 p-1.5 shadow-sm backdrop-blur-xl">
-        <Link href="/catalog/add" className="shrink-0">
-          <Button className="h-7 rounded-md px-2 text-[10px] font-bold uppercase tracking-tight">
-            <Plus className="mr-1.5 h-3 w-3" />
-            Add Book
-          </Button>
-        </Link>
-        <div className="mx-1 h-4 w-[1px] bg-border/50" />
-        {quickFilters.map((filter) => (
-          <Button
-            key={filter.key}
-            type="button"
-            variant={stockFilter === filter.key ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStockFilter(filter.key)}
-            className="h-7 rounded-full px-2.5 text-[10px]"
-          >
-            {filter.label} ({filter.count})
-          </Button>
-        ))}
+    <div className="w-full space-y-4 pb-10">
+      <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-border/40 bg-background/50 p-2 shadow-sm backdrop-blur-2xl transition-all duration-300">
+        <div className="flex items-center gap-1.5 px-1">
+          <Link href="/catalog/add" className="shrink-0">
+            <Button size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold uppercase tracking-tight shadow-none">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add Item
+            </Button>
+          </Link>
+          <div className="mx-1.5 h-4 w-[1px] bg-border/40" />
+        </div>
 
-        <div className="mx-1 h-4 w-[1px] bg-border/50" />
-
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[400px]">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
           <Button
             type="button"
             variant={categoryId === "all" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setCategoryId("all")}
-            className="h-7 whitespace-nowrap rounded-md px-2.5 text-[10px]"
+            className={cn(
+              "h-8 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold transition-all",
+              categoryId === "all" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            All Categories
+            All
           </Button>
           {categories.map((cat) => (
             <Button
@@ -124,46 +110,54 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
               variant={categoryId === cat.id ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setCategoryId(cat.id)}
-              className="h-7 whitespace-nowrap rounded-md px-2.5 text-[10px]"
+              className={cn(
+                "h-8 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold transition-all",
+                categoryId === cat.id ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:text-foreground"
+              )}
             >
               {cat.name}
             </Button>
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant={viewMode === "list" ? "default" : "outline"}
-            onClick={() => setViewMode("list")}
-            className="h-7 rounded-md px-2.5 text-[10px]"
-          >
-            List
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={viewMode === "grid" ? "default" : "outline"}
-            onClick={() => setViewMode("grid")}
-            className="h-7 rounded-md px-2.5 text-[10px]"
-          >
-            Grid
-          </Button>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ArrowUpDown className="h-3.5 w-3.5" />
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-              <SelectTrigger className="h-7 rounded-md border-border bg-card px-2 text-[11px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="title_asc">Title A-Z</SelectItem>
-                <SelectItem value="title_desc">Title Z-A</SelectItem>
-                <SelectItem value="availability_desc">Most Available</SelectItem>
-                <SelectItem value="availability_asc">Least Available</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="ml-auto flex items-center gap-2 pr-1">
+          <div className="flex items-center rounded-lg border border-border/40 bg-muted/20 p-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "h-6 rounded-md px-2.5 text-[10px] font-bold transition-all",
+                viewMode === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              List
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "h-6 rounded-md px-2.5 text-[10px] font-bold transition-all",
+                viewMode === "grid" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              Grid
+            </Button>
           </div>
+          
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/40 bg-muted/10 px-3 text-[11px] font-bold shadow-none focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="title_asc">Title A-Z</SelectItem>
+              <SelectItem value="title_desc">Title Z-A</SelectItem>
+              <SelectItem value="availability_desc">Availability</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

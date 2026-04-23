@@ -26,6 +26,8 @@ export type User = {
   department: string;
   joined: string;
   student_id: string | null;
+  address: string | null;
+  phone: string | null;
 };
 
 type ProfileRow = {
@@ -54,13 +56,14 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
-  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student" | "review">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
 
   const roleFilterLabels: Record<string, string> = {
     all: "All",
+    review: "Pending Review",
     admin: "Admin",
     librarian: "Librarian",
     staff: "Staff",
@@ -92,7 +95,9 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
           .from("profiles")
           .select("*", { count: "exact" });
 
-        if (activeTab !== "all") {
+        if (activeTab === "review") {
+          queryBuilder = queryBuilder.eq("status", "PENDING");
+        } else if (activeTab !== "all") {
           queryBuilder = queryBuilder.eq("role", activeTab);
         }
 
@@ -189,7 +194,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
               />
             </div>
             <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
-              {(["all", "admin", "librarian", "staff", "student"] as const).map((tab) => (
+              {(["all", "review", "admin", "librarian", "staff", "student"] as const).map((tab) => (
                 <Button
                   key={tab}
                   onClick={() => setActiveTab(tab)}

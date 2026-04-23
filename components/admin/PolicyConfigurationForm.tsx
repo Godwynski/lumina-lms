@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { AlertCircle, Calendar, BookCopy, RotateCw, History, Clock, Ticket, HelpCircle, MessageSquare, ChevronRight, ShieldCheck } from "lucide-react";
+import { AlertCircle, Calendar, BookCopy, RotateCw, History, Clock, Ticket, HelpCircle, MessageSquare, ChevronRight, ShieldCheck, User } from "lucide-react";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,8 @@ const ICONS = {
   Clock,
   Ticket,
   HelpCircle,
-  MessageSquare
+  MessageSquare,
+  User
 };
 
 export function PolicyConfigurationForm({

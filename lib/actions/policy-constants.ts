@@ -44,6 +44,12 @@ export const DEFAULT_POLICIES = {
   faq_student_a3: { value: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed.", description: "Student FAQ #3 answer", category: "support", icon: "MessageSquare" },
   faq_student_q4: { value: "Where can I see my current borrows?", description: "Student FAQ #4 question", category: "support", icon: "HelpCircle" },
   faq_student_a4: { value: "Use Borrow History from the dashboard quick actions to review active and past borrowing records.", description: "Student FAQ #4 answer", category: "support", icon: "MessageSquare" },
+  academic_programs: { 
+    value: "BS Information Technology, BS Computer Science, BS Information Systems, Associate in Computer Technology, BS Business Administration, BS Hospitality Management", 
+    description: "Comma-separated list of available academic programs for student onboarding.",
+    category: "identity",
+    icon: "User"
+  },
 };
 
 export const DEFAULT_STUDENT_FAQS = [

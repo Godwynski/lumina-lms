@@ -1,6 +1,6 @@
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, AlertCircle, ArrowRight } from "lucide-react";
@@ -37,9 +37,9 @@ export function PolicyCommitModal({
             <Check className="h-6 w-6" />
           </div>
           <DialogTitle className="text-xl font-bold tracking-tight">Review System Updates</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription className="text-sm text-muted-foreground">
             You are about to modify {changedKeys.length} core policy {changedKeys.length === 1 ? 'rule' : 'rules'}.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

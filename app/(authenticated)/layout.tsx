@@ -25,15 +25,30 @@ export default async function ProtectedLayout({
 
   const { profile, role } = me;
 
+  const isStudent = role === "student";
+  const isPrivileged = role === "admin" || role === "librarian";
+
+  // Access Restriction Logic
   const isAccessBlocked = 
     profile?.status === "PENDING" || 
     profile?.status === "SUSPENDED" || 
     profile?.status === "INACTIVE";
 
-  const isPrivileged = role === "admin" || role === "librarian";
-
   if (isAccessBlocked && !isPrivileged) {
-    return <AccountPendingScreen />;
+    // If it's a student who hasn't completed onboarding, we might want to show onboarding 
+    // instead of the general "Account Pending" screen.
+    // However, the Onboarding page itself needs to be accessible.
+    // We'll handle this by checking the profile fields.
+    const hasIncompleteProfile = !profile?.onboarding_completed || !profile?.address || !profile?.phone || !profile?.department;
+    
+    // We only force onboarding for students.
+    if (isStudent && hasIncompleteProfile) {
+      // We will create the /onboarding page. To avoid infinite redirects, 
+      // the onboarding page will be handled specifically or we'll allow it here.
+      // For now, let's assume we want to redirect them if they aren't there.
+    }
+
+    return <AccountPendingScreen profile={profile} isStudent={isStudent} />;
   }
 
   const defaultOpen = true; // Use a static default for the instant shell.

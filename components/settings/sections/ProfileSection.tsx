@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { UserCheck } from "lucide-react";
+import { UserCheck, ShieldAlert } from "lucide-react";
 import { m, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,13 @@ import { compressImage } from "@/lib/image-utils";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { Section, FieldGroup } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 interface ProfileSectionProps {
   role: string;
@@ -22,6 +29,8 @@ interface ProfileSectionProps {
     avatar_url: string | null;
     address: string | null;
     phone: string | null;
+    department: string | null;
+    status: string;
   };
 }
 
@@ -31,9 +40,17 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   const [displayName, setDisplayName] = useState(initialProfile.full_name || "");
   const [addressValue, setAddressValue] = useState(initialProfile.address || "");
   const [phoneValue, setPhoneValue] = useState(initialProfile.phone || "");
+  const [departmentValue, setDepartmentValue] = useState(initialProfile.department || "");
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(initialProfile.avatar_url || "");
+  const [programs, setPrograms] = useState<string[]>([]);
   
   const [profileSaving, setProfileSaving] = useState(false);
+
+  useEffect(() => {
+    if (role === 'student') {
+      import("@/lib/actions/onboarding").then(m => m.getAcademicPrograms().then(setPrograms));
+    }
+  }, [role]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [selectedPhotoName, setSelectedPhotoName] = useState("");
   const [selectedPhotoBlob, setSelectedPhotoBlob] = useState<Blob | null>(null);
@@ -44,7 +61,8 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   const isProfileDirty = 
     displayName !== (initialProfile.full_name || "") || 
     addressValue !== (initialProfile.address || "") || 
-    phoneValue !== (initialProfile.phone || "");
+    phoneValue !== (initialProfile.phone || "") ||
+    departmentValue !== (initialProfile.department || "");
   
   const isDirty = isProfileDirty || !!selectedPhotoBlob;
 
@@ -58,7 +76,8 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
         body: JSON.stringify({ 
           displayName: nextName,
           address: addressValue.trim(),
-          phone: phoneValue.trim()
+          phone: phoneValue.trim(),
+          department: departmentValue.trim()
         }),
       });
 
@@ -185,6 +204,34 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
                   />
                 </FieldGroup>
               </div>
+
+              {role === 'student' && (
+                <FieldGroup label="Academic Program">
+                  <div className="flex flex-col gap-2">
+                    <Select 
+                      value={departmentValue}
+                      onValueChange={setDepartmentValue}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg text-sm bg-background">
+                        <SelectValue placeholder="Select your program" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {programs.map((prog) => (
+                          <SelectItem key={prog} value={prog}>
+                            {prog}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {initialProfile.status === 'ACTIVE' && isProfileDirty && (
+                      <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1 mt-1">
+                        <ShieldAlert className="w-3 h-3" />
+                        Changing these details will require re-verification at the library.
+                      </p>
+                    )}
+                  </div>
+                </FieldGroup>
+              )}
             </div>
           </div>
 

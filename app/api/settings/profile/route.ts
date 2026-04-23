@@ -12,25 +12,43 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await request.json()) as { displayName?: string; address?: string; phone?: string };
+    const body = (await request.json()) as { 
+      displayName?: string; 
+      address?: string; 
+      phone?: string;
+      department?: string;
+    };
+    
     const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
     const address = typeof body.address === "string" ? body.address.trim() : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+    const department = typeof body.department === "string" ? body.department.trim() : "";
 
     if (!displayName) {
       return NextResponse.json({ error: "Display name is required" }, { status: 400 });
     }
 
-    if (displayName.length > 120) {
-      return NextResponse.json({ error: "Display name is too long" }, { status: 400 });
-    }
+    // Check current profile to see if we need to reset status
+    const { data: currentProfile } = await supabase
+      .from("profiles")
+      .select("role, status, full_name, address, phone, department")
+      .eq("id", user.id)
+      .single();
 
-    if (address.length > 500) {
-      return NextResponse.json({ error: "Address is too long" }, { status: 400 });
-    }
+    let nextStatus = currentProfile?.status;
 
-    if (phone.length > 50) {
-      return NextResponse.json({ error: "Phone number is too long" }, { status: 400 });
+    // Change Request Logic:
+    // If the user is a student and is changing critical info, reset to PENDING
+    if (currentProfile?.role === 'student' && currentProfile?.status === 'ACTIVE') {
+      const isChanged = 
+        displayName !== currentProfile.full_name ||
+        address !== currentProfile.address ||
+        phone !== currentProfile.phone ||
+        department !== currentProfile.department;
+
+      if (isChanged) {
+        nextStatus = 'PENDING';
+      }
     }
 
     const { error } = await supabase
@@ -39,6 +57,8 @@ export async function PATCH(request: Request) {
         full_name: displayName, 
         address, 
         phone, 
+        department,
+        status: nextStatus,
         updated_at: new Date().toISOString() 
       })
       .eq("id", user.id);

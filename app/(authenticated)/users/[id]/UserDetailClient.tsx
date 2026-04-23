@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon } from "lucide-react";
+import { UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,14 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     status: initialUser.status,
     department: initialUser.department,
     student_id: initialUser.student_id || "",
+    address: initialUser.address || "",
+    phone: initialUser.phone || "",
+  });
+
+  const [checklist, setChecklist] = useState({
+    nameMatches: false,
+    programMatches: false,
+    photoMatches: false,
   });
 
   const isDirty = 
@@ -36,7 +46,9 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     form.role !== initialUser.role ||
     form.status !== initialUser.status ||
     form.department !== initialUser.department ||
-    form.student_id !== (initialUser.student_id || "");
+    form.student_id !== (initialUser.student_id || "") ||
+    form.address !== (initialUser.address || "") ||
+    form.phone !== (initialUser.phone || "");
 
   const handleUpdateProfile = async () => {
     setIsSaving(true);
@@ -49,7 +61,19 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
         status: form.status.trim().toUpperCase(),
         department: form.department.trim() || "General",
         student_id: form.student_id.trim() || null,
+        address: form.address.trim() || null,
+        phone: form.phone.trim() || null,
       };
+
+      // Enforce checklist for student activation
+      if (form.status === 'ACTIVE' && initialUser.status === 'PENDING' && form.role === 'student') {
+        const isVerified = checklist.nameMatches && checklist.programMatches && checklist.photoMatches;
+        if (!isVerified) {
+          toast.error("Please complete the physical ID verification checklist before approving.");
+          setIsSaving(false);
+          return;
+        }
+      }
 
       const { data: updated, error: updateError } = await supabase
         .from("profiles")
@@ -161,6 +185,31 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                     </div>
                   </FieldGroup>
                 </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FieldGroup label="Contact Number">
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input 
+                        value={form.phone} 
+                        onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+63 900 000 0000"
+                        className="h-10 rounded-lg pl-9 text-sm"
+                      />
+                    </div>
+                  </FieldGroup>
+                  <FieldGroup label="Residential Address">
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input 
+                        value={form.address} 
+                        onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Street, City, Province"
+                        className="h-10 rounded-lg pl-9 text-sm"
+                      />
+                    </div>
+                  </FieldGroup>
+                </div>
               </div>
             </div>
           </Section>
@@ -223,7 +272,58 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
             </div>
           </Section>
 
+          {/* Physical Verification Checklist for Students */}
+          {form.role === 'student' && form.status === 'ACTIVE' && initialUser.status === 'PENDING' && (
+            <Section title="Physical ID Verification" icon={CheckCircle2}>
+              <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 space-y-4 animate-in fade-in slide-in-from-right-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Action Required: Physical Verification</p>
+                    <p className="text-xs text-muted-foreground">The student is physically present and has presented their school ID.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 pt-2">
+                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-background border border-border hover:border-primary/30 transition-colors">
+                    <Checkbox 
+                      id="nameMatches" 
+                      checked={checklist.nameMatches} 
+                      onCheckedChange={(checked) => setChecklist(prev => ({ ...prev, nameMatches: !!checked }))}
+                    />
+                    <Label htmlFor="nameMatches" className="text-sm font-medium cursor-pointer flex-1">
+                      Full Name matches physical ID Card
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-background border border-border hover:border-primary/30 transition-colors">
+                    <Checkbox 
+                      id="programMatches" 
+                      checked={checklist.programMatches} 
+                      onCheckedChange={(checked) => setChecklist(prev => ({ ...prev, programMatches: !!checked }))}
+                    />
+                    <Label htmlFor="programMatches" className="text-sm font-medium cursor-pointer flex-1">
+                      Academic Program matches physical ID Card
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-background border border-border hover:border-primary/30 transition-colors">
+                    <Checkbox 
+                      id="photoMatches" 
+                      checked={checklist.photoMatches} 
+                      onCheckedChange={(checked) => setChecklist(prev => ({ ...prev, photoMatches: !!checked }))}
+                    />
+                    <Label htmlFor="photoMatches" className="text-sm font-medium cursor-pointer flex-1">
+                      User identity matches ID Photo
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </Section>
+          )}
+
           {/* Admin Tools - Integrated into bottom bar via SettingsShell usually, but we'll show current save state */}
+
           <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-3 sm:p-4 mt-2">
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-card shadow-sm">

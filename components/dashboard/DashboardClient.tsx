@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import Image from 'next/image';
-import { BookMarked, CheckCircle2, Library, BookOpen, History, HelpCircle, Zap, ChevronDown, ShieldAlert, Users, Bookmark, XCircle, Clock, Ticket, Sparkles } from 'lucide-react';
+import { Library, BookOpen, History, HelpCircle, ChevronDown, Bookmark, XCircle, Clock, Ticket, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cancelReservation } from '@/lib/actions/reservations';
@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Reservation, ProfileData, Book, Category } from '@/lib/types';
 import type { BorrowingRecord } from '@/lib/actions/history';
 import { LiveActivityTicker } from './LiveActivityTicker';
+import { DashboardSearch } from './DashboardSearch';
 
 const ModernInventoryClient = dynamic(() => import('@/components/inventory/ModernInventoryClient').then(mod => mod.ModernInventoryClient), {
   ssr: false,
@@ -317,33 +318,7 @@ export function DashboardClient({
           )}
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-              Latest In Library
-            </h2>
-            <Link href="/student-catalog" className="text-[10px] font-bold text-primary hover:underline transition-all">Full Catalog</Link>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x px-0.5">
-            {stats.recentBooks.map((book) => (
-              <Link key={book.id} href={`/student-catalog/${book.id}`} className="flex-none w-[130px] snap-start group bg-card/40 border border-border/40 rounded-xl overflow-hidden hover:border-primary/30 transition-all shadow-none backdrop-blur-sm">
-                <div className="aspect-[3/4] bg-muted/20 flex flex-col items-center justify-center relative overflow-hidden">
-                  {book.cover_url ? (
-                    <Image src={book.cover_url} alt={book.title} fill sizes="130px" className="object-cover group-hover:scale-110 transition-transform duration-700" unoptimized />
-                  ) : (
-                    <BookMarked size={24} className="text-muted-foreground/10 group-hover:scale-125 transition-transform duration-700" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="p-2.5 bg-card/80 backdrop-blur-sm">
-                  <p className="truncate text-[10px] font-bold text-foreground leading-tight">{book.title}</p>
-                  <p className="truncate text-[9px] text-muted-foreground/70 mt-0.5">{book.author}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+
 
         {studentFaqs?.length > 0 && (
           <section className="pt-2">
@@ -369,51 +344,20 @@ export function DashboardClient({
 
   // STAFF / ADMIN DASHBOARD
   return (
-    <div className="space-y-6 pb-14 w-full relative overflow-hidden">
-      
-      <section className="space-y-6">
-         <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
-            <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Action Required
-         </h2>
-         <div className="grid gap-3">
-            {stats.pendingApprovals > 0 ? (
-               <Link href="/admin/approvals">
-                 <Card className="border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors p-4 rounded-2xl group relative overflow-hidden shadow-none">
-                   <div className="flex items-start gap-4">
-                      <div className="bg-amber-500/20 p-2 rounded-lg text-amber-600"><Users size={20} /></div>
-                      <div>
-                         <p className="font-bold text-amber-700 leading-tight">Account Approvals</p>
-                         <p className="text-xs font-medium text-amber-700/70 mt-1">
-                            You have {stats.pendingApprovals} new library card applications waiting for validation.
-                         </p>
-                      </div>
-                   </div>
-                 </Card>
-               </Link>
-            ) : (
-              <div className="rounded-[2rem] border-2 border-dashed border-border/60 bg-muted/10 p-8 text-center flex flex-col items-center">
-                <CheckCircle2 size={24} className="text-emerald-500/40 mb-3" />
-                <h3 className="text-sm font-bold text-foreground">All Clear</h3>
-                <p className="text-xs text-muted-foreground mt-1">No urgent issues or pending requests.</p>
-              </div>
-            )}
-         </div>
-      </section>
+    <div className="w-full relative min-h-[600px]">
+      <div className="flex items-center justify-between px-1 mb-4">
+        <div className="w-full max-w-md">
+          <DashboardSearch role={role || null} />
+        </div>
+      </div>
 
-      <section className="space-y-6">
-         <div className="flex items-center justify-between px-1">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-               <Library className="h-3.5 w-3.5 text-primary" /> Inventory Management
-            </h2>
-         </div>
-         <div className="w-full">
-            <ModernInventoryClient 
-              books={inventoryData.data || []} 
-              totalItems={inventoryData.count || 0} 
-              categories={inventoryCategories}
-            />
-         </div>
-      </section>
+      <div className="w-full">
+        <ModernInventoryClient 
+          books={inventoryData.data || []} 
+          totalItems={inventoryData.count || 0} 
+          categories={inventoryCategories}
+        />
+      </div>
     </div>
   );
 }

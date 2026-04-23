@@ -14,7 +14,7 @@ async function ProfileContent() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name, avatar_url, address, phone")
+    .select("role, full_name, avatar_url, address, phone, department, status")
     .eq("id", user.id)
     .single();
 
@@ -26,6 +26,8 @@ async function ProfileContent() {
         avatar_url: profile?.avatar_url || null,
         address: profile?.address || null,
         phone: profile?.phone || null,
+        department: profile?.department || null,
+        status: profile?.status || 'PENDING',
       }} 
     />
   );

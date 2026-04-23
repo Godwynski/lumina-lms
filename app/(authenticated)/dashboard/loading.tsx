@@ -1,13 +1,7 @@
 export default function DashboardLoading() {
   return (
     <div className="space-y-6 pb-6 lg:space-y-8">
-      {/* Search/Header Skeleton - subtle */}
-      <div className="flex flex-col gap-4 border-b border-border/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="hidden space-y-2 md:block">
-          <div className="h-4 w-64 animate-pulse rounded bg-muted/40" />
-        </div>
-        <div className="h-10 w-full animate-pulse rounded-lg bg-muted/30 sm:w-80" />
-      </div>
+
 
       {/* Main Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -234,7 +234,7 @@ export function AddBookClient() {
       if (!result.success) throw new Error(result.error);
 
       router.refresh();
-      router.push('/catalog');
+      router.push('/dashboard');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to add book';
       setError(message);
@@ -436,7 +436,7 @@ export function AddBookClient() {
                 asChild
                 className="h-9 rounded-md px-4 text-xs font-semibold"
               >
-                <Link href="/catalog">Cancel</Link>
+                <Link href="/dashboard">Cancel</Link>
               </Button>
             </div>
           </form>

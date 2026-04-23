@@ -26,4 +26,6 @@ export const mapProfileToUser = (row: Record<string, unknown>): User => ({
       ? new Date(row.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })
       : "Unknown",
   student_id: typeof row.student_id === "string" ? row.student_id : null,
+  address: typeof row.address === "string" ? row.address : null,
+  phone: typeof row.phone === "string" ? row.phone : null,
 });

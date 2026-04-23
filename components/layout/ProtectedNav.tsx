@@ -563,10 +563,12 @@ export function ProtectedNav({
                   <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
                   <Loader2 className="absolute inset-0 h-12 w-12 animate-spin text-primary [animation-duration:3s]" />
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <h3 className="text-2xl font-bold tracking-tight">Logging out...</h3>
-                  <p className="text-base text-muted-foreground font-medium text-center balance opacity-80">Ending your current session safely.</p>
-                </div>
+                <DialogHeader className="flex flex-col items-center gap-2">
+                  <DialogTitle className="text-2xl font-bold tracking-tight">Logging out...</DialogTitle>
+                  <DialogDescription className="text-base text-muted-foreground font-medium text-center balance opacity-80">
+                    Ending your current session safely.
+                  </DialogDescription>
+                </DialogHeader>
               </div>
             </div>
           </DialogContent>

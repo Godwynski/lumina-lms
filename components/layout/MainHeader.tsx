@@ -8,36 +8,43 @@ import Link from "next/link"
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav"
 import { cn } from "@/lib/utils"
 
+
 export function MainHeader() {
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
 
   return (
-    <header className="sticky top-0 z-40 hidden md:flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-md px-6 transition-all duration-200">
-      <div className="flex items-center gap-4 flex-1 overflow-hidden">
+    <header className="sticky top-0 z-40 hidden md:flex h-16 shrink-0 items-center gap-4 border-b border-border/40 bg-background/60 backdrop-blur-2xl px-8 transition-all duration-300">
+      <div className="flex items-center gap-6 flex-1 overflow-hidden">
         <div 
           className={cn(
-            "flex items-center gap-4 transition-all duration-300 ease-in-out",
+            "flex items-center gap-5 transition-all duration-500 ease-in-out",
             isCollapsed 
-              ? "max-w-[200px] opacity-100 translate-x-0 mr-2" 
-              : "max-w-0 opacity-0 -translate-x-4 mr-0 pointer-events-none"
+              ? "max-w-[240px] opacity-100 translate-x-0 mr-2" 
+              : "max-w-0 opacity-0 -translate-x-8 mr-0 pointer-events-none"
           )}
         >
-          <Link href="/dashboard" className="flex items-center gap-3 shrink-0" aria-label="Lumina LMS Platform">
-            <Logo size={18} className="scale-90 shrink-0" />
+          <Link href="/dashboard" className="flex items-center gap-3.5 shrink-0 group" aria-label="Lumina LMS Platform">
+            <div className="relative">
+              <Logo size={20} className="scale-90 shrink-0 group-hover:scale-100 transition-transform duration-300" />
+              <div className="absolute -inset-1 bg-primary/10 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
             <div className="flex flex-col whitespace-nowrap">
-              <span className="leading-none text-sm font-bold tracking-tight text-foreground">Lumina</span>
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">LMS Platform</span>
+              <span className="leading-none text-[15px] font-black tracking-tight text-foreground/90">Lumina</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">LMS Platform</span>
             </div>
           </Link>
-          <div className="h-4 w-[1px] bg-border mx-1" />
+          <div className="h-5 w-[1px] bg-border/40 mx-1" />
         </div>
         
         <div className="flex-1 truncate">
-          <Suspense fallback={<div className="h-4 w-32 animate-pulse bg-muted/40 rounded" />}>
-            <BreadcrumbNav />
+          <Suspense fallback={<div className="h-4 w-32 animate-pulse bg-muted/20 rounded-full" />}>
+            <div className="text-xs font-semibold tracking-wide">
+              <BreadcrumbNav />
+            </div>
           </Suspense>
         </div>
+
       </div>
     </header>
   )

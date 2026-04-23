@@ -42,7 +42,7 @@ export default function NotFound() {
             Back to Home
           </Button>
         </Link>
-        <Link href="/catalog" className="w-full sm:w-auto" onClick={() => handleNavigate('catalog')}>
+        <Link href="/dashboard" className="w-full sm:w-auto" onClick={() => handleNavigate('catalog')}>
           <Button
             variant="outline"
             size="lg"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -49,6 +49,9 @@ export function QRPrinterModal({ qrString, bookTitle }: QRPrinterModalProps) {
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Print QR Label</DialogTitle>
+          <DialogDescription>
+            Configure and print a QR code label for this book.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col items-center justify-center space-y-4 py-4">

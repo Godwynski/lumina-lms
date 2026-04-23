@@ -382,7 +382,7 @@ export function StaffBookManagementClient({
       const result = await softDeleteBook(book.id);
       if (!result.success) throw new Error(result.error);
       toast.success('Book removed from inventory');
-      router.push('/catalog');
+      router.push('/dashboard');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete book');
       setShowDeleteConfirm(false);

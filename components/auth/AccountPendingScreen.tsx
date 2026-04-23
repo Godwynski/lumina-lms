@@ -14,8 +14,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLogout } from "@/hooks/use-logout";
 
-export function AccountPendingScreen() {
+import { OnboardingForm } from "./OnboardingForm";
+
+export function AccountPendingScreen({ 
+  profile, 
+  isStudent 
+}: { 
+  profile: {
+    onboarding_completed?: boolean;
+    address?: string | null;
+    phone?: string | null;
+    department?: string | null;
+  }; 
+  isStudent: boolean;
+}) {
   const { logout, isLoggingOut } = useLogout();
+  const [isEditing, setIsEditing] = React.useState(false);
+
+  const needsOnboarding = isStudent && (!profile?.onboarding_completed || !profile?.address || !profile?.phone || !profile?.department);
+
+  if (needsOnboarding || isEditing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20 gap-4">
+        <OnboardingForm initialData={profile} />
+        {isEditing && (
+          <Button 
+            variant="ghost" 
+            onClick={() => setIsEditing(false)}
+            className="text-muted-foreground"
+          >
+            Cancel and Return
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
@@ -84,14 +117,23 @@ export function AccountPendingScreen() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 pb-8">
-          <Button 
-            variant="outline" 
-            className="w-full h-11 rounded-xl group"
-            onClick={() => window.location.reload()}
-          >
-            Check Status
-            <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Button>
+          <div className="grid grid-cols-2 gap-3 w-full">
+            <Button 
+              variant="outline" 
+              className="w-full h-11 rounded-xl group"
+              onClick={() => window.location.reload()}
+            >
+              Check Status
+              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full h-11 rounded-xl group border-primary/20 hover:bg-primary/5"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit Info
+            </Button>
+          </div>
           
           <Button 
             variant="ghost" 

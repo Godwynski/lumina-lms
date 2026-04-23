@@ -33,8 +33,8 @@ const DYNAMIC_SEGMENT_LABELS: Record<string, string> = {
 function formatSegment(segment: string, parentSegment?: string) {
   if (ROUTE_LABELS[segment]) return ROUTE_LABELS[segment];
 
-  // Specific contextual overrides for "new" segments
-  if (segment === "new") {
+  // Specific contextual overrides for "new" or "add" segments
+  if (segment === "new" || segment === "add") {
     if (parentSegment === "users") return "Invite User";
     if (parentSegment === "catalog") return "Add Asset";
     return "New Entry";
@@ -73,8 +73,15 @@ export function BreadcrumbNav() {
   const title = formatSegment(current, parentSegment);
 
   // For the back link, navigate to the parent path (e.g. /student-catalog) not the root segment
-  const backHref = pathSegments.length > 1 ? `/${pathSegments.slice(0, -1).join("/")}` : null;
-  const backLabel = parentSegment ? formatSegment(parentSegment) : null;
+  let backHref = pathSegments.length > 1 ? `/${pathSegments.slice(0, -1).join("/")}` : null;
+  let backLabel = parentSegment ? formatSegment(parentSegment) : null;
+
+  // Redirect "Inventory" (catalog) back links to dashboard for staff/admins
+  // And update the label to reflect the destination
+  if (backHref === "/catalog") {
+    backHref = "/dashboard";
+    backLabel = "Dashboard";
+  }
 
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">

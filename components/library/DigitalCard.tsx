@@ -166,7 +166,7 @@ function CardFront({
                   alt={`QR code for ${cardNumber}`}
                   width={92}
                   height={92}
-                  className="h-[64px] w-full object-contain sm:h-[92px]"
+                  className="w-full h-auto object-contain"
                   unoptimized
                 />
               ) : (
@@ -267,7 +267,7 @@ function CardBack({
                     alt={`QR code for ${cardNumber}`}
                     width={56}
                     height={56}
-                    className="h-10 w-10 object-contain sm:h-14 sm:w-14"
+                    className="w-10 h-10 sm:w-14 sm:h-14 object-contain"
                     unoptimized
                   />
                 ) : (
