@@ -12,7 +12,7 @@ import { Reservation } from "@/lib/types";
 export async function DashboardContent({ 
   searchParams 
 }: { 
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }> 
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; sort?: string; view?: string }> 
 }) {
   const me = await getMe();
   if (!me) return null;
@@ -51,18 +51,20 @@ export async function DashboardContent({
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
-  // Staff Inventory Data
   const params = await searchParams;
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';
   const categoryId = params.categoryId || '';
+  const sort = params.sort || 'title_asc';
+  const view = params.view || 'grid';
+  const pageSize = view === 'list' ? 10 : 9;
 
   const inventoryCategoriesPromise = role !== "student" 
     ? getCategories() 
     : Promise.resolve([]);
     
   const inventoryBooksPromise = role !== "student"
-    ? getBooks(q, categoryId || undefined, page, 9)
+    ? getBooks(q, categoryId || undefined, page, pageSize, sort)
     : Promise.resolve({ data: [], count: 0 });
 
   // Pass promises to the client component for rendering with Suspense/use() where needed

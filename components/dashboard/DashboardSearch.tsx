@@ -1,8 +1,8 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Search, Loader2 } from 'lucide-react';
-import { useState, useEffect, useTransition } from 'react';
+import { Search, Loader2, X } from 'lucide-react';
+import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import { cn } from "@/lib/utils";
 
 interface DashboardSearchProps {
@@ -12,63 +12,113 @@ interface DashboardSearchProps {
 export function DashboardSearch({ role: _role }: DashboardSearchProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
   const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync internal state when URL changes externally
+  // The URL is the ground truth — but we maintain local state for instant input feedback
+  const urlQuery = searchParams.get('q') ?? '';
+  const [localQuery, setLocalQuery] = useState(urlQuery);
+
+  // Track if the local state is "ahead" of the URL (user is typing)
+  const isTyping = localQuery !== urlQuery;
+
+  // Sync local → URL on mount if they drift (e.g., direct link navigation)
+  const prevUrlQuery = useRef(urlQuery);
   useEffect(() => {
-    const q = searchParams.get('q') || '';
-    if (q !== query) setQuery(q);
-  }, [searchParams, query]);
+    // Only sync FROM url → local if the URL changed externally (not from our own navigation)
+    if (prevUrlQuery.current !== urlQuery && !isTyping) {
+      setLocalQuery(urlQuery);
+    }
+    prevUrlQuery.current = urlQuery;
+  }, [urlQuery, isTyping]);
 
-  // Debounce search updates to the URL
+  // Stable navigation function
+  const navigate = useCallback((q: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (q.trim()) {
+      params.set('q', q.trim());
+    } else {
+      params.delete('q');
+    }
+    params.delete('page');
+    startTransition(() => {
+      router.replace(`?${params.toString()}`, { scroll: false });
+    });
+  }, [router, searchParams, startTransition]);
+
+  // Debounce: fire navigation 350ms after user stops typing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (query.trim()) {
-        params.set('q', query.trim());
-      } else {
-        params.delete('q');
-      }
-      params.delete('page'); // Reset page on search
-
-      startTransition(() => {
-        router.replace(`?${params.toString()}`, { scroll: false });
-      });
-    }, 300);
-
+    const timer = setTimeout(() => navigate(localQuery), 350);
     return () => clearTimeout(timer);
-  }, [query, router, searchParams]);
+  }, [localQuery, navigate]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // No-op as we use the useEffect debounce for searching
+  const handleClear = () => {
+    setLocalQuery('');
+    inputRef.current?.focus();
   };
 
+  const showClear = localQuery.length > 0;
+  const showSpinner = isPending && !isTyping;
+
   return (
-    <form onSubmit={handleSearch} className="relative group w-full">
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-        <Search className="h-4 w-4 text-primary transition-colors group-focus-within:text-primary" />
-        <div className="h-3 w-[1px] bg-border/60" />
+    <div className="relative group w-full">
+      {/* Left icon */}
+      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none z-10">
+        <Search
+          className={cn(
+            "h-4 w-4 transition-colors duration-200",
+            localQuery ? "text-primary" : "text-muted-foreground/50",
+            "group-focus-within:text-primary"
+          )}
+        />
       </div>
+
       <input
+        ref={inputRef}
         type="text"
-        placeholder="Search inventory, books, or records..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        autoComplete="off"
+        spellCheck={false}
+        placeholder="Search books, authors, ISBN..."
+        value={localQuery}
+        onChange={(e) => setLocalQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') handleClear();
+        }}
         className={cn(
-          "h-10 w-full rounded-2xl border-2 border-border/40 bg-background/80 pl-10 pr-10 text-sm font-medium transition-all duration-300",
-          "placeholder:text-muted-foreground/50",
-          "hover:border-primary/30 hover:bg-background/90 hover:shadow-md",
-          "focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-background focus:shadow-lg",
-          isPending && "opacity-80"
+          "h-10 w-full rounded-2xl border-2 bg-background/80 text-sm font-medium",
+          "pl-10 pr-10",
+          "transition-all duration-200",
+          "placeholder:text-muted-foreground/40 placeholder:font-normal",
+          "focus:outline-none",
+          // border states
+          "border-border/40",
+          "hover:border-border/70",
+          "focus:border-primary/60 focus:bg-background focus:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]",
+          // loading fade
+          showSpinner && "opacity-70"
         )}
       />
-      {isPending && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin text-primary/50" />
-        </div>
-      )}
-    </form>
+
+      {/* Right: spinner or clear button */}
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+        {showSpinner && (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary/40" />
+        )}
+        {!showSpinner && showClear && (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear search"
+            className={cn(
+              "flex h-5 w-5 items-center justify-center rounded-full",
+              "text-muted-foreground/40 hover:text-foreground hover:bg-muted/60",
+              "transition-all duration-150"
+            )}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

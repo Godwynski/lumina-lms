@@ -69,7 +69,7 @@ export const createCategory = createSafeAction(
  * @param pageSize - Number of items per page.
  * @returns Object with book list and total count.
  */
-export async function getBooks(query: string = '', categoryId?: string, page: number = 1, pageSize: number = 10) {
+export async function getBooks(query: string = '', categoryId?: string, page: number = 1, pageSize: number = 10, sort: string = 'title_asc') {
   const supabase = await assertStaffCatalogAccess();
   
   const from = (page - 1) * pageSize;
@@ -88,9 +88,24 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
     dbQuery = dbQuery.eq('category_id', categoryId);
   }
   
-  const { data, error, count } = await dbQuery
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  // Apply server-side sorting
+  switch (sort) {
+    case 'title_desc':
+      dbQuery = dbQuery.order('title', { ascending: false });
+      break;
+    case 'availability_desc':
+      dbQuery = dbQuery.order('available_copies', { ascending: false });
+      break;
+    case 'availability_asc':
+      dbQuery = dbQuery.order('available_copies', { ascending: true });
+      break;
+    case 'title_asc':
+    default:
+      dbQuery = dbQuery.order('title', { ascending: true });
+      break;
+  }
+
+  const { data, error, count } = await dbQuery.range(from, to);
 
   if (error) throw new Error(error.message);
   return { data, count: count || 0 };
