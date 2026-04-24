@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
-import DashboardLoading from "./loading";
+import DashboardLoading from "./DashboardLoading";
 
 export const metadata = {
   title: "Dashboard | Lumina LMS",

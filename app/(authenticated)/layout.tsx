@@ -75,18 +75,11 @@ export default async function ProtectedLayout({
 
           {/* Page content */}
           <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
-            <Suspense fallback={
-              <div className="p-8 animate-pulse space-y-4">
-                <div className="h-8 w-48 bg-muted rounded" />
-                <div className="h-32 w-full bg-muted rounded" />
-              </div>
-            }>
               <AuthGate>
                 <NavAnimatePresence>
                   {children}
                 </NavAnimatePresence>
               </AuthGate>
-            </Suspense>
           </div>
         </SidebarInset>
       </SidebarProvider>
