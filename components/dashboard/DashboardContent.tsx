@@ -19,12 +19,7 @@ export async function DashboardContent({
   
   const { user, role, profile, supabase } = me;
 
-  const faqKeys = [
-    "faq_student_q1", "faq_student_a1",
-    "faq_student_q2", "faq_student_a2",
-    "faq_student_q3", "faq_student_a3",
-    "faq_student_q4", "faq_student_a4",
-  ];
+  const faqKeys = ["student_faq_list"];
 
   // Kick off stats data promise for the appropriate role
   const statsPromise = getDashboardStats({ role });

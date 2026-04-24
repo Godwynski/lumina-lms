@@ -18,69 +18,65 @@ export function PolicySimulationPanel({ formData }: SimulationProps) {
   const renewalDate = addDays(dueDate, renewalPeriod);
 
   return (
-    <div className="rounded-3xl border border-border bg-card/50 p-6 shadow-sm backdrop-blur-sm sticky top-8">
-      <div className="space-y-6">
+    <div className="rounded-2xl border border-border/40 bg-card/30 p-4 sticky top-4">
+      <div className="space-y-4">
         <div>
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">
-            Live Flow Simulation
+          <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
+            Flow Simulation
           </h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Visualizing how your current rules impact the standard borrowing lifecycle.
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            Visualizing the borrowing lifecycle.
           </p>
         </div>
 
-        {/* Borrowing Timeline */}
-        <div className="space-y-4 pt-2">
-          <div className="relative pl-6 border-l border-primary/20 space-y-8">
-            {/* Step 1: Borrow */}
+        <div className="space-y-4 pt-1">
+          <div className="relative pl-5 border-l border-primary/20 space-y-6">
             <div className="relative">
-              <div className="absolute -left-[31px] top-0 h-2.5 w-2.5 rounded-full border-2 border-primary bg-background" />
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Checkout Day</span>
-                <p className="text-[11px] font-medium text-foreground">{format(today, 'MMM dd, yyyy')}</p>
-                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <BookOpen className="h-3 w-3" />
-                  <span>Limit: Borrow up to {maxBorrow} books</span>
+              <div className="absolute -left-[25.5px] top-0 h-2 w-2 rounded-full border-2 border-primary bg-background" />
+              <div className="space-y-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-primary">Checkout</span>
+                <p className="text-[10px] font-black text-foreground">{format(today, 'MMM dd, yyyy')}</p>
+                <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+                  <BookOpen className="h-2.5 w-2.5" />
+                  <span>Max {maxBorrow} books</span>
                 </div>
               </div>
             </div>
 
-            {/* Step 2: Due Date */}
             <div className="relative">
-              <div className="absolute -left-[31px] top-0 h-2.5 w-2.5 rounded-full border-2 border-primary bg-background" />
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Due Date</span>
-                <p className="text-[11px] font-medium text-foreground">{format(dueDate, 'MMM dd, yyyy')}</p>
-                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span>Borrow Period: {loanPeriod} days</span>
+              <div className="absolute -left-[25.5px] top-0 h-2 w-2 rounded-full border-2 border-primary bg-background" />
+              <div className="space-y-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-primary">Due Date</span>
+                <p className="text-[10px] font-black text-foreground">{format(dueDate, 'MMM dd, yyyy')}</p>
+                <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+                  <Calendar className="h-2.5 w-2.5" />
+                  <span>{loanPeriod} day term</span>
                 </div>
               </div>
             </div>
 
-            {/* Step 3: Renewal */}
             <div className="relative">
-              <div className="absolute -left-[31px] top-0 h-2.5 w-2.5 rounded-full border-2 border-muted-foreground/30 bg-background" />
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">After Renewal</span>
-                <p className="text-[11px] font-medium text-foreground">{format(renewalDate, 'MMM dd, yyyy')}</p>
-                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  <span>Extended by {renewalPeriod} days</span>
+              <div className="absolute -left-[25.5px] top-0 h-2 w-2 rounded-full border-2 border-muted-foreground/30 bg-background" />
+              <div className="space-y-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Renewal</span>
+                <p className="text-[10px] font-black text-foreground">{format(renewalDate, 'MMM dd, yyyy')}</p>
+                <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+                  <Clock className="h-2.5 w-2.5" />
+                  <span>+{renewalPeriod} days</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-border">
-          <div className="flex items-center gap-3">
-             <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Ticket className="h-4 w-4" />
+        <div className="pt-4 border-t border-border/40">
+          <div className="flex items-center gap-2">
+             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <Ticket className="h-3 w-3" />
              </div>
              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Hold Logic</span>
-                <p className="text-[11px] text-muted-foreground">{holdExpiry} day shelf expiry per reservation</p>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-foreground">Hold Logic</span>
+                <p className="text-[10px] text-muted-foreground">{holdExpiry} day shelf expiry</p>
              </div>
           </div>
         </div>

@@ -135,14 +135,14 @@ export function DashboardClient({
       };
 
       if (faqRows && faqRows.length > 0) {
-        const byKey = new Map(faqRows.map((row: FaqRow) => [String(row.key), String(row.value ?? "")]));
-        const pairs = [];
-        for (let i = 1; i <= 4; i += 1) {
-          const question = byKey.get(`faq_student_q${i}`) || DEFAULT_STUDENT_FAQS[i - 1]?.question || "";
-          const answer = byKey.get(`faq_student_a${i}`) || DEFAULT_STUDENT_FAQS[i - 1]?.answer || "";
-          if (question.trim() && answer.trim()) pairs.push({ question, answer });
+        const listRow = faqRows.find(row => row.key === "student_faq_list");
+        if (listRow?.value) {
+          try {
+            faqs = JSON.parse(listRow.value);
+          } catch (e) {
+            console.error("Failed to parse FAQs", e);
+          }
         }
-        if (pairs.length > 0) faqs = pairs;
       }
     }
     return { studentCard: card, studentFaqs: faqs };

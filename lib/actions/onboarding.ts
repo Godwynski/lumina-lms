@@ -16,9 +16,15 @@ export async function getAcademicPrograms() {
   }
 
   try {
-    return JSON.parse(data.value) as string[];
+    // Try JSON first
+    if (data.value.startsWith('[') && data.value.endsWith(']')) {
+      return JSON.parse(data.value) as string[];
+    }
+    // Fallback to comma-separated
+    return data.value.split(',').map((s: string) => s.trim()).filter(Boolean);
   } catch {
-    return ["Information Technology", "Computer Science", "Business Administration", "Engineering"];
+    // Last fallback to comma-separated if JSON parse failed but it looked like JSON
+    return data.value.split(',').map((s: string) => s.trim()).filter(Boolean);
   }
 }
 
