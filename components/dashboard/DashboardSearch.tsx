@@ -15,6 +15,13 @@ export function DashboardSearch({ role: _role }: DashboardSearchProps) {
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Keep a ref to the latest searchParams so navigate() never needs it as a dep.
+  // This breaks the searchParams → navigate → effect → navigate loop.
+  const searchParamsRef = useRef(searchParams);
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
+
   // The URL is the ground truth — but we maintain local state for instant input feedback
   const urlQuery = searchParams.get('q') ?? '';
   const [localQuery, setLocalQuery] = useState(urlQuery);
@@ -22,29 +29,34 @@ export function DashboardSearch({ role: _role }: DashboardSearchProps) {
   // Track if the local state is "ahead" of the URL (user is typing)
   const isTyping = localQuery !== urlQuery;
 
-  // Sync local → URL on mount if they drift (e.g., direct link navigation)
+  // Sync URL → local only when the URL changes externally (not from our own push)
   const prevUrlQuery = useRef(urlQuery);
   useEffect(() => {
-    // Only sync FROM url → local if the URL changed externally (not from our own navigation)
     if (prevUrlQuery.current !== urlQuery && !isTyping) {
       setLocalQuery(urlQuery);
     }
     prevUrlQuery.current = urlQuery;
   }, [urlQuery, isTyping]);
 
-  // Stable navigation function
+  // Stable navigation function — reads searchParams from ref, never recreated
   const navigate = useCallback((q: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParamsRef.current.toString());
     if (q.trim()) {
       params.set('q', q.trim());
     } else {
       params.delete('q');
     }
     params.delete('page');
+
+    // Only push if the URL will actually change — prevents a replace on empty string
+    const next = params.toString();
+    const current = searchParamsRef.current.toString();
+    if (next === current) return;
+
     startTransition(() => {
-      router.replace(`?${params.toString()}`, { scroll: false });
+      router.replace(`?${next}`, { scroll: false });
     });
-  }, [router, searchParams, startTransition]);
+  }, [router]); // ← searchParams removed; read via ref inside instead
 
   // Debounce: fire navigation 350ms after user stops typing
   useEffect(() => {
