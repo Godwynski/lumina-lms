@@ -28,6 +28,8 @@ export function PublicCatalog() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+
   useEffect(() => {
     async function loadCategories() {
       try {
@@ -41,7 +43,7 @@ export function PublicCatalog() {
   const loadBooks = useCallback(async (targetPage: number) => {
     try {
       setLoading(true);
-      const data = await getPublicBooksCached(query, categoryId, section, availableOnly, targetPage, pageSize);
+      const data = await getPublicBooksCached(debouncedQuery, categoryId, section, availableOnly, targetPage, pageSize);
 
       setBooks(data.books);
       setTotalBooks(data.total);
@@ -50,15 +52,22 @@ export function PublicCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [query, categoryId, section, availableOnly, pageSize]);
+  }, [debouncedQuery, categoryId, section, availableOnly, pageSize]);
 
   useEffect(() => {
-    // Debounce search
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
-    }, 300);
+    }, 100);
     return () => clearTimeout(timer);
-  }, [query, categoryId, section, availableOnly]);
+  }, [categoryId, section, availableOnly]);
 
   useEffect(() => {
     void loadBooks(page);

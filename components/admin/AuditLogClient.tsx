@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -47,13 +47,23 @@ interface AuditLog {
 export function AuditLogClient() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [entityType, setEntityType] = useState<string>("all");
   const pageSize = 10;
+
+  // Debounce search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const queryParams = new URLSearchParams({
     limit: pageSize.toString(),
     offset: ((page - 1) * pageSize).toString(),
-    ...(search && { query: search }),
+    ...(debouncedSearch && { query: debouncedSearch }),
     ...(entityType !== "all" && { entityType }),
   });
 

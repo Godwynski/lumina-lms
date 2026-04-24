@@ -93,7 +93,8 @@ export function StudentCatalogClient({
     });
   }, []);
 
-  const [query, setQuery] = useState(initialFilters.q);
+  const [localQuery, setLocalQuery] = useState(initialFilters.q);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialFilters.q);
   const [page, setPage] = useState(initialFilters.page);
   const pageSize = 16;
 
@@ -101,10 +102,18 @@ export function StudentCatalogClient({
   const [availableOnly, setAvailableOnly] = useState(initialFilters.availableOnly);
   const [sortBy, setSortBy] = useState(initialFilters.sortBy);
 
+  // Debounce the query update
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(localQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [localQuery]);
+
   // Synchronize state with URL to enable prefetching
   useEffect(() => {
     const params = new URLSearchParams();
-    if (query) params.set('q', query);
+    if (debouncedQuery) params.set('q', debouncedQuery);
     if (selectedCategory) params.set('category', selectedCategory);
     if (availableOnly) params.set('available', 'true');
     if (page > 1) params.set('page', page.toString());
@@ -113,16 +122,16 @@ export function StudentCatalogClient({
     startTransition(() => {
       router.replace(`?${params.toString()}`, { scroll: false });
     });
-  }, [query, selectedCategory, availableOnly, page, sortBy, router]);
+  }, [debouncedQuery, selectedCategory, availableOnly, page, sortBy, router]);
 
-  const handleQueryChange = (val: string) => { setQuery(val); setPage(1); };
+  const handleQueryChange = (val: string) => { setLocalQuery(val); setPage(1); };
   const handleCatChange = (val: string) => { setSelectedCategory(val === 'all' ? '' : val); setPage(1); };
   const handleAvailableToggle = () => { setAvailableOnly(p => !p); setPage(1); };
 
   const clearFilters = () => {
     setSelectedCategory('');
     setAvailableOnly(false);
-    setQuery('');
+    setLocalQuery('');
     setSortBy('title');
     setPage(1);
   };
@@ -226,7 +235,7 @@ export function StudentCatalogClient({
             <Input
               type="text"
               placeholder="Search title, author, or ISBN"
-              value={query}
+              value={localQuery}
               onChange={(e) => handleQueryChange(e.target.value)}
               className="pl-9"
             />
@@ -274,7 +283,7 @@ export function StudentCatalogClient({
               </Select>
             </div>
 
-            {(selectedCategory || availableOnly || query || sortBy !== 'title') && (
+            {(selectedCategory || availableOnly || localQuery || sortBy !== 'title') && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2.5 text-xs">
                 Clear
               </Button>

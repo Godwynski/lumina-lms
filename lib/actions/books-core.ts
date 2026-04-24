@@ -35,7 +35,21 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
     .eq('is_active', true);
   
   if (query) {
-    dbQuery = dbQuery.textSearch('search_vector', query.split(' ').join(' | '));
+    const cleanQuery = query.trim();
+    if (cleanQuery) {
+      if (cleanQuery.length < 3) {
+        // For short queries, use a broad ILIKE search across main fields
+        dbQuery = dbQuery.or(`title.ilike.%${cleanQuery}%,author.ilike.%${cleanQuery}%,isbn.ilike.%${cleanQuery}%`);
+      } else {
+        // For longer queries, use Full Text Search with prefix support
+        // We transform "lord of" into "lord:* & of:*"
+        const terms = cleanQuery.split(/\s+/).filter(Boolean);
+        const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
+        
+        // Use 'to_tsquery' style search via default type
+        dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
+      }
+    }
   }
   
   if (categoryId) {

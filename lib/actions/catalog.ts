@@ -81,7 +81,16 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
     .eq('is_active', true);
   
   if (query) {
-    dbQuery = dbQuery.textSearch('search_vector', query.split(' ').join(' | '));
+    const cleanQuery = query.trim();
+    if (cleanQuery) {
+      if (cleanQuery.length < 3) {
+        dbQuery = dbQuery.or(`title.ilike.%${cleanQuery}%,author.ilike.%${cleanQuery}%,isbn.ilike.%${cleanQuery}%`);
+      } else {
+        const terms = cleanQuery.split(/\s+/).filter(Boolean);
+        const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
+        dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
+      }
+    }
   }
   
   if (categoryId) {

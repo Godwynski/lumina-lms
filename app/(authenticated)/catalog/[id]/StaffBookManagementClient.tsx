@@ -12,19 +12,15 @@ import {
 } from '@/lib/actions/catalog';
 import {
   MapPin,
-  Hash,
-  Tag,
   BookOpen,
   CheckCircle2,
   AlertCircle,
   Wrench,
   SearchX,
   History,
-  QrCode,
   Filter,
   Edit3,
   Save,
-  X,
   Loader2,
   Clock,
   UserCircle2,
@@ -32,7 +28,6 @@ import {
   Users,
   ArrowRight,
   CalendarClock,
-  BookMarked,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +37,7 @@ import { useRouter } from 'next/navigation';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
-import { Section, FieldGroup } from '@/components/settings/SettingsShared';
+import { FieldGroup } from '@/components/settings/SettingsShared';
 import { cn } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 
@@ -443,182 +438,149 @@ export function StaffBookManagementClient({
 
   return (
     <AdminTableShell
-      variant="ghost"
+      title={book.title}
+      description={book.author}
+      variant="default"
       className="pb-6 md:pb-8"
       headerActions={
         <div className="flex items-center gap-2">
           {showDeleteConfirm ? (
             <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
-              <span className="text-[10px] font-bold text-destructive uppercase mr-1">Confirm removal?</span>
+              <span className="text-[10px] font-bold text-destructive uppercase mr-1">Confirm?</span>
               <Button variant="destructive" size="sm" onClick={handleDeleteBook} disabled={deleteLoading} className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider">
-                {deleteLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Yes, Purge'}
+                {deleteLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Purge'}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider">Cancel</Button>
             </div>
           ) : (
             <>
-              <Button
-                variant="outline"
-                onClick={() => setIsEditing(!isEditing)}
-                className={`h-8 rounded-md px-3 text-xs font-semibold ${isEditing ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90' : ''}`}
-              >
-                {isEditing ? <X className="mr-1.5 h-3.5 w-3.5" /> : <Edit3 className="mr-1.5 h-3.5 w-3.5" />}
-                {isEditing ? 'Cancel' : 'Edit Asset'}
-              </Button>
+              {isEditing ? (
+                 <Button variant="outline" onClick={() => setIsEditing(false)} className="h-8 rounded-md px-3 text-xs font-semibold">
+                   Cancel Edit
+                 </Button>
+              ) : (
+                 <Button variant="outline" onClick={() => setIsEditing(true)} className="h-8 rounded-md px-3 text-xs font-semibold">
+                   <Edit3 className="mr-1.5 h-3.5 w-3.5" /> Edit Asset
+                 </Button>
+              )}
             </>
           )}
         </div>
       }
     >
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-
-
-        {/* ── Sidebar ── */}
-        <div className="space-y-6 lg:col-span-4 xl:col-span-3">
-          {/* Book Identity Section */}
-          <Section title="Asset Metadata" icon={BookMarked} hideHeaderOnMobile>
-            <div className="overflow-hidden rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:shadow-md">
-              {isEditing ? (
-                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="space-y-4">
-                    <FieldGroup label="Asset Title">
-                      <Input 
-                        value={editForm.title} 
-                        onChange={e => setEditForm({ ...editForm, title: e.target.value })} 
-                        className="h-9 rounded-lg text-xs border-primary/20 bg-primary/5" 
-                      />
-                    </FieldGroup>
-                    <FieldGroup label="Primary Author">
-                      <Input 
-                        value={editForm.author} 
-                        onChange={e => setEditForm({ ...editForm, author: e.target.value })} 
-                        className="h-9 rounded-lg text-xs border-primary/20 bg-primary/5" 
-                      />
-                    </FieldGroup>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <FieldGroup label="ISBN">
-                        <Input value={editForm.isbn} onChange={e => setEditForm({ ...editForm, isbn: e.target.value })} className="h-9 rounded-lg text-xs bg-muted/50" />
-                      </FieldGroup>
-                      <FieldGroup label="Category">
-                        <Input value={editForm.section} onChange={e => setEditForm({ ...editForm, section: e.target.value })} className="h-9 rounded-lg text-xs bg-muted/50" />
-                      </FieldGroup>
-                    </div>
-
-                    <FieldGroup label="Precise Location">
-                      <div className="relative">
-                        <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                        <Input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="h-9 rounded-lg pl-8 text-xs bg-muted/50" />
-                      </div>
-                    </FieldGroup>
-                  </div>
-                  <Button onClick={handleUpdateBook} disabled={updateLoading} className="w-full h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20">
-                    {updateLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Metadata
-                  </Button>
+      <div className="flex flex-col gap-6 p-4 md:p-6">
+        
+        {/* --- Edit Form --- */}
+        {isEditing ? (
+          <div className="rounded-xl border border-border/50 bg-muted/20 p-5 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="mb-4 text-sm font-semibold text-foreground">Edit Metadata</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FieldGroup label="Asset Title">
+                <Input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} className="h-9 bg-background" />
+              </FieldGroup>
+              <FieldGroup label="Primary Author">
+                <Input value={editForm.author} onChange={e => setEditForm({ ...editForm, author: e.target.value })} className="h-9 bg-background" />
+              </FieldGroup>
+              <FieldGroup label="ISBN">
+                <Input value={editForm.isbn} onChange={e => setEditForm({ ...editForm, isbn: e.target.value })} className="h-9 bg-background" />
+              </FieldGroup>
+              <FieldGroup label="Category">
+                <Input value={editForm.section} onChange={e => setEditForm({ ...editForm, section: e.target.value })} className="h-9 bg-background" />
+              </FieldGroup>
+              <FieldGroup label="Precise Location">
+                <div className="relative">
+                  <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="h-9 pl-8 bg-background" />
                 </div>
-              ) : (
-                <>
-                  <div className="mb-4 flex items-start gap-4">
-                    <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40 shadow-sm">
-                      {book.cover_url
-                        ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
-                        : <BookOpen className="h-full w-full p-4 text-muted-foreground" />}
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <p className="line-clamp-2 text-sm font-bold text-foreground leading-snug">{book.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">{book.author}</p>
-                      <div className="pt-2">
-                         <span className={cn(
-                           "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                           book.available_copies > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                         )}>
-                           {book.available_copies > 0 ? "In Stock" : "Unavailable"}
-                         </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><Hash size={12} /> ISBN</span>
-                      <span className="text-foreground font-semibold">{book.isbn || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><Tag size={12} /> Category</span>
-                      <span className="text-foreground font-semibold">
-                        {Array.isArray(book.categories) ? book.categories[0]?.name : (book.categories as { name?: string })?.name || 'Unassigned'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><MapPin size={12} /> Section</span>
-                      <span className="text-foreground font-semibold">{book.section || 'N/A'}</span>
-                    </div>
-                  </div>
-
-                  {book.tags && book.tags.length > 0 && (
-                    <div className="mt-4 border-t border-border pt-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {book.tags.map((tag, i) => (
-                          <span key={i} className="rounded-md border border-border/50 bg-muted/60 px-2 py-0.5 text-[9px] font-medium text-muted-foreground uppercase">{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+              </FieldGroup>
             </div>
-          </Section>
-
-          {/* Availability Status Section */}
-          <Section title="Inventory Control" icon={QrCode}>
-            <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:shadow-md">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border bg-muted/40 p-3 text-center">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</p>
-                  <p className="text-xl font-bold text-foreground">{book.total_copies}</p>
+            <div className="mt-5 flex justify-end gap-2">
+               <Button onClick={() => setShowDeleteConfirm(true)} variant="ghost" className="h-9 text-red-600 hover:text-red-700 hover:bg-red-50">Delete Asset</Button>
+               <Button onClick={handleUpdateBook} disabled={updateLoading} className="h-9 font-semibold">
+                 {updateLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+                 Save Changes
+               </Button>
+            </div>
+          </div>
+        ) : (
+          /* --- View Metadata --- */
+          <div className="flex flex-col lg:flex-row gap-6 border-b border-border/40 pb-6">
+            <div className="flex flex-1 gap-5">
+              <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm">
+                {book.cover_url
+                  ? <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
+                  : <BookOpen className="h-full w-full p-6 text-muted-foreground bg-muted/40" />}
+              </div>
+              <div className="flex flex-col justify-center gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <span className={cn(
+                     "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                     book.available_copies > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                  )}>
+                     {book.available_copies > 0 ? "In Stock" : "Unavailable"}
+                  </span>
+                  {book.tags?.map((tag, i) => (
+                     <span key={i} className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase">{tag}</span>
+                  ))}
                 </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-3 text-center">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avail</p>
-                  <p className="text-xl font-bold text-primary">{book.available_copies}</p>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                   <div className="flex flex-col">
+                     <span className="text-[10px] font-bold text-muted-foreground uppercase">ISBN</span>
+                     <span className="font-medium text-foreground">{book.isbn || 'N/A'}</span>
+                   </div>
+                   <div className="flex flex-col">
+                     <span className="text-[10px] font-bold text-muted-foreground uppercase">Category</span>
+                     <span className="font-medium text-foreground">{(Array.isArray(book.categories) ? book.categories[0]?.name : book.categories?.name) || 'Unassigned'}</span>
+                   </div>
+                   <div className="flex flex-col">
+                     <span className="text-[10px] font-bold text-muted-foreground uppercase">Location</span>
+                     <span className="font-medium text-foreground flex items-center gap-1"><MapPin size={12}/>{book.location || book.section || 'N/A'}</span>
+                   </div>
                 </div>
               </div>
-
-              {reservationQueue.length > 0 && (
-                <div className="mt-3 flex items-center justify-between rounded-lg border border-violet-100 bg-violet-50/50 p-2 px-3">
-                  <div className="flex items-center gap-2">
-                    <BookMarked className="h-3.5 w-3.5 text-violet-500" />
-                    <span className="text-[11px] font-bold text-violet-700">Waiting Queue</span>
-                  </div>
-                  <span className="rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                    {reservationQueue.length}
-                  </span>
-                </div>
-              )}
             </div>
-          </Section>
+            
+            {/* Inventory Overview */}
+            <div className="flex items-center gap-4 lg:gap-6 px-5 py-4 bg-muted/30 rounded-xl border border-border/50 shrink-0">
+               <div className="text-center">
+                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</p>
+                 <p className="text-2xl font-black text-foreground">{book.total_copies}</p>
+               </div>
+               <div className="w-px h-8 bg-border"></div>
+               <div className="text-center">
+                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avail</p>
+                 <p className="text-2xl font-black text-primary">{book.available_copies}</p>
+               </div>
+               {reservationQueue.length > 0 && (
+                 <>
+                   <div className="w-px h-8 bg-border"></div>
+                   <div className="text-center">
+                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Waitlist</p>
+                     <p className="text-2xl font-black text-violet-600">{reservationQueue.length}</p>
+                   </div>
+                 </>
+               )}
+            </div>
+          </div>
+        )}
 
-          {/* Reservation Queue Panel */}
-          {reservationQueue.length > 0 && (
-            <ReservationQueuePanel
-              queue={reservationQueue}
-              bookId={book.id}
-              mounted={mounted}
-              onCancelled={handleQueueCancelled}
-            />
-          )}
-        </div>
+        {/* --- Reservation Queue --- */}
+        {reservationQueue.length > 0 && (
+          <div className="pt-2 max-w-3xl">
+             <ReservationQueuePanel queue={reservationQueue} bookId={book.id} mounted={mounted} onCancelled={handleQueueCancelled} />
+          </div>
+        )}
 
-        {/* ── Inventory List ── */}
-        <div className="space-y-2.5 lg:col-span-8 xl:col-span-9">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-            <h2 className="text-sm font-semibold text-foreground">Copies ({visibleCopies.length}/{copies.length})</h2>
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-card p-1.5 shadow-sm">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+        {/* --- Copies List --- */}
+        <div className="space-y-4 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold text-foreground">Copies ({visibleCopies.length}/{copies.length})</h2>
+            <div className="inline-flex items-center gap-1.5">
+              <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={copyFilter} onValueChange={(v) => {
                 if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
               }}>
-                <SelectTrigger className="h-11 md:h-7 border-0 bg-transparent px-2 md:px-1 text-sm md:text-[11px] font-medium text-muted-foreground">
+                <SelectTrigger className="h-8 w-[140px] text-xs bg-muted/30">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -631,7 +593,7 @@ export function StaffBookManagementClient({
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {pagedCopies.map((copy) => {
               const statusCfg = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG] ?? {
                 label: copy.status, icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-muted',
@@ -643,50 +605,37 @@ export function StaffBookManagementClient({
               const isCancelling = cancellingResId === res?.id;
 
               return (
-                <div key={copy.id} className="flex flex-col justify-between gap-2 rounded-lg border border-border/40 bg-card px-3 py-2.5 shadow-sm transition-all hover:border-border/70 md:flex-row md:items-center">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 shrink-0 rounded-md ${statusCfg.bg} flex items-center justify-center`}>
-                      <StatusIcon className={`h-4 w-4 ${statusCfg.color}`} />
+                <div key={copy.id} className="flex flex-col justify-between gap-3 rounded-xl border border-border/50 bg-card p-3 shadow-sm transition-all hover:border-border/80 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-4">
+                    <div className={`h-10 w-10 shrink-0 rounded-lg ${statusCfg.bg} flex items-center justify-center`}>
+                      <StatusIcon className={`h-5 w-5 ${statusCfg.color}`} />
                     </div>
                     <div>
-                      <div className="mb-0.5 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">{copy.qr_string}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${statusCfg.bg} ${statusCfg.color}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-foreground">{copy.qr_string}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${statusCfg.bg} ${statusCfg.color}`}>
                           {statusCfg.label}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                      <p className="text-[11px] text-muted-foreground mt-0.5" suppressHydrationWarning>
                         Added {mounted ? new Date(copy.created_at).toLocaleDateString() : '...'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
                     {isReserved && res ? (
-                      /* ── Reservation context for this copy ── */
-                      <div className="flex items-center gap-2 rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 px-2.5 py-1.5">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <UserCircle2 className="h-3 w-3 text-violet-500 shrink-0" />
-                            <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+                      <div className="flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50/50 px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <UserCircle2 className="h-4 w-4 text-violet-500 shrink-0" />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold text-violet-700">
                               {reserver?.full_name ?? 'Unknown Student'}
                             </span>
-                            {reserver?.student_id && (
-                              <span className="rounded bg-violet-100 dark:bg-violet-900 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:text-violet-400">
-                                {reserver.student_id}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-violet-500 dark:text-violet-400 flex-wrap">
-                            {reserver?.email && <span>{reserver.email}</span>}
                             {res.hold_expires_at && (
-                              <>
-                                <span className="opacity-40">·</span>
-                                <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-medium">
-                                  <CalendarClock className="h-2.5 w-2.5" />
-                                  {formatRelativeTime(res.hold_expires_at, mounted)}
-                                </span>
-                              </>
+                              <span className="text-[10px] text-amber-600 font-medium">
+                                {formatRelativeTime(res.hold_expires_at, mounted)}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -695,17 +644,16 @@ export function StaffBookManagementClient({
                           size="sm"
                           disabled={isCancelling}
                           onClick={() => handleCancelReservationFromCopy(res.id, copy.id)}
-                          className="ml-1 h-7 shrink-0 rounded-md border border-red-200 dark:border-red-800 bg-white dark:bg-transparent px-2 text-[10px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          className="ml-2 h-7 rounded-md bg-white px-2 text-[10px] font-semibold text-red-600 hover:bg-red-50 border border-red-100"
                         >
-                          {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <><XCircle className="mr-1 h-3 w-3" />Cancel</>}
+                          {isCancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Cancel Hold'}
                         </Button>
                       </div>
                     ) : (
-                      /* ── Editable status dropdown ── */
                       <Select value={copy.status} onValueChange={(v) => {
                         if (isEditableStatus(v)) void handleStatusChange(copy.id, v);
                       }}>
-                        <SelectTrigger className="h-11 md:h-7 rounded-md border border-border bg-muted px-4 md:px-2.5 text-sm md:text-[11px] font-medium text-muted-foreground">
+                        <SelectTrigger className="h-8 w-[130px] text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -723,25 +671,27 @@ export function StaffBookManagementClient({
             })}
 
             {visibleCopies.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border bg-muted py-12 text-center">
-                <AlertCircle className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+              <div className="rounded-xl border border-dashed border-border bg-muted/30 py-12 text-center">
+                <AlertCircle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/60" />
                 <p className="text-sm font-medium text-muted-foreground">No copies match this filter.</p>
-                <p className="text-xs text-muted-foreground">Try another status or add a new copy.</p>
               </div>
             )}
           </div>
 
           {visibleCopies.length > 0 && (
-            <CompactPagination
-              page={page}
-              totalItems={visibleCopies.length}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              pageSizeOptions={[10, 20, 30]}
-              onPageSizeChange={setPageSize}
-            />
+            <div className="pt-4">
+              <CompactPagination
+                page={page}
+                totalItems={visibleCopies.length}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                pageSizeOptions={[10, 20, 30]}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
           )}
         </div>
+
       </div>
     </AdminTableShell>
   );
