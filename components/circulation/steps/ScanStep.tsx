@@ -34,7 +34,9 @@ export function ScanStep({
   
     const {
         cameraOpen,
-        setCameraOpen,
+        startScanner,
+        stopCamera,
+        isInitializing,
         cameraSupported,
         cameraIssue,
         scannerId,
@@ -98,20 +100,21 @@ export function ScanStep({
                     {/* Minimalist Overlay */}
                     <div className="absolute inset-0 pointer-events-none border-[12px] border-background/20" />
                     
-                    {isProcessing && (
-                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-                            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    {(isProcessing || isInitializing) && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
+                            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                            {isInitializing && <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">Initializing...</span>}
                         </div>
                     )}
                     
-                    {!cameraOpen && (
+                    {!cameraOpen && !isInitializing && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200">
                             <QrCode className="h-10 w-10 text-muted-foreground/40 mb-4" />
                             <Button 
                                 variant="outline" 
                                 size="sm" 
                                 className="h-9 rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold text-[10px] uppercase tracking-wider"
-                                onClick={() => setCameraOpen(true)}
+                                onClick={() => startScanner()}
                                 disabled={!cameraSupported}
                             >
                                 <Camera className="mr-2 h-3.5 w-3.5" />
@@ -134,14 +137,14 @@ export function ScanStep({
                             <Button 
                                 variant="destructive" 
                                 className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
-                                onClick={() => setCameraOpen(false)}
+                                onClick={() => stopCamera()}
                             >
                                 Stop
                             </Button>
                         </div>
                     )}
                     
-                    {cameraIssue && !cameraOpen && (
+                    {cameraIssue && !cameraOpen && !isInitializing && (
                          <div className="absolute top-4 inset-x-4">
                             <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium">
                                 {cameraIssue}

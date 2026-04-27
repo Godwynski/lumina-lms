@@ -113,12 +113,11 @@ export function AddBookClient() {
 
   const {
     cameraOpen,
-    setCameraOpen,
-    cameraSupported,
-    cameraPermission,
-    cameraIssue,
+    startScanner,
     stopCamera,
-    requestCameraPermission,
+    isInitializing,
+    cameraSupported,
+    cameraIssue,
     scannerId
   } = useScanner({
     onScan: async (rawValue) => {
@@ -285,20 +284,13 @@ export function AddBookClient() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
-                        variant="outline"
-                        className="h-8 rounded-md text-xs"
-                        onClick={() => void requestCameraPermission()}
-                      >
-                        {cameraPermission === 'granted' ? 'Camera Enabled' : 'Enable Camera Permission'}
-                      </Button>
-                      <Button
-                        type="button"
                         variant={cameraOpen ? 'destructive' : 'outline'}
                         className="h-8 rounded-md text-xs"
-                        onClick={() => (cameraOpen ? void stopCamera() : setCameraOpen(true))}
+                        onClick={() => (cameraOpen ? void stopCamera() : void startScanner())}
+                        disabled={isInitializing}
                       >
                         <Camera className="mr-2 h-4 w-4" />
-                        {cameraOpen ? 'Stop ISBN Scanner' : 'Start ISBN Scanner'}
+                        {isInitializing ? 'Starting...' : (cameraOpen ? 'Stop ISBN Scanner' : 'Start ISBN Scanner')}
                       </Button>
                     </div>
                     <div className="relative overflow-hidden rounded-md border border-border bg-primary aspect-video">

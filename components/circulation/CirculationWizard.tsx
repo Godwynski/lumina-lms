@@ -161,15 +161,19 @@ export function CirculationWizard() {
   const processScan = async (value: string) => {
     setIsProcessing(true);
     setNotice(null);
+    console.info(`[Circulation] Processing scan: ${value} (Mode: ${mode}, Has Student: ${!!activeStudent})`);
 
     try {
       if (mode === 'checkout') {
         if (!activeStudent) {
+          console.info('[Circulation] Resolving student...');
           const res = await fetch('/api/circulation/resolve-scan', {
             method: 'POST',
             body: JSON.stringify({ scanValue: value, expectedType: 'auto' }),
           });
           const payload = await res.json();
+          console.info('[Circulation] Resolve result:', payload);
+          
           if (payload.ok && payload.type === 'student') {
             setActiveStudent(payload.data);
             setNotice({ tone: 'ok', text: 'Student verified. Please scan the book copy.' });
@@ -179,11 +183,14 @@ export function CirculationWizard() {
             playScanCue('error');
           }
         } else {
+          console.info('[Circulation] Validating book for checkout...');
           const res = await fetch('/api/circulation/checkout', {
             method: 'POST',
             body: JSON.stringify({ studentCardQr: activeStudent.cardNumber, bookQr: value, previewOnly: true }),
           });
           const payload = await res.json();
+          console.info('[Circulation] Checkout validation result:', payload);
+
           if (payload.ok) {
             setPendingCheckout({
               bookQr: value,
@@ -198,11 +205,14 @@ export function CirculationWizard() {
           }
         }
       } else {
+        console.info('[Circulation] Validating book for return...');
         const res = await fetch('/api/circulation/return', {
           method: 'POST',
           body: JSON.stringify({ bookQr: value, previewOnly: true }),
         });
         const payload = await res.json();
+        console.info('[Circulation] Return validation result:', payload);
+
         if (payload.ok) {
           setPendingReturn({
              bookQr: value,
@@ -218,10 +228,12 @@ export function CirculationWizard() {
           playScanCue('error');
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('[Circulation] Scan process error:', err);
       setNotice({ tone: 'error', text: 'Connection issue. Try manual input.' });
     } finally {
       setIsProcessing(false);
+      console.info('[Circulation] Scan processing finished.');
     }
   };
 
