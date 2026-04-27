@@ -192,18 +192,18 @@ export function AuditLogClient() {
         )}
 
         {data && data.logs.length > 0 && (
-          <div className="relative border-l-[3px] border-border/60 pl-6 ml-2 md:ml-6 space-y-8 py-2">
+          <div className="relative border-l-2 border-border/30 pl-6 ml-2 md:ml-6 space-y-8 py-2">
             {data.logs.map((log) => {
               const date = log.created_at ? new Date(log.created_at) : new Date();
 
               return (
                 <div key={log.id} className="relative group">
-                  <div className="absolute -left-[31px] md:-left-[31px] top-4 h-3.5 w-3.5 rounded-full border-2 border-primary bg-background ring-4 ring-background z-10 group-hover:scale-125 group-hover:bg-primary transition-all shadow-sm" />
+                  <div className="absolute -left-[31px] md:-left-[31px] top-4 h-3.5 w-3.5 rounded-full border border-primary/40 bg-background ring-4 ring-background z-10 group-hover:scale-125 group-hover:bg-primary transition-all shadow-sm" />
                   
-                  <div className="rounded-2xl border border-border/40 bg-card/40 p-4 md:p-5 shadow-none hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/20 backdrop-blur-sm space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+                  <div className="rounded-2xl border border-border/20 bg-card/10 p-4 md:p-5 shadow-none hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/10 backdrop-blur-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/10 pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">
+                        <div className="h-10 w-10 shrink-0 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">
                           <UserIcon className="h-5 w-5" />
                         </div>
                         <div className="flex flex-col min-w-0">

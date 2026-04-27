@@ -98,6 +98,13 @@ export function useScanner({
 
   useEffect(() => {
     const checkSupport = async () => {
+      // Basic environment check
+      if (typeof window === 'undefined' || !navigator.mediaDevices) {
+        setCameraSupported(false);
+        setCameraIssue('Camera API not supported in this browser.');
+        return;
+      }
+
       if (!window.isSecureContext && window.location.hostname !== 'localhost') {
         setCameraSupported(false);
         setCameraIssue('Camera only works on HTTPS or localhost.');
@@ -106,19 +113,20 @@ export function useScanner({
 
       try {
         const { Html5Qrcode } = await import('html5-qrcode');
+        // We try to get cameras but we don't fail hard if it returns empty
+        // as some browsers require permission before listing devices.
         const cameras = await Html5Qrcode.getCameras();
-        setDevices(cameras);
-        if (!cameras || cameras.length === 0) {
-          setCameraSupported(false);
-          setCameraIssue('No camera hardware detected on this device.');
-        } else {
-          setCameraSupported(true);
-          setCameraIssue(null);
-        }
+        setDevices(cameras || []);
+        
+        // If we found cameras, we are definitely supported.
+        // If we didn't, we still keep supported=true to allow the user to try and trigger the permission prompt.
+        setCameraSupported(true);
+        setCameraIssue(null);
       } catch (err) {
-        setCameraSupported(false);
-        const msg = err instanceof Error ? err.message : String(err);
-        setCameraIssue(`Could not detect camera hardware: ${msg}`);
+        // Only set as unsupported if it's a clear fatal error
+        console.warn('Initial camera check failed:', err);
+        // We still keep cameraSupported as true to let the user try the "Launch" button 
+        // which might trigger the browser's own permission/detection flow.
       }
     };
 
@@ -204,21 +212,26 @@ export function useScanner({
         if (!mounted) return;
         
         const errorMessage = err instanceof Error ? err.message : String(err);
-        const isHardwareError = errorMessage.includes('NotReadableError') || 
-                               errorMessage.includes('Starting video source failed') ||
-                               errorMessage.includes('Permission denied') ||
-                               errorMessage.includes('NotAllowedError');
+        const isPermissionError = errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError');
+        const isHardwareBusy = errorMessage.includes('NotReadableError') || errorMessage.includes('Starting video source failed');
+        const isNotFound = errorMessage.includes('NotFoundError') || errorMessage.includes('Devices not found');
         
-        if (!isHardwareError) {
-          console.error('Scanner start error:', err);
+        console.error('Scanner start error:', err);
+        
+        if (isPermissionError) {
+          setCameraPermission('denied');
+          setCameraIssue('Camera access denied. Please check browser permissions.');
+        } else if (isHardwareBusy) {
+          setCameraIssue('Camera is already in use by another app or tab.');
+        } else if (isNotFound) {
+          setCameraSupported(false);
+          setCameraIssue('No camera hardware found on this device.');
+        } else {
+          setCameraIssue(errorMessage || 'Failed to start camera.');
         }
         
-        setCameraPermission('denied');
-        setCameraIssue(isHardwareError ? 'Camera hardware is busy or unavailable.' : (errorMessage || 'Failed to start camera.'));
-        
-        if (!isHardwareError) {
-           void stopCamera();
-        }
+        // Always stop if we failed to start
+        void stopCamera();
       }
     };
 

@@ -27,7 +27,7 @@ export const Section = memo(({
     <div className={cn("space-y-3 md:space-y-4", hideHeaderOnMobile && "md:mt-4")}>
       {title && Icon && (
         <div className={cn(
-          "flex items-center gap-3 border-b border-border pb-2 md:pb-3",
+          "flex items-center gap-3 border-b border-border/40 pb-2 md:pb-3",
           hideHeaderOnMobile && "hidden md:flex"
         )}>
           <div className={cn("rounded-lg p-1.5", danger ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground")}>
@@ -74,7 +74,7 @@ export const PremiumToggle = memo(({
           onChange(!checked);
         }
       }}
-      className="group flex w-full cursor-pointer items-center justify-between rounded-xl border-border/40 bg-card p-4 text-left shadow-sm transition-all hover:bg-muted/50 hover:shadow-md"
+      className="group flex w-full cursor-pointer items-center justify-between rounded-xl border border-border/20 bg-card p-4 text-left shadow-sm transition-all hover:bg-muted/50 hover:shadow-md"
     >
       <div className="max-w-[80%]">
         <h4 className="text-sm font-bold text-foreground">{title}</h4>
@@ -109,9 +109,9 @@ export function AnnualResetTool() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
+      <div className="rounded-xl border border-border/20 bg-muted/20 p-4">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-card">
             <RefreshCw className={cn("h-5 w-5 text-primary", isResetting && "animate-spin")} />
           </div>
           <div className="space-y-1">

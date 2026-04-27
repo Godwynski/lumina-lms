@@ -162,14 +162,13 @@ export function PublicCatalog() {
       )}
 
       {!loading && totalBooks > 0 && (
-        <div className="pt-8 border-t border-border/50">
-          <CompactPagination
-            page={page}
-            totalItems={totalBooks}
-            pageSize={pageSize}
-            onPageChange={setPage}
-          />
-        </div>
+        <CompactPagination
+          page={page}
+          totalItems={totalBooks}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          variant="default"
+        />
       )}
 
       {/* Filter Bottom Sheet */}

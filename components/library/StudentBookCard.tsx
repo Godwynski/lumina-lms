@@ -36,7 +36,7 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
       className="group relative h-full"
     >
       <Link href={`/student-catalog/${book.id}`} className="block h-full">
-        <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:bg-accent/50 hover:border-primary/30 hover:shadow-lg">
+        <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border/40 bg-card p-3 shadow-sm transition-all hover:bg-accent/50 hover:border-primary/20 hover:shadow-lg">
           <div className="mb-3 flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <div className="mb-2">
@@ -65,7 +65,7 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
               </div>
             </div>
 
-            <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
+            <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border/40 bg-muted/20 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
               {book.cover_url ? (
                 <Image 
                   src={book.cover_url} 
@@ -83,7 +83,7 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
             </div>
           </div>
 
-          <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
+          <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/30">
             <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[10px] font-black tracking-tight">
               {book.available_copies} / {book.total_copies}
             </Badge>

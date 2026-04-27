@@ -188,7 +188,7 @@ export function DashboardClient({
 
           <div className="md:col-span-4 space-y-5">
             {stats.myActiveLoans > 0 && (
-              <Card className="border-border/40 bg-card/20 shadow-none p-4 backdrop-blur-sm">
+              <Card className="border-border/20 bg-card/20 shadow-none p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
@@ -214,10 +214,10 @@ export function DashboardClient({
                 </div>
                 <div className="grid gap-2">
                   {activeLoansList.map((loan) => (
-                     <Card key={loan.id} className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 backdrop-blur-sm">
+                     <Card key={loan.id} className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm">
                         <CardContent className="flex items-center justify-between gap-4 p-3">
                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
+                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm">
                                  <Library size={12} className="text-muted-foreground/30" />
                               </div>
                               <div className="min-w-0">
@@ -252,8 +252,8 @@ export function DashboardClient({
           </div>
 
           {reservations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-muted/10 py-10 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/20">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/30 bg-muted/5 py-10 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/20 bg-muted/10">
                 <Bookmark className="h-5 w-5 text-muted-foreground/20" />
               </div>
               <div>
@@ -276,11 +276,11 @@ export function DashboardClient({
                   : null;
 
                 return (
-                  <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-50/40 to-transparent' : 'border-border/40 bg-card/20 backdrop-blur-sm'}`}>
+                  <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-500/20 bg-emerald-50/5' : 'border-border/20 bg-card/10 backdrop-blur-sm'}`}>
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${isReady ? 'bg-emerald-500' : 'bg-primary/30'}`} />
                     <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-start">
                       <Link href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
-                        <div className="relative h-14 w-10 rounded-lg border border-border/60 bg-muted/20 overflow-hidden shadow-sm">
+                        <div className="relative h-14 w-10 rounded-lg bg-muted/20 overflow-hidden shadow-sm">
                           {res.books?.cover_url ? (
                             <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized priority />
                           ) : (
@@ -327,7 +327,7 @@ export function DashboardClient({
 
         {studentFaqs?.length > 0 && (
           <section className="pt-2">
-            <Collapsible className="bg-card/20 border border-border/40 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
+            <Collapsible className="bg-card/10 border border-border/20 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
                 <div className="flex items-center gap-2"><HelpCircle size={14} className="text-primary" /> Support & FAQs</div>
                 <ChevronDown size={14} />

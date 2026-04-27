@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Archive, Edit2, AlertCircle, Loader2 } from "lucide-react";
 
 function toSlug(value: string) {
   return value
@@ -122,21 +122,23 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
-
+  const handleArchive = async (id: string) => {
+    if (!confirm("Are you sure you want to archive this category?")) return;
+ 
     setLoading(true);
     setError(null);
-
+ 
     try {
       const response = await fetch(`/api/admin/categories/${id}`, {
-        method: "DELETE",
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false }),
       });
-
-      if (!response.ok) throw new Error("Failed to delete category");
-
-      setCategories((prev) => prev.filter((c) => c.id !== id));
-      setDraftCategories((prev) => prev.filter((c) => c.id !== id));
+ 
+      if (!response.ok) throw new Error("Failed to archive category");
+ 
+      setCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
+      setDraftCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -306,12 +308,13 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                       <Edit2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button
-                      onClick={() => handleDelete(category.id)}
+                      onClick={() => handleArchive(category.id)}
                       size="sm"
                       variant="ghost"
                       className="h-7 w-7 rounded-md p-0 text-destructive hover:bg-destructive/10"
+                      title="Archive category"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Archive className="h-3.5 w-3.5" />
                     </Button>
                   </>
                 )}

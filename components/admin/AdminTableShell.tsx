@@ -32,7 +32,7 @@ export function AdminTableShell({
       {(title || headerActions) && (
         <div className={cn(
           "flex flex-col gap-4 pb-4 sm:flex-row sm:items-end sm:justify-between",
-          !isGhost && "border-b border-border/50"
+          !isGhost && "border-b border-border/10 pb-4"
         )}>
           <div className="flex flex-col gap-1">
             {title && <h1 className="text-2xl font-black tracking-tight text-foreground">{title}</h1>}
@@ -47,7 +47,7 @@ export function AdminTableShell({
       {feedback}
 
       {controls ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/20 p-2 rounded-2xl border border-border/40 backdrop-blur-[2px]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/10 p-2 rounded-2xl backdrop-blur-[2px]">
           {controls}
         </div>
       ) : null}
@@ -56,7 +56,7 @@ export function AdminTableShell({
         "overflow-hidden transition-all duration-300",
         isGhost 
           ? "rounded-none border-none bg-transparent shadow-none" 
-          : "rounded-2xl border border-border bg-card shadow-sm"
+          : "rounded-2xl border border-border/10 bg-card/50 shadow-xs"
       )}>
         <div className="relative group/table overflow-hidden">
           <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/10 px-0.5">
@@ -68,7 +68,7 @@ export function AdminTableShell({
         {pagination ? (
           <div className={cn(
             "p-2.5",
-            isGhost ? "mt-4" : "border-t border-border bg-muted/10"
+            isGhost ? "mt-4" : "border-t border-border/10 bg-muted/5"
           )}>
             {pagination}
           </div>

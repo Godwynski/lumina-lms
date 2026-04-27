@@ -44,9 +44,9 @@ export function ReviewStep({
 
       <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border/40 bg-muted/10 p-5 space-y-5">
+          <div className="rounded-2xl border border-border/20 bg-muted/10 p-5 space-y-5">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+              <div className="h-10 w-10 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10">
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div>
@@ -55,7 +55,7 @@ export function ReviewStep({
               </div>
             </div>
             
-            <div className="bg-background rounded-xl p-4 border border-border/40 shadow-sm">
+            <div className="bg-background rounded-xl p-4 border border-border/20 shadow-sm">
                <p className="text-[9px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-widest">
                  <ShieldAlert className="h-3 w-3" />
                  ID Verification
@@ -68,13 +68,13 @@ export function ReviewStep({
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border/40 bg-muted/10 p-5 space-y-4 h-full">
+          <div className="rounded-2xl border border-border/20 bg-muted/10 p-5 space-y-4 h-full">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Resource</p>
               <p className="text-xs font-bold mt-1 text-foreground leading-tight">{bookTitle}</p>
             </div>
 
-            <div className="space-y-2 pt-3 border-t border-border/20">
+            <div className="space-y-2 pt-3 border-t border-border/10">
               {borrowedAt && (
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground flex items-center gap-1.5 font-medium">

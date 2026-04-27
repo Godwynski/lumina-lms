@@ -19,12 +19,12 @@ export function ModernBookListItem({ book }: ModernBookListItemProps) {
         layout 
         initial={{ opacity: 0, x: -10 }} 
         animate={{ opacity: 1, x: 0 }} 
-        className="relative flex min-w-max flex-row items-center gap-4 rounded-xl border border-border bg-card pr-4 transition-all hover:bg-muted hover:border-primary/20 hover:shadow-sm sm:min-w-[700px]"
+        className="relative flex min-w-max flex-row items-center gap-4 rounded-xl border border-border/10 bg-card pr-4 transition-all hover:bg-muted/50 hover:border-primary/20 hover:shadow-sm sm:min-w-[700px]"
       >
         
         {/* Pinned Title & Context Column */}
         <div className="sticky left-0 z-10 flex min-w-[280px] flex-1 shrink-0 items-center justify-start gap-3 bg-card py-3 pl-4 pr-6 shadow-[10px_0_15px_-10px_rgba(0,0,0,0.06)] transition-colors group-hover:bg-muted group-hover:shadow-none sm:min-w-[320px] sm:gap-4">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-500 ring-1 ring-border/50 ${
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-500 ${
             isOutOfStock 
             ? "bg-destructive/10 text-destructive shadow-sm" 
             : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
@@ -43,7 +43,7 @@ export function ModernBookListItem({ book }: ModernBookListItemProps) {
                   <MapPin size={11} className="text-primary/60" />
                   {book.location || "Central Storage"}
                </div>
-               <div className="flex items-center gap-1.5 rounded-md bg-muted/40 px-2 py-0.5 text-[10px] font-mono font-bold tracking-tight text-foreground shadow-none ring-1 ring-border/30 group-hover:bg-muted group-hover:ring-primary/20 transition-colors">
+               <div className="flex items-center gap-1.5 rounded-md bg-muted/40 px-2 py-0.5 text-[10px] font-mono font-bold tracking-tight text-foreground shadow-none group-hover:bg-muted transition-colors">
                   <Package size={11} className="text-muted-foreground/50 group-hover:text-primary/50" />
                   {book.isbn || "INTERNAL-ID"}
                </div>
@@ -82,7 +82,7 @@ export function ModernBookListItem({ book }: ModernBookListItemProps) {
         </div>
 
         {/* Action Indication */}
-        <div className="flex items-center gap-2 py-3 pl-4 ml-auto border-l border-border/50">
+        <div className="flex items-center gap-2 py-3 pl-4 ml-auto">
            <div className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 group-hover:translate-x-1">
               <ChevronRight size={18} />
            </div>

@@ -154,7 +154,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
       <Section>
         <div className="grid gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-border/20 bg-muted/20 p-4 sm:w-48">
               <Avatar className="h-24 w-24 rounded-xl border-2 border-background shadow-md">
                 <AvatarImage src={currentAvatarUrl || undefined} alt={initialProfile.full_name || "Profile"} className="object-cover" />
                 <AvatarFallback className="rounded-xl bg-muted text-lg font-bold">
@@ -175,27 +175,27 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
 
             <div className="flex-1 space-y-4">
               <FieldGroup label="Full Name">
-                <div className="h-10 rounded-lg bg-muted/20 border border-border/40 px-3 flex items-center text-sm font-bold text-foreground/80">
+                <div className="h-10 rounded-lg bg-muted/10 border border-border/20 px-3 flex items-center text-sm font-bold text-foreground/80">
                   {initialProfile.full_name || "Not Set"}
                 </div>
               </FieldGroup>
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <FieldGroup label="Student ID">
-                  <div className="h-10 rounded-lg bg-muted/20 border border-border/40 px-3 flex items-center text-sm font-mono font-bold text-primary">
+                  <div className="h-10 rounded-lg bg-muted/10 border border-border/20 px-3 flex items-center text-sm font-mono font-bold text-primary">
                     {initialProfile.student_id || "NOT-ASSIGNED"}
                   </div>
                 </FieldGroup>
 
                 <FieldGroup label="Official Email">
-                  <div className="h-10 rounded-lg bg-muted/20 border border-border/40 px-3 flex items-center text-sm font-semibold text-foreground/70">
+                  <div className="h-10 rounded-lg bg-muted/10 border border-border/20 px-3 flex items-center text-sm font-semibold text-foreground/70">
                     {initialProfile.email || "No Email"}
                   </div>
                 </FieldGroup>
 
                 <FieldGroup label="Account Status">
                   <div className={cn(
-                    "h-10 rounded-lg border border-border/40 px-3 flex items-center text-[10px] font-black uppercase tracking-widest",
+                    "h-10 rounded-lg border border-border/20 px-3 flex items-center text-[10px] font-black uppercase tracking-widest",
                     initialProfile.status === 'ACTIVE' ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
                   )}>
                     {initialProfile.status}
@@ -293,9 +293,9 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
             )}
           </AnimatePresence>
 
-          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3 mt-2">
+          <div className="flex items-center justify-between rounded-xl border border-border/20 bg-muted/20 p-3 mt-2">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/40 bg-card shadow-sm">
                 <UserCheck className="h-4 w-4 text-primary" />
               </div>
               <div>

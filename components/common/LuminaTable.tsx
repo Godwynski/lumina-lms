@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactPagination } from "@/components/ui/compact-pagination";
 
 export interface LuminaColumn<T> {
   header: string;
@@ -41,6 +42,9 @@ interface LuminaTableProps<T> {
   
   // Empty State
   emptyState?: EmptyState;
+
+  // Appearance
+  noBorder?: boolean;
 }
 
 export function LuminaTable<T extends { id: string | number }>({
@@ -56,6 +60,7 @@ export function LuminaTable<T extends { id: string | number }>({
   pageSize = 10,
   onPageChange,
   emptyState,
+  noBorder,
 }: LuminaTableProps<T>) {
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
@@ -87,7 +92,12 @@ export function LuminaTable<T extends { id: string | number }>({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      <div className="w-full overflow-hidden border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm">
+      <div className={cn(
+        "w-full overflow-hidden transition-all duration-200",
+        noBorder 
+          ? "border-none bg-transparent shadow-none" 
+          : "border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm"
+      )}>
         {/* ── Mobile view ── */}
         <div className="md:hidden flex flex-col divide-y divide-border/50">
           {isLoading ? (
@@ -129,7 +139,7 @@ export function LuminaTable<T extends { id: string | number }>({
         {/* ── Desktop table ── */}
         <table className="hidden md:table w-full text-left text-sm border-collapse">
           <thead>
-            <tr className="border-b border-border/50 bg-muted/30">
+            <tr className="border-b border-border/10 bg-muted/30">
               {columns.map((col, idx) => (
                 <th
                   key={`head-${idx}`}
@@ -143,7 +153,7 @@ export function LuminaTable<T extends { id: string | number }>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/40">
+          <tbody className="divide-y divide-border/10">
             {isLoading ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-16 text-center">
@@ -200,30 +210,14 @@ export function LuminaTable<T extends { id: string | number }>({
 
       {/* ── Pagination ── */}
       {totalPages > 1 && onPageChange && page && (
-        <div className="flex items-center justify-between gap-4 px-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="h-9 w-9 p-0 rounded-xl border-border/40 bg-card/40"
-            >
-              <ChevronLeft size={16} />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="h-9 w-9 p-0 rounded-xl border-border/40 bg-card/40"
-            >
-              <ChevronRight size={16} />
-            </Button>
-          </div>
+        <div className="pt-2">
+          <CompactPagination
+            page={page ?? 1}
+            totalItems={totalCount ?? 0}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+            variant="ghost"
+          />
         </div>
       )}
     </div>

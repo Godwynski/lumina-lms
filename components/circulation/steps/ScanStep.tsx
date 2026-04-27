@@ -76,7 +76,7 @@ export function ScanStep({
                                 <HelpCircle className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-[200px] p-4 bg-card border border-border shadow-xl">
+                        <TooltipContent side="left" className="max-w-[200px] p-4 bg-card border border-border/10 shadow-xl">
                             <h4 className="text-[10px] font-bold uppercase tracking-widest mb-2">Scanning Tips</h4>
                             <ul className="text-[10px] space-y-1.5 text-muted-foreground list-disc pl-3">
                                 <li>Ensure good lighting.</li>
@@ -89,7 +89,7 @@ export function ScanStep({
             </div>
 
             <div className="grid gap-8 items-center lg:grid-cols-[1fr_1.2fr]">
-                <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/40 bg-muted/20 shadow-inner">
+                <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/10 bg-muted/20 shadow-inner">
                     <div 
                         id={scannerId} 
                         className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
@@ -162,7 +162,7 @@ export function ScanStep({
                                 onChange={(e) => setManualValue(e.target.value.toUpperCase())}
                                 onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
                                 placeholder={placeholder}
-                                className="h-11 rounded-xl bg-muted/30 border-border/40 focus:border-primary/40 focus:ring-0 uppercase text-xs"
+                                className="h-11 rounded-xl bg-muted/30 border-border/20 focus:border-primary/40 focus:ring-0 uppercase text-xs"
                             />
                             <Button 
                                 onClick={handleManualSubmit}

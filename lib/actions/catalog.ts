@@ -247,7 +247,7 @@ export const softDeleteBook = createSafeAction(
     return data;
   },
   { 
-    auditAction: "soft_delete", 
+    auditAction: "archive", 
     auditEntity: "book", 
     allowedRoles: ['admin', 'librarian', 'staff'] 
   }

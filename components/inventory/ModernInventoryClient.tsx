@@ -61,7 +61,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
 
   return (
     <div className="w-full space-y-4 pb-10">
-      <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-border/40 bg-background/50 p-2 shadow-sm backdrop-blur-2xl transition-all duration-300">
+      <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-border/20 bg-background/50 p-2 shadow-sm backdrop-blur-2xl transition-all duration-300">
         <div className="flex items-center gap-1.5 px-1">
           <Link href="/catalog/add" className="shrink-0">
             <Button size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold uppercase tracking-tight shadow-none">
@@ -69,7 +69,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
               Add Item
             </Button>
           </Link>
-          <div className="mx-1.5 h-4 w-[1px] bg-border/40" />
+          <div className="mx-1.5 h-4 w-[1px] bg-border/20" />
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
@@ -103,7 +103,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
         </div>
 
         <div className="ml-auto flex items-center gap-2 pr-1">
-          <div className="flex items-center rounded-lg border border-border/40 bg-muted/20 p-1">
+          <div className="flex items-center rounded-lg border border-border/20 bg-muted/10 p-1">
             <Button
               type="button"
               size="sm"
@@ -131,7 +131,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
           </div>
           
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/40 bg-muted/10 px-3 text-[11px] font-bold shadow-none focus:ring-0">
+            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/20 bg-muted/5 px-3 text-[11px] font-bold shadow-none focus:ring-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -151,7 +151,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
                 <ModernBookListItem key={book.id} book={book} />
               ))}
               {books.length === 0 && (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/30 px-4 py-16 text-center shadow-none backdrop-blur-sm">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/40 bg-card/10 px-4 py-16 text-center shadow-none backdrop-blur-sm">
                   <div className="mb-4 rounded-full bg-slate-100 p-4 font-medium text-slate-400 ring-1 ring-slate-200/50">
                     <Search className="h-8 w-8" />
                   </div>
@@ -186,6 +186,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
           totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setPage}
+          variant="default"
         />
       )}
     </div>

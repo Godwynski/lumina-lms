@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Wrench,
-  Trash2,
   SearchX,
   History,
   Filter,
@@ -26,6 +25,7 @@ import {
   UserCircle2,
   Users,
   CalendarClock,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -306,7 +306,9 @@ export function StaffBookManagementClient({
     try {
       const result = await softDeleteBook(book.id);
       if (!result.success) throw new Error(result.error);
-      toast.success('Book removed from inventory');
+      toast.success('Book archived', {
+        description: 'The asset has been moved to archives.'
+      });
       router.push('/dashboard');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete book');
@@ -353,7 +355,7 @@ export function StaffBookManagementClient({
             <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
               <span className="text-[10px] font-bold text-destructive uppercase mr-1">Confirm?</span>
               <Button variant="destructive" size="sm" onClick={handleDeleteBook} disabled={deleteLoading} className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider">
-                {deleteLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Purge'}
+                {deleteLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Archive'}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider">Cancel</Button>
             </div>
@@ -371,6 +373,18 @@ export function StaffBookManagementClient({
             </>
           )}
         </div>
+      }
+      pagination={
+        visibleCopies.length > 0 ? (
+          <CompactPagination
+            page={page}
+            totalItems={visibleCopies.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            pageSizeOptions={[10, 20, 30]}
+            onPageSizeChange={setPageSize}
+          />
+        ) : null
       }
     >
       <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -410,9 +424,23 @@ export function StaffBookManagementClient({
             </div>
 
             <div className="mt-8 flex items-center justify-between border-t border-primary/10 pt-6">
-               <Button onClick={() => setShowDeleteConfirm(true)} variant="ghost" className="h-10 rounded-xl px-5 text-xs font-black uppercase tracking-widest text-rose-600 hover:bg-rose-500/10 hover:text-rose-700">
-                 <Trash2 className="mr-2 h-4 w-4" /> Purge Asset
-               </Button>
+                {showDeleteConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-rose-600 uppercase">Finalize?</span>
+                    <Button 
+                      onClick={handleDeleteBook} 
+                      disabled={deleteLoading}
+                      className="h-10 rounded-xl bg-rose-600 px-6 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-rose-600/20 hover:bg-rose-700"
+                    >
+                      {deleteLoading ? "Archiving..." : "Archive Asset"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)} className="h-10 rounded-xl px-4 text-xs font-bold uppercase">Cancel</Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => setShowDeleteConfirm(true)} variant="ghost" className="h-10 rounded-xl px-5 text-xs font-black uppercase tracking-widest text-rose-600 hover:bg-rose-500/10 hover:text-rose-700">
+                    <Archive className="mr-2 h-4 w-4" /> Archive Asset
+                  </Button>
+                )}
                <div className="flex gap-3">
                  <Button variant="outline" onClick={() => setIsEditing(false)} className="h-10 rounded-xl px-6 text-xs font-black uppercase tracking-widest">
                    Cancel
@@ -621,18 +649,7 @@ export function StaffBookManagementClient({
             )}
           </div>
 
-          {visibleCopies.length > 0 && (
-            <div className="pt-2">
-              <CompactPagination
-                page={page}
-                totalItems={visibleCopies.length}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                pageSizeOptions={[10, 20, 30]}
-                onPageSizeChange={setPageSize}
-              />
-            </div>
-          )}
+
         </div>
 
       </div>

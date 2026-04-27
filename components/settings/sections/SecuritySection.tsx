@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Lock, Trash2, ChevronRight, Settings } from "lucide-react";
+import { Lock, Archive, ChevronRight, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Section, AnnualResetTool } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
@@ -21,7 +21,7 @@ export function SecuritySection({ role }: SecuritySectionProps) {
       <div className="grid gap-6">
         {/* Identity & Access Group */}
         <Section title="Identity & Access" icon={Lock}>
-          <div className="rounded-xl border border-border bg-muted/40 p-4">
+          <div className="rounded-xl border border-border/20 bg-muted/20 p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground leading-relaxed font-medium">
@@ -31,7 +31,7 @@ export function SecuritySection({ role }: SecuritySectionProps) {
                 </p>
               </div>
               {role !== "student" && (
-                <Button asChild variant="outline" className="h-10 gap-3 rounded-lg border-border px-6 font-bold shadow-sm hover:bg-background">
+                <Button asChild variant="outline" className="h-10 gap-3 rounded-lg border-border/40 px-6 font-bold shadow-sm hover:bg-background">
                   <Link href="/auth/update-password">
                     <Lock size={14} />
                     Update Password
@@ -51,12 +51,12 @@ export function SecuritySection({ role }: SecuritySectionProps) {
         )}
 
         {/* Danger Zone */}
-        <Section title="Account Termination" icon={Trash2} danger>
-          <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-4">
+        <Section title="Account Archive" icon={Archive} danger>
+          <div className="rounded-xl border border-red-500/5 bg-red-500/5 p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
               <div className="max-w-md">
                 <p className="text-xs text-red-700/80 leading-relaxed font-medium">
-                  Permanently remove your profile from the library system. This action is irreversible.
+                  Archive your profile to restrict access while preserving data according to system policy.
                 </p>
               </div>
               <Button 
@@ -64,8 +64,8 @@ export function SecuritySection({ role }: SecuritySectionProps) {
                 onClick={() => setDeleteDialogOpen(true)}
                 className="h-10 rounded-lg gap-2 bg-red-600 hover:bg-red-700 font-bold px-6 shadow-md"
               >
-                <Trash2 size={16} />
-                Delete Profile
+                <Archive size={16} />
+                Archive Profile
               </Button>
             </div>
           </div>

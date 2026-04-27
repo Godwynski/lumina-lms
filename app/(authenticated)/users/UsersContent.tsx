@@ -232,6 +232,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
           columns={columns}
           isLoading={isLoadingUsers}
           onRowClick={handleUserClick}
+          noBorder
           renderMobileRow={(user) => (
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10 shrink-0">

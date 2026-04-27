@@ -60,12 +60,12 @@ export function PreferencesSection({ role: _role }: PreferencesSectionProps) {
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3 mt-2">
+          <div className="flex items-center justify-between rounded-xl border border-border/20 bg-muted/20 p-3 mt-2">
             <div className="flex items-center gap-3">
               <Button 
                 variant="outline" 
                 onClick={clearLocalPreferences} 
-                className="h-10 rounded-lg border-border text-muted-foreground font-bold px-6 hover:bg-background"
+                className="h-10 rounded-lg border-border/40 text-muted-foreground font-bold px-6 hover:bg-background"
               >
                 Reset Defaults
               </Button>

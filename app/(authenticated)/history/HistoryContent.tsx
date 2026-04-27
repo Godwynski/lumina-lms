@@ -129,7 +129,7 @@ export default function HistoryContent({
   return (
     <div className="space-y-4 w-full">
       {/* Header Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm font-sans">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border/10 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm font-sans">
         <form 
           onSubmit={(e) => {
             e.preventDefault();
@@ -146,7 +146,7 @@ export default function HistoryContent({
             className="h-10 rounded-xl pl-9 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
           />
         </form>
-        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/40">
+        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
           {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
             <button
               key={status}
