@@ -1,10 +1,16 @@
 'use client';
 
-import { Camera, QrCode, ScanLine, RefreshCcw } from 'lucide-react';
+import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
 import { useState, useRef, useEffect } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ScanStepProps {
   title: string;
@@ -53,135 +59,125 @@ export function ScanStep({
     }, []);
 
     return (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <ScanLine className="h-5 w-5 text-primary" />
-                    {title}
-                </h3>
-                <p className="text-sm text-muted-foreground">{description}</p>
+        <div className="space-y-6">
+            <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                        <ScanLine className="h-4 w-4 text-primary" />
+                        {title}
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-tight font-medium">{description}</p>
+                </div>
+                
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground">
+                                <HelpCircle className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[200px] p-4 bg-card border border-border shadow-xl">
+                            <h4 className="text-[10px] font-bold uppercase tracking-widest mb-2">Scanning Tips</h4>
+                            <ul className="text-[10px] space-y-1.5 text-muted-foreground list-disc pl-3">
+                                <li>Ensure good lighting.</li>
+                                <li>Keep the code steady.</li>
+                                <li>Toggle camera if focus fails.</li>
+                            </ul>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-3">
-                    <div className="relative aspect-square overflow-hidden rounded-3xl border border-border bg-black shadow-2xl">
-                        <div 
-                            id={scannerId} 
-                            className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
-                        />
-                        
-                        {/* Minimalism Scanning Brackets */}
-                        <div className="absolute inset-0 pointer-events-none">
-                            <div className="absolute top-8 left-8 w-12 h-12 border-t-2 border-l-2 border-primary/60 rounded-tl-xl" />
-                            <div className="absolute top-8 right-8 w-12 h-12 border-t-2 border-r-2 border-primary/60 rounded-tr-xl" />
-                            <div className="absolute bottom-8 left-8 w-12 h-12 border-b-2 border-l-2 border-primary/60 rounded-bl-xl" />
-                            <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-primary/60 rounded-br-xl" />
+            <div className="grid gap-8 items-center lg:grid-cols-[1fr_1.2fr]">
+                <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/40 bg-muted/20 shadow-inner">
+                    <div 
+                        id={scannerId} 
+                        className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
+                    />
+                    
+                    {/* Minimalist Overlay */}
+                    <div className="absolute inset-0 pointer-events-none border-[12px] border-background/20" />
+                    
+                    {isProcessing && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+                            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         </div>
+                    )}
+                    
+                    {!cameraOpen && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200">
+                            <QrCode className="h-10 w-10 text-muted-foreground/40 mb-4" />
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-9 rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold text-[10px] uppercase tracking-wider"
+                                onClick={() => setCameraOpen(true)}
+                                disabled={!cameraSupported}
+                            >
+                                <Camera className="mr-2 h-3.5 w-3.5" />
+                                Launch Scanner
+                            </Button>
+                        </div>
+                    )}
 
-                        {/* Scanner Scanning Line Animation */}
-                        {cameraOpen && !isProcessing && (
-                             <div className="absolute top-0 inset-x-8 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent animate-scan shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
-                        )}
+                    {cameraOpen && (
+                         <div className="absolute bottom-4 inset-x-4 flex justify-between items-center">
+                            <Button 
+                                variant="secondary" 
+                                size="icon" 
+                                className={`h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10 ${!hasMultipleCameras ? 'invisible' : ''}`}
+                                onClick={switchCamera}
+                            >
+                                <RefreshCcw className="h-4 w-4" />
+                            </Button>
 
-                        {/* Processing Shimmer */}
-                        {isProcessing && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40 backdrop-blur-[2px] animate-pulse">
-                                <div className="flex flex-col items-center gap-3">
-                                    <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs font-bold tracking-widest uppercase text-primary">Identifying...</span>
-                                </div>
+                            <Button 
+                                variant="destructive" 
+                                className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
+                                onClick={() => setCameraOpen(false)}
+                            >
+                                Stop
+                            </Button>
+                        </div>
+                    )}
+                    
+                    {cameraIssue && !cameraOpen && (
+                         <div className="absolute top-4 inset-x-4">
+                            <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium">
+                                {cameraIssue}
                             </div>
-                        )}
-                        
-                        {!cameraOpen && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-md transition-all duration-300">
-                                <div className="p-6 rounded-full bg-muted/20 mb-4">
-                                    <QrCode className="h-12 w-12 text-muted-foreground" />
-                                </div>
-                                <p className="text-sm font-semibold tracking-tight">Scanner Hardware Ready</p>
-                                <Button 
-                                    variant="default" 
-                                    size="lg" 
-                                    className="mt-6 h-12 rounded-2xl px-8 shadow-xl shadow-primary/20"
-                                    onClick={() => setCameraOpen(true)}
-                                    disabled={!cameraSupported}
-                                >
-                                    <Camera className="mr-2 h-4 w-4" />
-                                    Launch Scanner
-                                </Button>
-                            </div>
-                        )}
-
-                        {cameraOpen && (
-                             <div className="absolute bottom-6 inset-x-6 flex justify-between items-center animate-in fade-in slide-in-from-bottom-4">
-                                <Button 
-                                    variant="secondary" 
-                                    size="icon" 
-                                    className={`h-12 w-12 rounded-2xl backdrop-blur-xl bg-background/40 border-white/10 shadow-2xl ${!hasMultipleCameras ? 'invisible' : ''}`}
-                                    onClick={switchCamera}
-                                    title="Switch Camera"
-                                >
-                                    <RefreshCcw className="h-5 w-5" />
-                                </Button>
-
-                                <Button 
-                                    variant="destructive" 
-                                    className="h-12 rounded-2xl px-6 backdrop-blur-xl bg-destructive shadow-2xl border-none font-bold"
-                                    onClick={() => setCameraOpen(false)}
-                                >
-                                    Stop
-                                </Button>
-                            </div>
-                        )}
-                        
-                        {cameraIssue && !cameraOpen && (
-                             <div className="absolute top-6 inset-x-6">
-                                <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-xl rounded-2xl p-4 text-[11px] text-destructive flex items-center gap-3">
-                                    <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
-                                    <span className="font-medium">{cameraIssue}</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
-        <div className="flex flex-col justify-center space-y-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">
-              Manual Input
-            </label>
-            <div className="flex gap-2">
-              <Input
-                ref={manualInputRef}
-                value={manualValue}
-                onChange={(e) => setManualValue(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
-                placeholder={placeholder}
-                className="h-10 rounded-xl bg-muted/40 border-border focus:ring-primary/20 uppercase"
-              />
-              <Button 
-                onClick={handleManualSubmit}
-                disabled={isProcessing || !manualValue.trim()}
-                className="h-10 rounded-xl px-4"
-              >
-                {isProcessing ? '...' : actionLabel}
-              </Button>
+                <div className="flex flex-col gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
+                            Direct Entry
+                        </label>
+                        <div className="flex gap-2">
+                            <Input
+                                ref={manualInputRef}
+                                value={manualValue}
+                                onChange={(e) => setManualValue(e.target.value.toUpperCase())}
+                                onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+                                placeholder={placeholder}
+                                className="h-11 rounded-xl bg-muted/30 border-border/40 focus:border-primary/40 focus:ring-0 uppercase text-xs"
+                            />
+                            <Button 
+                                onClick={handleManualSubmit}
+                                disabled={isProcessing || !manualValue.trim()}
+                                className="h-11 rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/10"
+                            >
+                                {isProcessing ? '...' : actionLabel}
+                            </Button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground ml-1 font-medium opacity-60">
+                            Enter the identifier manually if scan fails.
+                        </p>
+                    </div>
+                </div>
             </div>
-            <p className="text-[11px] text-muted-foreground px-1 italic">
-              Press Enter or click the button to process manual entries.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-card/50 p-4">
-            <h4 className="text-xs font-semibold mb-2">Tips for success:</h4>
-            <ul className="text-[11px] space-y-1.5 text-muted-foreground list-disc pl-4">
-              <li>Ensure good lighting and avoid reflections on screens.</li>
-              <li>Keep the card/QR code steady within the frame.</li>
-              <li>Toggle the camera if the focus seems stuck.</li>
-            </ul>
-          </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

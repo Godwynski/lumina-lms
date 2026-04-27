@@ -31,13 +31,14 @@ interface ProfileSectionProps {
     phone: string | null;
     department: string | null;
     status: string;
+    student_id: string | null;
+    email: string | null;
   };
 }
 
 export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   const { updatePreferences: updatePrefsContext } = usePreferences();
   
-  const [displayName, setDisplayName] = useState(initialProfile.full_name || "");
   const [addressValue, setAddressValue] = useState(initialProfile.address || "");
   const [phoneValue, setPhoneValue] = useState(initialProfile.phone || "");
   const [departmentValue, setDepartmentValue] = useState(initialProfile.department || "");
@@ -59,7 +60,6 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isProfileDirty = 
-    displayName !== (initialProfile.full_name || "") || 
     addressValue !== (initialProfile.address || "") || 
     phoneValue !== (initialProfile.phone || "") ||
     departmentValue !== (initialProfile.department || "");
@@ -67,14 +67,12 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   const isDirty = isProfileDirty || !!selectedPhotoBlob;
 
   const saveProfile = async () => {
-    const nextName = displayName.trim();
     setProfileSaving(true);
     try {
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          displayName: nextName,
           address: addressValue.trim(),
           phone: phoneValue.trim(),
           department: departmentValue.trim()
@@ -84,7 +82,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Failed to save profile");
 
-      await updatePrefsContext({ displayName: nextName });
+      await updatePrefsContext({ displayName: initialProfile.full_name || "" });
       toast.success("Profile saved successfully");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save profile");
@@ -158,9 +156,9 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
               <Avatar className="h-24 w-24 rounded-xl border-2 border-background shadow-md">
-                <AvatarImage src={currentAvatarUrl || undefined} alt={displayName || "Profile"} className="object-cover" />
+                <AvatarImage src={currentAvatarUrl || undefined} alt={initialProfile.full_name || "Profile"} className="object-cover" />
                 <AvatarFallback className="rounded-xl bg-muted text-lg font-bold">
-                  {(displayName || "U").charAt(0).toUpperCase()}
+                  {(initialProfile.full_name || "U").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center">
@@ -176,14 +174,34 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
             </div>
 
             <div className="flex-1 space-y-4">
-              <FieldGroup label="Display Name">
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. Alex Rivera"
-                  className="h-10 rounded-lg text-sm"
-                />
+              <FieldGroup label="Full Name">
+                <div className="h-10 rounded-lg bg-muted/20 border border-border/40 px-3 flex items-center text-sm font-bold text-foreground/80">
+                  {initialProfile.full_name || "Not Set"}
+                </div>
               </FieldGroup>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <FieldGroup label="Student ID">
+                  <div className="h-10 rounded-lg bg-muted/20 border border-border/40 px-3 flex items-center text-sm font-mono font-bold text-primary">
+                    {initialProfile.student_id || "NOT-ASSIGNED"}
+                  </div>
+                </FieldGroup>
+
+                <FieldGroup label="Official Email">
+                  <div className="h-10 rounded-lg bg-muted/20 border border-border/40 px-3 flex items-center text-sm font-semibold text-foreground/70">
+                    {initialProfile.email || "No Email"}
+                  </div>
+                </FieldGroup>
+
+                <FieldGroup label="Account Status">
+                  <div className={cn(
+                    "h-10 rounded-lg border border-border/40 px-3 flex items-center text-[10px] font-black uppercase tracking-widest",
+                    initialProfile.status === 'ACTIVE' ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+                  )}>
+                    {initialProfile.status}
+                  </div>
+                </FieldGroup>
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <FieldGroup label="Contact Number">

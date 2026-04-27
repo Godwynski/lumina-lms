@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { AnimatePresence, m } from "framer-motion";
 import { RefreshCcw, User, CheckCircle2, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -55,30 +54,26 @@ const RETURN_STEPS = [
 
 function MemberPreview({ student }: { student: ActiveStudent }) {
   return (
-    <m.div 
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mb-6 p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center gap-4"
-    >
-      <Avatar className="h-12 w-12 border-2 border-primary/20 bg-background shadow-sm">
+    <div className="mb-8 p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-4">
+      <Avatar className="h-10 w-10 border border-primary/20 bg-background">
         <AvatarFallback>
-          <User className="h-6 w-6 text-primary/60" />
+          <User className="h-5 w-5 text-primary/60" />
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-bold truncate">{student.fullName}</h4>
-          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+          <h4 className="text-xs font-bold truncate">{student.fullName}</h4>
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-bold uppercase tracking-wider">
             {student.status}
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
           <Bookmark className="h-3 w-3" />
           {student.studentId}
         </p>
       </div>
-      <CheckCircle2 className="h-5 w-5 text-primary animate-in zoom-in duration-500" />
-    </m.div>
+      <CheckCircle2 className="h-4 w-4 text-primary" />
+    </div>
   );
 }
 
@@ -113,7 +108,6 @@ export function CirculationWizard() {
   const playScanCue = useCallback((type: 'success' | 'error') => {
     if (typeof window === 'undefined') return;
 
-    // Haptic Feedback
     if (type === 'success' && 'vibrate' in navigator) {
       navigator.vibrate([10, 50, 10]);
     } else if (type === 'error' && 'vibrate' in navigator) {
@@ -232,7 +226,6 @@ export function CirculationWizard() {
   };
 
   const confirmAction = async () => {
-    // Optimistic UI: Transition to success screen immediately
     setIsConfirmed(true);
     setNotice(null);
 
@@ -273,143 +266,122 @@ export function CirculationWizard() {
       }
     } catch {
       setIsConfirmed(false);
-      setNotice({ tone: 'error', text: 'Network failure during confirmation. Transaction might still be pending.' });
+      setNotice({ tone: 'error', text: 'Network failure during confirmation.' });
     }
   };
 
   return (
-    <div className="max-w-[1450px] mx-auto space-y-3">
-      {/* Action Bar - Low Profile */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/40 backdrop-blur-sm">
-          <Button
-            variant={mode === 'checkout' ? 'default' : 'ghost'}
-            className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
-            onClick={() => switchMode('checkout')}
-          >
-            Checkout
-          </Button>
-          <Button
-            variant={mode === 'return' ? 'default' : 'ghost'}
-            className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
-            onClick={() => switchMode('return')}
-          >
-            Return
-          </Button>
-          <div className="w-px h-3 bg-border/40 mx-1" />
+    <div className="max-w-[850px] mx-auto space-y-8 pb-12">
+      {/* Centered Compact Stepper */}
+      <div className="bg-card/30 border border-border/40 rounded-2xl p-6 pb-10 backdrop-blur-sm shadow-sm">
+        <CirculationStepper steps={steps} currentStep={currentStep} />
+      </div>
+
+      <main className="bg-card/50 border border-border/40 rounded-3xl p-8 shadow-sm relative overflow-hidden transition-all duration-200">
+        {/* Header Action Bar Integrated */}
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/20">
+          <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/20">
+            <Button
+              variant={mode === 'checkout' ? 'default' : 'ghost'}
+              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider shadow-sm"
+              onClick={() => switchMode('checkout')}
+            >
+              Checkout
+            </Button>
+            <Button
+              variant={mode === 'return' ? 'default' : 'ghost'}
+              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider shadow-sm"
+              onClick={() => switchMode('return')}
+            >
+              Return
+            </Button>
+          </div>
+
           <Button
             variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"
+            size="sm"
+            className="h-8 gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             onClick={handleReset}
-            title="Reset Workflow"
           >
             <RefreshCcw className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Reset</span>
           </Button>
         </div>
-      </div>
 
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        <aside className="lg:col-span-3 lg:sticky lg:top-8 bg-card/40 border border-border/40 rounded-3xl p-6 shadow-none">
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-6">Workflow Progress</h4>
-          <CirculationStepper steps={steps} currentStep={currentStep} />
-        </aside>
+        <div>
+          {isConfirmed ? (
+            <SuccessStep 
+              title={mode === 'checkout' ? 'Checkout Complete' : 'Return Complete'}
+              message={mode === 'checkout' 
+                ? `The resource has been successfully assigned to ${activeStudent?.fullName}.`
+                : `The resource has been successfully returned.`}
+              onReset={handleReset}
+              reservationReady={reservationData.ready}
+              reservedFor={reservationData.studentName}
+            />
+          ) : (currentStep === 1 || (currentStep === 2 && mode === 'checkout')) ? (
+            <div key="scanning-flow">
+              {activeStudent && mode === 'checkout' && (
+                <MemberPreview student={activeStudent} />
+              )}
+              
+              <ScanStep 
+                title={
+                  currentStep === 1 
+                    ? (mode === 'checkout' ? 'Identify Student' : 'Identify Resource')
+                    : 'Scan Resource'
+                }
+                description={
+                  currentStep === 1
+                    ? (mode === 'checkout' 
+                        ? 'Scan student library card or enter number.' 
+                        : 'Scan book copy QR code to begin.')
+                    : 'Now scan the book copy QR code.'
+                }
+                placeholder={
+                  currentStep === 1
+                    ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Book QR')
+                    : 'Enter Book QR'
+                }
+                onScan={processScan}
+                isProcessing={isProcessing}
+                actionLabel={currentStep === 1 ? 'Process' : 'Verify'}
+              />
+            </div>
+          ) : (
+            <div key="review" className="space-y-8">
+              <ReviewStep 
+                type={mode}
+                studentName={mode === 'checkout' ? activeStudent!.fullName : pendingReturn!.studentName}
+                studentId={mode === 'checkout' ? activeStudent!.studentId : 'N/A'}
+                bookTitle={mode === 'checkout' ? pendingCheckout!.bookTitle : pendingReturn!.bookTitle}
+                dueDate={mode === 'checkout' ? pendingCheckout!.dueDate : pendingReturn!.dueDate || 'N/A'}
+                borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
+              />
+              
+              <div className="flex gap-3 justify-end pt-6 border-t border-border/20">
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleReset} 
+                    disabled={isProcessing}
+                    className="rounded-xl px-6 h-10 text-[11px] font-bold uppercase tracking-wider"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={confirmAction} 
+                    disabled={isProcessing}
+                    className="rounded-xl px-8 h-10 bg-primary shadow-lg shadow-primary/20 text-[11px] font-bold uppercase tracking-wider"
+                  >
+                    {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
+                  </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
-        <main className="lg:col-span-9 bg-card/40 border border-border/40 rounded-3xl p-8 shadow-none relative overflow-hidden">
-           <AnimatePresence mode="wait">
-             {isConfirmed ? (
-                <m.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 1.05 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <SuccessStep 
-                    title={mode === 'checkout' ? 'Checkout Complete' : 'Return Complete'}
-                    message={mode === 'checkout' 
-                      ? `The resource has been successfully assigned to ${activeStudent?.fullName}. Due date: ${pendingCheckout?.dueDate}.`
-                      : `The resource has been successfully returned and inventory record updated.`}
-                    onReset={handleReset}
-                    reservationReady={reservationData.ready}
-                    reservedFor={reservationData.studentName}
-                  />
-                </m.div>
-             ) : (currentStep === 1 || (currentStep === 2 && mode === 'checkout')) ? (
-                <m.div
-                  key="scanning-flow"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  {activeStudent && mode === 'checkout' && (
-                    <MemberPreview student={activeStudent} />
-                  )}
-                  
-                  <ScanStep 
-                    title={
-                      currentStep === 1 
-                        ? (mode === 'checkout' ? 'Identify Student' : 'Identify Resource')
-                        : 'Scan Resource'
-                    }
-                    description={
-                      currentStep === 1
-                        ? (mode === 'checkout' 
-                            ? 'Scan the student library card or enter their card number manually.' 
-                            : 'Scan the book copy QR code to begin the return process.')
-                        : 'Student verified. Now scan the book copy QR code to proceed.'
-                    }
-                    placeholder={
-                      currentStep === 1
-                        ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Book QR')
-                        : 'Enter Book QR'
-                    }
-                    onScan={processScan}
-                    isProcessing={isProcessing}
-                    actionLabel={currentStep === 1 ? 'Process' : 'Verify'}
-                  />
-                </m.div>
-             ) : (
-                <m.div
-                  key="review"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-8"
-                >
-                  <ReviewStep 
-                    type={mode}
-                    studentName={mode === 'checkout' ? activeStudent!.fullName : pendingReturn!.studentName}
-                    studentId={mode === 'checkout' ? activeStudent!.studentId : 'N/A'}
-                    bookTitle={mode === 'checkout' ? pendingCheckout!.bookTitle : pendingReturn!.bookTitle}
-                    dueDate={mode === 'checkout' ? pendingCheckout!.dueDate : pendingReturn!.dueDate || 'N/A'}
-                    borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
-                  />
-                  
-                  <div className="flex gap-3 justify-end pt-6 border-t border-border/40">
-                     <Button 
-                        variant="ghost" 
-                        onClick={handleReset} 
-                        disabled={isProcessing}
-                        className="rounded-xl px-6"
-                     >
-                        Cancel
-                     </Button>
-                     <Button 
-                        onClick={confirmAction} 
-                        disabled={isProcessing}
-                        className="rounded-xl px-8 bg-primary shadow-lg shadow-primary/20"
-                     >
-                        {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
-                     </Button>
-                  </div>
-                </m.div>
-             )}
-           </AnimatePresence>
-
-           <StatusNotice notice={notice} className="mt-8" />
-        </main>
-      </div>
+        <StatusNotice notice={notice} className="mt-8" />
+      </main>
     </div>
   );
 }
