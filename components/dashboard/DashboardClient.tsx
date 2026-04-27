@@ -349,9 +349,9 @@ export function DashboardClient({
 
   // STAFF / ADMIN DASHBOARD
   return (
-    <div className="w-full relative min-h-[600px]">
-      <div className="flex items-center justify-between px-1 mb-4">
-        <div className="w-full max-w-md">
+    <div className="w-full relative min-h-[600px] space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <div className="w-full">
           <DashboardSearch role={role || null} />
         </div>
       </div>

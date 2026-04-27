@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactPagination } from "@/components/ui/compact-pagination";
-import { ModernBookListItem } from "./ModernBookListItem";
 import { InventoryGrid } from "./InventoryGrid";
 import { Book, Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -24,12 +23,11 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
   const [isPending, startTransition] = useTransition();
 
   // Derived values from URL
-  const viewMode = (searchParams.get("view") as "list" | "grid") || "grid";
   const sortBy = (searchParams.get("sort") as "title_asc" | "title_desc" | "availability_desc" | "availability_asc") || "title_asc";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
 
-  const pageSize = viewMode === "list" ? 10 : 9;
+  const pageSize = 12;
 
   // Centralized navigation helper
   const updateParams = (updates: Record<string, string | number | null>) => {
@@ -55,31 +53,46 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
 
   const setCategoryId = (id: string) => updateParams({ categoryId: id });
   const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
-  const setViewMode = (view: typeof viewMode) => updateParams({ view });
   const setPage = (p: number) => updateParams({ page: p });
 
 
   return (
     <div className="w-full space-y-4 pb-10">
-      <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-2xl border border-border/20 bg-background/50 p-2 shadow-sm backdrop-blur-2xl transition-all duration-300">
-        <div className="flex items-center gap-1.5 px-1">
-          <Link href="/catalog/add" className="shrink-0">
-            <Button size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold uppercase tracking-tight shadow-none">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Add Item
-            </Button>
-          </Link>
-          <div className="mx-1.5 h-4 w-[1px] bg-border/20" />
+      <div className="sticky top-16 z-20 space-y-2 rounded-2xl border border-border/10 bg-background/50 p-1.5 shadow-sm backdrop-blur-2xl transition-all duration-300 md:p-2">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-1.5">
+            <Link href="/catalog/add" className="shrink-0">
+              <Button size="sm" className="h-8 rounded-xl px-3 text-[10px] font-bold uppercase tracking-widest shadow-none md:text-[11px] md:px-4">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Add Item</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </Link>
+            <div className="mx-1 h-4 w-[1px] bg-border/20 hidden sm:block" />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+              <SelectTrigger className="h-7 w-[100px] rounded-xl border-border/20 bg-muted/5 px-2 text-[10px] font-bold shadow-none focus:ring-0 md:h-8 md:w-[130px] md:px-3 md:text-[11px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="title_asc">Title A-Z</SelectItem>
+                <SelectItem value="title_desc">Title Z-A</SelectItem>
+                <SelectItem value="availability_desc">Availability</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth px-1 pb-0.5">
           <Button
             type="button"
             variant={categoryId === "all" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setCategoryId("all")}
             className={cn(
-              "h-8 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold transition-all",
+              "h-7 whitespace-nowrap rounded-lg px-3 text-[10px] font-bold transition-all md:h-8 md:text-[11px]",
               categoryId === "all" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -93,7 +106,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
               size="sm"
               onClick={() => setCategoryId(cat.id)}
               className={cn(
-                "h-8 whitespace-nowrap rounded-lg px-3 text-[11px] font-bold transition-all",
+                "h-7 whitespace-nowrap rounded-lg px-3 text-[10px] font-bold transition-all md:h-8 md:text-[11px]",
                 categoryId === cat.id ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -101,83 +114,10 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
             </Button>
           ))}
         </div>
-
-        <div className="ml-auto flex items-center gap-2 pr-1">
-          <div className="flex items-center rounded-lg border border-border/20 bg-muted/10 p-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "h-6 rounded-md px-2.5 text-[10px] font-bold transition-all",
-                viewMode === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-              )}
-            >
-              List
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "h-6 rounded-md px-2.5 text-[10px] font-bold transition-all",
-                viewMode === "grid" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-              )}
-            >
-              Grid
-            </Button>
-          </div>
-          
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/20 bg-muted/5 px-3 text-[11px] font-bold shadow-none focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="title_asc">Title A-Z</SelectItem>
-              <SelectItem value="title_desc">Title Z-A</SelectItem>
-              <SelectItem value="availability_desc">Availability</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>
-        {viewMode === "list" ? (
-          <div className="overflow-x-auto pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-thin">
-            <div className="space-y-2 min-w-[700px] pr-2">
-              {books.map((book) => (
-                <ModernBookListItem key={book.id} book={book} />
-              ))}
-              {books.length === 0 && (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/40 bg-card/10 px-4 py-16 text-center shadow-none backdrop-blur-sm">
-                  <div className="mb-4 rounded-full bg-slate-100 p-4 font-medium text-slate-400 ring-1 ring-slate-200/50">
-                    <Search className="h-8 w-8" />
-                  </div>
-                  <h3 className="text-lg font-bold tracking-tight text-slate-900">No books found</h3>
-                  <p className="mt-1 max-w-[280px] text-sm text-slate-500">
-                    We couldn&apos;t find any books matching your current search or filters. Try adjusting them.
-                  </p>
-                  <div className="mt-6 flex gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 rounded-full px-5 text-xs font-semibold"
-                      onClick={() => {
-                        updateParams({ q: null, stock: "all", categoryId: "all" });
-                      }}
-                    >
-                      Clear Search
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <InventoryGrid books={books} />
-        )}
+        <InventoryGrid books={books} />
       </div>
 
       {totalItems > 0 && (

@@ -175,12 +175,35 @@ export function useScanner({
       }
 
       try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        const cameras = await Html5Qrcode.getCameras();
-        setDevices(cameras || []);
+        // Use passive enumeration first to check for presence without triggering busy errors
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        
+        if (videoDevices.length === 0) {
+          setCameraSupported(false);
+          return;
+        }
+
         setCameraSupported(true);
+        
+        // Try to get formatted cameras from html5-qrcode for labels
+        try {
+          const { Html5Qrcode } = await import('html5-qrcode');
+          const cameras = await Html5Qrcode.getCameras();
+          setDevices(cameras || []);
+        } catch (err: unknown) {
+          // If it fails with NotReadable, it's actually supported but busy
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('NotReadableError') || msg.includes('Could not start video source')) {
+             console.debug('[Scanner] Camera is busy, but hardware detected.');
+             // We can use a generic label if enumeration failed to give us labels
+             setDevices(videoDevices.map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` })));
+          } else {
+             console.warn('[Scanner] Initial label fetch failed:', err);
+          }
+        }
       } catch (err) {
-        console.warn('Initial camera check failed:', err);
+        console.warn('[Scanner] Initial support check failed:', err);
       }
     };
 
