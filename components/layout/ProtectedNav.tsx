@@ -15,7 +15,6 @@ import {
   LogOut,
   Loader2,
   UserCheck,
-  SlidersHorizontal,
   Lock,
   Shield,
 } from "lucide-react";
@@ -138,7 +137,7 @@ const NAV_GROUPS: NavGroup[] = [
     minRole: "librarian",
     children: [
       { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
-      { href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian" },
+      { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
       { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
     ],
   },
@@ -149,8 +148,7 @@ const NAV_GROUPS: NavGroup[] = [
     minRole: "librarian",
     children: [
       { href: "/profile", label: "Profile", icon: Users },
-      { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
-      { href: "/security", label: "Governance & Security", icon: Lock },
+      { href: "/security", label: "Security", icon: Lock },
     ],
   },
 ];

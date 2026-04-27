@@ -109,29 +109,27 @@ export function AnnualResetTool() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border/20 bg-muted/20 p-4">
-        <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-card">
-            <RefreshCw className={cn("h-5 w-5 text-primary", isResetting && "animate-spin")} />
-          </div>
-          <div className="space-y-1">
-            <h4 className="text-sm font-bold">Annual School Year Reset</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed italic">
-              Batch suspends all student accounts. Recommended at the start of every academic year to ensure only valid students maintain library privileges.
-            </p>
-          </div>
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-card">
+          <RefreshCw className={cn("h-5 w-5 text-primary", isResetting && "animate-spin")} />
         </div>
-        <div className="mt-4 flex justify-end">
-          <Button 
-            onClick={handleReset} 
-            disabled={isResetting}
-            variant="outline"
-            className="h-9 gap-2 border-primary/20 text-xs font-bold hover:bg-primary/5 hover:text-primary transition-colors"
-          >
-            {isResetting ? "Executing Reset..." : "Execute Batch Reset"}
-            <ChevronRight size={14} />
-          </Button>
+        <div className="space-y-1">
+          <h4 className="text-sm font-bold">Annual School Year Reset</h4>
+          <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+            Batch suspends all student accounts. Recommended at the start of every academic year to ensure only valid students maintain library privileges.
+          </p>
         </div>
+      </div>
+      <div className="mt-4 flex justify-start">
+        <Button 
+          onClick={handleReset} 
+          disabled={isResetting}
+          variant="outline"
+          className="h-9 gap-2 rounded-xl border-border/40 text-xs font-bold hover:bg-background transition-colors"
+        >
+          {isResetting ? "Executing Reset..." : "Execute Batch Reset"}
+          <ChevronRight size={14} className="text-muted-foreground/70" />
+        </Button>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { use, Suspense } from "react";
 import { Section } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
-import { PolicyConfigurationForm } from "@/components/admin/PolicyConfigurationForm";
+import { PolicyLayout } from "@/components/admin/policies/PolicyLayout";
 
 type PolicySetting = { id: string; key: string; value: string; description?: string };
 
@@ -28,5 +28,5 @@ export function PoliciesSection({ role, settingsPromise }: PoliciesSectionProps)
 
 function PolicyStreamWrapper({ promise, canEdit }: { promise: Promise<PolicySetting[]> | PromiseLike<PolicySetting[]>, canEdit: boolean }) {
   const data = use(promise) as PolicySetting[];
-  return <PolicyConfigurationForm settings={data} canEdit={canEdit} />;
+  return <PolicyLayout settings={data} canEdit={canEdit} />;
 }
