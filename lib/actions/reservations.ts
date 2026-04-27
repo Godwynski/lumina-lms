@@ -98,8 +98,7 @@ export async function getBookAvailabilityStatus(bookId: string) {
   const supabase = await createClient();
   
   // NOTE: cleanup is NOT triggered here to avoid excessive background tasks
-  // on every catalog page load. It is triggered on reservation placement
-  // and via the heartbeat route.
+  // on every catalog page load. It is triggered on reservation placement.
 
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;

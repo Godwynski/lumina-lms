@@ -417,37 +417,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- HEARTBEAT MAINTENANCE (Batch Processing)
-CREATE OR REPLACE FUNCTION public.heartbeat_maintenance()
-RETURNS JSONB AS $$
-DECLARE
-    v_overdue_count INTEGER := 0;
-    v_expired_hold_count INTEGER := 0;
-    v_hold RECORD;
-BEGIN
-    -- 1. Mark overdue loans (ACTIVE -> OVERDUE)
-    WITH updated AS (
-        UPDATE public.borrowing_records
-        SET status = 'OVERDUE', updated_at = NOW()
-        WHERE status = 'ACTIVE' AND due_date < NOW()
-        RETURNING id
-    )
-    SELECT COUNT(*) INTO v_overdue_count FROM updated;
-
-    -- 2. Expire READY holds and release copies
-    FOR v_hold IN (SELECT id, copy_id FROM public.reservations WHERE status = 'READY' AND hold_expires_at < NOW()) LOOP
-        UPDATE public.reservations SET status = 'EXPIRED', updated_at = NOW() WHERE id = v_hold.id;
-        
-        -- Try to pass to next person or release
-        -- For simplicity in heartbeat, we release to AVAILABLE and let the next return or manual trigger handle it
-        -- A more advanced version would call promotion logic here.
-        UPDATE public.book_copies SET status = 'AVAILABLE' WHERE id = v_hold.copy_id;
-        v_expired_hold_count := v_expired_hold_count + 1;
-    END LOOP;
-
-    RETURN jsonb_build_object('overdue_marked', v_overdue_count, 'expired_holds_cleaned', v_expired_hold_count);
-END;
-$$ LANGUAGE plpgsql;
 
 -- 5. DEFAULT SETTINGS SEED
 INSERT INTO public.system_settings (key, value, description) VALUES

@@ -29,13 +29,15 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: Avoid logging AuthApiErrors (like 'Refresh Token Not Found') 
-  // which can occur if the browser has stale session cookies.
-  try {
-    await supabase.auth.getUser();
-  } catch {
-    // Auth errors in middleware can be safely ignored; 
-    // downstream components will handle the lack of a user.
+  // ─── Update session ───────────────────────────────────────────────────────
+  // We call getUser() to ensure the session is refreshed if needed.
+  // We handle the error explicitly to avoid noisy AuthApiErrors (like 
+  // 'Refresh Token Not Found') in the server logs when cookies are stale.
+  const { error } = await supabase.auth.getUser();
+
+  if (error && error.code === 'refresh_token_not_found') {
+    // This is expected if the browser has stale session cookies.
+    // The @supabase/ssr client will handle cookie cleaning via setAll if configured.
   }
 
   return supabaseResponse;
