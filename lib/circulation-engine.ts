@@ -1,6 +1,6 @@
 
 export interface PolicySettings {
-  default_loan_period_days: number;
+  default_borrow_period_days: number;
   max_borrow_limit: number;
   max_renewal_count: number;
 }
@@ -12,14 +12,14 @@ export interface PolicySettings {
  * 
  * Logic:
  * 1. Check if user has reached max borrow limit.
- * 2. Check if user has active "Overdue" status loans.
+ * 2. Check if user has active "Overdue" status borrows.
  */
 export function canBorrow(
-  currentLoanCount: number,
+  currentBorrowCount: number,
   hasOverdueBooks: boolean,
   policy: Pick<PolicySettings, 'max_borrow_limit'>
 ): { eligible: boolean; reason?: string } {
-  if (currentLoanCount >= policy.max_borrow_limit) {
+  if (currentBorrowCount >= policy.max_borrow_limit) {
     return { eligible: false, reason: 'Maximum borrow limit reached.' };
   }
 
@@ -31,7 +31,7 @@ export function canBorrow(
 }
 
 /**
- * Validates if a loan can be renewed.
+ * Validates if a borrow record can be renewed.
  * 
  * Logic:
  * 1. Check if book is already overdue (usually prevents self-renewal).

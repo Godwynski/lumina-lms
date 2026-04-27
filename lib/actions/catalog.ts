@@ -373,6 +373,20 @@ export const updateBookCopyStatus = createSafeAction(
       .single();
       
     if (error) throw new Error(error.message);
+
+    // If a copy is manually marked as AVAILABLE, MAINTENANCE, or LOST, 
+    // we must close any lingering ACTIVE/OVERDUE borrowing records to prevent DB inconsistency.
+    if (['AVAILABLE', 'MAINTENANCE', 'LOST'].includes(status)) {
+      await supabase
+        .from('borrowing_records')
+        .update({ 
+          status: 'RETURNED', 
+          returned_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('book_copy_id', id)
+        .in('status', ['ACTIVE', 'OVERDUE']);
+    }
     
     const { revalidatePath } = await import('next/cache');
     revalidatePath('/catalog');

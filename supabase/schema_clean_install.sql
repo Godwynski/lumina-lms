@@ -378,13 +378,13 @@ BEGIN
     WHERE br.book_copy_id = v_copy.id AND br.status IN ('ACTIVE', 'OVERDUE')
     LIMIT 1 FOR UPDATE;
 
-    IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'Copy is not currently on loan.'); END IF;
+    IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'Copy is not currently borrowed.'); END IF;
 
     IF p_preview_only THEN
         RETURN jsonb_build_object('ok', true, 'preview', true, 'book_title', v_copy.title, 'student_name', v_borrow.full_name);
     END IF;
 
-    -- 3. Close Loan
+    -- 3. Close Borrow Record
     UPDATE public.borrowing_records SET status = 'RETURNED', returned_at = NOW() WHERE id = v_borrow.id;
 
     -- 4. Check Reservations (Promotion)
@@ -421,6 +421,6 @@ $$ LANGUAGE plpgsql;
 -- 5. DEFAULT SETTINGS SEED
 INSERT INTO public.system_settings (key, value, description) VALUES
 ('max_borrow_limit', '5', 'Max books a student can borrow at once'),
-('loan_period_days', '14', 'Standard loan duration in days'),
+('loan_period_days', '14', 'Standard borrowing duration in days'),
 ('hold_expiry_days', '3', 'Days a student has to pick up a reserved book')
 ON CONFLICT (key) DO NOTHING;

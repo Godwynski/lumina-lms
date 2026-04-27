@@ -35,11 +35,11 @@ type CardData = { card_number: string; status: string; expires_at: string } | nu
 type FaqRow = { key: string; value: string | null };
 
 type DashboardStats = {
-  activeLoans: number;
+  activeBorrows: number;
   pendingApprovals: number;
-  myActiveLoans: number;
+  myActiveBorrows: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
-  activeLoansList?: BorrowingRecord[];
+  activeBorrowsList?: BorrowingRecord[];
 };
 
 interface DashboardProps {
@@ -79,7 +79,7 @@ export function DashboardClient({
   const inventoryCategories = use(inventoryCategoriesPromise);
 
   const profileData = profileResult.data;
-  const activeLoansList = stats.activeLoansList || [];
+  const activeBorrowsList = stats.activeBorrowsList || [];
 
   // Real-time synchronization
   useEffect(() => {
@@ -187,12 +187,12 @@ export function DashboardClient({
           </Card>
 
           <div className="md:col-span-4 space-y-5">
-            {stats.myActiveLoans > 0 && (
+            {stats.myActiveBorrows > 0 && (
               <Card className="border-border/20 bg-card/20 shadow-none p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
-                    <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
+                    <p className="text-2xl font-black text-primary">{stats.myActiveBorrows}</p>
                   </div>
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
                      <History size={18} />
@@ -204,7 +204,7 @@ export function DashboardClient({
         </section>
 
         <div className="grid gap-6 md:grid-cols-2">
-           {activeLoansList.length > 0 && (
+           {activeBorrowsList.length > 0 && (
              <section className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                    <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -213,22 +213,22 @@ export function DashboardClient({
                    </h2>
                 </div>
                 <div className="grid gap-2">
-                  {activeLoansList.map((loan) => (
-                     <Card key={loan.id} className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm">
+                  {activeBorrowsList.map((borrow) => (
+                     <Card key={borrow.id} className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm">
                         <CardContent className="flex items-center justify-between gap-4 p-3">
                            <div className="flex min-w-0 items-center gap-3">
                               <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm">
                                  <Library size={12} className="text-muted-foreground/30" />
                               </div>
                               <div className="min-w-0">
-                                 <p className="truncate text-xs font-bold text-foreground/90">{loan.books?.title || 'Unknown Book'}</p>
+                                 <p className="truncate text-xs font-bold text-foreground/90">{borrow.books?.title || 'Unknown Book'}</p>
                                  <p className="text-xs font-bold text-foreground/80 tracking-tight" suppressHydrationWarning>
-                                    {mounted ? new Date(loan.due_date).toLocaleDateString() : '...'}
+                                    {mounted ? new Date(borrow.due_date).toLocaleDateString() : '...'}
                                  </p>
                               </div>
                            </div>
-                           <Badge variant={loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
-                              {loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'Overdue' : 'Active'}
+                           <Badge variant={borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
+                              {borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'Overdue' : 'Active'}
                            </Badge>
                         </CardContent>
                      </Card>

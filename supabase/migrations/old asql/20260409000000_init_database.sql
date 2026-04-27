@@ -438,5 +438,5 @@ CREATE POLICY "Users view own card" ON public.library_cards FOR SELECT USING (au
 CREATE POLICY "Full access for admins" ON public.library_cards FOR ALL TO authenticated USING ((SELECT role::text FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'librarian'));
 
 ALTER TABLE public.borrowing_records ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users view own loans" ON public.borrowing_records FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users view own borrows" ON public.borrowing_records FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Full access for admins" ON public.borrowing_records FOR ALL TO authenticated USING ((SELECT role::text FROM public.profiles WHERE id = auth.uid()) IN ('admin', 'librarian'));

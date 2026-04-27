@@ -31,6 +31,8 @@ const statusStyles: Record<string, string> = {
   CANCELLED: "status-danger opacity-70",
   COMPLETED: "status-neutral",
   EXPIRED: "status-danger brightness-90",
+  RETURNED: "status-success bg-emerald-50 text-emerald-700 border-emerald-200",
+  OVERDUE: "status-danger brightness-90",
 };
 
 const statusLabels: Record<string, string> = {
@@ -44,6 +46,8 @@ const statusLabels: Record<string, string> = {
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
   EXPIRED: "Expired",
+  RETURNED: "Returned",
+  OVERDUE: "Overdue",
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

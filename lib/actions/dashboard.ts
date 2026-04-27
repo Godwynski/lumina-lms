@@ -33,11 +33,11 @@ export async function getDashboardStats({
 }: {
   role: string | null;
 }): Promise<{
-  activeLoans: number;
+  activeBorrows: number;
   pendingApprovals: number;
-  myActiveLoans: number;
+  myActiveBorrows: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
-  activeLoansList?: BorrowingRecord[];
+  activeBorrowsList?: BorrowingRecord[];
 }> {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -62,10 +62,10 @@ export async function getDashboardStats({
   };
 
   const [
-    activeLoansResult,
+    activeBorrowsResult,
     recentBooks,
     pendingApprovalsResult,
-    myActiveLoansResult,
+    myActiveBorrowsResult,
   ] = await Promise.all([
     safeWrap(
       Promise.resolve(
@@ -96,13 +96,13 @@ export async function getDashboardStats({
       : Promise.resolve({ records: [], totalCount: 0 }),
   ]);
 
-  const activeLoans = (activeLoansResult as { count: number | null }).count || 0;
+  const activeBorrows = (activeBorrowsResult as { count: number | null }).count || 0;
 
   return {
-    activeLoans: activeLoans || 0,
+    activeBorrows: activeBorrows || 0,
     pendingApprovals: (pendingApprovalsResult as { count: number }).count || 0,
-    myActiveLoans: (myActiveLoansResult as { totalCount: number }).totalCount || 0,
+    myActiveBorrows: (myActiveBorrowsResult as { totalCount: number }).totalCount || 0,
     recentBooks,
-    activeLoansList: (myActiveLoansResult as { records: BorrowingRecord[] }).records,
+    activeBorrowsList: (myActiveBorrowsResult as { records: BorrowingRecord[] }).records,
   };
 }

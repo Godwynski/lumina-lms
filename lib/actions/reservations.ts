@@ -105,7 +105,7 @@ export async function getBookAvailabilityStatus(bookId: string) {
   const user = authData?.user;
 
   // 1. Get earliest due date for this book
-  const { data: loans, error } = await supabase
+  const { data: borrows, error } = await supabase
     .from('borrowing_records')
     .select('due_date, book_copies!inner(book_id)')
     .eq('book_copies.book_id', bookId)
@@ -114,8 +114,8 @@ export async function getBookAvailabilityStatus(bookId: string) {
     .limit(1);
 
   let nextAvailableDate: string | null = null;
-  if (!error && loans && loans.length > 0) {
-    nextAvailableDate = loans[0].due_date;
+  if (!error && borrows && borrows.length > 0) {
+    nextAvailableDate = borrows[0].due_date;
   }
 
   // 2. Check if current user has an active/ready reservation
