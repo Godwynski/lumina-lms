@@ -14,8 +14,6 @@ import {
   ChevronsUpDown,
   LogOut,
   Loader2,
-  UserCheck,
-  Lock,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -139,16 +137,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
       { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
       { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
-    ],
-  },
-  {
-    id: "account",
-    label: "Admin Configuration",
-    icon: UserCheck,
-    minRole: "librarian",
-    children: [
-      { href: "/profile", label: "Profile", icon: Users },
-      { href: "/security", label: "Security", icon: Lock },
     ],
   },
 ];

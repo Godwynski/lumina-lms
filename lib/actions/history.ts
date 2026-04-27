@@ -2,11 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilterInput } from "@/lib/utils";
-import { unstable_cache } from "next/cache";
 import { isAbortError } from "../error-utils";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-export type BookInfo = {
+type BookInfo = {
   id: string;
   title: string;
   author: string;
@@ -87,10 +86,3 @@ export async function getBorrowingHistory(
   };
 }
 
-// Cached version for high-performance repeat reads
-export const getCachedBorrowingHistory = async (userId: string, page: number, statusFilter: string, searchQuery: string) => 
-  unstable_cache(
-    () => getBorrowingHistory(userId, page, 10, statusFilter, searchQuery),
-    [`history-${userId}-${page}-${statusFilter}-${searchQuery}`],
-    { revalidate: 60, tags: [`history-${userId}`] }
-  )();

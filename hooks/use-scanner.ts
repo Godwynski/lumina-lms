@@ -45,18 +45,36 @@ export function useScanner({
         try {
           await scannerRef.current.stop();
         } catch (err) {
-          console.error('Failed to stop scanner:', err);
+          console.warn('[Scanner] Failed to stop scanner cleanly:', err);
         }
       }
-      // Properly clear the scanner instance
       try {
         scannerRef.current.clear();
       } catch {}
       scannerRef.current = null;
     }
+
+    // Aggressive track cleanup to ensure the hardware is released
+    // This fixes the "camera still in use" issue on mobile browsers
+    try {
+      const container = document.getElementById(scannerId);
+      const videoElem = container?.querySelector('video') as HTMLVideoElement | null;
+      
+      if (videoElem && videoElem.srcObject instanceof MediaStream) {
+        console.debug('[Scanner] Manually stopping tracks for:', scannerId);
+        videoElem.srcObject.getTracks().forEach(track => {
+          track.stop();
+          console.debug(`[Scanner] Track stopped: ${track.kind} - ${track.label}`);
+        });
+        videoElem.srcObject = null;
+      }
+    } catch (e) {
+      console.debug('[Scanner] Manual track cleanup failed:', e);
+    }
+
     setCameraOpen(false);
     setIsInitializing(false);
-  }, []);
+  }, [scannerId]);
 
   const clearLastScan = useCallback(() => {
     lastScanRef.current = null;
@@ -77,6 +95,7 @@ export function useScanner({
           if (scannerRef.current.isScanning) await scannerRef.current.stop();
           scannerRef.current.clear();
         } catch {}
+        scannerRef.current = null;
       }
 
       const html5QrCode = new Html5Qrcode(scannerId, { 
@@ -126,19 +145,28 @@ export function useScanner({
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       const isPermissionError = errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError');
-      const isHardwareBusy = errorMessage.includes('NotReadableError') || errorMessage.includes('Starting video source failed');
+      const isHardwareBusy = errorMessage.includes('NotReadableError') || 
+                             errorMessage.includes('Could not start video source') ||
+                             errorMessage.includes('Starting video source failed');
       const isNotFound = errorMessage.includes('NotFoundError') || errorMessage.includes('Devices not found');
-      
-      console.error('Scanner start error:', err);
+      const isKnownError = isPermissionError || isHardwareBusy || isNotFound;
+
+      if (isKnownError) {
+        console.warn('[Scanner] Camera start failed (handled):', errorMessage);
+      } else {
+        console.error('Scanner start error:', err);
+      }
       
       if (isPermissionError) {
         setCameraPermission('denied');
         setCameraIssue('Camera access denied. Please check browser permissions.');
       } else if (isHardwareBusy) {
-        setCameraIssue('Camera is already in use by another app or tab.');
+        // NotReadableError often means the camera is busy, but if the user has no camera,
+        // it means the browser is trying to open a "ghost" or virtual device driver.
+        setCameraIssue('Camera is busy or failed to start. If you don\'t have a camera, your browser may be detecting a virtual device driver.');
       } else if (isNotFound) {
         setCameraSupported(false);
-        setCameraIssue('No camera hardware found on this device.');
+        setCameraIssue('No camera hardware detected on this device.');
       } else {
         setCameraIssue(errorMessage || 'Failed to start camera.');
       }
@@ -156,7 +184,7 @@ export function useScanner({
     if (cameraOpen) {
       await stopCamera();
       // Give it a small timeout to ensure the hardware is released
-      setTimeout(() => startScanner(), 300);
+      setTimeout(() => startScanner(), 400);
     }
   }, [facingMode, cameraOpen, stopCamera, startScanner]);
 
@@ -175,10 +203,12 @@ export function useScanner({
       }
 
       try {
-        // Use passive enumeration first to check for presence without triggering busy errors
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
         
+        
+        console.info('[Scanner] Found video devices:', videoDevices.map(d => ({ label: d.label, id: d.deviceId })));
+
         if (videoDevices.length === 0) {
           setCameraSupported(false);
           return;
@@ -192,11 +222,9 @@ export function useScanner({
           const cameras = await Html5Qrcode.getCameras();
           setDevices(cameras || []);
         } catch (err: unknown) {
-          // If it fails with NotReadable, it's actually supported but busy
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('NotReadableError') || msg.includes('Could not start video source')) {
              console.debug('[Scanner] Camera is busy, but hardware detected.');
-             // We can use a generic label if enumeration failed to give us labels
              setDevices(videoDevices.map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` })));
           } else {
              console.warn('[Scanner] Initial label fetch failed:', err);

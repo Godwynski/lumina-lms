@@ -1,8 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
 
-export type NotificationType = 'SYSTEM' | 'CIRCULATION' | 'RESERVATION' | 'OVERDUE' | 'ACCOUNT' | 'DUE_SOON' | 'RESERVATION_EXPIRED';
-export type NotificationPriority = 'low' | 'medium' | 'high';
+type NotificationType = 'SYSTEM' | 'CIRCULATION' | 'RESERVATION' | 'OVERDUE' | 'ACCOUNT' | 'DUE_SOON' | 'RESERVATION_EXPIRED';
+type NotificationPriority = 'low' | 'medium' | 'high';
 
 // ... (sendNotification and sendBulkNotifications logic stays same, just adding new functions below)
 
@@ -132,7 +132,7 @@ interface SendNotificationOptions {
  * Sends a notification to a specific user.
  * Uses the admin client to bypass RLS.
  */
-export async function sendNotification({
+async function sendNotification({
   userId,
   title,
   content,

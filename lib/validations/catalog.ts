@@ -19,5 +19,3 @@ export const CategorySchema = z.object({
   description: z.string().optional().nullable(),
 });
 
-export type BookInput = z.infer<typeof BookSchema>;
-export type CategoryInput = z.infer<typeof CategorySchema>;

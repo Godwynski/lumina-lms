@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserCheck } from "lucide-react";
+import { UserCheck, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -10,6 +10,9 @@ import { Section } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
 import { AvatarManager } from "../profile/AvatarManager";
 import { PersonalInfoForm } from "../profile/PersonalInfoForm";
+import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 interface ProfileSectionProps {
   role: string;
@@ -27,6 +30,7 @@ interface ProfileSectionProps {
 
 export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   const { updatePreferences: updatePrefsContext } = usePreferences();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   const [addressValue, setAddressValue] = useState(initialProfile.address || "");
   const [phoneValue, setPhoneValue] = useState(initialProfile.phone || "");
@@ -115,9 +119,43 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
                 {profileSaving ? "Saving..." : "Save Profile"}
               </Button>
             </div>
+
+            {/* Account Archive — Danger Zone */}
+            <Card className="group relative border-destructive/20 bg-destructive/5 p-5 shadow-none transition-all hover:bg-destructive/10 rounded-2xl">
+              <div className="flex items-start gap-4">
+                <div className="mt-0.5 h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive group-hover:bg-destructive/20 transition-colors shrink-0">
+                  <Archive className="h-4 w-4" />
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-destructive">
+                      Account Archive
+                    </Label>
+                    <p className="mt-1 text-[11px] leading-relaxed text-destructive/80 max-w-lg">
+                      Archive your profile to restrict access while preserving data according to system policy.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex">
+                    <Button
+                      variant="destructive"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="h-9 rounded-xl gap-2 bg-destructive hover:bg-destructive/90 text-xs font-bold px-5 shadow-md"
+                    >
+                      <Archive size={14} />
+                      Archive Profile
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </Section>
       </SettingsShell>
+
+      <SelfDeleteAccountDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      />
     </div>
   );
 }

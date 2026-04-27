@@ -3,10 +3,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export type StatusType = 
-  | "active" | "pending" | "suspended" // User statuses
-  | "AVAILABLE" | "BORROWED" | "MAINTENANCE" | "LOST" // Book copy statuses
-  | "READY" | "ACTIVE" | "CANCELLED" | "COMPLETED" | "EXPIRED"; // Reservation/Process statuses
 
 interface StatusBadgeProps {
   status: string;

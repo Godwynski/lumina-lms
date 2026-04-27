@@ -19,7 +19,7 @@ export function PoliciesSection({ role, settingsPromise }: PoliciesSectionProps)
     <SettingsShell>
       <Section>
         <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
-           <PolicyStreamWrapper promise={settingsPromise} canEdit={isSuperAdmin} />
+          <PolicyStreamWrapper promise={settingsPromise} canEdit={isSuperAdmin} />
         </Suspense>
       </Section>
     </SettingsShell>

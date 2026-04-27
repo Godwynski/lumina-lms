@@ -198,8 +198,8 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card/30 border border-border/40 p-6 rounded-3xl shadow-sm">
+    <div className="w-full space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
         <div>
           <h2 className="text-xl font-black text-foreground tracking-tight">Catalog Categories</h2>
           <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mt-1">

@@ -72,7 +72,7 @@ export async function reportMissingBook(bookId: string, notes?: string) {
   return { success: true };
 }
 
-export async function getCategories() {
+async function getCategories() {
   return fetchCategoriesCore();
 }
 
@@ -94,3 +94,4 @@ export const getCategoriesCached = unstable_cache(
   ['public-categories'],
   { revalidate: 3600, tags: ['public-books'] }
 );
+

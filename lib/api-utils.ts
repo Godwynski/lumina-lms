@@ -4,13 +4,6 @@ import { logger } from './logger';
 import { isAbortError } from './error-utils';
 import { SupabaseClient, User } from '@supabase/supabase-js';
 
-export type ApiResponse<T = unknown> = {
-  ok: boolean;
-  data?: T;
-  message?: string;
-  code?: string;
-  details?: unknown;
-};
 
 /**
  * Standardized success response for API routes.

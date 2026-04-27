@@ -15,6 +15,8 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { SystemAnnouncement } from '@/components/admin/system-announcement';
 import { LibraryMaintenance } from '@/components/admin/library-maintenance';
+import { CategoryManagement } from '@/components/admin/CategoryManagement';
+import { getCategories } from '@/lib/actions/catalog';
 
 export const metadata = {
   title: "Admin Control Center | Lumina LMS",
@@ -28,6 +30,7 @@ async function AdminContent() {
   }
 
   const { user, role } = me;
+  const categories = await getCategories();
 
   return (
     <Card className="w-full max-w-3xl border-border/40 bg-card/20 shadow-none backdrop-blur-sm rounded-[2rem]">
@@ -62,18 +65,37 @@ async function AdminContent() {
           </div>
         </div>
 
-        <SystemAnnouncement />
-        <LibraryMaintenance />
+        <div className="space-y-12">
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <SystemAnnouncement />
+          </section>
+          
+          <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div className="p-4 rounded-xl border border-zinc-100 bg-white hover:border-blue-200 hover:shadow-md transition-all group pointer-events-none opacity-60">
-                <h5 className="text-sm font-semibold mb-1">User Management</h5>
-                <p className="text-xs text-zinc-500">Manage permissions and accounts.</p>
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <LibraryMaintenance />
+          </section>
+
+          <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+          
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-1000">
+            <CategoryManagement initialCategories={categories as { id: string; name: string; slug: string; description?: string; is_active: boolean }[]} />
+          </section>
+
+          <div className="pt-8 border-t border-border/10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-6 rounded-2xl border border-dashed border-border/40 bg-muted/5 opacity-50 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <h5 className="text-sm font-black uppercase tracking-widest text-muted-foreground/80 mb-2">User Management</h5>
+                    <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-tighter">Module Offline • v2.0 Pending</p>
+                </div>
+                <div className="p-6 rounded-2xl border border-dashed border-border/40 bg-muted/5 opacity-50 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <h5 className="text-sm font-black uppercase tracking-widest text-muted-foreground/80 mb-2">System Logs</h5>
+                    <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-tighter">Module Offline • v2.0 Pending</p>
+                </div>
             </div>
-            <div className="p-4 rounded-xl border border-zinc-100 bg-white hover:border-blue-200 hover:shadow-md transition-all group pointer-events-none opacity-60">
-                <h5 className="text-sm font-semibold mb-1">System Logs</h5>
-                <p className="text-xs text-zinc-500">Audit trails and error monitoring.</p>
-            </div>
+          </div>
         </div>
       </CardContent>
 

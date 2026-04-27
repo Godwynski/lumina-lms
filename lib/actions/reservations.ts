@@ -1,7 +1,6 @@
 'use server';
 import { createClient } from '@/lib/supabase/server';
 import { createSafeAction } from './action-utils';
-import { logAuditActivity } from '@/lib/audit';
 import { z } from 'zod';
 
 // ... Removed unused getSystemSetting helper
@@ -11,89 +10,6 @@ import { z } from 'zod';
  * Should only be called from reservation placement or via a scheduled job —
  * NOT from every read call.
  */
-export async function cleanupAndReassignReservations() {
-  const supabase = await createClient();
-  const now = new Date().toISOString();
-
-  // 1. Find expired READY reservations
-  const { data: expiredHolds } = await supabase
-    .from('reservations')
-    .select('id, book_id, copy_id, user_id')
-    .eq('status', 'READY')
-    .lt('hold_expires_at', now);
-
-  if (!expiredHolds || expiredHolds.length === 0) return;
-
-  for (const hold of expiredHolds) {
-    // 2. Mark current as EXPIRED
-    await supabase
-      .from('reservations')
-      .update({ status: 'EXPIRED', updated_at: now })
-      .eq('id', hold.id);
-
-    // 3. Find next student in queue for the same book
-    const { data: nextGuest } = await supabase
-      .from('reservations')
-      .select('id, user_id')
-      .eq('book_id', hold.book_id)
-      .eq('status', 'ACTIVE')
-      .order('queue_position', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (nextGuest && hold.copy_id) {
-       // 4. Transfer the hold to the next student
-       const holdDaysStr = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'hold_expiry_days')
-        .single()
-        .then(res => res.data?.value || '7');
-      
-      const holdDays = parseInt(holdDaysStr, 10);
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + holdDays);
-
-      await supabase
-        .from('reservations')
-        .update({ 
-          status: 'READY', 
-          fulfilled_at: now,
-          hold_expires_at: expiryDate.toISOString(),
-          copy_id: hold.copy_id,
-          updated_at: now
-        })
-        .eq('id', nextGuest.id);
-
-      await logAuditActivity(
-        '00000000-0000-0000-0000-000000000000', // System automated
-        'reservation',
-        nextGuest.id,
-        'reassign',
-        `Reassigned expired hold for book ID ${hold.book_id} to next student in queue.`
-      );
-    } else if (hold.copy_id) {
-      // 5. No one else waiting, release book to general stack
-      await supabase
-        .from('book_copies')
-        .update({ status: 'AVAILABLE', updated_at: now })
-        .eq('id', hold.copy_id);
-      
-      await logAuditActivity(
-        '00000000-0000-0000-0000-000000000000',
-        'book_copy',
-        hold.copy_id,
-        'release',
-        `Released book ID ${hold.book_id} back to AVAILABLE after hold expired.`
-      );
-    }
-  }
-
-  const { revalidatePath } = await import('next/cache');
-  revalidatePath('/student-catalog');
-  revalidatePath('/dashboard');
-}
 
 export async function getBookAvailabilityStatus(bookId: string) {
   const supabase = await createClient();

@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 
@@ -40,12 +39,7 @@ export function SystemAnnouncement() {
         return
       }
 
-      // 2. Send notifications (via server action or utility)
-      // Since sendBulkNotifications is a server-side utility using Admin Client, 
-      // I should ideally call it from a Server Action.
-      // For now, I'll use a dynamic import or a simpler approach if I can't call it directly from client.
-      
-      // I'll create a server action for this.
+      // 2. Send notifications via bulk API route (uses Admin Client server-side)
       const response = await fetch('/api/notifications/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,57 +69,65 @@ export function SystemAnnouncement() {
   }
 
   return (
-    <Card className="border-border/40 bg-card/20 shadow-none backdrop-blur-sm">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Megaphone className="w-5 h-5 text-primary" />
-          <CardTitle>System Announcement</CardTitle>
+    <div className="w-full space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
+        <div>
+          <h2 className="text-xl font-black text-foreground tracking-tight">System Broadcast</h2>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mt-1">
+            Priority notification dispatch
+          </p>
         </div>
-        <CardDescription>
-          Send a priority notification to users. This will appear in their notification bell.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Target Audience</label>
-          <Select value={target} onValueChange={(v: 'all' | 'students') => setTarget(v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select target" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="students">All Students</SelectItem>
-              <SelectItem value="all">All Registered Users</SelectItem>
-            </SelectContent>
-          </Select>
+      </div>
+
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Target Audience</label>
+            <Select value={target} onValueChange={(v: 'all' | 'students') => setTarget(v)}>
+              <SelectTrigger className="rounded-xl border-border/40 bg-muted/10 h-11 focus:ring-primary/20">
+                <SelectValue placeholder="Select target" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border/40 shadow-2xl">
+                <SelectItem value="students">All Students</SelectItem>
+                <SelectItem value="all">All Registered Users</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Broadcast Title</label>
+            <Input 
+              placeholder="e.g. Library Closure Notice" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="rounded-xl border-border/40 bg-muted/10 h-11 focus-visible:ring-primary/20"
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Title</label>
-          <Input 
-            placeholder="e.g. Library Closure Notice" 
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Message Content</label>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Message Payload</label>
           <Textarea 
             placeholder="Write your announcement here..." 
-            className="min-h-[100px]"
+            className="min-h-[120px] rounded-2xl border-border/40 bg-muted/10 p-4 focus-visible:ring-primary/20 resize-none"
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
         </div>
-      </CardContent>
-      <CardFooter>
+
         <Button 
-          className="w-full" 
+          className="w-full h-12 rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/10 hover:shadow-primary/20 transition-all active:scale-[0.98]" 
           disabled={loading || !title || !content}
           onClick={handleSend}
         >
-          {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Broadcast Announcement
+          {loading ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+             <Megaphone className="w-4 h-4 mr-2" />
+          )}
+          Dispatch Broadcast
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   )
 }
