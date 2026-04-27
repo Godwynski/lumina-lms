@@ -52,6 +52,7 @@ export default function DigitalCard({
         cardId={cardId}
         studentId={studentId}
         academicYear={academicYear}
+        status={status}
       />
     );
   }
@@ -115,9 +116,11 @@ function CardFront({
             <h2 className="text-center font-serif text-[clamp(20px,5vw,46px)] tracking-wide text-white">LIBRARY CARD</h2>
           </div>
           <div className="flex items-start justify-end p-1.5 sm:p-2">
-            <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase sm:text-[10px]", statusConfig[status])}>
-              {status}
-            </span>
+            {status !== "active" && (
+              <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase sm:text-[10px]", statusConfig[status])}>
+                {status}
+              </span>
+            )}
           </div>
         </div>
 
@@ -199,9 +202,10 @@ function CardBack({
   cardId,
   studentId,
   academicYear,
+  status,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "academicYear"
+  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "academicYear" | "status"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -274,6 +278,13 @@ function CardBack({
               </div>
               <p className="text-[9px] text-muted-foreground sm:text-[10px]">Academic Year {academicYear || (expiryDate ? `${new Date(expiryDate).getUTCFullYear() - 1} - ${new Date(expiryDate).getUTCFullYear()}` : "N/A")}</p>
             </div>
+
+            {status?.toLowerCase() !== 'active' && (
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground/60">Status</span>
+                <span className="text-xs font-bold capitalize text-foreground">{status}</span>
+              </div>
+            )}
 
             <div className="justify-self-end">
               <div className="min-w-[100px] border-t border-foreground text-center sm:min-w-[140px]">

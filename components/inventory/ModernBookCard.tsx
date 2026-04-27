@@ -13,9 +13,10 @@ import { Book } from "@/lib/types";
 
 interface ModernBookCardProps {
   book: Book;
+  priority?: boolean;
 }
 
-export function ModernBookCard({ book }: ModernBookCardProps) {
+export function ModernBookCard({ book, priority = false }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   
   return (
@@ -59,7 +60,7 @@ export function ModernBookCard({ book }: ModernBookCardProps) {
                 fill 
                 className="object-cover" 
                 sizes="80px"
-                loading="lazy"
+                priority={priority}
                 unoptimized
               />
             ) : (

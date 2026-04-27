@@ -13,6 +13,8 @@ import { ShieldCheck, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
+import { SystemAnnouncement } from '@/components/admin/system-announcement';
+import { LibraryMaintenance } from '@/components/admin/library-maintenance';
 
 export const metadata = {
   title: "Admin Control Center | Lumina LMS",
@@ -59,6 +61,9 @@ async function AdminContent() {
             </p>
           </div>
         </div>
+
+        <SystemAnnouncement />
+        <LibraryMaintenance />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div className="p-4 rounded-xl border border-zinc-100 bg-white hover:border-blue-200 hover:shadow-md transition-all group pointer-events-none opacity-60">

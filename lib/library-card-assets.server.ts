@@ -135,13 +135,13 @@ async function uploadProfilePhoto(opts: {
 
   const outputBuffer = await sharp(opts.sourceBuffer)
     .resize(PROFILE_SIZE, PROFILE_SIZE, { fit: "cover", position: "centre" })
-    .jpeg({ quality: PROFILE_QUALITY, mozjpeg: true })
+    .webp({ quality: PROFILE_QUALITY })
     .toBuffer();
 
   const { error: uploadError } = await admin.storage
     .from(CARD_ASSET_BUCKET)
     .upload(profile, outputBuffer, {
-      contentType: "image/jpeg",
+      contentType: "image/webp",
       upsert: true,
       cacheControl: "31536000",
     });

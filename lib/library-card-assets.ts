@@ -26,7 +26,7 @@ export function fileNamesFor(studentId: string) {
   const normalized = sanitizeStudentId(studentId);
   return {
     qr: `qr_${normalized}.png`,
-    profile: `profile_${normalized}.jpg`,
+    profile: `profile_${normalized}.webp`,
   };
 }
 

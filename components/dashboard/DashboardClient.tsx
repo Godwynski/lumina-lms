@@ -282,7 +282,7 @@ export function DashboardClient({
                       <Link href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
                         <div className="relative h-14 w-10 rounded-lg border border-border/60 bg-muted/20 overflow-hidden shadow-sm">
                           {res.books?.cover_url ? (
-                            <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized />
+                            <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized priority />
                           ) : (
                             <div className="flex h-full items-center justify-center">
                               <Library size={14} className="text-muted-foreground/20" />
