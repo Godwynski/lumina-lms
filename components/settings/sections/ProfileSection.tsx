@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import { Section } from "../SettingsShared";
+import { Section, PremiumToggle } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
 import { AvatarManager } from "../profile/AvatarManager";
 import { PersonalInfoForm } from "../profile/PersonalInfoForm";
@@ -29,8 +29,26 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
-  const { updatePreferences: updatePrefsContext } = usePreferences();
+  const { preferences, updatePreferences: updatePrefsContext } = usePreferences();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  const [intelligentAlerts, setIntelligentAlerts] = useState(true);
+
+  useEffect(() => {
+    if (preferences && typeof preferences.intelligentAlerts === "boolean") {
+      setIntelligentAlerts(preferences.intelligentAlerts);
+    }
+  }, [preferences]);
+
+  const toggleIntelligentAlerts = async (checked: boolean) => {
+    setIntelligentAlerts(checked);
+    try {
+      await updatePrefsContext({ intelligentAlerts: checked });
+      toast.success("Alert preferences updated");
+    } catch {
+      toast.error("Failed to update preferences");
+    }
+  };
   
   const [addressValue, setAddressValue] = useState(initialProfile.address || "");
   const [phoneValue, setPhoneValue] = useState(initialProfile.phone || "");
@@ -101,7 +119,16 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/30 p-5 mt-2 transition-all hover:bg-card/50">
+            <div className="rounded-2xl border border-border/40 bg-card/30 p-5 transition-all hover:bg-card/50">
+              <PremiumToggle 
+                title="Intelligent Alerts" 
+                description="Receive smart notifications for due dates, reservation availability, and account status."
+                checked={intelligentAlerts}
+                onChange={toggleIntelligentAlerts}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/30 p-5 mt-0 transition-all hover:bg-card/50">
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/40 bg-background shadow-sm">
                   <UserCheck className="h-5 w-5 text-primary" />

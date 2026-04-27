@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Edit2, Archive, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  is_active: boolean;
-}
+import { Category } from "@/types/admin";
 
 interface CategoryItemProps {
   category: Category;

@@ -1,36 +1,35 @@
-import { createClient } from "@/lib/supabase/server";
+import { getMe } from "@/lib/auth-helpers";
 import { PoliciesSection } from "@/components/settings/sections/PoliciesSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 async function PoliciesPageContent() {
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
+  const me = await getMe();
 
-  if (!user) {
+  if (!me) {
     redirect("/login");
   }
 
-  const profilePromise = supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()
-    .then(res => res.data);
+  const { supabase, profile } = me;
 
+  // Both queries fire in parallel — authed client handles RLS for categories too
   const settingsPromise = supabase
     .from("system_settings")
     .select("*")
     .order("key")
     .then(res => res.data || []);
 
-  const profile = await profilePromise;
+  const categoriesPromise = supabase
+    .from("categories")
+    .select("id, name, slug, description, is_active, created_at")
+    .order("name")
+    .then(res => res.data || []);
 
   return (
     <PoliciesSection 
       role={profile?.role || "student"} 
       settingsPromise={settingsPromise} 
+      categoriesPromise={categoriesPromise}
     />
   );
 }

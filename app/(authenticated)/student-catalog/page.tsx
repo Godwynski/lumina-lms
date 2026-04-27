@@ -26,10 +26,11 @@ export const metadata = {
   description: 'Browse the library catalog and check real-time availability.',
 };
 
-async function StudentCatalogLoader({
+// Synchronous page shell — responds immediately.
+export default function StudentCatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ 
+  searchParams: Promise<{
     q?: string;
     category?: string;
     available?: string;
@@ -37,6 +38,29 @@ async function StudentCatalogLoader({
     sort?: string;
   }>;
 }) {
+  return (
+    <div className="space-y-6">
+      <Suspense fallback={<CatalogSkeletonView />}>
+        <StudentCatalogLoader searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+// Awaits only the URL search params (no network) then fires all data
+// fetches concurrently as non-blocking promises passed to the client.
+async function StudentCatalogLoader({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    available?: string;
+    page?: string;
+    sort?: string;
+  }>;
+}) {
+  // Only awaiting URL params — this is synchronous from Next.js's perspective
   const params = await searchParams;
   const q = params.q || '';
   const categoryId = params.category || '';
@@ -45,14 +69,14 @@ async function StudentCatalogLoader({
   const sortBy = (params.sort as 'title' | 'author' | 'availability') || 'title';
   const pageSize = 16;
 
-  // Initiate all fetches concurrently so they run in parallel
+  // All three fire concurrently — none are awaited here
   const booksPromise = getPublicBooksCached(q, categoryId, '', availableOnly, page, pageSize, sortBy);
   const categoriesPromise = getCategoriesCached();
   const reservationsPromise = getMyReservations();
 
   return (
-    <StudentCatalogClient 
-      booksPromise={booksPromise} 
+    <StudentCatalogClient
+      booksPromise={booksPromise}
       categoriesPromise={categoriesPromise}
       reservationsPromise={reservationsPromise}
       initialFilters={{
@@ -63,26 +87,5 @@ async function StudentCatalogLoader({
         sortBy
       }}
     />
-  );
-}
-
-export default function StudentCatalogPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ 
-    q?: string;
-    category?: string;
-    available?: string;
-    page?: string;
-    sort?: string;
-  }>;
-}) {
-  return (
-    <div className="space-y-6">
-
-      <Suspense fallback={<CatalogSkeletonView />}>
-        <StudentCatalogLoader searchParams={searchParams} />
-      </Suspense>
-    </div>
   );
 }

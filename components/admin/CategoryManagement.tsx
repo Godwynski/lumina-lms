@@ -14,13 +14,7 @@ function toSlug(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  is_active: boolean;
-}
+import { Category } from "@/types/admin";
 
 export function CategoryManagement({ initialCategories }: { initialCategories: Category[] }) {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
@@ -92,6 +86,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         setCategories((prev) =>
           prev.map((c) => (c.id === editingId ? updated : c))
         );
+        setDraftCategories((prev) =>
+          prev.map((c) => (c.id === editingId ? updated : c))
+        );
       } else {
         const response = await fetch("/api/admin/categories", {
           method: "POST",
@@ -127,9 +124,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: false }),
       });
- 
+
       if (!response.ok) throw new Error("Failed to archive category");
- 
+
       setCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
       setDraftCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
     } catch (err) {
@@ -198,54 +195,51 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   };
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
-        <div>
-          <h2 className="text-xl font-black text-foreground tracking-tight">Catalog Categories</h2>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mt-1">
-            Manage your library&apos;s taxonomy
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">
+          {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+        </p>
+
+        <div className="flex items-center gap-2">
           {isBulkEditing ? (
             <>
               {changedIds.length > 0 && (
-                <span className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary mr-2">
+                <span className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
                   {changedIds.length} changes
                 </span>
               )}
-              <Button 
-                variant="ghost" 
-                onClick={resetBulkEdit} 
-                className="h-9 rounded-xl px-4 text-[11px] font-bold uppercase tracking-wider" 
+              <Button
+                variant="ghost"
+                onClick={resetBulkEdit}
+                className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider"
                 disabled={loading}
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleBulkSave} 
-                className="h-9 rounded-xl px-6 text-[11px] font-bold uppercase tracking-wider shadow-md" 
+              <Button
+                onClick={handleBulkSave}
+                className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm"
                 disabled={loading || changedIds.length === 0}
               >
-                {loading ? "Saving..." : "Save Changes"}
+                {loading ? "Saving..." : "Save"}
               </Button>
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsBulkEditing(true)} 
-                className="h-9 rounded-xl px-6 text-[11px] font-bold uppercase tracking-wider border-border/40 hover:bg-muted"
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkEditing(true)}
+                className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider border-border/40 hover:bg-muted"
               >
                 Bulk Edit
               </Button>
-              <Button 
-                onClick={() => openDialog()} 
-                className="h-9 rounded-xl gap-2 px-6 text-[11px] font-bold uppercase tracking-wider shadow-md shadow-primary/20"
+              <Button
+                onClick={() => openDialog()}
+                className="h-8 rounded-lg gap-1.5 px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm"
               >
-                <Plus className="h-3.5 w-3.5" />
-                Add Category
+                <Plus className="h-3 w-3" />
+                Add
               </Button>
             </>
           )}
@@ -259,10 +253,10 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
       )}
 
       {categories.length === 0 ? (
-        <div className="rounded-3xl border border-border/40 bg-card/30 p-12 text-center shadow-sm">
-          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
-          <h3 className="text-base font-bold text-foreground">No categories defined</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Get started by creating a new category for your catalog.</p>
+        <div className="rounded-2xl border border-border/40 bg-card/20 p-8 text-center">
+          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-muted-foreground/30" />
+          <p className="text-sm font-bold text-foreground">No categories defined</p>
+          <p className="mt-1 text-xs text-muted-foreground">Get started by adding a new category.</p>
         </div>
       ) : (
         <div className="grid gap-3">

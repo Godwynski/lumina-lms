@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { use, useMemo, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,39 +11,39 @@ import {
   Ticket, 
   HelpCircle, 
   User, 
-  Settings, 
-  RefreshCw
+  RefreshCw,
+  Megaphone,
+  Tag
 } from "lucide-react";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { cn } from "@/lib/utils";
 import { PolicySimulationPanel } from "../PolicySimulationPanel";
 import { PolicyCommitModal } from "../PolicyCommitModal";
 import { PolicyField } from "./PolicyField";
-import { PreferencesPanel } from "./PreferencesPanel";
 import { AnnualResetTool } from "../../settings/SettingsShared";
+import { SystemAnnouncement } from "../system-announcement";
+import { CategoryManagement } from "../CategoryManagement";
 
 const CATEGORY_MAP: Record<string, { label: string; icon: React.ElementType; group: string }> = {
   circulation: { label: "Circulation", icon: History, group: "System Core" },
   reservations: { label: "Reservations", icon: Ticket, group: "System Core" },
   identity: { label: "Identity", icon: User, group: "System Data" },
-  support: { label: "Support", icon: HelpCircle, group: "Customer Experience" },
-  preferences: { label: "Preferences", icon: Settings, group: "Customer Experience" },
-  lifecycle: { label: "Lifecycle", icon: RefreshCw, group: "Maintenance" },
+  categories: { label: "Categories", icon: Tag, group: "System Data" },
+  announcements: { label: "Announcements", icon: Megaphone, group: "Communication" },
+  support: { label: "Support", icon: HelpCircle, group: "Communication" },
+  lifecycle: { label: "Lifecycle", icon: RefreshCw, group: "Operations" },
 };
 
-interface PolicySetting {
-  id: string;
-  key: string;
-  value: string;
-  description?: string;
-}
+import { PolicySetting, Category } from "@/types/admin";
 
 export function PolicyLayout({
   settings,
   canEdit,
+  categoriesPromise,
 }: {
   settings: PolicySetting[];
   canEdit: boolean;
+  categoriesPromise: Promise<Category[]> | PromiseLike<Category[]>;
 }) {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("circulation");
@@ -68,15 +68,14 @@ export function PolicyLayout({
     [formData, initialValues],
   );
 
-
-
   // Defined the full set of categories in order
   const sidebarItems = useMemo(() => [
     { id: "circulation", ...CATEGORY_MAP.circulation },
     { id: "reservations", ...CATEGORY_MAP.reservations },
     { id: "identity", ...CATEGORY_MAP.identity },
+    { id: "categories", ...CATEGORY_MAP.categories },
+    { id: "announcements", ...CATEGORY_MAP.announcements },
     { id: "support", ...CATEGORY_MAP.support },
-    { id: "preferences", ...CATEGORY_MAP.preferences },
     { id: "lifecycle", ...CATEGORY_MAP.lifecycle },
   ], []);
 
@@ -204,10 +203,24 @@ export function PolicyLayout({
         {/* ── Content ───────────────────────────────────────────── */}
         <main className="min-w-0 space-y-6">
            <div className="grid gap-4">
-              {activeCategory === "preferences" ? (
-                <PreferencesPanel />
+              {activeCategory === "announcements" ? (
+                <div className="rounded-2xl border border-border/40 bg-card/30 p-5 shadow-none">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 mb-4">
+                    System Broadcast
+                  </p>
+                  <SystemAnnouncement />
+                </div>
+              ) : activeCategory === "categories" ? (
+                <div className="rounded-2xl border border-border/40 bg-card/30 p-5 shadow-none">
+                  <Suspense fallback={<div className="h-48 w-full animate-pulse bg-muted/40 rounded-xl" />}>
+                     <CategoryManagementWrapper promise={categoriesPromise} />
+                  </Suspense>
+                </div>
               ) : activeCategory === "lifecycle" ? (
-                <div className="rounded-2xl border border-border/40 bg-card/30 p-6 shadow-none">
+                <div className="rounded-2xl border border-border/40 bg-card/30 p-5 shadow-none">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 mb-4">
+                    Annual Reset
+                  </p>
                   <AnnualResetTool />
                 </div>
               ) : (
@@ -261,4 +274,9 @@ export function PolicyLayout({
       />
     </div>
   );
+}
+
+function CategoryManagementWrapper({ promise }: { promise: Promise<Category[]> | PromiseLike<Category[]> }) {
+  const categories = use(promise);
+  return <CategoryManagement initialCategories={Array.isArray(categories) ? categories : []} />;
 }
