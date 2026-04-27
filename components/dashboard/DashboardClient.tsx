@@ -121,13 +121,18 @@ export function DashboardClient({
         userId: user.id,
       });
 
+      const expiresAt = studentCardData?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
+      const expiryYear = new Date(expiresAt).getUTCFullYear();
+      const ayString = `${expiryYear - 1} - ${expiryYear}`;
+
       card = {
         fullName: profileData.full_name || "Student",
         studentId: resolvedStudentId || profileData.student_id || "N/A",
         cardNumber: studentCardData?.card_number || "Pending assignment",
         department: profileData.department || "General",
         status: (studentCardData?.status as "active" | "pending" | "suspended" | "expired") || "pending",
-        expiryDate: studentCardData?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+        expiryDate: expiresAt,
+        academicYear: ayString,
         avatarUrl: profileData.avatar_url,
         qrUrl: resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null,
         address: profileData.address || undefined,

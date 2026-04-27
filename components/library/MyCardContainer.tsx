@@ -20,6 +20,7 @@ interface MyCardContainerProps {
     qrUrl: string | null;
     address?: string;
     phone?: string;
+    academicYear?: string;
   };
   variant?: "page" | "dashboard";
 }
@@ -351,6 +352,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               address={data.address}
               phone={data.phone}
               side="front"
+              academicYear={data.academicYear}
             />
           </div>
 
@@ -367,6 +369,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               address={data.address}
               phone={data.phone}
               side="back"
+              academicYear={data.academicYear}
             />
           </div>
 
@@ -388,6 +391,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 side="front"
                 exportMode
                 cardId="library-card-front-export-card"
+                academicYear={data.academicYear}
               />
             </div>
             <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
@@ -405,6 +409,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 side="back"
                 exportMode
                 cardId="library-card-back-export-card"
+                academicYear={data.academicYear}
               />
             </div>
           </div>
@@ -505,6 +510,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             address={data.address}
             phone={data.phone}
             side="front"
+            academicYear={data.academicYear}
           />
         </div>
 
@@ -521,6 +527,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             address={data.address}
             phone={data.phone}
             side="back"
+            academicYear={data.academicYear}
           />
         </div>
 
@@ -540,6 +547,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               side="front"
               exportMode
               cardId="library-card-front-export-card"
+              academicYear={data.academicYear}
             />
           </div>
           <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
@@ -557,6 +565,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               side="back"
               exportMode
               cardId="library-card-back-export-card"
+              academicYear={data.academicYear}
             />
           </div>
         </div>

@@ -1,3 +1,4 @@
+'use server';
 import { createSafeAction } from './action-utils';
 import { cache } from 'react';
 import { BookSchema, CategorySchema } from '../validations/catalog';

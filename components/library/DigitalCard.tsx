@@ -20,16 +20,9 @@ interface DigitalCardProps {
   side?: "front" | "back";
   exportMode?: boolean;
   cardId?: string;
+  academicYear?: string;
 }
 
-function formatCardDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 export default function DigitalCard({
   fullName,
@@ -45,6 +38,7 @@ export default function DigitalCard({
   side = "front",
   exportMode = false,
   cardId,
+  academicYear,
 }: DigitalCardProps) {
   if (side === "back") {
     return (
@@ -57,6 +51,7 @@ export default function DigitalCard({
         exportMode={exportMode}
         cardId={cardId}
         studentId={studentId}
+        academicYear={academicYear}
       />
     );
   }
@@ -73,6 +68,7 @@ export default function DigitalCard({
       qrUrl={qrUrl}
       exportMode={exportMode}
       cardId={cardId}
+      academicYear={academicYear}
     />
   );
 }
@@ -88,6 +84,7 @@ function CardFront({
   qrUrl,
   exportMode,
   cardId,
+  academicYear,
 }: Omit<DigitalCardProps, "side">) {
   const statusConfig = {
     active: "status-success",
@@ -96,7 +93,6 @@ function CardFront({
     expired: "status-neutral",
   };
 
-  const formattedExpiry = formatCardDate(expiryDate);
 
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -152,9 +148,8 @@ function CardFront({
 
           <div className="flex min-w-0 flex-col justify-center gap-4 sm:gap-6">
             <FieldLine label="Name" value={fullName} />
-            <FieldLine label="ID Number" value={studentId} />
             <FieldLine label="Program" value={department} />
-            <FieldLine label="Valid Until" value={formattedExpiry} />
+            <FieldLine label="Academic Year" value={academicYear || (expiryDate ? `${new Date(expiryDate).getUTCFullYear() - 1} - ${new Date(expiryDate).getUTCFullYear()}` : "N/A")} />
             <div className="text-right font-serif text-[9px] text-foreground sm:text-[10px]">Card No: {cardNumber}</div>
           </div>
 
@@ -203,9 +198,10 @@ function CardBack({
   exportMode,
   cardId,
   studentId,
+  academicYear,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId" | "studentId"
+  "cardNumber" | "expiryDate" | "qrUrl" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "academicYear"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -276,7 +272,7 @@ function CardBack({
                   </div>
                 )}
               </div>
-              <p className="text-[9px] text-muted-foreground sm:text-[10px]">Valid until {formatCardDate(expiryDate)}</p>
+              <p className="text-[9px] text-muted-foreground sm:text-[10px]">Academic Year {academicYear || (expiryDate ? `${new Date(expiryDate).getUTCFullYear() - 1} - ${new Date(expiryDate).getUTCFullYear()}` : "N/A")}</p>
             </div>
 
             <div className="justify-self-end">

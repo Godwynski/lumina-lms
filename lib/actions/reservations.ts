@@ -1,3 +1,4 @@
+'use server';
 import { createClient } from '@/lib/supabase/server';
 import { createSafeAction } from './action-utils';
 import { logAuditActivity } from '@/lib/audit';

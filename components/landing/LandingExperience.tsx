@@ -93,6 +93,7 @@ export function LandingExperience() {
                   department="COMPUTER SCIENCE"
                   status="active"
                   expiryDate="2025-05-30"
+                  academicYear="2024 - 2025"
                   avatarUrl={null}
                   qrUrl={null}
                 />
