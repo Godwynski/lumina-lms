@@ -93,13 +93,3 @@ export function NavSkeleton() {
   );
 }
 
-export function HeaderSkeleton() {
-  return (
-    <div className="flex h-16 items-center justify-between px-8 border-b border-border/40 bg-background/60">
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-4 w-48" />
-      </div>
-      <Skeleton className="h-8 w-8 rounded-full" />
-    </div>
-  );
-}

@@ -80,13 +80,24 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const rawName = typeof body.name === "string" ? body.name.trim() : "";
-    const rawSlug = typeof body.slug === "string" ? body.slug.trim() : "";
-    const description = typeof body.description === "string" ? body.description.trim() : null;
-    const is_active = typeof body.is_active === "boolean" ? body.is_active : true;
-    const name = rawName;
-    const slug = toSlug(rawSlug || rawName);
     const { id } = await params;
+
+    // Fetch existing record for partial update
+    const { data: existing, error: fetchError } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
+
+    const name = typeof body.name === "string" ? body.name.trim() : existing.name;
+    const rawSlug = typeof body.slug === "string" ? body.slug.trim() : existing.slug;
+    const slug = toSlug(rawSlug || name);
+    const description = typeof body.description === "string" ? body.description.trim() : existing.description;
+    const is_active = typeof body.is_active === "boolean" ? body.is_active : existing.is_active;
 
     if (!name || !slug) {
       return NextResponse.json({ error: "name and slug are required" }, { status: 400 });
@@ -98,11 +109,13 @@ export async function PUT(
         name,
         slug,
         description,
-        is_active: is_active !== undefined ? is_active : true,
+        is_active,
       })
       .eq("id", id)
       .select()
       .single();
+
+    if (error) throw error;
 
     if (error) throw error;
 

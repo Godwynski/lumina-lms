@@ -1,46 +1,45 @@
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getMe } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { UsersContent } from "./UsersContent";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 
-export default function UsersPage() {
-  return (
-    <div className="space-y-6">
+const PAGE_SIZE = 12;
 
-      <Suspense fallback={<UsersSkeleton />}>
-        <UsersDataWrapper />
-      </Suspense>
-    </div>
-  );
-}
+// getMe() is cache()-memoized — reuses the auth result from the layout,
+// zero extra network round-trip. The .then() chain is non-blocking.
+function buildUsersPromise() {
+  return getMe().then(async (me) => {
+    if (!me) redirect("/login");
+    const { supabase } = me;
 
-
-async function UsersDataWrapper() {
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  if (!user) redirect("/login");
-
-  const pageSize = 12;
-
-  const usersPromise = Promise.resolve(
-    supabase
+    const { data, count, error } = await supabase
       .from("profiles")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
-      .range(0, pageSize - 1)
-      .then(({ data, count, error }) => {
-        if (error) throw error;
-        return {
-          users: (data || []).map((row) => mapProfileToUser(row as Record<string, unknown>)),
-          count: count || 0,
-        };
-      })
+      .range(0, PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    return {
+      users: (data || []).map((row) => mapProfileToUser(row as Record<string, unknown>)),
+      count: count || 0,
+    };
+  });
+}
+
+// Synchronous page shell — responds immediately.
+// Promise fires in the background; UsersContent uses use() to consume it.
+export default function UsersPage() {
+  const usersPromise = buildUsersPromise();
+
+  return (
+    <div className="space-y-6">
+      <Suspense fallback={<UsersSkeleton />}>
+        <UsersContent usersPromise={usersPromise} />
+      </Suspense>
+    </div>
   );
-
-
-  return <UsersContent usersPromise={usersPromise} />;
 }
 
 function UsersSkeleton() {
@@ -56,4 +55,3 @@ function UsersSkeleton() {
     </div>
   );
 }
-

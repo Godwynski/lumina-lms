@@ -8,13 +8,13 @@ interface SimulationProps {
 }
 
 export function PolicySimulationPanel({ formData }: SimulationProps) {
-  const loanPeriod = parseInt(formData.loan_period_days || '14');
+  const borrowPeriod = parseInt(formData.loan_period_days || '14');
   const holdExpiry = parseInt(formData.hold_expiry_days || '7');
   const maxBorrow = parseInt(formData.max_borrow_limit || '5');
   const renewalPeriod = parseInt(formData.renewal_period_days || '14');
 
   const today = new Date();
-  const dueDate = addDays(today, loanPeriod);
+  const dueDate = addDays(today, borrowPeriod);
   const renewalDate = addDays(dueDate, renewalPeriod);
 
   return (
@@ -50,7 +50,7 @@ export function PolicySimulationPanel({ formData }: SimulationProps) {
                 <p className="text-[10px] font-black text-foreground">{format(dueDate, 'MMM dd, yyyy')}</p>
                 <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
                   <Calendar className="h-2.5 w-2.5" />
-                  <span>{loanPeriod} day term</span>
+                  <span>{borrowPeriod} day term</span>
                 </div>
               </div>
             </div>

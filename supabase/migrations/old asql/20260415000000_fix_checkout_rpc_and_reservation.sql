@@ -239,7 +239,7 @@ BEGIN
   FOR UPDATE;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'No active loan found for this copy.');
+    RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'No active borrow record found for this copy.');
   END IF;
 
   -- Preview mode
@@ -251,7 +251,7 @@ BEGIN
     );
   END IF;
 
-  -- Mark loan as returned
+  -- Mark borrow record as returned
   UPDATE public.borrowing_records
   SET status = 'RETURNED', returned_at = v_now, updated_at = v_now
   WHERE id = v_borrow.id;

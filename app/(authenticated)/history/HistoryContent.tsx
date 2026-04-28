@@ -63,7 +63,7 @@ export default function HistoryContent({
   };
 
   const isOverdue = (record: BorrowingRecord) => {
-    return record.status === "ACTIVE" && new Date(record.due_date) < new Date();
+    return record.status === "OVERDUE" || (record.status === "ACTIVE" && new Date(record.due_date) < new Date());
   };
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
@@ -75,9 +75,14 @@ export default function HistoryContent({
             {record.books?.title?.charAt(0) || "?"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-foreground">
-              {record.books?.title || "Unknown Title"}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-bold text-foreground">
+                {record.books?.title || "Unknown Title"}
+              </p>
+              {record.status === 'RETURNED' && (
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+              )}
+            </div>
             <p className="truncate text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
               {record.books?.author || "Internal Entity"}
             </p>
@@ -96,7 +101,7 @@ export default function HistoryContent({
       )
     },
     {
-      header: "Due Date",
+      header: "Timeline",
       accessor: (record) => {
         const overdue = isOverdue(record);
         return (
@@ -104,12 +109,12 @@ export default function HistoryContent({
             <div className="flex items-center gap-2">
               <Clock size={14} className={cn("text-muted-foreground", overdue && "text-destructive")} />
               <span className={cn("text-[11px] font-bold", overdue ? "text-destructive" : "text-foreground")}>
-                {formatDate(record.due_date)}
+                Due {formatDate(record.due_date)}
               </span>
             </div>
             {record.returned_at && (
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600">
-                <CheckCircle2 size={12} />
+              <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-tight">
+                <CheckCircle2 size={12} strokeWidth={3} />
                 Returned {formatDate(record.returned_at)}
               </div>
             )}
@@ -129,7 +134,7 @@ export default function HistoryContent({
   return (
     <div className="space-y-4 w-full">
       {/* Header Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm font-sans">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border/10 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm font-sans">
         <form 
           onSubmit={(e) => {
             e.preventDefault();
@@ -146,7 +151,7 @@ export default function HistoryContent({
             className="h-10 rounded-xl pl-9 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
           />
         </form>
-        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/40">
+        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
           {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
             <button
               key={status}

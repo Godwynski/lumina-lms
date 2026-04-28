@@ -8,7 +8,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
  * Standard response type for all Server Actions.
  * Ensures consistent handling on the client side.
  */
-export type ActionResult<T> = 
+type ActionResult<T> = 
   | { success: true; data: T; error?: never }
   | { success: false; data?: never; error: string; validationErrors?: Record<string, string[]> };
 

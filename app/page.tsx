@@ -5,8 +5,7 @@ import { Hero } from "@/components/hero";
 import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
-import { getUserRole } from "@/lib/auth-helpers";
+import { getMe } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,19 +15,14 @@ export const metadata = {
 };
 
 async function HeroSection() {
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  const role = user ? await getUserRole() : null;
-  return <Hero user={user} role={role} />;
+  const me = await getMe();
+  return <Hero user={me?.user ?? null} role={me?.role ?? null} />;
 }
 
 async function AuthRedirect() {
-  const supabase = await createClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
+  const me = await getMe();
 
-  if (user) {
+  if (me?.user) {
     return redirect("/dashboard");
   }
   return null;

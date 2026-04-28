@@ -1,26 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
-import { UserCheck, ShieldAlert } from "lucide-react";
-import { m, AnimatePresence } from "framer-motion";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { UserCheck, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { compressImage } from "@/lib/image-utils";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import { Section, FieldGroup } from "../SettingsShared";
+import { Section, PremiumToggle } from "../SettingsShared";
 import { SettingsShell } from "../SettingsShell";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { AvatarManager } from "../profile/AvatarManager";
+import { PersonalInfoForm } from "../profile/PersonalInfoForm";
+import { SelfDeleteAccountDialog } from "@/components/account/SelfDeleteAccountDialog";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 interface ProfileSectionProps {
   role: string;
@@ -31,17 +23,36 @@ interface ProfileSectionProps {
     phone: string | null;
     department: string | null;
     status: string;
+    student_id: string | null;
+    email: string | null;
   };
 }
 
 export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
-  const { updatePreferences: updatePrefsContext } = usePreferences();
+  const { preferences, updatePreferences: updatePrefsContext } = usePreferences();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
-  const [displayName, setDisplayName] = useState(initialProfile.full_name || "");
+  const [intelligentAlerts, setIntelligentAlerts] = useState(true);
+
+  useEffect(() => {
+    if (preferences && typeof preferences.intelligentAlerts === "boolean") {
+      setIntelligentAlerts(preferences.intelligentAlerts);
+    }
+  }, [preferences]);
+
+  const toggleIntelligentAlerts = async (checked: boolean) => {
+    setIntelligentAlerts(checked);
+    try {
+      await updatePrefsContext({ intelligentAlerts: checked });
+      toast.success("Alert preferences updated");
+    } catch {
+      toast.error("Failed to update preferences");
+    }
+  };
+  
   const [addressValue, setAddressValue] = useState(initialProfile.address || "");
   const [phoneValue, setPhoneValue] = useState(initialProfile.phone || "");
   const [departmentValue, setDepartmentValue] = useState(initialProfile.department || "");
-  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(initialProfile.avatar_url || "");
   const [programs, setPrograms] = useState<string[]>([]);
   
   const [profileSaving, setProfileSaving] = useState(false);
@@ -51,30 +62,19 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
       import("@/lib/actions/onboarding").then(m => m.getAcademicPrograms().then(setPrograms));
     }
   }, [role]);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [selectedPhotoName, setSelectedPhotoName] = useState("");
-  const [selectedPhotoBlob, setSelectedPhotoBlob] = useState<Blob | null>(null);
-  const [selectedPhotoPreviewUrl, setSelectedPhotoPreviewUrl] = useState<string | null>(null);
-  
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isProfileDirty = 
-    displayName !== (initialProfile.full_name || "") || 
     addressValue !== (initialProfile.address || "") || 
     phoneValue !== (initialProfile.phone || "") ||
     departmentValue !== (initialProfile.department || "");
-  
-  const isDirty = isProfileDirty || !!selectedPhotoBlob;
 
   const saveProfile = async () => {
-    const nextName = displayName.trim();
     setProfileSaving(true);
     try {
       const response = await fetch("/api/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          displayName: nextName,
           address: addressValue.trim(),
           phone: phoneValue.trim(),
           department: departmentValue.trim()
@@ -84,7 +84,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Failed to save profile");
 
-      await updatePrefsContext({ displayName: nextName });
+      await updatePrefsContext({ displayName: initialProfile.full_name || "" });
       toast.success("Profile saved successfully");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save profile");
@@ -93,215 +93,96 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
     }
   };
 
-  const handlePhotoSelected = async (file?: File) => {
-    if (!file) {
-      setSelectedPhotoName("");
-      setSelectedPhotoBlob(null);
-      if (selectedPhotoPreviewUrl) URL.revokeObjectURL(selectedPhotoPreviewUrl);
-      setSelectedPhotoPreviewUrl(null);
-      return;
-    }
-
-    try {
-      setPhotoUploading(true);
-      const blob = await compressImage(file, {
-        maxDimension: 300,
-        quality: 0.9,
-        cropToSquare: true,
-        type: "image/webp"
-      });
-
-      if (selectedPhotoPreviewUrl) URL.revokeObjectURL(selectedPhotoPreviewUrl);
-      const nextPreviewUrl = URL.createObjectURL(blob);
-      setSelectedPhotoBlob(blob);
-      setSelectedPhotoName(file.name);
-      setSelectedPhotoPreviewUrl(nextPreviewUrl);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Invalid image file");
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
-
-  const uploadProfilePhoto = async () => {
-    if (!selectedPhotoBlob) return;
-    setPhotoUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", new File([selectedPhotoBlob], `profile.webp`, { type: "image/webp" }));
-
-      const response = await fetch("/api/profile-photo", { method: "POST", body: formData });
-      const payload = await response.json();
-
-      if (!response.ok) throw new Error(payload.error || "Profile photo upload failed");
-
-      toast.success("Profile photo updated");
-      if (payload.avatar_url) {
-        setCurrentAvatarUrl(`${payload.avatar_url}?t=${Date.now()}`);
-      }
-      window.dispatchEvent(new Event("lumina:profile-photo-updated"));
-      setSelectedPhotoBlob(null);
-      setSelectedPhotoName("");
-      if (selectedPhotoPreviewUrl) URL.revokeObjectURL(selectedPhotoPreviewUrl);
-      setSelectedPhotoPreviewUrl(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed");
-    } finally {
-      setPhotoUploading(false);
-    }
-  };
-
   return (
-    <SettingsShell isDirty={isDirty}>
-      <Section>
-        <div className="grid gap-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 sm:w-48">
-              <Avatar className="h-24 w-24 rounded-xl border-2 border-background shadow-md">
-                <AvatarImage src={currentAvatarUrl || undefined} alt={displayName || "Profile"} className="object-cover" />
-                <AvatarFallback className="rounded-xl bg-muted text-lg font-bold">
-                  {(displayName || "U").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-center">
-                <p className="text-xs font-semibold text-foreground">Profile Photo</p>
-                <p className="text-[10px] text-muted-foreground">300x300 WebP</p>
-              </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="mt-2 text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
-              >
-                Change
-              </button>
+    <div className="w-full max-w-5xl mx-auto pb-12">
+      <SettingsShell isDirty={isProfileDirty}>
+        <Section>
+          <div className="grid gap-6">
+            
+            <div className="flex flex-col gap-8 sm:flex-row sm:items-start bg-card/30 border border-border/40 p-6 sm:p-8 rounded-3xl shadow-sm relative overflow-hidden">
+              <AvatarManager 
+                initialAvatarUrl={initialProfile.avatar_url}
+                fullName={initialProfile.full_name}
+              />
+
+              <PersonalInfoForm 
+                role={role}
+                initialProfile={initialProfile}
+                addressValue={addressValue}
+                phoneValue={phoneValue}
+                departmentValue={departmentValue}
+                onAddressChange={setAddressValue}
+                onPhoneChange={setPhoneValue}
+                onDepartmentChange={setDepartmentValue}
+                programs={programs}
+                isProfileDirty={isProfileDirty}
+              />
             </div>
 
-            <div className="flex-1 space-y-4">
-              <FieldGroup label="Display Name">
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. Alex Rivera"
-                  className="h-10 rounded-lg text-sm"
-                />
-              </FieldGroup>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FieldGroup label="Contact Number">
-                  <Input
-                    value={phoneValue}
-                    onChange={(e) => setPhoneValue(e.target.value)}
-                    placeholder="+63 900 000 0000"
-                    className="h-10 rounded-lg text-sm"
-                  />
-                </FieldGroup>
-
-                <FieldGroup label="Residential Address">
-                  <Input
-                    value={addressValue}
-                    onChange={(e) => setAddressValue(e.target.value)}
-                    placeholder="Street, City, Province"
-                    className="h-10 rounded-lg text-sm"
-                  />
-                </FieldGroup>
-              </div>
-
-              {role === 'student' && (
-                <FieldGroup label="Academic Program">
-                  <div className="flex flex-col gap-2">
-                    <Select 
-                      value={departmentValue}
-                      onValueChange={setDepartmentValue}
-                    >
-                      <SelectTrigger className="h-10 rounded-lg text-sm bg-background">
-                        <SelectValue placeholder="Select your program" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {programs.map((prog) => (
-                          <SelectItem key={prog} value={prog}>
-                            {prog}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {initialProfile.status === 'ACTIVE' && isProfileDirty && (
-                      <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1 mt-1">
-                        <ShieldAlert className="w-3 h-3" />
-                        Changing these details will require re-verification at the library.
-                      </p>
-                    )}
-                  </div>
-                </FieldGroup>
-              )}
+            <div className="rounded-2xl border border-border/40 bg-card/30 p-5 transition-all hover:bg-card/50">
+              <PremiumToggle 
+                title="Intelligent Alerts" 
+                description="Receive smart notifications for due dates, reservation availability, and account status."
+                checked={intelligentAlerts}
+                onChange={toggleIntelligentAlerts}
+              />
             </div>
-          </div>
 
-          <AnimatePresence>
-            {selectedPhotoPreviewUrl && (
-              <m.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
+            <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/30 p-5 mt-0 transition-all hover:bg-card/50">
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/40 bg-background shadow-sm">
+                  <UserCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Current Membership</p>
+                  <p className="text-[11px] text-muted-foreground/80 font-black uppercase tracking-widest">{role}</p>
+                </div>
+              </div>
+              <Button
+                onClick={saveProfile}
+                disabled={profileSaving || !isProfileDirty}
+                className={cn("h-11 rounded-xl px-8 font-bold shadow-md transition-all text-sm")}
               >
-                <Card className="flex items-center justify-between border-primary/20 bg-primary/5 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-12 w-12 overflow-hidden rounded-md border border-primary/30">
-                      <Image src={selectedPhotoPreviewUrl} alt="Preview" fill className="object-cover" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-primary">Preview Ready</p>
-                      <p className="text-[10px] text-primary/70">{selectedPhotoName}</p>
-                    </div>
+                {profileSaving ? "Saving..." : "Save Profile"}
+              </Button>
+            </div>
+
+            {/* Account Archive — Danger Zone */}
+            <Card className="group relative border-destructive/20 bg-destructive/5 p-5 shadow-none transition-all hover:bg-destructive/10 rounded-2xl">
+              <div className="flex items-start gap-4">
+                <div className="mt-0.5 h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive group-hover:bg-destructive/20 transition-colors shrink-0">
+                  <Archive className="h-4 w-4" />
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-destructive">
+                      Account Archive
+                    </Label>
+                    <p className="mt-1 text-[11px] leading-relaxed text-destructive/80 max-w-lg">
+                      Archive your profile to restrict access while preserving data according to system policy.
+                    </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="pt-2 flex">
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handlePhotoSelected(undefined)}
-                      className="h-8 text-xs text-muted-foreground"
+                      variant="destructive"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="h-9 rounded-xl gap-2 bg-destructive hover:bg-destructive/90 text-xs font-bold px-5 shadow-md"
                     >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={uploadProfilePhoto}
-                      disabled={photoUploading}
-                      className="h-8 text-xs"
-                    >
-                      {photoUploading ? "Uploading..." : "Save Photo"}
+                      <Archive size={14} />
+                      Archive Profile
                     </Button>
                   </div>
-                </Card>
-              </m.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3 mt-2">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card shadow-sm">
-                <UserCheck className="h-4 w-4 text-primary" />
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-foreground">Current Membership</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{role}</p>
-              </div>
-            </div>
-            <Button
-              onClick={saveProfile}
-              disabled={profileSaving || !isProfileDirty}
-              className={cn("h-10 rounded-lg px-6 font-bold shadow-md transition-all")}
-            >
-              {profileSaving ? "Saving..." : "Save Profile"}
-            </Button>
+            </Card>
           </div>
-        </div>
-        <Input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => handlePhotoSelected(e.target.files?.[0])}
-        />
-      </Section>
-    </SettingsShell>
+        </Section>
+      </SettingsShell>
+
+      <SelfDeleteAccountDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      />
+    </div>
   );
 }

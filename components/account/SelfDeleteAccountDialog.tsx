@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Trash2 } from "lucide-react";
+import { AlertCircle, Archive } from "lucide-react";
 
 interface SelfDeleteAccountDialogProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export function SelfDeleteAccountDialog({
   const [error, setError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
-    if (confirmText !== "DELETE MY ACCOUNT") {
+    if (confirmText !== "ARCHIVE MY ACCOUNT") {
       setError("Please type the confirmation text exactly");
       return;
     }
@@ -49,10 +49,10 @@ export function SelfDeleteAccountDialog({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to delete account");
+        throw new Error(data.error || "Failed to archive account");
       }
 
-      // Account deleted successfully, user will be signed out and redirected
+      // Account archived successfully, user will be signed out and redirected
       window.location.href = "/login";
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -73,11 +73,11 @@ export function SelfDeleteAccountDialog({
       <DialogContent className="sm:max-w-[460px] max-h-[90vh] overflow-y-auto rounded-xl p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive text-base">
-            <Trash2 className="h-4 w-4" />
-            Delete My Account
+            <Archive className="h-4 w-4" />
+            Archive My Account
           </DialogTitle>
           <DialogDescription>
-            This action cannot be undone. Please read carefully.
+            This action will restrict your account. Please read carefully.
           </DialogDescription>
         </DialogHeader>
 
@@ -87,15 +87,13 @@ export function SelfDeleteAccountDialog({
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
                 <div className="space-y-2 text-sm">
-                  <p className="font-semibold">This will permanently delete:</p>
+                  <p className="font-semibold">This will archive:</p>
                   <ul className="list-disc list-inside space-y-1 ml-1">
-                    <li>Your account and profile</li>
-                    <li>Your personal information</li>
-                    <li>Your library card and borrowing history</li>
-                    <li>Access to all library services</li>
+                    <li>Your account and profile access</li>
+                    <li>Your library card and active sessions</li>
                   </ul>
                   <p className="pt-2 font-semibold">
-                    Your borrowing records will be retained for legal compliance but anonymized.
+                    Your information will be retained in archives for legal compliance and historical records.
                   </p>
                 </div>
               </div>
@@ -114,7 +112,7 @@ export function SelfDeleteAccountDialog({
                 onClick={() => setStep("confirm")}
                 className="h-9 rounded-lg"
               >
-                Continue to Deletion
+                Continue to Archiving
               </Button>
             </DialogFooter>
           </div>
@@ -125,7 +123,7 @@ export function SelfDeleteAccountDialog({
                 To confirm, please type the following text:
               </p>
               <code className="block rounded border border-border bg-muted p-2 text-sm font-mono text-foreground">
-                DELETE MY ACCOUNT
+                ARCHIVE MY ACCOUNT
               </code>
             </div>
 
@@ -162,10 +160,10 @@ export function SelfDeleteAccountDialog({
               <Button
                 variant="destructive"
                 onClick={handleConfirm}
-                disabled={isLoading || confirmText !== "DELETE MY ACCOUNT"}
+                disabled={isLoading || confirmText !== "ARCHIVE MY ACCOUNT"}
                 className="h-9 rounded-lg"
               >
-                {isLoading ? "Deleting..." : "Delete My Account"}
+                {isLoading ? "Archiving..." : "Archive My Account"}
               </Button>
             </DialogFooter>
           </div>

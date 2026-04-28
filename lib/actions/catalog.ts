@@ -1,6 +1,7 @@
+'use server';
 import { createSafeAction } from './action-utils';
 import { cache } from 'react';
-import { BookSchema, CategorySchema } from '../validations/catalog';
+import { BookSchema } from '../validations/catalog';
 import { logger } from '../logger';
 import { createClient, createSafeClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -28,7 +29,7 @@ export const getCategories = async () => {
   return unstable_cache(
     cache(async () => {
       const supabase = createSafeClient();
-      const { data, error } = await supabase.from('categories').select('id, name, description, created_at').order('name');
+      const { data, error } = await supabase.from('categories').select('id, name, slug, description, is_active, created_at').order('name');
       if (error) throw new Error(error.message);
       return data;
     }),
@@ -37,27 +38,6 @@ export const getCategories = async () => {
   )();
 };
 
-export const createCategory = createSafeAction(
-  CategorySchema,
-  async ({ name, description }, { supabase }) => {
-    const { data, error } = await supabase
-      .from('categories')
-      .insert([{ name, description }])
-      .select()
-      .single();
-      
-    if (error) throw new Error(error.message);
-    
-    const { revalidateTag } = await import('next/cache');
-    revalidateTag('categories', 'default');
-    return data;
-  },
-  { 
-    auditAction: "create_category", 
-    auditEntity: "system", 
-    allowedRoles: ['admin', 'librarian', 'staff'] 
-  }
-);
 
 // --- Books ---
 
@@ -246,7 +226,7 @@ export const softDeleteBook = createSafeAction(
     return data;
   },
   { 
-    auditAction: "soft_delete", 
+    auditAction: "archive", 
     auditEntity: "book", 
     allowedRoles: ['admin', 'librarian', 'staff'] 
   }
@@ -292,71 +272,7 @@ export async function getBookCopies(bookId: string) {
   });
 }
 
-export const staffCancelReservation = createSafeAction(
-  z.object({ reservationId: z.string(), bookId: z.string() }),
-  async ({ reservationId, bookId }, { supabase }) => {
-    // Fetch reservation to know its copy_id and status so we can release it
-    const { data: reservation, error: fetchError } = await supabase
-      .from('reservations')
-      .select('id, user_id, book_id, status, copy_id')
-      .eq('id', reservationId)
-      .single();
 
-    if (fetchError || !reservation) throw new Error('Reservation not found');
-
-    const { error } = await supabase
-      .from('reservations')
-      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
-      .eq('id', reservationId);
-
-    if (error) throw new Error(error.message);
-
-    // If the reservation was READY (copy is RESERVED), release the copy back to AVAILABLE
-    if (reservation.status === 'READY' && reservation.copy_id) {
-      await supabase
-        .from('book_copies')
-        .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
-        .eq('id', reservation.copy_id);
-    }
-
-    const { revalidatePath } = await import('next/cache');
-    revalidatePath(`/catalog/${bookId}`);
-    revalidatePath('/catalog');
-    revalidatePath('/student-catalog');
-    revalidatePath('/dashboard');
-
-    return { success: true };
-  },
-  {
-    auditAction: "staff_cancel",
-    auditEntity: "reservation",
-    allowedRoles: ['admin', 'librarian', 'staff']
-  }
-);
-
-export const createBookCopy = createSafeAction(
-  z.object({ bookId: z.string(), condition: z.string().optional() }),
-  async ({ bookId, condition }, { supabase }) => {
-    const { data, error } = await supabase
-      .from('book_copies')
-      .insert([{ book_id: bookId, condition }])
-      .select()
-      .single();
-      
-    if (error) throw new Error(error.message);
-    
-    const { revalidatePath } = await import('next/cache');
-    revalidatePath('/catalog');
-    revalidatePath(`/catalog/${bookId}`);
-    
-    return data;
-  },
-  { 
-    auditAction: "create", 
-    auditEntity: "book_copy", 
-    allowedRoles: ['admin', 'librarian', 'staff'] 
-  }
-);
 
 export const updateBookCopyStatus = createSafeAction(
   z.object({ 
@@ -372,6 +288,20 @@ export const updateBookCopyStatus = createSafeAction(
       .single();
       
     if (error) throw new Error(error.message);
+
+    // If a copy is manually marked as AVAILABLE, MAINTENANCE, or LOST, 
+    // we must close any lingering ACTIVE/OVERDUE borrowing records to prevent DB inconsistency.
+    if (['AVAILABLE', 'MAINTENANCE', 'LOST'].includes(status)) {
+      await supabase
+        .from('borrowing_records')
+        .update({ 
+          status: 'RETURNED', 
+          returned_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('book_copy_id', id)
+        .in('status', ['ACTIVE', 'OVERDUE']);
+    }
     
     const { revalidatePath } = await import('next/cache');
     revalidatePath('/catalog');

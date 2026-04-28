@@ -35,11 +35,11 @@ type CardData = { card_number: string; status: string; expires_at: string } | nu
 type FaqRow = { key: string; value: string | null };
 
 type DashboardStats = {
-  activeLoans: number;
+  activeBorrows: number;
   pendingApprovals: number;
-  myActiveLoans: number;
+  myActiveBorrows: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
-  activeLoansList?: BorrowingRecord[];
+  activeBorrowsList?: BorrowingRecord[];
 };
 
 interface DashboardProps {
@@ -79,7 +79,7 @@ export function DashboardClient({
   const inventoryCategories = use(inventoryCategoriesPromise);
 
   const profileData = profileResult.data;
-  const activeLoansList = stats.activeLoansList || [];
+  const activeBorrowsList = stats.activeBorrowsList || [];
 
   // Real-time synchronization
   useEffect(() => {
@@ -121,13 +121,18 @@ export function DashboardClient({
         userId: user.id,
       });
 
+      const expiresAt = studentCardData?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
+      const expiryYear = new Date(expiresAt).getUTCFullYear();
+      const ayString = `${expiryYear - 1} - ${expiryYear}`;
+
       card = {
         fullName: profileData.full_name || "Student",
         studentId: resolvedStudentId || profileData.student_id || "N/A",
         cardNumber: studentCardData?.card_number || "Pending assignment",
         department: profileData.department || "General",
         status: (studentCardData?.status as "active" | "pending" | "suspended" | "expired") || "pending",
-        expiryDate: studentCardData?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+        expiryDate: expiresAt,
+        academicYear: ayString,
         avatarUrl: profileData.avatar_url,
         qrUrl: resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null,
         address: profileData.address || undefined,
@@ -182,12 +187,12 @@ export function DashboardClient({
           </Card>
 
           <div className="md:col-span-4 space-y-5">
-            {stats.myActiveLoans > 0 && (
-              <Card className="border-border/40 bg-card/20 shadow-none p-4 backdrop-blur-sm">
+            {stats.myActiveBorrows > 0 && (
+              <Card className="border-border/20 bg-card/20 shadow-none p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Borrowed Books</p>
-                    <p className="text-2xl font-black text-primary">{stats.myActiveLoans}</p>
+                    <p className="text-2xl font-black text-primary">{stats.myActiveBorrows}</p>
                   </div>
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
                      <History size={18} />
@@ -199,7 +204,7 @@ export function DashboardClient({
         </section>
 
         <div className="grid gap-6 md:grid-cols-2">
-           {activeLoansList.length > 0 && (
+           {activeBorrowsList.length > 0 && (
              <section className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                    <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -208,22 +213,22 @@ export function DashboardClient({
                    </h2>
                 </div>
                 <div className="grid gap-2">
-                  {activeLoansList.map((loan) => (
-                     <Card key={loan.id} className="border-border/40 bg-card/20 shadow-none transition-all hover:bg-muted/30 hover:border-primary/20 backdrop-blur-sm">
+                  {activeBorrowsList.map((borrow) => (
+                     <Card key={borrow.id} className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm">
                         <CardContent className="flex items-center justify-between gap-4 p-3">
                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 overflow-hidden relative shadow-sm">
+                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm">
                                  <Library size={12} className="text-muted-foreground/30" />
                               </div>
                               <div className="min-w-0">
-                                 <p className="truncate text-xs font-bold text-foreground/90">{loan.books?.title || 'Unknown Book'}</p>
+                                 <p className="truncate text-xs font-bold text-foreground/90">{borrow.books?.title || 'Unknown Book'}</p>
                                  <p className="text-xs font-bold text-foreground/80 tracking-tight" suppressHydrationWarning>
-                                    {mounted ? new Date(loan.due_date).toLocaleDateString() : '...'}
+                                    {mounted ? new Date(borrow.due_date).toLocaleDateString() : '...'}
                                  </p>
                               </div>
                            </div>
-                           <Badge variant={loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
-                              {loan.status === 'OVERDUE' || (mounted && new Date(loan.due_date) < new Date()) ? 'Overdue' : 'Active'}
+                           <Badge variant={borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
+                              {borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'Overdue' : 'Active'}
                            </Badge>
                         </CardContent>
                      </Card>
@@ -247,8 +252,8 @@ export function DashboardClient({
           </div>
 
           {reservations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-muted/10 py-10 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/20">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/30 bg-muted/5 py-10 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/20 bg-muted/10">
                 <Bookmark className="h-5 w-5 text-muted-foreground/20" />
               </div>
               <div>
@@ -271,13 +276,13 @@ export function DashboardClient({
                   : null;
 
                 return (
-                  <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-50/40 to-transparent' : 'border-border/40 bg-card/20 backdrop-blur-sm'}`}>
+                  <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-500/20 bg-emerald-50/5' : 'border-border/20 bg-card/10 backdrop-blur-sm'}`}>
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${isReady ? 'bg-emerald-500' : 'bg-primary/30'}`} />
                     <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-start">
                       <Link href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
-                        <div className="relative h-14 w-10 rounded-lg border border-border/60 bg-muted/20 overflow-hidden shadow-sm">
+                        <div className="relative h-14 w-10 rounded-lg bg-muted/20 overflow-hidden shadow-sm">
                           {res.books?.cover_url ? (
-                            <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized />
+                            <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized priority />
                           ) : (
                             <div className="flex h-full items-center justify-center">
                               <Library size={14} className="text-muted-foreground/20" />
@@ -322,7 +327,7 @@ export function DashboardClient({
 
         {studentFaqs?.length > 0 && (
           <section className="pt-2">
-            <Collapsible className="bg-card/20 border border-border/40 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
+            <Collapsible className="bg-card/10 border border-border/20 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
               <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted/30 transition-colors text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
                 <div className="flex items-center gap-2"><HelpCircle size={14} className="text-primary" /> Support & FAQs</div>
                 <ChevronDown size={14} />
@@ -344,9 +349,9 @@ export function DashboardClient({
 
   // STAFF / ADMIN DASHBOARD
   return (
-    <div className="w-full relative min-h-[600px]">
-      <div className="flex items-center justify-between px-1 mb-4">
-        <div className="w-full max-w-md">
+    <div className="w-full relative min-h-[600px] space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <div className="w-full">
           <DashboardSearch role={role || null} />
         </div>
       </div>

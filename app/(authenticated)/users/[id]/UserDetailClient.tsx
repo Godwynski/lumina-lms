@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+import { UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon, Phone, CheckCircle2, AlertCircle, Archive } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
@@ -240,6 +240,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="pending">Pending Approval</SelectItem>
                     <SelectItem value="suspended">Suspended Access</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
                   </SelectContent>
                 </Select>
               </FieldGroup>
@@ -324,8 +325,8 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
 
           {/* Admin Tools - Integrated into bottom bar via SettingsShell usually, but we'll show current save state */}
 
-          <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-3 sm:p-4 mt-2">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-3 sm:p-4 mt-2 gap-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-card shadow-sm">
                 <UserCheck className="h-4 w-4 text-primary" />
               </div>
@@ -334,13 +335,23 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                 <p className="text-[10px] text-muted-foreground capitalize">Managed by Library Administration</p>
               </div>
             </div>
-            <Button
-              onClick={handleUpdateProfile}
-              disabled={isSaving || !isDirty}
-              className={cn("h-10 rounded-lg px-6 font-bold shadow-md transition-all")}
-            >
-              {isSaving ? "Saving..." : "Save Account Details"}
-            </Button>
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => handleAdminAction('ARCHIVED')}
+                className="h-10 rounded-lg px-4 font-bold text-destructive hover:bg-destructive/10"
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archive User
+              </Button>
+              <Button
+                onClick={handleUpdateProfile}
+                disabled={isSaving || !isDirty}
+                className={cn("h-10 rounded-lg px-6 font-bold shadow-md transition-all")}
+              >
+                {isSaving ? "Saving..." : "Save Account Details"}
+              </Button>
+            </div>
           </div>
 
         </div>

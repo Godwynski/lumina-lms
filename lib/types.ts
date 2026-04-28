@@ -24,7 +24,7 @@ export interface Book {
   created_at?: string;
 }
 
-export interface BookCopy {
+interface BookCopy {
   id: string;
   book_id: string;
   status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
@@ -33,14 +33,14 @@ export interface BookCopy {
   created_at: string;
 }
 
-export interface ReservationReserver {
+interface ReservationReserver {
   id: string;
   full_name: string | null;
   email: string | null;
   student_id: string | null;
 }
 
-export interface CopyReservation {
+interface CopyReservation {
   id: string;
   status: 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
   queue_position: number;

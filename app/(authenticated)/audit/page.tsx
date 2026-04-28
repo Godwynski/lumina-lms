@@ -1,17 +1,35 @@
 import { Suspense } from "react";
-import { AuditContentContainer } from "./AuditContentContainer";
+import { getUserRole } from "@/lib/auth-helpers";
+import { redirect } from "next/navigation";
+import { AuditLogClient } from "@/components/admin/AuditLogClient";
 
 export const metadata = {
   title: "Audit Logs | Lumina LMS",
 };
 
+// Synchronous page shell — responds immediately.
 export default function AuditPage() {
   return (
     <div className="space-y-6 w-full">
-
       <Suspense fallback={<AuditSkeleton />}>
-        <AuditContentContainer />
+        <AuditAuthGate />
       </Suspense>
+    </div>
+  );
+}
+
+// Only awaits getUserRole() — a cache()-memoized call that reuses the
+// auth already fetched by the layout. No extra round-trip.
+async function AuditAuthGate() {
+  const role = await getUserRole();
+
+  if (role !== "admin") {
+    redirect("/dashboard?error=unauthorized");
+  }
+
+  return (
+    <div className="w-full">
+      <AuditLogClient />
     </div>
   );
 }

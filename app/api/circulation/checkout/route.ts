@@ -68,9 +68,8 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
     return apiError(rpcResult.message || "Checkout failed.", rpcResult.code, status);
   }
 
-  logger.info("circulation", "Checkout successful", { studentCardQr, bookQr, librarianId: String(profile.id) });
-  
   if (!validated.previewOnly) {
+    logger.info("circulation", "Checkout successful", { studentCardQr, bookQr, librarianId: String(profile.id) });
     await logAuditActivity(
       String(profile.id),
       "borrowing_record",

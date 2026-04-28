@@ -1,7 +1,7 @@
 import { createSafeClient } from '@/lib/supabase/server';
 import { Book } from '@/lib/types';
 
-export interface BookSearchParams {
+interface BookSearchParams {
   query?: string;
   categoryId?: string;
   section?: string;

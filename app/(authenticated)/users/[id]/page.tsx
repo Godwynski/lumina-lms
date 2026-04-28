@@ -1,13 +1,31 @@
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getMe } from "@/lib/auth-helpers";
 import { redirect, notFound } from "next/navigation";
 import { UserDetailClient } from "./UserDetailClient";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 
+// getMe() is cache()-memoized — reuses auth already fetched by the layout.
+// The profile lookup for the *target* user is the only DB call needed.
+function buildUserDetailPromise(userId: string) {
+  return getMe().then(async (me) => {
+    if (!me) redirect("/login");
+    const { supabase } = me;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error || !data) notFound();
+
+    return mapProfileToUser(data as Record<string, unknown>);
+  });
+}
+
 export default function UserDetailPage(props: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
-
       <Suspense fallback={<div className="p-8"><div className="h-64 w-full animate-pulse bg-muted rounded-xl" /></div>}>
         <UserDetailLoader params={props.params} />
       </Suspense>
@@ -16,24 +34,7 @@ export default function UserDetailPage(props: { params: Promise<{ id: string }> 
 }
 
 async function UserDetailLoader({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const userId = resolvedParams.id;
-  const supabase = await createClient();
-  
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  if (!user) redirect("/login");
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single();
-    
-  if (error || !data) notFound();
-  
-  const row = data;
-  const mappedUser = mapProfileToUser(row as Record<string, unknown>);
-
-  return <UserDetailClient initialUser={mappedUser} />;
+  const { id } = await params;
+  const user = await buildUserDetailPromise(id);
+  return <UserDetailClient initialUser={user} />;
 }

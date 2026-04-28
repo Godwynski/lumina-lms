@@ -66,12 +66,11 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
     return apiError(result.message || "Return failed.", result.code, status);
   }
 
-  logger.info("circulation", "Return successful", {
-    bookQr,
-    librarianId: String(profile.id),
-  });
-
   if (!body.previewOnly) {
+    logger.info("circulation", "Return successful", {
+      bookQr,
+      librarianId: String(profile.id),
+    });
     await logAuditActivity(
       String(profile.id),
       "book_copy",

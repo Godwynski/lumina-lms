@@ -10,6 +10,7 @@ import { NavSkeleton } from "./_components/Skeletons";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import NavAnimatePresence from "./NavAnimatePresence";
 
 export default async function ProtectedLayout({
@@ -63,7 +64,8 @@ export default async function ProtectedLayout({
                 </Suspense>
               </div>
             </div>
-            <div className="ml-2 shrink-0">
+            <div className="ml-2 shrink-0 flex items-center gap-2">
+              <NotificationBell />
               <StreamedUserNav />
             </div>
           </div>

@@ -2,18 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
+import { CategoryItem } from "./categories/CategoryItem";
+import { CategoryDialog } from "./categories/CategoryDialog";
 
 function toSlug(value: string) {
   return value
@@ -23,13 +14,7 @@ function toSlug(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  is_active: boolean;
-}
+import { Category } from "@/types/admin";
 
 export function CategoryManagement({ initialCategories }: { initialCategories: Category[] }) {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
@@ -37,6 +22,8 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   const [isBulkEditing, setIsBulkEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -99,6 +86,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         setCategories((prev) =>
           prev.map((c) => (c.id === editingId ? updated : c))
         );
+        setDraftCategories((prev) =>
+          prev.map((c) => (c.id === editingId ? updated : c))
+        );
       } else {
         const response = await fetch("/api/admin/categories", {
           method: "POST",
@@ -122,21 +112,23 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
-
+  const handleArchive = async (id: string) => {
+    if (!confirm("Are you sure you want to archive this category?")) return;
+ 
     setLoading(true);
     setError(null);
-
+ 
     try {
       const response = await fetch(`/api/admin/categories/${id}`, {
-        method: "DELETE",
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false }),
       });
 
-      if (!response.ok) throw new Error("Failed to delete category");
+      if (!response.ok) throw new Error("Failed to archive category");
 
-      setCategories((prev) => prev.filter((c) => c.id !== id));
-      setDraftCategories((prev) => prev.filter((c) => c.id !== id));
+      setCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
+      setDraftCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -196,35 +188,57 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     }
   };
 
+  const handleDraftChange = (id: string, field: keyof Category, value: string) => {
+    setDraftCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: field === "slug" ? toSlug(value) : value } : c))
+    );
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Category management</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Manage catalog categories.</p>
-        </div>
-        <div className="flex items-center gap-1.5">
+        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">
+          {categories.length} {categories.length === 1 ? 'category' : 'categories'}
+        </p>
+
+        <div className="flex items-center gap-2">
           {isBulkEditing ? (
             <>
               {changedIds.length > 0 && (
-                <span className="rounded-md border border-border bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                  {changedIds.length} changed
+                <span className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+                  {changedIds.length} changes
                 </span>
               )}
-              <Button variant="outline" onClick={resetBulkEdit} className="h-8 rounded-md px-2.5 text-xs" disabled={loading}>
+              <Button
+                variant="ghost"
+                onClick={resetBulkEdit}
+                className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider"
+                disabled={loading}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleBulkSave} className="h-8 rounded-md px-2.5 text-xs" disabled={loading || changedIds.length === 0}>
-                {loading ? "Saving..." : "Save changes"}
+              <Button
+                onClick={handleBulkSave}
+                className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                disabled={loading || changedIds.length === 0}
+              >
+                {loading ? "Saving..." : "Save"}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setIsBulkEditing(true)} className="h-8 rounded-md px-2.5 text-xs">
-                Edit list
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkEditing(true)}
+                className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider border-border/40 hover:bg-muted"
+              >
+                Bulk Edit
               </Button>
-              <Button onClick={() => openDialog()} className="h-8 rounded-md gap-1.5 px-2.5 text-xs">
-                <Plus className="h-3.5 w-3.5" />
+              <Button
+                onClick={() => openDialog()}
+                className="h-8 rounded-lg gap-1.5 px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm"
+              >
+                <Plus className="h-3 w-3" />
                 Add
               </Button>
             </>
@@ -233,186 +247,44 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
       </div>
 
       {error && (
-        <div className="status-danger rounded-lg px-3 py-2 text-xs">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-xs font-medium text-destructive">
           {error}
         </div>
       )}
 
       {categories.length === 0 ? (
-        <Card className="border-border bg-card p-8 text-center shadow-sm">
-          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No categories yet.</p>
-        </Card>
+        <div className="rounded-2xl border border-border/40 bg-card/20 p-8 text-center">
+          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-muted-foreground/30" />
+          <p className="text-sm font-bold text-foreground">No categories defined</p>
+          <p className="mt-1 text-xs text-muted-foreground">Get started by adding a new category.</p>
+        </div>
       ) : (
         <div className="grid gap-3">
           {(isBulkEditing ? draftCategories : categories).map((category) => (
-            <Card
+            <CategoryItem
               key={category.id}
-              className={`flex items-center justify-between border-border bg-card p-3 shadow-sm ${
-                isBulkEditing && changedSet.has(category.id) ? "border-l-4 border-l-primary" : ""
-              } ${
-                !category.is_active ? "opacity-50" : ""
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                {isBulkEditing ? (
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <Input
-                      value={category.name}
-                      onChange={(e) =>
-                        setDraftCategories((prev) =>
-                          prev.map((c) => (c.id === category.id ? { ...c, name: e.target.value } : c)),
-                        )
-                      }
-                      className="h-8 text-xs"
-                    />
-                    <Input
-                      value={category.slug}
-                      onChange={(e) =>
-                        setDraftCategories((prev) =>
-                          prev.map((c) => (c.id === category.id ? { ...c, slug: toSlug(e.target.value) } : c)),
-                        )
-                      }
-                      className="h-8 text-xs"
-                    />
-                    <Input
-                      value={category.description || ""}
-                      onChange={(e) =>
-                        setDraftCategories((prev) =>
-                          prev.map((c) => (c.id === category.id ? { ...c, description: e.target.value } : c)),
-                        )
-                      }
-                      className="h-8 text-xs"
-                      placeholder="Description"
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-semibold text-foreground">{category.name}</h3>
-                    <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{category.slug}</p>
-                    {category.description && <p className="mt-1 text-xs text-muted-foreground">{category.description}</p>}
-                  </>
-                )}
-              </div>
-              <div className="flex gap-2 ml-4">
-                {!isBulkEditing && (
-                  <>
-                    <Button
-                      onClick={() => openDialog(category)}
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 rounded-md p-0 text-muted-foreground"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      onClick={() => handleDelete(category.id)}
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 rounded-md p-0 text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                )}
-              </div>
-            </Card>
+              category={category}
+              draftCategory={draftCategories.find((c) => c.id === category.id)}
+              isBulkEditing={isBulkEditing}
+              isChanged={changedSet.has(category.id)}
+              onDraftChange={(field, value) => handleDraftChange(category.id, field, value)}
+              onEdit={openDialog}
+              onArchive={handleArchive}
+            />
           ))}
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="rounded-lg">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit category" : "Create category"}</DialogTitle>
-            <DialogDescription>
-              {editingId
-                ? "Update category details."
-                : "Add a new category."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Science Fiction"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((p) => {
-                    const nextName = e.target.value;
-                    return {
-                      ...p,
-                      name: nextName,
-                      slug: toSlug(p.slug ? p.slug : nextName),
-                    };
-                  })
-                }
-                disabled={loading}
-                className="h-9"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                placeholder="e.g., science-fiction"
-                value={formData.slug}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, slug: toSlug(e.target.value) }))
-                }
-                disabled={loading}
-                className="h-9"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                placeholder="Brief description of the category"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, description: e.target.value }))
-                }
-                disabled={loading}
-                className="h-9"
-              />
-            </div>
-
-            {error && (
-              <p className="status-danger rounded-md p-2 text-xs">{error}</p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              onClick={() => setDialogOpen(false)}
-              variant="outline"
-              disabled={loading}
-              className="h-8 rounded-md px-3 text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={loading}
-              className="h-8 rounded-md px-3 text-xs"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CategoryDialog
+        isOpen={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        onSave={handleSave}
+        loading={loading}
+        error={error}
+      />
     </div>
   );
 }

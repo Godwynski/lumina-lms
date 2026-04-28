@@ -10,12 +10,14 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Book } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface ModernBookCardProps {
   book: Book;
+  priority?: boolean;
 }
 
-export function ModernBookCard({ book }: ModernBookCardProps) {
+export function ModernBookCard({ book, priority = false }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   
   return (
@@ -59,7 +61,7 @@ export function ModernBookCard({ book }: ModernBookCardProps) {
                 fill 
                 className="object-cover" 
                 sizes="80px"
-                loading="lazy"
+                priority={priority}
                 unoptimized
               />
             ) : (
@@ -75,11 +77,19 @@ export function ModernBookCard({ book }: ModernBookCardProps) {
           </div>
         </div>
 
-        <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/50">
-          <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[9px] font-black uppercase tracking-widest transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-            {book.available_copies} / {book.total_copies} In Pool
-          </Badge>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50 transition-colors group-hover:text-primary/60">
+        <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/10">
+          <div className="flex items-center gap-1.5">
+            <Badge 
+              variant={isOutOfStock ? "destructive" : "secondary"} 
+              className={cn(
+                "rounded-lg px-2 py-0 h-5 text-[9px] font-black uppercase tracking-widest transition-all duration-300",
+                !isOutOfStock && "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+              )}
+            >
+              {book.available_copies} / {book.total_copies} In Pool
+            </Badge>
+          </div>
+          <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground/40 transition-colors group-hover:text-primary/40">
             {book.section || "General"}
           </span>
         </div>
