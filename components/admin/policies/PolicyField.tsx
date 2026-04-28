@@ -28,12 +28,14 @@ type PolicyKey = keyof typeof DEFAULT_POLICIES;
 export function PolicyField({
   policyKey,
   value,
+  initialValue,
   onChange,
   disabled,
   loading
 }: {
   policyKey: string;
   value: string;
+  initialValue: string;
   onChange: (val: string) => void;
   disabled: boolean;
   loading: boolean;
@@ -95,12 +97,14 @@ export function PolicyField({
             ) : isIdentityList ? (
               <IdentityListManager
                 value={value || ""}
+                initialValue={initialValue || ""}
                 onChange={(val) => onChange(val)}
                 disabled={loading || disabled}
               />
             ) : isSupportFAQ ? (
               <SupportFAQManager
                 value={value || ""}
+                initialValue={initialValue || ""}
                 onChange={(val) => onChange(val)}
                 disabled={loading || disabled}
               />

@@ -80,13 +80,61 @@ export const POST = withAuthApi(
       result = data;
     }
 
+    let auditReason = reason;
+    let auditDetails: Record<string, unknown> | null = null;
+
+    if (!auditReason) {
+      let displayValue = value;
+      if (value.startsWith("[") || value.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            let oldParsed: unknown[] = [];
+            if (existing && (existing.value.startsWith("[") || existing.value.startsWith("{"))) {
+              try {
+                const oldObj = JSON.parse(existing.value);
+                if (Array.isArray(oldObj)) oldParsed = oldObj;
+              } catch {
+                // Ignore parse errors
+              }
+            }
+            const newCount = parsed.length;
+            const oldCount = oldParsed.length;
+
+            const added = parsed.filter(newItem => !oldParsed.some(oldItem => JSON.stringify(oldItem) === JSON.stringify(newItem)));
+            const removed = oldParsed.filter(oldItem => !parsed.some(newItem => JSON.stringify(newItem) === JSON.stringify(oldItem)));
+            
+            if (added.length > 0 || removed.length > 0) {
+              auditDetails = { added, removed };
+            }
+            
+            if (existing) {
+              if (newCount > oldCount) displayValue = `a list of ${newCount} items (${newCount - oldCount} added)`;
+              else if (newCount < oldCount) displayValue = `a list of ${newCount} items (${oldCount - newCount} removed)`;
+              else displayValue = `a list of ${newCount} items (modified)`;
+            } else {
+              displayValue = `a list of ${newCount} items`;
+            }
+          } else {
+            displayValue = `a configuration object`;
+          }
+        } catch {
+          if (value.length > 100) displayValue = value.substring(0, 100) + "...";
+        }
+      } else if (value.length > 100) {
+        displayValue = value.substring(0, 100) + "...";
+      }
+      auditReason = `Updated ${key} to ${displayValue}`;
+    }
+
     // Log the change
     await logAuditActivity(
       user.id,
       "system",
       result.id,
       `Updated policy: ${key}`,
-      reason || `Updated ${key} to ${value}`
+      auditReason,
+      auditDetails
     );
 
     revalidatePath("/policies", "page");

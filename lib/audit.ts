@@ -25,7 +25,8 @@ export async function logAuditActivity(
   entityType: AuditEntityType,
   entityId: string | null = null,
   action: string,
-  reason?: string | null
+  reason?: string | null,
+  details?: Record<string, unknown> | null
 ) {
   try {
     // Use the admin client to bypass RLS and guarantee the write.
@@ -42,6 +43,7 @@ export async function logAuditActivity(
           entity_id: entityId,
           action: action,
           reason: reason || null,
+          details: details || {},
         });
 
       if (error) {

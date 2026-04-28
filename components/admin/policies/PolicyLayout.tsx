@@ -229,6 +229,7 @@ export function PolicyLayout({
                     key={key}
                     policyKey={key}
                     value={formData[key]}
+                    initialValue={initialValues[key]}
                     onChange={(val) => handleChange(key, val)}
                     disabled={!canEdit}
                     loading={loading}

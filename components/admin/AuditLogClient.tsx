@@ -29,6 +29,14 @@ import { AdminTableShell } from "./AdminTableShell";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+type AuditLogDetailItem = Record<string, unknown> | string | number;
+
+interface AuditLogDetails {
+  added?: AuditLogDetailItem[];
+  removed?: AuditLogDetailItem[];
+  [key: string]: unknown;
+}
+
 interface AuditLog {
   id: string;
   admin_id: string;
@@ -36,6 +44,7 @@ interface AuditLog {
   entity_id: string | null;
   action: string;
   reason: string | null;
+  details: AuditLogDetails | null;
   created_at: string;
   profiles: {
     full_name: string | null;
@@ -231,6 +240,60 @@ export function AuditLogClient() {
                          <h3 className="text-sm md:text-base text-muted-foreground italic leading-relaxed">
                            System performed {log.action} on {log.entity_type}.
                          </h3>
+                      )}
+
+                      {log.details && (Array.isArray(log.details.added) && log.details.added.length > 0 || Array.isArray(log.details.removed) && log.details.removed.length > 0) && (
+                        <div className="mt-2 space-y-3 bg-muted/30 rounded-xl p-3 border border-border/5">
+                          {Array.isArray(log.details.added) && log.details.added.length > 0 && (
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400 flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                Added Items
+                              </span>
+                              <div className="grid gap-1.5">
+                                {log.details.added.map((item: AuditLogDetailItem, idx: number) => (
+                                  <div key={idx} className="text-xs text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/10 flex flex-col gap-0.5 shadow-sm">
+                                    {typeof item === 'object' ? (
+                                      Object.entries(item).map(([k, v]) => (
+                                        <div key={k} className="flex gap-2">
+                                          <span className="font-bold text-[10px] uppercase text-muted-foreground/60 w-16 shrink-0">{k}:</span>
+                                          <span className="truncate">{String(v)}</span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span>{String(item)}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {Array.isArray(log.details.removed) && log.details.removed.length > 0 && (
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                Removed Items
+                              </span>
+                              <div className="grid gap-1.5 opacity-70">
+                                {log.details.removed.map((item: AuditLogDetailItem, idx: number) => (
+                                  <div key={idx} className="text-xs text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/10 flex flex-col gap-0.5 line-through decoration-red-500/30">
+                                    {typeof item === 'object' ? (
+                                      Object.entries(item).map(([k, v]) => (
+                                        <div key={k} className="flex gap-2">
+                                          <span className="font-bold text-[10px] uppercase text-muted-foreground/60 w-16 shrink-0">{k}:</span>
+                                          <span className="truncate">{String(v)}</span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span>{String(item)}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       <div className="flex flex-wrap items-center gap-2 mt-1">
