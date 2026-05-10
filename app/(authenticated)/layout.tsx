@@ -9,7 +9,7 @@ import { NavSkeleton } from "./_components/Skeletons";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
-import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import NavAnimatePresence from "./NavAnimatePresence";
 
 export default async function ProtectedLayout({

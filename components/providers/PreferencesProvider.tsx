@@ -53,20 +53,25 @@ export function PreferencesProvider({
     // Skip if we've already resolved the initial data
     if (resolvedRef.current) return;
 
-    // If we have a promise, resolve it once
-    if (initialPreferences instanceof Promise) {
+    // Check if initialPreferences is a promise or thenable
+    const isThenable = initialPreferences && 
+      (initialPreferences instanceof Promise || typeof (initialPreferences as Record<string, unknown>).then === 'function');
+
+    if (isThenable) {
       resolvedRef.current = true;
-      initialPreferences.then((resolved) => {
-        if (resolved && Object.keys(resolved).length > 0) {
-          setPreferences(resolved);
-          setLoading(false);
-        } else {
+      Promise.resolve(initialPreferences as Promise<Preferences>)
+        .then((resolved) => {
+          if (resolved && Object.keys(resolved).length > 0) {
+            setPreferences(resolved);
+            setLoading(false);
+          } else {
+            fetchPreferences();
+          }
+        })
+        .catch((err) => {
+          console.error("[PREFERENCES-PROVIDER] Promise hydration failed:", err);
           fetchPreferences();
-        }
-      }).catch((err) => {
-        console.error("[PREFERENCES-PROVIDER] Promise hydration failed:", err);
-        fetchPreferences();
-      });
+        });
       return;
     }
 

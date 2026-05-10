@@ -1,12 +1,11 @@
 'use client'
 
 import React from 'react'
-import { Bell, Search, CheckCircle2 } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useNotifications } from '@/hooks/use-notifications'
-import { NotificationItem } from '@/components/notifications/notification-bell'
+import { NotificationList } from '@/components/notifications/NotificationList'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
 import { 
   Tabs, 
   TabsContent, 
@@ -35,112 +34,96 @@ export default function NotificationsPage() {
   const readNotifications = filteredNotifications.filter(n => n.is_read)
 
   return (
-    <div className="container max-w-2xl py-8 mx-auto space-y-6">
-      <Tabs defaultValue="all" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-4 gap-4">
-          <TabsList className="bg-transparent h-auto p-0 gap-6">
+    <div className="max-w-5xl mx-auto space-y-6 py-2 px-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-xl font-black tracking-tight text-foreground/90">
+            Notifications
+          </h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+            {notifications.length} recent events
+          </p>
+        </div>
+        
+        {unreadCount > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={markAllAsRead} 
+            className="h-8 px-3 rounded-lg border-border/40 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-all"
+          >
+            Clear unread
+          </Button>
+        )}
+      </div>
+
+      <Tabs defaultValue="all" className="w-full space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/10 p-1.5 rounded-xl border border-border/5">
+          <TabsList className="bg-transparent h-8 p-0 rounded-lg gap-1">
             <TabsTrigger 
               value="all" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 h-auto text-sm font-medium"
+              className="rounded-md px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm text-[10px] font-black uppercase tracking-widest transition-all h-full"
             >
               All
             </TabsTrigger>
             <TabsTrigger 
               value="unread"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 h-auto text-sm font-medium"
+              className="rounded-md px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm text-[10px] font-black uppercase tracking-widest transition-all h-full relative"
             >
               Unread
               {unreadCount > 0 && (
-                <span className="ml-2 px-1.5 py-0.5 rounded-full bg-primary text-[10px] text-primary-foreground font-semibold">
-                  {unreadCount}
-                </span>
+                <span className="ml-2 h-1.5 w-1.5 rounded-full bg-primary" />
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="read"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-0 pb-2 h-auto text-sm font-medium"
+              className="rounded-md px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm text-[10px] font-black uppercase tracking-widest transition-all h-full"
             >
-              Archived
+              History
             </TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-48">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                className="pl-9 bg-muted/30 border-transparent focus-visible:border-primary h-9 text-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-9 text-xs text-muted-foreground hover:text-foreground shrink-0">
-                <CheckCircle2 className="w-4 h-4" />
-                <span className="sr-only sm:not-sr-only sm:ml-2">Mark all as read</span>
-              </Button>
-            )}
+
+          <div className="relative flex-1 md:max-w-xs group w-full">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+            <Input
+              placeholder="Filter events..."
+              className="pl-8 h-8 bg-background border-border/40 focus-visible:ring-1 focus-visible:ring-primary/20 rounded-lg text-[11px] font-medium transition-all"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
         </div>
 
-        <div className="min-h-[400px]">
-          <TabsContent value="all" className="m-0">
-             {renderList(filteredNotifications)}
+        <div className="rounded-2xl border border-border/40 bg-card/20 overflow-hidden shadow-sm">
+          <TabsContent value="all" className="m-0 focus-visible:outline-none">
+             <NotificationList 
+               notifications={filteredNotifications} 
+               loading={loading}
+               onMarkRead={markAsRead}
+               onDelete={deleteNotification}
+               emptyMessage={search ? 'No matches found' : undefined}
+             />
           </TabsContent>
-          <TabsContent value="unread" className="m-0">
-             {renderList(unreadNotifications)}
+          <TabsContent value="unread" className="m-0 focus-visible:outline-none">
+             <NotificationList 
+               notifications={unreadNotifications} 
+               loading={loading}
+               onMarkRead={markAsRead}
+               onDelete={deleteNotification}
+               emptyMessage="No unread notifications"
+             />
           </TabsContent>
-          <TabsContent value="read" className="m-0">
-             {renderList(readNotifications)}
+          <TabsContent value="read" className="m-0 focus-visible:outline-none">
+             <NotificationList 
+               notifications={readNotifications} 
+               loading={loading}
+               onMarkRead={markAsRead}
+               onDelete={deleteNotification}
+               emptyMessage="No historical data"
+             />
           </TabsContent>
         </div>
       </Tabs>
     </div>
   )
-
-  function renderList(list: typeof notifications) {
-    if (loading) {
-      return (
-        <div className="divide-y border border-transparent">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 space-y-3">
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-3 w-16" />
-              </div>
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-2/3" />
-            </div>
-          ))}
-        </div>
-      )
-    }
-
-    if (list.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-          <div className="p-3 rounded-full bg-muted/50">
-            <Bell className="w-6 h-6 text-muted-foreground/50" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              {search ? 'No notifications match your search' : "You're all caught up"}
-            </p>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="divide-y divide-border/50 border rounded-lg overflow-hidden bg-card">
-        {list.map((notification) => (
-          <NotificationItem 
-            key={notification.id} 
-            notification={notification} 
-            onMarkRead={markAsRead}
-            onDelete={deleteNotification}
-          />
-        ))}
-      </div>
-    )
-  }
 }
