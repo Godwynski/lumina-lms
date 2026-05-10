@@ -10,7 +10,7 @@ const PAGE_SIZE = 12;
 // zero extra network round-trip. The .then() chain is non-blocking.
 function buildUsersPromise() {
   return getMe().then(async (me) => {
-    if (!me) redirect("/login");
+    if (!me) redirect("/");
     const { supabase } = me;
 
     const { data, count, error } = await supabase

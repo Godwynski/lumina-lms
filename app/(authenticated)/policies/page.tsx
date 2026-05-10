@@ -7,7 +7,7 @@ async function PoliciesPageContent() {
   const me = await getMe();
 
   if (!me) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { supabase, profile } = me;

@@ -6,7 +6,7 @@ import { Suspense } from "react";
 // getMe() is cache()-memoized — reuses auth already fetched by the layout
 async function SecurityPageContent() {
   const me = await getMe();
-  if (!me) redirect("/login");
+  if (!me) redirect("/");
 
   return <SecuritySection role={me.profile?.role || "student"} />;
 }

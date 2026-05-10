@@ -8,7 +8,7 @@ async function CatalogGuard({ children }: { children: React.ReactNode }) {
   const user = data?.user;
 
   if (!user) {
-    redirect('/login');
+    redirect('/');
   }
 
   const { data: profile } = await supabase

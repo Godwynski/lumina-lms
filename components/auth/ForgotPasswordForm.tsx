@@ -66,7 +66,7 @@ export function ForgotPasswordForm({
           </CardHeader>
           <CardContent className="pb-8">
             <Button asChild variant="outline" className="h-11 w-full rounded-lg border-input hover:bg-muted">
-              <Link href="/login">
+              <Link href="/">
                 Return to sign in
               </Link>
             </Button>
@@ -119,7 +119,7 @@ export function ForgotPasswordForm({
           </form>
 
           <Link
-            href="/login"
+            href="/"
             className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft size={14} />

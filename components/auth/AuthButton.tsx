@@ -22,13 +22,7 @@ export async function AuthButton() {
   }
 
   if (!user) {
-    return (
-      <div className="flex gap-2">
-        <Button asChild size="sm" variant="outline" className="rounded-full px-5 text-xs font-semibold">
-          <Link href="/login">Sign in</Link>
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   return <UserNav user={user} profile={profile} role={role} />;

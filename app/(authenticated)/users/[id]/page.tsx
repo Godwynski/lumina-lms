@@ -8,7 +8,7 @@ import { mapProfileToUser } from "@/lib/utils/mappers";
 // The profile lookup for the *target* user is the only DB call needed.
 function buildUserDetailPromise(userId: string) {
   return getMe().then(async (me) => {
-    if (!me) redirect("/login");
+    if (!me) redirect("/");
     const { supabase } = me;
 
     const { data, error } = await supabase
