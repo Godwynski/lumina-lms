@@ -1,6 +1,7 @@
 'use server';
 import { createSafeAction } from './action-utils';
-import { cache } from 'react';
+import { revalidateTag, revalidatePath } from 'next/cache';
+import { unstable_cache } from 'next/cache';
 import { BookSchema } from '../validations/catalog';
 import { logger } from '../logger';
 import { createClient, createSafeClient } from '@/lib/supabase/server';
@@ -25,14 +26,13 @@ async function assertStaffCatalogAccess() {
  * @returns Array of categories.
  */
 export const getCategories = async () => {
-  const { unstable_cache } = await import('next/cache');
   return unstable_cache(
-    cache(async () => {
+    async () => {
       const supabase = createSafeClient();
       const { data, error } = await supabase.from('categories').select('id, name, slug, description, is_active, created_at').order('name');
       if (error) throw new Error(error.message);
       return data;
-    }),
+    },
     ['catalog-categories'],
     { revalidate: 3600, tags: ['categories'] }
   )();
@@ -101,7 +101,6 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
 }
 
 export const getBookById = async (id: string) => {
-  const { unstable_cache } = await import('next/cache');
   return unstable_cache(
     async (id: string) => {
       const supabase = createSafeClient();
@@ -154,7 +153,6 @@ export const createBook = createSafeAction(
     }
 
     logger.info('catalog', `Book created: ${bookData.title}`, { bookId: data.id, isbn: bookData.isbn });
-    const { revalidateTag } = await import('next/cache');
     revalidateTag('catalog', 'default');
     revalidateTag('books', 'default');
     
@@ -192,7 +190,6 @@ export const updateBook = createSafeAction(
     if (error) throw new Error(error.message);
     
     logger.info('catalog', `Book updated: ${id}`, { updates: bookData });
-    const { revalidateTag } = await import('next/cache');
     revalidateTag('catalog', 'default');
     revalidateTag(`book-${id}`, 'default');
     
@@ -236,7 +233,6 @@ export const softDeleteBook = createSafeAction(
     if (error) throw new Error(error.message);
     
     logger.warn('catalog', `Book soft-deleted: ${id}`);
-    const { revalidateTag } = await import('next/cache');
     revalidateTag('catalog', 'default');
     revalidateTag('books', 'default');
     
@@ -324,7 +320,7 @@ export const updateBookCopyStatus = createSafeAction(
         .in('status', ['ACTIVE', 'OVERDUE']);
     }
     
-    const { revalidatePath } = await import('next/cache');
+    
     revalidatePath('/catalog');
     revalidatePath(`/catalog/${data.book_id}`);
     

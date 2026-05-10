@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
-import { useTransition, useMemo, useState, useEffect, use } from 'react';
+import { useTransition, useMemo, useState, useEffect, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -68,6 +68,17 @@ export function DashboardClient({
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const [supabase] = useState(() => createClient());
+  
+  // Debounced router.refresh to prevent cascade re-renders
+  // when multiple realtime subscriptions fire simultaneously
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      router.refresh();
+    }, 2000);
+  }, [router]);
   
   // Unwrap promises using 'use' hook
   const stats = use(statsPromise);
@@ -81,27 +92,27 @@ export function DashboardClient({
   const profileData = profileResult.data;
   const activeBorrowsList = stats.activeBorrowsList || [];
 
-  // Real-time synchronization
+  // Real-time synchronization — uses debounced refresh to batch
+  // concurrent changes from multiple table subscriptions
   useEffect(() => {
-    const supabase = createClient();
-    
     const channel = supabase
       .channel('dashboard-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
-        router.refresh();
+        debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'library_cards' }, () => {
-        router.refresh();
+        debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-        router.refresh();
+        debouncedRefresh();
       })
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [supabase, debouncedRefresh]);
 
   useEffect(() => {
     setMounted(true);

@@ -26,7 +26,7 @@ export function useScanner({
   const [cameraIssue, setCameraIssue] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
+  const [devices] = useState<{ id: string; label: string }[]>([]);
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef<{ value: string; time: number } | null>(null);
@@ -188,54 +188,18 @@ export function useScanner({
     }
   }, [facingMode, cameraOpen, stopCamera, startScanner]);
 
+  // Lazy support check — only validates API presence (no device enumeration, no dynamic imports)
   useEffect(() => {
-    const checkSupport = async () => {
-      if (typeof window === 'undefined' || !navigator.mediaDevices) {
-        setCameraSupported(false);
-        setCameraIssue('Camera API not supported in this browser.');
-        return;
-      }
+    if (typeof window === 'undefined' || !navigator.mediaDevices) {
+      setCameraSupported(false);
+      setCameraIssue('Camera API not supported in this browser.');
+      return;
+    }
 
-      if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-        setCameraSupported(false);
-        setCameraIssue('Camera only works on HTTPS or localhost.');
-        return;
-      }
-
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        
-        
-        console.info('[Scanner] Found video devices:', videoDevices.map(d => ({ label: d.label, id: d.deviceId })));
-
-        if (videoDevices.length === 0) {
-          setCameraSupported(false);
-          return;
-        }
-
-        setCameraSupported(true);
-        
-        // Try to get formatted cameras from html5-qrcode for labels
-        try {
-          const { Html5Qrcode } = await import('html5-qrcode');
-          const cameras = await Html5Qrcode.getCameras();
-          setDevices(cameras || []);
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes('NotReadableError') || msg.includes('Could not start video source')) {
-             console.debug('[Scanner] Camera is busy, but hardware detected.');
-             setDevices(videoDevices.map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` })));
-          } else {
-             console.warn('[Scanner] Initial label fetch failed:', err);
-          }
-        }
-      } catch (err) {
-        console.warn('[Scanner] Initial support check failed:', err);
-      }
-    };
-
-    void checkSupport();
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setCameraSupported(false);
+      setCameraIssue('Camera only works on HTTPS or localhost.');
+    }
   }, []);
 
   // Cleanup on unmount

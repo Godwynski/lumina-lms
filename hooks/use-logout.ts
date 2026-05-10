@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export function useLogout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   const logout = async () => {
     try {
