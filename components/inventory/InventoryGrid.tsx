@@ -40,7 +40,7 @@ export function InventoryGrid({ books }: InventoryGridProps) {
     <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
       <AnimatePresence mode="popLayout">
         {books.map((book, index) => (
-          <MemoizedBookCard key={book.id} book={book} priority={index < 4} />
+          <MemoizedBookCard key={book.id} book={book} priority={index < 6} />
         ))}
       </AnimatePresence>
     </div>

@@ -31,9 +31,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { getPublicBookById } from '@/lib/actions/public-catalog';
-import { getBookAvailabilityStatus } from '@/lib/actions/reservations';
-import { getBookById, getBookCopies, getBookReservationQueue } from '@/lib/actions/catalog';
+import { getBookAdminDetails, getBookPublicDetails } from '@/lib/actions/catalog';
 import { cn } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { AdminManagementContent } from './AdminManagementContent';
@@ -63,7 +61,7 @@ interface AvailabilityStatus {
   reservationId: string | null;
 }
 
-type ReservationQueueEntry = Awaited<ReturnType<typeof getBookReservationQueue>>[number];
+type ReservationQueueEntry = Awaited<ReturnType<typeof getBookAdminDetails>>['queue'][number];
 
 interface BookDetailModalProps {
   bookId: string;
@@ -390,22 +388,15 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
     setError(null);
     try {
       if (variant === 'student') {
-        const [book, availability] = await Promise.all([
-          getPublicBookById(bookId),
-          getBookAvailabilityStatus(bookId),
-        ]);
+        const { book, availability } = await getBookPublicDetails(bookId);
         if (!book) {
           setError('Book not found');
           return;
         }
         setStudentData({ book: book as BookDetail, availability });
       } else {
-        // Parallel fetch for admin
-        const [book, copies, queue] = await Promise.all([
-          getBookById(bookId),
-          getBookCopies(bookId),
-          getBookReservationQueue(bookId),
-        ]);
+        // Consolidated fetch for admin (1 roundtrip)
+        const { book, copies, queue } = await getBookAdminDetails(bookId);
         
         if (!book) {
           setError('Book not found');
@@ -413,8 +404,8 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
         }
         setAdminData({ 
           book: book as Book, 
-          copies: copies as BookCopyWithReservation[], 
-          queue 
+          copies, 
+          queue
         });
       }
     } catch (err) {

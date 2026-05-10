@@ -16,6 +16,7 @@ import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 
 interface StudentBookCardProps {
   book: Book;
+  priority?: boolean;
   reservedInfo?: {
     status: string;
     queuePosition: number;
@@ -23,7 +24,7 @@ interface StudentBookCardProps {
   onReserveSuccess?: (queuePosition: number, status: "READY" | "ACTIVE") => void;
 }
 
-export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: StudentBookCardProps) {
+export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess }: StudentBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   const isReady = reservedInfo?.status === "READY";
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,6 +87,7 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
                   fill 
                   className="object-cover" 
                   sizes="80px"
+                  priority={priority}
                   unoptimized
                 />
               ) : (

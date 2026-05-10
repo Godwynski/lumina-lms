@@ -34,7 +34,15 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("audit_logs")
-      .select("*", { count: "exact" })
+      .select(`
+        *,
+        profiles:admin_id (
+          id,
+          full_name,
+          email,
+          role
+        )
+      `, { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -51,29 +59,13 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    const logs = data || [];
-    const adminIds = [...new Set(logs.map((l) => l.admin_id).filter(Boolean))];
-
-    let profilesMap = new Map<string, { full_name: string | null; email: string | null; role: string | null }>();
-    if (adminIds.length > 0) {
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, role")
-        .in("id", adminIds);
-      profilesMap = new Map((profilesData ?? []).map((p) => [p.id, p]));
-    }
-
-    const enrichedLogs = logs.map((log) => ({
-      ...log,
-      profiles: log.admin_id ? profilesMap.get(log.admin_id) ?? null : null,
-    }));
-
     return NextResponse.json({
-      logs: enrichedLogs,
+      logs: data || [],
       total: count || 0,
       limit,
       offset,
     });
+
   } catch (error) {
     if (isAbortError(error)) {
       return new Response(null, { status: 499 }); // Client Closed Request

@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import {
-  getBookCopies,
   updateBookCopyStatus,
   updateBook,
   softDeleteBook,
-  getBookReservationQueue,
+  getBookAdminDetails,
 } from '@/lib/actions/catalog';
 import {
   BookOpen,
@@ -56,7 +55,7 @@ function isBookCopyStatus(v: string): v is BookCopyWithReservation['status'] {
   return ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'LOST', 'RESERVED'].includes(v);
 }
 
-type ReservationQueueEntry = Awaited<ReturnType<typeof getBookReservationQueue>>[number];
+type ReservationQueueEntry = Awaited<ReturnType<typeof getBookAdminDetails>>['queue'][number];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -185,11 +184,8 @@ export function AdminManagementContent({
 
   const fetchData = useCallback(async () => {
     try {
-      const [updatedCopies, updatedQueue] = await Promise.all([
-        getBookCopies(initialBook.id),
-        getBookReservationQueue(initialBook.id),
-      ]);
-      setCopies(updatedCopies as BookCopyWithReservation[]);
+      const { copies: updatedCopies, queue: updatedQueue } = await getBookAdminDetails(initialBook.id);
+      setCopies(updatedCopies);
       setReservationQueue(updatedQueue);
     } catch (err) {
       console.error('Failed to fetch admin book details', err);

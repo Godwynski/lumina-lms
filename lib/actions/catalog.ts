@@ -1,4 +1,5 @@
 'use server';
+import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { createSafeAction } from './action-utils';
 import { revalidateTag, revalidatePath } from 'next/cache';
 import { unstable_cache } from 'next/cache';
@@ -6,9 +7,11 @@ import { BookSchema } from '../validations/catalog';
 import { logger } from '../logger';
 import { createClient, createSafeClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { getPublicBookById } from './public-catalog';
+import { getBookAvailabilityStatus } from './reservations';
+import { getMe } from '@/lib/auth-helpers';
 
 async function assertStaffCatalogAccess() {
-  const { getMe } = await import('@/lib/auth-helpers');
   const me = await getMe();
   const role = me?.role;
 
@@ -374,4 +377,112 @@ export async function getBookReservationQueue(bookId: string) {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+/**
+ * Consolidated action for student view.
+ */
+export async function getBookPublicDetails(bookId: string) {
+  const [book, availability] = await Promise.all([
+    getPublicBookById(bookId),
+    getBookAvailabilityStatus(bookId),
+  ]);
+  return { book: book as Book, availability };
+}
 
+export interface AdminReservationQueueEntry {
+  id: string;
+  status: string;
+  queue_position: number;
+  hold_expires_at: string | null;
+  reserved_at: string;
+  user_id: string;
+  profiles: {
+    full_name: string | null;
+    email: string | null;
+    student_id: string | null;
+  } | {
+    full_name: string | null;
+    email: string | null;
+    student_id: string | null;
+  }[] | null;
+}
+
+/**
+ * Consolidated action to fetch all data needed for the admin management view in one round-trip.
+ * Combines book copies (with active reservations) and the full reservation queue.
+ */
+export async function getBookAdminDetails(bookId: string) {
+  const supabase = await assertStaffCatalogAccess();
+
+  const [bookResponse, copiesResponse, queueResponse] = await Promise.all([
+    supabase
+      .from('books')
+      .select(`*, categories(name)`)
+      .eq('id', bookId)
+      .single(),
+    supabase
+      .from('book_copies')
+      .select(`
+        id, book_id, status, condition, qr_string, created_at,
+        reservations!copy_id (
+          id,
+          status,
+          queue_position,
+          hold_expires_at,
+          profiles!user_id (
+            id,
+            full_name,
+            email,
+            student_id
+          )
+        )
+      `)
+      .eq('book_id', bookId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('reservations')
+      .select(`
+        id,
+        status,
+        queue_position,
+        hold_expires_at,
+        reserved_at,
+        copy_id,
+        profiles!user_id (
+          id,
+          full_name,
+          email,
+          student_id,
+          avatar_url
+        ),
+        book_copies!copy_id (
+          qr_string
+        )
+      `)
+      .eq('book_id', bookId)
+      .in('status', ['READY', 'ACTIVE'])
+      .order('status', { ascending: false })
+      .order('queue_position', { ascending: true })
+      .order('reserved_at', { ascending: true })
+  ]);
+
+  if (bookResponse.error) throw new Error(bookResponse.error.message);
+  if (copiesResponse.error) throw new Error(copiesResponse.error.message);
+  if (queueResponse.error) throw new Error(queueResponse.error.message);
+
+  const normalizedCopies = (copiesResponse.data ?? []).map((copy) => {
+    const copyData = copy as Record<string, unknown>;
+    const raws = Array.isArray(copyData.reservations) ? copyData.reservations : copyData.reservations ? [copyData.reservations] : [];
+    const activeRes = raws.find(
+      (r: { status: string }) => r.status === 'READY' || r.status === 'ACTIVE'
+    ) ?? null;
+    const rest = { ...copyData };
+    delete rest.reservations;
+    return { ...rest, reservation: activeRes } as unknown as BookCopyWithReservation;
+  });
+
+  return {
+    book: bookResponse.data as unknown as Book,
+    copies: normalizedCopies,
+    queue: (queueResponse.data ?? []) as unknown as AdminReservationQueueEntry[]
+  };
+}
