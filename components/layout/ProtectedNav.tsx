@@ -9,7 +9,6 @@ import {
   Settings,
   Library,
   Users,
-  History,
   Clock,
   RefreshCw,
   ScrollText,
@@ -17,7 +16,7 @@ import {
   LogOut,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 
 import { Logo } from "@/components/layout/Logo";
 import {
@@ -35,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useCallback, memo, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLogout } from "@/hooks/use-logout";
 import { SWRConfig } from "swr";
 import {
@@ -57,18 +56,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 
 type Role = "student" | "staff" | "librarian" | "admin" | null;
 
@@ -101,14 +92,7 @@ type NavItem = {
   exactRoles?: Exclude<Role, null>[];
 };
 
-type NavGroup = {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  minRole?: Exclude<Role, null>;
-  exactRoles?: Exclude<Role, null>[];
-  children: NavItem[];
-};
+
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
