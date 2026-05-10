@@ -27,7 +27,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "./AdminTableShell";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = new Error('An error occurred while fetching the data.');
+    // Attach extra info to the error object.
+    (error as any).info = await res.json();
+    (error as any).status = res.status;
+    throw error;
+  }
+  return res.json();
+};
 
 type AuditLogDetailItem = Record<string, unknown> | string | number;
 
@@ -265,7 +275,7 @@ export function AuditLogClient() {
           </div>
         )}
 
-        {data?.logs.length === 0 && (
+        {data?.logs?.length === 0 && (
           <div className="h-48 flex flex-col items-center justify-center gap-2 opacity-50 bg-muted/20 rounded-xl border border-border border-dashed">
             <Database className="h-10 w-10 text-muted-foreground" />
             <span className="text-sm font-medium">No results match your search.</span>
@@ -283,7 +293,7 @@ export function AuditLogClient() {
           </div>
         )}
 
-        {data && data.logs.length > 0 && (
+        {data?.logs && data.logs.length > 0 && (
           <div className="relative border-l-2 border-border/30 pl-6 ml-2 md:ml-6 space-y-8 py-2">
             {data.logs.map((log) => {
               const date = log.created_at ? new Date(log.created_at) : new Date();

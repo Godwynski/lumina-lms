@@ -34,15 +34,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("audit_logs")
-      .select(`
-        *,
-        profiles:admin_id (
-          id,
-          full_name,
-          email,
-          role
-        )
-      `, { count: "exact" })
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -55,12 +47,30 @@ export async function GET(request: NextRequest) {
       query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%,reason.ilike.%${safe}%`);
     }
 
-    const { data, error, count } = await query;
+    const { data: logs, error, count } = await query;
 
     if (error) throw error;
 
+    // Manual join since audit_logs has no FK to profiles
+    const adminIds = [...new Set((logs || []).map(l => l.admin_id).filter(Boolean))];
+    let profilesMap = new Map();
+
+    if (adminIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, role")
+        .in("id", adminIds);
+      
+      profiles?.forEach(p => profilesMap.set(p.id, p));
+    }
+
+    const logsWithProfiles = (logs || []).map(log => ({
+      ...log,
+      profiles: profilesMap.get(log.admin_id) || null
+    }));
+
     return NextResponse.json({
-      logs: data || [],
+      logs: logsWithProfiles,
       total: count || 0,
       limit,
       offset,
