@@ -5,16 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
-  ChevronRight,
   LayoutDashboard,
   Settings,
   Library,
   Users,
   History,
+  Clock,
+  RefreshCw,
+  ScrollText,
   ChevronsUpDown,
   LogOut,
   Loader2,
-  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -109,38 +110,15 @@ type NavGroup = {
   children: NavItem[];
 };
 
-const DASHBOARD_LINK: NavItem = {
-  href: "/dashboard",
-  label: "Dashboard",
-  icon: LayoutDashboard,
-  minRole: "student",
-};
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    id: "library",
-    label: "Library",
-    icon: Library,
-    minRole: "student",
-    children: [
-      { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
-      { href: "/circulation", label: "Circulation Desk", icon: History, minRole: "staff" },
-      { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
-    ],
-  },
-  {
-    id: "administration",
-    label: "Administration",
-    icon: Shield,
-    minRole: "librarian",
-    children: [
-      { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
-      { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
-      { href: "/audit", label: "Audit Logs", icon: History, minRole: "admin" },
-    ],
-  },
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
+  { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
+  { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "staff" },
+  { href: "/history", label: "Borrow History", icon: Clock, minRole: "student" },
+  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
+  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
+  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
 ];
-
 
 // Prefetch helper
 const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
@@ -148,98 +126,6 @@ const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
     router.prefetch(href);
   }
 };
-
-// Optimized sub-menu item to prevent re-renders when other items change
-const NavSubItem = memo(({ 
-  item, 
-  isActive, 
-  onMouseEnter,
-  onNavigate
-}: { 
-  item: NavItem; 
-  isActive: boolean; 
-  onMouseEnter: (href: string) => void;
-  onNavigate: (href: string) => void;
-}) => (
-  <SidebarMenuSubItem>
-    <SidebarMenuSubButton asChild isActive={isActive}>
-      <Link 
-        href={item.href} 
-        className="flex items-center gap-2"
-        onMouseEnter={() => onMouseEnter(item.href)}
-        onClick={(e) => {
-          e.currentTarget.blur();
-          onNavigate(item.href);
-        }}
-      >
-        <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isActive ? "bg-sidebar-primary animate-pulse" : "bg-sidebar-border")} />
-        <span className={cn("truncate group-data-[collapsible=icon]:hidden", isActive && "font-semibold text-sidebar-primary")}>{item.label}</span>
-      </Link>
-    </SidebarMenuSubButton>
-  </SidebarMenuSubItem>
-));
-NavSubItem.displayName = "NavSubItem";
-
-// Memoized group item to prevent heavy DOM reconciliations on parent state change
-const NavGroupItem = memo(({ 
-  group, 
-  isOpen, 
-  onToggle, 
-  isActive,
-  onMouseEnter,
-  onNavigate
-}: { 
-  group: NavGroup; 
-  isOpen: boolean; 
-  onToggle: (id: string) => void;
-  isActive: (href: string) => boolean;
-  onMouseEnter: (href: string) => void;
-  onNavigate: (href: string) => void;
-}) => {
-  const { state, setOpen } = useSidebar();
-  const isGroupActive = group.children.some(child => isActive(child.href));
-
-  return (
-    <SidebarMenuItem>
-      <Collapsible
-        open={isOpen}
-        onOpenChange={() => onToggle(group.id)}
-        className="group/collapsible"
-      >
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            tooltip={group.label}
-            isActive={isGroupActive}
-            onClick={() => {
-              if (state === "collapsed") {
-                setOpen(true);
-              }
-            }}
-          >
-            <group.icon />
-            <span className="group-data-[collapsible=icon]:hidden">{group.label}</span>
-            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down px-2">
-          <SidebarMenuSub>
-            {group.children.map((item) => (
-              <NavSubItem 
-                key={item.href}
-                item={item}
-                isActive={isActive(item.href)}
-                onMouseEnter={onMouseEnter}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </Collapsible>
-    </SidebarMenuItem>
-  );
-});
-
-NavGroupItem.displayName = "NavGroupItem";
 
 export function ProtectedNav({
   role,
@@ -255,6 +141,8 @@ export function ProtectedNav({
   const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const { setOpen, open, isMobile } = useSidebar();
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleSignOut = async () => {
     setLogoutDialogOpen(false);
@@ -280,7 +168,6 @@ export function ProtectedNav({
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   useEffect(() => {
-    // Pro-tip: Clear pending route when natively navigated
     setPendingRoute(null);
   }, [pathname]);
 
@@ -288,7 +175,6 @@ export function ProtectedNav({
     if (pathname === href) return;
     const pathWithoutQuery = pathname.split("?")[0];
     const hrefBase = href.split("?")[0];
-    // If we're already on the base path and it's not a tab switch, we ignore to avoid flicker.
     if (pathWithoutQuery === hrefBase && !href.includes("?tab=")) return;
     
     setPendingRoute(href);
@@ -303,8 +189,6 @@ export function ProtectedNav({
   }), [name, email, avatarUrl, initials]);
 
   const isActive = useCallback((href: string) => {
-    // If we have a pending route, that is the ONLY item that can be active.
-    // This immediately deselects the old item.
     if (pendingRoute !== null) {
       return pendingRoute === href;
     }
@@ -327,51 +211,9 @@ export function ProtectedNav({
     return pathWithoutQuery.startsWith(hrefBase);
   }, [pathname, currentTab, pendingRoute]);
 
-  const filteredGroups = useMemo(() => {
-    return NAV_GROUPS.map(group => ({
-      ...group,
-      children: group.children.filter(child => hasPermission(normalizedRole, child.minRole, child.exactRoles))
-    })).filter(group => {
-      const canSeeGroup = hasPermission(normalizedRole, group.minRole, group.exactRoles);
-      const hasVisibleChildren = group.children.length > 0;
-      return canSeeGroup && hasVisibleChildren;
-    });
+  const visibleItems = useMemo(() => {
+    return NAV_ITEMS.filter(item => hasPermission(normalizedRole, item.minRole, item.exactRoles));
   }, [normalizedRole]);
-
-  const allVisibleGroups = filteredGroups;
-
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    allVisibleGroups.forEach(group => {
-      if (group.children.some(child => isActive(child.href))) {
-        initial[group.id] = true;
-      }
-    });
-    return initial;
-  });
-
-  // Track if we need to expand a group because of a new pathname
-  useEffect(() => {
-    let changed = false;
-    const nextOpenGroups = { ...openGroups };
-
-    allVisibleGroups.forEach((group) => {
-      if (group.children.some((child) => isActive(child.href)) && !openGroups[group.id]) {
-        nextOpenGroups[group.id] = true;
-        changed = true;
-      }
-    });
-
-    if (changed) {
-      setOpenGroups(nextOpenGroups);
-    }
-  }, [pathname, allVisibleGroups, isActive, openGroups]);
-
-  const toggleGroup = useCallback((groupId: string) => {
-    setOpenGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-  }, []);
-
-  const dashboardActive = isActive(DASHBOARD_LINK.href);
 
   const handlePrefetch = useCallback((href: string) => {
     prefetch(router, href);
@@ -385,7 +227,22 @@ export function ProtectedNav({
         dedupingInterval: 5000,
       }}
     >
-      <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
+    <Sidebar 
+      collapsible="icon" 
+      className="border-r border-sidebar-border bg-sidebar"
+      onMouseEnter={() => {
+        if (!open && !isMobile) {
+          setOpen(true);
+          setIsHovered(true);
+        }
+      }}
+      onMouseLeave={() => {
+        if (isHovered && !isMobile) {
+          setOpen(false);
+          setIsHovered(false);
+        }
+      }}
+    >
       <SidebarHeader className="flex flex-row h-16 shrink-0 items-center gap-4 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
         <SidebarTrigger className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors group-data-[collapsible=icon]:flex" />
         <Link 
@@ -405,36 +262,27 @@ export function ProtectedNav({
         <nav className="flex flex-col gap-4" aria-label="Main Navigation">
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={dashboardActive}
-                  tooltip={DASHBOARD_LINK.label}
-                >
-                  <Link 
-                    href={DASHBOARD_LINK.href} 
-                    className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
-                    onClick={(e) => {
-                      e.currentTarget.blur();
-                      handleNavigate(DASHBOARD_LINK.href);
-                    }}
+              {visibleItems.map(item => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.href)}
+                    tooltip={item.label}
                   >
-                    {DASHBOARD_LINK.icon && <DASHBOARD_LINK.icon className="shrink-0" />}
-                    <span className="truncate group-data-[collapsible=icon]:hidden">{DASHBOARD_LINK.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {filteredGroups.map(group => (
-                <NavGroupItem 
-                  key={group.id}
-                  group={group}
-                  isOpen={openGroups[group.id] || false}
-                  onToggle={toggleGroup}
-                  isActive={isActive}
-                  onMouseEnter={handlePrefetch}
-                  onNavigate={handleNavigate}
-                />
+                    <Link 
+                      href={item.href} 
+                      className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
+                      onClick={(e) => {
+                        e.currentTarget.blur();
+                        handleNavigate(item.href);
+                      }}
+                      onMouseEnter={() => handlePrefetch(item.href)}
+                    >
+                      {item.icon && <item.icon className="shrink-0" />}
+                      <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroup>
