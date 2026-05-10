@@ -476,7 +476,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
         )}
 
         {!error && activeStudentData && variant === 'student' && (
-          <div className={cn("transition-opacity duration-300", loading ? "opacity-50" : "opacity-100")}>
+          <div>
             <StudentModalContent
               book={activeStudentData.book}
               availability={activeStudentData.availability}
@@ -486,7 +486,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
         )}
 
         {!error && activeAdminData && variant === 'admin' && (
-          <div className={cn("transition-opacity duration-300", (loading && !activeAdminData?.copies) ? "opacity-50" : "opacity-100")}>
+          <div>
             <AdminManagementContent 
               initialBook={activeAdminData.book} 
               initialCopies={activeAdminData.copies}
