@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logAuditActivity } from "@/lib/audit";
 
 // Types for graduation cleanup
 interface GraduationCleanupResult {
@@ -89,18 +90,17 @@ export async function POST(request: NextRequest) {
               .update({ status: "expired" })
               .eq("user_id", student.id);
 
-            // Log audit entry
-            await supabase.from("audit_logs").insert([
-              {
-                admin_id: user.id,
-                entity_type: "profile",
-                entity_id: student.id,
-                action: "update",
-                old_value: JSON.stringify({ status: "active" }),
-                new_value: JSON.stringify({ status: "graduated" }),
-                reason: "Batch graduation cleanup - no active borrows",
-              },
-            ]);
+            // Log audit entry using unified utility
+            await logAuditActivity(
+              user.id,
+              "profile",
+              student.id,
+              "update",
+              "Batch graduation cleanup - no active borrows",
+              { batch: true },
+              { status: student.status },
+              { status: "graduated" }
+            );
           }
 
           result.deactivatedCount++;
@@ -128,6 +128,17 @@ export async function POST(request: NextRequest) {
           reason: err instanceof Error ? err.message : "Unknown error",
         });
       }
+    }
+
+    if (!dryRun && result.deactivatedCount > 0) {
+      await logAuditActivity(
+        user.id,
+        "system",
+        null,
+        "graduation_cleanup",
+        `Completed graduation cleanup batch: ${result.deactivatedCount} students deactivated.`,
+        { ...result }
+      );
     }
 
     return NextResponse.json({

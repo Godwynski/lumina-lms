@@ -128,7 +128,10 @@ export const POST = withAuthApi(
       "profile",
       profile.id,
       "role_updated",
-      `Upgraded user ${email} to ${role} (status set to pending)`
+      `Upgraded user ${email} to ${role} (status set to pending)`,
+      { department: updates.department },
+      { role: profile.role, status: profile.status, department: profile.department },
+      { role: updated.role, status: updated.status, department: updated.department }
     );
 
     return apiSuccess({
@@ -243,7 +246,10 @@ export const PATCH = withAuthApi(
       "profile",
       id,
       "profile_updated",
-      `Modified user profile fields: ${Object.keys(updates).join(", ")}`
+      `Modified user profile fields: ${Object.keys(updates).join(", ")}`,
+      { updatedFields: Object.keys(updates) },
+      profile,
+      updated
     );
 
     return apiSuccess({

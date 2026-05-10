@@ -57,8 +57,8 @@ export function PersonalInfoForm({
       {/* Locked: Full Name */}
       <div className="space-y-2">
         <LockedLabel>Full Name</LockedLabel>
-        <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-bold text-foreground/80 shadow-sm">
-          {initialProfile.full_name || "Not Set"}
+        <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-bold text-foreground/80 shadow-sm overflow-hidden">
+          <span className="truncate w-full">{initialProfile.full_name || "Not Set"}</span>
         </div>
       </div>
 
@@ -66,15 +66,15 @@ export function PersonalInfoForm({
       <div className="grid gap-5 sm:grid-cols-3">
         <div className="space-y-2">
           <LockedLabel>Student ID</LockedLabel>
-          <div className="h-11 rounded-xl bg-primary/5 border border-primary/10 px-4 flex items-center text-sm font-mono font-bold text-primary shadow-sm">
-            {initialProfile.student_id || "NOT-ASSIGNED"}
+          <div className="h-11 rounded-xl bg-primary/5 border border-primary/10 px-4 flex items-center text-sm font-mono font-bold text-primary shadow-sm overflow-hidden">
+            <span className="truncate w-full">{initialProfile.student_id || "NOT-ASSIGNED"}</span>
           </div>
         </div>
 
         <div className="space-y-2">
           <LockedLabel>Official Email</LockedLabel>
-          <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-semibold text-foreground/70 shadow-sm">
-            {initialProfile.email || "No Email"}
+          <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-semibold text-foreground/70 shadow-sm overflow-hidden">
+            <span className="truncate w-full">{initialProfile.email || "No Email"}</span>
           </div>
         </div>
 
@@ -116,8 +116,8 @@ export function PersonalInfoForm({
       {role === 'student' && (
         <div className="space-y-2">
           <LockedLabel>Academic Program</LockedLabel>
-          <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-bold text-foreground/80 shadow-sm">
-            {departmentValue || <span className="text-muted-foreground/50 font-medium">Not Assigned</span>}
+          <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-bold text-foreground/80 shadow-sm overflow-hidden">
+            <span className="truncate w-full">{departmentValue || <span className="text-muted-foreground/50 font-medium">Not Assigned</span>}</span>
           </div>
         </div>
       )}

@@ -4,6 +4,26 @@ import { logger } from '@/lib/logger';
 type NotificationType = 'SYSTEM' | 'CIRCULATION' | 'RESERVATION' | 'OVERDUE' | 'ACCOUNT' | 'DUE_SOON' | 'RESERVATION_EXPIRED';
 type NotificationPriority = 'low' | 'medium' | 'high';
 
+interface BorrowingRecordWithDetails {
+  id: string;
+  user_id: string;
+  due_date: string;
+  status: string;
+  reminder_sent: boolean;
+  profiles: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+  book_copy: {
+    book_id: string;
+    book: {
+      title: string;
+      author: string | null;
+      cover_url: string | null;
+    } | null;
+  } | null;
+}
+
 // ... (sendNotification and sendBulkNotifications logic stays same, just adding new functions below)
 
 /**
@@ -13,8 +33,19 @@ type NotificationPriority = 'low' | 'medium' | 'high';
 export async function runMaintenanceTasks() {
   const supabaseAdmin = createAdminClient();
   const now = new Date();
-  const twoDaysFromNow = new Date(now.getTime() + (2 * 24 * 60 * 60 * 1000));
   
+  // Fetch system settings
+  const { data: settingsData } = await supabaseAdmin
+    .from('system_settings')
+    .select('key, value');
+  
+  const settings = (settingsData || []).reduce((acc, curr) => {
+    acc[curr.key] = curr.value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const dueSoonDays = parseInt(settings['due_soon_reminder_days'] || '1', 10);
+
   const results = {
     remindersSent: 0,
     overdueTagged: 0,
@@ -22,25 +53,41 @@ export async function runMaintenanceTasks() {
     errors: [] as string[]
   };
 
-  // 1. Due Soon Reminders (Due in <= 2 days, not yet reminded, not yet returned)
+  // 1. Due Soon Reminders (Based on configured dueSoonDays)
   try {
+    const dueSoonThreshold = new Date(now.getTime() + (dueSoonDays * 24 * 60 * 60 * 1000));
     const { data: dueSoon, error: dueSoonError } = await supabaseAdmin
       .from('borrowing_records')
-      .select('*, profiles:user_id(full_name), books:book_id(title)')
-      .eq('status', 'BORROWED')
+      .select(`
+        *,
+        profiles:user_id(full_name, email),
+        book_copy:book_copy_id(
+          book:book_id(title, author, cover_url)
+        )
+      `)
+      .eq('status', 'ACTIVE')
       .eq('reminder_sent', false)
-      .lte('due_date', twoDaysFromNow.toISOString())
+      .lte('due_date', dueSoonThreshold.toISOString())
       .gt('due_date', now.toISOString());
 
     if (dueSoonError) throw dueSoonError;
 
-    for (const record of dueSoon || []) {
+    const records = (dueSoon as unknown as BorrowingRecordWithDetails[]) || [];
+    for (const record of records) {
+      const book = record.book_copy?.book;
+      const dueDate = new Date(record.due_date);
       const { success } = await sendNotification({
         userId: record.user_id,
         title: 'Reminder: Book Due Soon',
-        content: `Your borrowed book "${record.books.title}" is due on ${new Date(record.due_date).toLocaleDateString()}. Please return or renew it to avoid fines.`,
+        content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} is due on ${dueDate.toLocaleDateString()}. Please return or renew it to avoid fines.`,
         type: 'DUE_SOON',
-        priority: 'medium'
+        priority: 'medium',
+        metadata: {
+          bookId: record.book_copy?.book_id,
+          bookTitle: book?.title,
+          coverUrl: book?.cover_url,
+          dueDate: record.due_date
+        }
       });
 
       if (success) {
@@ -48,6 +95,7 @@ export async function runMaintenanceTasks() {
           .from('borrowing_records')
           .update({ reminder_sent: true })
           .eq('id', record.id);
+        
         results.remindersSent++;
       }
     }
@@ -55,29 +103,60 @@ export async function runMaintenanceTasks() {
     results.errors.push(`Reminders error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // 2. Overdue Check (Actually overdue, status still BORROWED)
+  // 2. Overdue Check (Actually overdue, status still ACTIVE or already OVERDUE but notify again if needed)
   try {
     const { data: overdue, error: overdueError } = await supabaseAdmin
       .from('borrowing_records')
-      .select('*, profiles:user_id(full_name), books:book_id(title)')
-      .eq('status', 'BORROWED')
+      .select(`
+        *,
+        profiles:user_id(full_name, email),
+        book_copy:book_copy_id(
+          book:book_id(title, author, cover_url)
+        )
+      `)
+      .in('status', ['ACTIVE', 'OVERDUE'])
       .lt('due_date', now.toISOString());
 
     if (overdueError) throw overdueError;
 
-    for (const record of overdue || []) {
-      // Update status to OVERDUE if it isn't already
-      // Note: We might need to check if your system uses an 'OVERDUE' status in borrowing_records
+    const records = (overdue as unknown as BorrowingRecordWithDetails[]) || [];
+    for (const record of records) {
+      const book = record.book_copy?.book;
+      const dueDate = new Date(record.due_date);
+      const overdueDays = Math.floor((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
       
-      const { success } = await sendNotification({
-        userId: record.user_id,
-        title: 'URGENT: Book Overdue',
-        content: `Your borrowed book "${record.books.title}" was due on ${new Date(record.due_date).toLocaleDateString()} and is now overdue. Please return it immediately.`,
-        type: 'OVERDUE',
-        priority: 'high'
-      });
+      const isInitialOverdue = record.status !== 'OVERDUE';
 
-      if (success) results.overdueTagged++;
+      // Update status to OVERDUE if it isn't already
+      if (isInitialOverdue) {
+        await supabaseAdmin
+          .from('borrowing_records')
+          .update({ status: 'OVERDUE', updated_at: now.toISOString() })
+          .eq('id', record.id);
+      }
+
+      // Only notify if it just became overdue, or if it's a recurring check (e.g. every 7 days)
+      // For now, let's stick to a strong notification when it first becomes overdue.
+      if (isInitialOverdue) {
+        const { success } = await sendNotification({
+          userId: record.user_id,
+          title: 'URGENT: Book Overdue',
+          content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} was due on ${dueDate.toLocaleDateString()} and is now ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue. Please return it immediately to the Main Library circulation desk.`,
+          type: 'OVERDUE',
+          priority: 'high',
+          metadata: {
+            bookId: record.book_copy?.book_id,
+            bookTitle: book?.title,
+            coverUrl: book?.cover_url,
+            dueDate: record.due_date,
+            overdueDays
+          }
+        });
+
+        if (success) {
+          results.overdueTagged++;
+        }
+      }
     }
   } catch (err: unknown) {
     results.errors.push(`Overdue check error: ${err instanceof Error ? err.message : String(err)}`);

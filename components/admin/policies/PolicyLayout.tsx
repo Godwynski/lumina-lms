@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   AlertCircle, 
-  ChevronRight, 
   ShieldCheck, 
   History, 
   Ticket, 
@@ -23,13 +22,14 @@ import { PolicyField } from "./PolicyField";
 import { AnnualResetTool } from "../../settings/SettingsShared";
 import { SystemAnnouncement } from "../system-announcement";
 import { CategoryManagement } from "../CategoryManagement";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const CATEGORY_MAP: Record<string, { label: string; icon: React.ElementType; group: string }> = {
   circulation: { label: "Circulation", icon: History, group: "System Core" },
   reservations: { label: "Reservations", icon: Ticket, group: "System Core" },
   identity: { label: "Identity", icon: User, group: "System Data" },
   categories: { label: "Categories", icon: Tag, group: "System Data" },
-  announcements: { label: "Announcements", icon: Megaphone, group: "Communication" },
+  broadcasts: { label: "Broadcasts", icon: Megaphone, group: "Communication" },
   support: { label: "Support", icon: HelpCircle, group: "Communication" },
   lifecycle: { label: "Lifecycle", icon: RefreshCw, group: "Operations" },
 };
@@ -74,7 +74,7 @@ export function PolicyLayout({
     { id: "reservations", ...CATEGORY_MAP.reservations },
     { id: "identity", ...CATEGORY_MAP.identity },
     { id: "categories", ...CATEGORY_MAP.categories },
-    { id: "announcements", ...CATEGORY_MAP.announcements },
+    { id: "broadcasts", ...CATEGORY_MAP.broadcasts },
     { id: "support", ...CATEGORY_MAP.support },
     { id: "lifecycle", ...CATEGORY_MAP.lifecycle },
   ], []);
@@ -169,30 +169,32 @@ export function PolicyLayout({
         </div>
 
         {/* Desktop Sidebar Navigation */}
-        <aside className="hidden lg:block space-y-6">
+        <aside className="hidden lg:block space-y-8 sticky top-12">
           {Object.entries(groupedSidebar).map(([group, items]) => (
             <div key={group} className="space-y-2">
-              <p className="px-3 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 border-l-2 border-primary/20 ml-1">
+              <p className="px-4 text-[10px] font-semibold text-muted-foreground/30 uppercase tracking-[0.15em]">
                 {group}
               </p>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {items.map(item => (
                   <button
                     key={item.id}
                     onClick={() => setActiveCategory(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all group",
+                      "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group relative",
                       activeCategory === item.id 
-                        ? "bg-primary/10 text-primary shadow-sm" 
-                        : "text-muted-foreground/60 hover:bg-muted/40 hover:text-foreground"
+                        ? "text-primary font-semibold bg-primary/5" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                     )}
                   >
-                    <item.icon size={14} className={cn(
+                    {activeCategory === item.id && (
+                      <div className="absolute left-0 w-1 h-4 bg-primary rounded-r-full" />
+                    )}
+                    <item.icon size={16} className={cn(
                       "shrink-0 transition-colors",
                       activeCategory === item.id ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"
                     )} />
                     <span className="flex-1 text-left">{item.label}</span>
-                    {activeCategory === item.id && <ChevronRight className="h-3 w-3 animate-in fade-in slide-in-from-left-1" />}
                   </button>
                 ))}
               </div>
@@ -201,69 +203,107 @@ export function PolicyLayout({
         </aside>
 
         {/* ── Content ───────────────────────────────────────────── */}
-        <main className="min-w-0 space-y-6">
-           <div className="grid gap-4">
-              {activeCategory === "announcements" ? (
-                <div className="rounded-2xl border border-border/40 bg-card/30 p-5 shadow-none">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 mb-4">
-                    System Broadcast
-                  </p>
-                  <SystemAnnouncement />
+        <main className="min-w-0">
+           <div className="max-w-3xl">
+             <TooltipProvider>
+              {activeCategory === "broadcasts" ? (
+                <div className="space-y-12">
+                  <section className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <Megaphone className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground">Global Announcement</h4>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
+                      </div>
+                    </div>
+                    <div className="p-6 rounded-2xl border border-border/40 bg-muted/5 shadow-sm">
+                      <SystemAnnouncement />
+                    </div>
+                  </section>
+
+                  <section className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground">Trigger Policies</h4>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">Set the rules for automated system alerts and borrowing reminders.</p>
+                      </div>
+                    </div>
+                    <div className="space-y-0">
+                      {activeKeys.map(key => (
+                        <PolicyField 
+                          key={key}
+                          policyKey={key}
+                          value={formData[key]}
+                          initialValue={initialValues[key]}
+                          onChange={(val) => handleChange(key, val)}
+                          disabled={!canEdit}
+                          loading={loading}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 </div>
               ) : activeCategory === "categories" ? (
-                <div className="rounded-2xl border border-border/40 bg-card/30 p-5 shadow-none">
+                <div className="space-y-6">
                   <Suspense fallback={<div className="h-48 w-full animate-pulse bg-muted/40 rounded-xl" />}>
                      <CategoryManagementWrapper promise={categoriesPromise} />
                   </Suspense>
                 </div>
               ) : activeCategory === "lifecycle" ? (
-                <div className="rounded-2xl border border-border/40 bg-card/30 p-5 shadow-none">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 mb-4">
-                    Annual Reset
-                  </p>
+                <div className="space-y-6">
                   <AnnualResetTool />
                 </div>
               ) : (
-                activeKeys.map(key => (
-                  <PolicyField 
-                    key={key}
-                    policyKey={key}
-                    value={formData[key]}
-                    initialValue={initialValues[key]}
-                    onChange={(val) => handleChange(key, val)}
-                    disabled={!canEdit}
-                    loading={loading}
-                  />
-                ))
+                <div className="space-y-0">
+                  {activeKeys.map(key => (
+                    <PolicyField 
+                      key={key}
+                      policyKey={key}
+                      value={formData[key]}
+                      initialValue={initialValues[key]}
+                      onChange={(val) => handleChange(key, val)}
+                      disabled={!canEdit}
+                      loading={loading}
+                    />
+                  ))}
+                </div>
               )}
+             </TooltipProvider>
            </div>
         </main>
 
         {/* ── Simulation (Hidden on mobile by grid/aside) ───────── */}
-        <aside className="hidden lg:block">
-           <PolicySimulationPanel formData={formData} />
+        <aside className="hidden lg:block sticky top-12">
+           <div className="bg-muted/5 rounded-2xl border border-border/40 p-6">
+              <PolicySimulationPanel formData={formData} />
+           </div>
         </aside>
       </div>
 
       {/* ── Floating Review Bar ───────────────────────────────── */}
       {canEdit && changedKeys.length > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md animate-in slide-in-from-bottom-8 duration-500">
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/80 bg-background/90 p-1.5 pl-4 shadow-2xl backdrop-blur-xl">
-             <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-foreground">
-                  {changedKeys.length} Changes
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md animate-in slide-in-from-bottom-12 duration-500">
+          <div className="flex items-center justify-between gap-4 rounded-3xl border border-primary/20 bg-background/80 p-2 pl-6 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.15)] backdrop-blur-2xl">
+             <div className="flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-foreground">
+                  {changedKeys.length} unsaved changes
                 </span>
              </div>
              <Button
                 onClick={() => setIsCommitModalOpen(true)}
-                className="h-9 rounded-xl px-4 text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/10"
+                className="h-10 rounded-2xl px-6 text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
              >
-                Commit
+                Review & Commit
              </Button>
           </div>
         </div>
       )}
-
       <PolicyCommitModal
         isOpen={isCommitModalOpen}
         onClose={() => setIsCommitModalOpen(false)}

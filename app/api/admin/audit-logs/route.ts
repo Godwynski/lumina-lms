@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     
     if (queryParam) {
       const safe = sanitizeFilterInput(queryParam);
-      query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%`);
+      query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%,reason.ilike.%${safe}%`);
     }
 
     const { data, error, count } = await query;

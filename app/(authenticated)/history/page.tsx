@@ -17,7 +17,9 @@ export const metadata = {
 function buildHistoryPromise(page: number, status: string, q: string) {
   return getMe().then(async (me) => {
     if (!me) redirect("/");
-    return getBorrowingHistory(me.user.id, page, 10, status, q);
+    // Admin and Librarian can see all records, others see only their own.
+    const userId = (me.role === "admin" || me.role === "librarian") ? null : me.user.id;
+    return getBorrowingHistory(userId, page, 10, status, q);
   }) as Promise<BorrowingHistoryResult>;
 }
 
@@ -49,6 +51,10 @@ async function HistoryPageContent({
   const status = params.status || "all";
   const q = params.q || "";
 
+  // Get current user to determine role
+  const me = await getMe();
+  if (!me) redirect("/");
+
   // Fire the DB promise immediately — no await, passed straight to HistoryContent
   const historyPromise = buildHistoryPromise(page, status, q);
 
@@ -58,6 +64,7 @@ async function HistoryPageContent({
       page={page}
       statusFilter={status}
       searchQuery={q}
+      userRole={me.role}
     />
   );
 }

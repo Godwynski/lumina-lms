@@ -127,14 +127,16 @@ export const POST = withAuthApi(
       auditReason = `Updated ${key} to ${displayValue}`;
     }
 
-    // Log the change
+    // Log the change with full context
     await logAuditActivity(
       user.id,
-      "system",
+      "policy",
       result.id,
       `Updated policy: ${key}`,
       auditReason,
-      auditDetails
+      auditDetails,
+      existing ? { value: existing.value, key: existing.key } : null,
+      { value: result.value, key: result.key }
     );
 
     revalidatePath("/policies", "page");

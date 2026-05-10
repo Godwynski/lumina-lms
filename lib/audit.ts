@@ -8,7 +8,11 @@ export type AuditEntityType =
   | "borrowing_record" 
   | "library_card"
   | "reservation"
-  | "system";
+  | "system"
+  | "category"
+  | "policy"
+  | "fine"
+  | "settings";
 
 /**
  * Persists an audit log strictly for administrative mutations.
@@ -19,6 +23,9 @@ export type AuditEntityType =
  * @param entityId The specific ID of the entity (if applicable).
  * @param action The specific action taken (e.g., 'created', 'approved', 'hard_delete').
  * @param reason Human-readable justification if provided in the workflow.
+ * @param details Structured metadata about the action.
+ * @param oldValue The state of the entity before modification.
+ * @param newValue The state of the entity after modification.
  */
 export async function logAuditActivity(
   actorId: string | null | undefined,
@@ -26,11 +33,12 @@ export async function logAuditActivity(
   entityId: string | null = null,
   action: string,
   reason?: string | null,
-  details?: Record<string, unknown> | null
+  details?: Record<string, unknown> | null,
+  oldValue?: unknown | null,
+  newValue?: unknown | null
 ) {
   try {
     // Use the admin client to bypass RLS and guarantee the write.
-    // Important since some workflows use service_role to wipe data and auth.uid() is null contextually.
     const supabase = createAdminClient();
 
     const { after } = await import("next/server");
@@ -44,10 +52,11 @@ export async function logAuditActivity(
           action: action,
           reason: reason || null,
           details: details || {},
+          old_value: oldValue || null,
+          new_value: newValue || null
         });
 
       if (error) {
-        // Fallback to our server logger if DB insert fails
         logger.error("AUDIT_APPEND_FAILED", "Could not persist to public.audit_logs", { error, action, entityId, actorId });
       } else {
         logger.debug("AUDIT_LOG_WRITTEN", `Audit recorded: ${action} on ${entityType}`);

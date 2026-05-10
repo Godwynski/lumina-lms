@@ -61,50 +61,50 @@ export function SystemAnnouncement() {
   }
 
   return (
-    <div className="w-full space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 ml-0.5">
-            Target Audience
+    <div className="w-full space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-1">
+            Target Group
           </label>
           <Select value={target} onValueChange={(v: 'all' | 'students') => setTarget(v)}>
-            <SelectTrigger className="h-10 rounded-xl border-border/40 bg-muted/10 text-xs font-medium focus:ring-primary/20">
+            <SelectTrigger className="h-11 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm text-xs font-medium focus:ring-primary/20 transition-all">
               <SelectValue placeholder="Select target" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-border/40 shadow-xl">
+            <SelectContent className="rounded-xl border-border/40 shadow-2xl backdrop-blur-xl bg-background/95">
               <SelectItem value="students">All Students</SelectItem>
-              <SelectItem value="all">All Registered Users</SelectItem>
+              <SelectItem value="all">Everyone</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 ml-0.5">
-            Title
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-1">
+            Subject
           </label>
           <Input
-            placeholder="e.g. Library Closure Notice"
+            placeholder="e.g. Schedule Change"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="h-10 rounded-xl border-border/40 bg-muted/10 text-xs font-medium focus-visible:ring-primary/20"
+            className="h-11 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm text-xs font-medium focus-visible:ring-primary/20 transition-all"
           />
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 ml-0.5">
-          Message
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 px-1">
+          Message Content
         </label>
         <Textarea
-          placeholder="Write your announcement here..."
-          className="min-h-[100px] rounded-xl border-border/40 bg-muted/10 text-xs font-medium p-3 focus-visible:ring-primary/20 resize-none"
+          placeholder="What would you like to announce?"
+          className="min-h-[120px] rounded-xl border-border/40 bg-background/50 backdrop-blur-sm text-xs font-medium p-4 focus-visible:ring-primary/20 resize-none transition-all"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
       </div>
 
       <Button
-        className="h-10 w-full rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm shadow-primary/10 hover:shadow-primary/20 transition-all active:scale-[0.98]"
+        className="h-11 w-full rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-[0.98] bg-primary hover:bg-primary/90"
         disabled={loading || !title || !content}
         onClick={handleSend}
       >
@@ -113,7 +113,7 @@ export function SystemAnnouncement() {
         ) : (
           <Megaphone className="w-3.5 h-3.5 mr-2" />
         )}
-        Dispatch Broadcast
+        Dispatch Announcement
       </Button>
     </div>
   )

@@ -8,13 +8,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BorrowingRecord } from "@/lib/actions/history";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { type UserRole } from "@/lib/auth-helpers";
+
 
 interface HistoryContentProps {
   historyPromise: Promise<{ records: BorrowingRecord[]; totalCount: number }>;
   page: number;
   statusFilter: string;
   searchQuery: string;
+  userRole: UserRole;
 }
+
 
 export function HistorySkeleton() {
   return (
@@ -34,7 +38,9 @@ export default function HistoryContent({
   page,
   statusFilter,
   searchQuery,
+  userRole,
 }: HistoryContentProps) {
+
   const { records, totalCount } = use(historyPromise);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,9 +72,31 @@ export default function HistoryContent({
     return record.status === "OVERDUE" || (record.status === "ACTIVE" && new Date(record.due_date) < new Date());
   };
 
+  const isPrivileged = userRole === "admin" || userRole === "librarian";
+
   const columns: LuminaColumn<BorrowingRecord>[] = [
+    ...(isPrivileged
+      ? [
+          {
+            header: "Borrower",
+            accessor: (record: BorrowingRecord) => (
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground">
+                  {record.profiles?.full_name || "Unknown User"}
+                </span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                  {record.profiles?.student_id ||
+                    record.profiles?.email?.split("@")[0] ||
+                    "No ID"}
+                </span>
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       header: "Resource",
+
       accessor: (record) => (
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover:bg-background transition-colors">
@@ -178,8 +206,13 @@ export default function HistoryContent({
         onPageChange={(p) => updateFilters({ page: p })}
         emptyState={{
           title: searchQuery || statusFilter !== "all" ? "No matches found" : "Timeline empty",
-          description: searchQuery || statusFilter !== "all" ? "Try reframing your search strategy." : "Your borrowing history will appear here.",
+          description: searchQuery || statusFilter !== "all" 
+            ? "Try reframing your search strategy." 
+            : isPrivileged 
+              ? "No borrowing records exist in the system yet."
+              : "Your borrowing history will appear here.",
           icon: BookOpen,
+
           action: {
             label: "Clear All Filters",
             onClick: () => updateFilters({ q: "", status: "all", page: 1 })

@@ -23,7 +23,8 @@ export function IdentityListManager({
   const currentItems = useMemo(() => {
     try {
       if (value.startsWith("[") && value.endsWith("]")) {
-        return JSON.parse(value) as string[];
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed.filter(i => typeof i === "string") : [];
       }
       return value.split(",").map(i => i.trim()).filter(Boolean);
     } catch {
@@ -34,7 +35,8 @@ export function IdentityListManager({
   const initialItems = useMemo(() => {
     try {
       if (initialValue.startsWith("[") && initialValue.endsWith("]")) {
-        return JSON.parse(initialValue) as string[];
+        const parsed = JSON.parse(initialValue);
+        return Array.isArray(parsed) ? parsed.filter(i => typeof i === "string") : [];
       }
       return initialValue.split(",").map(i => i.trim()).filter(Boolean);
     } catch {
@@ -64,26 +66,26 @@ export function IdentityListManager({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 min-h-[40px] p-2 rounded-2xl bg-muted/5 border border-border/20">
-        {currentItems.map((item) => {
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 min-h-[40px]">
+        {currentItems.map((item, i) => {
           const isAdded = !initialItems.includes(item);
           return (
             <Badge 
-              key={item} 
+              key={`${item}-${i}`} 
               variant="secondary" 
               className={cn(
-                "group/badge h-8 pl-3 pr-1 py-0 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
+                "group/badge h-8 pl-3 pr-1 py-0 rounded-xl text-xs font-semibold transition-all border border-transparent shadow-sm",
                 isAdded 
-                  ? "bg-green-500/10 text-green-600 border-green-500/20 shadow-sm" 
-                  : "bg-primary/10 text-primary border-primary/20 shadow-none"
+                  ? "bg-primary/10 text-primary border-primary/20" 
+                  : "bg-muted/40 text-foreground/80 hover:bg-muted/60"
               )}
             >
               {item}
               <button
                 onClick={() => removeItem(item)}
                 disabled={disabled}
-                className="ml-2 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+                className="ml-2 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-all disabled:opacity-50"
               >
                 <X size={12} />
               </button>
@@ -91,17 +93,17 @@ export function IdentityListManager({
           );
         })}
         
-        {removedItems.map((item) => (
+        {removedItems.map((item, i) => (
           <Badge 
-            key={`rem-${item}`} 
+            key={`rem-${item}-${i}`} 
             variant="outline" 
-            className="h-8 pl-3 pr-1 py-0 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-red-500/[0.03] text-red-600/40 border-red-500/10 line-through decoration-red-500/30 transition-all hover:opacity-100 opacity-60"
+            className="h-8 pl-3 pr-1 py-0 rounded-xl text-xs font-semibold bg-red-50/30 text-red-400 border-red-100/50 line-through transition-all opacity-60 hover:opacity-100"
           >
             {item}
             <button
               onClick={() => restoreItem(item)}
               disabled={disabled}
-              className="ml-2 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-red-500/10 transition-colors"
+              className="ml-2 h-6 w-6 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all text-red-500"
             >
               <Plus size={12} />
             </button>
@@ -109,27 +111,27 @@ export function IdentityListManager({
         ))}
 
         {currentItems.length === 0 && removedItems.length === 0 && (
-          <p className="text-[10px] text-muted-foreground/50 italic px-2 py-1">No items configured.</p>
+          <p className="text-xs text-muted-foreground/50 italic py-1">No items configured.</p>
         )}
       </div>
 
       <div className="flex gap-2">
         <Input
-          placeholder="New entry..."
+          placeholder="Add item..."
           value={newItem}
           onChange={(e) => setNewItem(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem())}
           disabled={disabled}
-          className="h-10 rounded-xl border-border/30 bg-muted/10 text-[11px] font-bold focus:bg-background transition-all px-4 shadow-sm"
+          className="h-9 rounded-lg border-border/40 bg-muted/20 text-xs focus:bg-background transition-all px-3"
         />
         <Button
           type="button"
           onClick={addItem}
           disabled={disabled || !newItem.trim()}
-          size="icon"
-          className="h-10 w-10 rounded-xl shadow-lg shadow-primary/10 active:scale-95 transition-all"
+          size="sm"
+          className="h-9 px-3 rounded-lg active:scale-95 transition-all"
         >
-          <Plus size={16} />
+          Add
         </Button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
+import { logAuditActivity } from "@/lib/audit";
 
 interface HardDeleteRequest {
   userId: string;
@@ -59,16 +60,23 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
     return apiError(message, "DELETE_FAILED", 400);
   }
 
-  // Log the deletion action in our app
-  await supabase.from("audit_logs").insert([
-    {
-      admin_id: profile.id,
-      entity_type: "profile_deletion",
-      entity_id: userId,
-      action: "hard_delete",
-      reason: `GDPR RTE: ${reason || "User-initiated deletion"}`,
+  // Log the deletion action using the unified audit utility
+  await logAuditActivity(
+    profile.id as string,
+    "profile",
+    userId,
+    "hard_delete",
+    `GDPR RTE: ${reason || "User-initiated deletion"}`,
+    { 
+      targetUser: { 
+        email: targetUser.email, 
+        name: targetUser.full_name 
+      },
+      confirmedBy: profile.id
     },
-  ]);
+    { status: "ACTIVE" },
+    { status: "DELETED" }
+  );
 
   return apiSuccess({
     message: "User profile anonymized successfully",

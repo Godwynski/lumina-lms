@@ -158,7 +158,11 @@ export const createBook = createSafeAction(
     revalidateTag('catalog', 'default');
     revalidateTag('books', 'default');
     
-    return data;
+    return [data, {
+      reason: `Created new book: ${bookData.title}`,
+      newValue: { ...bookData, copies_created: copiesCount },
+      details: { isbn: bookData.isbn }
+    }];
   },
   { 
     auditAction: "create", 
@@ -170,6 +174,14 @@ export const createBook = createSafeAction(
 export const updateBook = createSafeAction(
   z.object({ id: z.string(), bookData: BookSchema.partial() }),
   async ({ id, bookData }, { supabase }) => {
+    // 1. Fetch old data for audit log
+    const { data: oldData } = await supabase
+      .from('books')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    // 2. Perform update
     const { data, error } = await supabase
       .from('books')
       .update(bookData)
@@ -184,7 +196,12 @@ export const updateBook = createSafeAction(
     revalidateTag('catalog', 'default');
     revalidateTag(`book-${id}`, 'default');
     
-    return data;
+    return [data, {
+      reason: `Updated book: ${data.title}`,
+      oldValue: oldData,
+      newValue: data,
+      details: { updatedFields: Object.keys(bookData) }
+    }];
   },
   { 
     auditAction: "update", 
@@ -223,7 +240,11 @@ export const softDeleteBook = createSafeAction(
     revalidateTag('catalog', 'default');
     revalidateTag('books', 'default');
     
-    return data;
+    return [data, {
+      reason: `Archived book: ${data.title}`,
+      newValue: { is_active: false },
+      oldValue: { is_active: true }
+    }];
   },
   { 
     auditAction: "archive", 
@@ -307,7 +328,11 @@ export const updateBookCopyStatus = createSafeAction(
     revalidatePath('/catalog');
     revalidatePath(`/catalog/${data.book_id}`);
     
-    return data;
+    return [data, {
+      reason: `Changed book copy status to ${status}`,
+      newValue: { status },
+      details: { copyId: id }
+    }];
   },
   { 
     auditAction: "update_status", 

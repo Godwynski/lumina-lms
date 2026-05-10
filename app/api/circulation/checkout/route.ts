@@ -75,7 +75,15 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
       "borrowing_record",
       rpcResult.borrowing_id || null,
       "checkout",
-      `Checked out book '${rpcResult.book_title}' to ${rpcResult.student_name} (QR: ${bookQr})`
+      `Checked out book '${rpcResult.book_title}' to ${rpcResult.student_name} (QR: ${bookQr})`,
+      { 
+        studentCardQr, 
+        bookQr, 
+        studentName: rpcResult.student_name,
+        bookTitle: rpcResult.book_title
+      },
+      null,
+      { status: 'ACTIVE', book_qr: bookQr, student_id: rpcResult.student_name }
     );
   }
   
