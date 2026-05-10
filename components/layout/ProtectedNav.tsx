@@ -33,7 +33,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLogout } from "@/hooks/use-logout";
 import { SWRConfig } from "swr";
@@ -116,7 +115,6 @@ export function ProtectedNav({
 }) {
   const pathname = usePathname();
 
-  const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { setOpen, open, isMobile } = useSidebar();
@@ -192,7 +190,7 @@ export function ProtectedNav({
     return NAV_ITEMS.filter(item => hasPermission(normalizedRole, item.minRole, item.exactRoles));
   }, [normalizedRole]);
 
-  const handlePrefetch = useCallback((href: string) => {
+  const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover
   }, []);
 
