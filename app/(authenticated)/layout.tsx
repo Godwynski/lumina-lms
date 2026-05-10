@@ -26,7 +26,7 @@ export default async function ProtectedLayout({
 
   // ─── Auth guard: redirect before touching any UI ──────────────────────────
   if (!me) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { profile, role } = me;

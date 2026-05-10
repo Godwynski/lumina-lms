@@ -7,7 +7,7 @@ import { NewUserClient } from "./NewUserClient";
 // NewUserClient is a pure client form with no server data deps beyond auth.
 async function NewUserContent() {
   const me = await getMe();
-  if (!me) redirect("/login");
+  if (!me) redirect("/");
 
   return <NewUserClient />;
 }

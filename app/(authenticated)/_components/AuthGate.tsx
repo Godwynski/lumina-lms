@@ -6,7 +6,7 @@ export async function AuthGate({ children }: { children: ReactNode }) {
   const me = await getMe();
 
   if (!me) {
-    redirect("/login");
+    redirect("/");
   }
 
   // Casing and status checks are now handled at the layout level

@@ -8,7 +8,7 @@ async function CirculationGuard({ children }: { children: React.ReactNode }) {
   const user = data?.user;
 
   if (!user?.id) {
-    redirect("/login");
+    redirect("/");
   }
 
   const { data: profile } = await supabase

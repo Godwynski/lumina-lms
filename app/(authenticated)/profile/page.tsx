@@ -6,7 +6,7 @@ import { Suspense } from "react";
 // getMe() is cache()-memoized — reuses auth already fetched by the layout
 function buildProfilePromise() {
   return getMe().then(async (me) => {
-    if (!me) redirect("/login");
+    if (!me) redirect("/");
     const { user, profile } = me;
     return { user, profile };
   });

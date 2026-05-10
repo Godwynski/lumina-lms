@@ -53,7 +53,7 @@ export function SelfDeleteAccountDialog({
       }
 
       // Account archived successfully, user will be signed out and redirected
-      window.location.href = "/login";
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

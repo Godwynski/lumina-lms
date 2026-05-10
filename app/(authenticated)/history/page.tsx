@@ -16,7 +16,7 @@ export const metadata = {
 // The .then() chain fires immediately without blocking the page shell.
 function buildHistoryPromise(page: number, status: string, q: string) {
   return getMe().then(async (me) => {
-    if (!me) redirect("/login");
+    if (!me) redirect("/");
     return getBorrowingHistory(me.user.id, page, 10, status, q);
   }) as Promise<BorrowingHistoryResult>;
 }
