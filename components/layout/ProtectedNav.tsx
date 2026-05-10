@@ -103,13 +103,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
 ];
-
-// Prefetch helper
-const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
-  if (href && !href.includes("?")) {
-    router.prefetch(href);
-  }
-};
+const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
 export function ProtectedNav({
   role,
@@ -182,7 +176,6 @@ export function ProtectedNav({
 
     if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
 
-    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
     if (SETTINGS_PATHS.includes(hrefBase)) {
       return pathWithoutQuery === hrefBase;
     }
@@ -200,17 +193,17 @@ export function ProtectedNav({
   }, [normalizedRole]);
 
   const handlePrefetch = useCallback((href: string) => {
-    prefetch(router, href);
-  }, [router]);
+    // Next.js Link already handles prefetching on hover
+  }, []);
+
+  const swrValue = useMemo(() => ({
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5000,
+  }), []);
 
   return (
-    <SWRConfig 
-      value={{
-        revalidateOnFocus: false,
-        revalidateOnReconnect: true,
-        dedupingInterval: 5000,
-      }}
-    >
+    <SWRConfig value={swrValue}>
     <Sidebar 
       collapsible="icon" 
       className="border-r border-sidebar-border bg-sidebar"
