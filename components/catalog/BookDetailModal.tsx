@@ -253,7 +253,7 @@ function StudentModalContent({
       <StatusMini book={book} availability={availability} />
 
       {/* Cover + Title row */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 pr-6">
         <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/20 shadow-sm">
           {book.cover_url ? (
             <Image src={book.cover_url} alt={book.title} fill className="object-cover" sizes="96px" unoptimized />
@@ -455,7 +455,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
-        "max-h-[90vh] overflow-y-auto custom-scrollbar",
+        "max-h-[90vh] overflow-y-auto custom-scrollbar pt-12",
         variant === 'admin' ? "sm:max-w-2xl" : "sm:max-w-lg"
       )}>
         <DialogHeader className="sr-only">

@@ -253,7 +253,7 @@ export function AdminManagementContent({
     <div className="space-y-6">
       {/* Header Summary */}
       {!isEditing && (
-        <div className="flex gap-4">
+        <div className="flex gap-4 pr-8">
           <div className="relative h-32 w-20 shrink-0 overflow-hidden rounded-xl border border-border/40 shadow-sm ring-1 ring-border/50">
             {book.cover_url ? (
               <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
