@@ -27,7 +27,22 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "./AdminTableShell";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+interface FetcherError extends Error {
+  info?: unknown;
+  status?: number;
+}
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = new Error('An error occurred while fetching the data.') as FetcherError;
+    // Attach extra info to the error object.
+    error.info = await res.json();
+    error.status = res.status;
+    throw error;
+  }
+  return res.json();
+};
 
 type AuditLogDetailItem = Record<string, unknown> | string | number;
 
@@ -53,6 +68,82 @@ interface AuditLog {
     email: string | null;
     role: string | null;
   } | null;
+}
+
+function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; newVal: Record<string, unknown> | null }) {
+  if (!oldVal && !newVal) return null;
+  
+  const formatValue = (v: unknown) => {
+    if (v === null || v === undefined) return 'None';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  };
+
+  const ignoredKeys = ['id', 'created_at', 'updated_at', 'deleted_at', 'metadata'];
+
+  // Creation
+  if (!oldVal && newVal) {
+     return (
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 p-3 bg-primary/5 rounded-xl border border-primary/10">
+         {Object.entries(newVal)
+          .filter(([k]) => !ignoredKeys.includes(k))
+          .map(([k, v]) => (
+            <div key={k} className="flex items-baseline gap-2 text-[11px]">
+              <span className="font-bold text-muted-foreground/60 shrink-0 uppercase tracking-tighter w-24">{k.replace(/_/g, ' ')}:</span>
+              <span className="text-primary font-bold truncate">{formatValue(v)}</span>
+            </div>
+         ))}
+       </div>
+     );
+  }
+  
+  // Deletion
+  if (oldVal && !newVal) {
+     return (
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 p-3 bg-muted/20 rounded-xl border border-border/5 opacity-70">
+         {Object.entries(oldVal)
+          .filter(([k]) => !ignoredKeys.includes(k))
+          .map(([k, v]) => (
+            <div key={k} className="flex items-baseline gap-2 text-[11px] line-through decoration-muted-foreground/30">
+              <span className="font-bold text-muted-foreground/40 shrink-0 uppercase tracking-tighter w-24">{k.replace(/_/g, ' ')}:</span>
+              <span className="text-muted-foreground truncate">{formatValue(v)}</span>
+            </div>
+         ))}
+       </div>
+     );
+  }
+
+  // Final guard for updates (both must be present)
+  if (!oldVal || !newVal) return null;
+
+  // Update
+  const keys = new Set([...Object.keys(oldVal), ...Object.keys(newVal)]);
+  const changes = Array.from(keys).filter(k => {
+    if (ignoredKeys.includes(k)) return false;
+    return JSON.stringify(oldVal[k]) !== JSON.stringify(newVal[k]);
+  });
+
+  if (changes.length === 0) return null;
+
+  return (
+    <div className="space-y-2 p-3 bg-muted/10 rounded-xl border border-border/5">
+      {changes.map(k => (
+        <div key={k} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 py-1.5 border-b border-border/5 last:border-0">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 w-32 shrink-0">{k.replace(/_/g, ' ')}</span>
+          <div className="flex items-center gap-2.5 text-xs">
+            <span className="line-through text-muted-foreground/60 bg-muted/30 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">
+              {formatValue(oldVal[k])}
+            </span>
+            <span className="text-muted-foreground/30 font-bold">→</span>
+            <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-md shadow-sm whitespace-nowrap border border-primary/10">
+              {formatValue(newVal[k])}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function AuditLogClient() {
@@ -189,7 +280,7 @@ export function AuditLogClient() {
           </div>
         )}
 
-        {data?.logs.length === 0 && (
+        {data?.logs?.length === 0 && (
           <div className="h-48 flex flex-col items-center justify-center gap-2 opacity-50 bg-muted/20 rounded-xl border border-border border-dashed">
             <Database className="h-10 w-10 text-muted-foreground" />
             <span className="text-sm font-medium">No results match your search.</span>
@@ -207,7 +298,7 @@ export function AuditLogClient() {
           </div>
         )}
 
-        {data && data.logs.length > 0 && (
+        {data?.logs && data.logs.length > 0 && (
           <div className="relative border-l-2 border-border/30 pl-6 ml-2 md:ml-6 space-y-8 py-2">
             {data.logs.map((log) => {
               const date = log.created_at ? new Date(log.created_at) : new Date();
@@ -303,25 +394,10 @@ export function AuditLogClient() {
                         </div>
                       )}
 
-                      {/* Display Old and New Values if available */}
+                      {/* Display Data Diff instead of Raw JSON */}
                       {(log.old_value || log.new_value) && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                          {log.old_value && (
-                            <div className="space-y-1.5 bg-muted/20 p-3 rounded-xl border border-border/5">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 block">Before</span>
-                              <div className="text-[11px] font-mono text-muted-foreground bg-background/30 p-2 rounded-lg border border-border/5 max-h-32 overflow-y-auto whitespace-pre-wrap">
-                                {JSON.stringify(log.old_value, null, 2)}
-                              </div>
-                            </div>
-                          )}
-                          {log.new_value && (
-                            <div className="space-y-1.5 bg-primary/5 p-3 rounded-xl border border-primary/5">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 block">After</span>
-                              <div className="text-[11px] font-mono text-primary/80 bg-background/30 p-2 rounded-lg border border-primary/5 max-h-32 overflow-y-auto whitespace-pre-wrap">
-                                {JSON.stringify(log.new_value, null, 2)}
-                              </div>
-                            </div>
-                          )}
+                        <div className="mt-2">
+                          <DataDiff oldVal={log.old_value} newVal={log.new_value} />
                         </div>
                       )}
 

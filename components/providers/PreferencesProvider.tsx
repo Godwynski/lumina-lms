@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { isAbortError } from "@/lib/error-utils";
 
 type Preferences = Record<string, unknown>;
@@ -21,7 +21,9 @@ export function PreferencesProvider({
   children: React.ReactNode;
   initialPreferences?: Preferences | Promise<Preferences>;
 }) {
-  const isPromise = initialPreferences && typeof (initialPreferences as Record<string, unknown>).then === 'function';
+  const isPromise = initialPreferences instanceof Promise;
+  // Track whether we've already resolved the initial promise to prevent re-runs
+  const resolvedRef = useRef(false);
 
   const [preferences, setPreferences] = useState<Preferences>(
     isPromise ? {} : (initialPreferences as Preferences)
@@ -48,30 +50,40 @@ export function PreferencesProvider({
   }, []);
 
   useEffect(() => {
-    // If we have a promise-like object, resolve it and update state.
-    if (initialPreferences && typeof (initialPreferences as Record<string, unknown>).then === 'function') {
-      const promise = Promise.resolve(initialPreferences as Preferences | Promise<Preferences>);
-      promise.then((resolved) => {
-        if (resolved && Object.keys(resolved as Preferences).length > 0) {
-          setPreferences(resolved as Preferences);
-          setLoading(false);
-        } else {
+    // Skip if we've already resolved the initial data
+    if (resolvedRef.current) return;
+
+    // Check if initialPreferences is a promise or thenable
+    const isThenable = initialPreferences && 
+      (initialPreferences instanceof Promise || typeof (initialPreferences as Record<string, unknown>).then === 'function');
+
+    if (isThenable) {
+      resolvedRef.current = true;
+      Promise.resolve(initialPreferences as Promise<Preferences>)
+        .then((resolved) => {
+          if (resolved && Object.keys(resolved).length > 0) {
+            setPreferences(resolved);
+            setLoading(false);
+          } else {
+            fetchPreferences();
+          }
+        })
+        .catch((err) => {
+          console.error("[PREFERENCES-PROVIDER] Promise hydration failed:", err);
           fetchPreferences();
-        }
-      }).catch((err) => {
-        console.error("[PREFERENCES-PROVIDER] Promise hydration failed:", err);
-        fetchPreferences();
-      });
+        });
       return;
     }
 
     // If we have initial preferences from the server, we don't need to fetch on mount.
     if (initialPreferences && Object.keys(initialPreferences as Preferences).length > 0) {
+      resolvedRef.current = true;
       setLoading(false);
       return;
     }
 
     const controller = new AbortController();
+    resolvedRef.current = true;
     fetchPreferences(controller.signal);
     return () => controller.abort();
   }, [fetchPreferences, initialPreferences]);

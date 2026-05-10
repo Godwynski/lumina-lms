@@ -2,7 +2,7 @@
 
 import { m } from "framer-motion";
 import Image from "next/image";
-import Link from "next/link";
+import { useState } from "react";
 import { 
   Book as BookIcon, 
   Sparkles, 
@@ -12,9 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Book } from "@/lib/types";
 import { ReserveTitleButton } from "@/components/common/ReserveTitleButton";
 import { cn } from "@/lib/utils";
+import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 
 interface StudentBookCardProps {
   book: Book;
+  priority?: boolean;
   reservedInfo?: {
     status: string;
     queuePosition: number;
@@ -22,9 +24,10 @@ interface StudentBookCardProps {
   onReserveSuccess?: (queuePosition: number, status: "READY" | "ACTIVE") => void;
 }
 
-export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: StudentBookCardProps) {
+export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess }: StudentBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   const isReady = reservedInfo?.status === "READY";
+  const [modalOpen, setModalOpen] = useState(false);
   
   return (
     <m.div
@@ -35,7 +38,18 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="group relative h-full"
     >
-      <Link href={`/student-catalog/${book.id}`} className="block h-full">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setModalOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setModalOpen(true);
+          }
+        }}
+        className="block h-full w-full text-left cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+      >
         <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border/40 bg-card p-3 shadow-sm transition-all hover:bg-accent/50 hover:border-primary/20 hover:shadow-lg">
           <div className="mb-3 flex items-start gap-3">
             <div className="min-w-0 flex-1">
@@ -73,6 +87,7 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
                   fill 
                   className="object-cover" 
                   sizes="80px"
+                  priority={priority}
                   unoptimized
                 />
               ) : (
@@ -113,7 +128,15 @@ export function StudentBookCard({ book, reservedInfo, onReserveSuccess }: Studen
             />
           </div>
         </div>
-      </Link>
+      </div>
+
+      <BookDetailModal
+        bookId={book.id}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        variant="student"
+        initialData={book}
+      />
     </m.div>
   );
 }

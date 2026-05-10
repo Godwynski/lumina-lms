@@ -34,6 +34,15 @@
     --status-warning: 38 92% 38%;
     --status-danger: 0 72% 44%;
     --status-neutral: 215 16% 38%;
+
+    --sidebar: hsl(210 17% 97%);
+    --sidebar-foreground: hsl(222 47% 13%);
+    --sidebar-primary: hsl(221 39% 20%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(210 20% 92%);
+    --sidebar-accent-foreground: hsl(222 47% 13%);
+    --sidebar-border: hsl(214 20% 87%);
+    --sidebar-ring: hsl(221 39% 28%);
   }
 }
 
@@ -48,19 +57,6 @@
     background-image: linear-gradient(to bottom, hsl(210 20% 99%), hsl(210 20% 98%));
   }
 }
-
-:root {
-  --sidebar: hsl(210 17% 97%);
-  --sidebar-foreground: hsl(222 47% 13%);
-  --sidebar-primary: hsl(221 39% 20%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(210 20% 92%);
-  --sidebar-accent-foreground: hsl(222 47% 13%);
-  --sidebar-border: hsl(214 20% 87%);
-  --sidebar-ring: hsl(221 39% 28%);
-}
-
-
 
 @layer utilities {
   .status-success {
@@ -170,17 +166,4 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* Status badge utilities — dark-mode safe */
-.status-success {
-  background-color: rgb(16 185 129 / 0.1);
-  color: rgb(4 120 87);
-}
-.status-danger {
-  background-color: hsl(var(--destructive) / 0.1);
-  color: hsl(var(--destructive));
-}
-.dark .status-success {
-  color: rgb(52 211 153);
 }

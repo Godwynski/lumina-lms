@@ -3,14 +3,13 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
 import { MainHeader } from "@/components/layout/MainHeader";
-import { AuthGate } from "./_components/AuthGate";
 import { StreamedNav } from "./_components/StreamedNav";
 import { StreamedUserNav } from "./_components/StreamedUserNav";
 import { NavSkeleton } from "./_components/Skeletons";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
-import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import NavAnimatePresence from "./NavAnimatePresence";
 
 export default async function ProtectedLayout({
@@ -77,11 +76,9 @@ export default async function ProtectedLayout({
 
           {/* Page content */}
           <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
-              <AuthGate>
-                <NavAnimatePresence>
-                  {children}
-                </NavAnimatePresence>
-              </AuthGate>
+              <NavAnimatePresence>
+                {children}
+              </NavAnimatePresence>
           </div>
         </SidebarInset>
       </SidebarProvider>

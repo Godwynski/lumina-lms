@@ -55,9 +55,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-      </head>
+      <head />
       <body className={`${appSans.className} antialiased`}>
         <AnimationProvider>
           {children}

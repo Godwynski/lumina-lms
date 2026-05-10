@@ -47,33 +47,35 @@ export async function GET(request: NextRequest) {
       query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%,reason.ilike.%${safe}%`);
     }
 
-    const { data, error, count } = await query;
+    const { data: logs, error, count } = await query;
 
     if (error) throw error;
 
-    const logs = data || [];
-    const adminIds = [...new Set(logs.map((l) => l.admin_id).filter(Boolean))];
+    // Manual join since audit_logs has no FK to profiles
+    const adminIds = [...new Set((logs || []).map(l => l.admin_id).filter(Boolean))];
+    let profilesMap = new Map();
 
-    let profilesMap = new Map<string, { full_name: string | null; email: string | null; role: string | null }>();
     if (adminIds.length > 0) {
-      const { data: profilesData } = await supabase
+      const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, email, role")
         .in("id", adminIds);
-      profilesMap = new Map((profilesData ?? []).map((p) => [p.id, p]));
+      
+      profiles?.forEach(p => profilesMap.set(p.id, p));
     }
 
-    const enrichedLogs = logs.map((log) => ({
+    const logsWithProfiles = (logs || []).map(log => ({
       ...log,
-      profiles: log.admin_id ? profilesMap.get(log.admin_id) ?? null : null,
+      profiles: profilesMap.get(log.admin_id) || null
     }));
 
     return NextResponse.json({
-      logs: enrichedLogs,
+      logs: logsWithProfiles,
       total: count || 0,
       limit,
       offset,
     });
+
   } catch (error) {
     if (isAbortError(error)) {
       return new Response(null, { status: 499 }); // Client Closed Request

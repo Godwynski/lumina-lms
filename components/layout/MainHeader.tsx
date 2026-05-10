@@ -9,7 +9,7 @@ import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav"
 import { cn } from "@/lib/utils"
 
 
-import { NotificationBell } from "@/components/notifications/notification-bell"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 interface MainHeaderProps {
   userNav?: React.ReactNode;

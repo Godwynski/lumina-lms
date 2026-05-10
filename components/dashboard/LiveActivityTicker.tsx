@@ -15,19 +15,27 @@ interface LibraryEvent {
 
 export function LiveActivityTicker() {
   const [events, setEvents] = useState<LibraryEvent[]>([]);
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    const supabase = createClient();
-
     const channel = supabase
       .channel('live-tickers')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'borrowing_records' }, async (payload) => {
-        // Fetch book info for the title
-        const { data: book } = await supabase.from('books').select('title').eq('id', payload.new.book_id).single();
+        // borrowing_records has book_copy_id, not book_id — join through book_copies to get title
+        const bookCopyId = payload.new.book_copy_id;
+        if (!bookCopyId) return;
+
+        const { data: copy } = await supabase
+          .from('book_copies')
+          .select('books(title)')
+          .eq('id', bookCopyId)
+          .single();
+
+        const bookTitle = (copy?.books as unknown as { title: string } | null)?.title || 'Resource';
         const event: LibraryEvent = {
           id: payload.new.id,
           type: payload.new.status === 'RETURNED' ? 'return' : 'borrow',
-          title: book?.title || 'Resource',
+          title: bookTitle,
           timestamp: new Date().toISOString(),
         };
         setEvents(prev => [event, ...prev].slice(0, 3));
@@ -46,7 +54,7 @@ export function LiveActivityTicker() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [supabase]);
 
   if (events.length === 0) return null;
 

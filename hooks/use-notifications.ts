@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -21,6 +21,8 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  // Cache userId to avoid redundant getUser() network calls
+  const userIdRef = useRef<string | null>(null)
 
   const fetchNotifications = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -49,6 +51,9 @@ export function useNotifications() {
         if (active) setLoading(false)
         return
       }
+
+      // Cache userId for use in markAllAsRead/refresh without re-fetching
+      userIdRef.current = user.id
 
       await fetchNotifications(user.id)
       if (!active) return
@@ -135,13 +140,14 @@ export function useNotifications() {
   }
 
   const markAllAsRead = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    // Use cached userId instead of re-fetching from auth endpoint
+    const userId = userIdRef.current
+    if (!userId) return
 
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_read', false)
 
     if (error) {
@@ -172,8 +178,9 @@ export function useNotifications() {
     markAllAsRead,
     deleteNotification,
     refresh: async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) await fetchNotifications(user.id)
+        // Use cached userId instead of re-fetching from auth endpoint
+        const userId = userIdRef.current
+        if (userId) await fetchNotifications(userId)
     }
   }
 }

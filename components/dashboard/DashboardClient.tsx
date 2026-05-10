@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
-import { useTransition, useMemo, useState, useEffect, use } from 'react';
+import { useTransition, useMemo, useState, useEffect, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -20,6 +20,7 @@ import { Reservation, ProfileData, Book, Category } from '@/lib/types';
 import type { BorrowingRecord } from '@/lib/actions/history';
 import { LiveActivityTicker } from './LiveActivityTicker';
 import { DashboardSearch } from './DashboardSearch';
+import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 
 const ModernInventoryClient = dynamic(() => import('@/components/inventory/ModernInventoryClient').then(mod => mod.ModernInventoryClient), {
   ssr: false,
@@ -68,6 +69,24 @@ export function DashboardClient({
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const [supabase] = useState(() => createClient());
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  
+  const openBookModal = (id: string) => {
+    setSelectedBookId(id);
+    setModalOpen(true);
+  };
+  
+  // Debounced router.refresh to prevent cascade re-renders
+  // when multiple realtime subscriptions fire simultaneously
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      router.refresh();
+    }, 2000);
+  }, [router]);
   
   // Unwrap promises using 'use' hook
   const stats = use(statsPromise);
@@ -79,29 +98,29 @@ export function DashboardClient({
   const inventoryCategories = use(inventoryCategoriesPromise);
 
   const profileData = profileResult.data;
-  const activeBorrowsList = stats.activeBorrowsList || [];
+  const activeBorrowsList = useMemo(() => stats.activeBorrowsList || [], [stats.activeBorrowsList]);
 
-  // Real-time synchronization
+  // Real-time synchronization — uses debounced refresh to batch
+  // concurrent changes from multiple table subscriptions
   useEffect(() => {
-    const supabase = createClient();
-    
     const channel = supabase
       .channel('dashboard-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
-        router.refresh();
+        debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'library_cards' }, () => {
-        router.refresh();
+        debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-        router.refresh();
+        debouncedRefresh();
       })
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [supabase, debouncedRefresh]);
 
   useEffect(() => {
     setMounted(true);
@@ -169,6 +188,18 @@ export function DashboardClient({
 
   const isStudent = role === 'student';
 
+  const initialData = useMemo(() => {
+    if (!selectedBookId) return undefined;
+    // Check reservations first
+    const resBook = reservations.find(r => r.books?.id === selectedBookId)?.books;
+    if (resBook) return resBook as Book;
+    // Then borrows
+    const borrowBook = activeBorrowsList.find(b => b.books?.id === selectedBookId)?.books;
+    if (borrowBook) return borrowBook as Book;
+    // Then inventory
+    return inventoryData.data?.find(b => b.id === selectedBookId);
+  }, [selectedBookId, reservations, activeBorrowsList, inventoryData.data]);
+
   if (isStudent) {
     return (
       <div className="space-y-6 pb-14 overflow-x-hidden relative">
@@ -214,14 +245,19 @@ export function DashboardClient({
                 </div>
                 <div className="grid gap-2">
                   {activeBorrowsList.map((borrow) => (
-                     <Card key={borrow.id} className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm">
+                     <Card 
+                        key={borrow.id} 
+                        role="button"
+                        onClick={() => openBookModal(borrow.books?.id || '')}
+                        className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm cursor-pointer group"
+                      >
                         <CardContent className="flex items-center justify-between gap-4 p-3">
                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm">
+                              <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm ring-1 ring-border/5 group-hover:ring-primary/20 transition-all">
                                  <Library size={12} className="text-muted-foreground/30" />
                               </div>
                               <div className="min-w-0">
-                                 <p className="truncate text-xs font-bold text-foreground/90">{borrow.books?.title || 'Unknown Book'}</p>
+                                 <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">{borrow.books?.title || 'Unknown Book'}</p>
                                  <p className="text-xs font-bold text-foreground/80 tracking-tight" suppressHydrationWarning>
                                     {mounted ? new Date(borrow.due_date).toLocaleDateString() : '...'}
                                  </p>
@@ -279,8 +315,12 @@ export function DashboardClient({
                   <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-500/20 bg-emerald-50/5' : 'border-border/20 bg-card/10 backdrop-blur-sm'}`}>
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${isReady ? 'bg-emerald-500' : 'bg-primary/30'}`} />
                     <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-start">
-                      <Link href={`/student-catalog/${res.books?.id ?? ''}`} className="shrink-0 group">
-                        <div className="relative h-14 w-10 rounded-lg bg-muted/20 overflow-hidden shadow-sm">
+                      <div 
+                        role="button"
+                        onClick={() => openBookModal(res.books?.id ?? '')}
+                        className="shrink-0 group cursor-pointer"
+                      >
+                        <div className="relative h-14 w-10 rounded-lg bg-muted/20 overflow-hidden shadow-sm ring-1 ring-border/10 group-hover:ring-primary/30 transition-all">
                           {res.books?.cover_url ? (
                             <Image src={res.books.cover_url} alt="" fill className="object-cover" unoptimized priority />
                           ) : (
@@ -289,13 +329,18 @@ export function DashboardClient({
                             </div>
                           )}
                         </div>
-                      </Link>
+                      </div>
+                      
                       <div className="flex-1 min-w-0">
-                        <Link href={`/student-catalog/${res.books?.id ?? ''}`}>
-                          <p className="truncate text-xs font-black text-foreground/90 leading-snug">
+                        <div 
+                          role="button"
+                          onClick={() => openBookModal(res.books?.id ?? '')}
+                          className="cursor-pointer group/title"
+                        >
+                          <p className="truncate text-xs font-black text-foreground/90 leading-snug group-hover/title:text-primary transition-colors">
                             {res.books?.title || 'Unknown Book'}
                           </p>
-                        </Link>
+                        </div>
                         {isReady ? (
                           <div className="mt-1 space-y-0.5 text-emerald-600 font-bold text-[10px]">
                             <p className="flex items-center gap-1"><Sparkles size={12} /> Ready for Pickup!</p>
@@ -307,6 +352,7 @@ export function DashboardClient({
                           </p>
                         )}
                       </div>
+
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <Badge variant={isReady ? 'default' : 'outline'} className={`text-[9px] px-1.5 py-0 h-5 ${isReady ? 'bg-emerald-500' : ''}`}>
                           {isReady ? 'READY' : 'IN QUEUE'}
@@ -322,8 +368,6 @@ export function DashboardClient({
             </div>
           )}
         </section>
-
-
 
         {studentFaqs?.length > 0 && (
           <section className="pt-2">
@@ -343,6 +387,14 @@ export function DashboardClient({
             </Collapsible>
           </section>
         )}
+
+        <BookDetailModal
+          bookId={selectedBookId || ''}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          variant="student"
+          initialData={initialData}
+        />
       </div>
     );
   }
