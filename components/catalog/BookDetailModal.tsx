@@ -377,14 +377,12 @@ function StudentModalContent({
 // ─── Main Modal ────────────────────────────────────────────────────────────
 
 export function BookDetailModal({ bookId, open, onOpenChange, variant, initialData }: BookDetailModalProps) {
-  const [loading, setLoading] = useState(false);
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!bookId) return;
-    setLoading(true);
     setError(null);
     try {
       if (variant === 'student') {
@@ -410,8 +408,6 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load book details');
-    } finally {
-      setLoading(false);
     }
   }, [bookId, variant]);
 
