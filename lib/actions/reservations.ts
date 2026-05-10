@@ -148,7 +148,12 @@ export const cancelReservation = createSafeAction(
     revalidatePath('/dashboard');
     revalidatePath('/student-catalog');
 
-    return { success: true };
+    return [{ success: true }, {
+      reason: `Cancelled reservation for book: ${reservation.book_id}`,
+      oldValue: { status: reservation.status },
+      newValue: { status: 'CANCELLED' },
+      details: { bookId: reservation.book_id }
+    }];
   },
   {
     auditAction: "cancel",

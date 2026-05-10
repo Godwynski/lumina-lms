@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logAuditActivity } from "@/lib/audit";
 
 export async function POST() {
   const supabase = await createClient();
@@ -50,6 +51,22 @@ export async function POST() {
       console.error("Failed to update student library cards:", cardError);
     }
   }
+
+  // Log the mass action
+  await logAuditActivity(
+    user.id,
+    "system",
+    null,
+    "annual_reset",
+    "Mass suspension of all student accounts for the new school year.",
+    { 
+      affectedCount: students?.length || 0,
+      role: "student",
+      action: "SUSPENDED"
+    },
+    { status: "ACTIVE" },
+    { status: "SUSPENDED" }
+  );
 
   return NextResponse.json({ 
     success: true, 

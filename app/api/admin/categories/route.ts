@@ -63,10 +63,13 @@ export async function POST(request: NextRequest) {
 
     await logAuditActivity(
       user.id,
-      "system",
+      "category",
       data.id,
       "category_created",
-      `Created book category: ${name}`
+      `Created book category: ${name}`,
+      { slug, description },
+      null,
+      data
     );
 
     revalidateTag("categories", "default");

@@ -21,10 +21,16 @@ export type BorrowingRecord = {
   returned_at: string | null;
   renewal_count: number;
   books: BookInfo | null;
+  profiles: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    student_id: string | null;
+  } | null;
 };
 
 export async function getBorrowingHistory(
-  userId: string,
+  userId: string | null,
   page: number = 1,
   pageSize: number = 10,
   statusFilter?: string,
@@ -43,9 +49,16 @@ export async function getBorrowingHistory(
         books!inner (
           id, title, author
         )
+      ),
+      profiles:profiles!borrowing_records_user_id_fkey (
+        id, full_name, email, student_id
       )
-    `, { count: "exact" })
-    .eq("user_id", userId);
+    `, { count: "exact" });
+
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
 
   if (statusFilter && statusFilter !== "all") {
     // Normalize to uppercase to match BorrowStatus enum in Postgres
@@ -53,7 +66,8 @@ export async function getBorrowingHistory(
   }
 
   if (searchQuery) {
-    query = query.or(`title.ilike.%${sanitizeFilterInput(searchQuery)}%,author.ilike.%${sanitizeFilterInput(searchQuery)}%`, { referencedTable: 'book_copies.books' });
+    const sanitized = sanitizeFilterInput(searchQuery);
+    query = query.or(`title.ilike.%${sanitized}%,author.ilike.%${sanitized}%`, { referencedTable: 'book_copies.books' });
   }
 
   const { data, error, count } = await query
@@ -69,16 +83,19 @@ export async function getBorrowingHistory(
   }
 
   const enriched = (data || []).map((record: Record<string, unknown>) => ({
-    id: record.id,
-    book_copy_id: record.book_copy_id,
-    user_id: record.user_id,
-    status: record.status,
-    borrowed_at: record.borrowed_at,
-    due_date: record.due_date,
-    returned_at: record.returned_at,
-    renewal_count: record.renewal_count,
-    books: (record.book_copies as { books: unknown })?.books || null,
+    id: record.id as string,
+    book_copy_id: record.book_copy_id as string,
+    user_id: record.user_id as string,
+    status: record.status as BorrowingRecord["status"],
+    borrowed_at: record.borrowed_at as string,
+    due_date: record.due_date as string,
+    returned_at: record.returned_at as string | null,
+    renewal_count: record.renewal_count as number,
+    books: (record.book_copies as { books: BookInfo } | null)?.books || null,
+    profiles: record.profiles as BorrowingRecord["profiles"],
   }));
+
+
 
   return {
     records: enriched as BorrowingRecord[],

@@ -2,49 +2,49 @@
 export const DEFAULT_POLICIES = {
   loan_period_days: { 
     value: "14", 
-    label: "Standard Borrowing Window",
-    description: "How many days a student can keep a book before it is marked overdue.",
-    example: "Example: If borrowed on Monday, it is due 2 weeks later on Monday.",
+    label: "Borrowing Period",
+    description: "Standard duration for book loans.",
+    example: "Example: 14 days.",
     category: "circulation",
     icon: "Calendar"
   },
   max_borrow_limit: { 
     value: "5", 
-    label: "Inventory Capacity per Student",
-    description: "The total number of books a single student can have at any given time.",
-    example: "Example: A student with 5 books must return one before taking another.",
+    label: "Max Borrows",
+    description: "Maximum books a student can borrow at once.",
+    example: "Example: 5 books.",
     category: "circulation",
     icon: "BookCopy"
   },
   max_renewal_count: { 
     value: "3", 
-    label: "Renewal Allowance",
-    description: "How many times a student can extend their own due date.",
-    example: "Example: Allows students to keep a popular book for up to 2 extra months.",
+    label: "Max Renewals",
+    description: "Number of times a loan can be extended.",
+    example: "Example: 3 times.",
     category: "circulation",
     icon: "RotateCw"
   },
   renewal_period_days: { 
     value: "14", 
-    label: "Renewal Extension Term",
-    description: "Number of days added to the due date upon a successful renewal.",
-    example: "Example: A 14-day renewal gives the student 2 more weeks from their current due date.",
+    label: "Renewal Period",
+    description: "Days added per renewal.",
+    example: "Example: 14 days.",
     category: "circulation",
     icon: "History"
   },
   hold_expiry_days: { 
     value: "7", 
-    label: "Reservation Shelf Life",
-    description: "Number of days a reserved book stays on the hold shelf before being released back to inventory.",
-    example: "Example: If not picked up within 7 days, the next student in queue gets the book.",
+    label: "Hold Shelf Life",
+    description: "Days a reserved book stays on hold.",
+    example: "Example: 7 days.",
     category: "reservations",
     icon: "Clock"
   },
   max_reservations_per_student: { 
     value: "3", 
-    label: "Queue Slot Limit",
-    description: "Maximum number of books a student can have on hold simultaneously.",
-    example: "Example: Prevents students from 'hogging' the entire upcoming popular catalog.",
+    label: "Max Reservations",
+    description: "Maximum concurrent book reservations.",
+    example: "Example: 3 books.",
     category: "reservations",
     icon: "Ticket"
   },
@@ -55,19 +55,28 @@ export const DEFAULT_POLICIES = {
       { question: "Can I use the card on my phone only?", answer: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed." },
       { question: "Where can I see my current borrows?", answer: "Use Borrow History from the dashboard quick actions to review active and past borrowing records." }
     ]),
-    label: "Student FAQ Directory",
-    description: "Manage the list of frequently asked questions displayed on the student dashboard.",
+    label: "FAQ Management",
+    description: "Questions shown on the student dashboard.",
+    example: "",
     category: "support",
     icon: "HelpCircle"
   },
   academic_programs: { 
     value: JSON.stringify(["BS Information Technology", "BS Computer Science", "BS Information Systems", "Associate in Computer Technology", "BS Business Administration", "BS Hospitality Management"]), 
-    label: "Academic Program Registry",
-    description: "Registry of available academic programs for student onboarding.",
-    example: "Example: Add 'BS Nursing' to allow nursing students to register.",
+    label: "Academic Programs",
+    description: "List of programs for student registration.",
+    example: "Example: BS Information Technology.",
     category: "identity",
     icon: "User"
   },
+  due_soon_reminder_days: {
+    value: "1",
+    label: "Reminder Offset",
+    description: "Days before due date to send reminder.",
+    example: "Example: 1 day.",
+    category: "broadcasts",
+    icon: "Megaphone"
+  }
 };
 
 export const DEFAULT_STUDENT_FAQS = JSON.parse(DEFAULT_POLICIES.student_faq_list.value) as { question: string; answer: string }[];

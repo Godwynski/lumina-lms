@@ -82,7 +82,16 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
         result.reservation_ready
           ? ` — reserved for ${result.reserved_for}`
           : ""
-      }`
+      }`,
+      {
+        bookQr,
+        studentName: result.student_name,
+        bookTitle: result.book_title,
+        reservationReady: result.reservation_ready,
+        reservedFor: result.reserved_for
+      },
+      { status: 'BORROWED' },
+      { status: 'RETURNED' }
     );
   }
 

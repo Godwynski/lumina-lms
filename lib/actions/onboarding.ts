@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { logAuditActivity } from "@/lib/audit";
 
 export async function getAcademicPrograms() {
   const supabase = await createClient();
@@ -51,6 +52,15 @@ export async function submitOnboarding(formData: {
     .eq('id', user.id);
 
   if (error) throw new Error(error.message);
+
+  await logAuditActivity(
+    user.id,
+    "profile",
+    user.id,
+    "onboarding_completed",
+    "Completed onboarding and profile setup.",
+    { ...formData }
+  );
 
   revalidatePath('/');
   return { success: true };

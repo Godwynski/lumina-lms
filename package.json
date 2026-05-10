@@ -38,7 +38,9 @@
     "html-to-image": "^1.11.13",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.511.0",
+    "mailtrap": "^4.5.1",
     "next": "^16.2.2",
+    "nodemailer": "^7.0.13",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
     "react": "^19.0.0",
@@ -52,6 +54,7 @@
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.2",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.23",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

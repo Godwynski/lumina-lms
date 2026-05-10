@@ -12,6 +12,17 @@ type ActionResult<T> =
   | { success: true; data: T; error?: never }
   | { success: false; data?: never; error: string; validationErrors?: Record<string, string[]> };
 
+/**
+ * Handlers can optionally return metadata for auditing.
+ */
+type AuditMetadata = {
+  reason?: string;
+  details?: Record<string, unknown>;
+  oldValue?: unknown;
+  newValue?: unknown;
+  entityId?: string;
+};
+
 type SafeActionOptions = {
   /** The audit action name (e.g., 'create_book'). If provided, an audit log will be created. */
   auditAction?: string;
@@ -27,7 +38,10 @@ type SafeActionOptions = {
  */
 export function createSafeAction<TInput, TOutput>(
   schema: ZodSchema<TInput> | null,
-  handler: (input: TInput, context: { userId: string; supabase: SupabaseClient }) => Promise<TOutput>,
+  handler: (
+    input: TInput, 
+    context: { userId: string; supabase: SupabaseClient }
+  ) => Promise<TOutput | [TOutput, AuditMetadata]>,
   options: SafeActionOptions = {}
 ) {
   return async (input: unknown): Promise<ActionResult<TOutput>> => {
@@ -61,22 +75,33 @@ export function createSafeAction<TInput, TOutput>(
       }
 
       // 3. Execution
-      const data = await handler(validatedInput, { 
+      const result = await handler(validatedInput, { 
         userId: me.user.id, 
         supabase: me.supabase 
       });
 
+      let data: TOutput;
+      let auditMeta: AuditMetadata | undefined;
+
+      if (Array.isArray(result) && result.length === 2) {
+        [data, auditMeta] = result;
+      } else {
+        data = result as TOutput;
+      }
+
       // 4. Audit Logging (Optional)
       if (options.auditAction && options.auditEntity) {
-        // We attempt to get an ID for the entity from the output if possible, 
-        // otherwise we just log the action.
-        const entityId = (data as Record<string, unknown>)?.id as string || "system";
+        const entityId = auditMeta?.entityId || (data as Record<string, unknown>)?.id as string || "system";
+        
         await logAuditActivity(
           me.user.id,
           options.auditEntity as AuditEntityType,
           entityId,
           options.auditAction,
-          `Action ${options.auditAction} performed on ${options.auditEntity}`
+          auditMeta?.reason || `Action ${options.auditAction} performed on ${options.auditEntity}`,
+          auditMeta?.details || null,
+          auditMeta?.oldValue || null,
+          auditMeta?.newValue || null
         );
       }
 

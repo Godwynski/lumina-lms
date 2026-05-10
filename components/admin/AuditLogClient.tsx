@@ -45,6 +45,8 @@ interface AuditLog {
   action: string;
   reason: string | null;
   details: AuditLogDetails | null;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
   created_at: string;
   profiles: {
     full_name: string | null;
@@ -102,6 +104,11 @@ export function AuditLogClient() {
     "book_copy",
     "profile",
     "borrowing_record",
+    "category",
+    "policy",
+    "fine",
+    "settings",
+    "system",
   ];
 
   return (
@@ -290,6 +297,28 @@ export function AuditLogClient() {
                                     )}
                                   </div>
                                 ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Display Old and New Values if available */}
+                      {(log.old_value || log.new_value) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                          {log.old_value && (
+                            <div className="space-y-1.5 bg-muted/20 p-3 rounded-xl border border-border/5">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 block">Before</span>
+                              <div className="text-[11px] font-mono text-muted-foreground bg-background/30 p-2 rounded-lg border border-border/5 max-h-32 overflow-y-auto whitespace-pre-wrap">
+                                {JSON.stringify(log.old_value, null, 2)}
+                              </div>
+                            </div>
+                          )}
+                          {log.new_value && (
+                            <div className="space-y-1.5 bg-primary/5 p-3 rounded-xl border border-primary/5">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 block">After</span>
+                              <div className="text-[11px] font-mono text-primary/80 bg-background/30 p-2 rounded-lg border border-primary/5 max-h-32 overflow-y-auto whitespace-pre-wrap">
+                                {JSON.stringify(log.new_value, null, 2)}
                               </div>
                             </div>
                           )}

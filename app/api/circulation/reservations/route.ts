@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logAuditActivity } from "@/lib/audit";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -82,6 +83,22 @@ export async function POST(request: NextRequest) {
         { status: statusByCode[result.code ?? ""] ?? 400 }
       );
     }
+
+    // Log successful reservation
+    await logAuditActivity(
+      user.id,
+      "borrowing_record",
+      result.reservation_id || null,
+      "reserve",
+      `Placed reservation for book (ID: ${bookId})${userId ? ` for user ${userId}` : ""}`,
+      { 
+        status: result.status, 
+        queuePosition: result.queue_position,
+        targetUserId: userId || user.id
+      },
+      null,
+      { status: result.status, queue_position: result.queue_position }
+    );
 
     return NextResponse.json(result);
   } catch (error) {
