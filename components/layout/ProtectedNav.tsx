@@ -9,7 +9,6 @@ import {
   Settings,
   Library,
   Users,
-  History,
   Clock,
   RefreshCw,
   ScrollText,
@@ -17,7 +16,7 @@ import {
   LogOut,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 
 import { Logo } from "@/components/layout/Logo";
 import {
@@ -34,8 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRouter } from "next/navigation";
-import { useState, useMemo, useCallback, memo, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLogout } from "@/hooks/use-logout";
 import { SWRConfig } from "swr";
 import {
@@ -57,18 +55,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 
 type Role = "student" | "staff" | "librarian" | "admin" | null;
 
@@ -101,14 +91,7 @@ type NavItem = {
   exactRoles?: Exclude<Role, null>[];
 };
 
-type NavGroup = {
-  id: string;
-  label: string;
-  icon: React.ElementType;
-  minRole?: Exclude<Role, null>;
-  exactRoles?: Exclude<Role, null>[];
-  children: NavItem[];
-};
+
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
@@ -119,13 +102,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
 ];
-
-// Prefetch helper
-const prefetch = (router: ReturnType<typeof useRouter>, href: string) => {
-  if (href && !href.includes("?")) {
-    router.prefetch(href);
-  }
-};
+const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
 export function ProtectedNav({
   role,
@@ -138,7 +115,6 @@ export function ProtectedNav({
 }) {
   const pathname = usePathname();
 
-  const router = useRouter();
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { setOpen, open, isMobile } = useSidebar();
@@ -198,7 +174,6 @@ export function ProtectedNav({
 
     if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
 
-    const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
     if (SETTINGS_PATHS.includes(hrefBase)) {
       return pathWithoutQuery === hrefBase;
     }
@@ -215,18 +190,18 @@ export function ProtectedNav({
     return NAV_ITEMS.filter(item => hasPermission(normalizedRole, item.minRole, item.exactRoles));
   }, [normalizedRole]);
 
-  const handlePrefetch = useCallback((href: string) => {
-    prefetch(router, href);
-  }, [router]);
+  const handlePrefetch = useCallback((_href: string) => {
+    // Next.js Link already handles prefetching on hover
+  }, []);
+
+  const swrValue = useMemo(() => ({
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5000,
+  }), []);
 
   return (
-    <SWRConfig 
-      value={{
-        revalidateOnFocus: false,
-        revalidateOnReconnect: true,
-        dedupingInterval: 5000,
-      }}
-    >
+    <SWRConfig value={swrValue}>
     <Sidebar 
       collapsible="icon" 
       className="border-r border-sidebar-border bg-sidebar"
