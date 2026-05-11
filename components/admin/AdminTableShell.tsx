@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type AdminTableShellProps = {
-  title?: string;
+  title?: ReactNode;
   description?: ReactNode;
   headerActions?: ReactNode;
   feedback?: ReactNode;
@@ -36,7 +36,7 @@ export function AdminTableShell({
         )}>
           <div className="flex flex-col gap-1">
             {title && <h1 className="text-2xl font-black tracking-tight text-foreground">{title}</h1>}
-            {description && <div className="text-sm font-medium text-muted-foreground hidden md:block opacity-70 leading-relaxed">{description}</div>}
+            {description && <div className="text-sm font-medium text-muted-foreground hidden md:block opacity-90 leading-relaxed">{description}</div>}
           </div>
           <div className="flex items-center gap-2">
             {headerActions}
@@ -58,8 +58,11 @@ export function AdminTableShell({
           ? "rounded-none border-none bg-transparent shadow-none" 
           : "rounded-2xl border border-border/10 bg-card/50 shadow-xs"
       )}>
-        <div className="relative group/table overflow-hidden">
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/10 px-0.5">
+        <div className={cn("relative group/table", !isGhost && "overflow-hidden")}>
+          <div className={cn(
+            "px-0.5",
+            !isGhost && "overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/10"
+          )}>
             {children}
           </div>
           {/* Subtle mobile scroll indicator gradient */}

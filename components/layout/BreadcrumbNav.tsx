@@ -14,7 +14,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "policies": "System Policies",
   "audit": "Audit Logs",
   "operations": "Operations",
-  "profile": "Profile Settings",
+  "profile": "My Profile",
   "preferences": "Preferences",
   "security": "Security",
 };

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, use } from "react";
 import { getMe } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { UsersContent } from "./UsersContent";
@@ -11,11 +11,18 @@ const PAGE_SIZE = 12;
 function buildUsersPromise() {
   return getMe().then(async (me) => {
     if (!me) redirect("/");
-    const { supabase } = me;
+    const { supabase, role } = me;
 
-    const { data, count, error } = await supabase
+    let query = supabase
       .from("profiles")
-      .select("*", { count: "exact" })
+      .select("*", { count: "exact" });
+
+    // Librarian Restriction: Hide admins from initial fetch
+    if (role === "librarian") {
+      query = query.neq("role", "admin");
+    }
+
+    const { data, count, error } = await query
       .order("created_at", { ascending: false })
       .range(0, PAGE_SIZE - 1);
 
@@ -24,6 +31,7 @@ function buildUsersPromise() {
     return {
       users: (data || []).map((row) => mapProfileToUser(row as Record<string, unknown>)),
       count: count || 0,
+      currentRole: role,
     };
   });
 }
@@ -36,10 +44,16 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <Suspense fallback={<UsersSkeleton />}>
-        <UsersContent usersPromise={usersPromise} />
+        <UserPageWrapper usersPromise={usersPromise} />
       </Suspense>
     </div>
   );
+}
+
+function UserPageWrapper({ usersPromise }: { usersPromise: ReturnType<typeof buildUsersPromise> }) {
+  const { currentRole } = use(usersPromise);
+  
+  return <UsersContent usersPromise={usersPromise} currentRole={currentRole as "admin" | "librarian" | "student_assistant" | "student"} />;
 }
 
 function UsersSkeleton() {

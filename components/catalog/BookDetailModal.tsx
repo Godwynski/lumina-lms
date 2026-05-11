@@ -69,6 +69,7 @@ interface BookDetailModalProps {
   onOpenChange: (open: boolean) => void;
   variant: 'student' | 'admin';
   initialData?: Partial<Book>;
+  canManage?: boolean;
 }
 
 // ─── Copy Progress Bar ─────────────────────────────────────────────────────
@@ -376,7 +377,7 @@ function StudentModalContent({
 
 // ─── Main Modal ────────────────────────────────────────────────────────────
 
-export function BookDetailModal({ bookId, open, onOpenChange, variant, initialData }: BookDetailModalProps) {
+export function BookDetailModal({ bookId, open, onOpenChange, variant, initialData, canManage = true }: BookDetailModalProps) {
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -489,6 +490,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
               initialQueue={activeAdminData.queue}
               onClose={() => onOpenChange(false)}
               onRefresh={fetchData}
+              canManage={canManage}
             />
           </div>
         )}

@@ -38,6 +38,9 @@ export async function getDashboardStats({
   myActiveBorrows: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
   activeBorrowsList?: BorrowingRecord[];
+  attendanceToday: number;
+  totalBooks: number;
+  totalUsers: number;
 }> {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -46,46 +49,48 @@ export async function getDashboardStats({
   const userId = user.id;
 
   const isStudent = role === 'student';
+  const isManager = role === 'admin' || role === 'librarian' || role === 'student_assistant';
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
-  // Helper to wrap promises with default values on error (e.g. AbortError)
   const safeWrap = async <T>(promise: Promise<T>, defaultValue: T): Promise<T> => {
     try {
       return await promise;
     } catch (err: unknown) {
-      if (isAbortError(err)) {
-        throw err; // Re-throw so Next.js can stop the stream
-      }
-      console.warn('[DASHBOARD] Sub-promise failed:', err instanceof Error ? err.message : String(err));
+      if (isAbortError(err)) throw err;
       return defaultValue;
     }
   };
 
   const [
     activeBorrowsResult,
-    recentBooks,
-    pendingApprovalsResult,
-    myActiveBorrowsResult,
+    recentBooksResult,
+    pendingCardsResult,
+    borrowingHistoryResult,
+    dailyAttendanceResult,
+    totalBooksResult,
+    totalUsersResult,
   ] = await Promise.all([
     safeWrap(
       Promise.resolve(
         supabase
           .from('borrowing_records')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('status', 'ACTIVE')
+          .then(res => ({ count: res.count ?? 0 }))
       ),
-      { count: 0, data: [], error: null, status: 200, statusText: 'OK', success: true }
+      { count: 0 }
     ),
-    safeWrap(getCachedRecentBooks(), [] as { id: string; title: string; author: string; cover_url: string | null; created_at: string }[]),
+    safeWrap(getCachedRecentBooks(), []),
     canReviewApprovals
       ? safeWrap(
           Promise.resolve(
             supabase
               .from('library_cards')
-              .select('*', { count: 'exact', head: true })
+              .select('id', { count: 'exact', head: true })
               .eq('status', 'pending')
+              .then(res => ({ count: res.count ?? 0 }))
           ),
-          { count: 0, data: [], error: null, status: 200, statusText: 'OK', success: true }
+          { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
     isStudent
@@ -94,15 +99,51 @@ export async function getDashboardStats({
           { records: [], totalCount: 0 }
         )
       : Promise.resolve({ records: [], totalCount: 0 }),
+    safeWrap(
+      Promise.resolve(
+        supabase
+          .from('attendance')
+          .select('id', { count: 'exact', head: true })
+          .gte('check_in_at', `${new Date().toISOString().split('T')[0]}T00:00:00`)
+          .then(res => ({ count: res.count ?? 0 }))
+      ),
+      { count: 0 }
+    ),
+    isManager
+      ? safeWrap(
+          Promise.resolve(
+            supabase
+              .from('books')
+              .select('id', { count: 'exact', head: true })
+              .then(res => ({ count: res.count ?? 0 }))
+          ),
+          { count: 0 }
+        )
+      : Promise.resolve({ count: 0 }),
+    canReviewApprovals
+      ? safeWrap(
+          Promise.resolve(
+            supabase
+              .from('profiles')
+              .select('id', { count: 'exact', head: true })
+              .then(res => ({ count: res.count ?? 0 }))
+          ),
+          { count: 0 }
+        )
+      : Promise.resolve({ count: 0 }),
   ]);
 
-  const activeBorrows = (activeBorrowsResult as { count: number | null }).count || 0;
+  interface SupabaseCountResult { count: number | null }
+  interface BorrowHistoryResult { records: BorrowingRecord[]; totalCount: number }
 
   return {
-    activeBorrows: activeBorrows || 0,
-    pendingApprovals: (pendingApprovalsResult as { count: number }).count || 0,
-    myActiveBorrows: (myActiveBorrowsResult as { totalCount: number }).totalCount || 0,
-    recentBooks,
-    activeBorrowsList: (myActiveBorrowsResult as { records: BorrowingRecord[] }).records,
+    activeBorrows: (activeBorrowsResult as SupabaseCountResult).count || 0,
+    pendingApprovals: (pendingCardsResult as SupabaseCountResult).count || 0,
+    myActiveBorrows: (borrowingHistoryResult as BorrowHistoryResult).totalCount || 0,
+    recentBooks: recentBooksResult as { id: string; title: string; author: string; cover_url: string | null; created_at: string }[],
+    activeBorrowsList: (borrowingHistoryResult as BorrowHistoryResult).records,
+    attendanceToday: (dailyAttendanceResult as SupabaseCountResult).count || 0,
+    totalBooks: (totalBooksResult as SupabaseCountResult).count || 0,
+    totalUsers: (totalUsersResult as SupabaseCountResult).count || 0,
   };
 }

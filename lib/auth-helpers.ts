@@ -1,12 +1,12 @@
 import { createClient } from './supabase/server';
 import { cache } from 'react';
 
-export type UserRole = 'admin' | 'librarian' | 'staff' | 'student';
+export type UserRole = 'admin' | 'librarian' | 'student_assistant' | 'student';
 
 export const normalizeUserRole = (value: unknown): UserRole | null => {
   if (typeof value !== 'string') return null;
   const role = value.trim().toLowerCase();
-  if (role === 'admin' || role === 'librarian' || role === 'staff' || role === 'student') {
+  if (role === 'admin' || role === 'librarian' || role === 'student_assistant' || role === 'student') {
     return role as UserRole;
   }
   return null;
@@ -40,7 +40,7 @@ export const getMe = cache(async () => {
     user,
     profile,
     role: role as UserRole,
-    isStaff: ['admin', 'librarian', 'staff'].includes(role),
+    isStaff: ['admin', 'librarian', 'student_assistant'].includes(role),
     isAdmin: role === 'admin',
     supabase
   };

@@ -25,9 +25,9 @@ export function NotificationList({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <Loader2 className="h-5 w-5 text-primary/40 animate-spin" />
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
-          Syncing...
+        <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+        <span className="text-sm text-muted-foreground">
+          Loading...
         </span>
       </div>
     )
@@ -36,17 +36,12 @@ export function NotificationList({
   if (notifications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-        <div className="h-12 w-12 rounded-2xl bg-muted/5 flex items-center justify-center border border-border/5">
-          <Bell className="w-5 h-5 text-muted-foreground/20" />
+        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+          <Bell className="w-5 h-5 text-muted-foreground" />
         </div>
-        <div className="space-y-1">
-          <p className="text-xs font-bold text-muted-foreground/60">
-            {emptyMessage}
-          </p>
-          <p className="text-[9px] uppercase tracking-[0.2em] font-black text-muted-foreground/20">
-            System Idle
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {emptyMessage}
+        </p>
       </div>
     )
   }

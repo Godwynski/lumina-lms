@@ -2,7 +2,7 @@ import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
 
-const MANAGER_ROLES: UserRole[] = ["admin", "librarian", "staff"];
+const MANAGER_ROLES: UserRole[] = ["admin", "librarian", "student_assistant"];
 
 function mapProfileToUser(row: Record<string, unknown>) {
   const createdAt = typeof row.created_at === "string" ? row.created_at : null;
@@ -36,10 +36,16 @@ function mapProfileToUser(row: Record<string, unknown>) {
 
 export const GET = withAuthApi(
   async (request, { supabase }) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { role: requesterRole } = (await supabase.auth.getUser()).data.user?.app_metadata || {};
+    
+    let query = supabase.from("profiles").select("*");
+
+    // Librarian Restriction: Hide admins
+    if (requesterRole === "librarian") {
+      query = query.neq("role", "admin");
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       return apiError(error.message, "DATABASE_ERROR", 400);
@@ -68,6 +74,11 @@ export const POST = withAuthApi(
     const role = normalizeUserRole(body.role as string);
     const department =
       typeof body.department === "string" ? body.department.trim() : "";
+
+    const requesterRole = user.app_metadata?.role;
+    if (requesterRole === "librarian" && role === "admin") {
+      return apiError("Librarians cannot create admin users", "FORBIDDEN", 403);
+    }
 
     if (!email) {
       return apiError("Email is required", "EMAIL_REQUIRED", 400);
@@ -151,6 +162,7 @@ export const PATCH = withAuthApi(
       status?: unknown;
       department?: unknown;
       student_id?: unknown;
+      permissions?: unknown;
     };
 
     try {
@@ -172,6 +184,13 @@ export const PATCH = withAuthApi(
 
     if (profileError) {
       return apiError(profileError.message, "DATABASE_ERROR", 400);
+    }
+
+    const requesterRole = user.app_metadata?.role;
+
+    // Librarian Restriction: Cannot target admins
+    if (requesterRole === "librarian" && profile.role === "admin") {
+      return apiError("Librarians cannot modify admin accounts", "FORBIDDEN", 403);
     }
 
     const updates: Record<string, unknown> = {};
@@ -203,7 +222,11 @@ export const PATCH = withAuthApi(
       nextRoleInput &&
       Object.prototype.hasOwnProperty.call(profile, "role")
     ) {
-      updates.role = normalizeUserRole(nextRoleInput);
+      const nextRole = normalizeUserRole(nextRoleInput);
+      if (requesterRole === "librarian" && nextRole === "admin") {
+        return apiError("Librarians cannot promote users to admin", "FORBIDDEN", 403);
+      }
+      updates.role = nextRole;
     }
 
     const nextStatus =
@@ -212,6 +235,9 @@ export const PATCH = withAuthApi(
       nextStatus &&
       Object.prototype.hasOwnProperty.call(profile, "status")
     ) {
+      if (requesterRole === "librarian" && (nextStatus === "archived" || nextStatus === "suspended")) {
+        return apiError("Librarians cannot archive or suspend users", "FORBIDDEN", 403);
+      }
       updates.status = nextStatus;
     }
 
@@ -222,6 +248,10 @@ export const PATCH = withAuthApi(
       Object.prototype.hasOwnProperty.call(profile, "department")
     ) {
       updates.department = nextDepartment || "General";
+    }
+
+    if (body.permissions !== undefined && typeof body.permissions === "object") {
+      updates.permissions = body.permissions;
     }
 
     if (Object.keys(updates).length === 0) {

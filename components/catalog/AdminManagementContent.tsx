@@ -7,6 +7,7 @@ import {
   updateBook,
   softDeleteBook,
   getBookAdminDetails,
+  addBookCopies,
 } from '@/lib/actions/catalog';
 import {
   BookOpen,
@@ -23,6 +24,7 @@ import {
   Users,
   Archive,
   Layers,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -149,6 +151,7 @@ interface AdminManagementContentProps {
   initialQueue?: ReservationQueueEntry[];
   onClose: () => void;
   onRefresh?: () => void;
+  canManage?: boolean;
 }
 
 export function AdminManagementContent({
@@ -157,6 +160,7 @@ export function AdminManagementContent({
   initialQueue,
   onClose,
   onRefresh: _onRefresh,
+  canManage = true,
 }: AdminManagementContentProps) {
   const router = useRouter();
   const [book, setBook] = useState<Book>(initialBook);
@@ -168,6 +172,10 @@ export function AdminManagementContent({
   const [updateLoading, setUpdateLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  
+  const [showAddCopies, setShowAddCopies] = useState(false);
+  const [copiesToAdd, setCopiesToAdd] = useState(1);
+  const [addCopiesLoading, setAddCopiesLoading] = useState(false);
 
   const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopyWithReservation['status']>('ALL');
 
@@ -242,6 +250,28 @@ export function AdminManagementContent({
     }
   };
 
+  const handleAddCopies = async () => {
+    if (copiesToAdd < 1) return;
+    setAddCopiesLoading(true);
+    try {
+      const result = await addBookCopies({ bookId: book.id, copiesCount: copiesToAdd });
+      if (!result.success) throw new Error(result.error);
+      await fetchData();
+      setBook(prev => ({
+        ...prev,
+        total_copies: (prev.total_copies || 0) + copiesToAdd,
+        available_copies: (prev.available_copies || 0) + copiesToAdd,
+      }));
+      setShowAddCopies(false);
+      setCopiesToAdd(1);
+      toast.success(`Successfully added ${copiesToAdd} ${copiesToAdd === 1 ? 'copy' : 'copies'}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add copies');
+    } finally {
+      setAddCopiesLoading(false);
+    }
+  };
+
   const categoryName = Array.isArray(book.categories)
     ? book.categories[0]?.name
     : book.categories?.name;
@@ -286,16 +316,18 @@ export function AdminManagementContent({
                </Badge>
             </div>
           </div>
-          <div className="flex flex-col gap-1 self-start">
-             <Button 
-               variant="outline" 
-               size="sm" 
-               onClick={() => setIsEditing(true)}
-               className="h-8 rounded-lg px-3 text-[10px] font-black uppercase tracking-wider"
-             >
-               <Edit3 size={12} className="mr-1.5" /> Edit
-             </Button>
-          </div>
+          {canManage && (
+            <div className="flex flex-col gap-1 self-start">
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={() => setIsEditing(true)}
+                 className="h-8 rounded-lg px-3 text-[10px] font-black uppercase tracking-wider"
+               >
+                 <Edit3 size={12} className="mr-1.5" /> Edit
+               </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -379,19 +411,47 @@ export function AdminManagementContent({
             </div>
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Inventory Assets</h3>
           </div>
-          <Select value={copyFilter} onValueChange={(v) => {
-            if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
-          }}>
-            <SelectTrigger className="h-7 w-[110px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-bold uppercase shadow-none focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL" className="text-[9px] font-bold uppercase">All</SelectItem>
-              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                <SelectItem key={key} value={key} className="text-[9px] font-bold uppercase">{cfg.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          <div className="flex items-center gap-2">
+            {canManage && (
+              !showAddCopies ? (
+                <Button variant="outline" size="sm" onClick={() => setShowAddCopies(true)} className="h-7 text-[9px] font-bold uppercase tracking-widest px-2">
+                  <Plus className="mr-1 h-3 w-3" /> Add Copies
+                </Button>
+              ) : (
+                <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
+                  <Input 
+                    type="number" 
+                    min={1} 
+                    max={50} 
+                    value={copiesToAdd} 
+                    onChange={e => setCopiesToAdd(parseInt(e.target.value) || 1)} 
+                    className="h-7 w-12 text-center text-[10px] font-black px-1"
+                  />
+                  <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest">
+                    {addCopiesLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Add'}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(false)} className="h-7 px-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Cancel
+                  </Button>
+                </div>
+              )
+            )}
+            {canManage && <div className="h-4 w-px bg-border/40 mx-0.5"></div>}
+            <Select value={copyFilter} onValueChange={(v) => {
+              if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
+            }}>
+              <SelectTrigger className="h-7 w-[90px] md:w-[110px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-bold uppercase shadow-none focus:ring-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL" className="text-[9px] font-bold uppercase">All</SelectItem>
+                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                  <SelectItem key={key} value={key} className="text-[9px] font-bold uppercase">{cfg.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
@@ -430,20 +490,26 @@ export function AdminManagementContent({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Select value={copy.status} onValueChange={(v) => {
-                      if (isEditableStatus(v)) handleStatusChange(copy.id, v);
-                    }}>
-                      <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EDITABLE_STATUSES.map((key) => (
-                          <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
-                            {STATUS_CONFIG[key].label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {canManage ? (
+                      <Select value={copy.status} onValueChange={(v) => {
+                        if (isEditableStatus(v)) handleStatusChange(copy.id, v);
+                      }}>
+                        <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDITABLE_STATUSES.map((key) => (
+                            <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
+                              {STATUS_CONFIG[key].label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className="h-7 px-2 text-[9px] font-black uppercase">
+                        {statusCfg.label}
+                      </Badge>
+                    )}
                     <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
                   </div>
                 </div>
@@ -482,17 +548,8 @@ export function AdminManagementContent({
         </div>
       </div>
 
-      <div className="pt-2 border-t border-border/20">
-        <Button 
-          variant="link" 
-          onClick={() => {
-            onClose();
-            router.push(`/catalog/${book.id}`);
-          }}
-          className="h-auto p-0 text-[10px] font-bold text-primary/70 hover:text-primary uppercase tracking-[0.2em]"
-        >
-          Detailed Analytics View →
-        </Button>
+      <div className="pt-2 border-t border-border/20 hidden">
+        {/* Analytics link removed per request to put everything in the modal */}
       </div>
     </div>
   );

@@ -41,7 +41,19 @@ type DashboardStats = {
   myActiveBorrows: number;
   recentBooks: { id: string; title: string; author: string; cover_url: string | null; created_at: string }[];
   activeBorrowsList?: BorrowingRecord[];
+  attendanceToday: number;
+  totalBooks: number;
+  totalUsers: number;
 };
+
+interface AttendanceLog {
+  id: string;
+  check_in_at: string;
+  user_id: string;
+  profiles?: {
+    full_name: string | null;
+  };
+}
 
 interface DashboardProps {
   user: User;
@@ -53,6 +65,7 @@ interface DashboardProps {
   reservationsPromise: Promise<Reservation[]>;
   inventoryBooksPromise: Promise<{ data: Book[]; count: number }>;
   inventoryCategoriesPromise: Promise<Category[]>;
+  attendancePromise: Promise<{ data: AttendanceLog[] | null; error: Error | null }>;
 }
 
 export function DashboardClient({ 
@@ -64,7 +77,8 @@ export function DashboardClient({
   faqPromise, 
   reservationsPromise,
   inventoryBooksPromise,
-  inventoryCategoriesPromise
+  inventoryCategoriesPromise,
+  attendancePromise
 }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -96,6 +110,7 @@ export function DashboardClient({
   const reservations = use(reservationsPromise);
   const inventoryData = use(inventoryBooksPromise);
   const inventoryCategories = use(inventoryCategoriesPromise);
+  const attendanceData = use(attendancePromise);
 
   const profileData = profileResult.data;
   const activeBorrowsList = useMemo(() => stats.activeBorrowsList || [], [stats.activeBorrowsList]);
@@ -228,6 +243,24 @@ export function DashboardClient({
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
                      <History size={18} />
                   </div>
+                </div>
+              </Card>
+            )}
+
+            {attendanceData?.data && attendanceData.data.length > 0 && (
+              <Card className="border-border/20 bg-card/20 shadow-none p-4 backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Recent Attendance</p>
+                <div className="space-y-2">
+                  {attendanceData.data.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between text-[11px]">
+                      <span className="font-medium text-foreground/70">
+                        {new Date(log.check_in_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {new Date(log.check_in_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </Card>
             )}
@@ -399,9 +432,11 @@ export function DashboardClient({
     );
   }
 
-  // STAFF / ADMIN DASHBOARD
+  // MANAGER / ADMIN DASHBOARD
+
+
   return (
-    <div className="w-full relative min-h-[600px] space-y-3">
+    <div className="w-full relative min-h-[600px] space-y-6">
       <div className="flex items-center justify-between px-1">
         <div className="w-full">
           <DashboardSearch role={role || null} />

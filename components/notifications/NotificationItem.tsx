@@ -84,15 +84,15 @@ export const NotificationItem = memo(({
       <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 overflow-hidden">
-            <Icon className={cn("h-3.5 w-3.5 shrink-0", notification.is_read ? "text-muted-foreground/40" : config.color)} />
+            <Icon className={cn("h-4 w-4 shrink-0", notification.is_read ? "text-muted-foreground/50" : config.color)} />
             <h4 className={cn(
-              "text-[13px] tracking-tight truncate transition-colors",
-              !notification.is_read ? "font-bold text-foreground" : "font-semibold text-muted-foreground"
+              "text-sm font-medium truncate transition-colors",
+              !notification.is_read ? "text-foreground" : "text-muted-foreground"
             )}>
               {notification.title}
             </h4>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 whitespace-nowrap">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
             {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
           </span>
         </div>
@@ -110,14 +110,14 @@ export const NotificationItem = memo(({
           <div className="hidden sm:flex items-center gap-4 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button 
               onClick={() => onMarkRead(notification.id)}
-              className="text-[10px] font-black uppercase tracking-[0.15em] text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5"
+              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5"
             >
               <Check className="w-3 h-3" />
               Mark as read
             </button>
             <button 
               onClick={() => onDelete(notification.id)}
-              className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 hover:text-destructive transition-colors flex items-center gap-1.5"
+              className="text-xs font-medium text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1.5"
             >
               <Trash2 className="w-3 h-3" />
               Remove
@@ -130,25 +130,25 @@ export const NotificationItem = memo(({
       <div className="flex items-center self-start pt-0.5">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 sm:opacity-0 transition-opacity text-muted-foreground/40 hover:text-foreground">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md opacity-0 group-hover:opacity-100 sm:opacity-0 transition-opacity text-muted-foreground hover:text-foreground">
               <MoreVertical className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40 rounded-xl border-border/40 shadow-xl backdrop-blur-md">
+          <DropdownMenuContent align="end" className="w-40">
             {!notification.is_read && (
               <DropdownMenuItem 
                 onClick={() => onMarkRead(notification.id)}
-                className="text-[11px] font-bold uppercase tracking-widest gap-2 py-2.5"
+                className="gap-2"
               >
-                <Check className="h-3.5 w-3.5 text-primary" />
+                <Check className="h-4 w-4" />
                 Mark read
               </DropdownMenuItem>
             )}
             <DropdownMenuItem 
               onClick={() => onDelete(notification.id)}
-              className="text-[11px] font-bold uppercase tracking-widest gap-2 py-2.5 text-destructive focus:text-destructive"
+              className="gap-2 text-destructive focus:text-destructive"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
