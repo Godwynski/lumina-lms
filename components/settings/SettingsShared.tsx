@@ -154,3 +154,44 @@ export function RunMaintenanceTool() {
     </div>
   );
 }
+
+export function TestEmailTool() {
+  const [isSending, setIsSending] = useState(false);
+
+  const handleTest = async () => {
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/test-email", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success("Test email sent! Check your inbox.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Test failed");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 py-2">
+      <div className="space-y-1">
+        <h4 className="text-sm font-medium text-foreground">Configuration Test</h4>
+        <p className="text-xs text-muted-foreground">
+          Sends a professional test email to your account to verify SMTP.
+        </p>
+      </div>
+      <Button 
+        onClick={handleTest} 
+        disabled={isSending}
+        variant="secondary"
+        size="sm"
+        className="h-8 rounded-lg text-xs font-medium"
+      >
+        {isSending ? "Sending..." : "Send Test Email"}
+      </Button>
+    </div>
+  );
+}
