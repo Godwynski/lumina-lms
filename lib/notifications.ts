@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logger } from '@/lib/logger';
+import { sendOverdueEmail, sendDueSoonEmail } from './mail';
 
 type NotificationType = 'SYSTEM' | 'CIRCULATION' | 'RESERVATION' | 'OVERDUE' | 'ACCOUNT' | 'DUE_SOON' | 'RESERVATION_EXPIRED';
 type NotificationPriority = 'low' | 'medium' | 'high';
@@ -91,6 +92,16 @@ export async function runMaintenanceTasks() {
       });
 
       if (success) {
+        // Send Email Notification if email exists
+        if (record.profiles?.email) {
+          await sendDueSoonEmail({
+            to: record.profiles.email,
+            userName: record.profiles.full_name || 'Valued Member',
+            bookTitle: book?.title || 'Borrowed Book',
+            dueDate: dueDate.toLocaleDateString(),
+          });
+        }
+
         await supabaseAdmin
           .from('borrowing_records')
           .update({ reminder_sent: true })
@@ -154,6 +165,17 @@ export async function runMaintenanceTasks() {
         });
 
         if (success) {
+          // Send Email Notification if email exists
+          if (record.profiles?.email) {
+            await sendOverdueEmail({
+              to: record.profiles.email,
+              userName: record.profiles.full_name || 'Valued Member',
+              bookTitle: book?.title || 'Borrowed Book',
+              dueDate: dueDate.toLocaleDateString(),
+              overdueDays,
+            });
+          }
+
           results.overdueTagged++;
         }
       }

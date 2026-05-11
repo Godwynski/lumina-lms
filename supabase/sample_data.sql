@@ -54,10 +54,10 @@ END $$;
 -- NOTE: These require corresponding auth.users in a real system.
 -- For local/mock SQL, we insert into public.profiles directly.
 INSERT INTO public.profiles (id, email, full_name, role, student_id, status) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@lumina.test', 'System Admin', 'admin', 'ADM-001', 'ACTIVE'),
-('00000000-0000-0000-0000-000000000002', 'librarian@lumina.test', 'Jane Librarian', 'librarian', 'LIB-001', 'ACTIVE'),
-('00000000-0000-0000-0000-000000000003', 'alice@lumina.test', 'Alice Student', 'student', 'STUD-001', 'ACTIVE'),
-('00000000-0000-0000-0000-000000000004', 'bob@lumina.test', 'Bob Student', 'student', 'STUD-002', 'ACTIVE')
+('00000000-0000-0000-0000-000000000001', 'admin@lumina.test', 'Alexander Wright', 'admin', 'ADM-001', 'ACTIVE'),
+('00000000-0000-0000-0000-000000000002', 'librarian@lumina.test', 'Sarah Jenkins', 'librarian', 'LIB-001', 'ACTIVE'),
+('00000000-0000-0000-0000-000000000003', 'alice@lumina.test', 'Alice Henderson', 'student', 'STUD-001', 'ACTIVE'),
+('00000000-0000-0000-0000-000000000004', 'bob@lumina.test', 'Robert Wilson', 'student', 'STUD-002', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. CARDS
