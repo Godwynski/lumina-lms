@@ -57,12 +57,11 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
     .select('borrowed_at, status')
     .gte('borrowed_at', startDate.toISOString());
 
-  // 3. Fetch Popular Books (Overall or range?)
-  // Let's do top 5 most borrowed books of all time for now, or within range
+  // 3. Fetch Popular Books
   const { data: popularBooksData } = await supabase
     .from('borrowing_records')
     .select('book_copies(books(title))')
-    .limit(1000); // Sample for speed
+    .limit(100);
 
   // Process Trends
   const attendanceTrends = processTrends(attendanceData?.map(d => d.check_in_at) || [], startDate, now, groupBy);
@@ -73,7 +72,10 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
   borrowingData?.forEach(record => {
     statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
   });
-  const statusDistribution = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+  const statusDistribution = Object.entries(statusCounts).map(([name, value]) => ({ 
+    name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '), 
+    value 
+  }));
 
   // Process Popular Books
   const bookCounts: Record<string, number> = {};
@@ -96,6 +98,8 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
     popularBooks
   };
 }
+
+
 
 function processTrends(timestamps: string[], startDate: Date, endDate: Date, groupBy: 'day' | 'month'): TrendDataPoint[] {
   const dates = timestamps.map(ts => new Date(ts));
