@@ -3,7 +3,7 @@ export const DEFAULT_POLICIES = {
   loan_period_days: { 
     value: "14", 
     label: "Borrowing Period",
-    description: "Standard duration for book loans.",
+    description: "Standard duration for book borrows.",
     example: "Example: 14 days.",
     category: "circulation",
     icon: "Calendar"
@@ -19,7 +19,7 @@ export const DEFAULT_POLICIES = {
   max_renewal_count: { 
     value: "3", 
     label: "Max Renewals",
-    description: "Number of times a loan can be extended.",
+    description: "Number of times a borrow can be extended.",
     example: "Example: 3 times.",
     category: "circulation",
     icon: "RotateCw"

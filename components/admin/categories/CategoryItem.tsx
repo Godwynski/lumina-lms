@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Archive, Check } from "lucide-react";
+import { Edit2, Archive, Check, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { Category } from "@/types/admin";
@@ -15,6 +15,7 @@ interface CategoryItemProps {
   onDraftChange?: (field: keyof Category, value: string) => void;
   onEdit?: (category: Category) => void;
   onArchive?: (id: string) => void;
+  onRestore?: (id: string) => void;
 }
 
 export function CategoryItem({
@@ -25,6 +26,7 @@ export function CategoryItem({
   onDraftChange,
   onEdit,
   onArchive,
+  onRestore,
 }: CategoryItemProps) {
   return (
     <div
@@ -94,15 +96,27 @@ export function CategoryItem({
             >
               <Edit2 className="h-4 w-4" />
             </Button>
-            <Button
-              onClick={() => onArchive(category.id)}
-              size="sm"
-              variant="outline"
-              className="h-9 w-9 rounded-xl p-0 border-border/40 text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-colors"
-              title="Archive category"
-            >
-              <Archive className="h-4 w-4" />
-            </Button>
+            {category.is_active ? (
+              <Button
+                onClick={() => onArchive(category.id)}
+                size="sm"
+                variant="outline"
+                className="h-9 w-9 rounded-xl p-0 border-border/40 text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-colors"
+                title="Archive category"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                onClick={() => onRestore && onRestore(category.id)}
+                size="sm"
+                variant="outline"
+                className="h-9 w-9 rounded-xl p-0 border-border/40 text-muted-foreground hover:text-emerald-600 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-colors"
+                title="Restore category"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            )}
           </>
         )}
         {isBulkEditing && isChanged && (

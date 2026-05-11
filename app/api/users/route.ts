@@ -1,6 +1,7 @@
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const MANAGER_ROLES: UserRole[] = ["admin", "librarian", "student_assistant"];
 
@@ -31,6 +32,9 @@ function mapProfileToUser(row: Record<string, unknown>) {
     joined: created
       ? created.toLocaleDateString("en-US", { month: "short", year: "numeric" })
       : "Unknown",
+    address: typeof row.address === "string" ? row.address : null,
+    phone: typeof row.phone === "string" ? row.phone : null,
+    permissions: (row.permissions as Record<string, boolean>) || {},
   };
 }
 
@@ -163,6 +167,8 @@ export const PATCH = withAuthApi(
       department?: unknown;
       student_id?: unknown;
       permissions?: unknown;
+      address?: unknown;
+      phone?: unknown;
     };
 
     try {
@@ -254,13 +260,25 @@ export const PATCH = withAuthApi(
       updates.permissions = body.permissions;
     }
 
+    const nextAddress = typeof body.address === "string" ? body.address.trim() : null;
+    if (nextAddress !== null && "address" in profile) {
+      updates.address = nextAddress || null;
+    }
+
+    const nextPhone = typeof body.phone === "string" ? body.phone.trim() : null;
+    if (nextPhone !== null && "phone" in profile) {
+      updates.phone = nextPhone || null;
+    }
+
     if (Object.keys(updates).length === 0) {
       return apiSuccess({
         user: mapProfileToUser(profile as Record<string, unknown>),
       });
     }
 
-    const { data: updated, error: updateError } = await supabase
+    const admin = createAdminClient();
+
+    const { data: updated, error: updateError } = await admin
       .from("profiles")
       .update(updates)
       .eq("id", id)
@@ -269,6 +287,14 @@ export const PATCH = withAuthApi(
 
     if (updateError) {
       return apiError(updateError.message, "DATABASE_ERROR", 400);
+    }
+
+    // Sync library card status if membership status changed
+    if (updates.status && updates.status !== profile.status) {
+      await admin
+        .from("library_cards")
+        .update({ status: (updates.status as string).toLowerCase() })
+        .eq("user_id", id);
     }
 
     await logAuditActivity(

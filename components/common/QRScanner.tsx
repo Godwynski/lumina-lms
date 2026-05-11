@@ -19,20 +19,45 @@ export function QRScanner({ onScan, onClose, className, autoStart = true }: QRSc
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const regionId = "qr-reader";
 
+  const isStoppingRef = useRef(false);
+
   const stopScanner = useCallback(async () => {
+    if (isStoppingRef.current) return;
     if (scannerRef.current && scannerRef.current.isScanning) {
+      isStoppingRef.current = true;
       try {
         await scannerRef.current.stop();
         scannerRef.current = null;
         setIsScannerActive(false);
       } catch (err) {
-        console.error("Scanner stop error:", err);
+        // If it's already stopped or in a state where it can't stop, we can safely ignore the transition error
+        if (err instanceof Error && !err.message.includes("Cannot transition")) {
+          console.error("Scanner stop error:", err);
+        }
+      } finally {
+        isStoppingRef.current = false;
       }
     }
   }, []);
 
+  const isStartingRef = useRef(false);
+
+  const isMounted = useRef(true);
+
   const startScanner = useCallback(async () => {
+    if (!isMounted.current || isStartingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
+    
+    isStartingRef.current = true;
     try {
+      // Ensure any existing instance is cleaned up first
+      if (scannerRef.current) {
+        try {
+          await stopScanner();
+        } catch { /* ignore cleanup errors */ }
+      }
+
+      if (!isMounted.current) return;
+
       const html5QrCode = new Html5Qrcode(regionId);
       scannerRef.current = html5QrCode;
       
@@ -56,19 +81,30 @@ export function QRScanner({ onScan, onClose, className, autoStart = true }: QRSc
         }
       );
       
-      setIsScannerActive(true);
-      setError(null);
+      if (isMounted.current) {
+        setIsScannerActive(true);
+        setError(null);
+      } else {
+        // If unmounted during start, stop it immediately
+        void stopScanner();
+      }
     } catch (err) {
-      console.error("Scanner start error:", err);
-      setError("Failed to access camera. Please check permissions.");
+      if (isMounted.current) {
+        console.error("Scanner start error:", err);
+        setError("Failed to access camera. Please check permissions.");
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   }, [onScan, stopScanner]);
 
   useEffect(() => {
+    isMounted.current = true;
     if (autoStart) {
       void startScanner();
     }
     return () => {
+      isMounted.current = false;
       void stopScanner();
     };
   }, [autoStart, startScanner, stopScanner]);

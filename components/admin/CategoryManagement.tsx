@@ -127,8 +127,31 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
       if (!response.ok) throw new Error("Failed to archive category");
 
-      setCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
-      setDraftCategories((prev) => prev.map((c) => c.id === id ? { ...c, is_active: false } : c));
+      setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
+      setDraftCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/admin/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: true }),
+      });
+
+      if (!response.ok) throw new Error("Failed to restore category");
+
+      const updated = await response.json();
+      setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      setDraftCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -270,6 +293,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
               onDraftChange={(field, value) => handleDraftChange(category.id, field, value)}
               onEdit={openDialog}
               onArchive={handleArchive}
+              onRestore={handleRestore}
             />
           ))}
         </div>

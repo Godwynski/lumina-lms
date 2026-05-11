@@ -39,9 +39,17 @@ export const Section = memo(({
 });
 Section.displayName = "Section";
 
-export const FieldGroup = memo(({ label, children }: { label: string; children: React.ReactNode }) => {
+export const FieldGroup = memo(({ 
+  label, 
+  children,
+  className 
+}: { 
+  label: string; 
+  children: React.ReactNode;
+  className?: string;
+}) => {
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       {children}
     </div>

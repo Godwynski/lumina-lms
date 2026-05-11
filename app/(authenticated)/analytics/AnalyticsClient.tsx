@@ -1,9 +1,8 @@
 'use client';
 
 import { use, useState, useEffect, useTransition, useCallback } from 'react';
-import { Clock, BookOpen, Library, UserCircle2, Loader2 } from 'lucide-react';
-import { AdminTableShell } from '@/components/admin/AdminTableShell';
-import { TrendChart, StatusPieChart } from './AnalyticsCharts';
+import { Clock, BookOpen, Library, UserCircle2, Sparkles, TrendingUp } from 'lucide-react';
+import { TrendChart, StatusPieChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange } from '@/lib/actions/analytics';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -24,9 +23,9 @@ interface AnalyticsProps {
 }
 
 const RANGES: { label: string; value: AnalyticsRange }[] = [
-  { label: '7D', value: '7d' },
-  { label: '30D', value: '30d' },
-  { label: '1Y', value: '1y' },
+  { label: '7 Days', value: '7d' },
+  { label: '30 Days', value: '30d' },
+  { label: '1 Year', value: '1y' },
 ];
 
 export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
@@ -57,7 +56,7 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
     const channel = supabase
       .channel('analytics-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
-        loadSummary(); // Refresh without full loading state for real-time feel
+        loadSummary();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
         loadSummary();
@@ -70,142 +69,186 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
   }, [loadSummary]);
 
   return (
-    <AdminTableShell
-      title={null}
-      description={null}
-      headerActions={
-        <div className="flex items-center justify-between w-full">
-          <div className="flex bg-muted/20 p-1 rounded-lg border border-border/10">
-            {RANGES.map((r) => (
-              <button
-                key={r.value}
-                onClick={() => setRange(r.value)}
-                className={cn(
-                  "px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] rounded-md transition-all",
-                  range === r.value 
-                    ? "bg-foreground text-background shadow-sm" 
-                    : "text-muted-foreground/60 hover:text-foreground/80 hover:bg-muted/30"
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} className="text-primary" />
+            <h1 className="text-2xl font-black tracking-tight text-foreground">System Insights</h1>
+          </div>
+          <p className="text-sm font-medium text-muted-foreground/90 max-w-md">
+            Real-time visualization of library traffic, circulation patterns, and collection health.
+          </p>
+        </div>
+
+        <div className="flex bg-muted/40 p-1 rounded-xl border border-border/60 self-start md:self-auto">
+          {RANGES.map((r) => (
+            <button
+              key={r.value}
+              onClick={() => setRange(r.value)}
+              className={cn(
+                "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                range === r.value 
+                  ? "bg-foreground text-background shadow-lg scale-[1.02]" 
+                  : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/70"
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Stats Grid */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { 
+            label: "Daily Traffic", 
+            value: stats.attendanceToday, 
+            icon: Clock, 
+            desc: "Check-ins today" 
+          },
+          { 
+            label: "Active Borrows", 
+            value: stats.activeBorrows, 
+            icon: BookOpen, 
+            desc: "Currently out" 
+          },
+          { 
+            label: "Inventory", 
+            value: stats.totalBooks, 
+            icon: Library, 
+            desc: "Total volumes" 
+          },
+          { 
+            label: "Members", 
+            value: stats.totalUsers, 
+            icon: UserCircle2, 
+            desc: "Registered users" 
+          },
+        ].map((stat, i) => (
+          <div key={i} className="relative group bg-muted/5 border border-border/40 p-6 rounded-2xl hover:bg-muted/10 hover:border-primary/20 transition-all duration-300">
+            <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-primary/60">
+              <stat.icon size={24} strokeWidth={2.5} />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 mb-4">{stat.label}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-3xl font-black text-foreground tracking-tighter">{stat.value}</p>
+              <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-tight">{stat.desc}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Primary Visualizations */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="relative overflow-hidden">
+          {!summary ? (
+            <ChartSkeleton title="Traffic Distribution" />
+          ) : (
+            <TrendChart 
+              data={summary.attendanceTrends} 
+              title="Traffic Distribution" 
+              color="hsl(var(--primary))" 
+            />
+          )}
+          {isPending && summary && (
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20 overflow-hidden">
+               <div className="h-full bg-primary animate-[shimmer_2s_infinite_linear]" style={{ width: '30%', background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)' }} />
+            </div>
+          )}
+        </div>
+
+        <div className="relative overflow-hidden">
+          {!summary ? (
+            <ChartSkeleton title="Circulation Trends" />
+          ) : (
+            <TrendChart 
+              data={summary.borrowingTrends} 
+              title="Circulation Trends" 
+              color="hsl(var(--primary))" 
+            />
+          )}
+          {isPending && summary && (
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20 overflow-hidden">
+               <div className="h-full bg-primary animate-[shimmer_2s_infinite_linear]" style={{ width: '30%', background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)' }} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Deep Insights */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Pie Chart */}
+        <div className="lg:col-span-5 flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">Asset Allocation</p>
+            <Sparkles size={14} className="text-primary/30" />
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            {summary ? (
+              <StatusPieChart data={summary.statusDistribution} />
+            ) : (
+              <div className="h-[240px] w-full flex flex-col items-center justify-center gap-4 animate-pulse">
+                <div className="w-32 h-32 rounded-full border-[12px] border-muted/10" />
+                <div className="w-24 h-2 bg-muted/10 rounded" />
+              </div>
+            )}
           </div>
         </div>
-      }
-      variant="ghost"
-    >
-      <div className="space-y-4">
-        {/* Stats Overview - Compact */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {[
-            { label: "Visits Today", value: stats.attendanceToday, icon: Clock },
-            { label: "Books Borrowed", value: stats.activeBorrows, icon: BookOpen },
-            { label: "Total Collection", value: stats.totalBooks, icon: Library },
-            { label: "Library Users", value: stats.totalUsers, icon: UserCircle2 },
-          ].map((stat, i) => (
-            <div key={i} className="flex items-center justify-between border-l border-primary/20 bg-muted/5 p-3 px-4 transition-all">
-              <div className="flex flex-col">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">{stat.label}</p>
-                <p className="text-lg font-black text-foreground tracking-tight">{stat.value}</p>
-              </div>
-              <stat.icon size={14} className="text-muted-foreground/30" />
-            </div>
-          ))}
-        </section>
 
-        {/* Main Charts - High Density */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="border-t border-border/5 bg-transparent p-4 relative overflow-hidden group">
-            {isPending && !summary && (
-              <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/10" />
-              </div>
-            )}
-            {summary ? (
-              <TrendChart 
-                data={summary.attendanceTrends} 
-                title="Daily Visits" 
-                color="hsl(var(--primary))" 
-              />
-            ) : (
-              <div className="h-[220px] flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted/5" />
-              </div>
-            )}
+        {/* Popular List */}
+        <div className="lg:col-span-7 bg-muted/5 border border-border/40 rounded-2xl overflow-hidden flex flex-col">
+          <div className="p-6 flex items-center justify-between border-b border-border/5">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">High Demand Catalog</p>
+            <span className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">Top Performance</span>
           </div>
-
-          <div className="border-t border-border/5 bg-transparent p-4 relative overflow-hidden group">
-            {isPending && !summary && (
-              <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/10" />
-              </div>
-            )}
+          
+          <div className="flex-1">
             {summary ? (
-              <TrendChart 
-                data={summary.borrowingTrends} 
-                title="Book Loans" 
-                color="hsl(var(--primary))" 
-              />
-            ) : (
-              <div className="h-[220px] flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted/5" />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Secondary Insights - Compact Grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <div className="lg:col-span-1 border-t border-border/5 bg-transparent p-5">
-             <div className="px-1 py-4 flex items-center justify-between">
-               <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                 Book Availability
-               </p>
-             </div>
-             {summary ? (
-               <StatusPieChart data={summary.statusDistribution} />
-             ) : (
-               <div className="h-[220px] flex items-center justify-center">
-                 <Loader2 className="h-6 w-6 animate-spin text-muted/5" />
-               </div>
-             )}
-           </div>
- 
-          <div className="lg:col-span-2 border-t border-border/5 bg-transparent overflow-hidden flex flex-col">
-            <div className="px-5 py-4 flex items-center justify-between border-b border-border/10">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Most Popular Books
-              </p>
-              <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Rank</span>
-            </div>
-            <div className="flex-1 p-0">
-              {summary ? (
-                <div className="divide-y divide-border/10">
-                  {summary.popularBooks.length > 0 ? summary.popularBooks.map((book, i) => (
-                    <div key={i} className="flex items-center justify-between py-3 px-5 hover:bg-muted/30 transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-black text-muted-foreground/50 w-4 group-hover:text-foreground/70 transition-colors">{i + 1}</span>
-                        <p className="text-sm font-bold text-foreground truncate max-w-[200px] sm:max-w-none">{book.title}</p>
+              <div className="divide-y divide-border/5">
+                {summary.popularBooks.length > 0 ? summary.popularBooks.map((book, i) => (
+                  <div key={i} className="flex items-center justify-between py-5 px-6 hover:bg-primary/[0.02] transition-colors group">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span className="text-[10px] font-black text-muted-foreground/20 w-4 group-hover:text-primary/40 transition-colors">0{i + 1}</span>
+                      <p className="text-sm font-bold text-foreground truncate">{book.title}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-1 w-12 bg-muted/20 rounded-full overflow-hidden hidden sm:block">
+                        <div 
+                          className="h-full bg-primary/40 rounded-full" 
+                          style={{ width: `${(book.count / (summary.popularBooks[0]?.count || 1)) * 100}%` }}
+                        />
                       </div>
-                      <div className="flex items-center gap-1.5 text-foreground font-black text-sm">
-                        {book.count}
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">units</span>
+                      <div className="flex items-baseline gap-1 text-foreground">
+                        <span className="font-black text-sm">{book.count}</span>
+                        <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-tight">borrows</span>
                       </div>
                     </div>
-                  )) : (
-                    <div className="p-8 text-center text-muted-foreground/40 text-[10px] uppercase tracking-widest font-black">No Data Recorded</div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-[200px] flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted/10" />
-                </div>
-              )}
-            </div>
+                  </div>
+                )) : (
+                  <div className="flex items-center justify-center py-20">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/30 italic">No circulation data recorded</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="divide-y divide-border/5 animate-pulse">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center justify-between py-5 px-6">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-4 h-2 bg-muted/20 rounded" />
+                      <div className="w-1/2 h-3 bg-muted/10 rounded" />
+                    </div>
+                    <div className="w-12 h-3 bg-muted/10 rounded" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </section>
-      </div>
-    </AdminTableShell>
+        </div>
+      </section>
+    </div>
   );
-}
+}

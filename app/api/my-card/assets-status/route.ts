@@ -1,12 +1,10 @@
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
-import { checkStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
+import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
 import {
   getDeterministicProfileUrl,
   isDeterministicProfileUrl,
   resolveStudentId,
 } from "@/lib/library-card-assets";
-
-
 
 export const GET = withAuthApi(async (request, { user, profile }) => {
   const studentId = resolveStudentId({
@@ -20,7 +18,13 @@ export const GET = withAuthApi(async (request, { user, profile }) => {
     return apiError("Unable to resolve student ID", "STUDENT_ID_MISSING", 400);
   }
 
-  const status = await checkStaticLibraryCardAssets({ studentId });
+  // This will check if assets exist and create them if missing (idempotent if not forcing)
+  const status = await ensureStaticLibraryCardAssets({
+    userId: user.id,
+    fallbackEmail: user.email,
+    fallbackAvatarUrl: profile.avatar_url as string,
+  });
+
   const profileUrl = (profile.avatar_url as string) || getDeterministicProfileUrl(studentId);
 
   return apiSuccess({

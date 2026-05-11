@@ -4,22 +4,24 @@ export const CARD_ASSET_BUCKET =
   process.env.NEXT_PUBLIC_CARD_ASSET_BUCKET || DEFAULT_BUCKET;
 
 export function sanitizeStudentId(studentId: string) {
-  return studentId.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "_");
+  return studentId.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "_");
 }
 
 function parseStudentIdFromEmail(email?: string | null) {
   if (!email) return null;
 
-  const localPart = email.split("@")[0];
+  const localPart = email.split("@")[0].toLowerCase();
   
-  // 1. Try to find the first sequence of digits (e.g., 376375 from neri.376375)
-  const digitMatch = localPart.match(/\d+/);
+  // 1. Student Case: lastname.id.@alabang.sti.edu.ph or lastname.id@...
+  // Usually has a sequence of 6+ digits
+  const digitMatch = localPart.match(/\d{6,}/) || localPart.match(/\d+/);
   if (digitMatch) {
-    return sanitizeStudentId(digitMatch[0]);
+    return `STU-${digitMatch[0]}`;
   }
 
-  // 2. If no digits (Teacher case), use the local part (e.g., johnrenaund.baybay)
-  return sanitizeStudentId(localPart);
+  // 2. Faculty Case: firstname.lastname@alabang.sti.edu.ph
+  // Use the local part directly (e.g. FAC-juan.delacruz)
+  return `FAC-${localPart}`;
 }
 
 export function fileNamesFor(studentId: string) {

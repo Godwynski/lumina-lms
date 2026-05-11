@@ -15,9 +15,16 @@ const roleStyles: Record<string, string> = {
   student: "text-muted-foreground font-medium",
 };
 
+const roleLabels: Record<string, string> = {
+  admin: "Administrator",
+  librarian: "Librarian",
+  student_assistant: "Student Assistant",
+  student: "Student",
+};
+
 export function RoleBadge({ role, className }: RoleBadgeProps) {
   const normalized = role.toLowerCase();
-  const displayName = normalized === "student_assistant" ? "Student Assistant" : role;
+  const displayName = roleLabels[normalized] || role;
   
   return (
     <span className={cn("text-[11px] uppercase tracking-tight", roleStyles[normalized] || "text-muted-foreground", className)}>
