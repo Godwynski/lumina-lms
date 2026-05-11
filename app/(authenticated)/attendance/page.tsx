@@ -12,36 +12,30 @@ export default async function AttendancePage() {
   const isStaff = ['admin', 'librarian', 'student_assistant'].includes(me.role);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {isStaff ? "Library Access Management" : "My Attendance History"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {isStaff 
-            ? "Manage library entries and exits via card scanning." 
-            : "Log your daily library visits and view your attendance history."}
-        </p>
-      </div>
-
-      <Suspense fallback={<AttendanceSkeleton />}>
-        <AttendanceClient 
-          historyPromise={historyPromise} 
-          isStaff={isStaff}
-        />
-      </Suspense>
-    </div>
+    <Suspense fallback={<AttendanceSkeleton />}>
+      <AttendanceClient 
+        historyPromise={historyPromise} 
+        isStaff={isStaff}
+      />
+    </Suspense>
   );
 }
 
 function AttendanceSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-32 w-full bg-muted rounded-xl" />
-      <div className="space-y-2">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-16 w-full bg-muted/40 rounded-lg" />
-        ))}
+    <div className="mx-auto w-full max-w-[1450px] space-y-6 animate-pulse">
+      <div className="flex flex-col gap-2">
+        <div className="h-8 w-48 bg-muted rounded-lg" />
+        <div className="h-4 w-64 bg-muted/50 rounded-lg" />
+      </div>
+      <div className="h-12 w-full bg-muted/30 rounded-2xl" />
+      <div className="rounded-2xl border border-border/10 bg-card/50 overflow-hidden">
+        <div className="h-10 w-full bg-muted/20 border-b border-border/10" />
+        <div className="p-1 space-y-1">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-16 w-full bg-muted/5 rounded-xl" />
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -297,6 +297,42 @@ export async function getBookCopies(bookId: string) {
 
 
 
+export const addBookCopies = createSafeAction(
+  z.object({
+    bookId: z.string(),
+    copiesCount: z.number().min(1).max(50)
+  }),
+  async ({ bookId, copiesCount }, { supabase }) => {
+    const copies = Array.from({ length: copiesCount }).map(() => ({
+      book_id: bookId,
+      status: 'AVAILABLE'
+    }));
+
+    const { error } = await supabase
+      .from('book_copies')
+      .insert(copies);
+
+    if (error) {
+      logger.error('catalog', `Failed to add copies for book ID: ${bookId}`, { error: error.message });
+      throw new Error('Failed to add book copies.');
+    }
+
+    revalidateTag('catalog', 'default');
+    revalidateTag(`book-${bookId}`, 'default');
+    revalidatePath(`/catalog/${bookId}`);
+    
+    return [null, {
+      reason: `Added ${copiesCount} copies to book ID: ${bookId}`,
+      details: { copiesCount }
+    }];
+  },
+  { 
+    auditAction: "create", 
+    auditEntity: "book_copy", 
+    allowedRoles: ['admin', 'librarian', 'student_assistant'] 
+  }
+);
+
 export const updateBookCopyStatus = createSafeAction(
   z.object({ 
     id: z.string(), 

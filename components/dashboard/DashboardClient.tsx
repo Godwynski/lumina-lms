@@ -433,7 +433,7 @@ export function DashboardClient({
   }
 
   // MANAGER / ADMIN DASHBOARD
-  const isAdminOrLibrarian = role === 'admin' || role === 'librarian';
+
 
   return (
     <div className="w-full relative min-h-[600px] space-y-6">
@@ -442,87 +442,6 @@ export function DashboardClient({
           <DashboardSearch role={role || null} />
         </div>
       </div>
-
-      {/* Stats Overview */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 px-1">
-        <Card className="border-border/20 bg-card/10 backdrop-blur-sm shadow-none p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Today&apos;s Visits</p>
-          <div className="flex items-center justify-between">
-            <p className="text-2xl font-black text-primary">{stats.attendanceToday}</p>
-            <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
-              <Clock size={16} />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="border-border/20 bg-card/10 backdrop-blur-sm shadow-none p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Active Borrows</p>
-          <div className="flex items-center justify-between">
-            <p className="text-2xl font-black text-primary">{stats.activeBorrows}</p>
-            <div className="rounded-lg bg-orange-500/10 p-1.5 text-orange-500">
-              <BookOpen size={16} />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="border-border/20 bg-card/10 backdrop-blur-sm shadow-none p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Total Books</p>
-          <div className="flex items-center justify-between">
-            <p className="text-2xl font-black text-primary">{stats.totalBooks}</p>
-            <div className="rounded-lg bg-blue-500/10 p-1.5 text-blue-500">
-              <Library size={16} />
-            </div>
-          </div>
-        </Card>
-
-        {isAdminOrLibrarian && (
-          <Card className="border-border/20 bg-card/10 backdrop-blur-sm shadow-none p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Total Users</p>
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-black text-primary">{stats.totalUsers}</p>
-              <div className="rounded-lg bg-emerald-500/10 p-1.5 text-emerald-500">
-                <Badge className="p-0 h-4 w-4 flex items-center justify-center bg-transparent text-inherit border-none">#</Badge>
-              </div>
-            </div>
-          </Card>
-        )}
-      </section>
-
-      {/* Recent Activity for Managers */}
-      {attendanceData?.data && attendanceData.data.length > 0 && (
-        <section className="px-1">
-          <Card className="border-border/20 bg-card/5 shadow-none overflow-hidden">
-            <div className="p-3 border-b border-border/10 bg-muted/20">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Recent Library Activity</p>
-            </div>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border/5">
-                {attendanceData.data.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between p-3 hover:bg-muted/10 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                        {(log.profiles?.full_name || "U")[0]}
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-foreground/90">{log.profiles?.full_name || "Unknown User"}</p>
-                        <p className="text-[10px] text-muted-foreground">Logged visit</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-medium text-foreground/60">
-                        {new Date(log.check_in_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground">
-                        {new Date(log.check_in_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
 
       <div className="w-full">
         <ModernInventoryClient 

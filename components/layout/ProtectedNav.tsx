@@ -9,12 +9,14 @@ import {
   Settings,
   Library,
   Users,
-  Clock,
   RefreshCw,
   ScrollText,
   ChevronsUpDown,
   LogOut,
   Loader2,
+  UserCheck,
+  History,
+  BarChart3,
 } from "lucide-react";
 
 
@@ -123,8 +125,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
   { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
-  { href: "/attendance", label: "Attendance", icon: Clock, minRole: "student" },
-  { href: "/history", label: "Borrow History", icon: Clock, minRole: "student" },
+  { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
+  { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian" },
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
