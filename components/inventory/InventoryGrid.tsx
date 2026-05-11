@@ -9,11 +9,12 @@ import * as React from "react";
 
 interface InventoryGridProps {
   books: Book[];
+  canManage?: boolean;
 }
 
 const MemoizedBookCard = React.memo(ModernBookCard);
 
-export function InventoryGrid({ books }: InventoryGridProps) {
+export function InventoryGrid({ books, canManage = true }: InventoryGridProps) {
   if (books.length === 0) {
     return (
       <m.div 
@@ -25,11 +26,11 @@ export function InventoryGrid({ books }: InventoryGridProps) {
           icon={PackageSearch}
           title="Vault is Empty"
           description="No physical assets were found matching your criteria. Start by populating your catalog."
-          action={{
+          action={canManage ? {
             href: "/catalog/add",
             label: "Initialize First Entry",
             icon: Plus,
-          }}
+          } : undefined}
           contentClassName="min-h-[500px]"
         />
       </m.div>
@@ -40,7 +41,7 @@ export function InventoryGrid({ books }: InventoryGridProps) {
     <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
       <AnimatePresence mode="popLayout">
         {books.map((book, index) => (
-          <MemoizedBookCard key={book.id} book={book} priority={index < 6} />
+          <MemoizedBookCard key={book.id} book={book} priority={index < 6} canManage={canManage} />
         ))}
       </AnimatePresence>
     </div>

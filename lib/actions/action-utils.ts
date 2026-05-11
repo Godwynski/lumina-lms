@@ -1,5 +1,5 @@
 import { logger } from "../logger";
-import { getMe } from "../auth-helpers";
+import { getMe, UserRole } from "../auth-helpers";
 import { logAuditActivity, AuditEntityType } from "../audit";
 import { ZodError, ZodSchema, ZodIssue } from "zod";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -29,7 +29,7 @@ type SafeActionOptions = {
   /** The entity type being audited (e.g., 'book'). Required if auditAction is provided. */
   auditEntity?: string;
   /** Whether this action requires a specific role. */
-  allowedRoles?: ('admin' | 'librarian' | 'staff' | 'student')[];
+  allowedRoles?: UserRole[];
 };
 
 /**

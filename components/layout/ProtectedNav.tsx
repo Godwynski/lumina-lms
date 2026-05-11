@@ -60,27 +60,52 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-type Role = "student" | "staff" | "librarian" | "admin" | null;
+type Role = "student" | "student_assistant" | "librarian" | "admin" | null;
 
 interface Profile {
   full_name?: string | null;
   avatar_url?: string | null;
+  permissions?: {
+    manage_inventory?: boolean;
+    manage_circulation?: boolean;
+  } | null;
 }
 
 const ROLE_RANKS: Record<Exclude<Role, null>, number> = {
   student: 1,
-  staff: 2,
+  student_assistant: 2,
   librarian: 3,
   admin: 4,
 };
 
-function hasPermission(userRole: Role, minRole?: Exclude<Role, null>, exactRoles?: Exclude<Role, null>[]): boolean {
+function hasPermission(
+  userRole: Role, 
+  item: NavItem,
+  profile?: Profile | null
+): boolean {
+  const { minRole, exactRoles, permissionKey } = item;
+  
   if (exactRoles && exactRoles.length > 0 && userRole) {
     return exactRoles.includes(userRole);
   }
+
   if (!minRole) return true;
   if (!userRole) return false;
-  return ROLE_RANKS[userRole] >= ROLE_RANKS[minRole];
+
+  const roleRank = ROLE_RANKS[userRole];
+  const minRank = ROLE_RANKS[minRole];
+
+  // If user is exactly student_assistant, check specific permissions if required
+  if (userRole === "student_assistant" && permissionKey) {
+    const permissions = profile?.permissions;
+    if (permissions && permissions[permissionKey as keyof typeof permissions] === true) {
+      return true;
+    }
+    // If they don't have the specific permission, they can't see it even if it's their rank
+    return false;
+  }
+
+  return roleRank >= minRank;
 }
 
 type NavItem = {
@@ -89,6 +114,7 @@ type NavItem = {
   icon?: React.ElementType;
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
+  permissionKey?: "manage_inventory" | "manage_circulation";
 };
 
 
@@ -96,7 +122,8 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
   { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
-  { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "staff" },
+  { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
+  { href: "/attendance", label: "Attendance", icon: Clock, minRole: "student" },
   { href: "/history", label: "Borrow History", icon: Clock, minRole: "student" },
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
@@ -187,8 +214,8 @@ export function ProtectedNav({
   }, [pathname, currentTab, pendingRoute]);
 
   const visibleItems = useMemo(() => {
-    return NAV_ITEMS.filter(item => hasPermission(normalizedRole, item.minRole, item.exactRoles));
-  }, [normalizedRole]);
+    return NAV_ITEMS.filter(item => hasPermission(normalizedRole, item, profile));
+  }, [normalizedRole, profile]);
 
   const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover
@@ -318,7 +345,7 @@ export function ProtectedNav({
                       }}
                     >
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Profile Settings</span>
+                      <span>My Profile</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

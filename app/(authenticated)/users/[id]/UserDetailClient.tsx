@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCheck, Shield, MapPin, Calendar, Mail, User as UserIcon, Phone, CheckCircle2, AlertCircle, Archive } from "lucide-react";
+import { Shield, Mail, Phone, MapPin, User as UserIcon, Building, Trash2, CheckCircle2, AlertCircle, UserCheck, Archive, Calendar, Key } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,23 @@ import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section, FieldGroup } from "@/components/settings/SettingsShared";
 import type { User } from "../UsersContent";
 
-export function UserDetailClient({ initialUser }: { initialUser: User }) {
+export function UserDetailClient({ 
+  initialUser, 
+  currentRole 
+}: { 
+  initialUser: User;
+  currentRole: string;
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [user, setUser] = useState<User>(initialUser);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isAdmin = currentRole === "admin";
+  const isLibrarian = currentRole === "librarian";
+  const isTargetAdmin = initialUser.role === "admin";
+  const isReadOnly = isLibrarian && isTargetAdmin;
 
   // Form State
   const [form, setForm] = useState({
@@ -33,6 +45,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     student_id: initialUser.student_id || "",
     address: initialUser.address || "",
     phone: initialUser.phone || "",
+    permissions: initialUser.permissions || {},
   });
 
   const [checklist, setChecklist] = useState({
@@ -48,7 +61,8 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     form.department !== initialUser.department ||
     form.student_id !== (initialUser.student_id || "") ||
     form.address !== (initialUser.address || "") ||
-    form.phone !== (initialUser.phone || "");
+    form.phone !== (initialUser.phone || "") ||
+    JSON.stringify(form.permissions) !== JSON.stringify(initialUser.permissions || {});
 
   const handleUpdateProfile = async () => {
     setIsSaving(true);
@@ -63,6 +77,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
         student_id: form.student_id.trim() || null,
         address: form.address.trim() || null,
         phone: form.phone.trim() || null,
+        permissions: form.permissions,
       };
 
       // Enforce checklist for student activation
@@ -114,13 +129,13 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
     }
   };
 
-  const handleAdminAction = (newStatus: string) => {
-    setForm(prev => ({ ...prev, status: newStatus }));
-    // We'll let the user click "Save Changes" at the bottom to commit status changes too
-    // for a consistent experience, or we can commit immediately. 
-    // To match Profile (Save Changes bar), we'll keep it in form state.
-    // Explicitly typed prev is not needed if useState is correctly inferred, 
-    // but tsc is strict here because it's a client component with multiple states.
+  const handleAdminAction = async (action: string) => {
+    if (isLibrarian && (action === "ARCHIVED" || action === "SUSPENDED")) {
+      setError("Librarians cannot suspend or archive users.");
+      return;
+    }
+    
+    setForm(prev => ({ ...prev, status: action }));
   };
 
   return (
@@ -147,7 +162,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                 </Avatar>
                 <div className="text-center">
                   <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">{form.name}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{form.role}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{form.role.replace('_', ' ')}</p>
                 </div>
               </div>
 
@@ -159,6 +174,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                     onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Full identity name"
                     className="h-10 rounded-lg text-sm"
+                    disabled={isReadOnly}
                   />
                 </FieldGroup>
 
@@ -175,12 +191,13 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                   </FieldGroup>
                   <FieldGroup label="Organization Unit">
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input 
                         value={form.department || ""} 
                         onChange={e => setForm(prev => ({ ...prev, department: e.target.value }))}
                         placeholder="e.g. IT, Admin"
                         className="h-10 rounded-lg pl-9 text-sm"
+                        disabled={isReadOnly}
                       />
                     </div>
                   </FieldGroup>
@@ -195,6 +212,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                         onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
                         placeholder="+63 900 000 0000"
                         className="h-10 rounded-lg pl-9 text-sm"
+                        disabled={isReadOnly}
                       />
                     </div>
                   </FieldGroup>
@@ -206,6 +224,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                         onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
                         placeholder="Street, City, Province"
                         className="h-10 rounded-lg pl-9 text-sm"
+                        disabled={isReadOnly}
                       />
                     </div>
                   </FieldGroup>
@@ -218,29 +237,37 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
           <Section title="Account Access" icon={Shield}>
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldGroup label="System Role">
-                 <Select value={form.role} onValueChange={(value) => setForm(prev => ({ ...prev, role: value as User["role"] }))}>
+                  <Select 
+                    value={form.role} 
+                    onValueChange={(value) => setForm(prev => ({ ...prev, role: value as User["role"] }))}
+                    disabled={isReadOnly}
+                  >
                   <SelectTrigger className="h-10 rounded-lg text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-[130]">
-                    <SelectItem value="admin">Administrator</SelectItem>
+                    {isAdmin && <SelectItem value="admin">Administrator</SelectItem>}
                     <SelectItem value="librarian">Librarian</SelectItem>
-                    <SelectItem value="staff">Staff Member</SelectItem>
+                    <SelectItem value="student_assistant">Student Assistant</SelectItem>
                     <SelectItem value="student">Student</SelectItem>
                   </SelectContent>
                 </Select>
               </FieldGroup>
 
               <FieldGroup label="Membership Status">
-                <Select value={form.status.toLowerCase()} onValueChange={(v) => handleAdminAction(v.toUpperCase())}>
+                <Select 
+                  value={form.status.toLowerCase()} 
+                  onValueChange={(v) => handleAdminAction(v.toUpperCase())}
+                  disabled={isReadOnly}
+                >
                   <SelectTrigger className="h-10 rounded-lg text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-[130]">
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="pending">Pending Approval</SelectItem>
-                    <SelectItem value="suspended">Suspended Access</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
+                    {!isLibrarian && <SelectItem value="suspended">Suspended Access</SelectItem>}
+                    {!isLibrarian && <SelectItem value="archived">Archived</SelectItem>}
                   </SelectContent>
                 </Select>
               </FieldGroup>
@@ -252,6 +279,7 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
                     onChange={e => setForm(prev => ({ ...prev, student_id: e.target.value }))}
                     placeholder="e.g. 123456"
                     className="h-10 rounded-lg text-sm font-mono"
+                    disabled={isReadOnly}
                   />
                   {!form.student_id && (
                     <p className="mt-1 text-[10px] text-destructive">Required for circulation and ID cards</p>
@@ -323,7 +351,54 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
             </Section>
           )}
 
-          {/* Admin Tools - Integrated into bottom bar via SettingsShell usually, but we'll show current save state */}
+          {form.role === "student_assistant" && (
+            <Section title="Special Permissions" icon={Key}>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Manage Inventory</p>
+                    <p className="text-xs text-muted-foreground">Allow adding and editing books in the catalog</p>
+                  </div>
+                  <Switch 
+                    checked={form.permissions?.manage_inventory} 
+                    onCheckedChange={(checked) => setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, manage_inventory: checked }
+                    }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Manage Circulation</p>
+                    <p className="text-xs text-muted-foreground">Allow processing checkouts and returns</p>
+                  </div>
+                  <Switch 
+                    checked={form.permissions?.manage_circulation} 
+                    onCheckedChange={(checked) => setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, manage_circulation: checked }
+                    }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
+              </div>
+            </Section>
+          )}
+
+          {!isLibrarian && (
+            <Section title="Danger Zone" icon={Trash2} danger>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-destructive">Archive User Identity</p>
+                  <p className="text-xs text-muted-foreground">Remove access and hide from main directories</p>
+                </div>
+                <Button variant="destructive" size="sm" onClick={() => handleAdminAction("ARCHIVED")}>
+                  Archive Identity
+                </Button>
+              </div>
+            </Section>
+          )}
 
           <div className="flex flex-col sm:flex-row items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-3 sm:p-4 mt-2 gap-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -336,14 +411,16 @@ export function UserDetailClient({ initialUser }: { initialUser: User }) {
               </div>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <Button
-                variant="ghost"
-                onClick={() => handleAdminAction('ARCHIVED')}
-                className="h-10 rounded-lg px-4 font-bold text-destructive hover:bg-destructive/10"
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive User
-              </Button>
+              {!isLibrarian && (
+                <Button
+                  variant="ghost"
+                  onClick={() => handleAdminAction('ARCHIVED')}
+                  className="h-10 rounded-lg px-4 font-bold text-destructive hover:bg-destructive/10"
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive User
+                </Button>
+              )}
               <Button
                 onClick={handleUpdateProfile}
                 disabled={isSaving || !isDirty}

@@ -15,19 +15,21 @@ import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable"
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoleBadge } from "@/components/common/RoleBadge";
 import { mapProfileToUser } from "@/lib/utils/mappers";
+import type { UserRole } from "@/lib/auth-helpers";
 
 export type User = {
   id: string;
   name: string;
   email: string;
   avatarUrl: string | null;
-  role: "admin" | "librarian" | "staff" | "student";
+  role: "admin" | "librarian" | "student_assistant" | "student";
   status: string;
   department: string;
   joined: string;
   student_id: string | null;
   address: string | null;
   phone: string | null;
+  permissions?: Record<string, boolean>;
 };
 
 type ProfileRow = {
@@ -44,9 +46,10 @@ type ProfileRow = {
 
 interface UsersContentProps {
   usersPromise: Promise<{ users: User[]; count: number }>;
+  currentRole: UserRole;
 }
 
-export function UsersContent({ usersPromise }: UsersContentProps) {
+export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const router = useRouter();
   const initialData = use(usersPromise);
   const supabase = useMemo(() => createClient(), []);
@@ -56,19 +59,24 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
-  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student" | "review">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "student_assistant" | "student" | "review">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
+  const isLibrarian = currentRole === "librarian";
 
   const roleFilterLabels: Record<string, string> = {
     all: "All",
     review: "Pending Review",
     admin: "Admin",
     librarian: "Librarian",
-    staff: "Staff",
+    student_assistant: "Student Assistant",
     student: "Student",
   };
+
+  // If librarian, remove 'admin' from filter options
+  const filterOptions = ["all", "review", "admin", "librarian", "student_assistant", "student"] as const;
+  const visibleTabs = isLibrarian ? filterOptions.filter(t => t !== "admin") : filterOptions;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -101,6 +109,11 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
           queryBuilder = queryBuilder.eq("role", activeTab);
         }
 
+        // Librarian Restriction: Hide admins
+        if (isLibrarian) {
+          queryBuilder = queryBuilder.neq("role", "admin");
+        }
+
         if (debouncedSearch) {
           const safe = sanitizeFilterInput(debouncedSearch);
           queryBuilder = queryBuilder.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
@@ -126,7 +139,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
     };
 
     void loadUsers();
-  }, [supabase, currentPage, debouncedSearch, activeTab, pageSize]);
+  }, [supabase, currentPage, debouncedSearch, activeTab, pageSize, isLibrarian]);
 
   const handleUserClick = useCallback((u: User) => {
     router.push(`/users/${u.id}`);
@@ -194,7 +207,7 @@ export function UsersContent({ usersPromise }: UsersContentProps) {
               />
             </div>
             <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
-              {(["all", "review", "admin", "librarian", "staff", "student"] as const).map((tab) => (
+              {visibleTabs.map((tab) => (
                 <Button
                   key={tab}
                   onClick={() => setActiveTab(tab)}

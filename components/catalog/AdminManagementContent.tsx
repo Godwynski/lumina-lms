@@ -149,6 +149,7 @@ interface AdminManagementContentProps {
   initialQueue?: ReservationQueueEntry[];
   onClose: () => void;
   onRefresh?: () => void;
+  canManage?: boolean;
 }
 
 export function AdminManagementContent({
@@ -157,6 +158,7 @@ export function AdminManagementContent({
   initialQueue,
   onClose,
   onRefresh: _onRefresh,
+  canManage = true,
 }: AdminManagementContentProps) {
   const router = useRouter();
   const [book, setBook] = useState<Book>(initialBook);
@@ -286,16 +288,18 @@ export function AdminManagementContent({
                </Badge>
             </div>
           </div>
-          <div className="flex flex-col gap-1 self-start">
-             <Button 
-               variant="outline" 
-               size="sm" 
-               onClick={() => setIsEditing(true)}
-               className="h-8 rounded-lg px-3 text-[10px] font-black uppercase tracking-wider"
-             >
-               <Edit3 size={12} className="mr-1.5" /> Edit
-             </Button>
-          </div>
+          {canManage && (
+            <div className="flex flex-col gap-1 self-start">
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={() => setIsEditing(true)}
+                 className="h-8 rounded-lg px-3 text-[10px] font-black uppercase tracking-wider"
+               >
+                 <Edit3 size={12} className="mr-1.5" /> Edit
+               </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -430,20 +434,26 @@ export function AdminManagementContent({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Select value={copy.status} onValueChange={(v) => {
-                      if (isEditableStatus(v)) handleStatusChange(copy.id, v);
-                    }}>
-                      <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EDITABLE_STATUSES.map((key) => (
-                          <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
-                            {STATUS_CONFIG[key].label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {canManage ? (
+                      <Select value={copy.status} onValueChange={(v) => {
+                        if (isEditableStatus(v)) handleStatusChange(copy.id, v);
+                      }}>
+                        <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EDITABLE_STATUSES.map((key) => (
+                            <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
+                              {STATUS_CONFIG[key].label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className="h-7 px-2 text-[9px] font-black uppercase">
+                        {statusCfg.label}
+                      </Badge>
+                    )}
                     <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
                   </div>
                 </div>

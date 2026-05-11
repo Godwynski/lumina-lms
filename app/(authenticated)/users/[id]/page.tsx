@@ -36,5 +36,6 @@ export default function UserDetailPage(props: { params: Promise<{ id: string }> 
 async function UserDetailLoader({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await buildUserDetailPromise(id);
-  return <UserDetailClient initialUser={user} />;
+  const me = await getMe();
+  return <UserDetailClient initialUser={user} currentRole={me?.role ?? 'student'} />;
 }

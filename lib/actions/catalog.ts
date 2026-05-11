@@ -15,7 +15,7 @@ async function assertStaffCatalogAccess() {
   const me = await getMe();
   const role = me?.role;
 
-  if (!role || !['admin', 'librarian', 'staff'].includes(role)) {
+  if (!role || !['admin', 'librarian', 'student_assistant'].includes(role)) {
     throw new Error('Unauthorized or Forbidden');
   }
 
@@ -171,7 +171,7 @@ export const createBook = createSafeAction(
   { 
     auditAction: "create", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian', 'staff'] 
+    allowedRoles: ['admin', 'librarian', 'student_assistant'] 
   }
 );
 
@@ -209,7 +209,7 @@ export const updateBook = createSafeAction(
   { 
     auditAction: "update", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian', 'staff'] 
+    allowedRoles: ['admin', 'librarian', 'student_assistant'] 
   }
 );
 
@@ -251,7 +251,7 @@ export const softDeleteBook = createSafeAction(
   { 
     auditAction: "archive", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian', 'staff'] 
+    allowedRoles: ['admin', 'librarian', 'student_assistant'] 
   }
 );
 
@@ -339,7 +339,7 @@ export const updateBookCopyStatus = createSafeAction(
   { 
     auditAction: "update_status", 
     auditEntity: "book_copy", 
-    allowedRoles: ['admin', 'librarian', 'staff'] 
+    allowedRoles: ['admin', 'librarian', 'student_assistant'] 
   }
 );
 

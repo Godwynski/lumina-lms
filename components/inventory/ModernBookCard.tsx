@@ -16,9 +16,10 @@ import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 interface ModernBookCardProps {
   book: Book;
   priority?: boolean;
+  canManage?: boolean;
 }
 
-export function ModernBookCard({ book, priority = false }: ModernBookCardProps) {
+export function ModernBookCard({ book, priority = false, canManage = true }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   const [modalOpen, setModalOpen] = useState(false);
   
@@ -125,6 +126,7 @@ export function ModernBookCard({ book, priority = false }: ModernBookCardProps) 
         onOpenChange={setModalOpen}
         variant="admin"
         initialData={book}
+        canManage={canManage}
       />
     </>
   );

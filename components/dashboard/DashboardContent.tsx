@@ -62,6 +62,16 @@ export async function DashboardContent({
     ? getBooks(q, categoryId || undefined, page, pageSize, sort)
     : Promise.resolve({ data: [], count: 0 });
 
+  const attendanceQuery = supabase
+    .from("attendance")
+    .select("*, profiles(full_name)")
+    .order("check_in_at", { ascending: false })
+    .limit(5);
+
+  const attendancePromise = role === "student"
+    ? attendanceQuery.eq("user_id", user.id)
+    : attendanceQuery;
+
   // Pass promises to the client component for rendering with Suspense/use() where needed
   return (
     <DashboardClient 
@@ -74,6 +84,7 @@ export async function DashboardContent({
       reservationsPromise={reservationsPromise}
       inventoryBooksPromise={inventoryBooksPromise}
       inventoryCategoriesPromise={inventoryCategoriesPromise}
+      attendancePromise={attendancePromise as unknown as Promise<{ data: { id: string; check_in_at: string; user_id: string; profiles?: { full_name: string | null } }[] | null; error: Error | null }>}
     />
   );
 }
