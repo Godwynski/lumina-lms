@@ -13,7 +13,7 @@ async function fetchPublicBooks(
   availableOnly: boolean = false,
   page: number = 1,
   limit: number = 20,
-  sortBy: 'title' | 'author' | 'availability' = 'title'
+  sortBy: 'title' | 'author' | 'availability' | 'newest' = 'title'
 ) {
   return fetchBooksCore({
     query,
@@ -22,8 +22,8 @@ async function fetchPublicBooks(
     availableOnly,
     page,
     pageSize: limit,
-    sortBy,
-    sortOrder: sortBy === 'availability' ? 'desc' : 'asc'
+    sortBy: sortBy === 'newest' ? 'created_at' : sortBy,
+    sortOrder: (sortBy === 'availability' || sortBy === 'newest') ? 'desc' : 'asc'
   }, 'id, title, author, isbn, category_id, tags, section, cover_url, total_copies, available_copies, categories(name)');
 }
 
@@ -35,7 +35,7 @@ export async function getPublicBooksCached(
   availableOnly: boolean = false,
   page: number = 1,
   limit: number = 20,
-  sortBy: 'title' | 'author' | 'availability' = 'title'
+  sortBy: 'title' | 'author' | 'availability' | 'newest' = 'title'
 ) {
   return unstable_cache(
     () => fetchPublicBooks(query, categoryId, section, availableOnly, page, limit, sortBy),

@@ -66,7 +66,7 @@ async function StudentCatalogLoader({
   const categoryId = params.category || '';
   const availableOnly = params.available === 'true';
   const page = parseInt(params.page || '1', 10);
-  const sortBy = (params.sort as 'title' | 'author' | 'availability') || 'title';
+  const sortBy = (params.sort as 'title' | 'author' | 'availability' | 'newest') || 'newest';
   const pageSize = 16;
 
   // All three fire concurrently — none are awaited here

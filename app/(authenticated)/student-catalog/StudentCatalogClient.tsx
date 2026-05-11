@@ -15,6 +15,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { StudentBookCard } from '@/components/library/StudentBookCard';
 import { AnimatePresence, m } from 'framer-motion';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
+import { createClient } from '@/lib/supabase/client';
+import { useRef } from 'react';
 
 
 interface ReservationRow {
@@ -37,7 +39,7 @@ interface StudentCatalogClientProps {
     categoryId: string;
     availableOnly: boolean;
     page: number;
-    sortBy: 'title' | 'author' | 'availability';
+    sortBy: 'title' | 'author' | 'availability' | 'newest';
   };
 }
 
@@ -53,6 +55,34 @@ export function StudentCatalogClient({
   const initialData = use(booksPromise);
   const categories = use(categoriesPromise);
   const reservations = use(reservationsPromise);
+  const [supabase] = useState(() => createClient());
+
+  // Debounced router.refresh to prevent cascade re-renders
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      router.refresh();
+    }, 2000);
+  }, [router]);
+
+  // Real-time synchronization
+  useEffect(() => {
+    const channel = supabase
+      .channel('catalog-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'book_copies' }, () => {
+        debouncedRefresh();
+      })
+      .subscribe();
+
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase, debouncedRefresh]);
 
 
   // Build the initial map from server data
@@ -137,7 +167,7 @@ export function StudentCatalogClient({
     setPage(parseInt(searchParams.get('page') || '1', 10));
     setSelectedCategory(searchParams.get('category') || '');
     setAvailableOnly(searchParams.get('available') === 'true');
-    setSortBy((searchParams.get('sort') as 'title' | 'author' | 'availability') || 'title');
+    setSortBy((searchParams.get('sort') as 'title' | 'author' | 'availability' | 'newest') || 'title');
   }, [searchParams]);
 
   useEffect(() => {
@@ -222,6 +252,7 @@ export function StudentCatalogClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="newest">Recently Added</SelectItem>
                 <SelectItem value="title">Title A-Z</SelectItem>
                 <SelectItem value="author">Author</SelectItem>
                 <SelectItem value="availability">Availability</SelectItem>
