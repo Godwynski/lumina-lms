@@ -50,7 +50,7 @@ export async function DashboardContent({
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';
   const categoryId = params.categoryId || '';
-  const sort = params.sort || 'title_asc';
+  const sort = params.sort || 'newest';
   const view = params.view || 'grid';
   const pageSize = view === 'list' ? 10 : 9;
 

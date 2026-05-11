@@ -23,7 +23,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
   const [isPending, startTransition] = useTransition();
 
   // Derived values from URL
-  const sortBy = (searchParams.get("sort") as "title_asc" | "title_desc" | "availability_desc" | "availability_asc") || "title_asc";
+  const sortBy = (searchParams.get("sort") as "newest" | "title_asc" | "title_desc" | "availability_desc" | "availability_asc") || "newest";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
 
@@ -77,6 +77,7 @@ export function ModernInventoryClient({ books, totalItems, categories }: ModernI
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="newest">Recently Added</SelectItem>
                 <SelectItem value="title_asc">Title A-Z</SelectItem>
                 <SelectItem value="title_desc">Title Z-A</SelectItem>
                 <SelectItem value="availability_desc">Availability</SelectItem>

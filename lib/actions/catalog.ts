@@ -82,6 +82,9 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
   
   // Apply server-side sorting
   switch (sort) {
+    case 'newest':
+      dbQuery = dbQuery.order('created_at', { ascending: false });
+      break;
     case 'title_desc':
       dbQuery = dbQuery.order('title', { ascending: false });
       break;
