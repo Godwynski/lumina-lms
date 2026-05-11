@@ -10,7 +10,22 @@ async function ErrorContent({
 
   return (
     <>
-      {params?.error ? (
+      {params?.error === "restricted_access" ? (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-destructive">
+            Restricted Access
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This system is exclusively for <strong>STI Alabang</strong> students and faculty. 
+            Please use your official institutional email to sign in.
+          </p>
+          <div className="bg-muted/50 p-3 rounded-lg space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Required Formats:</p>
+            <code className="text-[10px] block bg-background px-2 py-1 rounded border border-border/50">firstname.lastname@alabang.sti.edu.ph</code>
+            <code className="text-[10px] block bg-background px-2 py-1 rounded border border-border/50">lastname.id.@alabang.sti.edu.ph</code>
+          </div>
+        </div>
+      ) : params?.error ? (
         <p className="text-sm text-muted-foreground">
           Code error: {params.error}
         </p>

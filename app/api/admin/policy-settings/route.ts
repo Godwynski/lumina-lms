@@ -29,7 +29,7 @@ export const GET = withAuthApi(
 );
 
 export const POST = withAuthApi(
-  async (request, { supabase, user }) => {
+  async (request, { user }) => {
     const body = await request.json();
     const key = typeof body.key === "string" ? body.key.trim() : "";
     const value = typeof body.value === "string" ? body.value.trim() : "";
@@ -47,8 +47,11 @@ export const POST = withAuthApi(
       return apiError("Invalid policy value", "BAD_REQUEST", 400);
     }
 
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminClient = createAdminClient();
+
     // Check if exists
-    const { data: existing } = await supabase
+    const { data: existing } = await adminClient
       .from("system_settings")
       .select("*")
       .eq("key", key)
@@ -56,7 +59,7 @@ export const POST = withAuthApi(
 
     let result;
     if (existing) {
-      const { data, error } = await supabase
+      const { data, error } = await adminClient
         .from("system_settings")
         .update({
           value,
@@ -70,7 +73,7 @@ export const POST = withAuthApi(
       if (error) throw error;
       result = data;
     } else {
-      const { data, error } = await supabase
+      const { data, error } = await adminClient
         .from("system_settings")
         .insert([{ key, value, description, updated_by: user.id }])
         .select()

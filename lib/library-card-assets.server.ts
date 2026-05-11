@@ -193,7 +193,8 @@ export async function ensureStaticLibraryCardAssets(opts: {
     throw new Error("Unable to resolve student ID for card assets");
   }
 
-  if (!profile.student_id) {
+  // Sync student_id in profiles to match the resolved (prefixed) format
+  if (profile.student_id !== studentId) {
     await admin
       .from("profiles")
       .update({ student_id: studentId })
@@ -207,11 +208,28 @@ export async function ensureStaticLibraryCardAssets(opts: {
     .maybeSingle();
 
   const libraryCard = rawLibraryCard as LibraryCardRow | null;
+  const expectedCardNumber = studentId;
+
+  // Ensure database card_number matches the prefixed studentId
+  if (!libraryCard || libraryCard.card_number !== expectedCardNumber) {
+    if (!libraryCard) {
+      await admin.from("library_cards").insert({
+        user_id: opts.userId,
+        card_number: expectedCardNumber,
+        status: "active",
+      });
+    } else {
+      await admin
+        .from("library_cards")
+        .update({ card_number: expectedCardNumber })
+        .eq("user_id", opts.userId);
+    }
+  }
 
   await ensureQrImage({
     studentId,
-    qrPayload: libraryCard?.card_number || studentId,
-    force: Boolean(opts.forceQrRegeneration),
+    qrPayload: expectedCardNumber,
+    force: Boolean(opts.forceQrRegeneration) || (libraryCard?.card_number !== expectedCardNumber),
   });
 
   let profileUrlToSave: string | null = null;
@@ -243,9 +261,13 @@ export async function ensureStaticLibraryCardAssets(opts: {
   const { qr } = fileNamesFor(studentId);
   const { data: qrData } = admin.storage.from(CARD_ASSET_BUCKET).getPublicUrl(qr);
 
+  const { qrExists, profileExists } = await checkStaticLibraryCardAssets({ studentId });
+
   return {
     studentId,
     qrUrl: qrData.publicUrl || publicObjectUrl(qr),
     profileUrl: profileUrlToSave || profile.avatar_url,
+    qrExists,
+    profileExists,
   };
 }

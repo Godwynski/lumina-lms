@@ -80,8 +80,19 @@ export function withAuthApi(
         supabase: SupabaseClient;
       });
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
+      let errorMessage = "Unknown error";
+      let errorStack = undefined;
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        errorStack = error.stack;
+      } else if (typeof error === "object" && error !== null) {
+        // Handle Supabase error objects which have a message property but aren't Error instances
+        errorMessage = (error as { message?: string }).message || JSON.stringify(error);
+      } else {
+        errorMessage = String(error);
+      }
+
       if (isAbortError(error)) {
         // Quietly log aborts as they are expected when users navigate away or connections close
         logger.debug("api", `Request aborted: ${req.url}`);

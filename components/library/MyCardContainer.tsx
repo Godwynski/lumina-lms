@@ -471,7 +471,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 size="sm"
                 className="hidden sm:inline-flex text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
               >
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isRefreshingAssets && "animate-spin")} />
                 {isRefreshingAssets ? "Refreshing..." : "Refresh assets"}
               </Button>
             )}

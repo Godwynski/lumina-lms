@@ -17,6 +17,27 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
+        // 1. Check if user already exists in profiles (ignore filter for existing users)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .single();
+
+        if (!profile) {
+          const email = user.email?.toLowerCase() || "";
+          
+          // Faculty: firstname.lastname@alabang.sti.edu.ph
+          // Student: lastname.id.@Alabang.sti.edu.ph
+          const isFaculty = /^[a-z0-9-]+\.[a-z0-9-]+@alabang\.sti\.edu\.ph$/.test(email);
+          const isStudent = /^[a-z0-9-]+\.[a-z0-9-]+\.@alabang\.sti\.edu\.ph$/.test(email);
+
+          if (!isFaculty && !isStudent && !email.endsWith("@lumina.test")) {
+            await supabase.auth.signOut();
+            return NextResponse.redirect(`${origin}/error?error=restricted_access`);
+          }
+        }
+
         try {
           await ensureStaticLibraryCardAssets({
             userId: user.id,

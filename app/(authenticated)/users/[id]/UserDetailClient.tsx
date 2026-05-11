@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { Shield, Mail, Phone, MapPin, User as UserIcon, Building, Trash2, CheckCircle2, AlertCircle, UserCheck, Archive, Calendar, Key } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,7 +23,6 @@ export function UserDetailClient({
   currentRole: string;
 }) {
   const router = useRouter();
-  const supabase = createClient();
   const [user, setUser] = useState<User>(initialUser);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,17 +66,6 @@ export function UserDetailClient({
     setError(null);
 
     try {
-      const patch = {
-        full_name: form.name.trim(),
-        role: form.role,
-        status: form.status.trim().toUpperCase(),
-        department: form.department.trim() || "General",
-        student_id: form.student_id.trim() || null,
-        address: form.address.trim() || null,
-        phone: form.phone.trim() || null,
-        permissions: form.permissions,
-      };
-
       // Enforce checklist for student activation
       if (form.status === 'ACTIVE' && initialUser.status === 'PENDING' && form.role === 'student') {
         const isVerified = checklist.nameMatches && checklist.programMatches && checklist.photoMatches;
@@ -90,31 +76,38 @@ export function UserDetailClient({
         }
       }
 
-      const { data: updated, error: updateError } = await supabase
-        .from("profiles")
-        .update(patch)
-        .eq("id", user.id)
-        .select("*")
-        .single();
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          name: form.name.trim(),
+          role: form.role,
+          status: form.status.trim().toUpperCase(),
+          department: form.department.trim() || "General",
+          student_id: form.student_id.trim() || null,
+          address: form.address.trim() || null,
+          phone: form.phone.trim() || null,
+          permissions: form.permissions,
+        }),
+      });
 
-      if (updateError) throw updateError;
+      const result = await response.json();
+      if (!result.ok) throw new Error(result.message || "Failed to update profile");
 
-      if (form.status !== initialUser.status) {
-        await supabase
-          .from("library_cards")
-          .update({ status: form.status.toLowerCase() })
-          .eq("user_id", user.id);
-      }
-
-      const nextUser = updated ? {
+      const updated = result.user;
+      const nextUser = {
         ...user,
-        name: updated.full_name || updated.email,
+        name: updated.name,
         email: updated.email,
         role: updated.role,
         status: updated.status,
         department: updated.department,
-        student_id: updated.student_id
-      } : { ...user, ...form };
+        student_id: updated.student_id,
+        address: form.address, // API returns mapped user, might not have all raw fields
+        phone: form.phone,
+        permissions: form.permissions,
+      };
       
       setUser(nextUser);
       toast.success("Account updated successfully");
@@ -236,40 +229,59 @@ export function UserDetailClient({
           {/* Section 2: Access & Credentials */}
           <Section title="Account Access" icon={Shield}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FieldGroup label="System Role">
-                  <Select 
-                    value={form.role} 
-                    onValueChange={(value) => setForm(prev => ({ ...prev, role: value as User["role"] }))}
-                    disabled={isReadOnly}
-                  >
-                  <SelectTrigger className="h-10 rounded-lg text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-[130]">
-                    {isAdmin && <SelectItem value="admin">Administrator</SelectItem>}
-                    <SelectItem value="librarian">Librarian</SelectItem>
-                    <SelectItem value="student_assistant">Student Assistant</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
+              <FieldGroup label="System Role" className="sm:col-span-2">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'admin', label: 'Administrator', icon: Shield, hidden: !isAdmin },
+                    { id: 'librarian', label: 'Librarian', icon: Building },
+                    { id: 'student_assistant', label: 'Student Assistant', icon: UserCheck },
+                    { id: 'student', label: 'Student', icon: UserIcon },
+                  ].filter(r => !r.hidden).map((r) => (
+                    <Button
+                      key={r.id}
+                      type="button"
+                      variant={form.role === r.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setForm(prev => ({ ...prev, role: r.id as User["role"] }))}
+                      disabled={isReadOnly}
+                      className={cn(
+                        "h-9 px-4 text-xs font-bold transition-all gap-2",
+                        form.role === r.id ? "shadow-md scale-105" : "hover:bg-muted"
+                      )}
+                    >
+                      <r.icon className="h-3.5 w-3.5" />
+                      {r.label}
+                    </Button>
+                  ))}
+                </div>
               </FieldGroup>
 
-              <FieldGroup label="Membership Status">
-                <Select 
-                  value={form.status.toLowerCase()} 
-                  onValueChange={(v) => handleAdminAction(v.toUpperCase())}
-                  disabled={isReadOnly}
-                >
-                  <SelectTrigger className="h-10 rounded-lg text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-[130]">
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="pending">Pending Approval</SelectItem>
-                    {!isLibrarian && <SelectItem value="suspended">Suspended Access</SelectItem>}
-                    {!isLibrarian && <SelectItem value="archived">Archived</SelectItem>}
-                  </SelectContent>
-                </Select>
+              <FieldGroup label="Membership Status" className="sm:col-span-2">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'ACTIVE', label: 'Active', icon: CheckCircle2 },
+                    { id: 'PENDING', label: 'Pending', icon: Calendar },
+                    { id: 'SUSPENDED', label: 'Suspended', icon: AlertCircle, restricted: isLibrarian },
+                    { id: 'ARCHIVED', label: 'Archived', icon: Archive, restricted: isLibrarian },
+                  ].map((s) => (
+                    <Button
+                      key={s.id}
+                      type="button"
+                      variant={form.status === s.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleAdminAction(s.id)}
+                      disabled={isReadOnly || s.restricted}
+                      className={cn(
+                        "h-9 px-4 text-xs font-bold transition-all gap-2",
+                        form.status === s.id ? "shadow-md scale-105" : "hover:bg-muted",
+                        s.restricted && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <s.icon className="h-3.5 w-3.5" />
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
               </FieldGroup>
 
               <FieldGroup label="Library ID Number (Auto-extracted)">

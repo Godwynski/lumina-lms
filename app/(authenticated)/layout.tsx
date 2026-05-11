@@ -11,12 +11,17 @@ import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import NavAnimatePresence from "./NavAnimatePresence";
+import { cookies } from "next/headers";
 
 export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const sidebarState = cookieStore.get("sidebar_state")?.value;
+  const defaultOpen = sidebarState === undefined ? true : sidebarState === "true";
+
   // ─── Parallelize: fire both requests at the same time ────────────────────
   // getPreferences() internally calls getMe() which is cache()-memoized,
   // so there is no double network round-trip. Calling them together means
@@ -46,7 +51,7 @@ export default async function ProtectedLayout({
   // ─── Shell returns immediately — streamed children fill in behind it ──────
   return (
     <PreferencesProvider initialPreferences={preferencesPromise}>
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider defaultOpen={defaultOpen}>
         {/* Nav streams in independently; skeleton perfectly mirrors real nav */}
         <Suspense fallback={<NavSkeleton />}>
           <StreamedNav />

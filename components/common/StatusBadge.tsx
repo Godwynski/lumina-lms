@@ -32,13 +32,19 @@ const statusStyles: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  // Overrides for display if needed
+  // User/Profile Statuses
+  PENDING: "Pending",
+  ACTIVE: "Active",
+  SUSPENDED: "Suspended",
+  ARCHIVED: "Archived",
+  GRADUATED: "Graduated",
+  
+  // Book/Circulation
   AVAILABLE: "Available",
   BORROWED: "Borrowed",
   MAINTENANCE: "Maintenance",
   LOST: "Lost",
   READY: "Ready",
-  ACTIVE: "Active",
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
   EXPIRED: "Expired",
