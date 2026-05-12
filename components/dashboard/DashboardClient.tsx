@@ -66,6 +66,7 @@ interface DashboardProps {
   inventoryBooksPromise: Promise<{ data: Book[]; count: number }>;
   inventoryCategoriesPromise: Promise<Category[]>;
   attendancePromise: Promise<{ data: AttendanceLog[] | null; error: Error | null }>;
+  preferredView?: string;
 }
 
 export function DashboardClient({ 
@@ -78,7 +79,8 @@ export function DashboardClient({
   reservationsPromise,
   inventoryBooksPromise,
   inventoryCategoriesPromise,
-  attendancePromise
+  attendancePromise,
+  preferredView
 }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -145,7 +147,9 @@ export function DashboardClient({
     let card = null;
     let faqs = [...DEFAULT_STUDENT_FAQS];
 
-    if (role === "student" && profileData) {
+    const isStudentMode = role === "student" || (role === "student_assistant" && preferredView === "student");
+
+    if (isStudentMode && profileData) {
       const studentCardData = cardResult.data;
       const faqRows = faqResult.data;
 
@@ -185,7 +189,7 @@ export function DashboardClient({
       }
     }
     return { studentCard: card, studentFaqs: faqs };
-  }, [role, profileData, cardResult, faqResult, user]);
+  }, [role, profileData, cardResult, faqResult, user, preferredView]);
 
   const handleCancelReservation = (id: string, title: string) => {
     startTransition(async () => {
@@ -201,7 +205,9 @@ export function DashboardClient({
     });
   };
 
-  const isStudent = role === 'student';
+  // Determine the effective mode for SAs
+  const isStudent = role === 'student' || (role === 'student_assistant' && preferredView === 'student');
+  const canManageInventory = role === 'admin' || role === 'librarian' || (role === 'student_assistant' && profileData?.permissions?.manage_inventory);
 
   const initialData = useMemo(() => {
     if (!selectedBookId) return undefined;
@@ -448,6 +454,9 @@ export function DashboardClient({
           books={inventoryData.data || []} 
           totalItems={inventoryData.count || 0} 
           categories={inventoryCategories}
+          canManage={canManageInventory}
+          isStudentView={role === 'student_assistant' && !canManageInventory}
+          reservations={reservations}
         />
       </div>
     </div>

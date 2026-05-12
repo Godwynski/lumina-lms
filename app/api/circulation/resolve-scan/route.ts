@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { withAuthApi } from "@/lib/api-utils";
 
 type ResolveScanRequest = {
   scanValue: string;
@@ -39,25 +40,8 @@ type BookScanRow = {
     | null;
 };
 
-export async function POST(request: Request) {
+export const POST = withAuthApi(async (request: Request) => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !["admin", "librarian", "staff"].includes(profile.role)) {
-    return NextResponse.json({ ok: false, message: "Forbidden" }, { status: 403 });
-  }
 
   let body: ResolveScanRequest;
   try {
@@ -171,4 +155,8 @@ export async function POST(request: Request) {
     },
     { status: 404 },
   );
-}
+}, {
+  allowedRoles: ['admin', 'librarian', 'student_assistant'],
+  allowedPermissions: ['manage_circulation']
+});
+

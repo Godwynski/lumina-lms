@@ -3,7 +3,7 @@ import { getMyReservations } from "@/lib/actions/reservations";
 import { getBooks, getCategories } from '@/lib/actions/catalog';
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getMe } from "@/lib/auth-helpers";
-import { Reservation } from "@/lib/types";
+import { Reservation, ProfileData } from "@/lib/types";
 
 /**
  * Server Component that orchestrates various data promises for the dashboard.
@@ -24,8 +24,10 @@ export async function DashboardContent({
   // Kick off stats data promise for the appropriate role
   const statsPromise = getDashboardStats({ role });
 
-  // Optional: Library card for students
-  const cardPromise = role === "student"
+  // Optional: Library card for students and SAs
+  const isStudent = role === "student";
+  
+  const cardPromise = (isStudent || role === "student_assistant")
     ? supabase
         .from("library_cards")
         .select("card_number, status, expires_at")
@@ -34,15 +36,15 @@ export async function DashboardContent({
     : Promise.resolve({ data: null, error: null });
 
   // Optional: FAQ items for students
-  const faqPromise = role === "student"
+  const faqPromise = isStudent
     ? supabase
         .from("system_settings")
         .select("key, value")
         .in("key", faqKeys)
     : Promise.resolve({ data: null, error: null });
 
-  // Optional: Fetch current reservations for students
-  const reservationsPromise = role === "student"
+  // Optional: Fetch current reservations for anyone who might need to see them (students/SAs)
+  const reservationsPromise = (isStudent || role === "student_assistant")
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
@@ -54,11 +56,11 @@ export async function DashboardContent({
   const view = params.view || 'grid';
   const pageSize = view === 'list' ? 10 : 9;
 
-  const inventoryCategoriesPromise = role !== "student" 
+  const inventoryCategoriesPromise = (role !== "student") 
     ? getCategories() 
     : Promise.resolve([]);
     
-  const inventoryBooksPromise = role !== "student"
+  const inventoryBooksPromise = (role !== "student")
     ? getBooks(q, categoryId || undefined, page, pageSize, sort)
     : Promise.resolve({ data: [], count: 0 });
 
@@ -72,13 +74,27 @@ export async function DashboardContent({
     ? attendanceQuery.eq("user_id", user.id)
     : attendanceQuery;
 
+  // Fetch UI preferences for SA mode toggle
+  const { data: preferencesData } = await supabase
+    .from("ui_preferences")
+    .select("preferences")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const preferences = (preferencesData?.preferences as Record<string, string>) || {};
+  let preferredView = preferences.preferred_dashboard_view;
+  if (role === "student_assistant" && profile?.status !== "ACTIVE") {
+    preferredView = "student";
+  }
+
   // Pass promises to the client component for rendering with Suspense/use() where needed
   return (
     <DashboardClient 
       user={user} 
       role={role} 
+      preferredView={preferredView}
       statsPromise={statsPromise}
-      profilePromise={Promise.resolve({ data: profile, error: null })}
+      profilePromise={Promise.resolve({ data: profile as unknown as ProfileData | null, error: null })}
       cardPromise={cardPromise as unknown as Promise<{ data: { card_number: string; status: string; expires_at: string } | null }>}
       faqPromise={faqPromise as unknown as Promise<{ data: { key: string; value: string | null }[] | null }>}
       reservationsPromise={reservationsPromise}

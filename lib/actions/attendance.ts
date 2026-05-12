@@ -85,7 +85,10 @@ export const toggleAttendanceByCard = createSafeAction(
       };
     }
   },
-  { allowedRoles: ['admin', 'librarian', 'student_assistant'] } // Only staff can use the scanner action? Or maybe public?
+  { 
+    allowedRoles: ['admin', 'librarian', 'student_assistant'],
+    allowedPermissions: ['manage_attendance']
+  } // Only staff can use the scanner action? Or maybe public?
 );
 
 /**

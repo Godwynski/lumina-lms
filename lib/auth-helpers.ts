@@ -1,11 +1,16 @@
 import { createClient } from './supabase/server';
 import { cache } from 'react';
+import { ProfileData, UserRole, UserPermissions } from './types';
+export type { UserRole, UserPermissions };
 
-export type UserRole = 'admin' | 'librarian' | 'student_assistant' | 'student';
 
 export const normalizeUserRole = (value: unknown): UserRole | null => {
   if (typeof value !== 'string') return null;
   const role = value.trim().toLowerCase();
+  
+  // Mapping deprecated 'staff' role to 'student_assistant'
+  if (role === 'staff') return 'student_assistant';
+  
   if (role === 'admin' || role === 'librarian' || role === 'student_assistant' || role === 'student') {
     return role as UserRole;
   }
@@ -38,7 +43,12 @@ export const getMe = cache(async () => {
 
   return {
     user,
-    profile,
+    profile: profile as unknown as ProfileData & { 
+      id: string; 
+      email: string | null; 
+      role: string; 
+      permissions: UserPermissions | null;
+    },
     role: role as UserRole,
     isStaff: ['admin', 'librarian', 'student_assistant'].includes(role),
     isAdmin: role === 'admin',

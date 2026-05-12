@@ -96,5 +96,5 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
   }
 
   return apiSuccess(result);
-}, { requireStaff: true });
+}, { requireStaff: true, allowedPermissions: ['manage_circulation'] });
 

@@ -98,14 +98,14 @@ export function NewUserClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="librarian">Librarian</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="student_assistant">Staff / SA</SelectItem>
                 <SelectItem value="student">Student</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Department</Label>
+            <Label>Academic Program / Department</Label>
             <Input
               type="text"
               value={inviteDept}

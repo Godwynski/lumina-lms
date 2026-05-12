@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getMe, UserRole } from './auth-helpers';
+import { getMe } from './auth-helpers';
+import { ProfileData, UserRole } from './types';
 import { logger } from './logger';
 import { isAbortError } from './error-utils';
 import { SupabaseClient, User } from '@supabase/supabase-js';
@@ -27,6 +28,11 @@ export function apiError(
 interface AuthOptions {
   allowedRoles?: UserRole[];
   requireStaff?: boolean;
+  /** Optional: Required permissions for student_assistants. 
+   * If provided, an SA must have at least one of these permissions.
+   * Admins and Librarians bypass this check.
+   */
+  allowedPermissions?: string[];
 }
 
 /**
@@ -38,7 +44,11 @@ export function withAuthApi(
     req: Request,
     context: {
       user: User;
-      profile: Record<string, unknown>;
+      profile: ProfileData & {
+        id: string;
+        email: string | null;
+        role: string;
+      };
       role: UserRole;
       supabase: SupabaseClient;
     }
@@ -67,17 +77,25 @@ export function withAuthApi(
         );
       }
 
+      // Permission check for student assistants
+      if (role === 'student_assistant' && options.allowedPermissions) {
+        const permissions = profile.permissions || {};
+        const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
+        if (!hasPermission) {
+          return apiError(
+            "Forbidden: Missing required permission for this action",
+            "PERMISSION_DENIED",
+            403
+          );
+        }
+      }
+
       return await handler(req, {
         ...context,
         user,
-        profile: profile as Record<string, unknown>,
+        profile,
         role,
         supabase,
-      } as {
-        user: User;
-        profile: Record<string, unknown>;
-        role: UserRole;
-        supabase: SupabaseClient;
       });
     } catch (error: unknown) {
       let errorMessage = "Unknown error";

@@ -9,7 +9,7 @@ export default async function AttendancePage() {
   if (!me) redirect("/");
 
   const historyPromise = getAttendanceHistory();
-  const isStaff = ['admin', 'librarian', 'student_assistant'].includes(me.role);
+  const isStaff = me.role === 'admin' || me.role === 'librarian' || (me.role === 'student_assistant' && me.profile.permissions?.manage_attendance);
 
   return (
     <Suspense fallback={<AttendanceSkeleton />}>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { InventoryGrid } from "./InventoryGrid";
-import { Book, Category } from "@/lib/types";
+import { Book, Category, Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface ModernInventoryClientProps {
@@ -16,9 +16,18 @@ interface ModernInventoryClientProps {
   totalItems: number;
   categories: Category[];
   canManage?: boolean;
+  isStudentView?: boolean;
+  reservations?: Reservation[];
 }
 
-export function ModernInventoryClient({ books, totalItems, categories, canManage = true }: ModernInventoryClientProps) {
+export function ModernInventoryClient({ 
+  books, 
+  totalItems, 
+  categories, 
+  canManage = true,
+  isStudentView = false,
+  reservations = []
+}: ModernInventoryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -119,7 +128,12 @@ export function ModernInventoryClient({ books, totalItems, categories, canManage
       </div>
 
       <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>
-        <InventoryGrid books={books} canManage={canManage} />
+        <InventoryGrid 
+          books={books} 
+          canManage={canManage} 
+          isStudentView={isStudentView}
+          reservations={reservations}
+        />
       </div>
 
       {totalItems > 0 && (

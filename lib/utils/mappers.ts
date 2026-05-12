@@ -19,7 +19,7 @@ export const mapProfileToUser = (row: Record<string, unknown>): User => ({
   role: ["admin", "librarian", "student_assistant", "student"].includes(String(row.role))
     ? (String(row.role) as User["role"])
     : "student",
-  status: typeof row.status === "string" ? row.status : "active",
+  status: typeof row.status === "string" ? row.status.toUpperCase() : "ACTIVE",
   department: typeof row.department === "string" && row.department.trim() ? row.department : "General",
   joined:
     typeof row.created_at === "string"

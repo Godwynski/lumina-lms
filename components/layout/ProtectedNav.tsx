@@ -67,9 +67,11 @@ type Role = "student" | "student_assistant" | "librarian" | "admin" | null;
 interface Profile {
   full_name?: string | null;
   avatar_url?: string | null;
+  status?: string;
   permissions?: {
     manage_inventory?: boolean;
     manage_circulation?: boolean;
+    manage_attendance?: boolean;
   } | null;
 }
 
@@ -116,14 +118,14 @@ type NavItem = {
   icon?: React.ElementType;
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
-  permissionKey?: "manage_inventory" | "manage_circulation";
+  permissionKey?: "manage_inventory" | "manage_circulation" | "manage_attendance";
 };
 
 
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student"] },
+  { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student", "student_assistant"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
@@ -138,10 +140,12 @@ export function ProtectedNav({
   role,
   user,
   profile,
+  preferences,
 }: {
   role?: string | null;
   user?: User | null;
   profile?: Profile | null;
+  preferences?: Record<string, unknown>;
 }) {
   const pathname = usePathname();
 
@@ -216,9 +220,25 @@ export function ProtectedNav({
     return pathWithoutQuery.startsWith(hrefBase);
   }, [pathname, currentTab, pendingRoute]);
 
+  const isDisabledSA = normalizedRole === "student_assistant" && 
+    profile?.status !== "ACTIVE";
+
   const visibleItems = useMemo(() => {
-    return NAV_ITEMS.filter(item => hasPermission(normalizedRole, item, profile));
-  }, [normalizedRole, profile]);
+    return NAV_ITEMS.filter(item => {
+      // If SA is in student mode (or disabled), only show student items
+      if (normalizedRole === "student_assistant" && (preferences?.preferred_dashboard_view === "student" || isDisabledSA)) {
+        // Items with minRole "student" are allowed, but exclude staff-only tools even if they have perms
+        if (item.permissionKey) return false;
+        if (item.minRole === "librarian" || item.minRole === "admin") return false;
+        
+        // Hide catalog for SAs if they are disabled (as requested: "no catalog because it's redundant")
+        if (isDisabledSA && item.href === "/student-catalog") return false;
+        
+        // Keep dashboard, attendance, history
+      }
+      return hasPermission(normalizedRole, item, profile);
+    });
+  }, [normalizedRole, profile, preferences, isDisabledSA]);
 
   const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover
