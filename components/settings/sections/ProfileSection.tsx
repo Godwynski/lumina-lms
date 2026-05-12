@@ -4,7 +4,7 @@ import { UserCheck, Shield } from "lucide-react";
 import { Section } from "../SettingsShared";
 import { AvatarManager } from "../profile/AvatarManager";
 import { PersonalInfoForm } from "../profile/PersonalInfoForm";
-import { DashboardModeToggle } from "../profile/DashboardModeToggle";
+
 
 interface ProfileSectionProps {
   role: string;
@@ -21,19 +21,14 @@ interface ProfileSectionProps {
   };
 }
 
-export function ProfileSection({ role, preferences, initialProfile }: ProfileSectionProps) {
-  const currentMode = (preferences?.preferred_dashboard_view as "student" | "staff") || "staff";
+export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
+
 
   return (
     <div className="w-full max-w-5xl mx-auto pb-12">
       <Section>
         <div className="grid gap-6">
-          {/* SA Mode Toggle Section */}
-          {role === "student_assistant" && initialProfile.status === "ACTIVE" && (
-            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-              <DashboardModeToggle currentMode={currentMode} />
-            </div>
-          )}
+          {/* Profile Section Content */}
 
           <div className="flex flex-col gap-8 sm:flex-row sm:items-start bg-card/30 border border-border/40 p-6 sm:p-8 rounded-3xl shadow-sm relative overflow-hidden">
             <AvatarManager 

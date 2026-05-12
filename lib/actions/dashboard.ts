@@ -48,8 +48,12 @@ export async function getDashboardStats({
   const { user, supabase } = me;
   const userId = user.id;
 
-  const isStudent = role === 'student';
-  const isManager = role === 'admin' || role === 'librarian' || role === 'student_assistant';
+  const isActuallyStaff = role === 'admin' || 
+                          role === 'librarian' || 
+                          (role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE');
+
+
+  const isManager = isActuallyStaff;
   const canReviewApprovals = role === 'admin' || role === 'librarian';
 
   const safeWrap = async <T>(promise: Promise<T>, defaultValue: T): Promise<T> => {
@@ -93,12 +97,10 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
-    isStudent
-      ? safeWrap(
-          getBorrowingHistory(userId, 1, 5, 'ACTIVE', undefined, supabase),
-          { records: [], totalCount: 0 }
-        )
-      : Promise.resolve({ records: [], totalCount: 0 }),
+    safeWrap(
+      getBorrowingHistory(userId, 1, 5, 'ACTIVE', undefined, supabase),
+      { records: [], totalCount: 0 }
+    ),
     safeWrap(
       Promise.resolve(
         supabase

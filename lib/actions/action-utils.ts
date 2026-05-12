@@ -62,11 +62,19 @@ export function createSafeAction<TInput, TOutput>(
       }
 
       // Permission check for student assistants
-      if (me.role === 'student_assistant' && options.allowedPermissions) {
-        const permissions = me.profile.permissions || {};
-        const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
-        if (!hasPermission) {
-          return { success: false, error: "Access denied: Missing required permission." };
+      if (me.role === 'student_assistant') {
+        // If this is a staff-only action (student role not allowed), check if the account is ACTIVE
+        const isStaffOnlyAction = options.allowedRoles && !options.allowedRoles.includes('student');
+        if (isStaffOnlyAction && me.profile.status !== 'ACTIVE') {
+          return { success: false, error: "Access denied: Staff account is currently deactivated." };
+        }
+
+        if (options.allowedPermissions) {
+          const permissions = me.profile.permissions || {};
+          const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
+          if (!hasPermission) {
+            return { success: false, error: "Access denied: Missing required permission." };
+          }
         }
       }
 

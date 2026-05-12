@@ -1,24 +1,25 @@
-import { createClient } from '@/lib/supabase/server';
+import { getMe } from '@/lib/auth-helpers';
+import { UserPermissions } from '@/lib/types';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 async function CirculationGuard({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user;
+  const me = await getMe();
+  if (!me) redirect('/');
+  
+  const { role, profile } = me;
 
-  if (!user?.id) {
-    redirect("/");
+  if (!['admin', 'librarian', 'student_assistant'].includes(role)) {
+    redirect('/dashboard');
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || !["admin", "librarian", "student_assistant"].includes(String(profile.role))) {
-    redirect("/dashboard");
+  // Security check for Student Assistants
+  if (role === 'student_assistant') {
+    const permissions = profile?.permissions as UserPermissions;
+    if (profile.status?.toUpperCase() !== 'ACTIVE' || !permissions?.manage_circulation) {
+      console.warn('[CIRCULATION-GUARD] SA Access Denied:', { status: profile.status, hasPerm: !!permissions?.manage_circulation });
+      redirect('/dashboard');
+    }
   }
 
   return <>{children}</>;

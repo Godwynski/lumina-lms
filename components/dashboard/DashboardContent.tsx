@@ -27,16 +27,14 @@ export async function DashboardContent({
   // Optional: Library card for students and SAs
   const isStudent = role === "student";
   
-  const cardPromise = (isStudent || role === "student_assistant")
-    ? supabase
+  const cardPromise = supabase
         .from("library_cards")
         .select("card_number, status, expires_at")
         .eq("user_id", user.id)
-        .maybeSingle()
-    : Promise.resolve({ data: null, error: null });
+        .maybeSingle();
 
-  // Optional: FAQ items for students
-  const faqPromise = isStudent
+  // Optional: FAQ items for students and SAs
+  const faqPromise = (isStudent || role === "student_assistant")
     ? supabase
         .from("system_settings")
         .select("key, value")
@@ -56,11 +54,16 @@ export async function DashboardContent({
   const view = params.view || 'grid';
   const pageSize = view === 'list' ? 10 : 9;
 
-  const inventoryCategoriesPromise = (role !== "student") 
+  const isStaffActive = profile?.status?.toUpperCase() === 'ACTIVE';
+  const canSeeStaffInventory = role === 'admin' || 
+                               role === 'librarian' || 
+                               (role === 'student_assistant' && isStaffActive && profile?.permissions?.manage_inventory);
+
+  const inventoryCategoriesPromise = canSeeStaffInventory
     ? getCategories() 
     : Promise.resolve([]);
     
-  const inventoryBooksPromise = (role !== "student")
+  const inventoryBooksPromise = canSeeStaffInventory
     ? getBooks(q, categoryId || undefined, page, pageSize, sort)
     : Promise.resolve({ data: [], count: 0 });
 
@@ -70,9 +73,13 @@ export async function DashboardContent({
     .order("check_in_at", { ascending: false })
     .limit(5);
 
-  const attendancePromise = role === "student"
-    ? attendanceQuery.eq("user_id", user.id)
-    : attendanceQuery;
+  const canSeeAllAttendance = role === 'admin' || 
+                               role === 'librarian' || 
+                               (role === 'student_assistant' && isStaffActive);
+
+  const attendancePromise = canSeeAllAttendance
+    ? attendanceQuery
+    : attendanceQuery.eq("user_id", user.id);
 
   // Fetch UI preferences for SA mode toggle
   const { data: preferencesData } = await supabase
@@ -83,7 +90,8 @@ export async function DashboardContent({
 
   const preferences = (preferencesData?.preferences as Record<string, string>) || {};
   let preferredView = preferences.preferred_dashboard_view;
-  if (role === "student_assistant" && profile?.status !== "ACTIVE") {
+  if (role === "student_assistant" && !isStaffActive) {
+
     preferredView = "student";
   }
 

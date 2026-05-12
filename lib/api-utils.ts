@@ -63,22 +63,33 @@ export function withAuthApi(
         return apiError("Unauthorized", "UNAUTHORIZED", 401);
       }
 
-      const { user, profile, role, isStaff, supabase } = me;
+      const { user, profile, role, supabase } = me;
 
-      if (options.requireStaff && !isStaff) {
-        return apiError("Forbidden: Staff access required", "FORBIDDEN", 403);
+      const isActuallyStaff = role === 'admin' || role === 'librarian' || (role === 'student_assistant' && profile.status?.toUpperCase() === 'ACTIVE');
+
+      if (options.requireStaff && !isActuallyStaff) {
+        return apiError("Forbidden: Staff access required or account disabled", "FORBIDDEN", 403);
       }
 
-      if (options.allowedRoles && !options.allowedRoles.includes(role)) {
-        return apiError(
-          "Forbidden: Insufficient permissions",
-          "FORBIDDEN",
-          403
-        );
+      if (options.allowedRoles) {
+        const isAllowedRole = options.allowedRoles.includes(role);
+        const isDisabledSA = role === 'student_assistant' && profile.status?.toUpperCase() !== 'ACTIVE';
+        
+        // If it's a disabled SA, they only count as 'student' role
+        if (!isAllowedRole || (isDisabledSA && !options.allowedRoles.includes('student'))) {
+          return apiError(
+            "Forbidden: Insufficient permissions or account disabled",
+            "FORBIDDEN",
+            403
+          );
+        }
       }
 
       // Permission check for student assistants
       if (role === 'student_assistant' && options.allowedPermissions) {
+        if (profile.status?.toUpperCase() !== 'ACTIVE') {
+          return apiError("Forbidden: Account disabled", "FORBIDDEN", 403);
+        }
         const permissions = profile.permissions || {};
         const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
         if (!hasPermission) {

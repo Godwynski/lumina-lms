@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   Library,
+  BookOpen,
   Users,
   RefreshCw,
   ScrollText,
@@ -17,7 +18,12 @@ import {
   UserCheck,
   History,
   BarChart3,
+  Layout,
+  User as UserIcon,
 } from "lucide-react";
+
+import { updateUiPreference } from "@/lib/actions/preferences";
+import { toast } from "sonner";
 
 
 import { Logo } from "@/components/layout/Logo";
@@ -59,7 +65,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 
 type Role = "student" | "student_assistant" | "librarian" | "admin" | null;
@@ -118,20 +123,21 @@ type NavItem = {
   icon?: React.ElementType;
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
-  permissionKey?: "manage_inventory" | "manage_circulation" | "manage_attendance";
+  permissionKey?: "manage_inventory" | "manage_circulation" | "manage_attendance" | "manage_users" | "manage_policies" | "manage_analytics";
 };
 
 
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: Library, exactRoles: ["student", "student_assistant"] },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", exactRoles: ["student", "student_assistant"] },
+  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian", permissionKey: "manage_inventory", exactRoles: ["student_assistant"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
-  { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
+  { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student", permissionKey: "manage_attendance" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian" },
-  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
-  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "manage_analytics" },
+  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "manage_users" },
+  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "manage_policies" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
@@ -148,11 +154,36 @@ export function ProtectedNav({
   preferences?: Record<string, unknown>;
 }) {
   const pathname = usePathname();
+  const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
 
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const { setOpen, open, isMobile } = useSidebar();
-  const [isHovered, setIsHovered] = useState(false);
+  const [isPending, startTransition] = React.useTransition();
+
+  const isDeactivatedSA = normalizedRole === "student_assistant" && 
+    profile?.status?.toUpperCase() !== "ACTIVE";
+
+  const currentMode = isDeactivatedSA 
+    ? "student" 
+    : ((preferences?.preferred_dashboard_view as "student" | "staff") || 
+       (normalizedRole === "student_assistant" ? "student" : "staff"));
+
+  const handleToggleMode = () => {
+    const newMode = currentMode === "staff" ? "student" : "staff";
+    startTransition(async () => {
+      const result = await updateUiPreference({
+        key: "preferred_dashboard_view",
+        value: newMode,
+      });
+
+      if (result.success) {
+        toast.success(`Switched to ${newMode === "staff" ? "Staff" : "Student"} mode`);
+      } else {
+        toast.error("Failed to switch mode");
+      }
+    });
+  };
+
 
   const handleSignOut = async () => {
     setLogoutDialogOpen(false);
@@ -173,7 +204,7 @@ export function ProtectedNav({
     const segments = pathname.split("/").filter(Boolean);
     return segments[segments.length - 1] || "profile";
   }, [pathname]);
-  const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
+
 
   const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
@@ -220,25 +251,26 @@ export function ProtectedNav({
     return pathWithoutQuery.startsWith(hrefBase);
   }, [pathname, currentTab, pendingRoute]);
 
-  const isDisabledSA = normalizedRole === "student_assistant" && 
-    profile?.status !== "ACTIVE";
-
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
-      // If SA is in student mode (or disabled), only show student items
-      if (normalizedRole === "student_assistant" && (preferences?.preferred_dashboard_view === "student" || isDisabledSA)) {
-        // Items with minRole "student" are allowed, but exclude staff-only tools even if they have perms
-        if (item.permissionKey) return false;
-        if (item.minRole === "librarian" || item.minRole === "admin") return false;
-        
-        // Hide catalog for SAs if they are disabled (as requested: "no catalog because it's redundant")
-        if (isDisabledSA && item.href === "/student-catalog") return false;
-        
-        // Keep dashboard, attendance, history
+      // Basic permission check
+      if (!hasPermission(normalizedRole, item, profile)) return false;
+
+      // If SA is disabled (e.g. status not ACTIVE), hide all staff-only tools
+      if (isDeactivatedSA && (item.permissionKey || item.minRole === "librarian" || item.minRole === "admin")) {
+        return false;
       }
-      return hasPermission(normalizedRole, item, profile);
+
+      // If in Student mode, only show standard student tools
+      if (currentMode === "student" && (item.permissionKey || item.minRole === "librarian" || item.minRole === "admin")) {
+        if (item.href !== "/dashboard" && item.href !== "/student-catalog" && item.href !== "/attendance") {
+           return false;
+        }
+      }
+
+      return true;
     });
-  }, [normalizedRole, profile, preferences, isDisabledSA]);
+  }, [normalizedRole, profile, isDeactivatedSA, currentMode]);
 
   const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover
@@ -253,20 +285,8 @@ export function ProtectedNav({
   return (
     <SWRConfig value={swrValue}>
     <Sidebar 
-      collapsible="icon" 
+      collapsible="icon"
       className="border-r border-sidebar-border bg-sidebar"
-      onMouseEnter={() => {
-        if (!open && !isMobile) {
-          setOpen(true);
-          setIsHovered(true);
-        }
-      }}
-      onMouseLeave={() => {
-        if (isHovered && !isMobile) {
-          setOpen(false);
-          setIsHovered(false);
-        }
-      }}
     >
       <SidebarHeader className="flex flex-row h-16 shrink-0 items-center gap-4 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
         <SidebarTrigger className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors group-data-[collapsible=icon]:flex" />
@@ -283,9 +303,9 @@ export function ProtectedNav({
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
-        <nav className="flex flex-col gap-4" aria-label="Main Navigation">
-          <SidebarGroup>
+      <SidebarContent className="px-2 flex-1">
+        <nav className="flex flex-col h-full" aria-label="Main Navigation">
+          <SidebarGroup className="flex-1">
             <SidebarMenu>
               {visibleItems.map(item => (
                 <SidebarMenuItem key={item.href}>
@@ -314,7 +334,7 @@ export function ProtectedNav({
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-2 hidden md:flex">
+      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -371,6 +391,30 @@ export function ProtectedNav({
                       <span>My Profile</span>
                     </Link>
                   </DropdownMenuItem>
+
+                  {(normalizedRole === "librarian" || normalizedRole === "admin" || (normalizedRole === "student_assistant" && !isDeactivatedSA)) && (
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        handleToggleMode();
+                      }}
+                      disabled={isPending}
+                    >
+                      {currentMode === "staff" ? (
+                        <>
+                          <UserIcon className="mr-2 h-4 w-4" />
+                          <span>Switch to Student View</span>
+                        </>
+                      ) : (
+                        <>
+                          <Layout className="mr-2 h-4 w-4" />
+                          <span>Switch to Staff View</span>
+                        </>
+                      )}
+                      {isPending && <Loader2 className="ml-auto h-3 w-3 animate-spin" />}
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
