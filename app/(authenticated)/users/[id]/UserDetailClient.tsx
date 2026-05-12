@@ -420,6 +420,48 @@ export function UserDetailClient({
                     disabled={isReadOnly}
                   />
                 </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Manage Users</p>
+                    <p className="text-xs text-muted-foreground">Allow viewing and modifying user accounts</p>
+                  </div>
+                  <Switch 
+                    checked={form.permissions?.manage_users} 
+                    onCheckedChange={(checked) => setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, manage_users: checked }
+                    }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Manage Policies</p>
+                    <p className="text-xs text-muted-foreground">Allow modifying library settings and policies</p>
+                  </div>
+                  <Switch 
+                    checked={form.permissions?.manage_policies} 
+                    onCheckedChange={(checked) => setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, manage_policies: checked }
+                    }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Manage Analytics</p>
+                    <p className="text-xs text-muted-foreground">Allow viewing system-wide library reports</p>
+                  </div>
+                  <Switch 
+                    checked={form.permissions?.manage_analytics} 
+                    onCheckedChange={(checked) => setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, manage_analytics: checked }
+                    }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
               </div>
             </Section>
           )}

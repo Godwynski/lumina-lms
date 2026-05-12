@@ -137,9 +137,35 @@ export async function getAttendanceHistory(userId?: string) {
   if (!me) throw new Error("Unauthorized");
 
   const { supabase } = me;
+  
+  const isStaff = me.role === 'admin' || 
+                  me.role === 'librarian' || 
+                  (me.role === 'student_assistant' && 
+                   me.profile?.status?.toUpperCase() === 'ACTIVE' &&
+                   me.profile.permissions?.manage_attendance);
+
+  // If no userId provided and is staff, show all of today's records
+  if (!userId && isStaff) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("id, check_in_at, check_out_at, user_id, profiles(full_name)")
+      .gte("check_in_at", today.toISOString())
+      .order("check_in_at", { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map(record => ({
+      ...record,
+      profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
+    })) as unknown as AttendanceRecord[];
+  }
+
+  // Otherwise show specific user's history (defaulting to current user)
   const targetId = userId || me.user.id;
 
-  if (targetId !== me.user.id && !['admin', 'librarian', 'student_assistant'].includes(me.role)) {
+  if (targetId !== me.user.id && !isStaff) {
     throw new Error("Forbidden");
   }
 

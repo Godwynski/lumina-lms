@@ -1,25 +1,22 @@
-import { createClient } from '@/lib/supabase/server';
+import { getMe } from '@/lib/auth-helpers';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 async function CatalogGuard({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user;
+  const me = await getMe();
+  if (!me) redirect('/');
+  
+  const { role, profile } = me;
 
-  if (!user) {
-    redirect('/');
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  const role = (profile?.role ?? 'student') as string;
   if (!['admin', 'librarian', 'student_assistant'].includes(role)) {
     redirect('/student-catalog');
+  }
+
+  // Security check for Student Assistants
+  if (role === 'student_assistant') {
+    if (profile.status?.toUpperCase() !== 'ACTIVE' || !profile.permissions?.manage_inventory) {
+      redirect('/student-catalog');
+    }
   }
 
   return <>{children}</>;

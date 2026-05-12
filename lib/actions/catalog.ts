@@ -13,10 +13,25 @@ import { getMe } from '@/lib/auth-helpers';
 
 async function assertStaffCatalogAccess() {
   const me = await getMe();
-  const role = me?.role;
+  if (!me) throw new Error('Unauthorized');
+  
+  const { role, profile } = me;
 
-  if (!role || !['admin', 'librarian', 'student_assistant'].includes(role)) {
-    throw new Error('Unauthorized or Forbidden');
+  if (!['admin', 'librarian', 'student_assistant'].includes(role)) {
+    throw new Error('Forbidden');
+  }
+
+  // Security check for Student Assistants
+  if (role === 'student_assistant') {
+    const status = profile.status?.toUpperCase();
+    if (status !== 'ACTIVE') {
+      console.error(`[assertStaffCatalogAccess] Access denied for SA. Status: "${profile.status}", Role: "${role}"`);
+      throw new Error('Access denied: Staff account is deactivated.');
+    }
+    // Most staff catalog views (queues, copies) should require manage_inventory
+    if (!profile.permissions?.manage_inventory) {
+      throw new Error('Access denied: Missing inventory management permission.');
+    }
   }
 
   return await createClient();

@@ -68,8 +68,10 @@ export function ModernInventoryClient({
 
   return (
     <div className="w-full space-y-4 pb-10">
-      <div className="sticky top-16 z-20 space-y-2 rounded-2xl border border-border/10 bg-background/50 p-1.5 shadow-sm backdrop-blur-2xl transition-all duration-300 md:p-2">
+
+      <div className="sticky rounded-2xl border border-border/10 bg-background/50 p-1.5 shadow-sm backdrop-blur-2xl transition-all duration-300 md:p-2">
         <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex items-center gap-2">
             {canManage && (
               <Link href="/catalog/add" className="shrink-0">
                 <Button size="sm" className="h-8 rounded-xl px-3 text-[10px] font-bold uppercase tracking-widest shadow-none md:text-[11px] md:px-4">
@@ -79,7 +81,8 @@ export function ModernInventoryClient({
                 </Button>
               </Link>
             )}
-            {canManage && <div className="mx-1 h-4 w-[1px] bg-border/20 hidden sm:block" />}
+            {canManage && <div className="h-4 w-[1px] bg-border/20 hidden sm:block" />}
+          </div>
 
           <div className="flex items-center gap-2">
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
@@ -126,7 +129,6 @@ export function ModernInventoryClient({
           ))}
         </div>
       </div>
-
       <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>
         <InventoryGrid 
           books={books} 

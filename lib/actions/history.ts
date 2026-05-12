@@ -9,6 +9,7 @@ type BookInfo = {
   id: string;
   title: string;
   author: string;
+  cover_url: string | null;
 };
 
 export type BorrowingRecord = {
@@ -47,7 +48,7 @@ export async function getBorrowingHistory(
       id, book_copy_id, user_id, status, borrowed_at, due_date, returned_at, renewal_count,
       book_copies!inner (
         books!inner (
-          id, title, author
+          id, title, author, cover_url
         )
       ),
       profiles:profiles!borrowing_records_user_id_fkey (

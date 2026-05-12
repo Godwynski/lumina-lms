@@ -17,8 +17,11 @@ export const metadata = {
 function buildHistoryPromise(page: number, status: string, q: string) {
   return getMe().then(async (me) => {
     if (!me) redirect("/");
-    // Admin and Librarian can see all records, others see only their own.
-    const userId = (me.role === "admin" || me.role === "librarian") ? null : me.user.id;
+    // Admin, Librarian and active SA can see all records, others see only their own.
+    const isStaff = me.role === "admin" || 
+                    me.role === "librarian" || 
+                    (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+    const userId = isStaff ? null : me.user.id;
     return getBorrowingHistory(userId, page, 10, status, q);
   }) as Promise<BorrowingHistoryResult>;
 }

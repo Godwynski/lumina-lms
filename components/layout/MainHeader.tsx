@@ -20,13 +20,13 @@ export function MainHeader({ userNav }: MainHeaderProps) {
   const isCollapsed = state === "collapsed"
 
   return (
-    <header className="sticky top-0 z-40 hidden md:flex h-16 shrink-0 items-center gap-4 border-b border-border/20 bg-background/60 backdrop-blur-2xl px-8 transition-all duration-300">
-      <div className="flex items-center gap-6 flex-1 overflow-hidden">
+    <header className="sticky top-0 z-40 hidden md:flex h-16 shrink-0 items-center gap-4 border-b border-border/20 bg-background/60 backdrop-blur-2xl px-6 transition-all duration-300">
+      <div className="flex items-center flex-1 overflow-hidden">
         <div 
           className={cn(
             "flex items-center gap-5 transition-all duration-500 ease-in-out",
             isCollapsed 
-              ? "max-w-[240px] opacity-100 translate-x-0 mr-2" 
+              ? "max-w-[240px] opacity-100 translate-x-0 mr-6" 
               : "max-w-0 opacity-0 -translate-x-8 mr-0 pointer-events-none"
           )}
         >

@@ -2,7 +2,7 @@ import { getBooks, getCategories } from '@/lib/actions/catalog';
 import { Suspense } from 'react';
 import { CatalogContent, CatalogSkeleton } from './CatalogContent';
 import { getMe } from '@/lib/auth-helpers';
-import { redirect } from 'next/navigation';
+
 
 export const metadata = {
   title: 'Inventory | Lumina LMS',
@@ -33,11 +33,8 @@ async function CatalogDataWrapper({
   searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }>;
 }) {
   // Auth redirect — uses cache()-memoized getMe() shared with the layout
-  const me = await getMe();
-  if (me?.role === 'admin' || me?.role === 'librarian') {
-    redirect('/dashboard');
-  }
-
+  await getMe();
+  
   const params = await searchParams;
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';
