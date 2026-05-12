@@ -70,7 +70,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     review: "Pending Review",
     admin: "Admin",
     librarian: "Librarian",
-    student_assistant: "Student Assistant",
+    student_assistant: "Staff / SA",
     student: "Student",
   };
 
@@ -164,7 +164,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     {
       header: "ID",
       className: "w-[120px]",
-      cell: (user) => <span className="font-mono text-xs font-medium">{user.student_id || "N/A"}</span>
+      cell: (user) => <span className="font-mono text-xs font-medium">{user.student_id || "No ID"}</span>
     },
     {
       header: "Role",

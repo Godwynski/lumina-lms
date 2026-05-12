@@ -44,7 +44,7 @@ export default async function ProtectedLayout({
     profile?.status === "SUSPENDED" ||
     profile?.status === "INACTIVE";
 
-  if (isAccessBlocked && !isPrivileged) {
+  if (isAccessBlocked && !isPrivileged && role !== "student_assistant") {
     return <AccountPendingScreen profile={profile} isStudent={isStudent} />;
   }
 

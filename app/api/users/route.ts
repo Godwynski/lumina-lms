@@ -23,7 +23,7 @@ function mapProfileToUser(row: Record<string, unknown>) {
         : nameFromEmail || "Unnamed User",
     email,
     role: normalizeUserRole(row.role as string),
-    status: typeof row.status === "string" ? row.status : "active",
+    status: typeof row.status === "string" ? row.status.toUpperCase() : "ACTIVE",
     student_id: typeof row.student_id === "string" ? row.student_id : null,
     department:
       typeof row.department === "string" && row.department.trim()

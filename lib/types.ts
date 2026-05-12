@@ -1,3 +1,12 @@
+export type UserRole = 'admin' | 'librarian' | 'student_assistant' | 'student';
+
+export type UserPermissions = {
+  manage_inventory?: boolean;
+  manage_circulation?: boolean;
+  manage_attendance?: boolean;
+  [key: string]: boolean | undefined;
+};
+
 export interface Category {
   id: string;
   name: string;
@@ -72,5 +81,8 @@ export type ProfileData = {
   avatar_url: string | null;
   address: string | null;
   phone: string | null;
+  status?: string;
+  onboarding_completed?: boolean;
+  permissions?: UserPermissions | null;
 };
 

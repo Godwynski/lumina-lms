@@ -30,6 +30,11 @@ type SafeActionOptions = {
   auditEntity?: string;
   /** Whether this action requires a specific role. */
   allowedRoles?: UserRole[];
+  /** Optional: Required permissions for student_assistants. 
+   * If provided, an SA must have at least one of these permissions.
+   * Admins and Librarians bypass this check.
+   */
+  allowedPermissions?: string[];
 };
 
 /**
@@ -54,6 +59,15 @@ export function createSafeAction<TInput, TOutput>(
 
       if (options.allowedRoles && !options.allowedRoles.includes(me.role)) {
         return { success: false, error: "Unauthorized access" };
+      }
+
+      // Permission check for student assistants
+      if (me.role === 'student_assistant' && options.allowedPermissions) {
+        const permissions = me.profile.permissions || {};
+        const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
+        if (!hasPermission) {
+          return { success: false, error: "Access denied: Missing required permission." };
+        }
       }
 
       // 2. Validation

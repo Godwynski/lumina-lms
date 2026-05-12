@@ -52,13 +52,13 @@ export function UserDetailClient({
   });
 
   const isDirty = 
-    form.name !== initialUser.name ||
+    form.name.trim() !== (initialUser.name || "").trim() ||
     form.role !== initialUser.role ||
-    form.status !== initialUser.status ||
-    form.department !== initialUser.department ||
-    form.student_id !== (initialUser.student_id || "") ||
-    form.address !== (initialUser.address || "") ||
-    form.phone !== (initialUser.phone || "") ||
+    form.status.toUpperCase() !== (initialUser.status || "").toUpperCase() ||
+    form.department.trim() !== (initialUser.department || "").trim() ||
+    form.student_id.trim() !== (initialUser.student_id || "").trim() ||
+    form.address.trim() !== (initialUser.address || "").trim() ||
+    form.phone.trim() !== (initialUser.phone || "").trim() ||
     JSON.stringify(form.permissions) !== JSON.stringify(initialUser.permissions || {});
 
   const handleUpdateProfile = async () => {
@@ -110,6 +110,18 @@ export function UserDetailClient({
       };
       
       setUser(nextUser);
+      // Sync form state to match the just-saved data to disable the save button
+      setForm({
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        status: updated.status,
+        department: updated.department,
+        student_id: updated.student_id || "",
+        address: form.address,
+        phone: form.phone,
+        permissions: form.permissions,
+      });
       toast.success("Account updated successfully");
       router.refresh();
       // We don't reset isEditing because we are always in the "Detail" view now which is interactive
@@ -155,7 +167,7 @@ export function UserDetailClient({
                 </Avatar>
                 <div className="text-center">
                   <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">{form.name}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{form.role.replace('_', ' ')}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{form.role === 'student_assistant' ? 'Staff / SA' : form.role.replace('_', ' ')}</p>
                 </div>
               </div>
 
@@ -182,7 +194,7 @@ export function UserDetailClient({
                       />
                     </div>
                   </FieldGroup>
-                  <FieldGroup label="Organization Unit">
+                  <FieldGroup label="Academic Program / Department">
                     <div className="relative">
                       <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input 
@@ -234,7 +246,7 @@ export function UserDetailClient({
                   {[
                     { id: 'admin', label: 'Administrator', icon: Shield, hidden: !isAdmin },
                     { id: 'librarian', label: 'Librarian', icon: Building },
-                    { id: 'student_assistant', label: 'Student Assistant', icon: UserCheck },
+                    { id: 'student_assistant', label: 'Staff / Student Assistant (SA)', icon: UserCheck },
                     { id: 'student', label: 'Student', icon: UserIcon },
                   ].filter(r => !r.hidden).map((r) => (
                     <Button
@@ -256,7 +268,7 @@ export function UserDetailClient({
                 </div>
               </FieldGroup>
 
-              <FieldGroup label="Membership Status" className="sm:col-span-2">
+              <FieldGroup label="Student Status" className="sm:col-span-2">
                 <div className="flex flex-wrap gap-2">
                   {[
                     { id: 'ACTIVE', label: 'Active', icon: CheckCircle2 },
@@ -284,7 +296,7 @@ export function UserDetailClient({
                 </div>
               </FieldGroup>
 
-              <FieldGroup label="Library ID Number (Auto-extracted)">
+              <FieldGroup label="Library ID / Institutional ID">
                 <div className="relative">
                   <Input 
                     value={form.student_id} 
@@ -321,7 +333,7 @@ export function UserDetailClient({
                   <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-foreground">Action Required: Physical Verification</p>
-                    <p className="text-xs text-muted-foreground">The student is physically present and has presented their school ID.</p>
+                    <p className="text-xs text-muted-foreground">The student is physically present and has presented their official ID.</p>
                   </div>
                 </div>
 
@@ -394,6 +406,20 @@ export function UserDetailClient({
                     disabled={isReadOnly}
                   />
                 </div>
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Manage Attendance</p>
+                    <p className="text-xs text-muted-foreground">Allow scanning library cards for attendance</p>
+                  </div>
+                  <Switch 
+                    checked={form.permissions?.manage_attendance} 
+                    onCheckedChange={(checked) => setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, manage_attendance: checked }
+                    }))}
+                    disabled={isReadOnly}
+                  />
+                </div>
               </div>
             </Section>
           )}
@@ -418,21 +444,11 @@ export function UserDetailClient({
                 <UserCheck className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">Membership Review</p>
+                <p className="text-xs font-bold text-foreground">Student Review</p>
                 <p className="text-[10px] text-muted-foreground capitalize">Managed by Library Administration</p>
               </div>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              {!isLibrarian && (
-                <Button
-                  variant="ghost"
-                  onClick={() => handleAdminAction('ARCHIVED')}
-                  className="h-10 rounded-lg px-4 font-bold text-destructive hover:bg-destructive/10"
-                >
-                  <Archive className="mr-2 h-4 w-4" />
-                  Archive User
-                </Button>
-              )}
               <Button
                 onClick={handleUpdateProfile}
                 disabled={isSaving || !isDirty}

@@ -1,4 +1,4 @@
-import { getMe } from "@/lib/auth-helpers";
+import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { ProfileSection } from "@/components/settings/sections/ProfileSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -13,11 +13,15 @@ function buildProfilePromise() {
 }
 
 async function ProfileContent() {
-  const { profile } = await buildProfilePromise();
+  const [{ profile }, preferences] = await Promise.all([
+    buildProfilePromise(),
+    getPreferences()
+  ]);
 
   return (
     <ProfileSection
       role={profile?.role || "student"}
+      preferences={preferences}
       initialProfile={{
         full_name: profile?.full_name || null,
         avatar_url: profile?.avatar_url || null,

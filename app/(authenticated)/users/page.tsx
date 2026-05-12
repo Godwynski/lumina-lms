@@ -13,6 +13,10 @@ function buildUsersPromise() {
     if (!me) redirect("/");
     const { supabase, role } = me;
 
+    if (role !== "admin" && role !== "librarian") {
+      redirect("/dashboard");
+    }
+
     let query = supabase
       .from("profiles")
       .select("*", { count: "exact" });
