@@ -12,24 +12,42 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, Archive } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SelfDeleteAccountDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const CONFIRMATION_TEXT = "ARCHIVE MY ACCOUNT";
+
+/**
+ * Dialog component for users to self-archive their account.
+ * Features a two-step process: warning and confirmation.
+ */
 export function SelfDeleteAccountDialog({
   isOpen,
   onClose,
 }: SelfDeleteAccountDialogProps) {
-  const [step, setStep] = useState<"confirm" | "warning">("warning");
+  const [step, setStep] = useState<"warning" | "confirm">("warning");
   const [confirmText, setConfirmText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const resetState = () => {
+    setStep("warning");
+    setConfirmText("");
+    setError(null);
+  };
+
+  const handleClose = () => {
+    resetState();
+    onClose();
+  };
+
   const handleConfirm = async () => {
-    if (confirmText !== "ARCHIVE MY ACCOUNT") {
-      setError("Please type the confirmation text exactly");
+    if (confirmText !== CONFIRMATION_TEXT) {
+      setError(`Please type "${CONFIRMATION_TEXT}" exactly`);
       return;
     }
 
@@ -39,9 +57,7 @@ export function SelfDeleteAccountDialog({
     try {
       const response = await fetch("/api/users/self-delete", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reason: "User-initiated self-deletion",
         }),
@@ -52,20 +68,13 @@ export function SelfDeleteAccountDialog({
         throw new Error(data.error || "Failed to archive account");
       }
 
-      // Account archived successfully, user will be signed out and redirected
+      // Successful archive: redirect to landing page
       window.location.href = "/";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    setStep("warning");
-    setConfirmText("");
-    setError(null);
-    onClose();
   };
 
   return (
@@ -87,30 +96,30 @@ export function SelfDeleteAccountDialog({
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
                 <div className="space-y-2 text-sm">
-                  <p className="font-semibold">This will archive:</p>
-                  <ul className="list-disc list-inside space-y-1 ml-1">
+                  <p className="font-semibold text-destructive">This will archive:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-1 text-muted-foreground">
                     <li>Your account and profile access</li>
                     <li>Your library card and active sessions</li>
                   </ul>
-                  <p className="pt-2 font-semibold">
+                  <p className="pt-2 font-medium">
                     Your information will be retained in archives for legal compliance and historical records.
                   </p>
                 </div>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button
                 variant="outline"
                 onClick={handleClose}
-                className="h-9 rounded-lg"
+                className="h-9 rounded-lg flex-1 sm:flex-none"
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => setStep("confirm")}
-                className="h-9 rounded-lg"
+                className="h-9 rounded-lg flex-1 sm:flex-none"
               >
                 Continue to Archiving
               </Button>
@@ -122,29 +131,34 @@ export function SelfDeleteAccountDialog({
               <p className="text-sm font-medium text-foreground">
                 To confirm, please type the following text:
               </p>
-              <code className="block rounded border border-border bg-muted p-2 text-sm font-mono text-foreground">
-                ARCHIVE MY ACCOUNT
+              <code className="block rounded border border-border bg-muted p-2 text-sm font-mono text-center select-all">
+                {CONFIRMATION_TEXT}
               </code>
             </div>
 
-            <Input
-              type="text"
-              placeholder="Type confirmation text..."
-              value={confirmText}
-              onChange={(e) => {
-                setConfirmText(e.target.value);
-                setError(null);
-              }}
-              className="h-10 w-full rounded-lg border-border text-sm focus:border-destructive"
-            />
+            <div className="space-y-1.5">
+              <Input
+                type="text"
+                placeholder="Type confirmation text..."
+                value={confirmText}
+                onChange={(e) => {
+                  setConfirmText(e.target.value);
+                  setError(null);
+                }}
+                className={cn(
+                  "h-10 w-full rounded-lg border-border text-sm focus:ring-1 focus:ring-destructive",
+                  error && "border-destructive focus:ring-destructive"
+                )}
+                autoFocus
+              />
+              {error && (
+                <p className="text-xs text-destructive font-medium px-1">
+                  {error}
+                </p>
+              )}
+            </div>
 
-            {error && (
-              <div className="status-danger rounded p-2 text-sm">
-                {error}
-              </div>
-            )}
-
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -153,15 +167,15 @@ export function SelfDeleteAccountDialog({
                   setError(null);
                 }}
                 disabled={isLoading}
-                className="h-9 rounded-lg"
+                className="h-9 rounded-lg flex-1 sm:flex-none"
               >
                 Back
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleConfirm}
-                disabled={isLoading || confirmText !== "ARCHIVE MY ACCOUNT"}
-                className="h-9 rounded-lg"
+                disabled={isLoading || confirmText !== CONFIRMATION_TEXT}
+                className="h-9 rounded-lg flex-1 sm:flex-none"
               >
                 {isLoading ? "Archiving..." : "Archive My Account"}
               </Button>

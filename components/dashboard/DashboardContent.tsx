@@ -5,10 +5,6 @@ import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { getMe } from "@/lib/auth-helpers";
 import { Reservation, ProfileData } from "@/lib/types";
 
-/**
- * Server Component that orchestrates various data promises for the dashboard.
- * It uses the 'getMe' helper which is cached per-request.
- */
 export async function DashboardContent({ 
   searchParams 
 }: { 
@@ -21,10 +17,7 @@ export async function DashboardContent({
 
   const faqKeys = ["student_faq_list"];
 
-  // Kick off stats data promise for the appropriate role
   const statsPromise = getDashboardStats({ role });
-
-  // Optional: Library card for students and SAs
   const isStudent = role === "student";
   
   const cardPromise = supabase
@@ -33,7 +26,6 @@ export async function DashboardContent({
         .eq("user_id", user.id)
         .maybeSingle();
 
-  // Optional: FAQ items for students and SAs
   const faqPromise = (isStudent || role === "student_assistant")
     ? supabase
         .from("system_settings")
@@ -41,12 +33,19 @@ export async function DashboardContent({
         .in("key", faqKeys)
     : Promise.resolve({ data: null, error: null });
 
-  // Optional: Fetch current reservations for anyone who might need to see them (students/SAs)
   const reservationsPromise = (isStudent || role === "student_assistant")
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
-  const params = await searchParams;
+  const [params, { data: preferencesData }] = await Promise.all([
+    searchParams,
+    supabase
+      .from("ui_preferences")
+      .select("preferences")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';
   const categoryId = params.categoryId || '';
@@ -67,27 +66,6 @@ export async function DashboardContent({
     ? getBooks(q, categoryId || undefined, page, pageSize, sort)
     : Promise.resolve({ data: [], count: 0 });
 
-  const attendanceQuery = supabase
-    .from("attendance")
-    .select("*, profiles(full_name)")
-    .order("check_in_at", { ascending: false })
-    .limit(5);
-
-  const canSeeAllAttendance = role === 'admin' || 
-                               role === 'librarian' || 
-                               (role === 'student_assistant' && isStaffActive);
-
-  const attendancePromise = canSeeAllAttendance
-    ? attendanceQuery
-    : attendanceQuery.eq("user_id", user.id);
-
-  // Fetch UI preferences for SA mode toggle
-  const { data: preferencesData } = await supabase
-    .from("ui_preferences")
-    .select("preferences")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
   const preferences = (preferencesData?.preferences as Record<string, string>) || {};
   let preferredView = preferences.preferred_dashboard_view;
   if (role === "student_assistant" && !isStaffActive) {
@@ -95,7 +73,6 @@ export async function DashboardContent({
     preferredView = "student";
   }
 
-  // Pass promises to the client component for rendering with Suspense/use() where needed
   return (
     <DashboardClient 
       user={user} 
@@ -108,7 +85,6 @@ export async function DashboardContent({
       reservationsPromise={reservationsPromise}
       inventoryBooksPromise={inventoryBooksPromise}
       inventoryCategoriesPromise={inventoryCategoriesPromise}
-      attendancePromise={attendancePromise as unknown as Promise<{ data: { id: string; check_in_at: string; user_id: string; profiles?: { full_name: string | null } }[] | null; error: Error | null }>}
     />
   );
 }

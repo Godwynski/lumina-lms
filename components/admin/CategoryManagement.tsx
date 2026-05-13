@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Plus } from "lucide-react";
+import { Plus, Layers, Edit3, Save, X, Loader2 } from "lucide-react";
 import { CategoryItem } from "./categories/CategoryItem";
 import { CategoryDialog } from "./categories/CategoryDialog";
+
+import { toast } from "sonner";
+import { Category } from "@/types/admin";
 
 function toSlug(value: string) {
   return value
@@ -14,8 +17,10 @@ function toSlug(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-import { Category } from "@/types/admin";
-
+/**
+ * Main management interface for system categories.
+ * Handles CRUD operations and bulk modifications.
+ */
 export function CategoryManagement({ initialCategories }: { initialCategories: Category[] }) {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [draftCategories, setDraftCategories] = useState<Category[]>(initialCategories);
@@ -23,7 +28,6 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -61,13 +65,11 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   const handleSave = async () => {
     const normalizedSlug = toSlug(formData.slug || formData.name);
     if (!formData.name || !normalizedSlug) {
-      setError("Name and slug are required");
+      toast.error("Label and identifier are required");
       return;
     }
 
     setLoading(true);
-    setError(null);
-
     try {
       if (editingId) {
         const response = await fetch(`/api/admin/categories/${editingId}`, {
@@ -80,15 +82,12 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           }),
         });
 
-        if (!response.ok) throw new Error("Failed to update category");
+        if (!response.ok) throw new Error("Failed to update category protocol");
 
         const updated = await response.json();
-        setCategories((prev) =>
-          prev.map((c) => (c.id === editingId ? updated : c))
-        );
-        setDraftCategories((prev) =>
-          prev.map((c) => (c.id === editingId ? updated : c))
-        );
+        setCategories((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
+        setDraftCategories((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
+        toast.success("Category updated successfully");
       } else {
         const response = await fetch("/api/admin/categories", {
           method: "POST",
@@ -96,28 +95,26 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           body: JSON.stringify({ ...formData, slug: normalizedSlug }),
         });
 
-        if (!response.ok) throw new Error("Failed to create category");
+        if (!response.ok) throw new Error("Failed to initialize new category");
 
         const newCategory = await response.json();
         setCategories((prev) => [...prev, newCategory]);
         setDraftCategories((prev) => [...prev, newCategory]);
+        toast.success("New category registered");
       }
-
       setDialogOpen(false);
       resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const msg = err instanceof Error ? err.message : "Internal system error";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleArchive = async (id: string) => {
-    if (!confirm("Are you sure you want to archive this category?")) return;
- 
     setLoading(true);
-    setError(null);
- 
     try {
       const response = await fetch(`/api/admin/categories/${id}`, {
         method: "PUT",
@@ -129,8 +126,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
       setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
       setDraftCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
+      toast.success("Category archived");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error(err instanceof Error ? err.message : "Archive failed");
     } finally {
       setLoading(false);
     }
@@ -138,8 +136,6 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
   const handleRestore = async (id: string) => {
     setLoading(true);
-    setError(null);
-
     try {
       const response = await fetch(`/api/admin/categories/${id}`, {
         method: "PUT",
@@ -152,20 +148,19 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
       const updated = await response.json();
       setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
       setDraftCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      toast.success("Category restored to active state");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error(err instanceof Error ? err.message : "Restore failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const changedIds = draftCategories
-    .filter((draft) => {
-      const current = categories.find((c) => c.id === draft.id);
-      if (!current) return false;
-      return current.name !== draft.name || current.slug !== draft.slug || (current.description || "") !== (draft.description || "");
-    })
-    .map((c) => c.id);
+  const changedIds = draftCategories.filter((draft) => {
+    const current = categories.find((c) => c.id === draft.id);
+    if (!current) return false;
+    return current.name !== draft.name || current.slug !== draft.slug || (current.description || "") !== (draft.description || "");
+  }).map((c) => c.id);
 
   const changedSet = new Set(changedIds);
 
@@ -176,36 +171,30 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     }
 
     setLoading(true);
-    setError(null);
-
     try {
       for (const id of changedIds) {
         const draft = draftCategories.find((c) => c.id === id);
         if (!draft) continue;
-
-        const normalizedSlug = toSlug(draft.slug || draft.name);
-        if (!draft.name || !normalizedSlug) {
-          throw new Error("Name and slug are required");
-        }
 
         const response = await fetch(`/api/admin/categories/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: draft.name,
-            slug: normalizedSlug,
+            slug: draft.slug,
             description: draft.description || "",
             is_active: draft.is_active,
           }),
         });
 
-        if (!response.ok) throw new Error("Failed to update categories");
+        if (!response.ok) throw new Error(`Failed to commit changes for ${draft.name}`);
       }
 
-      setCategories(draftCategories.map((c) => ({ ...c, slug: toSlug(c.slug || c.name) })));
+      setCategories(draftCategories);
       setIsBulkEditing(false);
+      toast.success(`Successfully committed ${changedIds.length} modifications`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error(err instanceof Error ? err.message : "Bulk commit failed");
     } finally {
       setLoading(false);
     }
@@ -218,71 +207,82 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-8 p-1">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">
-          {categories.length} {categories.length === 1 ? 'category' : 'categories'}
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary/40 border border-primary/10">
+            <Layers className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none mb-1">
+              Registry Overview
+            </p>
+            <h2 className="text-sm font-black text-foreground tracking-tight">
+              {categories.length} Registered {categories.length === 1 ? 'Category' : 'Categories'}
+            </h2>
+          </div>
+        </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isBulkEditing ? (
-            <>
+            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
               {changedIds.length > 0 && (
-                <span className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
-                  {changedIds.length} changes
-                </span>
+                <div className="px-4 py-1.5 rounded-full bg-primary/[0.03] border border-primary/10 text-[9px] font-black uppercase tracking-[0.2em] text-primary shadow-xs">
+                  {changedIds.length} Pending Mods
+                </div>
               )}
               <Button
                 variant="ghost"
                 onClick={resetBulkEdit}
-                className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider"
                 disabled={loading}
+                className="h-11 rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
               >
-                Cancel
+                <X className="h-4 w-4 mr-2" />
+                Discard
               </Button>
               <Button
                 onClick={handleBulkSave}
-                className="h-8 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm"
                 disabled={loading || changedIds.length === 0}
+                className="h-11 rounded-2xl px-8 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all"
               >
-                {loading ? "Saving..." : "Save"}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Commit Changes
               </Button>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 onClick={() => setIsBulkEditing(true)}
-                className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider border-border/40 hover:bg-muted"
+                className="h-11 rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.2em] border-border/20 bg-muted/5 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
               >
-                Bulk Edit
+                <Edit3 className="h-4 w-4 mr-2" />
+                Bulk Management
               </Button>
               <Button
                 onClick={() => openDialog()}
-                className="h-8 rounded-lg gap-1.5 px-4 text-[10px] font-bold uppercase tracking-wider shadow-sm"
+                className="h-11 rounded-2xl gap-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/10 hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
               >
-                <Plus className="h-3 w-3" />
-                Add
+                <Plus className="h-4 w-4" />
+                Add Category
               </Button>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-xs font-medium text-destructive">
-          {error}
-        </div>
-      )}
-
       {categories.length === 0 ? (
-        <div className="rounded-2xl border border-border/40 bg-card/20 p-8 text-center">
-          <AlertCircle className="mx-auto mb-3 h-8 w-8 text-muted-foreground/30" />
-          <p className="text-sm font-bold text-foreground">No categories defined</p>
-          <p className="mt-1 text-xs text-muted-foreground">Get started by adding a new category.</p>
+        <div className="rounded-[2.5rem] border border-dashed border-border/20 bg-muted/[0.02] p-16 text-center group hover:bg-muted/[0.04] transition-all duration-700">
+          <div className="h-20 w-20 rounded-[2rem] bg-muted/5 flex items-center justify-center text-muted-foreground/20 mx-auto mb-6 group-hover:scale-110 group-hover:text-primary/30 group-hover:bg-primary/5 transition-all duration-700">
+            <Layers className="h-10 w-10" />
+          </div>
+          <h3 className="text-sm font-black text-foreground/60 group-hover:text-foreground transition-colors mb-2">No categories defined</h3>
+          <p className="text-xs text-muted-foreground/40 font-medium max-w-[280px] mx-auto leading-relaxed">
+            Initialize your organization&apos;s classification system by adding your first category.
+          </p>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {(isBulkEditing ? draftCategories : categories).map((category) => (
             <CategoryItem
               key={category.id}
@@ -312,3 +312,4 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     </div>
   );
 }
+

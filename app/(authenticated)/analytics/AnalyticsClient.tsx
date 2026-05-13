@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useEffect, useTransition, useCallback } from 'react';
-import { Clock, BookOpen, Library, UserCircle2, Sparkles, TrendingUp } from 'lucide-react';
+import { Clock, BookOpen, Library, UserCircle2, Sparkles } from 'lucide-react';
 import { TrendChart, StatusPieChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange } from '@/lib/actions/analytics';
 import { cn } from '@/lib/utils';
@@ -70,19 +70,8 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={16} className="text-primary" />
-            <h1 className="text-2xl font-black tracking-tight text-foreground">System Insights</h1>
-          </div>
-          <p className="text-sm font-medium text-muted-foreground/90 max-w-md">
-            Real-time visualization of library traffic, circulation patterns, and collection health.
-          </p>
-        </div>
-
-        <div className="flex bg-muted/40 p-1 rounded-xl border border-border/60 self-start md:self-auto">
+      <div className="flex justify-end px-1">
+        <div className="flex bg-muted/40 p-1 rounded-xl border border-border/60">
           {RANGES.map((r) => (
             <button
               key={r.value}

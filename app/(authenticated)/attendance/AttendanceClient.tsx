@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useTransition, useState, useRef, useEffect, useMemo } from "react";
-import { logAttendance, toggleAttendanceByCard } from "@/lib/actions/attendance";
+import { toggleAttendanceByCard } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -37,17 +37,7 @@ export function AttendanceClient({
 
   const activeRecord = history.find(r => !r.check_out_at);
 
-  const handleSelfLog = () => {
-    startTransition(async () => {
-      const result = await logAttendance();
-      if (result.success) {
-        toast.success(result.message);
-        window.location.reload(); 
-      } else {
-        toast.error(result.message);
-      }
-    });
-  };
+
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +51,6 @@ export function AttendanceClient({
           icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
         });
         setCardNumber("");
-        window.location.reload();
       } else {
         toast.error(result.error);
         setCardNumber("");
@@ -87,7 +76,6 @@ export function AttendanceClient({
           icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
         });
         setShowScanner(false);
-        window.location.reload();
       } else {
         toast.error(result.error);
         // Don't close scanner on error so they can try again or check what went wrong
@@ -198,24 +186,12 @@ export function AttendanceClient({
           <StatusBadge status="ACTIVE" className="h-5" />
         )}
       </div>
-      <Button 
-        size="sm" 
-        onClick={handleSelfLog} 
-        disabled={isPending}
-        className={cn(
-          "h-9 px-6 font-bold",
-          activeRecord && "bg-orange-600 hover:bg-orange-700"
-        )}
-      >
-        {isPending ? "Processing..." : activeRecord ? "Check Out" : "Check In Now"}
-      </Button>
+
     </div>
   );
 
   return (
     <AdminTableShell
-      title="Library Attendance"
-      description={isStaff ? "Scan cards to track student entry and exit." : "Confirm your presence in the library."}
       controls={isStaff ? scannerControls : selfLogControls}
       className="max-w-5xl"
     >
