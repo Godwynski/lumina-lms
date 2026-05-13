@@ -27,11 +27,8 @@ export default async function AttendancePage() {
 
 function AttendanceSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-[1450px] space-y-6 animate-pulse">
-      <div className="flex flex-col gap-2">
-        <div className="h-8 w-48 bg-muted rounded-lg" />
-        <div className="h-4 w-64 bg-muted/50 rounded-lg" />
-      </div>
+    <div className="mx-auto w-full max-w-5xl space-y-6 animate-pulse">
+
       <div className="h-12 w-full bg-muted/30 rounded-2xl" />
       <div className="rounded-2xl border border-border/10 bg-card/50 overflow-hidden">
         <div className="h-10 w-full bg-muted/20 border-b border-border/10" />

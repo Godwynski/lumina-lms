@@ -21,6 +21,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const DEMO_ACCOUNTS = [
+  { label: "Admin", email: "admin@lumina.test" },
+  { label: "Librarian", email: "librarian@lumina.test" },
+  { label: "Staff", email: "staff@lumina.test" },
+  { label: "Student", email: "student@lumina.test" },
+] as const;
+
 export function LoginForm({
   className,
   ...props
@@ -84,7 +91,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {error ? <AuthErrorAlert message={error} /> : null}
+          {error && <AuthErrorAlert message={error} />}
 
           <form 
             onSubmit={(e) => {
@@ -97,7 +104,7 @@ export function LoginForm({
               <div className="flex items-center justify-between">
                 <Label htmlFor="email">Email address</Label>
                 {studentIdPreview && (
-                  <span className="text-[10px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full animate-in fade-in slide-in-from-right-1">
                     ID: {studentIdPreview}
                   </span>
                 )}
@@ -109,7 +116,7 @@ export function LoginForm({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl border-input bg-background px-4 text-sm focus-visible:ring-2 focus-visible:ring-primary/20"
+                className="h-12 rounded-xl border-input bg-background px-4 text-sm transition-all focus-visible:ring-2 focus-visible:ring-primary/20"
               />
             </div>
             <div className="space-y-2">
@@ -130,7 +137,7 @@ export function LoginForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 rounded-xl border-input bg-background px-4 text-sm focus-visible:ring-2 focus-visible:ring-primary/20 pr-12"
+                  className="h-12 rounded-xl border-input bg-background px-4 text-sm transition-all focus-visible:ring-2 focus-visible:ring-primary/20 pr-12"
                 />
                 <Button
                   type="button"
@@ -138,6 +145,7 @@ export function LoginForm({
                   size="icon"
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </Button>
@@ -147,10 +155,16 @@ export function LoginForm({
             <Button
               type="submit"
               disabled={isLoading}
-              className="h-12 w-full rounded-xl text-sm font-bold bg-[#1e293b] text-white hover:bg-[#0f172a] shadow-md transition-all active:scale-[0.98]"
+              className="h-12 w-full rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-md transition-all active:scale-[0.98]"
             >
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
             </Button>
           </form>
 
@@ -188,12 +202,7 @@ export function LoginForm({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Admin", email: "admin@lumina.test" },
-                { label: "Librarian", email: "librarian@lumina.test" },
-                { label: "Staff", email: "staff@lumina.test" },
-                { label: "Student", email: "student@lumina.test" },
-              ].map((role) => (
+              {DEMO_ACCOUNTS.map((role) => (
                 <Button
                   key={role.email}
                   type="button"

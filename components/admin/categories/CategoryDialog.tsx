@@ -7,11 +7,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
+
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, Layers, Type, Hash, AlignLeft, ShieldCheck } from "lucide-react";
+
 
 interface CategoryFormData {
   name: string;
@@ -38,6 +39,9 @@ function toSlug(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+/**
+ * Dialog for creating or editing a single category entry.
+ */
 export function CategoryDialog({
   isOpen,
   onOpenChange,
@@ -50,98 +54,120 @@ export function CategoryDialog({
 }: CategoryDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl border-border/40 bg-card p-6 shadow-2xl sm:max-w-md">
-        <DialogHeader className="mb-4">
-          <DialogTitle className="text-xl font-black tracking-tight">
-            {editingId ? "Edit Category" : "New Category"}
-          </DialogTitle>
-          <DialogDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
-            {editingId ? "Update category details" : "Add a new catalog category"}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-[11px] font-bold uppercase tracking-widest text-foreground/80">Name</Label>
-            <Input
-              id="name"
-              placeholder="e.g., Science Fiction"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData((p) => {
-                  const nextName = e.target.value;
-                  return {
-                    ...p,
-                    name: nextName,
-                    slug: toSlug(p.slug ? p.slug : nextName),
-                  };
-                })
-              }
-              disabled={loading}
-              className="h-11 rounded-xl bg-muted/20 border-border/40 focus:ring-2 focus:ring-primary/20 transition-all text-sm shadow-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="slug" className="text-[11px] font-bold uppercase tracking-widest text-foreground/80">Slug</Label>
-            <Input
-              id="slug"
-              placeholder="e.g., science-fiction"
-              value={formData.slug}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, slug: toSlug(e.target.value) }))
-              }
-              disabled={loading}
-              className="h-11 rounded-xl bg-muted/20 border-border/40 focus:ring-2 focus:ring-primary/20 transition-all text-sm font-mono shadow-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-[11px] font-bold uppercase tracking-widest text-foreground/80">Description</Label>
-            <Input
-              id="description"
-              placeholder="Brief description of the category"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, description: e.target.value }))
-              }
-              disabled={loading}
-              className="h-11 rounded-xl bg-muted/20 border-border/40 focus:ring-2 focus:ring-primary/20 transition-all text-sm shadow-sm"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs font-medium text-destructive">
-              {error}
+      <DialogContent className="rounded-[3rem] border-border/40 bg-background p-0 shadow-2xl sm:max-w-md overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        
+        <div className="p-8 space-y-10">
+          <DialogHeader className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="h-14 w-14 rounded-2xl bg-primary/[0.03] flex items-center justify-center text-primary shadow-inner border border-primary/5">
+                <Layers className="h-7 w-7" />
+              </div>
+              <div className="px-3 py-1 rounded-full bg-muted/40 border border-border/40 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shadow-xs">
+                Registry System
+              </div>
             </div>
-          )}
+            <div className="space-y-1.5">
+              <DialogTitle className="text-2xl font-black tracking-tight text-foreground">
+                {editingId ? "Update Category" : "Register Category"}
+              </DialogTitle>
+              <DialogDescription className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground/50 leading-none">
+                {editingId ? "Modify existing registry parameters" : "Initialize a new classification node"}
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1 flex items-center gap-2">
+                <Type className="h-3 w-3" />
+                Display Label
+              </Label>
+              <Input
+                id="name"
+                placeholder="e.g. Theoretical Physics"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((p) => {
+                    const nextName = e.target.value;
+                    return {
+                      ...p,
+                      name: nextName,
+                      slug: toSlug(p.slug ? p.slug : nextName),
+                    };
+                  })
+                }
+                disabled={loading}
+                className="h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-bold shadow-inner placeholder:text-muted-foreground/30"
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              <Label htmlFor="slug" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1 flex items-center gap-2">
+                <Hash className="h-3 w-3" />
+                URL Identifier
+              </Label>
+              <Input
+                id="slug"
+                placeholder="e.g. theoretical-physics"
+                value={formData.slug}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, slug: toSlug(e.target.value) }))
+                }
+                disabled={loading}
+                className="h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-mono font-bold shadow-inner placeholder:text-muted-foreground/30"
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1 flex items-center gap-2">
+                <AlignLeft className="h-3 w-3" />
+                Meta Description
+              </Label>
+              <Input
+                id="description"
+                placeholder="Brief summary of this classification category..."
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, description: e.target.value }))
+                }
+                disabled={loading}
+                className="h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-medium shadow-inner placeholder:text-muted-foreground/30"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-2xl bg-rose-500/[0.03] border border-rose-500/10 p-4 text-[10px] font-bold text-rose-500 uppercase tracking-widest animate-in fade-in slide-in-from-top-2 duration-300">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
 
-        <DialogFooter className="mt-6 gap-2 sm:gap-0">
+        <div className="p-8 pt-0 flex gap-4">
           <Button
             onClick={() => onOpenChange(false)}
             variant="ghost"
             disabled={loading}
-            className="h-11 rounded-xl px-6 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted"
+            className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
           >
-            Cancel
+            Abort
           </Button>
           <Button
             onClick={onSave}
             disabled={loading}
-            className="h-11 rounded-xl px-8 text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20"
+            className="flex-[2] h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/10 hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
           >
             {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
-              "Save Category"
+              <ShieldCheck className="h-4 w-4 mr-2" />
             )}
+            {editingId ? "Update Protocol" : "Authorize Node"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
+

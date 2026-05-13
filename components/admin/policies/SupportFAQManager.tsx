@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Edit3, HelpCircle, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit3, HelpCircle, MessageSquare, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Manages the FAQ / Knowledge Base items for policy support.
+ * Designed with a high-fidelity, premium administrative aesthetic.
+ */
 export function SupportFAQManager({ 
   value, 
   initialValue,
@@ -99,138 +103,164 @@ export function SupportFAQManager({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
-          Knowledge Base ({currentFaqs.length})
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between px-2">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-2">
+            Knowledge Base
+          </p>
+          <p className="text-[9px] font-medium text-muted-foreground/30 uppercase tracking-widest">
+            {currentFaqs.length} entries registered
+          </p>
+        </div>
         {!disabled && (
           <Button 
             onClick={startAdd}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-8 rounded-xl gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 text-[10px] font-bold uppercase tracking-widest transition-all"
+            className="h-9 rounded-xl gap-2 text-primary hover:bg-primary/5 text-[10px] font-bold uppercase tracking-widest transition-all"
           >
             <Plus className="h-3 w-3" />
-            Add Question
+            Add Entry
           </Button>
         )}
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid gap-4">
         {currentFaqs.length === 0 && !disabled && (
-          <div className="flex flex-col items-center justify-center py-12 rounded-2xl border border-dashed border-border/60 bg-muted/5">
-             <HelpCircle className="h-8 w-8 text-muted-foreground/20 mb-3" />
-             <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">No FAQs defined</p>
-             <Button 
-               variant="link" 
-               className="text-[10px] h-auto p-0 mt-1" 
-               onClick={startAdd}
-             >
-               Click here to add your first question
-             </Button>
+          <div className="flex flex-col items-center justify-center py-12 rounded-[2rem] border border-dashed border-border/20 bg-muted/[0.01]">
+             <div className="h-12 w-12 rounded-2xl bg-muted/5 flex items-center justify-center mb-3">
+               <HelpCircle className="h-6 w-6 text-muted-foreground/10" />
+             </div>
+             <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">No entries found</p>
           </div>
         )}
 
-        {currentFaqs.map((faq, i) => {
-          const added = isNew(faq);
-          const modified = isModified(faq);
-          return (
-            <div key={`curr-${i}`} className={cn(
-              "group/faq relative rounded-2xl border p-5 transition-all",
-              added ? "bg-primary/[0.03] border-primary/20" : 
-              modified ? "bg-amber-50/50 border-amber-200/50" :
-              "bg-muted/5 border-border/40 hover:bg-muted/10"
-            )}>
-              <div className="flex justify-between gap-6">
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-foreground tracking-tight">{faq.question}</p>
-                    {added && (
-                      <span className="text-[9px] text-primary font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/10">New</span>
-                    )}
-                    {modified && (
-                      <span className="text-[9px] text-amber-600 font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-amber-100">Modified</span>
-                    )}
+        <div className="grid gap-3">
+          {currentFaqs.map((faq, i) => {
+            const added = isNew(faq);
+            const modified = isModified(faq);
+            return (
+                <div key={`curr-${i}`} className={cn(
+                  "group/faq relative rounded-[2rem] border p-6 transition-all duration-300",
+                  added ? "bg-primary/[0.02] border-primary/10 shadow-[0_0_20px_rgba(var(--primary),0.05)]" : 
+                  modified ? "bg-primary/[0.01] border-primary/10 shadow-[0_0_20px_rgba(var(--primary),0.02)]" :
+                  "bg-muted/[0.02] border-border/40 hover:bg-muted/[0.05] hover:border-border/60 hover:shadow-xl hover:shadow-muted/5"
+                )}>
+                  <div className="flex justify-between gap-8">
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-8 w-8 rounded-xl flex items-center justify-center shrink-0",
+                          added || modified ? "bg-primary/10 text-primary" :
+                          "bg-muted/20 text-muted-foreground/60"
+                        )}>
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </div>
+                        <p className="text-sm font-bold text-foreground tracking-tight line-clamp-1">{faq.question}</p>
+                        {added && (
+                          <span className="text-[8px] text-primary font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">New</span>
+                        )}
+                        {modified && (
+                          <span className="text-[8px] text-primary/80 font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10">Edited</span>
+                        )}
+                      </div>
+                    <div className="flex gap-4 items-start pl-11">
+                      <ArrowRight className="h-3 w-3 text-muted-foreground/20 mt-1 shrink-0" />
+                      <p className="text-xs text-muted-foreground/60 leading-relaxed font-medium line-clamp-2">{faq.answer}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground/80 leading-relaxed font-medium">{faq.answer}</p>
+                  {!disabled && (
+                    <div className="flex gap-2 opacity-0 group-hover/faq:opacity-100 transition-all duration-300 translate-x-2 group-hover/faq:translate-x-0">
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-background shadow-inner border border-transparent hover:border-border/10 transition-all" onClick={() => startEdit(i)}>
+                        <Edit3 size={15} className="text-muted-foreground/60 group-hover/faq:text-primary transition-colors" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-muted-foreground/20 hover:text-rose-500/60 hover:bg-rose-500/[0.02] transition-all" onClick={() => removeFAQ(i)}>
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                {!disabled && (
-                  <div className="flex gap-1.5 opacity-0 group-hover/faq:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-background shadow-sm border border-transparent hover:border-border/40 transition-all" onClick={() => startEdit(i)}>
-                      <Edit3 size={14} className="text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5 hover:border-destructive/10 border border-transparent transition-all" onClick={() => removeFAQ(i)}>
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
         {removedFaqs.length > 0 && (
-          <div className="mt-4 space-y-2 pt-6 border-t border-border/40">
-             <div className="flex items-center gap-2 px-1 mb-4">
-                <AlertCircle size={12} className="text-muted-foreground/40" />
-                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Marked for Deletion</p>
+          <div className="mt-8 space-y-4 pt-10 border-t border-border/10">
+             <div className="flex items-center gap-3 px-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/20" />
+                <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">Pending Removal</p>
              </div>
-             {removedFaqs.map((faq, i) => (
-                <div key={`rem-${i}`} className="group/rem relative rounded-xl border border-red-100/50 bg-red-50/20 p-4 opacity-60 hover:opacity-100 transition-all">
-                  <div className="flex justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-xs font-bold text-red-700/60 line-through tracking-tight">Q: {faq.question}</p>
-                      </div>
-                      <p className="text-xs text-red-600/50 leading-relaxed line-through italic font-medium">A: {faq.answer}</p>
-                    </div>
-                    {!disabled && (
-                      <div className="flex gap-1 opacity-0 group-hover/rem:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-primary hover:bg-primary/5" onClick={() => restoreFAQ(faq)}>
-                          <Plus size={14} />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-             ))}
+             <div className="grid gap-3">
+                {removedFaqs.map((faq, i) => (
+                   <div key={`rem-${i}`} className="group/rem relative rounded-[1.5rem] border border-border/20 bg-muted/[0.02] p-5 opacity-60 hover:opacity-100 transition-all duration-300">
+                     <div className="flex justify-between gap-6">
+                       <div className="min-w-0 flex-1">
+                         <p className="text-xs font-bold text-muted-foreground line-through tracking-tight mb-1">Q: {faq.question}</p>
+                         <p className="text-[10px] text-muted-foreground/60 leading-relaxed line-through italic font-medium">A: {faq.answer}</p>
+                       </div>
+                       {!disabled && (
+                         <Button 
+                           variant="ghost" 
+                           size="icon" 
+                           className="h-10 w-10 rounded-2xl text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all shrink-0" 
+                           onClick={() => restoreFAQ(faq)}
+                         >
+                           <Plus size={16} />
+                         </Button>
+                       )}
+                     </div>
+                   </div>
+                ))}
+             </div>
           </div>
         )}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="p-8 pb-4 bg-muted/5">
-            <DialogTitle className="text-xl font-black tracking-tight text-foreground">
-              {editingIndex !== null ? "Modify FAQ" : "New Knowledge Item"}
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground font-medium mt-1">
-              {editingIndex !== null 
-                ? "Update the question and answer for this knowledge base item." 
-                : "Add a common question and its corresponding answer for the support system."}
-            </p>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border border-border/20 shadow-2xl rounded-[2rem] bg-background">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          
+          <DialogHeader className="p-8 pb-4">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="h-12 w-12 rounded-xl bg-primary/5 flex items-center justify-center text-primary/60 border border-primary/5">
+                <HelpCircle className="h-6 w-6" />
+              </div>
+              <div className="space-y-0.5">
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                  {editingIndex !== null ? "Edit FAQ" : "Add FAQ"}
+                </DialogTitle>
+                <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest">
+                  Knowledge Base Entry
+                </p>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="p-8 pt-4 space-y-6">
+          <div className="p-8 pt-2 space-y-6">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/70 ml-1">The Question</Label>
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 ml-1">
+                Question
+              </Label>
               <Input
-                placeholder="e.g., How do I renew a book copy?"
+                placeholder="How do I borrow a book?"
                 value={newQ}
                 onChange={(e) => setNewQ(e.target.value)}
                 disabled={disabled}
-                className="h-12 rounded-2xl border-border/40 bg-muted/20 text-sm px-4 focus:ring-2 focus:ring-primary/10 transition-all font-semibold"
+                className="h-12 rounded-xl border-border/20 bg-muted/5 text-xs px-4 focus:ring-0 transition-all font-medium placeholder:text-muted-foreground/20"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-foreground/70 ml-1">Detailed Answer</Label>
+              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 ml-1">
+                Answer
+              </Label>
               <Textarea
-                placeholder="Write the clear, step-by-step resolution here..."
+                placeholder="Enter the detailed answer here..."
                 value={newA}
                 onChange={(e) => setNewA(e.target.value)}
                 disabled={disabled}
-                className="min-h-[160px] rounded-2xl border-border/40 bg-muted/20 text-sm p-4 resize-none focus:ring-2 focus:ring-primary/10 transition-all leading-relaxed font-medium"
+                className="min-h-[150px] rounded-2xl border-border/20 bg-muted/5 text-xs p-5 resize-none focus:ring-0 transition-all leading-relaxed font-medium placeholder:text-muted-foreground/20"
               />
             </div>
           </div>
@@ -239,16 +269,16 @@ export function SupportFAQManager({
              <Button 
                 variant="ghost" 
                 onClick={() => setIsModalOpen(false)}
-                className="flex-1 h-12 rounded-2xl text-[10px] font-bold uppercase tracking-widest"
+                className="flex-1 h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
               >
                 Cancel
               </Button>
               <Button
                 onClick={addOrUpdateFAQ}
                 disabled={disabled || !newQ.trim() || !newA.trim()}
-                className="flex-[2] h-12 rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20"
+                className="flex-[2] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]"
               >
-                {editingIndex !== null ? "Apply Changes" : "Create Item"}
+                {editingIndex !== null ? "Save Changes" : "Add Entry"}
               </Button>
           </DialogFooter>
         </DialogContent>
@@ -256,3 +286,4 @@ export function SupportFAQManager({
     </div>
   );
 }
+

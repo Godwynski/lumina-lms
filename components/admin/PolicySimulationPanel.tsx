@@ -1,76 +1,31 @@
-'use client';
+'use client'
 
-import { Calendar, BookOpen, Clock, Ticket } from 'lucide-react';
-import { addDays, format } from 'date-fns';
+import { Ticket } from 'lucide-react'
 
 interface SimulationProps {
   formData: Record<string, string>;
 }
 
+/**
+ * Component for simulating policy changes and visualizing the projected borrowing lifecycle.
+ */
 export function PolicySimulationPanel({ formData }: SimulationProps) {
-  const borrowPeriod = parseInt(formData.loan_period_days || '14');
-  const holdExpiry = parseInt(formData.hold_expiry_days || '7');
-  const maxBorrow = parseInt(formData.max_borrow_limit || '5');
-  const renewalPeriod = parseInt(formData.renewal_period_days || '14');
-
-  const today = new Date();
-  const dueDate = addDays(today, borrowPeriod);
-  const renewalDate = addDays(dueDate, renewalPeriod);
+  const holdExpiry = parseInt(formData.hold_expiry_days || '7')
 
   return (
-    <div className="space-y-8 sticky top-4">
-      <div>
-        <h3 className="text-sm font-medium text-foreground mb-1">Timeline</h3>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Estimated borrowing lifecycle.
-        </p>
-      </div>
-
-      <div className="space-y-8 relative pl-4 border-l border-border">
-        <div className="relative">
-          <div className="absolute -left-[20.5px] top-1.5 h-2 w-2 rounded-full bg-primary" />
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Checkout</span>
-            <p className="text-sm font-medium text-foreground">{format(today, 'MMM dd, yyyy')}</p>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
-              <BookOpen className="h-3 w-3" />
-              <span>Limit: {maxBorrow}</span>
-            </div>
-          </div>
+    <div className="w-full space-y-10 p-1">
+      <div className="p-5 rounded-xl border border-primary/10 bg-primary/[0.02] flex items-start gap-4">
+        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/10 shrink-0">
+          <Ticket className="h-4 w-4" />
         </div>
-
-        <div className="relative">
-          <div className="absolute -left-[20.5px] top-1.5 h-2 w-2 rounded-full bg-primary" />
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Due Date</span>
-            <p className="text-sm font-medium text-foreground">{format(dueDate, 'MMM dd, yyyy')}</p>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
-              <Calendar className="h-3 w-3" />
-              <span>{borrowPeriod} days</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="absolute -left-[20.5px] top-1.5 h-2 w-2 rounded-full border border-border bg-background" />
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Renewal</span>
-            <p className="text-sm font-medium text-foreground">{format(renewalDate, 'MMM dd, yyyy')}</p>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
-              <Clock className="h-3 w-3" />
-              <span>+{renewalPeriod} days</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="pt-6 border-t border-border">
-        <div className="flex items-start gap-3">
-           <Ticket className="h-4 w-4 mt-0.5 text-muted-foreground/60" />
-           <div>
-              <span className="text-xs font-medium text-foreground">Hold Expiry</span>
-              <p className="text-xs text-muted-foreground">{holdExpiry} days on shelf</p>
-           </div>
+        <div className="space-y-1 pt-0.5">
+          <h4 className="text-[9px] font-bold uppercase tracking-widest text-primary/60">Hold Period</h4>
+          <p className="text-xs font-bold text-foreground/80">
+            {holdExpiry} Day Reservation
+          </p>
+          <p className="text-[10px] text-muted-foreground/50 font-medium leading-relaxed">
+            Items are held for {holdExpiry} days before expiration.
+          </p>
         </div>
       </div>
     </div>

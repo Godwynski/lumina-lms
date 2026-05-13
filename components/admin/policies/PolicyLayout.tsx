@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { cn } from "@/lib/utils";
-import { PolicySimulationPanel } from "../PolicySimulationPanel";
+
 import { PolicyCommitModal } from "../PolicyCommitModal";
 import { PolicyField } from "./PolicyField";
 import { AnnualResetTool, RunMaintenanceTool, TestEmailTool } from "../../settings/SettingsShared";
@@ -139,14 +139,14 @@ export function PolicyLayout({
           </div>
         )}
         {saved && (
-          <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-[10px] font-bold text-emerald-600">
+          <div className="flex items-center gap-3 rounded-lg border border-primary/10 bg-primary/5 px-4 py-2 text-[10px] font-bold text-primary/80">
             <ShieldCheck size={14} />
-            Policies synchronized.
+            Changes synchronized
           </div>
         )}
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[200px_1fr_280px] items-start">
+      <div className="grid gap-8 lg:grid-cols-[220px_1fr] items-start">
         {/* Mobile Category Navigation */}
         <div className="lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar pb-2">
           <div className="flex gap-2 min-w-max">
@@ -172,7 +172,7 @@ export function PolicyLayout({
         <aside className="hidden lg:block space-y-8 sticky top-12">
           {Object.entries(groupedSidebar).map(([group, items]) => (
             <div key={group} className="space-y-2">
-              <p className="px-4 text-[10px] font-semibold text-muted-foreground/30 uppercase tracking-[0.15em]">
+              <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em]">
                 {group}
               </p>
               <div className="space-y-0.5">
@@ -194,7 +194,7 @@ export function PolicyLayout({
                       "shrink-0 transition-colors",
                       activeCategory === item.id ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"
                     )} />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <span className="flex-1 text-left font-bold uppercase tracking-widest text-[10px]">{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -285,29 +285,24 @@ export function PolicyLayout({
            </div>
         </main>
 
-        {/* ── Simulation (Hidden on mobile by grid/aside) ───────── */}
-        <aside className="hidden lg:block sticky top-12">
-           <div className="bg-muted/5 rounded-2xl border border-border/40 p-6">
-              <PolicySimulationPanel formData={formData} />
-           </div>
-        </aside>
+
       </div>
 
       {/* ── Floating Review Bar ───────────────────────────────── */}
       {canEdit && changedKeys.length > 0 && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md animate-in slide-in-from-bottom-12 duration-500">
-          <div className="flex items-center justify-between gap-4 rounded-3xl border border-primary/20 bg-background/80 p-2 pl-6 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.15)] backdrop-blur-2xl">
-             <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-foreground">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-sm animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/10 bg-background/90 p-2 pl-5 shadow-2xl backdrop-blur-xl">
+             <div className="flex items-center gap-2.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">
                   {changedKeys.length} unsaved changes
                 </span>
              </div>
              <Button
                 onClick={() => setIsCommitModalOpen(true)}
-                className="h-10 rounded-2xl px-6 text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="h-9 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
              >
-                Review & Commit
+                Review Changes
              </Button>
           </div>
         </div>
