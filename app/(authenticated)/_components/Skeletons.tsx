@@ -1,6 +1,7 @@
+"use client";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
@@ -9,19 +10,20 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
-/**
- * NavSkeleton — mirrors the exact DOM structure of ProtectedNav so that when
- * the real nav streams in, there is zero layout shift. Pixel-matches:
- *   • SidebarHeader: h-16, trigger square + logo text block
- *   • SidebarContent: 1 top-level item (Dashboard) + 2 group rows (Library, Administration)
- *   • SidebarFooter: lg-size user button row (avatar + name/email + chevron)
- *   • SidebarRail at the end
- */
+
 export function NavSkeleton() {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar">
+    <div 
+      className={`hidden md:flex flex-col h-screen border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 ${
+        isCollapsed ? "w-[var(--sidebar-width-icon)]" : "w-[var(--sidebar-width)]"
+      }`}
+    >
       {/* Header — h-16 matches SidebarHeader in ProtectedNav */}
       <SidebarHeader className="flex flex-row h-16 shrink-0 items-center gap-4 px-4">
         {/* Trigger placeholder */}
@@ -89,7 +91,7 @@ export function NavSkeleton() {
       </SidebarFooter>
 
       <SidebarRail />
-    </Sidebar>
+    </div>
   );
 }
 

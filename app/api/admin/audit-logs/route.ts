@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
     const entityType = searchParams.get("entityType");
     const queryParam = searchParams.get("query");
+    const actionType = searchParams.get("actionType");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const userId = searchParams.get("userId");
 
     let query = supabase
       .from("audit_logs")
@@ -38,13 +42,35 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (entityType) {
-      query = query.eq("entity_type", entityType);
-    }
+    if (entityType) query = query.eq("entity_type", entityType);
+    if (actionType) query = query.eq("action", actionType);
+    if (startDate) query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
+    if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
+    if (userId) query = query.eq("admin_id", userId);
     
     if (queryParam) {
       const safe = sanitizeFilterInput(queryParam);
-      query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%,reason.ilike.%${safe}%`);
+      
+      // Lookup profiles that match the search query by name or email
+      const { data: matchingProfiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
+      
+      const profileIds = matchingProfiles?.map(p => p.id) || [];
+      
+      let orConditions = [
+        `entity_type.ilike.%${safe}%`,
+        `action.ilike.%${safe}%`,
+        `reason.ilike.%${safe}%`
+      ];
+
+      // Add matching profile IDs to the search if found
+      if (profileIds.length > 0) {
+        orConditions.push(`admin_id.in.(${profileIds.join(',')})`);
+      }
+      
+      query = query.or(orConditions.join(','));
     }
 
     const { data: logs, error, count } = await query;
