@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getMe } from "@/lib/auth-helpers";
+import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { getBorrowingHistory } from "@/lib/actions/history";
 import HistoryContent, { HistorySkeleton } from "./HistoryContent";
 import { type BorrowingRecord } from "@/lib/actions/history";
@@ -15,13 +15,19 @@ export const metadata = {
 // getMe() is cache()-memoized — reuses the auth resolved by the layout.
 // The .then() chain fires immediately without blocking the page shell.
 function buildHistoryPromise(page: number, status: string, q: string) {
-  return getMe().then(async (me) => {
+  return Promise.all([getMe(), getPreferences()]).then(async ([me, preferences]) => {
     if (!me) redirect("/");
+    
+    const preferredView = preferences.preferred_dashboard_view;
+    
     // Admin, Librarian and active SA can see all records, others see only their own.
-    const isStaff = me.role === "admin" || 
-                    me.role === "librarian" || 
-                    (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+    const isStaffRole = me.role === "admin" || 
+                        me.role === "librarian" || 
+                        (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+    
+    const isStaff = isStaffRole && preferredView !== 'student';
     const userId = isStaff ? null : me.user.id;
+    
     return getBorrowingHistory(userId, page, 10, status, q);
   }) as Promise<BorrowingHistoryResult>;
 }
@@ -58,6 +64,10 @@ async function HistoryPageContent({
   const me = await getMe();
   if (!me) redirect("/");
 
+  const preferences = await getPreferences();
+  const preferredView = preferences.preferred_dashboard_view;
+  const isStaff = (me.role === 'admin' || me.role === 'librarian' || (me.role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE')) && preferredView !== 'student';
+
   // Fire the DB promise immediately — no await, passed straight to HistoryContent
   const historyPromise = buildHistoryPromise(page, status, q);
 
@@ -67,7 +77,7 @@ async function HistoryPageContent({
       page={page}
       statusFilter={status}
       searchQuery={q}
-      userRole={me.role}
+      userRole={isStaff ? me.role : 'student'}
     />
   );
 }

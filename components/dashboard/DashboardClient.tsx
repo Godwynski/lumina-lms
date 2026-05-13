@@ -134,6 +134,7 @@ export function DashboardClient({
         studentId: profileData.student_id,
         fallbackEmail: user.email,
         userId: user.id,
+        role: role,
       });
 
       const now = new Date();
@@ -169,7 +170,7 @@ export function DashboardClient({
       }
     }
     return { studentCard: card, studentFaqs: faqs };
-  }, [profileData, cardResult, faqResult, user]);
+  }, [profileData, cardResult, faqResult, user, role]);
 
   const handleCancelReservation = (id: string, title: string) => {
     startTransition(async () => {

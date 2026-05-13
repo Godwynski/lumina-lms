@@ -119,7 +119,7 @@ function CardFront({
           </div>
         </div>
 
-        <div className="grid h-[calc(100%-52px)] grid-cols-[96px_1fr_72px] gap-2 p-2 sm:h-[calc(100%-72px)] sm:grid-cols-[150px_1fr_102px] sm:gap-4 sm:p-4">
+        <div className="grid h-[calc(100%-52px)] grid-cols-[80px_1fr_68px] gap-2 p-2 sm:h-[calc(100%-72px)] sm:grid-cols-[150px_1fr_102px] sm:gap-4 sm:p-4">
           <div className="flex flex-col justify-start">
             <div className="h-[110px] w-full overflow-hidden border border-foreground bg-card sm:h-[172px]">
               {avatarUrl ? (
@@ -165,13 +165,13 @@ function CardFront({
                   unoptimized
                 />
               ) : (
-                <div className="flex h-[48px] w-full items-center justify-center sm:h-[92px]">
+                <div className="flex h-[60px] w-full items-center justify-center sm:h-[92px]">
                   <QrCode className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
             </div>
             <div className="flex flex-col items-center leading-none">
-              <p className="font-mono text-[10px] font-black tracking-tighter text-foreground sm:text-[14px]">{cardNumber}</p>
+              <p className="font-mono text-[11px] font-black tracking-tighter text-foreground sm:text-[14px] break-all text-center">{cardNumber}</p>
               <p className="mt-0.5 text-center text-[6px] font-bold uppercase tracking-tight text-muted-foreground/80 sm:text-[8px]">Scan</p>
             </div>
           </div>
@@ -185,7 +185,7 @@ function FieldLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col items-center">
       <div className="w-full border-b border-foreground/40 pb-0.5 text-center">
-        <p className="font-sans text-[13px] font-bold leading-tight text-foreground sm:text-[20px] whitespace-normal break-words">{value}</p>
+        <p className="font-sans text-[12px] font-bold leading-tight text-foreground sm:text-[20px] whitespace-normal break-words line-clamp-2">{value}</p>
       </div>
       <p className="pt-0.5 text-center font-sans text-[9px] font-bold uppercase tracking-widest text-muted-foreground/80 sm:text-[11px]">{label}</p>
     </div>

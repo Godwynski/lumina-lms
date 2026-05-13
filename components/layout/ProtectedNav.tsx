@@ -177,7 +177,10 @@ export function ProtectedNav({
       });
 
       if (result.success) {
-        toast.success(`Switched to ${newMode === "staff" ? "Staff" : "Student"} mode`);
+        const viewLabel = newMode === "staff" 
+          ? (normalizedRole === "admin" ? "Admin" : normalizedRole === "librarian" ? "Librarian" : "Staff")
+          : "Personal";
+        toast.success(`Switched to ${viewLabel} View`);
       } else {
         toast.error("Failed to switch mode");
       }
@@ -404,12 +407,12 @@ export function ProtectedNav({
                       {currentMode === "staff" ? (
                         <>
                           <UserIcon className="mr-2 h-4 w-4" />
-                          <span>Switch to Student View</span>
+                          <span>Switch to Personal View</span>
                         </>
                       ) : (
                         <>
                           <Layout className="mr-2 h-4 w-4" />
-                          <span>Switch to Staff View</span>
+                          <span>Switch to {normalizedRole === "admin" ? "Admin" : normalizedRole === "librarian" ? "Librarian" : "Staff"} View</span>
                         </>
                       )}
                       {isPending && <Loader2 className="ml-auto h-3 w-3 animate-spin" />}

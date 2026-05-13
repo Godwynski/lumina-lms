@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { logAuditActivity } from "@/lib/audit";
+import { parseStudentIdFromEmail, resolveStudentId } from "@/lib/library-card-assets";
 
 export async function getAcademicPrograms() {
   const supabase = await createClient();
@@ -24,7 +25,6 @@ export async function getAcademicPrograms() {
     // Fallback to comma-separated
     return data.value.split(',').map((s: string) => s.trim()).filter(Boolean);
   } catch {
-    // Last fallback to comma-separated if JSON parse failed but it looked like JSON
     return data.value.split(',').map((s: string) => s.trim()).filter(Boolean);
   }
 }
@@ -39,16 +39,44 @@ export async function submitOnboarding(formData: {
 
   if (!user) throw new Error("Unauthorized");
 
+  // Fetch current profile to check existing student_id and role
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('student_id, role, email')
+    .eq('id', user.id)
+    .single();
+
+  // Derive student_id from email if not already set
+  let studentId = profile?.student_id ?? null;
+  if (!studentId) {
+    // Try to parse from their STI email (e.g. lastname.376536@alabang.sti.edu.ph)
+    studentId = parseStudentIdFromEmail(profile?.email ?? user.email ?? null);
+  } else {
+    // Normalize existing value to ensure correct prefix
+    studentId = resolveStudentId({
+      studentId,
+      email: profile?.email ?? user.email,
+      role: profile?.role,
+    });
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    address: formData.address,
+    phone: formData.phone,
+    department: formData.department,
+    onboarding_completed: true,
+    status: 'PENDING',
+    updated_at: new Date().toISOString(),
+  };
+
+  // Only set student_id if we resolved one and it's not already set
+  if (studentId && !profile?.student_id) {
+    updatePayload.student_id = studentId;
+  }
+
   const { error } = await supabase
     .from('profiles')
-    .update({
-      address: formData.address,
-      phone: formData.phone,
-      department: formData.department,
-      onboarding_completed: true,
-      status: 'PENDING', // Ensure they are pending for verification
-      updated_at: new Date().toISOString()
-    })
+    .update(updatePayload)
     .eq('id', user.id);
 
   if (error) throw new Error(error.message);
@@ -59,7 +87,7 @@ export async function submitOnboarding(formData: {
     user.id,
     "onboarding_completed",
     "Completed onboarding and profile setup.",
-    { ...formData }
+    { ...formData, student_id_assigned: studentId }
   );
 
   revalidatePath('/');

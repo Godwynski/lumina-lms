@@ -7,6 +7,7 @@ import { Download, RefreshCw, RotateCcw, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface MyCardContainerProps {
   initialData: {
@@ -153,22 +154,26 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
       });
 
       if (!response.ok) {
+        toast.error("Failed to refresh card assets. Please try again.");
         return;
       }
 
       const payload = (await response.json()) as {
         qr_url?: string;
         profile_url?: string | null;
+        student_id?: string;
       };
 
-      setData((current) => {
-        const next = {
-          ...current,
-          qrUrl: payload.qr_url ?? current.qrUrl,
-          avatarUrl: payload.profile_url ?? current.avatarUrl,
-        };
-        return next;
-      });
+      setData((current) => ({
+        ...current,
+        qrUrl: payload.qr_url ?? current.qrUrl,
+        avatarUrl: payload.profile_url ?? current.avatarUrl,
+        studentId: payload.student_id ?? current.studentId,
+        cardNumber: payload.student_id ?? current.cardNumber,
+      }));
+      toast.success("Card assets refreshed successfully!");
+    } catch {
+      toast.error("An error occurred while refreshing assets.");
     } finally {
       setIsRefreshingAssets(false);
     }
@@ -469,7 +474,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 disabled={isRefreshingAssets}
                 variant="outline"
                 size="sm"
-                className="hidden sm:inline-flex text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+                className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
               >
                 <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isRefreshingAssets && "animate-spin")} />
                 {isRefreshingAssets ? "Refreshing..." : "Refresh assets"}
