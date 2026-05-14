@@ -47,11 +47,18 @@ export const getMe = cache(async () => {
       id: string; 
       email: string | null; 
       role: string; 
+      status: string;
       permissions: UserPermissions | null;
     },
     role: role as UserRole,
     isStaff: ['admin', 'librarian', 'student_assistant'].includes(role),
     isAdmin: role === 'admin',
+    isDeactivatedSA: role === 'student_assistant' && profile.status !== 'ACTIVE',
+    hasPermission: (permission: keyof UserPermissions) => {
+      if (role === 'admin') return true;
+      const perms = (profile.permissions as UserPermissions | null);
+      return !!perms?.[permission];
+    },
     supabase
   };
 });

@@ -13,6 +13,27 @@ import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable"
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
+import { 
+  updateAttendance, 
+  deleteAttendance 
+} from "@/lib/actions/attendance";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Pencil, Trash2, MoreVertical, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AttendanceRecord {
   id: string;
@@ -34,6 +55,12 @@ export function AttendanceClient({
   const [isPending, startTransition] = useTransition();
   const [cardNumber, setCardNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Management State
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const activeRecord = history.find(r => !r.check_out_at);
 
@@ -81,6 +108,47 @@ export function AttendanceClient({
         // Don't close scanner on error so they can try again or check what went wrong
       }
     });
+  };
+
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
+    startTransition(async () => {
+      const result = await deleteAttendance(recordToDelete);
+      if (result.success) {
+        toast.success("Record deleted");
+        setIsDeleteDialogOpen(false);
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingRecord) return;
+
+    const formData = new FormData(e.currentTarget);
+    const check_in_at = formData.get("check_in_at") as string;
+    const check_out_at = formData.get("check_out_at") as string;
+    const notes = formData.get("notes") as string;
+
+    setIsUpdating(true);
+    const result = await updateAttendance({
+      id: editingRecord.id,
+      updates: {
+        check_in_at: new Date(check_in_at).toISOString(),
+        check_out_at: check_out_at ? new Date(check_out_at).toISOString() : null,
+        notes: notes || null
+      }
+    });
+    setIsUpdating(false);
+
+    if (result.success) {
+      toast.success("Attendance updated");
+      setEditingRecord(null);
+    } else {
+      toast.error(result.error);
+    }
   };
 
   const columns = useMemo<LuminaColumn<AttendanceRecord>[]>(() => [
@@ -134,8 +202,38 @@ export function AttendanceClient({
       cell: (record) => (
         <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
       )
-    }
-  ], []);
+    },
+    ...(isStaff ? [{
+      header: "",
+      className: "w-[50px]",
+      cell: (record: AttendanceRecord) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onClick={() => setEditingRecord(record)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Record
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive"
+              onClick={() => {
+                setRecordToDelete(record.id);
+                setIsDeleteDialogOpen(true);
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }] : [])
+  ], [isStaff]);
 
   const scannerControls = (
     <div className="flex flex-1 items-center gap-3">
@@ -191,6 +289,7 @@ export function AttendanceClient({
   );
 
   return (
+    <>
     <AdminTableShell
       controls={isStaff ? scannerControls : selfLogControls}
       className="max-w-5xl"
@@ -250,5 +349,71 @@ export function AttendanceClient({
         )}
       />
     </AdminTableShell>
+
+    {/* Delete Confirmation */}
+    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Attendance Record</DialogTitle>
+          <Alert variant="destructive" className="mt-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              This action cannot be undone. This will permanently remove the record from the logs.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+            {isPending ? "Deleting..." : "Confirm Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Dialog */}
+    <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Attendance Record</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Adjusting logs for <span className="font-bold text-foreground">{editingRecord?.profiles?.full_name || "Self Check-in"}</span>
+          </p>
+        </DialogHeader>
+        <form onSubmit={handleUpdate} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="check_in_at">Check-in Time</Label>
+            <Input 
+              id="check_in_at" 
+              name="check_in_at" 
+              type="datetime-local" 
+              defaultValue={editingRecord ? format(new Date(editingRecord.check_in_at), "yyyy-MM-dd'T'HH:mm") : ""}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="check_out_at">Check-out Time (Optional)</Label>
+            <Input 
+              id="check_out_at" 
+              name="check_out_at" 
+              type="datetime-local" 
+              defaultValue={editingRecord?.check_out_at ? format(new Date(editingRecord.check_out_at), "yyyy-MM-dd'T'HH:mm") : ""}
+            />
+            <p className="text-[10px] text-muted-foreground">Leave empty for active sessions.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Staff Notes</Label>
+            <Input id="notes" name="notes" placeholder="Reason for edit..." />
+          </div>
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => setEditingRecord(null)}>Cancel</Button>
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

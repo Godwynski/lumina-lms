@@ -92,28 +92,35 @@ function hasPermission(
   profile?: Profile | null
 ): boolean {
   const { minRole, exactRoles, permissionKey } = item;
-  
+  const isDeactivatedSA = userRole === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
+
+  // 1. Exact role match (highest priority)
   if (exactRoles && exactRoles.length > 0 && userRole) {
-    return exactRoles.includes(userRole);
+    if (exactRoles.includes(userRole)) return true;
   }
 
-  if (!minRole) return true;
+  // 2. Minimum rank check
   if (!userRole) return false;
-
   const roleRank = ROLE_RANKS[userRole];
-  const minRank = ROLE_RANKS[minRole];
+  const minRank = minRole ? ROLE_RANKS[minRole] : 0;
 
-  // If user is exactly student_assistant, check specific permissions if required
-  if (userRole === "student_assistant" && permissionKey) {
+  if (roleRank < minRank) return false;
+
+  // 3. Specific permission requirement for staff/admin tools
+  if (permissionKey) {
+    if (userRole === "admin") return true;
     const permissions = profile?.permissions;
-    if (permissions && permissions[permissionKey as keyof typeof permissions] === true) {
-      return true;
+    if (!permissions || !permissions[permissionKey as keyof typeof permissions]) {
+      return false;
     }
-    // If they don't have the specific permission, they can't see it even if it's their rank
+  }
+
+  // 4. Deactivation check
+  if (isDeactivatedSA && (minRole !== "student" || permissionKey)) {
     return false;
   }
 
-  return roleRank >= minRank;
+  return true;
 }
 
 type NavItem = {
@@ -122,6 +129,7 @@ type NavItem = {
   icon?: React.ElementType;
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
+  excludeRoles?: Exclude<Role, null>[];
   permissionKey?: "manage_inventory" | "manage_circulation" | "manage_attendance" | "manage_users" | "manage_policies" | "manage_analytics";
 };
 
@@ -129,8 +137,8 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", exactRoles: ["student", "student_assistant"] },
-  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian", permissionKey: "manage_inventory", exactRoles: ["student_assistant"] },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian"] },
+  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian", permissionKey: "manage_inventory", exactRoles: ["student_assistant"], excludeRoles: ["admin"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student", permissionKey: "manage_attendance" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
@@ -255,24 +263,22 @@ export function ProtectedNav({
 
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
-      // Basic permission check
+      // 1. Permission Check (Role + Status + Permissions)
       if (!hasPermission(normalizedRole, item, profile)) return false;
 
-      // If SA is disabled (e.g. status not ACTIVE), hide all staff-only tools
-      if (isDeactivatedSA && (item.permissionKey || item.minRole === "librarian" || item.minRole === "admin")) {
-        return false;
-      }
-
-      // If in Student mode, only show standard student tools
-      if (currentMode === "student" && (item.permissionKey || item.minRole === "librarian" || item.minRole === "admin")) {
-        if (item.href !== "/dashboard" && item.href !== "/student-catalog" && item.href !== "/attendance") {
-           return false;
-        }
+      // 2. Mode Check (Staff View vs Personal View)
+      if (currentMode === "student") {
+        // In Student/Personal mode, only allow these basic items
+        const studentHrefs = ["/dashboard", "/student-catalog", "/attendance", "/history"];
+        return studentHrefs.includes(item.href);
+      } else {
+        // Staff/Admin Mode: Apply exclusions
+        if (normalizedRole && item.excludeRoles?.includes(normalizedRole)) return false;
       }
 
       return true;
     });
-  }, [normalizedRole, profile, isDeactivatedSA, currentMode]);
+  }, [normalizedRole, profile, currentMode]);
 
   const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover

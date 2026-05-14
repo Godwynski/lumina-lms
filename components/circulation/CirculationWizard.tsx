@@ -10,6 +10,9 @@ import { ReviewStep } from './steps/ReviewStep';
 import { SuccessStep } from './steps/SuccessStep';
 import { StatusNotice } from './StatusNotice';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
+import { resolveScan, checkoutBook, returnBook } from '@/lib/actions/circulation';
+import { toast } from 'sonner';
 
 type FlowMode = 'checkout' | 'return';
 
@@ -161,124 +164,109 @@ export function CirculationWizard() {
   const processScan = async (value: string) => {
     setIsProcessing(true);
     setNotice(null);
-    console.info(`[Circulation] Processing scan: ${value} (Mode: ${mode}, Has Student: ${!!activeStudent})`);
+    logger.info('Circulation', `Processing scan: ${value}`, { mode, hasStudent: !!activeStudent });
 
     try {
       if (mode === 'checkout') {
         if (!activeStudent) {
-          console.info('[Circulation] Resolving student...');
-          const res = await fetch('/api/circulation/resolve-scan', {
-            method: 'POST',
-            body: JSON.stringify({ scanValue: value, expectedType: 'auto' }),
-          });
-          const payload = await res.json();
-          console.info('[Circulation] Resolve result:', payload);
+          const result = await resolveScan({ scanValue: value, expectedType: 'auto' });
           
-          if (payload.ok && payload.type === 'student') {
-            setActiveStudent(payload.data);
+          if (result.success && result.data.type === 'student') {
+            setActiveStudent(result.data.data as ActiveStudent);
             setNotice({ tone: 'ok', text: 'Student verified. Please scan the book copy.' });
             playScanCue('success');
           } else {
-            setNotice({ tone: 'error', text: payload.message || 'Invalid student card.' });
+            setNotice({ tone: 'error', text: result.error || 'Invalid student card.' });
             playScanCue('error');
           }
         } else {
-          console.info('[Circulation] Validating book for checkout...');
-          const res = await fetch('/api/circulation/checkout', {
-            method: 'POST',
-            body: JSON.stringify({ studentCardQr: activeStudent.cardNumber, bookQr: value, previewOnly: true }),
+          const result = await checkoutBook({ 
+            studentCardQr: activeStudent.cardNumber, 
+            bookQr: value, 
+            previewOnly: true 
           });
-          const payload = await res.json();
-          console.info('[Circulation] Checkout validation result:', payload);
 
-          if (payload.ok) {
+          if (result.success) {
             setPendingCheckout({
               bookQr: value,
-              bookTitle: payload.book_title,
-              dueDate: payload.due_date,
+              bookTitle: result.data.book_title!,
+              dueDate: result.data.due_date!,
               idempotencyKey: crypto.randomUUID(),
             });
             playScanCue('success');
           } else {
-            setNotice({ tone: 'error', text: payload.message || 'Could not validate book.' });
+            setNotice({ tone: 'error', text: result.error || 'Could not validate book.' });
             playScanCue('error');
           }
         }
       } else {
-        console.info('[Circulation] Validating book for return...');
-        const res = await fetch('/api/circulation/return', {
-          method: 'POST',
-          body: JSON.stringify({ bookQr: value, previewOnly: true }),
-        });
-        const payload = await res.json();
-        console.info('[Circulation] Return validation result:', payload);
+        const result = await returnBook({ bookQr: value, previewOnly: true });
 
-        if (payload.ok) {
+        if (result.success) {
           setPendingReturn({
              bookQr: value,
-             bookTitle: payload.book_title,
-             studentName: payload.student_name,
-             dueDate: payload.due_date,
-             borrowedAt: payload.borrowed_at,
+             bookTitle: result.data.book_title!,
+             studentName: result.data.student_name!,
+             dueDate: result.data.due_date,
+             borrowedAt: result.data.borrowed_at,
              idempotencyKey: crypto.randomUUID(),
           });
           playScanCue('success');
         } else {
-          setNotice({ tone: 'error', text: payload.message || 'Return validation failed.' });
+          setNotice({ tone: 'error', text: result.error || 'Return validation failed.' });
           playScanCue('error');
         }
       }
-    } catch (err) {
-      console.error('[Circulation] Scan process error:', err);
-      setNotice({ tone: 'error', text: 'Connection issue. Try manual input.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Process failed.';
+      logger.error('Circulation', 'Scan process error', {}, err);
+      setNotice({ tone: 'error', text: message });
+      toast.error(message);
     } finally {
       setIsProcessing(false);
-      console.info('[Circulation] Scan processing finished.');
+      logger.info('Circulation', 'Scan processing finished');
     }
   };
 
   const confirmAction = async () => {
-    setIsConfirmed(true);
+    setIsProcessing(true);
     setNotice(null);
 
     try {
       if (mode === 'checkout' && activeStudent && pendingCheckout) {
-        const res = await fetch('/api/circulation/checkout', {
-          method: 'POST',
-          body: JSON.stringify({
-            studentCardQr: activeStudent.cardNumber,
-            bookQr: pendingCheckout.bookQr,
-            idempotencyKey: pendingCheckout.idempotencyKey,
-            previewOnly: false,
-          }),
+        const result = await checkoutBook({
+          studentCardQr: activeStudent.cardNumber,
+          bookQr: pendingCheckout.bookQr,
+          idempotencyKey: pendingCheckout.idempotencyKey,
+          previewOnly: false,
         });
-        const payload = await res.json();
-        if (!payload.ok) {
-          setIsConfirmed(false);
-          setNotice({ tone: 'error', text: payload.message || 'Failed to confirm checkout.' });
+        
+        if (result.success) {
+          setIsConfirmed(true);
+        } else {
+          setNotice({ tone: 'error', text: result.error || 'Failed to confirm checkout.' });
         }
       } else if (mode === 'return' && pendingReturn) {
-        const res = await fetch('/api/circulation/return', {
-          method: 'POST',
-          body: JSON.stringify({
-            bookQr: pendingReturn.bookQr,
-            idempotencyKey: pendingReturn.idempotencyKey,
-            previewOnly: false,
-          }),
+        const result = await returnBook({
+          bookQr: pendingReturn.bookQr,
+          idempotencyKey: pendingReturn.idempotencyKey,
+          previewOnly: false,
         });
-        const payload = await res.json();
-        if (payload.ok) {
-           if (payload.reservation_ready) {
-             setReservationData({ ready: true, studentName: payload.reserved_for });
-           }
+
+        if (result.success) {
+          setIsConfirmed(true);
+          if (result.data.reservation_ready) {
+            setReservationData({ ready: true, studentName: result.data.reserved_for });
+          }
         } else {
-          setIsConfirmed(false);
-          setNotice({ tone: 'error', text: payload.message || 'Failed to confirm return.' });
+          setNotice({ tone: 'error', text: result.error || 'Failed to confirm return.' });
         }
       }
-    } catch {
-      setIsConfirmed(false);
-      setNotice({ tone: 'error', text: 'Network failure during confirmation.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network failure during confirmation.';
+      setNotice({ tone: 'error', text: message });
+    } finally {
+      setIsProcessing(false);
     }
   };
 

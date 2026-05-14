@@ -5,7 +5,7 @@ import { revalidateTag, revalidatePath } from 'next/cache';
 import { unstable_cache } from 'next/cache';
 import { BookSchema } from '../validations/catalog';
 import { logger } from '../logger';
-import { createClient, createSafeClient } from '@/lib/supabase/server';
+import { createSafeClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { getPublicBookById } from './public-catalog';
 import { getBookAvailabilityStatus } from './reservations';
@@ -13,28 +13,19 @@ import { getMe } from '@/lib/auth-helpers';
 
 async function assertStaffCatalogAccess() {
   const me = await getMe();
-  if (!me) throw new Error('Unauthorized');
+  if (!me || !me.isStaff) throw new Error('Unauthorized');
   
-  const { role, profile } = me;
-
-  if (!['admin', 'librarian', 'student_assistant'].includes(role)) {
-    throw new Error('Forbidden');
+  if (me.isDeactivatedSA) {
+    logger.error('catalog', 'Access denied for deactivated SA', { userId: me.user.id });
+    throw new Error('Access denied: Staff account is deactivated.');
   }
 
-  // Security check for Student Assistants
-  if (role === 'student_assistant') {
-    const status = profile.status?.toUpperCase();
-    if (status !== 'ACTIVE') {
-      console.error(`[assertStaffCatalogAccess] Access denied for SA. Status: "${profile.status}", Role: "${role}"`);
-      throw new Error('Access denied: Staff account is deactivated.');
-    }
-    // Most staff catalog views (queues, copies) should require manage_inventory
-    if (!profile.permissions?.manage_inventory) {
-      throw new Error('Access denied: Missing inventory management permission.');
-    }
+  // Most staff catalog views (queues, copies) should require manage_inventory
+  if (!me.hasPermission('manage_inventory')) {
+    throw new Error('Access denied: Missing inventory management permission.');
   }
 
-  return await createClient();
+  return me.supabase;
 }
 
 // --- Categories ---

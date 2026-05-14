@@ -4,6 +4,7 @@ import { getMe } from "@/lib/auth-helpers";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "./action-utils";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 export interface AttendanceRecord {
   id: string;
@@ -58,8 +59,8 @@ export const toggleAttendanceByCard = createSafeAction(
 
       if (outError) throw new Error("Failed to log out.");
 
-      revalidatePath("/attendance");
-      revalidatePath("/dashboard");
+      revalidatePath("/attendance", "page");
+      revalidatePath("/dashboard", "page");
       return { 
         status: "OUT", 
         message: `Goodbye, ${fullName}! You have logged out.`,
@@ -76,8 +77,8 @@ export const toggleAttendanceByCard = createSafeAction(
 
       if (inError) throw new Error("Failed to log in.");
 
-      revalidatePath("/attendance");
-      revalidatePath("/dashboard");
+      revalidatePath("/attendance", "page");
+      revalidatePath("/dashboard", "page");
       return { 
         status: "IN", 
         message: `Welcome to the Library, ${fullName}!`,
@@ -111,7 +112,7 @@ export async function logAttendance() {
   if (existing) {
     // Log out
     await supabase.from("attendance").update({ check_out_at: new Date().toISOString() }).eq("id", existing.id);
-    revalidatePath("/attendance");
+    revalidatePath("/attendance", "page");
     return { success: true, message: "Logged out successfully!" };
   }
 
@@ -126,8 +127,8 @@ export async function logAttendance() {
     return { success: false, message: "Failed to log attendance." };
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/attendance");
+  revalidatePath("/dashboard", "page");
+  revalidatePath("/attendance", "page");
   
   return { success: true, message: "Checked in successfully!" };
 }
@@ -180,4 +181,122 @@ export async function getAttendanceHistory(userId?: string) {
     ...record,
     profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
   })) as unknown as AttendanceRecord[];
+}
+
+/**
+ * Updates an attendance record. Used by staff to fix errors.
+ */
+export const updateAttendance = createSafeAction(
+  z.object({
+    id: z.string(),
+    updates: z.object({
+      check_in_at: z.string().optional(),
+      check_out_at: z.string().nullable().optional(),
+      notes: z.string().nullable().optional()
+    })
+  }),
+  async ({ id, updates }, { supabase }) => {
+    const { data: oldData } = await supabase
+      .from("attendance")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (!oldData) throw new Error("Attendance record not found.");
+
+    const { data, error } = await supabase
+      .from("attendance")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/attendance", "page");
+    
+    return [data, {
+      reason: `Updated attendance record for user ID: ${oldData.user_id}`,
+      oldValue: oldData,
+      newValue: data,
+      details: { updatedFields: Object.keys(updates) }
+    }];
+  },
+  {
+    allowedRoles: ['admin', 'librarian'],
+    allowedPermissions: ['manage_attendance'],
+    auditAction: "update",
+    auditEntity: "attendance"
+  }
+);
+
+/**
+ * Deletes an attendance record.
+ */
+export const deleteAttendance = createSafeAction(
+  z.string(),
+  async (id, { supabase }) => {
+    const { data: oldData } = await supabase
+      .from("attendance")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (!oldData) throw new Error("Attendance record not found.");
+
+    const { error: deleteError } = await supabase
+      .from("attendance")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      logger.error("Attendance", "Failed to delete attendance", { id }, deleteError);
+      throw new Error("Failed to delete attendance record.");
+    }
+
+    logger.info("Attendance", "Attendance record deleted", { id });
+    revalidatePath("/attendance", "page");
+
+    return [{ success: true }, {
+      reason: `Deleted attendance record for user ID: ${oldData.user_id}`,
+      oldValue: oldData,
+      auditAction: "delete",
+      auditEntity: "attendance"
+    }];
+  },
+  {
+    allowedRoles: ['admin'],
+    allowedPermissions: ['manage_attendance']
+  }
+);
+
+/**
+ * Gets attendance stats for the dashboard.
+ */
+export async function getAttendanceStats() {
+  const me = await getMe();
+  if (!me) throw new Error("Unauthorized");
+  
+  const { supabase } = me;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [totalToday, activeNow] = await Promise.all([
+    supabase
+      .from("attendance")
+      .select("*", { count: 'exact', head: true })
+      .gte("check_in_at", today.toISOString()),
+    supabase
+      .from("attendance")
+      .select("*", { count: 'exact', head: true })
+      .is("check_out_at", null)
+  ]);
+
+  return {
+    todayCount: totalToday.count || 0,
+    activeCount: activeNow.count || 0
+  };
 }
