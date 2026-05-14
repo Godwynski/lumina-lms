@@ -46,11 +46,15 @@ export function useNotifications() {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function setupNotifications() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || !active) {
+      // Use getSession() instead of getUser() — reads the JWT locally without a
+      // network round-trip. The middleware already refreshes the session before
+      // server components render, so the token is guaranteed to be valid.
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user || !active) {
         if (active) setLoading(false)
         return
       }
+      const user = session.user
 
       // Cache userId for use in markAllAsRead/refresh without re-fetching
       userIdRef.current = user.id

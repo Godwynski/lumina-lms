@@ -17,8 +17,14 @@ export async function DashboardContent({
 
   const faqKeys = ["student_faq_list"];
 
-  const statsPromise = getDashboardStats({ role });
   const isStudent = role === "student";
+  const isStaffActive = profile?.status?.toUpperCase() === 'ACTIVE';
+  const canSeeStaffInventory = role === 'admin' || 
+                               role === 'librarian' || 
+                               (role === 'student_assistant' && isStaffActive && profile?.permissions?.manage_inventory);
+
+  // Fire ALL non-blocking promises at once — no sequential awaits
+  const statsPromise = getDashboardStats({ role });
   
   const cardPromise = supabase
         .from("library_cards")
@@ -37,13 +43,16 @@ export async function DashboardContent({
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
+  const prefsPromise = supabase
+    .from("ui_preferences")
+    .select("preferences")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  // Await only what we need for rendering decisions
   const [params, { data: preferencesData }] = await Promise.all([
     searchParams,
-    supabase
-      .from("ui_preferences")
-      .select("preferences")
-      .eq("user_id", user.id)
-      .maybeSingle(),
+    prefsPromise,
   ]);
 
   const page = parseInt(params.page || '1', 10);
@@ -52,11 +61,6 @@ export async function DashboardContent({
   const sort = params.sort || 'newest';
   const view = params.view || 'grid';
   const pageSize = view === 'list' ? 10 : 9;
-
-  const isStaffActive = profile?.status?.toUpperCase() === 'ACTIVE';
-  const canSeeStaffInventory = role === 'admin' || 
-                               role === 'librarian' || 
-                               (role === 'student_assistant' && isStaffActive && profile?.permissions?.manage_inventory);
 
   const inventoryCategoriesPromise = canSeeStaffInventory
     ? getCategories() 

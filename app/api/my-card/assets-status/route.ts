@@ -12,13 +12,14 @@ export const GET = withAuthApi(async (request, { user, profile }) => {
     email: profile.email as string,
     fallbackEmail: user.email,
     userId: user.id,
+    role: profile.role as string,
   });
 
   if (!studentId) {
     return apiError("Unable to resolve student ID", "STUDENT_ID_MISSING", 400);
   }
 
-  // This will check if assets exist and create them if missing (idempotent if not forcing)
+  // Ensure assets exist (idempotent — creates only if missing)
   const status = await ensureStaticLibraryCardAssets({
     userId: user.id,
     fallbackEmail: user.email,
@@ -37,4 +38,3 @@ export const GET = withAuthApi(async (request, { user, profile }) => {
     ready: status.qrExists && status.profileExists,
   });
 });
-

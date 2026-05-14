@@ -30,15 +30,21 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const entityType = searchParams.get("entityType");
     const queryParam = searchParams.get("query");
+    const actionType = searchParams.get("actionType");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const userId = searchParams.get("userId");
 
     let query = supabase
       .from("audit_logs")
       .select("*, profiles(full_name, email)")
       .order("created_at", { ascending: false });
 
-    if (entityType && entityType !== "all") {
-      query = query.eq("entity_type", entityType);
-    }
+    if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
+    if (actionType) query = query.eq("action", actionType);
+    if (startDate) query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
+    if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
+    if (userId) query = query.eq("admin_id", userId);
     
     if (queryParam) {
       const safe = sanitizeFilterInput(queryParam);

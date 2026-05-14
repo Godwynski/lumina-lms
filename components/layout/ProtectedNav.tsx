@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLogout } from "@/hooks/use-logout";
-import { SWRConfig } from "swr";
 import {
   Dialog,
   DialogContent,
@@ -177,7 +176,10 @@ export function ProtectedNav({
       });
 
       if (result.success) {
-        toast.success(`Switched to ${newMode === "staff" ? "Staff" : "Student"} mode`);
+        const viewLabel = newMode === "staff" 
+          ? (normalizedRole === "admin" ? "Admin" : normalizedRole === "librarian" ? "Librarian" : "Staff")
+          : "Personal";
+        toast.success(`Switched to ${viewLabel} View`);
       } else {
         toast.error("Failed to switch mode");
       }
@@ -276,14 +278,8 @@ export function ProtectedNav({
     // Next.js Link already handles prefetching on hover
   }, []);
 
-  const swrValue = useMemo(() => ({
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5000,
-  }), []);
 
   return (
-    <SWRConfig value={swrValue}>
     <Sidebar 
       collapsible="icon"
       className="border-r border-sidebar-border bg-sidebar"
@@ -404,12 +400,12 @@ export function ProtectedNav({
                       {currentMode === "staff" ? (
                         <>
                           <UserIcon className="mr-2 h-4 w-4" />
-                          <span>Switch to Student View</span>
+                          <span>Switch to Personal View</span>
                         </>
                       ) : (
                         <>
                           <Layout className="mr-2 h-4 w-4" />
-                          <span>Switch to Staff View</span>
+                          <span>Switch to {normalizedRole === "admin" ? "Admin" : normalizedRole === "librarian" ? "Librarian" : "Staff"} View</span>
                         </>
                       )}
                       {isPending && <Loader2 className="ml-auto h-3 w-3 animate-spin" />}
@@ -479,6 +475,5 @@ export function ProtectedNav({
       )}
       <SidebarRail />
     </Sidebar>
-    </SWRConfig>
   );
 }

@@ -143,6 +143,24 @@ function ReservationQueuePanel({
   );
 }
 
+function InventoryItemSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border/40 bg-card/10 p-2.5 animate-pulse">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="h-8 w-8 rounded-lg bg-muted/40 shrink-0" />
+          <div className="space-y-2 flex-1">
+            <div className="h-2.5 w-24 bg-muted/40 rounded" />
+            <div className="h-2 w-16 bg-muted/40 rounded" />
+          </div>
+        </div>
+        <div className="h-7 w-[90px] bg-muted/40 rounded-lg" />
+        <div className="h-7 w-7 bg-muted/40 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Admin Management Content ─────────────────────────────────────────
 
 interface AdminManagementContentProps {
@@ -454,96 +472,93 @@ export function AdminManagementContent({
           </div>
         </div>
 
-        <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
+        <div className="space-y-2 min-h-[160px] max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-primary/20" />
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">Loading Inventory...</p>
+            <div className="space-y-2">
+              <InventoryItemSkeleton />
+              <InventoryItemSkeleton />
+              <InventoryItemSkeleton />
             </div>
           ) : filteredCopies.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 rounded-xl border border-dashed border-border/40 bg-muted/5">
-              <p className="text-[9px] font-bold uppercase text-muted-foreground/40">No assets found</p>
+            <div className="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-border/40 bg-muted/5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">No assets found matching filters</p>
             </div>
-          ) : filteredCopies.map((copy) => {
-            const statusCfg = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG] ?? {
-              label: copy.status, icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border'
-            };
-            const StatusIcon = statusCfg.icon;
-            const res = copy.reservation;
-            const r = res?.profiles as { full_name?: string | null; avatar_url?: string | null } | null;
+          ) : (
+            filteredCopies.map((copy) => {
+              const statusCfg = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG] ?? {
+                label: copy.status, icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border'
+              };
+              const StatusIcon = statusCfg.icon;
+              const res = copy.reservation;
+              const r = res?.profiles as { full_name?: string | null; avatar_url?: string | null } | null;
 
-            return (
-              <div key={copy.id} className="group relative flex flex-col gap-2 rounded-xl border border-border/40 bg-card/30 p-2.5 transition-all hover:border-primary/20">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={cn("h-8 w-8 shrink-0 rounded-lg border flex items-center justify-center", statusCfg.bg, statusCfg.border)}>
-                      <StatusIcon size={14} className={statusCfg.color} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-mono text-[11px] font-black text-foreground truncate">{copy.qr_string}</p>
-                      <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground/60 uppercase">
-                        <span className={statusCfg.color}>{statusCfg.label}</span>
-                        <span className="opacity-30">•</span>
-                        <span>{copy.id.split('-')[0]}</span>
+              return (
+                <div key={copy.id} className="group relative flex flex-col gap-2 rounded-xl border border-border/40 bg-card/30 p-2.5 transition-all hover:border-primary/20">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn("h-8 w-8 shrink-0 rounded-lg border flex items-center justify-center", statusCfg.bg, statusCfg.border)}>
+                        <StatusIcon size={14} className={statusCfg.color} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-mono text-[11px] font-black text-foreground truncate">{copy.qr_string}</p>
+                        <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground/60 uppercase">
+                          <span className={statusCfg.color}>{statusCfg.label}</span>
+                          <span className="opacity-30">•</span>
+                          <span>{copy.id.split('-')[0]}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    {canManage ? (
-                      <Select value={copy.status} onValueChange={(v) => {
-                        if (isEditableStatus(v)) handleStatusChange(copy.id, v);
-                      }}>
-                        <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EDITABLE_STATUSES.map((key) => (
-                            <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
-                              {STATUS_CONFIG[key].label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge variant="outline" className="h-7 px-2 text-[9px] font-black uppercase">
-                        {statusCfg.label}
-                      </Badge>
-                    )}
-                    <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
-                  </div>
-                </div>
-
-                {/* Reserver Info inside copy card */}
-                {copy.status === 'RESERVED' && r && (
-                  <div className="flex items-center gap-2 bg-indigo-500/5 rounded-lg border border-indigo-500/10 p-1.5 animate-in fade-in slide-in-from-left-1">
-                    <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full border border-background ring-1 ring-indigo-500/20">
-                       {r.avatar_url ? (
-                         <Image src={r.avatar_url} alt="" fill className="object-cover" unoptimized />
-                       ) : (
-                         <UserCircle2 size={12} className="h-full w-full p-0.5 text-indigo-400" />
-                       )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase truncate">
-                        Reserved by {r.full_name ?? 'Unknown'}
-                      </p>
-                      {res?.hold_expires_at && (
-                        <p className="text-[8px] font-bold text-amber-600 uppercase tracking-tighter">
-                          Exp: {formatRelativeTime(res.hold_expires_at, mounted)}
-                        </p>
+                    <div className="flex items-center gap-2">
+                      {canManage ? (
+                        <Select value={copy.status} onValueChange={(v) => {
+                          if (isEditableStatus(v)) handleStatusChange(copy.id, v);
+                        }}>
+                          <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EDITABLE_STATUSES.map((key) => (
+                              <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
+                                {STATUS_CONFIG[key].label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="outline" className="h-7 px-2 text-[9px] font-black uppercase">
+                          {statusCfg.label}
+                        </Badge>
                       )}
+                      <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
 
-          {filteredCopies.length === 0 && (
-            <div className="py-10 text-center rounded-xl border border-dashed border-border/40">
-              <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">No assets matching filter</p>
-            </div>
+                  {/* Reserver Info inside copy card */}
+                  {copy.status === 'RESERVED' && r && (
+                    <div className="flex items-center gap-2 bg-indigo-500/5 rounded-lg border border-indigo-500/10 p-1.5 animate-in fade-in slide-in-from-left-1">
+                      <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full border border-background ring-1 ring-indigo-500/20">
+                         {r.avatar_url ? (
+                           <Image src={r.avatar_url} alt="" fill className="object-cover" unoptimized />
+                         ) : (
+                           <UserCircle2 size={12} className="h-full w-full p-0.5 text-indigo-400" />
+                         )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase truncate">
+                          Reserved by {r.full_name ?? 'Unknown'}
+                        </p>
+                        {res?.hold_expires_at && (
+                          <p className="text-[8px] font-bold text-amber-600 uppercase tracking-tighter">
+                            Exp: {formatRelativeTime(res.hold_expires_at, mounted)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>

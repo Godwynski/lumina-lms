@@ -16,4 +16,3 @@ export const POST = withAuthApi(async (request, { user }) => {
     profile_url: assets.profileUrl,
   });
 });
-

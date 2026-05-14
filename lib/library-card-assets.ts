@@ -7,21 +7,67 @@ export function sanitizeStudentId(studentId: string) {
   return studentId.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "_");
 }
 
-function parseStudentIdFromEmail(email?: string | null) {
+/**
+ * Parses the student number from a STI Alabang email address.
+ * 
+ * Student emails: lastname.NUMBER@alabang.sti.edu.ph  → STU-{NUMBER}
+ * Faculty emails: firstname.lastname@alabang.sti.edu.ph → FAC-{localpart}
+ * External emails (gmail, etc.) → null (cannot determine)
+ */
+export function parseStudentIdFromEmail(email?: string | null): string | null {
   if (!email) return null;
 
-  const localPart = email.split("@")[0].toLowerCase();
-  
-  // 1. Student Case: lastname.id.@alabang.sti.edu.ph or lastname.id@...
-  // Usually has a sequence of 6+ digits
-  const digitMatch = localPart.match(/\d{6,}/) || localPart.match(/\d+/);
-  if (digitMatch) {
-    return `STU-${digitMatch[0]}`;
+  const [localPart, domain] = email.split("@");
+  if (!localPart) return null;
+
+  const local = localPart.toLowerCase();
+
+  // STI domain: alabang.sti.edu.ph
+  const isStiDomain = domain?.toLowerCase().includes("sti.edu.ph");
+
+  if (isStiDomain) {
+    // Student pattern: has 6+ consecutive digits → STU-{digits}
+    const digitMatch = local.match(/(\d{6,})/);
+    if (digitMatch) {
+      return `STU-${digitMatch[1]}`;
+    }
+    // Faculty pattern: no digits (or < 6) → FAC-{localpart}
+    return `FAC-${local}`;
   }
 
-  // 2. Faculty Case: firstname.lastname@alabang.sti.edu.ph
-  // Use the local part directly (e.g. FAC-juan.delacruz)
-  return `FAC-${localPart}`;
+  // Non-STI domain: try to extract any 6+ digit sequence for student IDs
+  const digitMatch = local.match(/(\d{6,})/);
+  if (digitMatch) {
+    return `STU-${digitMatch[1]}`;
+  }
+
+  return null;
+}
+
+/**
+ * Normalizes a raw student_id value to ensure it has the correct role-based prefix.
+ * - Pure numeric strings → STU-{number}
+ * - Staff/admin/librarian with no FAC- prefix → FAC-{id}
+ * - Already prefixed IDs (STU-/FAC-) → unchanged
+ */
+function normalizeIdByRole(id: string | null, role?: string | null): string | null {
+  if (!id) return null;
+
+  const upper = id.trim().toUpperCase();
+
+  // Already correctly prefixed
+  if (upper.startsWith("STU-") || upper.startsWith("FAC-")) return upper;
+
+  // Pure numeric → always a student number
+  if (/^\d+$/.test(upper)) return `STU-${upper}`;
+
+  // Staff/admin/librarian without FAC- prefix
+  const staffRoles = ["admin", "librarian", "staff"];
+  if (role && staffRoles.includes(role.toLowerCase())) {
+    return `FAC-${upper}`;
+  }
+
+  return upper;
 }
 
 export function fileNamesFor(studentId: string) {
@@ -51,12 +97,19 @@ export function resolveStudentId(opts: {
   email?: string | null;
   fallbackEmail?: string | null;
   userId?: string;
-}) {
+  role?: string | null;
+}): string | null {
+  // 1. Try the stored student_id (normalize it if it's a bare number or missing prefix)
+  const normalizedStored = normalizeIdByRole(
+    opts.studentId ? sanitizeStudentId(opts.studentId) : null,
+    opts.role
+  );
+
   return (
-    (opts.studentId ? sanitizeStudentId(opts.studentId) : null) ||
+    normalizedStored ||
     parseStudentIdFromEmail(opts.email) ||
     parseStudentIdFromEmail(opts.fallbackEmail) ||
-    (opts.userId ? sanitizeStudentId(opts.userId.slice(0, 12)) : null)
+    (opts.userId ? `FAC-${sanitizeStudentId(opts.userId.slice(0, 12))}` : null)
   );
 }
 

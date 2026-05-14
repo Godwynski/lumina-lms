@@ -45,23 +45,25 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
       groupBy = 'day';
   }
 
-  // 1. Fetch Attendance Data
-  const { data: attendanceData } = await supabase
-    .from('attendance')
-    .select('check_in_at')
-    .gte('check_in_at', startDate.toISOString());
-
-  // 2. Fetch Borrowing Data
-  const { data: borrowingData } = await supabase
-    .from('borrowing_records')
-    .select('borrowed_at, status')
-    .gte('borrowed_at', startDate.toISOString());
-
-  // 3. Fetch Popular Books
-  const { data: popularBooksData } = await supabase
-    .from('borrowing_records')
-    .select('book_copies(books(title))')
-    .limit(100);
+  // Fire all queries in parallel
+  const [
+    { data: attendanceData },
+    { data: borrowingData },
+    { data: popularBooksData }
+  ] = await Promise.all([
+    supabase
+      .from('attendance')
+      .select('check_in_at')
+      .gte('check_in_at', startDate.toISOString()),
+    supabase
+      .from('borrowing_records')
+      .select('borrowed_at, status')
+      .gte('borrowed_at', startDate.toISOString()),
+    supabase
+      .from('borrowing_records')
+      .select('book_copies(books(title))')
+      .limit(100)
+  ]);
 
   // Process Trends
   const attendanceTrends = processTrends(attendanceData?.map(d => d.check_in_at) || [], startDate, now, groupBy);

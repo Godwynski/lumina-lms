@@ -8,9 +8,6 @@ export async function AuthGate({ children }: { children: ReactNode }) {
   if (!me) {
     redirect("/");
   }
-
-  // Casing and status checks are now handled at the layout level
-  // to ensure a clean UI for blocked users.
   
   return <>{children}</>;
 }
