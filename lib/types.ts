@@ -75,6 +75,7 @@ export interface Reservation {
 }
 
 export type ProfileData = {
+  id: string;
   full_name: string | null;
   student_id: string | null;
   department: string | null;

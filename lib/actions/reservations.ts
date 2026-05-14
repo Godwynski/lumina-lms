@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createSafeAction } from './action-utils';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // ... Removed unused getSystemSetting helper
 /**
@@ -20,7 +21,11 @@ export async function cleanupAndReassignReservations(bookId: string) {
     .eq('status', 'READY')
     .lt('hold_expires_at', new Date().toISOString());
 
-  if (!expired || expired.length === 0) return;
+  if (!expired || expired.length === 0) {
+    return;
+  }
+
+  logger.info('Reservations', `Cleaning up ${expired.length} expired holds for book`, { bookId });
 
   for (const res of expired) {
     // A. Expire the current hold
@@ -164,8 +169,8 @@ export const cancelReservation = createSafeAction(
 
     const { revalidatePath, revalidateTag } = await import('next/cache');
     revalidateTag(`book-${reservation.book_id}`, 'default');
-    revalidatePath('/dashboard');
-    revalidatePath('/student-catalog');
+    revalidatePath('/dashboard', 'page');
+    revalidatePath('/student-catalog', 'page');
 
     return [{ success: true }, {
       reason: `Cancelled reservation for book: ${reservation.book_id}`,
@@ -205,8 +210,8 @@ export const staffCancelReservation = createSafeAction(
 
     const { revalidatePath, revalidateTag } = await import('next/cache');
     revalidateTag(`book-${reservation.book_id}`, 'default');
-    revalidatePath('/dashboard');
-    revalidatePath('/catalog');
+    revalidatePath('/dashboard', 'page');
+    revalidatePath('/catalog', 'page');
 
     return [{ success: true }, {
       reason: `Staff cancelled reservation for book: ${reservation.book_id}`,

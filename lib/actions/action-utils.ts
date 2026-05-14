@@ -1,5 +1,6 @@
 import { logger } from "../logger";
-import { getMe, UserRole } from "../auth-helpers";
+import { getMe, UserRole, UserPermissions } from "../auth-helpers";
+import { ProfileData } from "../types";
 import { logAuditActivity, AuditEntityType } from "../audit";
 import { ZodError, ZodSchema, ZodIssue } from "zod";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -45,7 +46,7 @@ export function createSafeAction<TInput, TOutput>(
   schema: ZodSchema<TInput> | null,
   handler: (
     input: TInput, 
-    context: { userId: string; supabase: SupabaseClient }
+    context: { userId: string; supabase: SupabaseClient; profile: ProfileData; role: UserRole }
   ) => Promise<TOutput | [TOutput, AuditMetadata]>,
   options: SafeActionOptions = {}
 ) {
@@ -61,20 +62,17 @@ export function createSafeAction<TInput, TOutput>(
         return { success: false, error: "Unauthorized access" };
       }
 
-      // Permission check for student assistants
-      if (me.role === 'student_assistant') {
-        // If this is a staff-only action (student role not allowed), check if the account is ACTIVE
-        const isStaffOnlyAction = options.allowedRoles && !options.allowedRoles.includes('student');
-        if (isStaffOnlyAction && me.profile.status !== 'ACTIVE') {
-          return { success: false, error: "Access denied: Staff account is currently deactivated." };
-        }
+      // Permission check for staff roles (excluding student role if allowed)
+      const isStaffOnlyAction = options.allowedRoles && !options.allowedRoles.includes('student');
+      
+      if (isStaffOnlyAction && me.isDeactivatedSA) {
+        return { success: false, error: "Access denied: Staff account is currently deactivated." };
+      }
 
-        if (options.allowedPermissions) {
-          const permissions = me.profile.permissions || {};
-          const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
-          if (!hasPermission) {
-            return { success: false, error: "Access denied: Missing required permission." };
-          }
+      if (options.allowedPermissions) {
+        const hasPermission = options.allowedPermissions.some(p => me.hasPermission(p as keyof UserPermissions));
+        if (!hasPermission) {
+          return { success: false, error: "Access denied: Missing required permission." };
         }
       }
 
@@ -99,7 +97,9 @@ export function createSafeAction<TInput, TOutput>(
       // 3. Execution
       const result = await handler(validatedInput, { 
         userId: me.user.id, 
-        supabase: me.supabase 
+        supabase: me.supabase,
+        profile: me.profile,
+        role: me.role
       });
 
       let data: TOutput;

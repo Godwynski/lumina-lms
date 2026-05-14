@@ -129,6 +129,7 @@ type NavItem = {
   icon?: React.ElementType;
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
+  excludeRoles?: Exclude<Role, null>[];
   permissionKey?: "manage_inventory" | "manage_circulation" | "manage_attendance" | "manage_users" | "manage_policies" | "manage_analytics";
 };
 
@@ -136,8 +137,8 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", exactRoles: ["student", "student_assistant"] },
-  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian", permissionKey: "manage_inventory", exactRoles: ["student_assistant"] },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian"] },
+  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian", permissionKey: "manage_inventory", exactRoles: ["student_assistant"], excludeRoles: ["admin"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student", permissionKey: "manage_attendance" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
@@ -269,7 +270,10 @@ export function ProtectedNav({
       if (currentMode === "student") {
         // In Student/Personal mode, only allow these basic items
         const studentHrefs = ["/dashboard", "/student-catalog", "/attendance", "/history"];
-        if (!studentHrefs.includes(item.href)) return false;
+        return studentHrefs.includes(item.href);
+      } else {
+        // Staff/Admin Mode: Apply exclusions
+        if (normalizedRole && item.excludeRoles?.includes(normalizedRole)) return false;
       }
 
       return true;

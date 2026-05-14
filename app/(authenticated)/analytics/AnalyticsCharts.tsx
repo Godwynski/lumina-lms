@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -40,6 +41,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function TrendChart({ data, title, color }: TrendChartProps) {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const hasData = data && data.length > 0 && data.some(d => d.count > 0);
 
   // Generate ghost data if no real data exists - now set to zero to show the floor line
@@ -58,45 +65,47 @@ export function TrendChart({ data, title, color }: TrendChartProps) {
         </div>
       </div>
       
-      <div className="flex-1 w-full relative z-10">
+      <div className="flex-1 w-full relative z-10 min-h-0">
         <div className={cn("w-full h-full transition-all duration-1000", !hasData && "grayscale")}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-            <LineChart data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid 
-                strokeDasharray="8 8" 
-                vertical={true} 
-                horizontal={true}
-                stroke="hsl(var(--border) / 0.1)" 
-              />
-              <XAxis 
-                dataKey="label" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
-                dy={15}
-                interval="preserveStartEnd"
-                hide={!hasData}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
-                hide={!hasData}
-                domain={[0, 'auto']}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--primary) / 0.2)', strokeWidth: 1 }} />
-              
-              <Line 
-                type="monotone" 
-                dataKey="count" 
-                stroke={hasData ? color : 'hsl(var(--muted-foreground) / 0.6)'} 
-                strokeWidth={3}
-                dot={hasData ? { r: 3, fill: color, strokeWidth: 0 } : { r: 2, fill: 'hsl(var(--muted-foreground) / 0.5)', strokeWidth: 0 }}
-                activeDot={hasData ? { r: 5, strokeWidth: 0, fill: color } : false}
-                animationDuration={2000}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {mounted && (
+            <ResponsiveContainer width="100%" height="100%" debounce={100}>
+              <LineChart data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid 
+                  strokeDasharray="8 8" 
+                  vertical={true} 
+                  horizontal={true}
+                  stroke="hsl(var(--border) / 0.1)" 
+                />
+                <XAxis 
+                  dataKey="label" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
+                  dy={15}
+                  interval="preserveStartEnd"
+                  hide={!hasData}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
+                  hide={!hasData}
+                  domain={[0, 'auto']}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--primary) / 0.2)', strokeWidth: 1 }} />
+                
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke={hasData ? color : 'hsl(var(--muted-foreground) / 0.6)'} 
+                  strokeWidth={3}
+                  dot={hasData ? { r: 3, fill: color, strokeWidth: 0 } : { r: 2, fill: 'hsl(var(--muted-foreground) / 0.5)', strokeWidth: 0 }}
+                  activeDot={hasData ? { r: 5, strokeWidth: 0, fill: color } : false}
+                  animationDuration={2000}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>
@@ -115,6 +124,12 @@ const COLORS = [
 ];
 
 export function StatusPieChart({ data }: StatusPieChartProps) {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const hasData = data && data.length > 0 && data.some(d => d.value > 0);
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
@@ -123,44 +138,46 @@ export function StatusPieChart({ data }: StatusPieChartProps) {
       {/* Subtle background glow */}
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />
       
-      <div className="flex-1 relative z-10">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-          <PieChart>
-            <Pie
-              data={hasData ? data : [{ name: 'Empty', value: 1 }]}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={90}
-              paddingAngle={hasData ? 8 : 0}
-              dataKey="value"
-              animationDuration={1000}
-              stroke="none"
-            >
-              {hasData ? data.map((_, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={COLORS[index % COLORS.length]} 
-                  className="hover:opacity-80 transition-opacity cursor-pointer outline-none"
+      <div className="flex-1 relative z-10 min-h-0">
+        {mounted && (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={hasData ? data : [{ name: 'Empty', value: 1 }]}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={90}
+                paddingAngle={hasData ? 8 : 0}
+                dataKey="value"
+                animationDuration={1000}
+                stroke="none"
+              >
+                {hasData ? data.map((_, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={COLORS[index % COLORS.length]} 
+                    className="hover:opacity-80 transition-opacity cursor-pointer outline-none"
+                  />
+                )) : (
+                  <Cell fill="hsl(var(--muted) / 0.1)" />
+                )}
+              </Pie>
+              {hasData && (
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--background))', 
+                    border: '1px solid hsl(var(--border) / 0.5)', 
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)'
+                  }}
                 />
-              )) : (
-                <Cell fill="hsl(var(--muted) / 0.1)" />
               )}
-            </Pie>
-            {hasData && (
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--background))', 
-                  border: '1px solid hsl(var(--border) / 0.5)', 
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)'
-                }}
-              />
-            )}
-          </PieChart>
-        </ResponsiveContainer>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
         
         {/* Center Label */}
         <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] flex flex-col items-center pointer-events-none">

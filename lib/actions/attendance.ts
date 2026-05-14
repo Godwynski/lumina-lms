@@ -4,6 +4,7 @@ import { getMe } from "@/lib/auth-helpers";
 import { revalidatePath } from "next/cache";
 import { createSafeAction } from "./action-utils";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 export interface AttendanceRecord {
   id: string;
@@ -58,8 +59,8 @@ export const toggleAttendanceByCard = createSafeAction(
 
       if (outError) throw new Error("Failed to log out.");
 
-      revalidatePath("/attendance");
-      revalidatePath("/dashboard");
+      revalidatePath("/attendance", "page");
+      revalidatePath("/dashboard", "page");
       return { 
         status: "OUT", 
         message: `Goodbye, ${fullName}! You have logged out.`,
@@ -76,8 +77,8 @@ export const toggleAttendanceByCard = createSafeAction(
 
       if (inError) throw new Error("Failed to log in.");
 
-      revalidatePath("/attendance");
-      revalidatePath("/dashboard");
+      revalidatePath("/attendance", "page");
+      revalidatePath("/dashboard", "page");
       return { 
         status: "IN", 
         message: `Welcome to the Library, ${fullName}!`,
@@ -111,7 +112,7 @@ export async function logAttendance() {
   if (existing) {
     // Log out
     await supabase.from("attendance").update({ check_out_at: new Date().toISOString() }).eq("id", existing.id);
-    revalidatePath("/attendance");
+    revalidatePath("/attendance", "page");
     return { success: true, message: "Logged out successfully!" };
   }
 
@@ -126,8 +127,8 @@ export async function logAttendance() {
     return { success: false, message: "Failed to log attendance." };
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/attendance");
+  revalidatePath("/dashboard", "page");
+  revalidatePath("/attendance", "page");
   
   return { success: true, message: "Checked in successfully!" };
 }
@@ -215,7 +216,7 @@ export const updateAttendance = createSafeAction(
 
     if (error) throw new Error(error.message);
 
-    revalidatePath("/attendance");
+    revalidatePath("/attendance", "page");
     
     return [data, {
       reason: `Updated attendance record for user ID: ${oldData.user_id}`,
@@ -246,14 +247,18 @@ export const deleteAttendance = createSafeAction(
 
     if (!oldData) throw new Error("Attendance record not found.");
 
-    const { error } = await supabase
+    const { error: deleteError } = await supabase
       .from("attendance")
       .delete()
       .eq("id", id);
 
-    if (error) throw new Error(error.message);
+    if (deleteError) {
+      logger.error("Attendance", "Failed to delete attendance", { id }, deleteError);
+      throw new Error("Failed to delete attendance record.");
+    }
 
-    revalidatePath("/attendance");
+    logger.info("Attendance", "Attendance record deleted", { id });
+    revalidatePath("/attendance", "page");
 
     return [{ success: true }, {
       reason: `Deleted attendance record for user ID: ${oldData.user_id}`,
