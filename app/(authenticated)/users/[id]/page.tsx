@@ -13,7 +13,7 @@ function buildUserDetailPromise(userId: string) {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select("*, library_cards(*)")
       .eq("id", userId)
       .single();
 

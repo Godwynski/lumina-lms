@@ -16,7 +16,7 @@ export const mapProfileToUser = (row: Record<string, unknown>): User => ({
       : "Unnamed User"),
   email: typeof row.email === "string" ? row.email : "",
   avatarUrl: typeof row.avatar_url === "string" && row.avatar_url.trim() ? row.avatar_url : null,
-  role: ["admin", "librarian", "student_assistant", "student"].includes(String(row.role))
+  role: ["admin", "librarian", "staff", "student_assistant", "student"].includes(String(row.role))
     ? (String(row.role) as User["role"])
     : "student",
   status: typeof row.status === "string" ? row.status.toUpperCase() : "ACTIVE",
@@ -28,5 +28,7 @@ export const mapProfileToUser = (row: Record<string, unknown>): User => ({
   student_id: typeof row.student_id === "string" ? row.student_id : null,
   address: typeof row.address === "string" ? row.address : null,
   phone: typeof row.phone === "string" ? row.phone : null,
+  onboarding_completed: Boolean(row.onboarding_completed),
+  library_card: Array.isArray(row.library_cards) ? row.library_cards[0] : (row.library_cards as User["library_card"]) || null,
   permissions: (row.permissions as Record<string, boolean>) || {},
 });

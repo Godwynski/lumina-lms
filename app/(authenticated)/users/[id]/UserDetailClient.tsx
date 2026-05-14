@@ -6,19 +6,17 @@ import {
   Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
   CheckCircle2, AlertCircle, UserCheck, Archive, Calendar, Key, Hash
 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter, DialogClose
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
@@ -41,6 +39,7 @@ export function UserDetailClient({
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
 
   const isAdmin = currentRole === "admin";
   const isLibrarian = currentRole === "librarian";
@@ -59,12 +58,6 @@ export function UserDetailClient({
     permissions: initialUser.permissions || {},
   });
 
-  const [checklist, setChecklist] = useState({
-    nameMatches: false,
-    programMatches: false,
-    photoMatches: false,
-  });
-
   const isDirty =
     form.name.trim() !== (initialUser.name || "").trim() ||
     form.role !== initialUser.role ||
@@ -74,20 +67,13 @@ export function UserDetailClient({
     form.phone.trim() !== (initialUser.phone || "").trim() ||
     JSON.stringify(form.permissions) !== JSON.stringify(initialUser.permissions || {});
 
-  const needsVerification = form.role === "student" && form.status === "ACTIVE" && initialUser.status === "PENDING";
-  const isVerified = checklist.nameMatches && checklist.programMatches && checklist.photoMatches;
+  const needsVerification = form.role === "student" && form.status === "ACTIVE" && user.status === "PENDING";
 
   const handleUpdateProfile = async () => {
     setIsSaving(true);
     setError(null);
 
     try {
-      if (needsVerification && !isVerified) {
-        toast.error("Please complete the physical ID verification checklist before approving.");
-        setIsSaving(false);
-        return;
-      }
-
       const response = await fetch("/api/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -144,6 +130,54 @@ export function UserDetailClient({
     }
   };
 
+  const handleVerifyAndApprove = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          name: form.name.trim(),
+          role: form.role,
+          status: "ACTIVE", // Force Active
+          department: form.department.trim() || "General",
+          student_id: form.student_id.trim() || null,
+          address: form.address.trim() || null,
+          phone: form.phone.trim() || null,
+          permissions: form.permissions,
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.ok) throw new Error(result.message || "Failed to approve account");
+
+      const updated = result.user;
+      const nextUser = {
+        ...user,
+        name: updated.name,
+        role: updated.role,
+        status: updated.status,
+        department: updated.department,
+        student_id: updated.student_id,
+        address: form.address,
+        phone: form.phone,
+        permissions: form.permissions,
+      };
+
+      setUser(nextUser);
+      setForm(prev => ({ ...prev, status: updated.status }));
+      setVerificationOpen(false);
+      toast.success("Identity verified and account activated!");
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to approve account";
+      toast.error(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleStatusChange = (value: string) => {
     if (isLibrarian && (value === "ARCHIVED" || value === "SUSPENDED")) {
       toast.error("Librarians cannot suspend or archive users.");
@@ -162,7 +196,8 @@ export function UserDetailClient({
   const roleOptions = [
     { id: "admin", label: "Administrator", icon: Shield, hidden: !isAdmin },
     { id: "librarian", label: "Librarian", icon: Building },
-    { id: "student_assistant", label: "Staff / SA", icon: UserCheck },
+    { id: "staff", label: "Staff", icon: UserCheck },
+    { id: "student_assistant", label: "Student Assistant", icon: UserCheck },
     { id: "student", label: "Student", icon: UserIcon },
   ];
 
@@ -334,17 +369,24 @@ export function UserDetailClient({
                       variant="outline"
                       size="sm"
                       className={cn(
-                        "h-8 text-[11px] font-bold gap-1.5",
-                        isVerified
-                          ? "border-emerald-500/40 text-emerald-600 hover:bg-emerald-50"
-                          : "border-amber-500/40 text-amber-600 hover:bg-amber-50"
+                        "h-8 text-[11px] font-bold gap-1.5 transition-all border-amber-500/40 text-amber-600 hover:bg-amber-50 ring-2 ring-amber-500/20 animate-pulse"
                       )}
                       onClick={() => setVerificationOpen(true)}
                     >
                       <CheckCircle2 className="h-3 w-3" />
-                      {isVerified ? "Verified" : "Verify ID"}
+                      Verify & Approve
                     </Button>
                   )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] font-bold gap-1.5"
+                    onClick={() => setSecondaryOpen(true)}
+                  >
+                    <AlertCircle className="h-3 w-3" />
+                    Other Information
+                  </Button>
 
                   {!isLibrarian && (
                     <Button
@@ -452,28 +494,119 @@ export function UserDetailClient({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
-            {[
-              { id: "nameMatches", label: "Full Name matches physical ID" },
-              { id: "programMatches", label: "Academic Program matches ID" },
-              { id: "photoMatches", label: "User identity matches ID Photo" },
-            ].map(item => (
-              <div
-                key={item.id}
-                className="flex items-center space-x-3 p-3 rounded-lg bg-muted/30 border border-border hover:border-primary/30 transition-colors"
-              >
-                <Checkbox
-                  id={item.id}
-                  checked={checklist[item.id as keyof typeof checklist]}
-                  onCheckedChange={(checked) =>
-                    setChecklist(prev => ({ ...prev, [item.id]: !!checked }))
-                  }
-                />
-                <Label htmlFor={item.id} className="text-sm font-medium cursor-pointer flex-1">
-                  {item.label}
-                </Label>
+          <div className="space-y-4">
+            {/* Identity Comparison Preview */}
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Identity Preview</h4>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Full Name</p>
+                    <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Student ID</p>
+                    <p className="text-sm font-mono font-bold text-foreground">{initialUser.student_id}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-1 border-t border-border/40 pt-3">
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Program / Department</p>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <p className="text-sm font-medium">{form.department || "General"}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-3">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Phone</p>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3 text-muted-foreground/60" />
+                      <p className="text-xs font-medium">{form.phone || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Address</p>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3 text-muted-foreground/60" />
+                      <p className="text-xs font-medium truncate">{form.address || "—"}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" className="h-9 font-bold">Cancel</Button>
+            </DialogClose>
+            <Button
+              className="h-9 font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-500/20"
+              onClick={handleVerifyAndApprove}
+              disabled={isSaving}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {isSaving ? "Activating..." : "Confirm & Activate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Other Information Modal */}
+      <Dialog open={secondaryOpen} onOpenChange={setSecondaryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <AlertCircle className="h-4 w-4" />
+              Other Information
+            </DialogTitle>
+            <DialogDescription>
+              Secondary identity details and system metadata.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Library Card Section */}
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Library Identity</h4>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Card Number</span>
+                  <span className="text-xs font-mono font-bold">{user.library_card?.card_number || "None"}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Card Status</span>
+                  <StatusBadge status={user.library_card?.status || "None"} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Expires At</span>
+                  <span className="text-xs font-medium">
+                    {user.library_card?.expires_at 
+                      ? new Date(user.library_card.expires_at).toLocaleDateString()
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* System Status Section */}
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">System Metadata</h4>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Onboarding Status</span>
+                  <Badge variant={user.onboarding_completed ? "default" : "secondary"} className="h-5 text-[9px] uppercase font-bold">
+                    {user.onboarding_completed ? "Completed" : "Pending"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Account Created</span>
+                  <span className="text-xs font-medium">{user.joined}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
