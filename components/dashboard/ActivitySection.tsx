@@ -1,6 +1,6 @@
 'use client';
 
-import { Library, BookOpen, Bookmark, XCircle, Ticket } from 'lucide-react';
+import { Library, BookOpen, Bookmark, XCircle, Ticket, Clock, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -10,6 +10,7 @@ import { Reservation } from '@/lib/types';
 interface ActivityProps {
   activeBorrows: BorrowingRecord[];
   reservations: Reservation[];
+  attendanceLogs: { id: string; check_in_at: string; check_out_at: string | null }[];
   onOpenBook: (id: string) => void;
   onCancelReservation: (id: string, title: string) => void;
   isPending: boolean;
@@ -19,13 +20,14 @@ interface ActivityProps {
 export function ActivitySection({ 
   activeBorrows, 
   reservations, 
+  attendanceLogs,
   onOpenBook, 
   onCancelReservation, 
   isPending,
   mounted 
 }: ActivityProps) {
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-3">
       {/* My Active Borrows */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
@@ -133,6 +135,72 @@ export function ActivitySection({
           </div>
         )}
       </section>
+
+      {/* Recent Attendance */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+            <Clock className="h-3 w-3 text-primary" />
+            Recent Attendance
+          </h2>
+          <a href="/attendance" className="text-[9px] font-bold text-primary hover:underline flex items-center gap-1">
+            View All <ArrowRight size={10} />
+          </a>
+        </div>
+
+        {attendanceLogs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
+            <Clock className="h-5 w-5 text-muted-foreground/20 mb-2" />
+            <p className="text-[10px] font-bold uppercase tracking-widest">No logs yet</p>
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            {attendanceLogs.map((log) => (
+              <Card key={log.id} className="border-border/10 bg-card/5 shadow-none backdrop-blur-sm">
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-muted-foreground">
+                      {mounted ? new Date(log.check_in_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '...'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-foreground/90">
+                          {mounted ? new Date(log.check_in_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '--:--'}
+                        </span>
+                        <span className="text-[8px] font-bold text-green-600/70 uppercase">In</span>
+                      </div>
+                      <div className="h-4 w-px bg-border/40" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-foreground/90">
+                          {log.check_out_at ? (mounted ? new Date(log.check_out_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '--:--') : 'Active'}
+                        </span>
+                        <span className="text-[8px] font-bold text-orange-600/70 uppercase">Out</span>
+                      </div>
+                    </div>
+                  </div>
+                  {log.check_out_at ? (
+                    <Badge variant="outline" className="text-[8px] h-5 bg-muted/20 border-none font-bold">
+                      {(() => {
+                        const start = new Date(log.check_in_at);
+                        const end = new Date(log.check_out_at);
+                        const diffMs = end.getTime() - start.getTime();
+                        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        return `${diffHrs}h ${diffMins}m`;
+                      })()}
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-none text-[8px] h-5 font-bold animate-pulse">
+                      Live
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
+
   );
 }

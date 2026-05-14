@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
@@ -10,22 +11,17 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
-  useSidebar,
 } from "@/components/ui/sidebar";
 
 
 export function NavSkeleton() {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
-
   return (
-    <div 
-      className={`hidden md:flex flex-col h-screen border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 ${
-        isCollapsed ? "w-[var(--sidebar-width-icon)]" : "w-[var(--sidebar-width)]"
-      }`}
+    <Sidebar 
+      collapsible="icon"
+      className="border-r border-sidebar-border bg-sidebar"
     >
       {/* Header — h-16 matches SidebarHeader in ProtectedNav */}
-      <SidebarHeader className="flex flex-row h-16 shrink-0 items-center gap-4 px-4">
+      <SidebarHeader className="flex flex-row h-16 shrink-0 items-center gap-4 px-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
         {/* Trigger placeholder */}
         <Skeleton className="h-8 w-8 rounded-md shrink-0" />
         {/* Logo + wordmark */}
@@ -72,7 +68,7 @@ export function NavSkeleton() {
       </SidebarContent>
 
       {/* Footer — lg size button mirrors ProtectedNav's SidebarMenuButton size="lg" */}
-      <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-2 hidden md:flex">
+      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="pointer-events-none">
@@ -91,7 +87,7 @@ export function NavSkeleton() {
       </SidebarFooter>
 
       <SidebarRail />
-    </div>
+    </Sidebar>
   );
 }
 

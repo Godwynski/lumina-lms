@@ -203,7 +203,7 @@ export const checkoutBook = createSafeAction(
       );
       
       revalidatePath('/circulation', 'page');
-      revalidateTag('catalog', 'page');
+      revalidateTag('catalog', 'max');
     }
 
     return result;
@@ -271,7 +271,7 @@ export const returnBook = createSafeAction(
       );
 
       revalidatePath('/circulation', 'page');
-      revalidateTag('catalog', 'page');
+      revalidateTag('catalog', 'max');
     }
 
     return result;

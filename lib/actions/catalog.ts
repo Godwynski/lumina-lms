@@ -144,7 +144,10 @@ export const createBook = createSafeAction(
       .select()
       .single();
       
-    if (error) throw new Error('Failed to create book record. Please check if ISBN is unique.');
+    if (error) {
+      logger.error('catalog', 'Failed to insert book record', { error });
+      throw new Error(`Failed to create book record: ${error.message}`);
+    }
 
     // Automatically create copies
     if (copiesCount > 0) {
@@ -164,11 +167,24 @@ export const createBook = createSafeAction(
       }
     }
 
-    logger.info('catalog', `Book created: ${bookData.title}`, { bookId: data.id, isbn: bookData.isbn });
-    revalidateTag('catalog', 'default');
-    revalidateTag('books', 'default');
+    // Fetch the updated book record with correct counts (synced by triggers)
+    const { data: updatedData, error: refreshError } = await supabase
+      .from('books')
+      .select('*, categories(name)')
+      .eq('id', data.id)
+      .single();
+
+    if (refreshError) {
+      logger.error('catalog', 'Failed to refresh book record after copy sync', { error: refreshError });
+    }
+
+    const finalData = updatedData || data;
+
+    logger.info('catalog', `Book created: ${bookData.title}`, { bookId: finalData.id, isbn: bookData.isbn });
+    revalidateTag('catalog', 'max');
+    revalidateTag('books', 'max');
     
-    return [data, {
+    return [finalData, {
       reason: `Created new book: ${bookData.title}`,
       newValue: { ...bookData, copies_created: copiesCount },
       details: { isbn: bookData.isbn }
@@ -203,8 +219,8 @@ export const updateBook = createSafeAction(
     if (error) throw new Error(error.message);
     
     logger.info('catalog', `Book updated: ${id}`, { updates: bookData });
-    revalidateTag('catalog', 'default');
-    revalidateTag(`book-${id}`, 'default');
+    revalidateTag('catalog', 'max');
+    revalidateTag(`book-${id}`, 'max');
     
     return [data, {
       reason: `Updated book: ${data.title}`,
@@ -247,8 +263,8 @@ export const softDeleteBook = createSafeAction(
     if (error) throw new Error(error.message);
     
     logger.warn('catalog', `Book soft-deleted: ${id}`);
-    revalidateTag('catalog', 'default');
-    revalidateTag('books', 'default');
+    revalidateTag('catalog', 'max');
+    revalidateTag('books', 'max');
     
     return [data, {
       reason: `Archived book: ${data.title}`,
@@ -326,8 +342,8 @@ export const addBookCopies = createSafeAction(
       throw new Error('Failed to add book copies.');
     }
 
-    revalidateTag('catalog', 'default');
-    revalidateTag(`book-${bookId}`, 'default');
+    revalidateTag('catalog', 'max');
+    revalidateTag(`book-${bookId}`, 'max');
     revalidatePath(`/catalog/${bookId}`);
     
     return [null, {

@@ -57,6 +57,8 @@ interface DashboardProps {
   inventoryBooksPromise: Promise<{ data: Book[]; count: number }>;
   inventoryCategoriesPromise: Promise<Category[]>;
   preferredView?: string;
+  activeAttendance?: { id: string; check_in_at: string } | null;
+  attendanceLogs: { id: string; check_in_at: string; check_out_at: string | null }[];
 }
 
 export function DashboardClient({ 
@@ -69,7 +71,9 @@ export function DashboardClient({
   reservationsPromise,
   inventoryBooksPromise,
   inventoryCategoriesPromise,
-  preferredView
+  preferredView,
+  activeAttendance,
+  attendanceLogs
 }: DashboardProps) {
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -220,7 +224,21 @@ export function DashboardClient({
       <section className="grid gap-6 items-start">
         <Card className="border-none bg-gradient-to-br from-primary/10 via-background to-primary/5 shadow-md overflow-hidden relative p-5 sm:p-7">
           {studentCard ? (
-            <MyCardContainer initialData={studentCard} variant="dashboard" />
+            <div className="space-y-4">
+              <MyCardContainer initialData={studentCard} variant="dashboard" />
+              {activeAttendance && (
+                <div className="flex items-center justify-between px-2 py-2 bg-green-500/10 rounded-xl border border-green-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-green-700 uppercase tracking-widest">Currently Timed In</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-green-600/70">
+                    Since {new Date(activeAttendance.check_in_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </span>
+
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Library size={42} className="text-muted-foreground/20 mb-3" />
@@ -242,6 +260,7 @@ export function DashboardClient({
       <ActivitySection 
         activeBorrows={activeBorrowsList}
         reservations={reservations}
+        attendanceLogs={attendanceLogs}
         onOpenBook={(id) => {
           setSelectedBookId(id);
           setModalOpen(true);

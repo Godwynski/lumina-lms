@@ -49,11 +49,23 @@ export async function DashboardContent({
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const attendancePromise = supabase
+    .from("attendance")
+    .select("id, check_in_at, check_out_at")
+    .eq("user_id", user.id)
+    .order("check_in_at", { ascending: false })
+    .limit(5);
+
   // Await only what we need for rendering decisions
-  const [params, { data: preferencesData }] = await Promise.all([
+  const [params, { data: preferencesData }, { data: attendanceLogs }] = await Promise.all([
     searchParams,
     prefsPromise,
+    attendancePromise
   ]);
+
+  const activeAttendance = attendanceLogs?.find(a => !a.check_out_at) || null;
+
+
 
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';
@@ -89,6 +101,10 @@ export async function DashboardContent({
       reservationsPromise={reservationsPromise}
       inventoryBooksPromise={inventoryBooksPromise}
       inventoryCategoriesPromise={inventoryCategoriesPromise}
+      activeAttendance={activeAttendance}
+      attendanceLogs={attendanceLogs || []}
     />
+
+
   );
 }
