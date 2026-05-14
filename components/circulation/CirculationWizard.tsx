@@ -10,6 +10,7 @@ import { ReviewStep } from './steps/ReviewStep';
 import { SuccessStep } from './steps/SuccessStep';
 import { StatusNotice } from './StatusNotice';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger';
 
 type FlowMode = 'checkout' | 'return';
 
@@ -161,7 +162,7 @@ export function CirculationWizard() {
   const processScan = async (value: string) => {
     setIsProcessing(true);
     setNotice(null);
-    console.info(`[Circulation] Processing scan: ${value} (Mode: ${mode}, Has Student: ${!!activeStudent})`);
+    logger.info('Circulation', `Processing scan: ${value}`, { mode, hasStudent: !!activeStudent });
 
     try {
       if (mode === 'checkout') {
@@ -172,7 +173,7 @@ export function CirculationWizard() {
             body: JSON.stringify({ scanValue: value, expectedType: 'auto' }),
           });
           const payload = await res.json();
-          console.info('[Circulation] Resolve result:', payload);
+          logger.info('Circulation', 'Resolve result', { type: payload.type, ok: payload.ok });
           
           if (payload.ok && payload.type === 'student') {
             setActiveStudent(payload.data);
@@ -189,7 +190,7 @@ export function CirculationWizard() {
             body: JSON.stringify({ studentCardQr: activeStudent.cardNumber, bookQr: value, previewOnly: true }),
           });
           const payload = await res.json();
-          console.info('[Circulation] Checkout validation result:', payload);
+          logger.info('Circulation', 'Checkout validation result', { ok: payload.ok });
 
           if (payload.ok) {
             setPendingCheckout({
@@ -211,7 +212,7 @@ export function CirculationWizard() {
           body: JSON.stringify({ bookQr: value, previewOnly: true }),
         });
         const payload = await res.json();
-        console.info('[Circulation] Return validation result:', payload);
+        logger.info('Circulation', 'Return validation result', { ok: payload.ok });
 
         if (payload.ok) {
           setPendingReturn({
@@ -229,11 +230,11 @@ export function CirculationWizard() {
         }
       }
     } catch (err) {
-      console.error('[Circulation] Scan process error:', err);
+      logger.error('Circulation', 'Scan process error', {}, err);
       setNotice({ tone: 'error', text: 'Connection issue. Try manual input.' });
     } finally {
       setIsProcessing(false);
-      console.info('[Circulation] Scan processing finished.');
+      logger.info('Circulation', 'Scan processing finished');
     }
   };
 
