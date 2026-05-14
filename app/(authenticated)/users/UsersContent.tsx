@@ -22,13 +22,19 @@ export type User = {
   name: string;
   email: string;
   avatarUrl: string | null;
-  role: "admin" | "librarian" | "student_assistant" | "student";
+  role: "admin" | "librarian" | "staff" | "student_assistant" | "student";
   status: string;
   department: string;
   joined: string;
   student_id: string | null;
   address: string | null;
   phone: string | null;
+  onboarding_completed?: boolean;
+  library_card?: {
+    card_number: string;
+    status: string;
+    expires_at: string | null;
+  } | null;
   permissions?: Record<string, boolean>;
 };
 
@@ -59,7 +65,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
-  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "student_assistant" | "student" | "review">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "staff" | "student_assistant" | "student" | "review">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
@@ -70,12 +76,13 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     review: "Pending Review",
     admin: "Admin",
     librarian: "Librarian",
-    student_assistant: "Staff / SA",
+    staff: "Staff",
+    student_assistant: "Student Assistant",
     student: "Student",
   };
 
   // If librarian, remove 'admin' from filter options
-  const filterOptions = ["all", "review", "admin", "librarian", "student_assistant", "student"] as const;
+  const filterOptions = ["all", "review", "admin", "librarian", "staff", "student_assistant", "student"] as const;
   const visibleTabs = isLibrarian ? filterOptions.filter(t => t !== "admin") : filterOptions;
 
   useEffect(() => {

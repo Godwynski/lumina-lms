@@ -15,7 +15,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
 import { 
   updateAttendance, 
-  deleteAttendance 
+  deleteAttendance,
+  logAttendance
 } from "@/lib/actions/attendance";
 import {
   DropdownMenu,
@@ -86,26 +87,63 @@ export function AttendanceClient({
   };
 
   const [showScanner, setShowScanner] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const lastScannedRef = useRef<string | null>(null);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep focus on input for scanning
   useEffect(() => {
-    if (isStaff && !showScanner) {
+    if (isStaff && !showScanner && !editingRecord) {
       inputRef.current?.focus();
     }
-  }, [isStaff, showScanner]);
+  }, [isStaff, showScanner, editingRecord]);
 
   const handleQRScan = (data: string) => {
+    if (isProcessing || isPending) return;
+    
+    const cleanData = data.trim();
+    if (!cleanData) return;
+
+    // Prevention of rapid spamming for the same card
+    if (lastScannedRef.current === cleanData) {
+      return;
+    }
+
+    lastScannedRef.current = cleanData;
+    setIsProcessing(true);
+
     startTransition(async () => {
-      const result = await toggleAttendanceByCard({ cardNumber: data.trim() });
+      try {
+        const result = await toggleAttendanceByCard({ cardNumber: cleanData });
+        if (result.success) {
+          toast.success(result.data.message, {
+            description: result.data.description,
+            icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
+          });
+          
+          // Clear "last scanned" after 5 seconds to allow re-scanning if they forgot or made a mistake
+          if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+          scanTimeoutRef.current = setTimeout(() => {
+            lastScannedRef.current = null;
+          }, 5000);
+
+        } else {
+          toast.error(result.error);
+          lastScannedRef.current = null; // Allow immediate retry on error
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+    });
+  };
+
+  const handleSelfToggle = () => {
+    startTransition(async () => {
+      const result = await logAttendance();
       if (result.success) {
-        toast.success(result.data.message, {
-          description: result.data.status === "IN" ? "Checked in successfully." : "Checked out successfully.",
-          icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
-        });
-        setShowScanner(false);
+        toast.success(result.message);
       } else {
-        toast.error(result.error);
-        // Don't close scanner on error so they can try again or check what went wrong
+        toast.error(result.message);
       }
     });
   };
@@ -253,10 +291,10 @@ export function AttendanceClient({
         <Button 
           type="submit" 
           size="sm"
-          disabled={isPending || !cardNumber.trim() || showScanner}
+          disabled={isPending || isProcessing || !cardNumber.trim() || showScanner}
           className="h-9 px-4 font-bold"
         >
-          {isPending ? "..." : "Process"}
+          {isPending || isProcessing ? "..." : "Process"}
         </Button>
       </form>
       <div className="w-px h-6 bg-border/40 mx-1" />
@@ -276,14 +314,45 @@ export function AttendanceClient({
   const selfLogControls = (
     <div className="flex flex-1 items-center justify-between">
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <CalendarIcon className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/5">
+          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
           {format(new Date(), "MMMM dd, yyyy")}
         </div>
-        {activeRecord && (
-          <StatusBadge status="ACTIVE" className="h-5" />
+        {activeRecord ? (
+          <div className="flex items-center gap-2">
+            <StatusBadge status="ACTIVE" className="h-6 px-3" />
+            <span className="text-[10px] font-bold text-green-600 animate-pulse uppercase tracking-wider">You are Timed In</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <StatusBadge status="COMPLETED" className="h-6 px-3" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">You are Timed Out</span>
+          </div>
         )}
       </div>
+
+      <Button
+        variant={activeRecord ? "outline" : "default"}
+        size="sm"
+        onClick={handleSelfToggle}
+        disabled={isPending}
+        className={cn(
+          "h-9 px-5 font-bold transition-all shadow-sm",
+          !activeRecord && "bg-primary text-primary-foreground hover:bg-primary/90"
+        )}
+      >
+        {isPending ? "..." : activeRecord ? (
+          <span className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Time Out
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <LogIn className="w-4 h-4" />
+            Time In
+          </span>
+        )}
+      </Button>
 
     </div>
   );
@@ -295,7 +364,17 @@ export function AttendanceClient({
       className="max-w-5xl"
     >
       {isStaff && showScanner && (
-        <div className="p-4 border-b border-border/10 bg-muted/5">
+        <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
+          {isProcessing && (
+            <div className="absolute inset-0 z-10 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
+              <div className="bg-background/90 px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                <span className="text-xs font-bold uppercase tracking-widest text-foreground">Processing Scan...</span>
+              </div>
+            </div>
+          )}
           <QRScanner 
             onScan={handleQRScan}
             onClose={() => setShowScanner(false)}

@@ -267,14 +267,14 @@ CREATE OR REPLACE FUNCTION public.process_qr_checkout(
     p_preview_only BOOLEAN DEFAULT FALSE
 ) RETURNS JSONB AS $$
 DECLARE
-    v_profile RECORD;
     v_card RECORD;
     v_copy RECORD;
     v_limit INTEGER;
     v_days INTEGER;
     v_active_count INTEGER;
     v_due_date TIMESTAMPTZ;
-    v_res RECORD;
+    v_res JSONB;
+    v_res_id UUID := NULL;
 BEGIN
     -- 1. Idempotency Check
     IF p_idempotency_key IS NOT NULL THEN
@@ -283,12 +283,16 @@ BEGIN
     END IF;
 
     -- 2. Resolve Profile & Card
-    SELECT lc.*, p.full_name, p.status as profile_status INTO v_card
-    FROM public.library_cards lc JOIN public.profiles p ON p.id = lc.user_id
+    SELECT lc.user_id, lc.card_number, lc.status as card_status, p.full_name, p.status as profile_status 
+    INTO v_card
+    FROM public.library_cards lc 
+    JOIN public.profiles p ON p.id = lc.user_id
     WHERE lc.card_number = p_card_qr;
 
     IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'code', 'CARD_NOT_FOUND', 'message', 'Invalid library card.'); END IF;
-    IF v_card.status <> 'active' OR v_card.profile_status <> 'ACTIVE' THEN
+    
+    -- Case-insensitive status checks
+    IF UPPER(v_card.card_status) <> 'ACTIVE' OR UPPER(v_card.profile_status) <> 'ACTIVE' THEN
         RETURN jsonb_build_object('ok', false, 'code', 'ACCOUNT_INACTIVE', 'message', 'This card or account is not active.');
     END IF;
 
@@ -310,11 +314,13 @@ BEGIN
 
     IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'code', 'COPY_NOT_FOUND', 'message', 'Book copy not found.'); END IF;
 
-    -- Check if it belongs to a READY reservation
+    -- Handle RESERVED copies
     IF v_copy.status = 'RESERVED' THEN
-        SELECT id INTO v_res FROM public.reservations 
-        WHERE copy_id = v_copy.id AND user_id = v_card.user_id AND status = 'READY';
-        IF NOT FOUND THEN
+        SELECT id INTO v_res_id FROM public.reservations 
+        WHERE copy_id = v_copy.id AND user_id = v_card.user_id AND status = 'READY'
+        LIMIT 1;
+        
+        IF v_res_id IS NULL THEN
             RETURN jsonb_build_object('ok', false, 'code', 'COPY_UNAVAILABLE', 'message', 'This copy is reserved for another student.');
         END IF;
     ELSIF v_copy.status <> 'AVAILABLE' THEN
@@ -332,9 +338,11 @@ BEGIN
     INSERT INTO public.borrowing_records (user_id, book_copy_id, processed_by, due_date, status)
     VALUES (v_card.user_id, v_copy.id, p_librarian_id, v_due_date, 'ACTIVE');
 
-    -- Fulfill reservation if picker was the hold-owner
-    UPDATE public.reservations SET status = 'FULFILLED', fulfilled_at = NOW() 
-    WHERE copy_id = v_copy.id AND user_id = v_card.user_id AND status = 'READY';
+    -- Fulfill reservation if applicable
+    IF v_res_id IS NOT NULL THEN
+        UPDATE public.reservations SET status = 'FULFILLED', fulfilled_at = NOW() 
+        WHERE id = v_res_id;
+    END IF;
 
     v_res := jsonb_build_object('ok', true, 'student_name', v_card.full_name, 'book_title', v_copy.title, 'due_date', v_due_date);
     

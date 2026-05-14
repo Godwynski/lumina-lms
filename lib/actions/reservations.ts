@@ -168,7 +168,7 @@ export const cancelReservation = createSafeAction(
     }
 
     const { revalidatePath, revalidateTag } = await import('next/cache');
-    revalidateTag(`book-${reservation.book_id}`, 'default');
+    revalidateTag(`book-${reservation.book_id}`, 'max');
     revalidatePath('/dashboard', 'page');
     revalidatePath('/student-catalog', 'page');
 
@@ -209,7 +209,7 @@ export const staffCancelReservation = createSafeAction(
     }
 
     const { revalidatePath, revalidateTag } = await import('next/cache');
-    revalidateTag(`book-${reservation.book_id}`, 'default');
+    revalidateTag(`book-${reservation.book_id}`, 'max');
     revalidatePath('/dashboard', 'page');
     revalidatePath('/catalog', 'page');
 

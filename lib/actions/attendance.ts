@@ -24,31 +24,48 @@ export interface AttendanceRecord {
 export const toggleAttendanceByCard = createSafeAction(
   z.object({ cardNumber: z.string() }),
   async ({ cardNumber }, { supabase }) => {
+    const cleanCardNumber = cardNumber.trim();
+    
     // 1. Find user by card number
     const { data: card, error: cardError } = await supabase
       .from("library_cards")
-      .select("user_id, profiles(full_name)")
-      .eq("card_number", cardNumber)
+      .select("user_id, profiles(full_name, status)")
+      .eq("card_number", cleanCardNumber)
       .eq("status", "active")
-      .single();
+      .maybeSingle();
 
-    if (cardError || !card) {
-      throw new Error("Invalid or inactive library card.");
+    if (cardError) {
+      logger.error("Attendance", "Failed to query library card", { cardNumber: cleanCardNumber }, cardError);
+      throw new Error("Database error while checking library card.");
+    }
+
+    if (!card) {
+      throw new Error("Invalid or inactive library card. Please ensure the card is activated in the system.");
     }
 
     const userId = card.user_id;
-    const profiles = card.profiles;
-    const fullName = (Array.isArray(profiles) ? profiles[0] : profiles)?.full_name || "User";
+    const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+    
+    if (profile?.status?.toUpperCase() !== 'ACTIVE') {
+      throw new Error(`User account is ${profile?.status?.toLowerCase() || 'inactive'}. Attendance restricted.`);
+    }
+
+    const fullName = profile?.full_name || "User";
 
     // 2. Check for active attendance record
-    const { data: activeRecord } = await supabase
+    const { data: activeRecord, error: activeError } = await supabase
       .from("attendance")
-      .select("id")
+      .select("id, check_in_at")
       .eq("user_id", userId)
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (activeError) {
+      logger.error("Attendance", "Failed to query active record", { userId }, activeError);
+      throw new Error("Database error while checking active sessions.");
+    }
 
     if (activeRecord) {
       // LOG OUT
@@ -57,13 +74,15 @@ export const toggleAttendanceByCard = createSafeAction(
         .update({ check_out_at: new Date().toISOString() })
         .eq("id", activeRecord.id);
 
-      if (outError) throw new Error("Failed to log out.");
+      if (outError) throw new Error("Failed to register Time Out.");
 
       revalidatePath("/attendance", "page");
       revalidatePath("/dashboard", "page");
+      
       return { 
         status: "OUT", 
-        message: `Goodbye, ${fullName}! You have logged out.`,
+        message: `Goodbye, ${fullName}!`,
+        description: "Timed out successfully.",
         userName: fullName
       };
     } else {
@@ -75,13 +94,15 @@ export const toggleAttendanceByCard = createSafeAction(
           check_in_at: new Date().toISOString()
         });
 
-      if (inError) throw new Error("Failed to log in.");
+      if (inError) throw new Error("Failed to register Time In.");
 
       revalidatePath("/attendance", "page");
       revalidatePath("/dashboard", "page");
+      
       return { 
         status: "IN", 
-        message: `Welcome to the Library, ${fullName}!`,
+        message: `Welcome, ${fullName}!`,
+        description: "Timed in successfully.",
         userName: fullName
       };
     }
@@ -89,8 +110,9 @@ export const toggleAttendanceByCard = createSafeAction(
   { 
     allowedRoles: ['admin', 'librarian', 'student_assistant'],
     allowedPermissions: ['manage_attendance']
-  } // Only staff can use the scanner action? Or maybe public?
+  }
 );
+
 
 /**
  * Legacy/Simple check-in for the user themselves
