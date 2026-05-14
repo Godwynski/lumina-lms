@@ -60,7 +60,7 @@ export function TrendChart({ data, title, color }: TrendChartProps) {
       
       <div className="flex-1 w-full relative z-10">
         <div className={cn("w-full h-full transition-all duration-1000", !hasData && "grayscale")}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid 
                 strokeDasharray="8 8" 
@@ -124,7 +124,7 @@ export function StatusPieChart({ data }: StatusPieChartProps) {
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />
       
       <div className="flex-1 relative z-10">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <PieChart>
             <Pie
               data={hasData ? data : [{ name: 'Empty', value: 1 }]}

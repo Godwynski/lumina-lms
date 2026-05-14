@@ -5,10 +5,9 @@ import { AttendanceClient } from "./AttendanceClient";
 import { getAttendanceHistory } from "@/lib/actions/attendance";
 
 export default async function AttendancePage() {
-  const me = await getMe();
+  const [me, preferences] = await Promise.all([getMe(), getPreferences()]);
   if (!me) redirect("/");
 
-  const preferences = await getPreferences();
   const preferredView = preferences.preferred_dashboard_view;
 
   const isStaffRole = me.role === 'admin' || 

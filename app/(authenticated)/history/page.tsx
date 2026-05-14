@@ -60,11 +60,10 @@ async function HistoryPageContent({
   const status = params.status || "all";
   const q = params.q || "";
 
-  // Get current user to determine role
-  const me = await getMe();
+  // Get current user and preferences in parallel
+  const [me, preferences] = await Promise.all([getMe(), getPreferences()]);
   if (!me) redirect("/");
 
-  const preferences = await getPreferences();
   const preferredView = preferences.preferred_dashboard_view;
   const isStaff = (me.role === 'admin' || me.role === 'librarian' || (me.role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE')) && preferredView !== 'student';
 

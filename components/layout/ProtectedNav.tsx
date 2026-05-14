@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useLogout } from "@/hooks/use-logout";
-import { SWRConfig } from "swr";
 import {
   Dialog,
   DialogContent,
@@ -279,14 +278,8 @@ export function ProtectedNav({
     // Next.js Link already handles prefetching on hover
   }, []);
 
-  const swrValue = useMemo(() => ({
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5000,
-  }), []);
 
   return (
-    <SWRConfig value={swrValue}>
     <Sidebar 
       collapsible="icon"
       className="border-r border-sidebar-border bg-sidebar"
@@ -482,6 +475,5 @@ export function ProtectedNav({
       )}
       <SidebarRail />
     </Sidebar>
-    </SWRConfig>
   );
 }
