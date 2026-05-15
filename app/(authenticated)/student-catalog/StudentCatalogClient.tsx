@@ -22,12 +22,14 @@ import { useRef } from 'react';
 interface ReservationRow {
   status: string;
   queue_position: number;
+  hold_expires_at?: string | null;
   books: { id: string } | { id: string }[] | null;
 }
 
 interface ReservedInfo {
   status: string;
   queuePosition: number;
+  holdExpiresAt?: string | null;
 }
 
 interface StudentCatalogClientProps {
@@ -63,29 +65,29 @@ export function StudentCatalogClient({
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
       router.refresh();
-    }, 500);
+    }, 100);
   }, [router]);
 
   // Real-time synchronization
   useEffect(() => {
+    const supabase = createClient();
     const channel = supabase
       .channel('catalog-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-        debouncedRefresh();
+        router.refresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'book_copies' }, () => {
-        debouncedRefresh();
+        router.refresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
-        debouncedRefresh();
+        router.refresh();
       })
       .subscribe();
 
     return () => {
-      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [supabase, debouncedRefresh]);
+  }, [router]);
 
 
   // Build the initial map from server data
@@ -94,7 +96,11 @@ export function StudentCatalogClient({
     for (const r of rows) {
       const bookId = Array.isArray(r.books) ? r.books[0]?.id : r.books?.id;
       if (bookId) {
-        map.set(bookId, { status: r.status, queuePosition: r.queue_position });
+        map.set(bookId, { 
+          status: r.status, 
+          queuePosition: r.queue_position,
+          holdExpiresAt: r.hold_expires_at
+        });
       }
     }
     return map;
@@ -114,11 +120,12 @@ export function StudentCatalogClient({
   const handleReserveSuccess = useCallback((
     bookId: string,
     queuePosition: number,
-    status: 'READY' | 'ACTIVE'
+    status: 'READY' | 'ACTIVE',
+    holdExpiresAt?: string | null
   ) => {
     setReservedBooksMap(prev => {
       const next = new Map(prev);
-      next.set(bookId, { status, queuePosition });
+      next.set(bookId, { status, queuePosition, holdExpiresAt });
       return next;
     });
   }, []);
@@ -304,7 +311,7 @@ export function StudentCatalogClient({
                 book={book} 
                 priority={index < 4}
                 reservedInfo={reservedBooksMap.get(book.id)}
-                onReserveSuccess={(pos, status) => handleReserveSuccess(book.id, pos, status)}
+                onReserveSuccess={(pos, status, expires) => handleReserveSuccess(book.id, pos, status, expires)}
                 onCancelSuccess={() => handleCancelSuccess(book.id)}
               />
             ))}
