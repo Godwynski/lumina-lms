@@ -1,7 +1,6 @@
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
 import {
-  getDeterministicProfileUrl,
   isDeterministicProfileUrl,
   resolveStudentId,
 } from "@/lib/library-card-assets";
