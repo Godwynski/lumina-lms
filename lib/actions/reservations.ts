@@ -123,11 +123,11 @@ export async function getBookAvailabilityStatus(bookId: string) {
     
     if (userRes) {
       hasReservation = true;
-      if (userRes.status === 'READY') {
+      if (userRes.status?.toUpperCase() === 'READY') {
         isReady = true;
         nextAvailableDate = userRes.hold_expires_at;
         holdExpiresAt = userRes.hold_expires_at;
-      } else if (userRes.status === 'ACTIVE') {
+      } else if (userRes.status?.toUpperCase() === 'ACTIVE') {
         queuePosition = userRes.queue_position;
       }
     }
@@ -163,7 +163,7 @@ export const cancelReservation = createSafeAction(
 
     if (error) throw new Error(error.message);
 
-    if (reservation.status === 'READY' && reservation.copy_id) {
+    if (reservation.status?.toUpperCase() === 'READY' && reservation.copy_id) {
       await cleanupAndReassignReservations(reservation.book_id);
     }
 
@@ -204,7 +204,7 @@ export const staffCancelReservation = createSafeAction(
 
     if (error) throw new Error(error.message);
 
-    if (reservation.status === 'READY' && reservation.copy_id) {
+    if (reservation.status?.toUpperCase() === 'READY' && reservation.copy_id) {
       await cleanupAndReassignReservations(reservation.book_id);
     }
 

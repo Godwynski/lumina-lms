@@ -61,7 +61,7 @@ export function PersonalInfoForm({
           <InfoLabel>Account Status</InfoLabel>
           <div className={cn(
             "h-11 rounded-xl border border-border/20 px-4 flex items-center text-[11px] font-black uppercase tracking-widest shadow-sm",
-            initialProfile.status === 'ACTIVE' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+            initialProfile.status?.toUpperCase() === 'ACTIVE' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"
           )}>
             {initialProfile.status}
           </div>

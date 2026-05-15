@@ -73,9 +73,9 @@ interface Profile {
   avatar_url?: string | null;
   status?: string;
   permissions?: {
-    manage_inventory?: boolean;
     manage_circulation?: boolean;
     manage_attendance?: boolean;
+    view_admin_dashboard?: boolean;
   } | null;
 }
 
@@ -130,7 +130,7 @@ type NavItem = {
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
   excludeRoles?: Exclude<Role, null>[];
-  permissionKey?: "manage_inventory" | "manage_circulation" | "manage_attendance" | "manage_users" | "manage_policies" | "manage_analytics";
+  permissionKey?: "manage_circulation" | "manage_attendance" | "view_admin_dashboard";
 };
 
 
@@ -138,13 +138,13 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
   { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian"] },
-  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian", permissionKey: "manage_inventory", exactRoles: ["student_assistant"], excludeRoles: ["admin"] },
+  { href: "/catalog", label: "Inventory", icon: Library, minRole: "librarian" },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "manage_analytics" },
-  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "manage_users" },
-  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "manage_policies" },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian" },
+  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
+  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
@@ -170,7 +170,11 @@ export function ProtectedNav({
   const isDeactivatedSA = normalizedRole === "student_assistant" && 
     profile?.status?.toUpperCase() !== "ACTIVE";
 
-  const currentMode = isDeactivatedSA 
+  const hasAnyPermission = normalizedRole === "student_assistant"
+    ? !!(profile?.permissions?.manage_circulation || profile?.permissions?.manage_attendance || profile?.permissions?.view_admin_dashboard)
+    : true;
+
+  const currentMode = (isDeactivatedSA || (normalizedRole === "student_assistant" && !hasAnyPermission))
     ? "student" 
     : ((preferences?.preferred_dashboard_view as "student" | "staff") || 
        (normalizedRole === "student_assistant" ? "student" : "staff"));
@@ -394,7 +398,7 @@ export function ProtectedNav({
                     </Link>
                   </DropdownMenuItem>
 
-                  {(normalizedRole === "librarian" || normalizedRole === "admin" || (normalizedRole === "student_assistant" && !isDeactivatedSA)) && (
+                  {(normalizedRole === "librarian" || normalizedRole === "admin" || (normalizedRole === "student_assistant" && !isDeactivatedSA && hasAnyPermission)) && (
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onSelect={(e) => {

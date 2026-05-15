@@ -19,9 +19,10 @@ export async function DashboardContent({
 
   const isStudent = role === "student";
   const isStaffActive = profile?.status?.toUpperCase() === 'ACTIVE';
-  const canSeeStaffInventory = role === 'admin' || 
+  const canSeeStaffInventory = role === 'admin' || role === 'librarian';
+  const canSeeAdminDashboard = role === 'admin' || 
                                role === 'librarian' || 
-                               (role === 'student_assistant' && isStaffActive && profile?.permissions?.manage_inventory);
+                               (role === 'student_assistant' && isStaffActive && profile?.permissions?.view_admin_dashboard);
 
   // Fire ALL non-blocking promises at once — no sequential awaits
   const statsPromise = getDashboardStats({ role });
@@ -84,8 +85,7 @@ export async function DashboardContent({
 
   const preferences = (preferencesData?.preferences as Record<string, string>) || {};
   let preferredView = preferences.preferred_dashboard_view;
-  if (role === "student_assistant" && !isStaffActive) {
-
+  if (role === "student_assistant" && (!isStaffActive || !profile?.permissions?.view_admin_dashboard)) {
     preferredView = "student";
   }
 

@@ -3,7 +3,7 @@ import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const MANAGER_ROLES: UserRole[] = ["admin", "librarian", "student_assistant"];
+const MANAGER_ROLES: UserRole[] = ["admin", "librarian"];
 
 function mapProfileToUser(row: Record<string, unknown>) {
   const createdAt = typeof row.created_at === "string" ? row.created_at : null;
@@ -115,7 +115,7 @@ export const POST = withAuthApi(
     if (Object.prototype.hasOwnProperty.call(profile, "role"))
       updates.role = role;
     if (Object.prototype.hasOwnProperty.call(profile, "status"))
-      updates.status = "pending";
+      updates.status = "PENDING";
     if (Object.prototype.hasOwnProperty.call(profile, "department"))
       updates.department = department || "General";
 
@@ -236,12 +236,12 @@ export const PATCH = withAuthApi(
     }
 
     const nextStatus =
-      typeof body.status === "string" ? body.status.trim().toLowerCase() : null;
+      typeof body.status === "string" ? body.status.trim().toUpperCase() : null;
     if (
       nextStatus &&
       Object.prototype.hasOwnProperty.call(profile, "status")
     ) {
-      if (requesterRole === "librarian" && (nextStatus === "archived" || nextStatus === "suspended")) {
+      if (requesterRole === "librarian" && (nextStatus === "ARCHIVED" || nextStatus === "SUSPENDED")) {
         return apiError("Librarians cannot archive or suspend users", "FORBIDDEN", 403);
       }
       updates.status = nextStatus;

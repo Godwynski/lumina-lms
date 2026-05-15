@@ -91,7 +91,7 @@ export function withAuthApi(
           return apiError("Forbidden: Account disabled", "FORBIDDEN", 403);
         }
         const permissions = profile.permissions || {};
-        const hasPermission = options.allowedPermissions.some(p => permissions[p] === true);
+        const hasPermission = options.allowedPermissions.some(p => permissions[p as keyof typeof permissions] === true);
         if (!hasPermission) {
           return apiError(
             "Forbidden: Missing required permission for this action",

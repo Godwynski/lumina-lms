@@ -1,10 +1,9 @@
 export type UserRole = 'admin' | 'librarian' | 'student_assistant' | 'student';
 
 export type UserPermissions = {
-  manage_inventory?: boolean;
   manage_circulation?: boolean;
   manage_attendance?: boolean;
-  [key: string]: boolean | undefined;
+  view_admin_dashboard?: boolean;
 };
 
 export interface Category {

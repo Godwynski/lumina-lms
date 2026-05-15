@@ -8,15 +8,8 @@ async function CatalogGuard({ children }: { children: React.ReactNode }) {
   
   const { role, profile } = me;
 
-  if (!['admin', 'librarian', 'student_assistant'].includes(role)) {
+  if (!['admin', 'librarian'].includes(role)) {
     redirect('/student-catalog');
-  }
-
-  // Security check for Student Assistants
-  if (role === 'student_assistant') {
-    if (profile.status?.toUpperCase() !== 'ACTIVE' || !profile.permissions?.manage_inventory) {
-      redirect('/student-catalog');
-    }
   }
 
   return <>{children}</>;

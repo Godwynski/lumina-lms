@@ -31,7 +31,7 @@ export const toggleAttendanceByCard = createSafeAction(
       .from("library_cards")
       .select("user_id, profiles(full_name, status)")
       .eq("card_number", cleanCardNumber)
-      .eq("status", "active")
+      .ilike("status", "active")
       .maybeSingle();
 
     if (cardError) {

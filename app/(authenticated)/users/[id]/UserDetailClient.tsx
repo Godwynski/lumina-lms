@@ -67,7 +67,7 @@ export function UserDetailClient({
     form.phone.trim() !== (initialUser.phone || "").trim() ||
     JSON.stringify(form.permissions) !== JSON.stringify(initialUser.permissions || {});
 
-  const needsVerification = form.role === "student" && form.status === "ACTIVE" && user.status === "PENDING";
+  const needsVerification = form.role === "student" && form.status.toUpperCase() === "ACTIVE" && user.status.toUpperCase() === "PENDING";
 
   const handleUpdateProfile = async () => {
     setIsSaving(true);
@@ -196,7 +196,6 @@ export function UserDetailClient({
   const roleOptions = [
     { id: "admin", label: "Administrator", icon: Shield, hidden: !isAdmin },
     { id: "librarian", label: "Librarian", icon: Building },
-    { id: "staff", label: "Staff", icon: UserCheck },
     { id: "student_assistant", label: "Student Assistant", icon: UserCheck },
     { id: "student", label: "Student", icon: UserIcon },
   ];
@@ -445,12 +444,9 @@ export function UserDetailClient({
           </DialogHeader>
           <div className="space-y-1">
             {[
-              { key: "manage_inventory", label: "Inventory", desc: "Catalog & Item management" },
               { key: "manage_circulation", label: "Circulation", desc: "Checkouts & Returns" },
               { key: "manage_attendance", label: "Attendance", desc: "Gate scans & records" },
-              { key: "manage_users", label: "Users", desc: "Account management" },
-              { key: "manage_policies", label: "Policies", desc: "Library settings" },
-              { key: "manage_analytics", label: "Analytics", desc: "System reports" },
+              { key: "view_admin_dashboard", label: "Admin Dashboard", desc: "View admin dashboard overview" },
             ].map(p => (
               <div
                 key={p.key}

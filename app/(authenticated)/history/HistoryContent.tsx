@@ -69,7 +69,7 @@ export default function HistoryContent({
   };
 
   const isOverdue = (record: BorrowingRecord) => {
-    return record.status === "OVERDUE" || (record.status === "ACTIVE" && new Date(record.due_date) < new Date());
+    return record.status?.toUpperCase() === "OVERDUE" || (record.status?.toUpperCase() === "ACTIVE" && new Date(record.due_date) < new Date());
   };
 
   const isPrivileged = userRole === "admin" || userRole === "librarian";
@@ -107,7 +107,7 @@ export default function HistoryContent({
               <p className="truncate text-sm font-bold text-foreground">
                 {record.books?.title || "Unknown Title"}
               </p>
-              {record.status === 'RETURNED' && (
+              {record.status?.toUpperCase() === 'RETURNED' && (
                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
               )}
             </div>

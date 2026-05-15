@@ -53,7 +53,7 @@ export const getMe = cache(async () => {
     role: role as UserRole,
     isStaff: ['admin', 'librarian', 'student_assistant'].includes(role),
     isAdmin: role === 'admin',
-    isDeactivatedSA: role === 'student_assistant' && profile.status !== 'ACTIVE',
+    isDeactivatedSA: role === 'student_assistant' && profile.status?.toUpperCase() !== 'ACTIVE',
     hasPermission: (permission: keyof UserPermissions) => {
       if (role === 'admin') return true;
       const perms = (profile.permissions as UserPermissions | null);
