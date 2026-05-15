@@ -52,8 +52,11 @@ export function IdentityListManager({
     return initialItems.filter(init => !currentItems.includes(init));
   }, [currentItems, initialItems]);
 
+  const MAX_ITEM_LENGTH = 50;
+
   const addItem = () => {
     if (!newItem.trim() || currentItems.includes(newItem.trim())) return;
+    if (newItem.length > MAX_ITEM_LENGTH) return;
     const updated = [...currentItems, newItem.trim()];
     onChange(JSON.stringify(updated));
     setNewItem("");
@@ -122,26 +125,44 @@ export function IdentityListManager({
         )}
       </div>
 
-      <div className="flex gap-3 px-1">
-        <div className="relative flex-1 group/input">
-          <Input
-            placeholder="Add identifier..."
-            value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem())}
-            disabled={disabled}
-            className="h-10 rounded-lg border-border/10 bg-muted/5 text-[10px] font-bold uppercase tracking-widest focus:ring-0 transition-all px-4 placeholder:text-muted-foreground/20"
-          />
+      <div className="space-y-2">
+        <div className="flex justify-between items-center px-1">
+          <p className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-widest">
+            {currentItems.length} Items
+          </p>
+          {newItem.length > 0 && (
+            <p className={cn(
+              "text-[8px] font-bold tracking-widest",
+              newItem.length > MAX_ITEM_LENGTH ? "text-rose-500" : "text-muted-foreground/20"
+            )}>
+              {newItem.length} / {MAX_ITEM_LENGTH} Chars
+            </p>
+          )}
         </div>
-        <Button
-          type="button"
-          onClick={addItem}
-          disabled={disabled || !newItem.trim()}
-          className="h-10 px-6 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98] shrink-0"
-        >
-          <Plus className="h-3 w-3 mr-2" />
-          Add
-        </Button>
+        <div className="flex gap-3">
+          <div className="relative flex-1 group/input">
+            <Input
+              placeholder="Add identifier..."
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem())}
+              disabled={disabled}
+              className={cn(
+                "h-10 rounded-lg border-border/10 bg-muted/5 text-[10px] font-bold uppercase tracking-widest focus:ring-0 transition-all px-4 placeholder:text-muted-foreground/20",
+                newItem.length > MAX_ITEM_LENGTH && "border-rose-500/40 bg-rose-500/5"
+              )}
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={addItem}
+            disabled={disabled || !newItem.trim() || newItem.length > MAX_ITEM_LENGTH}
+            className="h-10 px-6 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98] shrink-0"
+          >
+            <Plus className="h-3 w-3 mr-2" />
+            Add
+          </Button>
+        </div>
       </div>
     </div>
   );

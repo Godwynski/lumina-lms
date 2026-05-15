@@ -51,8 +51,12 @@ export function SupportFAQManager({
     return initialFaqs.filter(init => !currentFaqs.some(curr => curr.question === init.question));
   }, [currentFaqs, initialFaqs]);
 
+  const MAX_Q_LENGTH = 120;
+  const MAX_A_LENGTH = 600;
+
   const addOrUpdateFAQ = () => {
     if (!newQ.trim() || !newA.trim()) return;
+    if (newQ.length > MAX_Q_LENGTH || newA.length > MAX_A_LENGTH) return;
     
     let updated;
     if (editingIndex !== null) {
@@ -201,14 +205,14 @@ export function SupportFAQManager({
                          <p className="text-[10px] text-muted-foreground/60 leading-relaxed line-through italic font-medium">A: {faq.answer}</p>
                        </div>
                        {!disabled && (
-                         <Button 
-                           variant="ghost" 
-                           size="icon" 
-                           className="h-10 w-10 rounded-2xl text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all shrink-0" 
-                           onClick={() => restoreFAQ(faq)}
-                         >
-                           <Plus size={16} />
-                         </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-2xl text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all shrink-0" 
+                            onClick={() => restoreFAQ(faq)}
+                          >
+                            <Plus size={16} />
+                          </Button>
                        )}
                      </div>
                    </div>
@@ -231,36 +235,60 @@ export function SupportFAQManager({
                 <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
                   {editingIndex !== null ? "Edit FAQ" : "Add FAQ"}
                 </DialogTitle>
-                <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest">
-                  Knowledge Base Entry
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest">
+                    Knowledge Base Entry
+                  </p>
+                </div>
               </div>
             </div>
           </DialogHeader>
 
           <div className="p-8 pt-2 space-y-6">
             <div className="space-y-2">
-              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 ml-1">
-                Question
-              </Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                  Question
+                </Label>
+                <span className={cn(
+                  "text-[8px] font-bold tracking-widest",
+                  newQ.length > MAX_Q_LENGTH ? "text-rose-500" : "text-muted-foreground/20"
+                )}>
+                  {newQ.length}/{MAX_Q_LENGTH}
+                </span>
+              </div>
               <Input
                 placeholder="How do I borrow a book?"
                 value={newQ}
                 onChange={(e) => setNewQ(e.target.value)}
                 disabled={disabled}
-                className="h-12 rounded-xl border-border/20 bg-muted/5 text-xs px-4 focus:ring-0 transition-all font-medium placeholder:text-muted-foreground/20"
+                className={cn(
+                  "h-12 rounded-xl border-border/20 bg-muted/5 text-xs px-4 focus:ring-0 transition-all font-medium placeholder:text-muted-foreground/20",
+                  newQ.length > MAX_Q_LENGTH && "border-rose-500/50 bg-rose-500/5"
+                )}
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 ml-1">
-                Answer
-              </Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                  Answer
+                </Label>
+                <span className={cn(
+                  "text-[8px] font-bold tracking-widest",
+                  newA.length > MAX_A_LENGTH ? "text-rose-500" : "text-muted-foreground/20"
+                )}>
+                  {newA.length}/{MAX_A_LENGTH}
+                </span>
+              </div>
               <Textarea
                 placeholder="Enter the detailed answer here..."
                 value={newA}
                 onChange={(e) => setNewA(e.target.value)}
                 disabled={disabled}
-                className="min-h-[150px] rounded-2xl border-border/20 bg-muted/5 text-xs p-5 resize-none focus:ring-0 transition-all leading-relaxed font-medium placeholder:text-muted-foreground/20"
+                className={cn(
+                  "min-h-[150px] rounded-2xl border-border/20 bg-muted/5 text-xs p-5 resize-none focus:ring-0 transition-all leading-relaxed font-medium placeholder:text-muted-foreground/20",
+                  newA.length > MAX_A_LENGTH && "border-rose-500/50 bg-rose-500/5"
+                )}
               />
             </div>
           </div>
@@ -275,7 +303,7 @@ export function SupportFAQManager({
               </Button>
               <Button
                 onClick={addOrUpdateFAQ}
-                disabled={disabled || !newQ.trim() || !newA.trim()}
+                disabled={disabled || !newQ.trim() || !newA.trim() || newQ.length > MAX_Q_LENGTH || newA.length > MAX_A_LENGTH}
                 className="flex-[2] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]"
               >
                 {editingIndex !== null ? "Save Changes" : "Add Entry"}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BorrowingRecord } from "@/lib/actions/history";
@@ -45,6 +46,25 @@ export default function HistoryContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+
+  // Realtime refresh
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('history-realtime')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'borrowing_records' }, 
+        () => {
+          router.refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   const updateFilters = (updates: Record<string, string | number>) => {
     const params = new URLSearchParams(searchParams.toString());

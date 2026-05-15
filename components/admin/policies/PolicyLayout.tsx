@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useMemo, useState, Suspense } from "react";
+import { use, useMemo, useState, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { 
   AlertCircle, 
@@ -39,15 +40,43 @@ import { PolicySetting, Category } from "@/types/admin";
 export function PolicyLayout({
   settings,
   canEdit,
+  role,
   categoriesPromise,
 }: {
   settings: PolicySetting[];
   canEdit: boolean;
+  role: string;
   categoriesPromise: Promise<Category[]> | PromiseLike<Category[]>;
 }) {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("circulation");
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
+
+  // Realtime synchronization
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('policies-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_settings' },
+        () => {
+          router.refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        () => {
+          router.refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   const initialValues = useMemo(() => {
     const byKey = new Map(settings.map((s) => [s.key, s.value]));
@@ -69,15 +98,22 @@ export function PolicyLayout({
   );
 
   // Defined the full set of categories in order
-  const sidebarItems = useMemo(() => [
-    { id: "circulation", ...CATEGORY_MAP.circulation },
-    { id: "reservations", ...CATEGORY_MAP.reservations },
-    { id: "identity", ...CATEGORY_MAP.identity },
-    { id: "categories", ...CATEGORY_MAP.categories },
-    { id: "broadcasts", ...CATEGORY_MAP.broadcasts },
-    { id: "support", ...CATEGORY_MAP.support },
-    { id: "lifecycle", ...CATEGORY_MAP.lifecycle },
-  ], []);
+  const sidebarItems = useMemo(() => {
+    const items = [
+      { id: "circulation", ...CATEGORY_MAP.circulation },
+      { id: "reservations", ...CATEGORY_MAP.reservations },
+      { id: "identity", ...CATEGORY_MAP.identity },
+      { id: "categories", ...CATEGORY_MAP.categories },
+      { id: "broadcasts", ...CATEGORY_MAP.broadcasts },
+      { id: "support", ...CATEGORY_MAP.support },
+    ];
+
+    if (role === "admin") {
+      items.push({ id: "lifecycle", ...CATEGORY_MAP.lifecycle });
+    }
+
+    return items;
+  }, [role]);
 
   const groupedSidebar = useMemo(() => {
     const groups: Record<string, typeof sidebarItems> = {};

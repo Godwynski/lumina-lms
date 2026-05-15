@@ -19,7 +19,7 @@ import {
   Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
+import { DEFAULT_POLICIES, type PolicyConfig } from "@/lib/actions/policy-constants";
 import { IdentityListManager } from "./IdentityListManager";
 import { SupportFAQManager } from "./SupportFAQManager";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,7 +38,6 @@ const ICONS = {
   Megaphone
 };
 
-type PolicyKey = keyof typeof DEFAULT_POLICIES;
 
 /**
  * Individual policy field component with high-fidelity administrative styling.
@@ -59,18 +58,36 @@ export function PolicyField({
   disabled: boolean;
   loading: boolean;
 }) {
-  const config = DEFAULT_POLICIES[policyKey as PolicyKey];
+  const config = DEFAULT_POLICIES[policyKey] as PolicyConfig;
   const Icon = ICONS[config.icon as keyof typeof ICONS] || HelpCircle;
   
   // Type detection logic
-  const isSlider = policyKey === "max_borrow_limit" || policyKey === "max_renewal_count";
-  const isDays = policyKey.includes("days");
+  const validation = config.validation;
+  const isSlider = validation?.type === "number" && validation?.max !== undefined && validation.max <= 50;
+  const isDays = policyKey.includes("days") || policyKey.includes("period");
   const isToggle = config.value === "true" || config.value === "false" || policyKey.includes("enable") || policyKey.includes("required");
   const isSupportFAQ = policyKey === "support_faqs" || policyKey === "student_faq_list";
   const isIdentityList = (config.category === "identity" || policyKey.includes("list") || policyKey.includes("identities") || (value || config.value).startsWith("[")) && !isSupportFAQ;
   const isComplex = isIdentityList || isSupportFAQ;
 
   const labelText = config.label.replace(/_/g, ' ');
+
+  const handleNumericChange = (val: string) => {
+    if (validation?.type === "number") {
+      const num = parseInt(val);
+      if (isNaN(num)) {
+        onChange("0");
+        return;
+      }
+      // Enforce limits immediately in the UI if it's a number
+      let clamped = num;
+      if (validation.min !== undefined) clamped = Math.max(validation.min, clamped);
+      if (validation.max !== undefined) clamped = Math.min(validation.max, clamped);
+      onChange(clamped.toString());
+    } else {
+      onChange(val);
+    }
+  };
 
   return (
     <div className="py-8 first:pt-0 border-b border-border/5 last:border-0 group animate-in fade-in slide-in-from-top-1 duration-500">
@@ -98,6 +115,11 @@ export function PolicyField({
                         <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/60">Information</span>
                       </div>
                       <p className="text-[11px] font-medium text-foreground/80 leading-relaxed">{config.description}</p>
+                      {validation?.type === "number" && (
+                        <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">
+                          Limit: {validation.min ?? 0} - {validation.max ?? '∞'}
+                        </p>
+                      )}
                       {config.example && (
                         <div className="bg-muted/10 p-3 rounded-lg border border-border/10">
                           <p className="text-[9px] text-muted-foreground/60 leading-relaxed italic font-medium">&ldquo;{config.example}&rdquo;</p>
@@ -126,8 +148,9 @@ export function PolicyField({
           {isSlider ? (
             <div className="flex items-center gap-5 px-1">
               <Slider
-                max={15}
-                step={1}
+                min={validation?.min ?? 0}
+                max={validation?.max ?? 50}
+                step={validation?.step ?? 1}
                 value={[parseInt(value || "0")]}
                 onValueChange={(vals) => onChange(vals[0].toString())}
                 disabled={loading || disabled}
@@ -165,9 +188,11 @@ export function PolicyField({
           ) : (
             <div className="relative group/input">
               <Input
-                type={isDays ? "number" : "text"}
+                type={validation?.type === "number" ? "number" : "text"}
+                min={validation?.min}
+                max={validation?.max}
                 value={value || ""}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(e) => handleNumericChange(e.target.value)}
                 disabled={loading || disabled}
                 className="h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-12 transition-all shadow-sm"
               />

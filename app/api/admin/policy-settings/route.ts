@@ -4,11 +4,29 @@ import { logAuditActivity } from "@/lib/audit";
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 
 function isValidPolicyValue(key: string, value: string) {
-  const numberLikeKeys = ["days", "limit", "count", "years", "fine", "amount"];
-  if (numberLikeKeys.some((token) => key.includes(token))) {
+  const config = DEFAULT_POLICIES[key];
+  if (!config) return value.trim().length > 0;
+
+  const { validation } = config;
+  if (!validation) return value.trim().length > 0;
+
+  if (validation.type === "number") {
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed >= 0;
+    if (!Number.isFinite(parsed)) return false;
+    if (validation.min !== undefined && parsed < validation.min) return false;
+    if (validation.max !== undefined && parsed > validation.max) return false;
+    return true;
   }
+
+  if (validation.type === "json") {
+    try {
+      JSON.parse(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   return value.trim().length > 0;
 }
 

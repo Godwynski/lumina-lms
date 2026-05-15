@@ -114,6 +114,18 @@ export function DashboardClient({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
         debouncedRefresh();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_settings' }, () => {
+        debouncedRefresh();
+      })
       .subscribe();
 
     return () => {
