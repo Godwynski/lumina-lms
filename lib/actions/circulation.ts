@@ -49,9 +49,10 @@ async function checkUserBorrowingEligibility(supabase: SupabaseClient, userId: s
 export const resolveScan = createSafeAction(
   z.object({
     scanValue: z.string().min(1),
-    expectedType: z.enum(['auto', 'student', 'book']).default('auto')
+    expectedType: z.enum(['auto', 'student', 'book']).default('auto'),
+    isManual: z.boolean().default(false)
   }),
-  async ({ scanValue, expectedType }, { supabase }) => {
+  async ({ scanValue, expectedType, isManual }, { supabase }) => {
     const value = scanValue.trim();
 
     // 1. Try resolving as Library Card (Student)
@@ -151,7 +152,11 @@ export const resolveScan = createSafeAction(
       }
     }
 
-    throw new Error('Scanned QR is not recognized by the circulation system.');
+    const errorMessage = isManual 
+      ? 'The identifier is not recognized by the circulation system.'
+      : 'Scanned QR is not recognized by the circulation system.';
+
+    throw new Error(errorMessage);
   },
   { allowedRoles: ['admin', 'librarian', 'student_assistant'], allowedPermissions: ['manage_circulation'] }
 );
@@ -164,9 +169,10 @@ export const checkoutBook = createSafeAction(
     studentCardQr: z.string().min(1),
     bookQr: z.string().min(1),
     idempotencyKey: z.string().optional(),
-    previewOnly: z.boolean().optional().default(false)
+    previewOnly: z.boolean().optional().default(false),
+    isManual: z.boolean().default(false)
   }),
-  async ({ studentCardQr, bookQr, idempotencyKey, previewOnly }, { supabase, profile: staff }) => {
+  async ({ studentCardQr, bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
     // 1. Pre-validation: Eligibility Check (only if not preview)
     if (!previewOnly) {
        // First resolve the student to get user_id
@@ -207,7 +213,13 @@ export const checkoutBook = createSafeAction(
 
     if (!result.ok) {
       logger.warn('circulation', `Checkout failed: ${result.message}`, { bookQr, code: result.code });
-      throw new Error(result.message || 'Checkout failed.');
+      
+      let message = result.message || 'Checkout failed.';
+      if (isManual && message.toLowerCase().includes('not found')) {
+        message = 'The identifier is not recognized by the circulation system.';
+      }
+      
+      throw new Error(message);
     }
 
     if (!previewOnly) {
@@ -225,6 +237,7 @@ export const checkoutBook = createSafeAction(
       
       revalidatePath('/circulation', 'page');
       revalidateTag('catalog', 'max');
+      revalidateTag('public-books', 'max');
     }
 
     return result;
@@ -244,9 +257,10 @@ export const returnBook = createSafeAction(
   z.object({
     bookQr: z.string().min(1),
     idempotencyKey: z.string().optional(),
-    previewOnly: z.boolean().optional().default(false)
+    previewOnly: z.boolean().optional().default(false),
+    isManual: z.boolean().default(false)
   }),
-  async ({ bookQr, idempotencyKey, previewOnly }, { supabase, profile: staff }) => {
+  async ({ bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
     const { data, error } = await supabase.rpc('process_qr_return', {
       p_librarian_id: String(staff.id),
       p_book_qr: bookQr.trim(),
@@ -273,7 +287,13 @@ export const returnBook = createSafeAction(
 
     if (!result.ok) {
       logger.warn('circulation', `Return failed: ${result.message}`, { bookQr, code: result.code });
-      throw new Error(result.message || 'Return failed.');
+      
+      let message = result.message || 'Return failed.';
+      if (isManual && message.toLowerCase().includes('not found')) {
+        message = 'The identifier is not recognized by the circulation system.';
+      }
+      
+      throw new Error(message);
     }
 
     if (!previewOnly) {
@@ -293,6 +313,7 @@ export const returnBook = createSafeAction(
 
       revalidatePath('/circulation', 'page');
       revalidateTag('catalog', 'max');
+      revalidateTag('public-books', 'max');
     }
 
     return result;

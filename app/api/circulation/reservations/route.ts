@@ -100,6 +100,12 @@ export async function POST(request: NextRequest) {
       { status: result.status, queue_position: result.queue_position }
     );
 
+    const { revalidateTag, revalidatePath } = await import('next/cache');
+    revalidateTag('public-books', 'max');
+    revalidateTag(`book-${bookId}`, 'max');
+    revalidatePath('/student-catalog', 'page');
+    revalidatePath('/dashboard', 'page');
+
     return NextResponse.json(result);
   } catch (error) {
     console.error("Reservation error:", error);

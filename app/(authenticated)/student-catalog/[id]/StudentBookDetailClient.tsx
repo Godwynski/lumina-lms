@@ -1,8 +1,9 @@
 'use client';
 
-import { use, useState, useTransition } from 'react';
+import { use, useState, useTransition, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 import {
   MapPin,
   BookOpen,
@@ -230,6 +231,52 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   const availability = use(availabilityPromise);
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [supabase] = useState(() => createClient());
+
+  // Debounced router.refresh
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      router.refresh();
+    }, 1500);
+  }, [router]);
+
+  // Real-time synchronization
+  useEffect(() => {
+    const channel = supabase
+      .channel(`book-detail-${id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'books', 
+        filter: `id=eq.${id}` 
+      }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'book_copies', 
+        filter: `book_id=eq.${id}` 
+      }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'reservations', 
+        filter: `book_id=eq.${id}` 
+      }, () => {
+        debouncedRefresh();
+      })
+      .subscribe();
+
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase, debouncedRefresh, id]);
 
   if (!book) {
     return (

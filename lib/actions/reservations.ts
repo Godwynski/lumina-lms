@@ -1,20 +1,71 @@
 'use server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createSafeAction } from './action-utils';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
 // ... Removed unused getSystemSetting helper
 /**
+ * Assigns a specific book copy to the next person in the reservation queue.
+ * If no one is waiting, marks the copy as AVAILABLE.
+ */
+async function reassignCopy(bookId: string, copyId: string) {
+  const adminClient = createAdminClient();
+
+  // 1. Find next in line
+  const { data: nextInQueue } = await adminClient
+    .from('reservations')
+    .select('id')
+    .eq('book_id', bookId)
+    .eq('status', 'ACTIVE')
+    .order('queue_position', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (nextInQueue) {
+    // 2. Promote next person
+    const { data: holdData } = await adminClient
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'hold_expiry_days')
+      .single();
+
+    const holdDays = parseInt(holdData?.value ?? '3', 10);
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + holdDays);
+
+    await adminClient
+      .from('reservations')
+      .update({
+        status: 'READY',
+        copy_id: copyId,
+        hold_expires_at: expiryDate.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', nextInQueue.id);
+  } else {
+    // 3. No one waiting - return copy to shelf
+    await adminClient
+      .from('book_copies')
+      .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
+      .eq('id', copyId);
+  }
+
+  // Final maintenance: reorder any remaining queue
+  await adminClient.rpc('compress_reservation_queue', { p_book_id: bookId });
+}
+
+/**
  * Automatically expires READY reservations that have passed their hold deadline
  * and assigns the book copy to the next student in the queue.
- * Should be called from reservation placement, returns, or via a scheduled job.
  */
 export async function cleanupAndReassignReservations(bookId: string) {
-  const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   // 1. Find expired READY reservations for this book
-  const { data: expired } = await supabase
+  const { data: expired } = await adminClient
     .from('reservations')
     .select('id, copy_id')
     .eq('book_id', bookId)
@@ -29,56 +80,15 @@ export async function cleanupAndReassignReservations(bookId: string) {
 
   for (const res of expired) {
     // A. Expire the current hold
-    await supabase
+    await adminClient
       .from('reservations')
       .update({ status: 'EXPIRED', updated_at: new Date().toISOString() })
       .eq('id', res.id);
 
     if (res.copy_id) {
-      // B. Find next in line
-      const { data: nextInQueue } = await supabase
-        .from('reservations')
-        .select('id')
-        .eq('book_id', bookId)
-        .eq('status', 'ACTIVE')
-        .order('queue_position', { ascending: true })
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (nextInQueue) {
-        // C. Promote next person
-        const { data: holdData } = await supabase
-          .from('system_settings')
-          .select('value')
-          .eq('key', 'hold_expiry_days')
-          .single();
-
-        const holdDays = parseInt(holdData?.value ?? '3', 10);
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + holdDays);
-
-        await supabase
-          .from('reservations')
-          .update({
-            status: 'READY',
-            copy_id: res.copy_id,
-            hold_expires_at: expiryDate.toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', nextInQueue.id);
-      } else {
-        // D. No one waiting - return copy to shelf
-        await supabase
-          .from('book_copies')
-          .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
-          .eq('id', res.copy_id);
-      }
+      await reassignCopy(bookId, res.copy_id);
     }
   }
-
-  // Final maintenance
-  await supabase.rpc('compress_reservation_queue', { p_book_id: bookId });
 }
 
 export async function getBookAvailabilityStatus(bookId: string) {
@@ -145,9 +155,11 @@ export async function getBookAvailabilityStatus(bookId: string) {
 
 export const cancelReservation = createSafeAction(
   z.string(),
-  async (reservationId, { supabase, userId }) => {
+  async (reservationId, { supabase: _supabase, userId }) => {
+    const adminClient = createAdminClient();
+
     // Fetch reservation including status and copy_id so we can release if READY
-    const { data: reservation, error: fetchError } = await supabase
+    const { data: reservation, error: fetchError } = await adminClient
       .from('reservations')
       .select('user_id, book_id, status, copy_id')
       .eq('id', reservationId)
@@ -156,7 +168,7 @@ export const cancelReservation = createSafeAction(
     if (fetchError || !reservation) throw new Error('Reservation not found');
     if (reservation.user_id !== userId) throw new Error('Unauthorized');
 
-    const { error } = await supabase
+    const { error } = await adminClient
       .from('reservations')
       .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
       .eq('id', reservationId);
@@ -164,11 +176,14 @@ export const cancelReservation = createSafeAction(
     if (error) throw new Error(error.message);
 
     if (reservation.status?.toUpperCase() === 'READY' && reservation.copy_id) {
-      await cleanupAndReassignReservations(reservation.book_id);
+      await reassignCopy(reservation.book_id, reservation.copy_id);
+    } else {
+      await adminClient.rpc('compress_reservation_queue', { p_book_id: reservation.book_id });
     }
 
     const { revalidatePath, revalidateTag } = await import('next/cache');
     revalidateTag(`book-${reservation.book_id}`, 'max');
+    revalidateTag('public-books', 'max');
     revalidatePath('/dashboard', 'page');
     revalidatePath('/student-catalog', 'page');
 
@@ -188,8 +203,10 @@ export const cancelReservation = createSafeAction(
 
 export const staffCancelReservation = createSafeAction(
   z.string(),
-  async (reservationId, { supabase }) => {
-    const { data: reservation, error: fetchError } = await supabase
+  async (reservationId, { supabase: _supabase }) => {
+    const adminClient = createAdminClient();
+
+    const { data: reservation, error: fetchError } = await adminClient
       .from('reservations')
       .select('user_id, book_id, status, copy_id')
       .eq('id', reservationId)
@@ -197,7 +214,7 @@ export const staffCancelReservation = createSafeAction(
 
     if (fetchError || !reservation) throw new Error('Reservation not found');
 
-    const { error } = await supabase
+    const { error } = await adminClient
       .from('reservations')
       .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
       .eq('id', reservationId);
@@ -205,11 +222,14 @@ export const staffCancelReservation = createSafeAction(
     if (error) throw new Error(error.message);
 
     if (reservation.status?.toUpperCase() === 'READY' && reservation.copy_id) {
-      await cleanupAndReassignReservations(reservation.book_id);
+      await reassignCopy(reservation.book_id, reservation.copy_id);
+    } else {
+      await adminClient.rpc('compress_reservation_queue', { p_book_id: reservation.book_id });
     }
 
     const { revalidatePath, revalidateTag } = await import('next/cache');
     revalidateTag(`book-${reservation.book_id}`, 'max');
+    revalidateTag('public-books', 'max');
     revalidatePath('/dashboard', 'page');
     revalidatePath('/catalog', 'page');
 

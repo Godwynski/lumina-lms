@@ -20,11 +20,13 @@ interface StudentBookCardProps {
   reservedInfo?: {
     status: string;
     queuePosition: number;
+    holdExpiresAt?: string | null;
   };
-  onReserveSuccess?: (queuePosition: number, status: "READY" | "ACTIVE") => void;
+  onReserveSuccess?: (queuePosition: number, status: "READY" | "ACTIVE", holdExpiresAt?: string | null) => void;
+  onCancelSuccess?: () => void;
 }
 
-export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess }: StudentBookCardProps) {
+export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess, onCancelSuccess }: StudentBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   const isReady = reservedInfo?.status === "READY";
   const [modalOpen, setModalOpen] = useState(false);
@@ -108,6 +110,9 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
                 bookId={book.id}
                 isAvailable={book.available_copies > 0}
                 hasExistingReservation={!!reservedInfo}
+                isReady={reservedInfo?.status === "READY"}
+                queuePosition={reservedInfo?.queuePosition}
+                holdExpiresAt={reservedInfo?.holdExpiresAt}
                 variant="outline"
                 size="sm"
                 className="h-7 text-[10px] px-2 rounded-lg"
@@ -136,6 +141,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
         onOpenChange={setModalOpen}
         variant="student"
         initialData={book}
+        onCancelSuccess={onCancelSuccess}
       />
     </m.div>
   );

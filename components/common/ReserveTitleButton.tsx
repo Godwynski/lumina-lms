@@ -68,15 +68,16 @@ export function ReserveTitleButton({
       });
     } else {
       // Sync when props arrive/change (book detail view)
-      setStatus({
-        hasReservation: initialHasReservation,
-        isReady: initialIsReady,
-        queuePosition: initialPos,
-        holdExpiresAt: initialExpires,
-        nextAvailableDate: initialNextDate
-      });
-    }
-  }, [bookId, initialHasReservation, initialIsReady, initialPos, initialExpires, initialNextDate]);
+        setStatus({
+          hasReservation: initialHasReservation,
+          isReady: initialIsReady,
+          queuePosition: initialPos,
+          holdExpiresAt: initialExpires,
+          nextAvailableDate: initialNextDate
+        });
+        setIsSuccess(false);
+      }
+    }, [bookId, initialHasReservation, initialIsReady, initialPos, initialExpires, initialNextDate]);
 
   const handleReserve = (e: React.MouseEvent) => {
     e.preventDefault();

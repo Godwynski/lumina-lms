@@ -66,7 +66,15 @@ export function ModernInventoryClient({
           router.refresh();
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservations' },
+        () => {
+          router.refresh();
+        }
+      )
       .subscribe();
+
 
     return () => {
       void supabase.removeChannel(channel);
