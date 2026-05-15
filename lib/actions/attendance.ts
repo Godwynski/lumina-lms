@@ -321,30 +321,3 @@ export const deleteAttendance = createSafeAction(
   }
 );
 
-/**
- * Gets attendance stats for the dashboard.
- */
-export async function getAttendanceStats() {
-  const me = await getMe();
-  if (!me) throw new Error("Unauthorized");
-  
-  const { supabase } = me;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const [totalToday, activeNow] = await Promise.all([
-    supabase
-      .from("attendance")
-      .select("*", { count: 'exact', head: true })
-      .gte("check_in_at", today.toISOString()),
-    supabase
-      .from("attendance")
-      .select("*", { count: 'exact', head: true })
-      .is("check_out_at", null)
-  ]);
-
-  return {
-    todayCount: totalToday.count || 0,
-    activeCount: activeNow.count || 0
-  };
-}

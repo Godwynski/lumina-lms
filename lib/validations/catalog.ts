@@ -14,8 +14,5 @@ export const BookSchema = z.object({
   section: z.string().optional().nullable(),
 });
 
-export const CategorySchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  description: z.string().optional().nullable(),
-});
+
 

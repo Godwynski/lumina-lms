@@ -107,23 +107,6 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
   return { data, count: count || 0 };
 }
 
-export const getBookById = async (id: string) => {
-  return unstable_cache(
-    async (id: string) => {
-      const supabase = createSafeClient();
-      const { data, error } = await supabase
-        .from('books')
-        .select(`*, categories(name)`)
-        .eq('id', id)
-        .single();
-        
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    ['catalog-book-detail'],
-    { revalidate: 3600, tags: ['books'] }
-  )(id);
-};
 
 const CreateBookSchema = z.object({
   bookData: BookSchema,
@@ -275,42 +258,6 @@ export const softDeleteBook = createSafeAction(
 
 // --- Book Copies ---
 
-export async function getBookCopies(bookId: string) {
-  const supabase = await assertStaffCatalogAccess();
-  const { data, error } = await supabase
-    .from('book_copies')
-    .select(`
-      id, book_id, status, condition, qr_string, created_at,
-      reservations!copy_id (
-        id,
-        status,
-        queue_position,
-        hold_expires_at,
-        profiles!user_id (
-          id,
-          full_name,
-          email,
-          student_id
-        )
-      )
-    `)
-    .eq('book_id', bookId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw new Error(error.message);
-
-  // Normalize: attach only the active reservation (READY or ACTIVE with copy_id assigned)  
-  return (data ?? []).map((copy) => {
-    const copyData = copy as Record<string, unknown>;
-    const raws = Array.isArray(copyData.reservations) ? copyData.reservations : copyData.reservations ? [copyData.reservations] : [];
-    const activeRes = raws.find(
-      (r: { status: string }) => r.status === 'READY' || r.status === 'ACTIVE'
-    ) ?? null;
-    const rest = { ...copyData };
-    delete rest.reservations;
-    return { ...rest, reservation: activeRes };
-  });
-}
 
 
 
@@ -401,38 +348,6 @@ export const updateBookCopyStatus = createSafeAction(
  * the reserver's profile: name, student ID, email, avatar_url.
  * READY entries appear first (the current hold), then ACTIVE sorted by queue_position.
  */
-export async function getBookReservationQueue(bookId: string) {
-  const supabase = await assertStaffCatalogAccess();
-
-  const { data, error } = await supabase
-    .from('reservations')
-    .select(`
-      id,
-      status,
-      queue_position,
-      hold_expires_at,
-      reserved_at,
-      copy_id,
-      profiles!user_id (
-        id,
-        full_name,
-        email,
-        student_id,
-        avatar_url
-      ),
-      book_copies!copy_id (
-        qr_string
-      )
-    `)
-    .eq('book_id', bookId)
-    .in('status', ['READY', 'ACTIVE'])
-    .order('status', { ascending: false }) // READY before ACTIVE alphabetically
-    .order('queue_position', { ascending: true })
-    .order('reserved_at', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
 /**
  * Consolidated action for student view.
  */

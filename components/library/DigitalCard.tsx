@@ -51,7 +51,6 @@ export default function DigitalCard({
         exportMode={exportMode}
         cardId={cardId}
         studentId={studentId}
-        academicYear={academicYear}
         roleLabel={roleLabel}
       />
     );
@@ -202,11 +201,10 @@ function CardBack({
   exportMode,
   cardId,
   studentId,
-  academicYear,
   roleLabel,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "academicYear" | "roleLabel"
+  "cardNumber" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "roleLabel"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -259,17 +257,7 @@ function CardBack({
             </ol>
           </div>
 
-          <div className="grid grid-cols-2 items-end gap-4">
-            <div className="flex flex-col items-start pb-1">
-              <p className="text-[8px] font-bold uppercase tracking-tight text-muted-foreground/60 sm:text-[9px]">Academic Year</p>
-              <p className="text-[10px] font-black text-foreground sm:text-[13px]">{academicYear || (() => {
-                const now = new Date();
-                const currentYear = now.getUTCFullYear();
-                const startYear = now.getUTCMonth() >= 5 ? currentYear : currentYear - 1;
-                return `${startYear} - ${startYear + 1}`;
-              })()}</p>
-            </div>
-
+          <div className="flex items-end justify-end">
             <div className="flex flex-col items-end pb-1">
               <div className="min-w-[100px] border-b border-foreground text-center sm:min-w-[140px]">
                 <p className="font-sans text-[11px] font-bold text-foreground sm:text-sm">{roleLabel || "Librarian"}</p>
