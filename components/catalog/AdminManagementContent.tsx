@@ -186,6 +186,23 @@ export function AdminManagementContent({
   const [reservationQueue, setReservationQueue] = useState<ReservationQueueEntry[]>(initialQueue || []);
   const [loading, setLoading] = useState(!initialCopies);
   
+  // Sync state with props when they change (e.g. from realtime updates in parent)
+  useEffect(() => {
+    setBook(initialBook);
+  }, [initialBook]);
+
+  useEffect(() => {
+    if (initialCopies) setCopies(initialCopies);
+  }, [initialCopies]);
+
+  useEffect(() => {
+    if (initialQueue) setReservationQueue(initialQueue);
+  }, [initialQueue]);
+
+  useEffect(() => {
+    if (initialCopies) setLoading(false);
+  }, [initialCopies]);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

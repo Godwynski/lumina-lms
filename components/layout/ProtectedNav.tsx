@@ -23,6 +23,7 @@ import {
 
 import { updateUiPreference } from "@/lib/actions/preferences";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 
 import { Logo } from "@/components/layout/Logo";
@@ -71,6 +72,7 @@ interface Profile {
   full_name?: string | null;
   avatar_url?: string | null;
   status?: string;
+  role?: string | null;
   permissions?: {
     manage_circulation?: boolean;
     manage_attendance?: boolean;
@@ -160,27 +162,92 @@ export function ProtectedNav({
 }) {
   const pathname = usePathname();
   const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
+  const [supabase] = useState(() => createClient());
+  const [currentRole, setCurrentRole] = useState<Role>(normalizedRole);
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(profile ?? null);
+  const [currentPrefs, setCurrentPrefs] = useState<Record<string, unknown>>(preferences || {});
+
+  // Sync state if props change (e.g. initial server load)
+  useEffect(() => {
+    setCurrentRole(normalizedRole);
+    setCurrentProfile(profile ?? null);
+    setCurrentPrefs(preferences || {});
+  }, [normalizedRole, profile, preferences]);
+
+  // Real-time subscription for profile and permission changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const profileChannel = supabase
+      .channel(`nav-profile-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newProfile = payload.new as Profile;
+          setCurrentProfile(newProfile);
+          if (newProfile.role) {
+            setCurrentRole(newProfile.role.toLowerCase() as Role);
+          }
+        }
+      )
+      .subscribe();
+
+    const prefsChannel = supabase
+      .channel(`nav-prefs-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ui_preferences",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const nextPrefs = (payload.new as { preferences?: Record<string, unknown> })?.preferences || {};
+          setCurrentPrefs(nextPrefs);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profileChannel);
+      supabase.removeChannel(prefsChannel);
+    };
+  }, [user?.id, supabase]);
 
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isPending, startTransition] = React.useTransition();
 
-  const isDeactivatedSA = normalizedRole === "student_assistant" && 
-    profile?.status?.toUpperCase() !== "ACTIVE";
+  const isDeactivatedSA = currentRole === "student_assistant" && 
+    currentProfile?.status?.toUpperCase() !== "ACTIVE";
 
-  const hasAnyPermission = normalizedRole === "student_assistant"
-    ? !!(profile?.permissions?.manage_circulation || profile?.permissions?.manage_attendance || profile?.permissions?.view_admin_dashboard)
+  const hasAnyPermission = currentRole === "student_assistant"
+    ? !!(currentProfile?.permissions?.manage_circulation || currentProfile?.permissions?.manage_attendance || currentProfile?.permissions?.view_admin_dashboard)
     : true;
 
-  const currentMode = (isDeactivatedSA || (normalizedRole === "student_assistant" && !hasAnyPermission))
+  const currentMode = (isDeactivatedSA || (currentRole === "student_assistant" && !hasAnyPermission))
     ? "student" 
-    : (normalizedRole === "admin" || normalizedRole === "librarian")
+    : (currentRole === "admin" || currentRole === "librarian")
       ? "staff"
-      : ((preferences?.preferred_dashboard_view as "student" | "staff") || 
-         (normalizedRole === "student_assistant" ? "student" : "staff"));
+      : ((currentPrefs?.preferred_dashboard_view as "student" | "staff") || 
+         (currentRole === "student_assistant" ? "student" : "staff"));
 
   const handleToggleMode = () => {
     const newMode = currentMode === "staff" ? "student" : "staff";
+    
+    // Update local state immediately for instant UI feedback
+    setCurrentPrefs(prev => ({
+      ...prev,
+      preferred_dashboard_view: newMode
+    }));
+
     startTransition(async () => {
       const result = await updateUiPreference({
         key: "preferred_dashboard_view",
@@ -189,10 +256,15 @@ export function ProtectedNav({
 
       if (result.success) {
         const viewLabel = newMode === "staff" 
-          ? (normalizedRole === "admin" ? "Admin" : normalizedRole === "librarian" ? "Librarian" : "Staff")
+          ? (currentRole === "admin" ? "Admin" : currentRole === "librarian" ? "Librarian" : "Staff")
           : "Personal";
         toast.success(`Switched to ${viewLabel} View`);
       } else {
+        // Revert on failure
+        setCurrentPrefs(prev => ({
+          ...prev,
+          preferred_dashboard_view: currentMode
+        }));
         toast.error("Failed to switch mode");
       }
     });
@@ -204,9 +276,9 @@ export function ProtectedNav({
     await logout();
   };
 
-  const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const name = currentProfile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const email = user?.email || "";
-  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const avatarUrl = currentProfile?.avatar_url || user?.user_metadata?.avatar_url;
   const initials = name
     .split(" ")
     .map((n: string) => n[0])
@@ -268,7 +340,7 @@ export function ProtectedNav({
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
       // 1. Permission Check (Role + Status + Permissions)
-      if (!hasPermission(normalizedRole, item, profile)) return false;
+      if (!hasPermission(currentRole, item, currentProfile)) return false;
 
       // 2. Mode Check (Staff View vs Personal View)
       if (currentMode === "student") {
@@ -277,12 +349,12 @@ export function ProtectedNav({
         return studentHrefs.includes(item.href);
       } else {
         // Staff/Admin Mode: Apply exclusions
-        if (normalizedRole && item.excludeRoles?.includes(normalizedRole)) return false;
+        if (currentRole && item.excludeRoles?.includes(currentRole)) return false;
       }
 
       return true;
     });
-  }, [normalizedRole, profile, currentMode]);
+  }, [currentRole, currentProfile, currentMode]);
 
   const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover
@@ -398,7 +470,7 @@ export function ProtectedNav({
                     </Link>
                   </DropdownMenuItem>
 
-                  {(normalizedRole === "student_assistant" && !isDeactivatedSA && hasAnyPermission) && (
+                  {(currentRole === "student_assistant" && !isDeactivatedSA && hasAnyPermission) && (
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onSelect={(e) => {

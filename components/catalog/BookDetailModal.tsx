@@ -34,7 +34,9 @@ import {
 import { getBookAdminDetails, getBookPublicDetails } from '@/lib/actions/catalog';
 import { cn } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
 import { AdminManagementContent } from './AdminManagementContent';
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +72,7 @@ interface BookDetailModalProps {
   variant: 'student' | 'admin';
   initialData?: Partial<Book>;
   canManage?: boolean;
+  onCancelSuccess?: () => void;
 }
 
 // ─── Copy Progress Bar ─────────────────────────────────────────────────────
@@ -213,10 +216,12 @@ function StudentModalContent({
   book,
   availability,
   onClose,
+  onCancelSuccess,
 }: {
   book: BookDetail;
   availability: AvailabilityStatus;
   onClose: () => void;
+  onCancelSuccess?: () => void;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -235,6 +240,7 @@ function StudentModalContent({
       try {
         await cancelReservation(resId);
         toast.success('Reservation cancelled');
+        onCancelSuccess?.();
         router.refresh();
         onClose();
       } catch (err) {
@@ -377,7 +383,7 @@ function StudentModalContent({
 
 // ─── Main Modal ────────────────────────────────────────────────────────────
 
-export function BookDetailModal({ bookId, open, onOpenChange, variant, initialData, canManage = true }: BookDetailModalProps) {
+export function BookDetailModal({ bookId, open, onOpenChange, variant, initialData, canManage = true, onCancelSuccess }: BookDetailModalProps) {
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -417,6 +423,35 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
       fetchData();
     }
   }, [open, fetchData]);
+
+  // Real-time synchronization for the modal content
+  useEffect(() => {
+    if (!open || !bookId) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`modal-realtime-${bookId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'books', filter: `id=eq.${bookId}` },
+        fetchData
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'book_copies', filter: `book_id=eq.${bookId}` },
+        fetchData
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservations', filter: `book_id=eq.${bookId}` },
+        fetchData
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [open, bookId, fetchData]);
 
   const placeholderStudentData = useMemo(() => {
     if (initialData && variant === 'student') {
@@ -478,6 +513,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
               book={activeStudentData.book}
               availability={activeStudentData.availability}
               onClose={() => onOpenChange(false)}
+              onCancelSuccess={onCancelSuccess}
             />
           </div>
         )}

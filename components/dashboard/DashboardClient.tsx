@@ -87,7 +87,7 @@ export function DashboardClient({
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
       router.refresh();
-    }, 2000);
+    }, 500);
   }, [router]);
   
   // Unwrap promises using 'use' hook

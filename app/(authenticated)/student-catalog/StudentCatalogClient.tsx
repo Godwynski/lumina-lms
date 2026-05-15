@@ -63,7 +63,7 @@ export function StudentCatalogClient({
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
       router.refresh();
-    }, 2000);
+    }, 500);
   }, [router]);
 
   // Real-time synchronization
@@ -74,6 +74,9 @@ export function StudentCatalogClient({
         debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'book_copies' }, () => {
+        debouncedRefresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
         debouncedRefresh();
       })
       .subscribe();
@@ -116,6 +119,14 @@ export function StudentCatalogClient({
     setReservedBooksMap(prev => {
       const next = new Map(prev);
       next.set(bookId, { status, queuePosition });
+      return next;
+    });
+  }, []);
+
+  const handleCancelSuccess = useCallback((bookId: string) => {
+    setReservedBooksMap(prev => {
+      const next = new Map(prev);
+      next.delete(bookId);
       return next;
     });
   }, []);
@@ -294,6 +305,7 @@ export function StudentCatalogClient({
                 priority={index < 4}
                 reservedInfo={reservedBooksMap.get(book.id)}
                 onReserveSuccess={(pos, status) => handleReserveSuccess(book.id, pos, status)}
+                onCancelSuccess={() => handleCancelSuccess(book.id)}
               />
             ))}
           </m.div>
