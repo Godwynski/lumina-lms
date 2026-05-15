@@ -21,6 +21,7 @@ type ProfileRow = {
   student_id: string | null;
   avatar_url: string | null;
   role: string | null;
+  status: string | null;
 };
 
 type LibraryCardRow = {
@@ -173,7 +174,7 @@ export async function ensureStaticLibraryCardAssets(opts: {
 
   const { data: rawProfile, error: profileError } = await admin
     .from("profiles")
-    .select("id, email, student_id, avatar_url, role")
+    .select("id, email, student_id, avatar_url, role, status")
     .eq("id", opts.userId)
     .single();
 
@@ -218,7 +219,7 @@ export async function ensureStaticLibraryCardAssets(opts: {
       await admin.from("library_cards").insert({
         user_id: opts.userId,
         card_number: expectedCardNumber,
-        status: "active",
+        status: profile.status || "ACTIVE",
       });
     } else {
       await admin

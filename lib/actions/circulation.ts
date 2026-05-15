@@ -56,7 +56,7 @@ export const resolveScan = createSafeAction(
 
     // 1. Try resolving as Library Card (Student)
     if (expectedType !== 'book') {
-      const { data: card, error: cardError } = await supabase
+      let { data: card, error: cardError } = await supabase
         .from('library_cards')
         .select(`
           card_number,
@@ -72,6 +72,27 @@ export const resolveScan = createSafeAction(
         .maybeSingle();
 
       if (cardError) throw new Error(cardError.message);
+
+      // Fallback: Try resolving as Student ID from profiles
+      if (!card) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, student_id, status')
+          .eq('student_id', value)
+          .maybeSingle();
+        
+        if (profileError) throw new Error(profileError.message);
+
+        if (profile) {
+          // Construct a mock card object for consistent downstream logic
+          card = {
+            card_number: profile.student_id,
+            status: 'ACTIVE',
+            user_id: profile.id,
+            profiles: profile
+          } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+        }
+      }
 
       if (card) {
         // Validation logic

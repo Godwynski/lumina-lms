@@ -25,7 +25,8 @@ function buildHistoryPromise(page: number, status: string, q: string) {
                         me.role === "librarian" || 
                         (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
     
-    const isStaff = isStaffRole && preferredView !== 'student';
+    const isAdminOrLibrarian = me.role === "admin" || me.role === "librarian";
+    const isStaff = isStaffRole && (isAdminOrLibrarian || preferredView !== 'student');
     const userId = isStaff ? null : me.user.id;
     
     return getBorrowingHistory(userId, page, 10, status, q);
@@ -65,7 +66,8 @@ async function HistoryPageContent({
   if (!me) redirect("/");
 
   const preferredView = preferences.preferred_dashboard_view;
-  const isStaff = (me.role === 'admin' || me.role === 'librarian' || (me.role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE')) && preferredView !== 'student';
+  const isAdminOrLibrarian = me.role === 'admin' || me.role === 'librarian';
+  const isStaff = (isAdminOrLibrarian || (me.role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE')) && (isAdminOrLibrarian || preferredView !== 'student');
 
   // Fire the DB promise immediately — no await, passed straight to HistoryContent
   const historyPromise = buildHistoryPromise(page, status, q);

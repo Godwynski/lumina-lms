@@ -153,13 +153,14 @@ export function DashboardClient({
         studentId: resolvedStudentId || profileData.student_id || "N/A",
         cardNumber: studentCardData?.card_number || "Pending assignment",
         department: profileData.department || "General",
-        status: (studentCardData?.status as "active" | "pending" | "suspended" | "expired") || "pending",
+        status: ((studentCardData?.status?.toLowerCase() || profileData.status?.toLowerCase()) as "active" | "pending" | "suspended" | "expired") || "pending",
         expiryDate: expiresAt,
         academicYear: ayString,
         avatarUrl: profileData.avatar_url,
         qrUrl: resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null,
         address: profileData.address || undefined,
         phone: profileData.phone || undefined,
+        roleLabel: role ? role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Student",
       };
 
       if (faqRows && faqRows.length > 0) {

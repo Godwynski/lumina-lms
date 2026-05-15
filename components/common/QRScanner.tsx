@@ -11,41 +11,93 @@ interface QRScannerProps {
   onClose?: () => void;
   className?: string;
   autoStart?: boolean;
+  stopOnScan?: boolean;
 }
 
-export function QRScanner({ onScan, onClose, className, autoStart = true }: QRScannerProps) {
+export function QRScanner({ 
+  onScan, 
+  onClose, 
+  className, 
+  autoStart = true,
+  stopOnScan = true 
+}: QRScannerProps) {
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const regionId = "qr-reader";
 
+  // --- Visual-only state for cooldown overlay ---
+  const [showCooldown, setShowCooldown] = useState(false);
+
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef(false);
+  const isStartingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  // --- Refs for values read inside the html5-qrcode callback ---
+  // These MUST be refs (not state) to avoid stale closures.
+  const isCooldownRef = useRef(false);
+  const lastScannedRef = useRef<{ value: string; time: number } | null>(null);
+  const onScanRef = useRef(onScan);
+  const stopOnScanRef = useRef(stopOnScan);
+
+  // Keep refs in sync with latest prop values
+  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
+  useEffect(() => { stopOnScanRef.current = stopOnScan; }, [stopOnScan]);
+
+  const regionId = "qr-reader";
 
   const stopScanner = useCallback(async () => {
     if (isStoppingRef.current) return;
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      isStoppingRef.current = true;
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
-        setIsScannerActive(false);
-      } catch (err) {
-        // If it's already stopped or in a state where it can't stop, we can safely ignore the transition error
-        if (err instanceof Error && !err.message.includes("Cannot transition")) {
-          console.error("Scanner stop error:", err);
+    isStoppingRef.current = true;
+
+    try {
+      // 1. Stop all media tracks FIRST to prevent the RenderedCameraImpl
+      //    onabort() error that fires when the video surface is removed
+      //    while a MediaStream is still pushing frames to it.
+      const container = document.getElementById(regionId);
+      const videoElem = container?.querySelector("video");
+      if (videoElem) {
+        // Detach abort handler before we touch anything
+        videoElem.onabort = null;
+        if (videoElem.srcObject instanceof MediaStream) {
+          videoElem.srcObject.getTracks().forEach(track => track.stop());
+          videoElem.srcObject = null;
         }
-      } finally {
-        isStoppingRef.current = false;
       }
+
+      // 2. Now safely stop and clear the scanner instance
+      if (scannerRef.current) {
+        try {
+          if (scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+          }
+        } catch (stopErr) {
+          // Suppress "Cannot transition" and abort errors during teardown
+          if (stopErr instanceof Error && !stopErr.message.includes("Cannot transition") && !stopErr.message.includes("onabort")) {
+            console.warn("Scanner stop warning:", stopErr);
+          }
+        }
+        try {
+          await scannerRef.current.clear();
+        } catch {
+          // clear() can throw if the video surface was already removed
+        }
+        scannerRef.current = null;
+      }
+
+      setIsScannerActive(false);
+    } catch (err) {
+      if (err instanceof Error && !err.message.includes("Cannot transition") && !err.message.includes("onabort")) {
+        console.warn("Scanner cleanup warning:", err);
+      }
+    } finally {
+      isStoppingRef.current = false;
     }
   }, []);
 
-  const isStartingRef = useRef(false);
-
-  const isMounted = useRef(true);
-
+  // startScanner has NO dependencies on onScan or stopOnScan (uses refs),
+  // so its identity is stable and won't cause useEffect cleanup loops.
   const startScanner = useCallback(async () => {
-    if (!isMounted.current || isStartingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
+    if (!isMountedRef.current || isStartingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
     
     isStartingRef.current = true;
     try {
@@ -56,7 +108,7 @@ export function QRScanner({ onScan, onClose, className, autoStart = true }: QRSc
         } catch { /* ignore cleanup errors */ }
       }
 
-      if (!isMounted.current) return;
+      if (!isMountedRef.current) return;
 
       const html5QrCode = new Html5Qrcode(regionId);
       scannerRef.current = html5QrCode;
@@ -72,39 +124,73 @@ export function QRScanner({ onScan, onClose, className, autoStart = true }: QRSc
         { facingMode: "environment" },
         config,
         (decodedText) => {
-          onScan(decodedText);
-          // Auto-stop after successful scan to prevent multiple triggers
-          void stopScanner();
+          // --- ALL reads here use refs, never stale state ---
+          const now = Date.now();
+          const cleanData = decodedText.trim();
+
+          if (!stopOnScanRef.current) {
+            // Continuous mode: enforce cooldown via ref
+            if (isCooldownRef.current) return;
+
+            if (lastScannedRef.current?.value === cleanData && now - lastScannedRef.current.time < 3000) {
+              return;
+            }
+
+            lastScannedRef.current = { value: cleanData, time: now };
+
+            // Activate cooldown synchronously via ref (blocks next frame)
+            isCooldownRef.current = true;
+            setShowCooldown(true);
+
+            setTimeout(() => {
+              isCooldownRef.current = false;
+              setShowCooldown(false);
+            }, 3000);
+          }
+
+          // Use ref to call the latest onScan without capturing it in closure
+          onScanRef.current(decodedText);
+          
+          if (stopOnScanRef.current) {
+            void stopScanner();
+          }
         },
         () => {
           // Failure callback, ignore to keep UI clean
         }
       );
       
-      if (isMounted.current) {
+      if (isMountedRef.current) {
         setIsScannerActive(true);
         setError(null);
       } else {
-        // If unmounted during start, stop it immediately
         void stopScanner();
       }
     } catch (err) {
-      if (isMounted.current) {
+      if (isMountedRef.current) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Scanner start error:", err);
-        setError("Failed to access camera. Please check permissions.");
+        
+        if (errorMessage.includes("NotReadableError") || errorMessage.includes("video source")) {
+          setError("Camera is currently in use by another application or tab.");
+        } else if (errorMessage.includes("Permission")) {
+          setError("Camera permission denied. Please allow access in browser settings.");
+        } else {
+          setError("Failed to access camera. Please check permissions and hardware.");
+        }
       }
     } finally {
       isStartingRef.current = false;
     }
-  }, [onScan, stopScanner]);
+  }, [stopScanner]); // Only depends on stopScanner (which is stable)
 
   useEffect(() => {
-    isMounted.current = true;
+    isMountedRef.current = true;
     if (autoStart) {
       void startScanner();
     }
     return () => {
-      isMounted.current = false;
+      isMountedRef.current = false;
       void stopScanner();
     };
   }, [autoStart, startScanner, stopScanner]);
@@ -113,6 +199,17 @@ export function QRScanner({ onScan, onClose, className, autoStart = true }: QRSc
     <div className={cn("relative flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-black/90", className)}>
       <div id={regionId} className="w-full h-full" />
       
+      {showCooldown && !stopOnScan && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/10 backdrop-blur-[0.5px] transition-all duration-300">
+          <div className="bg-background/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-primary/20 shadow-2xl flex flex-col items-center gap-2 animate-in zoom-in fade-in duration-300">
+            <div className="h-1 w-24 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-primary animate-cooldown-progress" />
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary">Cooldown Active</span>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-background/95 backdrop-blur-sm">
           <p className="text-sm font-bold text-destructive mb-4">{error}</p>

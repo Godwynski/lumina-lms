@@ -26,7 +26,7 @@ export const GET = withAuthApi(async (request, { user, profile }) => {
     fallbackAvatarUrl: profile.avatar_url as string,
   });
 
-  const profileUrl = (profile.avatar_url as string) || getDeterministicProfileUrl(studentId);
+  const profileUrl = status.profileUrl;
 
   return apiSuccess({
     student_id: studentId,

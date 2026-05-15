@@ -39,12 +39,32 @@ export const toggleAttendanceByCard = createSafeAction(
       throw new Error("Database error while checking library card.");
     }
 
-    if (!card) {
-      throw new Error("Invalid or inactive library card. Please ensure the card is activated in the system.");
-    }
+    let userId: string;
+    let profile: { id?: string; full_name: string | null; status: string | null } | null;
 
-    const userId = card.user_id;
-    const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+    if (!card) {
+      // Fallback: Check if it's a student ID in profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, full_name, status")
+        .eq("student_id", cleanCardNumber)
+        .maybeSingle();
+      
+      if (profileError) {
+        logger.error("Attendance", "Failed to query profile by student ID", { studentId: cleanCardNumber }, profileError);
+        throw new Error("Database error while checking student ID.");
+      }
+
+      if (!profileData) {
+        throw new Error("Invalid or inactive library card. Please ensure the card is activated in the system.");
+      }
+      
+      userId = profileData.id;
+      profile = profileData;
+    } else {
+      userId = card.user_id;
+      profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
+    }
     
     if (profile?.status?.toUpperCase() !== 'ACTIVE') {
       throw new Error(`User account is ${profile?.status?.toLowerCase() || 'inactive'}. Attendance restricted.`);

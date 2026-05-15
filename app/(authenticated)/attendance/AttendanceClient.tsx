@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useTransition, useState, useRef, useEffect, useMemo } from "react";
+import { use, useTransition, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
 import { toggleAttendanceByCard } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,6 @@ export function AttendanceClient({
   historyPromise: Promise<AttendanceRecord[]>,
   isStaff?: boolean
 }) {
-  const history = use(historyPromise);
   const [isPending, startTransition] = useTransition();
   const [cardNumber, setCardNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,10 +61,6 @@ export function AttendanceClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const activeRecord = history.find(r => !r.check_out_at);
-
-
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +83,15 @@ export function AttendanceClient({
 
   const [showScanner, setShowScanner] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // --- Synchronous lock: prevents race conditions between state updates ---
+  const isProcessingRef = useRef(false);
   const lastScannedRef = useRef<string | null>(null);
+  const lastScanTimeRef = useRef(0);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Minimum interval between ANY two scans (ms)
+  const SCAN_INTERVAL_MS = 3000;
 
   // Keep focus on input for scanning
   useEffect(() => {
@@ -98,18 +100,36 @@ export function AttendanceClient({
     }
   }, [isStaff, showScanner, editingRecord]);
 
-  const handleQRScan = (data: string) => {
-    if (isProcessing || isPending) return;
-    
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+    };
+  }, []);
+
+  const handleQRScan = useCallback((data: string) => {
+    // Synchronous ref guard — blocks the very next callback frame
+    if (isProcessingRef.current) return;
+
     const cleanData = data.trim();
     if (!cleanData) return;
 
-    // Prevention of rapid spamming for the same card
-    if (lastScannedRef.current === cleanData) {
+    const now = Date.now();
+
+    // Block if same card scanned within interval
+    if (lastScannedRef.current === cleanData && now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
       return;
     }
 
+    // Block if ANY scan happened too recently
+    if (now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
+      return;
+    }
+
+    // Lock synchronously BEFORE any async work
+    isProcessingRef.current = true;
     lastScannedRef.current = cleanData;
+    lastScanTimeRef.current = now;
     setIsProcessing(true);
 
     startTransition(async () => {
@@ -120,8 +140,8 @@ export function AttendanceClient({
             description: result.data.description,
             icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
           });
-          
-          // Clear "last scanned" after 5 seconds to allow re-scanning if they forgot or made a mistake
+
+          // Clear "last scanned" after 5 seconds to allow re-scanning
           if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
           scanTimeoutRef.current = setTimeout(() => {
             lastScannedRef.current = null;
@@ -133,9 +153,14 @@ export function AttendanceClient({
         }
       } finally {
         setIsProcessing(false);
+        // Release the synchronous lock after a short delay
+        // to prevent immediate re-trigger from the html5-qrcode callback
+        setTimeout(() => {
+          isProcessingRef.current = false;
+        }, 500);
       }
     });
-  };
+  }, [startTransition]);
 
   const handleSelfToggle = () => {
     startTransition(async () => {
@@ -188,6 +213,236 @@ export function AttendanceClient({
       toast.error(result.error);
     }
   };
+
+  const scannerControls = (
+    <div className="flex flex-1 items-center gap-3">
+      <form onSubmit={handleScan} className="flex flex-1 items-center gap-3">
+        <div className="relative flex-1">
+          <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            value={cardNumber}
+            onChange={(e) => setCardNumber(e.target.value)}
+            placeholder="Scan Library Card..."
+            className="h-9 pl-9 pr-3 bg-background/50"
+            disabled={isPending || showScanner}
+            autoComplete="off"
+          />
+        </div>
+        <Button 
+          type="submit" 
+          size="sm"
+          disabled={isPending || isProcessing || !cardNumber.trim() || showScanner}
+          className="h-9 px-4 font-bold"
+        >
+          {isPending || isProcessing ? "..." : "Process"}
+        </Button>
+      </form>
+      <div className="w-px h-6 bg-border/40 mx-1" />
+      <Button
+        variant={showScanner ? "secondary" : "outline"}
+        size="sm"
+        onClick={() => setShowScanner(!showScanner)}
+        className="h-9 px-4"
+        disabled={isPending}
+      >
+        <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
+        {showScanner ? "Close Camera" : "Open Camera"}
+      </Button>
+    </div>
+  );
+
+  return (
+    <>
+    <AdminTableShell
+      controls={isStaff ? scannerControls : (
+        <Suspense fallback={<div className="h-9 w-32 animate-pulse bg-muted/20 rounded-lg" />}>
+          <SelfLogControls 
+            historyPromise={historyPromise} 
+            isPending={isPending} 
+            handleSelfToggle={handleSelfToggle} 
+          />
+        </Suspense>
+      )}
+      className="max-w-5xl"
+    >
+      {isStaff && showScanner && (
+        <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
+          {isProcessing && (
+            <div className="absolute inset-0 z-10 bg-background/20 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
+              <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Processing...</span>
+              </div>
+            </div>
+          )}
+          <QRScanner 
+            onScan={handleQRScan}
+            onClose={() => setShowScanner(false)}
+            stopOnScan={false}
+            className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
+          />
+        </div>
+      )}
+
+      <Suspense fallback={
+        <div className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Logs...</p>
+        </div>
+      }>
+        <AttendanceTable 
+          historyPromise={historyPromise} 
+          isStaff={isStaff} 
+          setEditingRecord={setEditingRecord}
+          setRecordToDelete={setRecordToDelete}
+          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+        />
+      </Suspense>
+    </AdminTableShell>
+
+    {/* Delete Confirmation */}
+    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Attendance Record</DialogTitle>
+          <Alert variant="destructive" className="mt-4">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              This action cannot be undone. This will permanently remove the record from the logs.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+            {isPending ? "Deleting..." : "Confirm Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Dialog */}
+    <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Attendance Record</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Adjusting logs for <span className="font-bold text-foreground">{editingRecord?.profiles?.full_name || "Self Check-in"}</span>
+          </p>
+        </DialogHeader>
+        <form onSubmit={handleUpdate} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="check_in_at">Check-in Time</Label>
+            <Input 
+              id="check_in_at" 
+              name="check_in_at" 
+              type="datetime-local" 
+              defaultValue={editingRecord ? format(new Date(editingRecord.check_in_at), "yyyy-MM-dd'T'HH:mm") : ""}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="check_out_at">Check-out Time (Optional)</Label>
+            <Input 
+              id="check_out_at" 
+              name="check_out_at" 
+              type="datetime-local" 
+              defaultValue={editingRecord?.check_out_at ? format(new Date(editingRecord.check_out_at), "yyyy-MM-dd'T'HH:mm") : ""}
+            />
+            <p className="text-[10px] text-muted-foreground">Leave empty for active sessions.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Staff Notes</Label>
+            <Input id="notes" name="notes" placeholder="Reason for edit..." />
+          </div>
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => setEditingRecord(null)}>Cancel</Button>
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
+  );
+}
+
+function SelfLogControls({ 
+  historyPromise, 
+  isPending, 
+  handleSelfToggle 
+}: { 
+  historyPromise: Promise<AttendanceRecord[]>, 
+  isPending: boolean,
+  handleSelfToggle: () => void
+}) {
+  const history = use(historyPromise);
+  const activeRecord = history.find(r => !r.check_out_at);
+
+  return (
+    <div className="flex flex-1 items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
+          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+          {format(new Date(), "MMMM dd, yyyy")}
+        </div>
+        {activeRecord ? (
+          <div className="flex items-center gap-2">
+            <StatusBadge status="ACTIVE" className="h-6 px-3" />
+            <span className="text-[10px] font-bold text-green-600 animate-pulse uppercase tracking-wider">You are Timed In</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <StatusBadge status="COMPLETED" className="h-6 px-3" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">You are Timed Out</span>
+          </div>
+        )}
+      </div>
+
+      <Button
+        variant={activeRecord ? "outline" : "default"}
+        size="sm"
+        onClick={handleSelfToggle}
+        disabled={isPending}
+        className={cn(
+          "h-9 px-5 font-bold transition-all shadow-sm",
+          !activeRecord && "bg-primary text-primary-foreground hover:bg-primary/90"
+        )}
+      >
+        {isPending ? "..." : activeRecord ? (
+          <span className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Time Out
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <LogIn className="w-4 h-4" />
+            Time In
+          </span>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+function AttendanceTable({ 
+  historyPromise, 
+  isStaff,
+  setEditingRecord,
+  setRecordToDelete,
+  setIsDeleteDialogOpen
+}: { 
+  historyPromise: Promise<AttendanceRecord[]>,
+  isStaff: boolean,
+  setEditingRecord: (r: AttendanceRecord) => void,
+  setRecordToDelete: (id: string) => void,
+  setIsDeleteDialogOpen: (open: boolean) => void
+}) {
+  const history = use(historyPromise);
 
   const columns = useMemo<LuminaColumn<AttendanceRecord>[]>(() => [
     {
@@ -271,228 +526,52 @@ export function AttendanceClient({
         </DropdownMenu>
       )
     }] : [])
-  ], [isStaff]);
-
-  const scannerControls = (
-    <div className="flex flex-1 items-center gap-3">
-      <form onSubmit={handleScan} className="flex flex-1 items-center gap-3">
-        <div className="relative flex-1">
-          <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={cardNumber}
-            onChange={(e) => setCardNumber(e.target.value)}
-            placeholder="Scan Library Card..."
-            className="h-9 pl-9 pr-3 bg-background/50"
-            disabled={isPending || showScanner}
-            autoComplete="off"
-          />
-        </div>
-        <Button 
-          type="submit" 
-          size="sm"
-          disabled={isPending || isProcessing || !cardNumber.trim() || showScanner}
-          className="h-9 px-4 font-bold"
-        >
-          {isPending || isProcessing ? "..." : "Process"}
-        </Button>
-      </form>
-      <div className="w-px h-6 bg-border/40 mx-1" />
-      <Button
-        variant={showScanner ? "secondary" : "outline"}
-        size="sm"
-        onClick={() => setShowScanner(!showScanner)}
-        className="h-9 px-4"
-        disabled={isPending}
-      >
-        <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
-        {showScanner ? "Close Camera" : "Open Camera"}
-      </Button>
-    </div>
-  );
-
-  const selfLogControls = (
-    <div className="flex flex-1 items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/5">
-          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
-          {format(new Date(), "MMMM dd, yyyy")}
-        </div>
-        {activeRecord ? (
-          <div className="flex items-center gap-2">
-            <StatusBadge status="ACTIVE" className="h-6 px-3" />
-            <span className="text-[10px] font-bold text-green-600 animate-pulse uppercase tracking-wider">You are Timed In</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <StatusBadge status="COMPLETED" className="h-6 px-3" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">You are Timed Out</span>
-          </div>
-        )}
-      </div>
-
-      <Button
-        variant={activeRecord ? "outline" : "default"}
-        size="sm"
-        onClick={handleSelfToggle}
-        disabled={isPending}
-        className={cn(
-          "h-9 px-5 font-bold transition-all shadow-sm",
-          !activeRecord && "bg-primary text-primary-foreground hover:bg-primary/90"
-        )}
-      >
-        {isPending ? "..." : activeRecord ? (
-          <span className="flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
-            Time Out
-          </span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <LogIn className="w-4 h-4" />
-            Time In
-          </span>
-        )}
-      </Button>
-
-    </div>
-  );
+  ], [isStaff, setEditingRecord, setIsDeleteDialogOpen, setRecordToDelete]);
 
   return (
-    <>
-    <AdminTableShell
-      controls={isStaff ? scannerControls : selfLogControls}
-      className="max-w-5xl"
-    >
-      {isStaff && showScanner && (
-        <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
-          {isProcessing && (
-            <div className="absolute inset-0 z-10 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
-              <div className="bg-background/90 px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                <span className="text-xs font-bold uppercase tracking-widest text-foreground">Processing Scan...</span>
+    <LuminaTable
+      data={history}
+      columns={columns}
+      isLoading={false}
+      noBorder
+      emptyState={{
+        title: "No logs found",
+        description: "There are no attendance records for today yet.",
+        icon: Clock
+      }}
+      renderMobileRow={(record) => (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-muted text-muted-foreground">
+                {(record.profiles?.full_name || "S").charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Self Check-in"}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] text-muted-foreground font-bold uppercase">
+                  {format(new Date(record.check_in_at), "MMM dd")}
+                </span>
+                <span className="opacity-20 text-[10px]">•</span>
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <LogIn className="w-2.5 h-2.5" />
+                  {format(new Date(record.check_in_at), "hh:mm a")}
+                </div>
               </div>
             </div>
-          )}
-          <QRScanner 
-            onScan={handleQRScan}
-            onClose={() => setShowScanner(false)}
-            className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
-          />
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
+            {record.check_out_at && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+                <LogOut className="w-2.5 h-2.5" />
+                {format(new Date(record.check_out_at), "hh:mm a")}
+              </div>
+            )}
+          </div>
         </div>
       )}
-
-      <LuminaTable
-        data={history}
-        columns={columns}
-        isLoading={false}
-        noBorder
-        emptyState={{
-          title: "No logs found",
-          description: "There are no attendance records for today yet.",
-          icon: Clock
-        }}
-        renderMobileRow={(record) => (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-muted text-muted-foreground">
-                  {(record.profiles?.full_name || "S").charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Self Check-in"}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-muted-foreground font-bold uppercase">
-                    {format(new Date(record.check_in_at), "MMM dd")}
-                  </span>
-                  <span className="opacity-20 text-[10px]">•</span>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <LogIn className="w-2.5 h-2.5" />
-                    {format(new Date(record.check_in_at), "hh:mm a")}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1.5">
-              <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
-              {record.check_out_at && (
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
-                  <LogOut className="w-2.5 h-2.5" />
-                  {format(new Date(record.check_out_at), "hh:mm a")}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      />
-    </AdminTableShell>
-
-    {/* Delete Confirmation */}
-    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete Attendance Record</DialogTitle>
-          <Alert variant="destructive" className="mt-4">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              This action cannot be undone. This will permanently remove the record from the logs.
-            </AlertDescription>
-          </Alert>
-        </DialogHeader>
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
-            {isPending ? "Deleting..." : "Confirm Delete"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* Edit Dialog */}
-    <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Attendance Record</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Adjusting logs for <span className="font-bold text-foreground">{editingRecord?.profiles?.full_name || "Self Check-in"}</span>
-          </p>
-        </DialogHeader>
-        <form onSubmit={handleUpdate} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="check_in_at">Check-in Time</Label>
-            <Input 
-              id="check_in_at" 
-              name="check_in_at" 
-              type="datetime-local" 
-              defaultValue={editingRecord ? format(new Date(editingRecord.check_in_at), "yyyy-MM-dd'T'HH:mm") : ""}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="check_out_at">Check-out Time (Optional)</Label>
-            <Input 
-              id="check_out_at" 
-              name="check_out_at" 
-              type="datetime-local" 
-              defaultValue={editingRecord?.check_out_at ? format(new Date(editingRecord.check_out_at), "yyyy-MM-dd'T'HH:mm") : ""}
-            />
-            <p className="text-[10px] text-muted-foreground">Leave empty for active sessions.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Staff Notes</Label>
-            <Input id="notes" name="notes" placeholder="Reason for edit..." />
-          </div>
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => setEditingRecord(null)}>Cancel</Button>
-            <Button type="submit" disabled={isUpdating}>
-              {isUpdating ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-    </>
+    />
   );
 }
