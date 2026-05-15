@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Layers, Type, Hash, AlignLeft, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 
 interface CategoryFormData {
@@ -79,10 +80,18 @@ export function CategoryDialog({
 
           <div className="space-y-6">
             <div className="space-y-2.5">
-              <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1 flex items-center gap-2">
-                <Type className="h-3 w-3" />
-                Display Label
-              </Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-2">
+                  <Type className="h-3 w-3" />
+                  Display Label
+                </Label>
+                <span className={cn(
+                  "text-[8px] font-bold tracking-widest",
+                  formData.name.length > 50 ? "text-rose-500" : "text-muted-foreground/20"
+                )}>
+                  {formData.name.length}/50
+                </span>
+              </div>
               <Input
                 id="name"
                 placeholder="e.g. Theoretical Physics"
@@ -98,15 +107,26 @@ export function CategoryDialog({
                   })
                 }
                 disabled={loading}
-                className="h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-bold shadow-inner placeholder:text-muted-foreground/30"
+                className={cn(
+                  "h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-bold shadow-inner placeholder:text-muted-foreground/30",
+                  formData.name.length > 50 && "border-rose-500/50 bg-rose-500/5"
+                )}
               />
             </div>
 
             <div className="space-y-2.5">
-              <Label htmlFor="slug" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1 flex items-center gap-2">
-                <Hash className="h-3 w-3" />
-                URL Identifier
-              </Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label htmlFor="slug" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-2">
+                  <Hash className="h-3 w-3" />
+                  URL Identifier
+                </Label>
+                <span className={cn(
+                  "text-[8px] font-bold tracking-widest",
+                  formData.slug.length > 60 ? "text-rose-500" : "text-muted-foreground/20"
+                )}>
+                  {formData.slug.length}/60
+                </span>
+              </div>
               <Input
                 id="slug"
                 placeholder="e.g. theoretical-physics"
@@ -115,15 +135,26 @@ export function CategoryDialog({
                   setFormData((p) => ({ ...p, slug: toSlug(e.target.value) }))
                 }
                 disabled={loading}
-                className="h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-mono font-bold shadow-inner placeholder:text-muted-foreground/30"
+                className={cn(
+                  "h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-mono font-bold shadow-inner placeholder:text-muted-foreground/30",
+                  formData.slug.length > 60 && "border-rose-500/50 bg-rose-500/5"
+                )}
               />
             </div>
 
             <div className="space-y-2.5">
-              <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 ml-1 flex items-center gap-2">
-                <AlignLeft className="h-3 w-3" />
-                Meta Description
-              </Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 flex items-center gap-2">
+                  <AlignLeft className="h-3 w-3" />
+                  Meta Description
+                </Label>
+                <span className={cn(
+                  "text-[8px] font-bold tracking-widest",
+                  formData.description.length > 200 ? "text-rose-500" : "text-muted-foreground/20"
+                )}>
+                  {formData.description.length}/200
+                </span>
+              </div>
               <Input
                 id="description"
                 placeholder="Brief summary of this classification category..."
@@ -132,7 +163,10 @@ export function CategoryDialog({
                   setFormData((p) => ({ ...p, description: e.target.value }))
                 }
                 disabled={loading}
-                className="h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-medium shadow-inner placeholder:text-muted-foreground/30"
+                className={cn(
+                  "h-12 rounded-2xl bg-muted/5 border-border/20 focus:ring-4 focus:ring-primary/5 transition-all text-xs font-medium shadow-inner placeholder:text-muted-foreground/30",
+                  formData.description.length > 200 && "border-rose-500/50 bg-rose-500/5"
+                )}
               />
             </div>
 
@@ -155,7 +189,13 @@ export function CategoryDialog({
           </Button>
           <Button
             onClick={onSave}
-            disabled={loading}
+            disabled={
+              loading || 
+              formData.name.length > 50 || 
+              formData.slug.length > 60 || 
+              formData.description.length > 200 ||
+              !formData.name.trim()
+            }
             className="flex-[2] h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/10 hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
           >
             {loading ? (

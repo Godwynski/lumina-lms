@@ -1,12 +1,30 @@
+export interface PolicyValidation {
+  type: "number" | "json";
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface PolicyConfig {
+  value: string;
+  label: string;
+  description: string;
+  example: string;
+  category: string;
+  icon: string;
+  validation?: PolicyValidation;
+}
+
 // 8 Core Policy Variables with defaults, categorized and enriched for the UI
-export const DEFAULT_POLICIES = {
+export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   loan_period_days: { 
     value: "14", 
     label: "Borrowing Period",
     description: "Standard duration for book borrows.",
     example: "Example: 14 days.",
     category: "circulation",
-    icon: "Calendar"
+    icon: "Calendar",
+    validation: { min: 1, max: 180, type: "number" }
   },
   max_borrow_limit: { 
     value: "5", 
@@ -14,7 +32,8 @@ export const DEFAULT_POLICIES = {
     description: "Maximum books a student can borrow at once.",
     example: "Example: 5 books.",
     category: "circulation",
-    icon: "BookCopy"
+    icon: "BookCopy",
+    validation: { min: 1, max: 50, type: "number" }
   },
   max_renewal_count: { 
     value: "3", 
@@ -22,7 +41,8 @@ export const DEFAULT_POLICIES = {
     description: "Number of times a borrow can be extended.",
     example: "Example: 3 times.",
     category: "circulation",
-    icon: "RotateCw"
+    icon: "RotateCw",
+    validation: { min: 0, max: 10, type: "number" }
   },
   renewal_period_days: { 
     value: "14", 
@@ -30,7 +50,8 @@ export const DEFAULT_POLICIES = {
     description: "Days added per renewal.",
     example: "Example: 14 days.",
     category: "circulation",
-    icon: "History"
+    icon: "History",
+    validation: { min: 1, max: 90, type: "number" }
   },
   hold_expiry_days: { 
     value: "7", 
@@ -38,7 +59,8 @@ export const DEFAULT_POLICIES = {
     description: "Days a reserved book stays on hold.",
     example: "Example: 7 days.",
     category: "reservations",
-    icon: "Clock"
+    icon: "Clock",
+    validation: { min: 1, max: 30, type: "number" }
   },
   max_reservations_per_student: { 
     value: "3", 
@@ -46,7 +68,8 @@ export const DEFAULT_POLICIES = {
     description: "Maximum concurrent book reservations.",
     example: "Example: 3 books.",
     category: "reservations",
-    icon: "Ticket"
+    icon: "Ticket",
+    validation: { min: 1, max: 20, type: "number" }
   },
   student_faq_list: { 
     value: JSON.stringify([
@@ -59,7 +82,8 @@ export const DEFAULT_POLICIES = {
     description: "Questions shown on the student dashboard.",
     example: "",
     category: "support",
-    icon: "HelpCircle"
+    icon: "HelpCircle",
+    validation: { type: "json" }
   },
   academic_programs: { 
     value: JSON.stringify(["BS Information Technology", "BS Computer Science", "BS Information Systems", "Associate in Computer Technology", "BS Business Administration", "BS Hospitality Management"]), 
@@ -67,7 +91,8 @@ export const DEFAULT_POLICIES = {
     description: "List of programs for student registration.",
     example: "Example: BS Information Technology.",
     category: "identity",
-    icon: "User"
+    icon: "User",
+    validation: { type: "json" }
   },
   due_soon_reminder_days: {
     value: "1",
@@ -75,7 +100,8 @@ export const DEFAULT_POLICIES = {
     description: "Days before due date to send reminder.",
     example: "Example: 1 day.",
     category: "broadcasts",
-    icon: "Megaphone"
+    icon: "Megaphone",
+    validation: { min: 1, max: 14, type: "number" }
   }
 };
 

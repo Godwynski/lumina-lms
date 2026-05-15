@@ -95,57 +95,75 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
 
   const isInitialMount = React.useRef(true);
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      if (isInitialMount.current) {
-        isInitialMount.current = false;
-        return;
+  const loadUsers = useCallback(async (isInitial = false) => {
+    if (isInitial && isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    setIsLoadingUsers(true);
+    setLoadError(null);
+    try {
+      let queryBuilder = supabase
+        .from("profiles")
+        .select("*", { count: "exact" });
+
+      if (activeTab === "review") {
+        queryBuilder = queryBuilder.eq("status", "PENDING");
+      } else if (activeTab !== "all") {
+        queryBuilder = queryBuilder.eq("role", activeTab);
       }
 
-      setIsLoadingUsers(true);
-      setLoadError(null);
-      try {
-        let queryBuilder = supabase
-          .from("profiles")
-          .select("*", { count: "exact" });
-
-        if (activeTab === "review") {
-          queryBuilder = queryBuilder.eq("status", "PENDING");
-        } else if (activeTab !== "all") {
-          queryBuilder = queryBuilder.eq("role", activeTab);
-        }
-
-        // Librarian Restriction: Hide admins
-        if (isLibrarian) {
-          queryBuilder = queryBuilder.neq("role", "admin");
-        }
-
-        if (debouncedSearch) {
-          const safe = sanitizeFilterInput(debouncedSearch);
-          queryBuilder = queryBuilder.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
-        }
-
-        const from = (currentPage - 1) * pageSize;
-        const to = from + pageSize - 1;
-
-        const { data, error, count } = await queryBuilder
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) throw error;
-
-        const nextUsers = ((data ?? []) as ProfileRow[]).map(mapProfileToUser);
-        setUsers(nextUsers);
-        setTotalUsers(count ?? 0);
-      } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Failed to load users");
-      } finally {
-        setIsLoadingUsers(false);
+      // Librarian Restriction: Hide admins
+      if (isLibrarian) {
+        queryBuilder = queryBuilder.neq("role", "admin");
       }
-    };
 
-    void loadUsers();
+      if (debouncedSearch) {
+        const safe = sanitizeFilterInput(debouncedSearch);
+        queryBuilder = queryBuilder.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
+      }
+
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await queryBuilder
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      const nextUsers = ((data ?? []) as ProfileRow[]).map(mapProfileToUser);
+      setUsers(nextUsers);
+      setTotalUsers(count ?? 0);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to load users");
+    } finally {
+      setIsLoadingUsers(false);
+    }
   }, [supabase, currentPage, debouncedSearch, activeTab, pageSize, isLibrarian]);
+
+  useEffect(() => {
+    void loadUsers(true);
+  }, [loadUsers]);
+
+  // Realtime subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('users-realtime')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' }, 
+        () => {
+          void loadUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [supabase, loadUsers]);
 
   const handleUserClick = useCallback((u: User) => {
     router.push(`/users/${u.id}`);

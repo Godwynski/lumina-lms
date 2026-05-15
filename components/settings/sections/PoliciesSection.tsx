@@ -14,13 +14,17 @@ interface PoliciesSectionProps {
 }
 
 export function PoliciesSection({ role, settingsPromise, categoriesPromise }: PoliciesSectionProps) {
-  const isSuperAdmin = role === "admin";
 
   return (
     <SettingsShell>
       <Section>
         <Suspense fallback={<div className="h-32 w-full animate-pulse bg-muted rounded-xl" />}>
-          <PolicyStreamWrapper promise={settingsPromise} categoriesPromise={categoriesPromise} canEdit={isSuperAdmin} />
+          <PolicyStreamWrapper 
+            promise={settingsPromise} 
+            categoriesPromise={categoriesPromise} 
+            canEdit={role === "admin" || role === "librarian"} 
+            role={role}
+          />
         </Suspense>
       </Section>
     </SettingsShell>
@@ -30,12 +34,14 @@ export function PoliciesSection({ role, settingsPromise, categoriesPromise }: Po
 function PolicyStreamWrapper({ 
   promise, 
   categoriesPromise, 
-  canEdit 
+  canEdit,
+  role
 }: { 
   promise: Promise<PolicySetting[]> | PromiseLike<PolicySetting[]>, 
   categoriesPromise: Promise<Category[]> | PromiseLike<Category[]>,
-  canEdit: boolean 
+  canEdit: boolean,
+  role: string
 }) {
   const data = use(promise) as PolicySetting[];
-  return <PolicyLayout settings={data} canEdit={canEdit} categoriesPromise={categoriesPromise} />;
+  return <PolicyLayout settings={data} canEdit={canEdit} role={role} categoriesPromise={categoriesPromise} />;
 }

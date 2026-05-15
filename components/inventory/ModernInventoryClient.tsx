@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTransition, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, X, Loader2, ArrowUpDown } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactPagination } from "@/components/ui/compact-pagination";
@@ -45,6 +46,32 @@ export function ModernInventoryClient({
   useEffect(() => {
     setSearchQuery(urlQuery);
   }, [urlQuery]);
+
+  // Realtime subscription to refresh data
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('inventory-realtime')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'books' }, 
+        () => {
+          router.refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'book_copies' },
+        () => {
+          router.refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   // Centralized navigation helper
   const updateParams = (updates: Record<string, string | number | null>) => {
