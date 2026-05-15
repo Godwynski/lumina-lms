@@ -16,7 +16,7 @@ import { StudentBookCard } from '@/components/library/StudentBookCard';
 import { AnimatePresence, m } from 'framer-motion';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { createClient } from '@/lib/supabase/client';
-import { useRef } from 'react';
+
 
 
 interface ReservationRow {
@@ -57,16 +57,7 @@ export function StudentCatalogClient({
   const initialData = use(booksPromise);
   const categories = use(categoriesPromise);
   const reservations = use(reservationsPromise);
-  const [supabase] = useState(() => createClient());
 
-  // Debounced router.refresh to prevent cascade re-renders
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedRefresh = useCallback(() => {
-    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-    refreshTimeoutRef.current = setTimeout(() => {
-      router.refresh();
-    }, 100);
-  }, [router]);
 
   // Real-time synchronization
   useEffect(() => {
