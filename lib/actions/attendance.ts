@@ -22,8 +22,11 @@ export interface AttendanceRecord {
  * Otherwise, it creates a new check-in record.
  */
 export const toggleAttendanceByCard = createSafeAction(
-  z.object({ cardNumber: z.string() }),
-  async ({ cardNumber }, { supabase }) => {
+  z.object({ 
+    cardNumber: z.string(),
+    isManual: z.boolean().default(false)
+  }),
+  async ({ cardNumber, isManual }, { supabase }) => {
     const cleanCardNumber = cardNumber.trim();
     
     // 1. Find user by card number
@@ -56,7 +59,10 @@ export const toggleAttendanceByCard = createSafeAction(
       }
 
       if (!profileData) {
-        throw new Error("Invalid or inactive library card. Please ensure the card is activated in the system.");
+        const errorMessage = isManual
+          ? "The identifier is not recognized by the system. Please ensure the user has an active account."
+          : "Invalid or inactive library card. Please ensure the card is activated in the system.";
+        throw new Error(errorMessage);
       }
       
       userId = profileData.id;

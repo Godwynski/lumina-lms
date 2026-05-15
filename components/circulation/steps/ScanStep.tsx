@@ -16,7 +16,7 @@ interface ScanStepProps {
   title: string;
   description: string;
   placeholder: string;
-  onScan: (value: string) => Promise<void>;
+  onScan: (value: string, isManual?: boolean) => Promise<void>;
   isProcessing: boolean;
   actionLabel: string;
 }
@@ -44,7 +44,7 @@ export function ScanStep({
         hasMultipleCameras,
     } = useScanner({
         onScan: async (val) => {
-            await onScan(val);
+            await onScan(val, false);
         },
         isProcessing,
         scannerId: 'circulation-scanner'
@@ -52,7 +52,7 @@ export function ScanStep({
 
     const handleManualSubmit = async () => {
         if (!manualValue.trim() || isProcessing) return;
-        await onScan(manualValue.trim());
+        await onScan(manualValue.trim(), true);
         setManualValue('');
     };
 

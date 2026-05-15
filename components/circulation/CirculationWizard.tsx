@@ -161,7 +161,7 @@ export function CirculationWizard() {
     router.replace(`?${params.toString()}`);
   };
 
-  const processScan = async (value: string) => {
+  const processScan = async (value: string, isManual: boolean = false) => {
     setIsProcessing(true);
     setNotice(null);
     logger.info('Circulation', `Processing scan: ${value}`, { mode, hasStudent: !!activeStudent });
@@ -169,7 +169,7 @@ export function CirculationWizard() {
     try {
       if (mode === 'checkout') {
         if (!activeStudent) {
-          const result = await resolveScan({ scanValue: value, expectedType: 'auto' });
+          const result = await resolveScan({ scanValue: value, expectedType: 'auto', isManual });
           
           if (result.success && result.data.type === 'student') {
             setActiveStudent(result.data.data as ActiveStudent);
@@ -183,7 +183,8 @@ export function CirculationWizard() {
           const result = await checkoutBook({ 
             studentCardQr: activeStudent.cardNumber, 
             bookQr: value, 
-            previewOnly: true 
+            previewOnly: true,
+            isManual
           });
 
           if (result.success) {
@@ -200,7 +201,7 @@ export function CirculationWizard() {
           }
         }
       } else {
-        const result = await returnBook({ bookQr: value, previewOnly: true });
+        const result = await returnBook({ bookQr: value, previewOnly: true, isManual });
 
         if (result.success) {
           setPendingReturn({
@@ -239,6 +240,7 @@ export function CirculationWizard() {
           bookQr: pendingCheckout.bookQr,
           idempotencyKey: pendingCheckout.idempotencyKey,
           previewOnly: false,
+          isManual: true, // If we got here, we already resolved it, so this is just for safety
         });
         
         if (result.success) {
@@ -251,6 +253,7 @@ export function CirculationWizard() {
           bookQr: pendingReturn.bookQr,
           idempotencyKey: pendingReturn.idempotencyKey,
           previewOnly: false,
+          isManual: true,
         });
 
         if (result.success) {

@@ -67,7 +67,10 @@ export function AttendanceClient({
     if (!cardNumber.trim()) return;
 
     startTransition(async () => {
-      const result = await toggleAttendanceByCard({ cardNumber: cardNumber.trim() });
+      const result = await toggleAttendanceByCard({ 
+        cardNumber: cardNumber.trim(),
+        isManual: true 
+      });
       if (result.success) {
         toast.success(result.data.message, {
           description: result.data.status === "IN" ? "Checked in successfully." : "Checked out successfully.",
@@ -134,7 +137,10 @@ export function AttendanceClient({
 
     startTransition(async () => {
       try {
-        const result = await toggleAttendanceByCard({ cardNumber: cleanData });
+        const result = await toggleAttendanceByCard({ 
+          cardNumber: cleanData,
+          isManual: false 
+        });
         if (result.success) {
           toast.success(result.data.message, {
             description: result.data.description,
@@ -225,14 +231,14 @@ export function AttendanceClient({
             onChange={(e) => setCardNumber(e.target.value)}
             placeholder="Scan Library Card..."
             className="h-9 pl-9 pr-3 bg-background/50"
-            disabled={isPending || showScanner}
+            disabled={isPending}
             autoComplete="off"
           />
         </div>
         <Button 
           type="submit" 
           size="sm"
-          disabled={isPending || isProcessing || !cardNumber.trim() || showScanner}
+          disabled={isPending || isProcessing || !cardNumber.trim()}
           className="h-9 px-4 font-bold"
         >
           {isPending || isProcessing ? "..." : "Process"}
