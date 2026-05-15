@@ -153,11 +153,7 @@ export function AccountPendingScreen({
         </CardFooter>
       </Card>
       
-      <div className="fixed bottom-8 left-0 right-0 text-center animate-in fade-in duration-1000">
-        <p className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">
-          Lumina LMS &bull; Security Infrastructure
-        </p>
-      </div>
+
     </div>
   );
 }

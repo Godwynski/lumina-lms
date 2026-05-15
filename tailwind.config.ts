@@ -77,6 +77,7 @@ export default {
       animation: {
         "collapsible-down": "collapsible-down 0.2s ease-out",
         "collapsible-up": "collapsible-up 0.2s ease-out",
+        "cooldown-progress": "cooldown-progress 3s linear forwards",
       },
       keyframes: {
         "collapsible-down": {
@@ -86,6 +87,10 @@ export default {
         "collapsible-up": {
           from: { height: "var(--radix-collapsible-content-height)" },
           to: { height: "0" },
+        },
+        "cooldown-progress": {
+          from: { width: "100%" },
+          to: { width: "0%" },
         },
       },
     },

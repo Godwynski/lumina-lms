@@ -7,7 +7,6 @@ import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   Settings,
-  Library,
   BookOpen,
   Users,
   RefreshCw,
@@ -108,7 +107,7 @@ function hasPermission(
 
   // 3. Specific permission requirement for staff/admin tools
   if (permissionKey) {
-    if (userRole === "admin") return true;
+    if (userRole === "admin" || userRole === "librarian") return true;
     const permissions = profile?.permissions;
     if (!permissions || !permissions[permissionKey as keyof typeof permissions]) {
       return false;
@@ -139,10 +138,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
   { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
-  { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian" },
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
+  { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
 ];
@@ -175,8 +174,10 @@ export function ProtectedNav({
 
   const currentMode = (isDeactivatedSA || (normalizedRole === "student_assistant" && !hasAnyPermission))
     ? "student" 
-    : ((preferences?.preferred_dashboard_view as "student" | "staff") || 
-       (normalizedRole === "student_assistant" ? "student" : "staff"));
+    : (normalizedRole === "admin" || normalizedRole === "librarian")
+      ? "staff"
+      : ((preferences?.preferred_dashboard_view as "student" | "staff") || 
+         (normalizedRole === "student_assistant" ? "student" : "staff"));
 
   const handleToggleMode = () => {
     const newMode = currentMode === "staff" ? "student" : "staff";
@@ -397,7 +398,7 @@ export function ProtectedNav({
                     </Link>
                   </DropdownMenuItem>
 
-                  {(normalizedRole === "librarian" || normalizedRole === "admin" || (normalizedRole === "student_assistant" && !isDeactivatedSA && hasAnyPermission)) && (
+                  {(normalizedRole === "student_assistant" && !isDeactivatedSA && hasAnyPermission) && (
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onSelect={(e) => {
@@ -414,7 +415,7 @@ export function ProtectedNav({
                       ) : (
                         <>
                           <Layout className="mr-2 h-4 w-4" />
-                          <span>Switch to {normalizedRole === "admin" ? "Admin" : normalizedRole === "librarian" ? "Librarian" : "Staff"} View</span>
+                          <span>Switch to Staff View</span>
                         </>
                       )}
                       {isPending && <Loader2 className="ml-auto h-3 w-3 animate-spin" />}

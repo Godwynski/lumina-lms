@@ -21,6 +21,7 @@ interface DigitalCardProps {
   exportMode?: boolean;
   cardId?: string;
   academicYear?: string;
+  roleLabel?: string;
 }
 
 
@@ -39,6 +40,7 @@ export default function DigitalCard({
   exportMode = false,
   cardId,
   academicYear,
+  roleLabel,
 }: DigitalCardProps) {
   if (side === "back") {
     return (
@@ -50,6 +52,7 @@ export default function DigitalCard({
         cardId={cardId}
         studentId={studentId}
         academicYear={academicYear}
+        roleLabel={roleLabel}
       />
     );
   }
@@ -200,9 +203,10 @@ function CardBack({
   cardId,
   studentId,
   academicYear,
+  roleLabel,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "academicYear"
+  "cardNumber" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "academicYear" | "roleLabel"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -268,7 +272,7 @@ function CardBack({
 
             <div className="flex flex-col items-end pb-1">
               <div className="min-w-[100px] border-b border-foreground text-center sm:min-w-[140px]">
-                <p className="font-sans text-[11px] font-bold text-foreground sm:text-sm">Librarian</p>
+                <p className="font-sans text-[11px] font-bold text-foreground sm:text-sm">{roleLabel || "Librarian"}</p>
               </div>
               <p className="mt-0.5 text-[8px] uppercase tracking-widest text-muted-foreground/60">Signature</p>
             </div>

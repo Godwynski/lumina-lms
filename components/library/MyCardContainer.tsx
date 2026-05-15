@@ -22,6 +22,7 @@ interface MyCardContainerProps {
     address?: string;
     phone?: string;
     academicYear?: string;
+    roleLabel?: string;
   };
   variant?: "page" | "dashboard";
 }
@@ -358,6 +359,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               phone={data.phone}
               side="front"
               academicYear={data.academicYear}
+              roleLabel={data.roleLabel}
             />
           </div>
 
@@ -375,12 +377,12 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               phone={data.phone}
               side="back"
               academicYear={data.academicYear}
+              roleLabel={data.roleLabel}
             />
           </div>
 
           {/* Export Hidden Layer */}
           <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
-             {/* ... export logic remains same ... */}
              <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
               <DigitalCard
                 fullName={data.fullName}
@@ -397,6 +399,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 exportMode
                 cardId="library-card-front-export-card"
                 academicYear={data.academicYear}
+                roleLabel={data.roleLabel}
               />
             </div>
             <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
@@ -415,6 +418,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 exportMode
                 cardId="library-card-back-export-card"
                 academicYear={data.academicYear}
+                roleLabel={data.roleLabel}
               />
             </div>
           </div>
