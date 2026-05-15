@@ -91,7 +91,7 @@ export async function getDashboardStats({
             supabase
               .from('library_cards')
               .select('id', { count: 'exact', head: true })
-              .eq('status', 'pending')
+              .ilike('status', 'pending')
               .then(res => ({ count: res.count ?? 0 }))
           ),
           { count: 0 }

@@ -39,7 +39,7 @@ export async function PATCH(request: Request) {
 
     // Change Request Logic:
     // If the user is a student and is changing critical info, reset to PENDING
-    if (currentProfile?.role === 'student' && currentProfile?.status === 'ACTIVE') {
+    if (currentProfile?.role === 'student' && currentProfile?.status?.toUpperCase() === 'ACTIVE') {
       const isChanged = 
         displayName !== currentProfile.full_name ||
         address !== currentProfile.address ||

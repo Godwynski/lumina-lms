@@ -12,15 +12,13 @@ const roleStyles: Record<string, string> = {
   admin: "text-foreground font-bold",
   librarian: "text-blue-700 font-semibold",
   student_assistant: "text-indigo-700 font-semibold",
-  staff: "text-indigo-700 font-semibold", // Legacy support
   student: "text-muted-foreground font-medium",
 };
 
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
   librarian: "Librarian",
-  student_assistant: "Staff / SA",
-  staff: "Staff / SA", // Legacy support
+  student_assistant: "Student Assistant",
   student: "Student",
 };
 

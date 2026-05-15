@@ -15,14 +15,9 @@ async function assertStaffCatalogAccess() {
   const me = await getMe();
   if (!me || !me.isStaff) throw new Error('Unauthorized');
   
-  if (me.isDeactivatedSA) {
-    logger.error('catalog', 'Access denied for deactivated SA', { userId: me.user.id });
-    throw new Error('Access denied: Staff account is deactivated.');
-  }
-
-  // Most staff catalog views (queues, copies) should require manage_inventory
-  if (!me.hasPermission('manage_inventory')) {
-    throw new Error('Access denied: Missing inventory management permission.');
+  // Only admin and librarian can access the catalog inventory
+  if (me.role !== 'admin' && me.role !== 'librarian') {
+    throw new Error('Access denied: Inventory management is restricted to Admin and Librarian roles.');
   }
 
   return me.supabase;
@@ -193,8 +188,7 @@ export const createBook = createSafeAction(
   { 
     auditAction: "create", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
-    allowedPermissions: ['manage_inventory']
+    allowedRoles: ['admin', 'librarian']
   }
 );
 
@@ -232,8 +226,7 @@ export const updateBook = createSafeAction(
   { 
     auditAction: "update", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
-    allowedPermissions: ['manage_inventory']
+    allowedRoles: ['admin', 'librarian']
   }
 );
 
@@ -275,8 +268,7 @@ export const softDeleteBook = createSafeAction(
   { 
     auditAction: "archive", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
-    allowedPermissions: ['manage_inventory']
+    allowedRoles: ['admin', 'librarian']
   }
 );
 
@@ -354,8 +346,7 @@ export const addBookCopies = createSafeAction(
   { 
     auditAction: "create", 
     auditEntity: "book_copy", 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
-    allowedPermissions: ['manage_inventory']
+    allowedRoles: ['admin', 'librarian']
   }
 );
 
@@ -401,8 +392,7 @@ export const updateBookCopyStatus = createSafeAction(
   { 
     auditAction: "update_status", 
     auditEntity: "book_copy", 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
-    allowedPermissions: ['manage_inventory']
+    allowedRoles: ['admin', 'librarian']
   }
 );
 
