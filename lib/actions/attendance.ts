@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createSafeAction } from "./action-utils";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { sendNotification } from "@/lib/notifications";
+import { format as formatDate } from "date-fns";
 
 export interface AttendanceRecord {
   id: string;
@@ -102,6 +104,15 @@ export const toggleAttendanceByCard = createSafeAction(
 
       if (outError) throw new Error("Failed to register Time Out.");
 
+      // Notify the user
+      await sendNotification({
+        userId,
+        title: "Attendance: Time Out",
+        content: `You have successfully recorded your Time Out at ${formatDate(new Date(), "hh:mm a")}.`,
+        type: "SYSTEM",
+        priority: "medium"
+      });
+
       revalidatePath("/attendance", "page");
       revalidatePath("/dashboard", "page");
       
@@ -121,6 +132,15 @@ export const toggleAttendanceByCard = createSafeAction(
         });
 
       if (inError) throw new Error("Failed to register Time In.");
+
+      // Notify the user
+      await sendNotification({
+        userId,
+        title: "Attendance: Time In",
+        content: `You have successfully recorded your Time In at ${formatDate(new Date(), "hh:mm a")}.`,
+        type: "SYSTEM",
+        priority: "medium"
+      });
 
       revalidatePath("/attendance", "page");
       revalidatePath("/dashboard", "page");

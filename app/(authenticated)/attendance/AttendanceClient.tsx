@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useTransition, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
-import { toggleAttendanceByCard } from "@/lib/actions/attendance";
+import { toggleAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable"
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
+import { createClient } from "@/lib/supabase/client";
 
 interface AttendanceRecord {
   id: string;
@@ -25,11 +26,15 @@ interface AttendanceRecord {
 
 export function AttendanceClient({ 
   historyPromise,
-  isStaff = false
+  isStaff = false,
+  userId
 }: { 
   historyPromise: Promise<AttendanceRecord[]>,
-  isStaff?: boolean
+  isStaff?: boolean,
+  userId: string
 }) {
+  const initialHistory = use(historyPromise);
+  const [records, setRecords] = useState(initialHistory);
   const [isPending, startTransition] = useTransition();
   const [cardNumber, setCardNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,10 +82,30 @@ export function AttendanceClient({
 
   // Cleanup timeout on unmount
   useEffect(() => {
+    const supabase = createClient();
+    
+    const channel = supabase
+      .channel('attendance-updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'attendance' 
+      }, async () => {
+        // Refresh the attendance history
+        try {
+          const freshData = await getAttendanceHistory(isStaff ? undefined : userId);
+          setRecords(freshData);
+        } catch (error) {
+          console.error("Failed to refresh attendance history:", error);
+        }
+      })
+      .subscribe();
+
     return () => {
+      supabase.removeChannel(channel);
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
-  }, []);
+  }, [isStaff, userId]);
 
   const handleQRScan = useCallback((data: string) => {
     // Synchronous ref guard — blocks the very next callback frame
@@ -218,7 +243,7 @@ export function AttendanceClient({
         </div>
       }>
         <AttendanceTable 
-          historyPromise={historyPromise} 
+          history={records} 
         />
       </Suspense>
     </AdminTableShell>
@@ -227,11 +252,11 @@ export function AttendanceClient({
 
 
 function AttendanceTable({ 
-  historyPromise, 
+  history, 
 }: { 
-  historyPromise: Promise<AttendanceRecord[]>,
+  history: AttendanceRecord[],
 }) {
-  const history = use(historyPromise);
+
 
   const columns = useMemo<LuminaColumn<AttendanceRecord>[]>(() => [
     {

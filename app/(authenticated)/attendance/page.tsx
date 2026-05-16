@@ -24,6 +24,7 @@ export default async function AttendancePage() {
       <AttendanceClient 
         historyPromise={historyPromise} 
         isStaff={isStaff}
+        userId={me.user.id}
       />
     </Suspense>
   );
