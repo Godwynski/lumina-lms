@@ -40,9 +40,8 @@ export async function GET(request: Request) {
           // Student: lastname.id@Alabang.sti.edu.ph
           const isFaculty = /^[a-z0-9-]+\.[a-z0-9-]+@alabang\.sti\.edu\.ph$/.test(email);
           const isStudent = /^[a-z0-9-]+\.[a-z0-9-]+@alabang\.sti\.edu\.ph$/.test(email);
-          const isTest = email.endsWith("@lumina.test");
 
-          if (!isFaculty && !isStudent && !isTest) {
+          if (!isFaculty && !isStudent) {
             await supabase.auth.signOut();
             return NextResponse.redirect(`${origin}/error?error=restricted_access`);
           }

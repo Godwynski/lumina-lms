@@ -276,24 +276,24 @@ export function CirculationWizard() {
   return (
     <div className="max-w-[850px] mx-auto space-y-8 pb-12">
       {/* Centered Compact Stepper */}
-      <div className="bg-card/30 border border-border/10 rounded-2xl p-6 pb-10 backdrop-blur-sm shadow-sm">
+      <div className="bg-card/30 border border-border/10 rounded-2xl p-6 pb-10 backdrop-blur-sm">
         <CirculationStepper steps={steps} currentStep={currentStep} />
       </div>
 
-      <main className="bg-card/50 border border-border/10 rounded-3xl p-8 shadow-sm relative overflow-hidden transition-all duration-200">
+      <main className="bg-card/50 border border-border/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-200">
         {/* Header Action Bar Integrated */}
         <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/20">
           <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/10">
             <Button
               variant={mode === 'checkout' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider shadow-sm"
+              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider"
               onClick={() => switchMode('checkout')}
             >
               Checkout
             </Button>
             <Button
               variant={mode === 'return' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider shadow-sm"
+              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider"
               onClick={() => switchMode('return')}
             >
               Return
@@ -374,7 +374,7 @@ export function CirculationWizard() {
                   <Button 
                     onClick={confirmAction} 
                     disabled={isProcessing}
-                    className="rounded-xl px-8 h-10 bg-primary shadow-lg shadow-primary/20 text-[11px] font-bold uppercase tracking-wider"
+                    className="rounded-xl px-8 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
                   >
                     {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
                   </Button>

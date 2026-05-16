@@ -21,10 +21,8 @@ import {
   Loader2,
   Clock,
   UserCircle2,
-  Users,
   Archive,
   RotateCw,
-  Layers,
   Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,11 +39,11 @@ import { Badge } from '@/components/ui/badge';
 // ─── Config ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  AVAILABLE:   { label: 'Available',   icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400',  bg: 'bg-emerald-50/50 dark:bg-emerald-950/20', border: 'border-emerald-100 dark:border-emerald-900/30' },
-  BORROWED:    { label: 'Borrowed',    icon: History,      color: 'text-blue-600 dark:text-blue-400',       bg: 'bg-blue-50/50 dark:bg-blue-950/20',    border: 'border-blue-100 dark:border-blue-900/30'    },
-  MAINTENANCE: { label: 'Maintenance', icon: Wrench,       color: 'text-amber-600 dark:text-amber-400',    bg: 'bg-amber-50/50 dark:bg-amber-950/20',  border: 'border-amber-100 dark:border-amber-900/30'  },
-  LOST:        { label: 'Lost',        icon: SearchX,      color: 'text-rose-600 dark:text-rose-400',       bg: 'bg-rose-50/50 dark:bg-rose-950/20',    border: 'border-rose-100 dark:border-rose-900/30'    },
-  RESERVED:    { label: 'Reserved',    icon: Clock,        color: 'text-indigo-600 dark:text-indigo-400',   bg: 'bg-indigo-50/50 dark:bg-indigo-950/20', border: 'border-indigo-100 dark:border-indigo-900/30' },
+  AVAILABLE:   { label: 'Available',   icon: CheckCircle2, color: 'text-emerald-500',  bg: 'bg-emerald-500/5', border: 'border-emerald-500/10' },
+  BORROWED:    { label: 'Borrowed',    icon: History,      color: 'text-blue-500',       bg: 'bg-blue-500/5',    border: 'border-blue-500/10'    },
+  MAINTENANCE: { label: 'Maintenance', icon: Wrench,       color: 'text-amber-500',    bg: 'bg-amber-500/5',  border: 'border-amber-500/10'  },
+  LOST:        { label: 'Lost',        icon: SearchX,      color: 'text-rose-500',       bg: 'bg-rose-500/5',    border: 'border-rose-500/10'    },
+  RESERVED:    { label: 'Reserved',    icon: Clock,        color: 'text-indigo-500',   bg: 'bg-indigo-500/5', border: 'border-indigo-500/10' },
 } as const;
 
 const EDITABLE_STATUSES = ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'LOST'] as const;
@@ -95,45 +93,44 @@ function ReservationQueuePanel({
   };
 
   return (
-    <div className="rounded-xl border border-border/40 bg-background/30 overflow-hidden flex flex-col h-full">
-      <div className="bg-muted/30 px-3 py-2 border-b border-border/40 flex items-center justify-between shrink-0">
+    <div className="rounded-xl border border-border/40 bg-muted/5 flex flex-col h-full transition-all">
+      <div className="px-3 py-2 border-b border-border/40 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <Users size={12} className="text-indigo-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-foreground/70">Waitlist</span>
-          <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-indigo-500/10 text-indigo-600 border-none">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Queue</span>
+          <Badge variant="secondary" className="h-4 px-1.5 text-[9px] bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/10 border-none">
             {queue.length}
           </Badge>
         </div>
       </div>
-      <div className="divide-y divide-border/40 overflow-y-auto custom-scrollbar flex-1 max-h-[160px]">
+      <div className="divide-y divide-border/20 overflow-y-auto custom-scrollbar flex-1 max-h-[160px]">
         {queue.map((entry) => {
           const r = reserver(entry);
           return (
-            <div key={entry.id} className="px-3 py-2.5 flex items-center justify-between gap-3 bg-background/20">
+            <div key={entry.id} className="px-3 py-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-border/40">
                   {r?.avatar_url ? (
                     <Image src={r.avatar_url} alt="" fill className="object-cover" unoptimized />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-indigo-50 dark:bg-indigo-900/40">
-                      <UserCircle2 size={12} className="text-indigo-400" />
+                    <div className="flex h-full w-full items-center justify-center bg-muted/40">
+                      <UserCircle2 size={10} className="text-muted-foreground/40" />
                     </div>
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold truncate leading-none mb-1">{r?.full_name ?? 'Unknown'}</p>
-                  <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-tighter">Pos: {entry.queue_position}</p>
+                  <p className="text-[11px] font-medium truncate leading-tight text-foreground">{r?.full_name ?? 'Unknown'}</p>
+                  <p className="text-[9px] text-muted-foreground/60">Position {entry.queue_position}</p>
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <span className={cn(
-                  "text-[9px] font-black uppercase tracking-widest",
-                  entry.status === 'READY' ? "text-emerald-600" : "text-indigo-600/60"
+                  "text-[9px] font-bold uppercase tracking-wider",
+                  entry.status === 'READY' ? "text-emerald-500" : "text-muted-foreground/40"
                 )}>
-                  {entry.status === 'READY' ? 'Ready' : 'Wait'}
+                  {entry.status === 'READY' ? 'Ready' : 'Waiting'}
                 </span>
                 {entry.hold_expires_at && entry.status === 'READY' && (
-                  <p className="text-[8px] font-bold text-amber-600 mt-0.5">{formatRelativeTime(entry.hold_expires_at, mounted)}</p>
+                  <p className="text-[8px] font-medium text-amber-500/80 mt-0.5">{formatRelativeTime(entry.hold_expires_at, mounted)}</p>
                 )}
               </div>
             </div>
@@ -336,8 +333,8 @@ export function AdminManagementContent({
     <div className="space-y-6">
       {/* Header Summary */}
       {!isEditing && (
-        <div className="flex gap-4 pr-8">
-          <div className="relative h-32 w-20 shrink-0 overflow-hidden rounded-xl border border-border/40 shadow-sm ring-1 ring-border/50">
+        <div className="flex gap-6 pr-8">
+          <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-lg shadow-sm border border-border/40">
             <Image 
               src={book.cover_url || "/images/default-book-cover.png"} 
               alt={book.title} 
@@ -346,43 +343,46 @@ export function AdminManagementContent({
               unoptimized 
             />
           </div>
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="flex-1 min-w-0 flex flex-col py-1">
+            <div className="flex items-center gap-2 mb-2">
                <span className={cn(
-                 "rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] shadow-sm",
+                 "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tracking-tight",
                  !book.is_active
-                   ? "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20"
+                   ? "bg-amber-500/10 text-amber-600"
                    : isAvailable
-                     ? "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20"
-                     : "bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20"
+                     ? "bg-emerald-500/10 text-emerald-600"
+                     : "bg-rose-500/10 text-rose-600"
                )}>
-                 {!book.is_active ? "⚠ Archived" : isAvailable ? "● In Stock" : "○ Depleted"}
+                 <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
+                 {!book.is_active ? "Archived" : isAvailable ? "In Stock" : "Out of Stock"}
                </span>
             </div>
-            <h2 className="text-lg font-black tracking-tight text-foreground leading-tight line-clamp-1">{book.title}</h2>
-            <p className="text-sm font-medium text-muted-foreground/70 mb-3">{book.author}</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground leading-none mb-1 line-clamp-1">{book.title}</h2>
+            <p className="text-base text-muted-foreground/80 mb-4">{book.author}</p>
             
-            <div className="flex flex-wrap gap-2">
-               <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 border-primary/20 bg-primary/5 text-primary">
+            <div className="flex flex-wrap gap-1.5">
+               <Badge variant="secondary" className="text-[10px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
                  {categoryName || 'General'}
                </Badge>
-               <Badge variant="outline" className="text-[9px] font-bold uppercase py-0">
-                 ISBN: {book.isbn || 'REF'}
+               <Badge variant="secondary" className="text-[10px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
+                 DDC {book.dewey_decimal || 'N/A'}
                </Badge>
-               <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 text-primary border-primary/20 bg-primary/5">
-                 DDC: {book.dewey_decimal || 'N/A'}
-               </Badge>
+               {book.isbn && (
+                 <Badge variant="secondary" className="text-[10px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
+                   {book.isbn}
+                 </Badge>
+               )}
             </div>
           </div>
           {canManage && (
-            <div className="flex flex-col gap-1 self-start">
+            <div className="flex flex-col self-start pt-1">
                <Button 
-                 variant="outline" 
-                 size="sm" 
+                 variant="ghost" 
+                 size="icon"
                  onClick={() => setIsEditing(true)}
-                 className="h-8 rounded-lg px-3 text-[10px] font-black uppercase tracking-wider"
+                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
                >
-                 <Edit3 size={12} className="mr-1.5" /> Edit
+                 <Edit3 size={16} />
                </Button>
             </div>
           )}
@@ -453,22 +453,22 @@ export function AdminManagementContent({
 
       {/* Stats & Queue */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <div className="rounded-xl border border-border/40 bg-muted/10 p-3 flex items-center justify-around">
+         <div className="rounded-xl border border-border/20 bg-muted/5 p-4 flex items-center justify-between px-6">
             <div className="text-center">
-              <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest mb-0.5">Total</p>
-              <p className="text-lg font-black text-foreground">{book.total_copies ?? 0}</p>
+              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">Total</p>
+              <p className="text-xl font-semibold text-foreground leading-none">{book.total_copies ?? 0}</p>
             </div>
-            <div className="w-px h-6 bg-border/40" />
+            <div className="w-px h-8 bg-border/20" />
             <div className="text-center">
-              <p className="text-[9px] font-black text-emerald-600/50 uppercase tracking-widest mb-0.5">Avail</p>
-              <p className="text-lg font-black text-emerald-600">{book.available_copies ?? 0}</p>
+              <p className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest mb-1">Available</p>
+              <p className="text-xl font-semibold text-emerald-500 leading-none">{book.available_copies ?? 0}</p>
             </div>
             {reservationQueue.length > 0 && (
               <>
-                <div className="w-px h-6 bg-border/40" />
+                <div className="w-px h-8 bg-border/20" />
                 <div className="text-center">
-                  <p className="text-[9px] font-black text-indigo-600/50 uppercase tracking-widest mb-0.5">Queue</p>
-                  <p className="text-lg font-black text-indigo-600">{reservationQueue.length}</p>
+                  <p className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-widest mb-1">Queue</p>
+                  <p className="text-xl font-semibold text-indigo-500 leading-none">{reservationQueue.length}</p>
                 </div>
               </>
             )}
@@ -477,58 +477,55 @@ export function AdminManagementContent({
       </div>
 
       {/* Inventory List */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between border-b border-border/40 pb-2">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-border/20 pb-3">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded-md bg-primary/10 flex items-center justify-center">
-              <Layers size={12} className="text-primary" />
-            </div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">Inventory Assets</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Inventory Assets</h3>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             {canManage && (
               !showAddCopies ? (
-                <Button variant="outline" size="sm" onClick={() => setShowAddCopies(true)} className="h-7 text-[9px] font-bold uppercase tracking-widest px-2">
-                  <Plus className="mr-1 h-3 w-3" /> Add Copies
+                <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[10px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Copies
                 </Button>
               ) : (
-                <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
                   <Input 
                     type="number" 
                     min={1} 
                     max={50} 
                     value={copiesToAdd} 
                     onChange={e => setCopiesToAdd(parseInt(e.target.value) || 1)} 
-                    className="h-7 w-12 text-center text-[10px] font-black px-1"
+                    className="h-8 w-14 text-center text-xs px-1 rounded-md"
                   />
-                  <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest">
-                    {addCopiesLoading ? <Loader2 className="animate-spin h-3 w-3" /> : 'Add'}
+                  <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-8 px-3 text-[10px] font-medium">
+                    {addCopiesLoading ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : 'Confirm'}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(false)} className="h-7 px-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(false)} className="h-8 px-2 text-[10px] font-medium text-muted-foreground">
                     Cancel
                   </Button>
                 </div>
               )
             )}
-            {canManage && <div className="h-4 w-px bg-border/40 mx-0.5"></div>}
+            
             <Select value={copyFilter} onValueChange={(v) => {
               if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
             }}>
-              <SelectTrigger className="h-7 w-[90px] md:w-[110px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-bold uppercase shadow-none focus:ring-0">
+              <SelectTrigger className="h-8 w-[110px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[10px] font-medium text-muted-foreground shadow-none focus:ring-0 transition-colors">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL" className="text-[9px] font-bold uppercase">All</SelectItem>
+              <SelectContent className="border-border/40 shadow-xl">
+                <SelectItem value="ALL" className="text-[10px] font-medium">All Statuses</SelectItem>
                 {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key} className="text-[9px] font-bold uppercase">{cfg.label}</SelectItem>
+                  <SelectItem key={key} value={key} className="text-[10px] font-medium">{cfg.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <div className="space-y-2 min-h-[160px] max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
+        <div className="space-y-2 min-h-[160px] max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
           {loading ? (
             <div className="space-y-2">
               <InventoryItemSkeleton />
@@ -536,8 +533,9 @@ export function AdminManagementContent({
               <InventoryItemSkeleton />
             </div>
           ) : filteredCopies.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-border/40 bg-muted/5">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">No assets found matching filters</p>
+            <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border/20 bg-muted/5">
+              <SearchX size={24} className="text-muted-foreground/20 mb-3" />
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">No matching assets found</p>
             </div>
           ) : (
             filteredCopies.map((copy) => {
@@ -549,67 +547,71 @@ export function AdminManagementContent({
               const r = res?.profiles as { full_name?: string | null; avatar_url?: string | null } | null;
 
               return (
-                <div key={copy.id} className="group relative flex flex-col gap-2 rounded-xl border border-border/40 bg-card/30 p-2.5 transition-all hover:border-primary/20">
+                <div key={copy.id} className="group flex flex-col gap-2 rounded-lg border border-border/20 bg-muted/5 p-3 transition-colors hover:bg-muted/10">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={cn("h-8 w-8 shrink-0 rounded-lg border flex items-center justify-center", statusCfg.bg, statusCfg.border)}>
-                        <StatusIcon size={14} className={statusCfg.color} />
+                      <div className={cn("h-9 w-9 shrink-0 rounded-md border flex items-center justify-center transition-colors", statusCfg.bg, statusCfg.border)}>
+                        <StatusIcon size={16} className={statusCfg.color} />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-mono text-[11px] font-black text-foreground truncate">{copy.qr_string}</p>
-                          <span className="text-[9px] font-black text-primary/40 px-1 border border-primary/10 rounded bg-primary/5">{copy.accession_number}</span>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="font-mono text-[12px] font-semibold text-foreground/90 truncate">{copy.qr_string}</p>
+                          <span className="text-[9px] font-medium text-muted-foreground px-1.5 py-0.5 border border-border/40 rounded bg-muted/40 uppercase tracking-tighter">{copy.accession_number}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground/60 uppercase">
-                          <span className={statusCfg.color}>{statusCfg.label}</span>
-                          <span className="opacity-30">•</span>
-                          <span>{copy.id.split('-')[0]}</span>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+                          <span className={cn("font-medium", statusCfg.color)}>{statusCfg.label}</span>
+                          <span className="opacity-20">•</span>
+                          <span className="font-mono opacity-60">ID: {copy.id.split('-')[0]}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {canManage ? (
                         <Select value={copy.status} onValueChange={(v) => {
                           if (isEditableStatus(v)) handleStatusChange(copy.id, v);
                         }}>
-                          <SelectTrigger className="h-7 w-[90px] rounded-lg border-border/40 bg-muted/20 px-2 text-[9px] font-black uppercase shadow-none focus:ring-0">
+                          <SelectTrigger className="h-8 w-[100px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[10px] font-semibold uppercase shadow-none focus:ring-0 transition-colors">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="border-border/40 shadow-xl">
                             {EDITABLE_STATUSES.map((key) => (
-                              <SelectItem key={key} value={key} className="text-[9px] font-black uppercase">
+                              <SelectItem key={key} value={key} className="text-[10px] font-semibold uppercase">
                                 {STATUS_CONFIG[key].label}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className="h-7 px-2 text-[9px] font-black uppercase">
+                        <Badge variant="outline" className="h-8 px-2.5 text-[10px] font-semibold uppercase border-border/40">
                           {statusCfg.label}
                         </Badge>
                       )}
-                      <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Reserver Info inside copy card */}
+                  {/* Reserver Info */}
                   {copy.status === 'RESERVED' && r && (
-                    <div className="flex items-center gap-2 bg-indigo-500/5 rounded-lg border border-indigo-500/10 p-1.5 animate-in fade-in slide-in-from-left-1">
-                      <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full border border-background ring-1 ring-indigo-500/20">
+                    <div className="flex items-center gap-2.5 bg-indigo-500/5 rounded-md border border-indigo-500/10 p-2 mt-1">
+                      <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-background">
                          {r.avatar_url ? (
                            <Image src={r.avatar_url} alt="" fill className="object-cover" unoptimized />
                          ) : (
-                           <UserCircle2 size={12} className="h-full w-full p-0.5 text-indigo-400" />
+                           <div className="h-full w-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                             <UserCircle2 size={12} className="text-indigo-400" />
+                           </div>
                          )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase truncate">
-                          Reserved by {r.full_name ?? 'Unknown'}
+                        <p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tight truncate">
+                          Reserved by {r.full_name ?? 'Unknown User'}
                         </p>
                         {res?.hold_expires_at && (
-                          <p className="text-[8px] font-bold text-amber-600 uppercase tracking-tighter">
-                            Exp: {formatRelativeTime(res.hold_expires_at, mounted)}
+                          <p className="text-[9px] font-medium text-amber-500/80">
+                            Expires {formatRelativeTime(res.hold_expires_at, mounted)}
                           </p>
                         )}
                       </div>

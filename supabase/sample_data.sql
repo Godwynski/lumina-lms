@@ -50,42 +50,4 @@ BEGIN
     END IF;
 END $$;
 
--- 3. USERS (Profiles)
--- NOTE: These require corresponding auth.users in a real system.
--- For local/mock SQL, we insert into public.profiles directly.
-INSERT INTO public.profiles (id, email, full_name, role, student_id, status) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@lumina.test', 'Alexander Wright', 'admin', 'ADM-001', 'ACTIVE'),
-('00000000-0000-0000-0000-000000000002', 'librarian@lumina.test', 'Sarah Jenkins', 'librarian', 'LIB-001', 'ACTIVE'),
-('00000000-0000-0000-0000-000000000003', 'alice@lumina.test', 'Alice Henderson', 'student', 'STUD-001', 'ACTIVE'),
-('00000000-0000-0000-0000-000000000004', 'bob@lumina.test', 'Robert Wilson', 'student', 'STUD-002', 'ACTIVE')
-ON CONFLICT (id) DO NOTHING;
 
--- 4. CARDS
-INSERT INTO public.library_cards (user_id, card_number, status) VALUES
-('00000000-0000-0000-0000-000000000003', 'CARD-ALICE-123', 'active'),
-('00000000-0000-0000-0000-000000000004', 'CARD-BOB-456', 'active')
-ON CONFLICT (user_id) DO NOTHING;
-
--- 5. INITIAL TRANSACTIONS
-DO $$
-DECLARE
-    v_alice_id UUID := '00000000-0000-0000-0000-000000000003';
-    v_bob_id   UUID := '00000000-0000-0000-0000-000000000004';
-    v_copy_id  UUID;
-    v_book_id  UUID;
-BEGIN
-    -- Alice borrows Algorithms Copy 1
-    v_copy_id := (SELECT id FROM public.book_copies WHERE qr_string = 'QR-ALGO-001');
-    IF v_copy_id IS NOT NULL THEN
-        INSERT INTO public.borrowing_records (user_id, book_copy_id, due_date, status)
-        VALUES (v_alice_id, v_copy_id, NOW() + interval '14 days', 'ACTIVE');
-    END IF;
-
-    -- Bob reserves "Clean Code"
-    v_book_id := (SELECT id FROM public.books WHERE title = 'Clean Code');
-    v_copy_id := (SELECT id FROM public.book_copies WHERE qr_string = 'QR-CODE-002');
-    IF v_book_id IS NOT NULL THEN
-        INSERT INTO public.reservations (user_id, book_id, copy_id, status, queue_position, hold_expires_at)
-        VALUES (v_bob_id, v_book_id, v_copy_id, 'READY', 1, NOW() + interval '3 days');
-    END IF;
-END $$;

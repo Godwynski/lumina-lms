@@ -105,7 +105,7 @@ export function DashboardSearch({ role: _role }: DashboardSearchProps) {
           // border states
           "border-border/40",
           "hover:border-border/70",
-          "focus:border-primary/60 focus:bg-background focus:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]",
+          "focus:border-primary/60 focus:bg-background",
           // loading fade
           showSpinner && "opacity-70"
         )}

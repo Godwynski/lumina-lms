@@ -16,7 +16,6 @@ import { Reservation, ProfileData, Book, Category, UserRole } from '@/lib/types'
 import type { BorrowingRecord } from '@/lib/actions/history';
 
 import { LiveActivityTicker } from './LiveActivityTicker';
-import { DashboardSearch } from './DashboardSearch';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { ActivitySection } from './ActivitySection';
 import { SupportSection } from './SupportSection';

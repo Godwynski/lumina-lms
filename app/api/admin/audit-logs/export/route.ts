@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
       log.entity_type,
       log.action,
       `"${(log.reason || "").replace(/"/g, '""')}"`,
-      `"${(log.old_value || "").replace(/"/g, '""')}"`,
-      `"${(log.new_value || "").replace(/"/g, '""')}"`,
+      `"${log.old_value ? JSON.stringify(log.old_value).replace(/"/g, '""') : ""}"`,
+      `"${log.new_value ? JSON.stringify(log.new_value).replace(/"/g, '""') : ""}"`,
     ]);
 
     const csvContent = [

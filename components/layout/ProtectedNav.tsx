@@ -147,7 +147,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin", permissionKey: "view_admin_dashboard" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 

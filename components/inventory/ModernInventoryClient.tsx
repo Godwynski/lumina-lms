@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTransition, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Search, X, Loader2, ArrowUpDown } from "lucide-react";
+import { Plus, Search, X, ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,14 @@ import { CompactPagination } from "@/components/ui/compact-pagination";
 import { InventoryGrid } from "./InventoryGrid";
 import { Book, Category, Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface ModernInventoryClientProps {
   books: Book[];
@@ -118,124 +126,175 @@ export function ModernInventoryClient({
   };
 
 
-  return (
-    <div className="w-full space-y-4 pb-10">
+  const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (sortBy !== "newest" ? 1 : 0);
 
-      <div className="sticky top-0 z-30 flex flex-col gap-3 rounded-[2rem] border border-border/10 bg-background/60 p-2.5 shadow-sm backdrop-blur-2xl transition-all duration-300 md:p-3">
-        {/* Top Controls Row */}
-        <div className="flex flex-col gap-2.5 md:flex-row md:items-center">
+  return (
+    <div className="w-full space-y-6 pb-10">
+      <div className="sticky top-0 z-30 flex flex-col gap-4 rounded-3xl border border-border/10 bg-background/60 p-2.5 backdrop-blur-2xl transition-all duration-300">
+        <div className="flex items-center gap-3 w-full">
           {/* Search Box */}
           <form onSubmit={handleSearch} className="relative flex flex-1 items-center gap-2">
-            <div className="relative flex-1">
+            <div className="relative flex-1 group">
               <Search className={cn(
-                "absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors",
-                searchQuery ? "text-primary" : "text-muted-foreground/40"
+                "absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-all duration-300",
+                searchQuery ? "text-primary scale-110" : "text-muted-foreground/30"
               )} />
               <input
                 type="text"
                 placeholder="Search inventory..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-2xl border border-border/10 bg-muted/10 pl-10 pr-10 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5"
+                className="h-11 w-full rounded-2xl border border-border/20 bg-muted/5 pl-11 pr-11 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground/30"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground/40 hover:bg-muted hover:text-foreground transition-all"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground/30 hover:bg-muted hover:text-foreground transition-all active:scale-90"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
-            <Button 
-              type="submit" 
-              size="sm" 
-              variant="secondary"
-              className="h-10 rounded-2xl px-4 text-xs font-black uppercase tracking-widest shadow-none border border-border/10 hover:bg-muted/30"
-              disabled={isPending}
-            >
-              {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Search"}
-            </Button>
           </form>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Status Select */}
-            <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
-              <SelectTrigger className="h-10 w-full min-w-[120px] rounded-2xl border border-border/10 bg-muted/10 px-4 text-xs font-bold shadow-none focus:ring-0 md:w-[130px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-border/10 shadow-2xl">
-                <SelectItem value="ACTIVE">Visible Only</SelectItem>
-                <SelectItem value="ARCHIVED">Archived Only</SelectItem>
-                <SelectItem value="ALL">Show All</SelectItem>
-              </SelectContent>
-            </Select>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 relative"
+              >
+                <SlidersHorizontal className="h-4 w-4 text-primary/80" />
+                <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider">Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 rounded-full text-[10px] bg-primary text-primary-foreground border-2 border-background">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-md rounded-l-3xl border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
+              <div className="absolute top-0 right-0 p-4 z-10">
+                <SheetClose className="rounded-full h-8 w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
+                   <X className="h-4 w-4" />
+                </SheetClose>
+              </div>
 
-            {/* Sort Select */}
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-              <SelectTrigger className="h-10 w-full min-w-[140px] rounded-2xl border border-border/10 bg-muted/10 px-4 text-xs font-bold shadow-none focus:ring-0 md:w-[160px]">
-                <div className="flex items-center gap-2">
-                  <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
-                  <SelectValue />
+              <div className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                    Filters
+                  </h2>
+                  <p className="text-xs text-muted-foreground font-medium">Refine your search results</p>
                 </div>
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-border/10 shadow-2xl">
-                <SelectItem value="newest">Recently Added</SelectItem>
-                <SelectItem value="title_asc">Title A-Z</SelectItem>
-                <SelectItem value="title_desc">Title Z-A</SelectItem>
-                <SelectItem value="availability_desc">By Availability</SelectItem>
-              </SelectContent>
-            </Select>
 
-            {/* Add Item Button */}
-            {canManage && (
-              <>
-                <div className="h-6 w-px bg-border/20 mx-1 hidden sm:block" />
-                <Link href="/catalog/add" className="shrink-0">
-                  <Button className="h-10 rounded-2xl px-5 text-xs font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95">
-                    <Plus className="mr-2 h-4 w-4" />
-                    <span>Add Item</span>
+                <Separator className="bg-border/10" />
+
+                <div className="space-y-6">
+                  {/* Status Selection */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Availability Status</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["ACTIVE", "ARCHIVED", "ALL"] as const).map((s) => (
+                        <Button
+                          key={s}
+                          variant={status === s ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setStatus(s)}
+                          className={cn(
+                            "h-9 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                            status === s ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10 hover:bg-muted/10"
+                          )}
+                        >
+                          {s === "ACTIVE" ? "Visible" : s === "ARCHIVED" ? "Archived" : "All"}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sort Selection */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Sorting Order</label>
+                    <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                      <SelectTrigger className="h-10 w-full rounded-lg border border-border/10 bg-muted/5 px-3 text-[11px] font-medium shadow-none focus:ring-0">
+                        <div className="flex items-center gap-2">
+                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          <SelectValue />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-lg border-border/10">
+                        <SelectItem value="newest" className="text-[11px]">Recently Added</SelectItem>
+                        <SelectItem value="title_asc" className="text-[11px]">Title A-Z</SelectItem>
+                        <SelectItem value="title_desc" className="text-[11px]">Title Z-A</SelectItem>
+                        <SelectItem value="availability_desc" className="text-[11px]">By Availability</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Categories Selection */}
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Categories</label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={categoryId === "all" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCategoryId("all")}
+                        className={cn(
+                          "h-9 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider transition-all",
+                          categoryId === "all" ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10"
+                        )}
+                      >
+                        All Items
+                      </Button>
+                      {categories.map((cat) => (
+                        <Button
+                          key={cat.id}
+                          variant={categoryId === cat.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCategoryId(cat.id)}
+                          className={cn(
+                            "h-10 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest transition-all",
+                            categoryId === cat.id ? "bg-primary shadow-lg shadow-primary/20" : "bg-muted/5 border-border/10"
+                          )}
+                        >
+                          {cat.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-muted/5 border-t border-border/10 flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest border-border/10"
+                  onClick={() => {
+                    setCategoryId("all");
+                    setStatus("ACTIVE");
+                    setSortBy("newest");
+                  }}
+                >
+                  Reset All
+                </Button>
+                <SheetClose asChild>
+                  <Button className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                    Apply Filters
                   </Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
+                </SheetClose>
+              </div>
+            </SheetContent>
+          </Sheet>
 
-        {/* Categories Bar */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth px-1 pb-1 border-t border-border/5 pt-2">
-          <Button
-            type="button"
-            variant={categoryId === "all" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setCategoryId("all")}
-            className={cn(
-              "h-8 whitespace-nowrap rounded-xl px-4 text-[10px] font-black uppercase tracking-widest transition-all md:text-[11px]",
-              categoryId === "all" 
-                ? "bg-primary/10 text-primary border border-primary/20" 
-                : "text-muted-foreground/60 border border-transparent hover:bg-muted/20 hover:text-foreground"
-            )}
-          >
-            All
-          </Button>
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              type="button"
-              variant={categoryId === cat.id ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setCategoryId(cat.id)}
-              className={cn(
-                "h-8 whitespace-nowrap rounded-xl px-4 text-[10px] font-black uppercase tracking-widest transition-all md:text-[11px]",
-                categoryId === cat.id 
-                  ? "bg-primary/10 text-primary border border-primary/20" 
-                  : "text-muted-foreground/60 border border-transparent hover:bg-muted/20 hover:text-foreground"
-              )}
-            >
-              {cat.name}
-            </Button>
-          ))}
+          {/* Add Item Button */}
+          {canManage && (
+            <Link href="/catalog/add" className="shrink-0">
+              <Button className="h-12 rounded-[1.5rem] px-5 text-xs font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
+                <Plus className="sm:mr-2 h-5 w-5 transition-transform group-hover:rotate-90" />
+                <span className="hidden sm:inline">Add Item</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
       <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>
