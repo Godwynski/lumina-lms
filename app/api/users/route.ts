@@ -39,9 +39,7 @@ function mapProfileToUser(row: Record<string, unknown>) {
 }
 
 export const GET = withAuthApi(
-  async (request, { supabase }) => {
-    const { role: requesterRole } = (await supabase.auth.getUser()).data.user?.app_metadata || {};
-    
+  async (request, { supabase, role: requesterRole }) => {
     let query = supabase.from("profiles").select("*");
 
     // Librarian Restriction: Hide admins
@@ -79,8 +77,9 @@ export const POST = withAuthApi(
     const department =
       typeof body.department === "string" ? body.department.trim() : "";
 
-    const requesterRole = user.app_metadata?.role;
-    if (requesterRole === "librarian" && role === "admin") {
+    const requesterRole = role;
+    const createdRole = normalizeUserRole(body.role as string);
+    if (requesterRole === "librarian" && createdRole === "admin") {
       return apiError("Librarians cannot create admin users", "FORBIDDEN", 403);
     }
 
@@ -157,7 +156,7 @@ export const POST = withAuthApi(
 );
 
 export const PATCH = withAuthApi(
-  async (request, { supabase, user }) => {
+  async (request, { supabase, user, role: requesterRole }) => {
     let body: {
       id?: unknown;
       name?: unknown;
@@ -192,11 +191,14 @@ export const PATCH = withAuthApi(
       return apiError(profileError.message, "DATABASE_ERROR", 400);
     }
 
-    const requesterRole = user.app_metadata?.role;
-
     // Librarian Restriction: Cannot target admins
     if (requesterRole === "librarian" && profile.role === "admin") {
       return apiError("Librarians cannot modify admin accounts", "FORBIDDEN", 403);
+    }
+    
+    // Check permissions: Manager roles can edit others, users can edit themselves
+    if (requesterRole !== "admin" && requesterRole !== "librarian" && user.id !== id) {
+      return apiError("Forbidden: Insufficient permissions", "FORBIDDEN", 403);
     }
 
     const updates: Record<string, unknown> = {};
@@ -292,11 +294,21 @@ export const PATCH = withAuthApi(
     }
 
     // Sync library card status if membership status changed
-    if (updates.status && updates.status !== profile.status) {
-      await admin
+    // Sync library card status if profile status is updated
+    if (updates.status) {
+      const cardStatus = (updates.status as string).toUpperCase();
+      
+      const { error: cardSyncError } = await admin
         .from("library_cards")
-        .update({ status: (updates.status as string).toLowerCase() })
+        .update({ 
+          status: cardStatus,
+          updated_at: new Date().toISOString()
+        })
         .eq("user_id", id);
+        
+      if (cardSyncError) {
+        console.error(`Failed to sync library card status for user ${id}:`, cardSyncError);
+      }
     }
 
     await logAuditActivity(
