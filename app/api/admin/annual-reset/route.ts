@@ -44,8 +44,7 @@ export async function POST() {
     const { error: cardError } = await supabase
       .from("library_cards")
       .update({ status: "SUSPENDED" })
-      .in("user_id", studentIds)
-      .is("deleted_at", null);
+      .in("user_id", studentIds);
 
     if (cardError) {
       console.error("Failed to update student library cards:", cardError);

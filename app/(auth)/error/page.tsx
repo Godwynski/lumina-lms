@@ -12,6 +12,36 @@ async function ErrorContent({
 }) {
   const params = await searchParams;
 
+  if (params?.error === "archived_account") {
+    return (
+      <div className="space-y-6">
+        <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/10 flex gap-3 items-start shadow-inner">
+           <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5 opacity-70" />
+           <p className="text-xs text-destructive/80 leading-relaxed font-medium">
+             Your account has been <strong>archived</strong>. This typically happens when an account is no longer in use or has been retired.
+           </p>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
+            What this means
+          </h4>
+          <div className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Archived accounts cannot access system resources or borrow books. Your data is preserved for records but active access is disabled.
+            </p>
+            <div className="pt-2 border-t border-border/50">
+               <p className="text-[10px] font-bold text-foreground mb-1 uppercase tracking-tight">Need assistance?</p>
+               <p className="text-[11px] text-muted-foreground">
+                 If you believe this is a mistake, please visit the <strong>School Library Administration</strong> to request account reactivation.
+               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (params?.error === "restricted_access") {
     return (
       <div className="space-y-6">

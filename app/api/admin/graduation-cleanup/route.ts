@@ -74,12 +74,12 @@ export async function POST(request: NextRequest) {
 
         // If no active borrows and status is active, candidate for deactivation
         const activeBorrowCount = activeBorrows ?? 0;
-        if (activeBorrowCount === 0 && student.status === "active") {
+        if (activeBorrowCount === 0 && student.status === "ACTIVE") {
           if (!dryRun) {
             // Deactivate student
             const { error: updateError } = await supabase
               .from("profiles")
-              .update({ status: "graduated" })
+              .update({ status: "GRADUATED" })
               .eq("id", student.id);
 
             if (updateError) throw updateError;
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
             // Deactivate library card
             await supabase
               .from("library_cards")
-              .update({ status: "expired" })
+              .update({ status: "EXPIRED" })
               .eq("user_id", student.id);
 
             // Log audit entry using unified utility
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
               "Batch graduation cleanup - no active borrows",
               { batch: true },
               { status: student.status },
-              { status: "graduated" }
+              { status: "GRADUATED" }
             );
           }
 

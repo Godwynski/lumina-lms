@@ -39,6 +39,10 @@ export default async function ProtectedLayout({
   const isPrivileged = role === "admin" || role === "librarian";
 
   // ─── Access restriction: render a blocking screen (no shell needed) ───────
+  if (profile?.status === "ARCHIVED" && !isPrivileged) {
+    redirect("/error?error=archived_account");
+  }
+
   const isAccessBlocked =
     profile?.status === "PENDING" ||
     profile?.status === "SUSPENDED" ||

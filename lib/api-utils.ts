@@ -65,6 +65,10 @@ export function withAuthApi(
 
       const { user, profile, role, supabase } = me;
 
+      if (profile.status?.toUpperCase() === 'ARCHIVED') {
+        return apiError("Account archived. Please contact administration.", "FORBIDDEN", 403);
+      }
+
       const isActuallyStaff = role === 'admin' || role === 'librarian' || (role === 'student_assistant' && profile.status?.toUpperCase() === 'ACTIVE');
 
       if (options.requireStaff && !isActuallyStaff) {
