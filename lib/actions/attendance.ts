@@ -6,7 +6,6 @@ import { createSafeAction } from "./action-utils";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notifications";
-import { format as formatDate } from "date-fns";
 
 export interface AttendanceRecord {
   id: string;
@@ -108,7 +107,7 @@ export const toggleAttendanceByCard = createSafeAction(
       await sendNotification({
         userId,
         title: "Attendance: Time Out",
-        content: `You have successfully recorded your Time Out at ${formatDate(new Date(), "hh:mm a")}.`,
+        content: `You have successfully recorded your Time Out at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })}.`,
         type: "SYSTEM",
         priority: "medium"
       });
@@ -137,7 +136,7 @@ export const toggleAttendanceByCard = createSafeAction(
       await sendNotification({
         userId,
         title: "Attendance: Time In",
-        content: `You have successfully recorded your Time In at ${formatDate(new Date(), "hh:mm a")}.`,
+        content: `You have successfully recorded your Time In at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })}.`,
         type: "SYSTEM",
         priority: "medium"
       });
