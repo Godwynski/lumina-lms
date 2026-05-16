@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
-import { Search, UserPlus, Filter } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { sanitizeFilterInput } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -279,14 +279,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               </DialogContent>
             </Dialog>
             <div className="flex-1" />
-            <Button 
-              onClick={() => router.push('/users/new')} 
-              size="sm" 
-              className="h-8 w-full sm:w-auto px-4 font-bold uppercase tracking-tight"
-            >
-              <UserPlus size={14} className="mr-2" />
-              Invite user
-            </Button>
           </>
         )}
         pagination={
