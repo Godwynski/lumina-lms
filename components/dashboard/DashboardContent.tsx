@@ -8,7 +8,15 @@ import { Reservation, ProfileData } from "@/lib/types";
 export async function DashboardContent({ 
   searchParams 
 }: { 
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; sort?: string; view?: string }> 
+  searchParams: Promise<{ 
+    page?: string; 
+    q?: string; 
+    stock?: string; 
+    categoryId?: string; 
+    sort?: string; 
+    view?: string;
+    status?: string;
+  }> 
 }) {
   const me = await getMe();
   if (!me) return null;
@@ -70,6 +78,7 @@ export async function DashboardContent({
   const categoryId = params.categoryId || '';
   const sort = params.sort || 'newest';
   const view = params.view || 'grid';
+  const status = (params.status?.toUpperCase() as 'ACTIVE' | 'ARCHIVED' | 'ALL') || 'ACTIVE';
   const pageSize = view === 'list' ? 10 : 9;
 
   const inventoryCategoriesPromise = canSeeStaffInventory
@@ -77,7 +86,7 @@ export async function DashboardContent({
     : Promise.resolve([]);
     
   const inventoryBooksPromise = canSeeStaffInventory
-    ? getBooks(q, categoryId || undefined, page, pageSize, sort)
+    ? getBooks(q, categoryId || undefined, page, pageSize, sort, status)
     : Promise.resolve({ data: [], count: 0 });
 
   const preferences = (preferencesData?.preferences as Record<string, string>) || {};

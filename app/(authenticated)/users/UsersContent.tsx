@@ -94,7 +94,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const filterOptions = ["all", "review", "admin", "librarian", "student_assistant", "student", "archived"] as const;
   const visibleTabs = filterOptions.filter(t => {
     if (isLibrarian && t === "admin") return false;
-    if (currentRole !== "admin" && t === "archived") return false;
+    if (t === "archived" && !["admin", "librarian"].includes(currentRole)) return false;
     return true;
   });
 

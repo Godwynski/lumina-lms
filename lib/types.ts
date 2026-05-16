@@ -29,6 +29,7 @@ export interface Book {
     name: string;
   }[];
   tags?: string[];
+  dewey_decimal?: string;
   created_at?: string;
 }
 
@@ -37,6 +38,7 @@ interface BookCopy {
   book_id: string;
   status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
   qr_string: string;
+  accession_number: string;
   condition?: string;
   created_at: string;
 }

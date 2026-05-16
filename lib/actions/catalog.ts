@@ -15,9 +15,9 @@ async function assertStaffCatalogAccess() {
   const me = await getMe();
   if (!me || !me.isStaff) throw new Error('Unauthorized');
   
-  // Only admin and librarian can access the catalog inventory
-  if (me.role !== 'admin' && me.role !== 'librarian') {
-    throw new Error('Access denied: Inventory management is restricted to Admin and Librarian roles.');
+  // Only admin, librarian, and student assistant can access the catalog inventory
+  if (me.role !== 'admin' && me.role !== 'librarian' && me.role !== 'student_assistant') {
+    throw new Error('Access denied: Inventory management is restricted to authorized staff roles.');
   }
 
   return me.supabase;
@@ -51,9 +51,17 @@ export const getCategories = async () => {
  * @param categoryId - Filter by a specific category ID.
  * @param page - Current page for pagination.
  * @param pageSize - Number of items per page.
+ * @param status - Filter by active status ('ACTIVE', 'ARCHIVED', or 'ALL').
  * @returns Object with book list and total count.
  */
-export async function getBooks(query: string = '', categoryId?: string, page: number = 1, pageSize: number = 10, sort: string = 'title_asc') {
+export async function getBooks(
+  query: string = '', 
+  categoryId?: string, 
+  page: number = 1, 
+  pageSize: number = 10, 
+  sort: string = 'title_asc',
+  status: 'ACTIVE' | 'ARCHIVED' | 'ALL' = 'ACTIVE'
+) {
   const supabase = await assertStaffCatalogAccess();
   
   const from = (page - 1) * pageSize;
@@ -61,8 +69,14 @@ export async function getBooks(query: string = '', categoryId?: string, page: nu
 
   let dbQuery = supabase
     .from('books')
-    .select(`*, categories(name)`, { count: 'exact' })
-    .eq('is_active', true);
+    .select(`*, categories!left(name)`, { count: 'exact' });
+
+  // Apply status filter
+  if (status === 'ACTIVE') {
+    dbQuery = dbQuery.eq('is_active', true);
+  } else if (status === 'ARCHIVED') {
+    dbQuery = dbQuery.eq('is_active', false);
+  }
   
   if (query) {
     const cleanQuery = query.trim();
@@ -250,6 +264,35 @@ export const softDeleteBook = createSafeAction(
   },
   { 
     auditAction: "archive", 
+    auditEntity: "book", 
+    allowedRoles: ['admin', 'librarian']
+  }
+);
+
+export const restoreBook = createSafeAction(
+  z.string(),
+  async (id, { supabase }) => {
+    const { data, error } = await supabase
+      .from('books')
+      .update({ is_active: true })
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) throw new Error(error.message);
+    
+    logger.info('catalog', `Book restored: ${id}`);
+    revalidateTag('catalog', 'max');
+    revalidateTag('books', 'max');
+    
+    return [data, {
+      reason: `Restored book: ${data.title}`,
+      newValue: { is_active: true },
+      oldValue: { is_active: false }
+    }];
+  },
+  { 
+    auditAction: "restore", 
     auditEntity: "book", 
     allowedRoles: ['admin', 'librarian']
   }

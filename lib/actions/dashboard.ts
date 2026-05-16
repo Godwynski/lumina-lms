@@ -1,5 +1,5 @@
 'use server'
- 
+
 import { createSafeClient } from '@/lib/supabase/server';
 import { getBorrowingHistory, type BorrowingRecord } from './history';
 import { unstable_cache } from 'next/cache';
@@ -41,6 +41,8 @@ export async function getDashboardStats({
   attendanceToday: number;
   totalBooks: number;
   totalUsers: number;
+  archivedBooks: number;
+  archivedUsers: number;
 }> {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -73,6 +75,8 @@ export async function getDashboardStats({
     dailyAttendanceResult,
     totalBooksResult,
     totalUsersResult,
+    archivedBooksResult,
+    archivedUsersResult,
   ] = await Promise.all([
     safeWrap(
       Promise.resolve(
@@ -133,6 +137,30 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
+    isManager
+      ? safeWrap(
+          Promise.resolve(
+            supabase
+              .from('books')
+              .select('id', { count: 'exact', head: true })
+              .eq('is_active', false)
+              .then(res => ({ count: res.count ?? 0 }))
+          ),
+          { count: 0 }
+        )
+      : Promise.resolve({ count: 0 }),
+    canReviewApprovals
+      ? safeWrap(
+          Promise.resolve(
+            supabase
+              .from('profiles')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'ARCHIVED')
+              .then(res => ({ count: res.count ?? 0 }))
+          ),
+          { count: 0 }
+        )
+      : Promise.resolve({ count: 0 }),
   ]);
 
   interface SupabaseCountResult { count: number | null }
@@ -147,5 +175,7 @@ export async function getDashboardStats({
     attendanceToday: (dailyAttendanceResult as SupabaseCountResult).count || 0,
     totalBooks: (totalBooksResult as SupabaseCountResult).count || 0,
     totalUsers: (totalUsersResult as SupabaseCountResult).count || 0,
+    archivedBooks: (archivedBooksResult as SupabaseCountResult).count || 0,
+    archivedUsers: (archivedUsersResult as SupabaseCountResult).count || 0,
   };
 }

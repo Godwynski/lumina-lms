@@ -6,6 +6,7 @@ import { useState } from "react";
 import { 
   MapPin, 
   Layers, 
+  Tag,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Book } from "@/lib/types";
@@ -64,6 +65,13 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
                   <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">ISBN:</span>
                   <span className="truncate font-mono text-foreground/80">{book.isbn || "INTERNAL-STOCK"}</span>
                 </div>
+                {book.dewey_decimal && (
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground px-1.5">
+                    <Tag size={11} className="text-primary/70" />
+                    <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">DDC:</span>
+                    <span className="truncate font-mono text-foreground/80">{book.dewey_decimal}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -87,15 +95,21 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/10">
             <div className="flex items-center gap-1.5">
-              <Badge 
-                variant={isOutOfStock ? "destructive" : "secondary"} 
-                className={cn(
-                  "rounded-lg px-2 py-0 h-5 text-[9px] font-black uppercase tracking-widest transition-all duration-300",
-                  !isOutOfStock && "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
-                )}
-              >
-                {book.available_copies} / {book.total_copies} In Pool
-              </Badge>
+              {!book.is_active ? (
+                <Badge variant="outline" className="rounded-lg px-2 py-0 h-5 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border-amber-200">
+                  Archived
+                </Badge>
+              ) : (
+                <Badge 
+                  variant={isOutOfStock ? "destructive" : "secondary"} 
+                  className={cn(
+                    "rounded-lg px-2 py-0 h-5 text-[9px] font-black uppercase tracking-widest transition-all duration-300",
+                    !isOutOfStock && "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                  )}
+                >
+                  {book.available_copies} / {book.total_copies} In Pool
+                </Badge>
+              )}
             </div>
             <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground/40 transition-colors group-hover:text-primary/40">
               {book.section || "General"}

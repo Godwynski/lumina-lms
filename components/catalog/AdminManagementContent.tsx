@@ -6,6 +6,7 @@ import {
   updateBookCopyStatus,
   updateBook,
   softDeleteBook,
+  restoreBook,
   getBookAdminDetails,
   addBookCopies,
 } from '@/lib/actions/catalog';
@@ -22,6 +23,7 @@ import {
   UserCircle2,
   Users,
   Archive,
+  RotateCw,
   Layers,
   Plus,
 } from 'lucide-react';
@@ -206,6 +208,7 @@ export function AdminManagementContent({
   const [updateLoading, setUpdateLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
   
   const [showAddCopies, setShowAddCopies] = useState(false);
   const [copiesToAdd, setCopiesToAdd] = useState(1);
@@ -219,6 +222,7 @@ export function AdminManagementContent({
     isbn: initialBook.isbn || '',
     section: initialBook.section || '',
     location: initialBook.location || '',
+    dewey_decimal: initialBook.dewey_decimal || '',
   });
 
   const [mounted, setMounted] = useState(false);
@@ -270,6 +274,21 @@ export function AdminManagementContent({
       toast.error('Archive failed');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleRestoreBook = async () => {
+    setRestoreLoading(true);
+    try {
+      const result = await restoreBook(book.id);
+      if (!result.success) throw new Error(result.error);
+      toast.success('Book restored');
+      setBook(prev => ({ ...prev, is_active: true }));
+      router.refresh();
+    } catch {
+      toast.error('Restore failed');
+    } finally {
+      setRestoreLoading(false);
     }
   };
 
@@ -331,11 +350,13 @@ export function AdminManagementContent({
             <div className="flex items-center gap-2 mb-1">
                <span className={cn(
                  "rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em] shadow-sm",
-                 isAvailable
-                   ? "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20"
-                   : "bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20"
+                 !book.is_active
+                   ? "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20"
+                   : isAvailable
+                     ? "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20"
+                     : "bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20"
                )}>
-                 {isAvailable ? "● In Stock" : "○ Depleted"}
+                 {!book.is_active ? "⚠ Archived" : isAvailable ? "● In Stock" : "○ Depleted"}
                </span>
             </div>
             <h2 className="text-lg font-black tracking-tight text-foreground leading-tight line-clamp-1">{book.title}</h2>
@@ -347,6 +368,9 @@ export function AdminManagementContent({
                </Badge>
                <Badge variant="outline" className="text-[9px] font-bold uppercase py-0">
                  ISBN: {book.isbn || 'REF'}
+               </Badge>
+               <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 text-primary border-primary/20 bg-primary/5">
+                 DDC: {book.dewey_decimal || 'N/A'}
                </Badge>
             </div>
           </div>
@@ -388,19 +412,35 @@ export function AdminManagementContent({
             <FieldGroup label="Section">
               <Input value={editForm.section} onChange={e => setEditForm({ ...editForm, section: e.target.value })} className="h-9 rounded-xl text-xs" />
             </FieldGroup>
+            <FieldGroup label="Dewey Decimal (DDC)">
+              <Input value={editForm.dewey_decimal} onChange={e => setEditForm({ ...editForm, dewey_decimal: e.target.value })} className="h-9 rounded-xl text-xs" />
+            </FieldGroup>
           </div>
           <div className="mt-6 flex items-center justify-between border-t border-primary/10 pt-4">
-             {showDeleteConfirm ? (
-               <div className="flex items-center gap-2">
-                 <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Archive?</span>
-                 <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[10px] font-black uppercase">
-                   Confirm
+             {book.is_active ? (
+               showDeleteConfirm ? (
+                 <div className="flex items-center gap-2">
+                   <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Archive?</span>
+                   <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[10px] font-black uppercase">
+                     Confirm
+                   </Button>
+                   <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[10px] font-bold uppercase">No</Button>
+                 </div>
+               ) : (
+                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[10px] font-black uppercase">
+                   <Archive size={12} className="mr-1.5" /> Archive Asset
                  </Button>
-                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[10px] font-bold uppercase">No</Button>
-               </div>
+               )
              ) : (
-               <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[10px] font-black uppercase">
-                 <Archive size={12} className="mr-1.5" /> Archive Asset
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={handleRestoreBook} 
+                 disabled={restoreLoading}
+                 className="h-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-[10px] font-black uppercase"
+               >
+                 {restoreLoading ? <Loader2 size={12} className="mr-1.5 animate-spin" /> : <RotateCw size={12} className="mr-1.5" />}
+                 Restore Asset
                </Button>
              )}
              <Button onClick={handleUpdateBook} disabled={updateLoading} size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase tracking-widest">
@@ -516,7 +556,10 @@ export function AdminManagementContent({
                         <StatusIcon size={14} className={statusCfg.color} />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-mono text-[11px] font-black text-foreground truncate">{copy.qr_string}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-[11px] font-black text-foreground truncate">{copy.qr_string}</p>
+                          <span className="text-[9px] font-black text-primary/40 px-1 border border-primary/10 rounded bg-primary/5">{copy.accession_number}</span>
+                        </div>
                         <div className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground/60 uppercase">
                           <span className={statusCfg.color}>{statusCfg.label}</span>
                           <span className="opacity-30">•</span>

@@ -19,7 +19,8 @@ function buildUsersPromise() {
 
     let query = supabase
       .from("profiles")
-      .select("*", { count: "exact" });
+      .select("*", { count: "exact" })
+      .neq("status", "ARCHIVED");
 
     // Librarian Restriction: Hide admins from initial fetch
     if (role === "librarian") {

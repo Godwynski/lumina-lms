@@ -12,6 +12,7 @@ export const BookSchema = z.object({
   tags: z.array(z.string()).optional(),
   location: z.string().optional().nullable(),
   section: z.string().optional().nullable(),
+  dewey_decimal: z.string().optional().nullable(),
 });
 
 
