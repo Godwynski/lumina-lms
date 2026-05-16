@@ -34,12 +34,6 @@ export function AddBookClient() {
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
 
-  const normalizeIsbn = useCallback((value: string) => {
-    const trimmed = value.trim().toUpperCase().replace(/^ISBN(?:-1[03])?:?\s*/, '');
-    const compact = trimmed.replace(/[^0-9X]/g, '');
-    if (compact.length === 10 || compact.length === 13) return compact;
-    return null;
-  }, []);
 
   const handleIsbnLookup = useCallback(async (isbnCandidate?: string) => {
     const sourceIsbn = (isbnCandidate ?? formData.isbn).trim();
@@ -217,7 +211,7 @@ export function AddBookClient() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 shadow-sm relative overflow-hidden">
+          <form onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 relative overflow-hidden">
             
             <ISBNLookupBar 
               isbn={formData.isbn}
@@ -236,7 +230,7 @@ export function AddBookClient() {
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="h-11 flex-1 rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm"
+                className="h-11 flex-1 rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90"
               >
                 {loading ? 'Processing...' : (
                   <div className="flex items-center gap-2">

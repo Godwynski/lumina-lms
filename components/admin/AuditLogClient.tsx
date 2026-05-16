@@ -207,6 +207,25 @@ export function AuditLogClient() {
   const [actionType, setActionType] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const handleStartDateChange = (val: string) => {
+    if (endDate && val > endDate) {
+      toast.error("Start date cannot be after end date");
+      return;
+    }
+    setStartDate(val);
+    setPage(1);
+  };
+
+  const handleEndDateChange = (val: string) => {
+    if (startDate && val < startDate) {
+      toast.error("End date cannot be before start date");
+      return;
+    }
+    setEndDate(val);
+    setPage(1);
+  };
+
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -273,7 +292,7 @@ export function AuditLogClient() {
                   placeholder="Search name, action, or reason..." 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-10 border-none shadow-none focus-visible:ring-1 focus-visible:ring-primary/30 bg-muted/10 rounded-xl text-xs font-medium w-full"
+                  className="pl-9 h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
                 />
               </div>
               <Button
@@ -281,8 +300,8 @@ export function AuditLogClient() {
                 size="icon"
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 className={cn(
-                  "h-10 w-10 shrink-0 rounded-xl border-none shadow-none transition-colors xl:hidden",
-                  showAdvancedFilters ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/10 hover:bg-muted/20"
+                  "h-10 w-10 shrink-0 rounded-2xl border border-border/20 transition-all xl:hidden",
+                  showAdvancedFilters ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/5 hover:bg-muted/10"
                 )}
                 title="Toggle Advanced Filters"
               >
@@ -292,13 +311,13 @@ export function AuditLogClient() {
             
             <div className="flex flex-row items-center gap-2 w-full xl:w-auto">
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger className="flex-1 xl:w-[140px] h-10 border-none shadow-none bg-muted/10 rounded-xl text-xs font-medium focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="flex-1 xl:w-[140px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
                   <div className="flex items-center gap-2">
                     <Filter className="h-3 w-3 text-muted-foreground/40" />
                     <SelectValue placeholder="Entity" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                <SelectContent className="rounded-2xl border-border/40">
                   {ENTITY_TYPES.map(t => (
                     <SelectItem key={t} value={t} className="capitalize text-xs py-2">
                       {t === "all" ? "All Entities" : t.replace(/_/g, " ")}
@@ -308,13 +327,13 @@ export function AuditLogClient() {
               </Select>
 
               <Select value={actionType} onValueChange={(v) => { setActionType(v); setPage(1); }}>
-                <SelectTrigger className="flex-1 xl:w-[140px] h-10 border-none shadow-none bg-muted/10 rounded-xl text-xs font-medium focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="flex-1 xl:w-[140px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
                   <div className="flex items-center gap-2">
                     <Filter className="h-3 w-3 text-muted-foreground/40" />
                     <SelectValue placeholder="Action" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-border/40 shadow-xl">
+                <SelectContent className="rounded-2xl border-border/40">
                   <SelectItem value="all" className="text-xs py-2">All Actions</SelectItem>
                   <SelectItem value="create" className="text-xs py-2">Create</SelectItem>
                   <SelectItem value="update" className="text-xs py-2">Update</SelectItem>
@@ -328,8 +347,8 @@ export function AuditLogClient() {
                 size="icon"
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 className={cn(
-                  "hidden xl:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-none shadow-none transition-colors",
-                  showAdvancedFilters ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted/10 hover:bg-muted/20"
+                  "hidden xl:flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/20 transition-all",
+                  showAdvancedFilters ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/5 hover:bg-muted/10"
                 )}
                 title="Toggle Advanced Filters"
               >
@@ -342,7 +361,7 @@ export function AuditLogClient() {
                   size="sm"
                   onClick={() => mutate()}
                   disabled={isValidating}
-                  className="h-10 rounded-xl bg-background shadow-xs text-[10px] font-bold uppercase tracking-wider px-4 border-border/40 hover:bg-muted"
+                  className="h-10 rounded-2xl bg-background text-[10px] font-bold uppercase tracking-wider px-4 border border-border/20 hover:bg-muted transition-all"
                 >
                   <RefreshCw className={cn("h-3.5 w-3.5 xl:mr-2", isValidating && "animate-spin")} />
                   <span className="hidden xl:inline">Refresh</span>
@@ -351,7 +370,7 @@ export function AuditLogClient() {
                   variant="default"
                   size="sm"
                   onClick={handleExport}
-                  className="h-10 rounded-xl shadow-lg shadow-primary/10 text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
+                  className="h-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
                 >
                   <Download className="h-3.5 w-3.5 xl:mr-2" />
                   <span className="hidden xl:inline">Export CSV</span>
@@ -366,7 +385,7 @@ export function AuditLogClient() {
                   size="sm"
                   onClick={() => mutate()}
                   disabled={isValidating}
-                  className="h-10 flex-1 rounded-xl bg-background shadow-xs text-[10px] font-bold uppercase tracking-wider px-4 border-border/40 hover:bg-muted"
+                  className="h-10 flex-1 rounded-2xl bg-background text-[10px] font-bold uppercase tracking-wider px-4 border border-border/20 hover:bg-muted"
                 >
                   <RefreshCw className={cn("h-3.5 w-3.5 mr-2", isValidating && "animate-spin")} />
                   Refresh
@@ -375,7 +394,7 @@ export function AuditLogClient() {
                   variant="default"
                   size="sm"
                   onClick={handleExport}
-                  className="h-10 flex-1 rounded-xl shadow-lg shadow-primary/10 text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
+                  className="h-10 flex-1 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
                 >
                   <Download className="h-3.5 w-3.5 mr-2" />
                   Export CSV
@@ -385,13 +404,14 @@ export function AuditLogClient() {
 
           {/* Collapsible Advanced Filters */}
           {showAdvancedFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 p-4 mt-2 bg-muted/5 rounded-2xl border border-border/5 animate-in slide-in-from-top-2 fade-in-50 duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 p-4 mt-2 bg-muted/5 rounded-3xl border border-border/5 animate-in slide-in-from-top-2 fade-in-50 duration-200">
               <div className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-wider">Start Date</span>
                 <Input 
                   type="date" 
                   value={startDate}
-                  onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
                   className="h-9 border-none shadow-none bg-muted/10 rounded-xl text-xs"
                 />
               </div>
@@ -400,7 +420,8 @@ export function AuditLogClient() {
                 <Input 
                   type="date" 
                   value={endDate}
-                  onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
                   className="h-9 border-none shadow-none bg-muted/10 rounded-xl text-xs"
                 />
               </div>
@@ -530,7 +551,7 @@ export function AuditLogClient() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider hover:bg-background shadow-xs border border-border/10"
+                              className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider hover:bg-background border border-border/10"
                               onClick={(e) => { e.stopPropagation(); setExpandedRowId(isExpanded ? null : log.id); }}
                             >
                               {isExpanded ? "Hide" : "View"}

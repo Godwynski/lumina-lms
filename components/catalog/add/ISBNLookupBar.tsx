@@ -18,7 +18,7 @@ export function ISBNLookupBar({
   isbnLoading,
 }: ISBNLookupBarProps) {
   return (
-    <div className="space-y-4 rounded-xl border border-border/40 bg-card/50 p-5 shadow-sm">
+    <div className="space-y-4 rounded-xl border border-border/40 bg-card/50 p-5">
       <div className="mb-1 flex items-center gap-2 text-foreground/80">
         <Search className="w-4 h-4 text-primary/70" />
         <span className="text-xs font-bold uppercase tracking-wider">ISBN Quick Lookup</span>
@@ -30,7 +30,7 @@ export function ISBNLookupBar({
             type="text" 
             value={isbn}
             onChange={(e) => onIsbnChange(e.target.value)}
-            className="h-10 w-full rounded-xl border-border/40 bg-background px-4 text-sm transition-all focus:ring-2 focus:ring-primary/20 shadow-sm"
+            className="h-10 w-full rounded-xl border-border/40 bg-background px-4 text-sm transition-all focus:ring-2 focus:ring-primary/20"
             placeholder="Enter ISBN-10 or ISBN-13"
           />
         </div>
@@ -38,7 +38,7 @@ export function ISBNLookupBar({
           type="button" 
           onClick={onFetchData}
           disabled={isbnLoading || !isbn}
-          className="h-10 rounded-xl bg-primary px-6 text-xs font-bold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm"
+          className="h-10 rounded-xl bg-primary px-6 text-xs font-bold text-primary-foreground transition-all hover:bg-primary/90"
         >
           {isbnLoading ? 'Searching...' : 'Fetch Data'}
         </Button>

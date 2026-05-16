@@ -3,8 +3,7 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookText, Hash, MapPin, Layers, Tag, PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { BookText, MapPin, Layers, Tag, PlusCircle } from "lucide-react";
 
 interface BookDetailsFormProps {
   formData: {
@@ -22,7 +21,7 @@ interface BookDetailsFormProps {
   categories: Array<{ id: string; name: string }>;
 }
 
-function SectionHeader({ icon: Icon, title }: { icon: any, title: string }) {
+function SectionHeader({ icon: Icon, title }: { icon: React.ElementType, title: string }) {
   return (
     <div className="flex items-center gap-2 pb-2 border-b border-border/10 mb-4">
       <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -48,7 +47,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               value={formData.title}
               onChange={e => onUpdate({ title: e.target.value })}
               placeholder="e.g. Clean Code"
-              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
+              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -60,7 +59,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               value={formData.author}
               onChange={e => onUpdate({ author: e.target.value })}
               placeholder="e.g. Robert C. Martin"
-              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
+              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -73,7 +72,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
           <div className="space-y-2 text-left">
             <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Category</Label>
             <Select value={formData.categoryId || 'none'} onValueChange={(value) => onUpdate({ categoryId: value === 'none' ? '' : value })}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm">
+              <SelectTrigger className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm focus:bg-background focus:ring-2 focus:ring-primary/20">
                 <SelectValue placeholder="Uncategorized" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -92,7 +91,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               value={formData.dewey_decimal}
               onChange={e => onUpdate({ dewey_decimal: e.target.value })}
               placeholder="e.g. 621.389"
-              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
+              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -103,7 +102,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               value={formData.isbn}
               onChange={e => onUpdate({ isbn: e.target.value })}
               placeholder="9780132350884"
-              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
+              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -134,7 +133,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               value={formData.section}
               onChange={e => onUpdate({ section: e.target.value })}
               placeholder="e.g. CS Reference"
-              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
+              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
           </div>
           
@@ -145,7 +144,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               value={formData.location}
               onChange={e => onUpdate({ location: e.target.value })}
               placeholder="e.g. Shelf A-5"
-              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
+              className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
           </div>
 

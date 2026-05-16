@@ -70,7 +70,7 @@ export function AdminTableShell({
       {feedback}
 
       {controls && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/5 p-2 rounded-[2rem] border border-border/5 backdrop-blur-[2px]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/5 p-2 rounded-3xl border border-border/5 backdrop-blur-[2px]">
           {controls}
         </div>
       )}
@@ -79,7 +79,7 @@ export function AdminTableShell({
         "overflow-hidden transition-all duration-500",
         isGhost 
           ? "rounded-none border-none bg-transparent shadow-none" 
-          : "rounded-[2.5rem] border border-border/10 bg-card/40 shadow-sm backdrop-blur-sm"
+          : "rounded-3xl border border-border/10 bg-card/40 backdrop-blur-sm"
       )}>
         <div className={cn("relative group/table", !isGhost && "overflow-hidden")}>
           <div className={cn(

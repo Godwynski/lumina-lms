@@ -43,7 +43,7 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
           animate={{ opacity: 1, scale: 1, y: 0 }}
           whileHover={{ y: -4 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all group-hover:bg-accent/50 group-hover:border-primary/30 group-hover:shadow-lg"
+          className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-3 transition-all group-hover:bg-accent/50 group-hover:border-primary/30"
         >
           <div className="mb-3 flex items-start gap-4">
             <div className="min-w-0 flex-1">
@@ -75,7 +75,7 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
               </div>
             </div>
 
-            <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 group-hover:shadow-md">
+            <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
               <Image 
                 src={book.cover_url || "/images/default-book-cover.png"} 
                 alt={book.title} 
