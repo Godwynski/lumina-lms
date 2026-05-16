@@ -23,7 +23,7 @@ export default function AuditPage() {
 async function AuditAuthGate() {
   const role = await getUserRole();
 
-  if (role !== "admin") {
+  if (role !== "admin" && role !== "librarian") {
     redirect("/dashboard?error=unauthorized");
   }
 

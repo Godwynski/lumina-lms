@@ -80,7 +80,7 @@ export async function runMaintenanceTasks() {
       const { success } = await sendNotification({
         userId: record.user_id,
         title: 'Reminder: Book Due Soon',
-        content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} is due on ${dueDate.toLocaleDateString()}. Please return or renew it to avoid fines.`,
+        content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} is due on ${dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' })}. Please return or renew it to avoid fines.`,
         type: 'DUE_SOON',
         priority: 'medium',
         metadata: {
@@ -98,7 +98,7 @@ export async function runMaintenanceTasks() {
             to: record.profiles.email,
             userName: record.profiles.full_name || 'Valued Member',
             bookTitle: book?.title || 'Borrowed Book',
-            dueDate: dueDate.toLocaleDateString(),
+            dueDate: dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' }),
           });
         }
 
@@ -152,7 +152,7 @@ export async function runMaintenanceTasks() {
         const { success } = await sendNotification({
           userId: record.user_id,
           title: 'URGENT: Book Overdue',
-          content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} was due on ${dueDate.toLocaleDateString()} and is now ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue. Please return it immediately to the Main Library circulation desk.`,
+          content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} was due on ${dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' })} and is now ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue. Please return it immediately to the Main Library circulation desk.`,
           type: 'OVERDUE',
           priority: 'high',
           metadata: {
@@ -171,7 +171,7 @@ export async function runMaintenanceTasks() {
               to: record.profiles.email,
               userName: record.profiles.full_name || 'Valued Member',
               bookTitle: book?.title || 'Borrowed Book',
-              dueDate: dueDate.toLocaleDateString(),
+              dueDate: dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' }),
               overdueDays,
             });
           }

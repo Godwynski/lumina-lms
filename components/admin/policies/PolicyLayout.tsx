@@ -109,7 +109,7 @@ export function PolicyLayout({
       { id: "support", ...CATEGORY_MAP.support },
     ];
 
-    if (role === "admin") {
+    if (role === "admin" || role === "librarian") {
       items.push({ id: "lifecycle", ...CATEGORY_MAP.lifecycle });
     }
 

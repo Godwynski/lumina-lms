@@ -141,11 +141,11 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian"] },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian" },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, exactRoles: ["admin", "librarian"] },
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
-  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin" },
+  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
