@@ -103,24 +103,43 @@ export function DashboardClient({
   const activeBorrowsList = useMemo(() => stats.activeBorrowsList || [], [stats.activeBorrowsList]);
 
   useEffect(() => {
+    // Unique channel name to avoid collisions
+    const channelName = `dashboard-${user.id}-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel('dashboard-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
+      .channel(channelName)
+      // Student-specific data with filters for efficiency
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'borrowing_records',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
         debouncedRefresh();
       })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'reservations',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        debouncedRefresh();
+      })
+      // General data that affects the dashboard
       .on('postgres_changes', { event: '*', schema: 'public', table: 'library_cards' }, () => {
         debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
         debouncedRefresh();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
-        debouncedRefresh();
-      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
         debouncedRefresh();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'attendance',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
         debouncedRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'system_settings' }, () => {
@@ -132,7 +151,7 @@ export function DashboardClient({
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [supabase, debouncedRefresh]);
+  }, [supabase, debouncedRefresh, user.id]);
 
   useEffect(() => {
     setMounted(true);
@@ -261,13 +280,6 @@ export function DashboardClient({
           )}
         </Card>
       </section>
-
-      {/* Catalog Search */}
-      <div className="flex items-center justify-between px-1">
-        <div className="w-full">
-          <DashboardSearch role={role || null} />
-        </div>
-      </div>
 
       {/* Main Content Area: Personal Activity */}
       <ActivitySection 

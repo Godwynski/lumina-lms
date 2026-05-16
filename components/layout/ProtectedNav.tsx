@@ -96,8 +96,10 @@ function hasPermission(
   const isDeactivatedSA = userRole === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
 
   // 1. Exact role match (highest priority)
-  if (exactRoles && exactRoles.length > 0 && userRole) {
-    if (exactRoles.includes(userRole)) return true;
+  if (exactRoles && exactRoles.length > 0) {
+    if (userRole && exactRoles.includes(userRole)) return true;
+    // If exactRoles is specified and no match, and no minRole fallback, deny access
+    if (!minRole) return false;
   }
 
   // 2. Minimum rank check
@@ -138,14 +140,15 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian"] },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian", "student_assistant"] },
+  { href: "/catalog", label: "Inventory", icon: BookOpen, minRole: "librarian" },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, exactRoles: ["admin", "librarian"] },
-  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian" },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
-  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian" },
-  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian" },
+  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian", permissionKey: "view_admin_dashboard" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
@@ -237,7 +240,7 @@ export function ProtectedNav({
     : (currentRole === "admin" || currentRole === "librarian")
       ? "staff"
       : ((currentPrefs?.preferred_dashboard_view as "student" | "staff") || 
-         (currentRole === "student_assistant" ? "student" : "staff"));
+         (currentRole === "student" ? "student" : "staff"));
 
   const handleToggleMode = () => {
     const newMode = currentMode === "staff" ? "student" : "staff";
@@ -339,17 +342,28 @@ export function ProtectedNav({
 
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
-      // 1. Permission Check (Role + Status + Permissions)
+      // 1. Core Permission Check (Role Rank + Specific Permission Key)
       if (!hasPermission(currentRole, item, currentProfile)) return false;
 
-      // 2. Mode Check (Staff View vs Personal View)
-      if (currentMode === "student") {
-        // In Student/Personal mode, only allow these basic items
-        const studentHrefs = ["/dashboard", "/student-catalog", "/attendance", "/history"];
-        return studentHrefs.includes(item.href);
-      } else {
-        // Staff/Admin Mode: Apply exclusions
+      // 2. View Mode Filtering
+      if (currentMode === "staff") {
+        // Staff View: Hide purely student-facing modules
+        const studentOnly = ["/student-catalog", "/history"];
+        if (studentOnly.includes(item.href)) return false;
+
+        // Special case: Attendance only shows in staff view if you have manage permission
+        // otherwise it stays in Personal View to avoid confusion with the management table
+        if (item.href === "/attendance" && currentRole === "student_assistant") {
+           const hasAttendancePerm = currentProfile?.permissions?.manage_attendance;
+           if (!hasAttendancePerm) return false;
+        }
+
+        // Apply explicit exclusions
         if (currentRole && item.excludeRoles?.includes(currentRole)) return false;
+      } else {
+        // Personal/Student View: Only show basic personal modules
+        const personalModules = ["/dashboard", "/student-catalog", "/attendance", "/history"];
+        return personalModules.includes(item.href);
       }
 
       return true;

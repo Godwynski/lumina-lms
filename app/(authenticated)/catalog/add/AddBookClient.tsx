@@ -7,8 +7,6 @@ import { Save, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { compressImage } from '@/lib/image-utils';
-
-import { useScanner } from '@/hooks/use-scanner';
 import { ISBNLookupBar } from '@/components/catalog/add/ISBNLookupBar';
 import { BookDetailsForm } from '@/components/catalog/add/BookDetailsForm';
 import { CoverUploader } from '@/components/catalog/add/CoverUploader';
@@ -18,7 +16,6 @@ export function AddBookClient() {
   const [loading, setLoading] = useState(false);
   const [isbnLoading, setIsbnLoading] = useState(false);
   const [error, setError] = useState('');
-  const [scanNotice, setScanNotice] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -109,38 +106,6 @@ export function AddBookClient() {
       setIsbnLoading(false);
     }
   }, [formData.isbn]);
-
-  const {
-    cameraOpen,
-    startScanner,
-    stopCamera,
-    isInitializing,
-    cameraSupported,
-    cameraIssue,
-    scannerId
-  } = useScanner({
-    onScan: async (rawValue) => {
-      const isbn = normalizeIsbn(rawValue);
-      if (!isbn) {
-        setScanNotice('Scanned code is not a valid ISBN-10 or ISBN-13.');
-        return;
-      }
-
-      setFormData((prev) => ({ ...prev, isbn }));
-      setScanNotice(`Scanned ISBN ${isbn}. Looking up book data...`);
-      void stopCamera();
-      await handleIsbnLookup(isbn);
-    },
-    isProcessing: loading || isbnLoading,
-    scannerId: 'isbn-scanner',
-    formats: [
-      9,  // EAN_13
-      10, // EAN_8
-      5,  // CODE_128
-      14, // UPC_A
-      15, // UPC_E
-    ]
-  });
 
   useEffect(() => {
     async function loadCategories() {
@@ -257,13 +222,6 @@ export function AddBookClient() {
               onIsbnChange={(isbn) => updateFormData({ isbn })}
               onFetchData={() => void handleIsbnLookup()}
               isbnLoading={isbnLoading}
-              cameraSupported={cameraSupported}
-              cameraOpen={cameraOpen}
-              isInitializing={isInitializing}
-              cameraIssue={cameraIssue}
-              scannerId={scannerId}
-              onToggleCamera={() => cameraOpen ? void stopCamera() : void startScanner()}
-              scanNotice={scanNotice}
             />
 
             <BookDetailsForm 
