@@ -241,8 +241,10 @@ export const PATCH = withAuthApi(
       nextStatus &&
       Object.prototype.hasOwnProperty.call(profile, "status")
     ) {
-      if (requesterRole === "librarian" && (nextStatus === "ARCHIVED" || nextStatus === "SUSPENDED")) {
-        return apiError("Librarians cannot archive or suspend users", "FORBIDDEN", 403);
+      if (nextStatus === "ARCHIVED" || nextStatus === "SUSPENDED") {
+        if (requesterRole !== "admin") {
+          return apiError("Only admins can archive or suspend users", "FORBIDDEN", 403);
+        }
       }
       updates.status = nextStatus;
     }
