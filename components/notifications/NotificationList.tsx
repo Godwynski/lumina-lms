@@ -9,7 +9,6 @@ interface NotificationListProps {
   notifications: Notification[]
   loading: boolean
   onMarkRead: (id: string) => void
-  onDelete: (id: string) => void
   variant?: 'compact' | 'full'
   emptyMessage?: string
 }
@@ -18,7 +17,6 @@ export function NotificationList({
   notifications,
   loading,
   onMarkRead,
-  onDelete,
   variant = 'full',
   emptyMessage = "You're all caught up"
 }: NotificationListProps) {
@@ -53,7 +51,6 @@ export function NotificationList({
           key={notification.id} 
           notification={notification} 
           onMarkRead={onMarkRead}
-          onDelete={onDelete}
           variant={variant}
         />
       ))}

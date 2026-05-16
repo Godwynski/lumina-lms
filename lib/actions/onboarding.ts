@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { logAuditActivity } from "@/lib/audit";
-import { parseStudentIdFromEmail, resolveStudentId } from "@/lib/library-card-assets";
+import { parseStudentIdFromEmail, resolveStudentId, generateFacultyId } from "@/lib/library-card-assets";
 
 export async function getAcademicPrograms() {
   const supabase = await createClient();
@@ -58,6 +58,26 @@ export async function submitOnboarding(formData: {
       email: profile?.email ?? user.email,
       role: profile?.role,
     });
+  }
+
+  // Ensure uniqueness for generated faculty IDs if we're assigning a new one
+  if (studentId && studentId.startsWith("FAC-") && !profile?.student_id) {
+    let isUnique = false;
+    let attempts = 0;
+    while (!isUnique && attempts < 10) {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('student_id', studentId)
+        .maybeSingle();
+      
+      if (!existing) {
+        isUnique = true;
+      } else {
+        studentId = generateFacultyId();
+        attempts++;
+      }
+    }
   }
 
   const updatePayload: Record<string, unknown> = {
