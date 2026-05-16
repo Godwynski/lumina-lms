@@ -22,8 +22,13 @@ interface TrendChartProps {
   color: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: { value: number; stroke: string }[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-background/95 backdrop-blur-md border border-border/50 p-3 shadow-2xl rounded-lg">

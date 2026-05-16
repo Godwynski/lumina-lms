@@ -17,12 +17,13 @@ import {
 } from "lucide-react";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { cn } from "@/lib/utils";
-
 import { PolicyCommitModal } from "../PolicyCommitModal";
+import { CategoryManagement } from "../CategoryManagement";
+import { PolicySimulationPanel } from "../PolicySimulationPanel";
 import { PolicyField } from "./PolicyField";
 import { AnnualResetTool, RunMaintenanceTool, TestEmailTool } from "../../settings/SettingsShared";
 import { SystemAnnouncement } from "../system-announcement";
-import { CategoryManagement } from "../CategoryManagement";
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const CATEGORY_MAP: Record<string, { label: string; icon: React.ElementType; group: string }> = {
@@ -315,6 +316,15 @@ export function PolicyLayout({
                       loading={loading}
                     />
                   ))}
+                  {activeCategory === "reservations" && (
+                    <div className="mt-12 pt-12 border-t border-border/40">
+                      <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-foreground">Simulation Engine</h4>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">Preview the impact of reservation policies on system throughput.</p>
+                      </div>
+                      <PolicySimulationPanel formData={formData} />
+                    </div>
+                  )}
                 </div>
               )}
              </TooltipProvider>
@@ -360,3 +370,5 @@ function CategoryManagementWrapper({ promise }: { promise: Promise<Category[]> |
   const categories = use(promise);
   return <CategoryManagement initialCategories={Array.isArray(categories) ? categories : []} />;
 }
+
+

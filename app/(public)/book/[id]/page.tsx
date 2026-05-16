@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getPublicBookById } from '@/lib/actions/public-catalog';
-import { ChevronLeft, MapPin, BookOpen, Hash, Tag } from 'lucide-react';
+import { ChevronLeft, MapPin, Hash, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportMissingButton } from '@/components/common/ReportMissingButton';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,16 +26,12 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
     <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8 flex flex-col md:flex-row gap-8">
       <div className="w-full md:w-1/3 flex-shrink-0">
         <div className="relative aspect-[2/3] bg-muted rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
-          {book.cover_url ? (
-            <Image 
-              src={book.cover_url} 
-              alt={book.title} 
-              fill
-              className="object-cover" 
-            />
-          ) : (
-            <BookOpen className="w-16 h-16 text-muted-foreground/40" />
-          )}
+          <Image 
+            src={book.cover_url || "/images/default-book-cover.png"} 
+            alt={book.title} 
+            fill
+            className="object-cover" 
+          />
         </div>
       </div>
 

@@ -15,8 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
 import { 
   updateAttendance, 
-  deleteAttendance,
-  logAttendance
+  deleteAttendance
 } from "@/lib/actions/attendance";
 import {
   DropdownMenu,
@@ -168,16 +167,6 @@ export function AttendanceClient({
     });
   }, [startTransition]);
 
-  const handleSelfToggle = () => {
-    startTransition(async () => {
-      const result = await logAttendance();
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  };
 
   const handleDelete = async () => {
     if (!recordToDelete) return;
@@ -262,13 +251,10 @@ export function AttendanceClient({
     <>
     <AdminTableShell
       controls={isStaff ? scannerControls : (
-        <Suspense fallback={<div className="h-9 w-32 animate-pulse bg-muted/20 rounded-lg" />}>
-          <SelfLogControls 
-            historyPromise={historyPromise} 
-            isPending={isPending} 
-            handleSelfToggle={handleSelfToggle} 
-          />
-        </Suspense>
+        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
+          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+          {format(new Date(), "MMMM dd, yyyy")}
+        </div>
       )}
       className="max-w-5xl"
     >
@@ -336,7 +322,7 @@ export function AttendanceClient({
         <DialogHeader>
           <DialogTitle>Edit Attendance Record</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Adjusting logs for <span className="font-bold text-foreground">{editingRecord?.profiles?.full_name || "Self Check-in"}</span>
+            Adjusting logs for <span className="font-bold text-foreground">{editingRecord?.profiles?.full_name || "Student"}</span>
           </p>
         </DialogHeader>
         <form onSubmit={handleUpdate} className="space-y-4 py-4">
@@ -377,63 +363,6 @@ export function AttendanceClient({
   );
 }
 
-function SelfLogControls({ 
-  historyPromise, 
-  isPending, 
-  handleSelfToggle 
-}: { 
-  historyPromise: Promise<AttendanceRecord[]>, 
-  isPending: boolean,
-  handleSelfToggle: () => void
-}) {
-  const history = use(historyPromise);
-  const activeRecord = history.find(r => !r.check_out_at);
-
-  return (
-    <div className="flex flex-1 items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
-          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
-          {format(new Date(), "MMMM dd, yyyy")}
-        </div>
-        {activeRecord ? (
-          <div className="flex items-center gap-2">
-            <StatusBadge status="ACTIVE" className="h-6 px-3" />
-            <span className="text-[10px] font-bold text-green-600 animate-pulse uppercase tracking-wider">You are Timed In</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <StatusBadge status="COMPLETED" className="h-6 px-3" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">You are Timed Out</span>
-          </div>
-        )}
-      </div>
-
-      <Button
-        variant={activeRecord ? "outline" : "default"}
-        size="sm"
-        onClick={handleSelfToggle}
-        disabled={isPending}
-        className={cn(
-          "h-9 px-5 font-bold transition-all shadow-sm",
-          !activeRecord && "bg-primary text-primary-foreground hover:bg-primary/90"
-        )}
-      >
-        {isPending ? "..." : activeRecord ? (
-          <span className="flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
-            Time Out
-          </span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <LogIn className="w-4 h-4" />
-            Time In
-          </span>
-        )}
-      </Button>
-    </div>
-  );
-}
 
 function AttendanceTable({ 
   historyPromise, 
@@ -457,11 +386,11 @@ function AttendanceTable({
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
-              {(record.profiles?.full_name || "Self").charAt(0)}
+              {(record.profiles?.full_name || "Student").charAt(0)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="truncate font-medium text-foreground">{record.profiles?.full_name || "Self Check-in"}</p>
+            <p className="truncate font-medium text-foreground">{record.profiles?.full_name || "Student"}</p>
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
               {format(new Date(record.check_in_at), "MMM dd, yyyy")}
             </p>
@@ -554,7 +483,7 @@ function AttendanceTable({
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Self Check-in"}</p>
+              <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] text-muted-foreground font-bold uppercase">
                   {format(new Date(record.check_in_at), "MMM dd")}

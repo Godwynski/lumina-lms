@@ -140,46 +140,6 @@ export const toggleAttendanceByCard = createSafeAction(
 );
 
 
-/**
- * Legacy/Simple check-in for the user themselves
- */
-export async function logAttendance() {
-  const me = await getMe();
-  if (!me) throw new Error("Unauthorized");
-
-  const { supabase, user } = me;
-
-  // Check if already logged today and still in
-  const { data: existing } = await supabase
-    .from("attendance")
-    .select("id")
-    .eq("user_id", user.id)
-    .is("check_out_at", null)
-    .maybeSingle();
-
-  if (existing) {
-    // Log out
-    await supabase.from("attendance").update({ check_out_at: new Date().toISOString() }).eq("id", existing.id);
-    revalidatePath("/attendance", "page");
-    return { success: true, message: "Logged out successfully!" };
-  }
-
-  const { error } = await supabase
-    .from("attendance")
-    .insert({
-      user_id: user.id,
-      check_in_at: new Date().toISOString()
-    });
-
-  if (error) {
-    return { success: false, message: "Failed to log attendance." };
-  }
-
-  revalidatePath("/dashboard", "page");
-  revalidatePath("/attendance", "page");
-  
-  return { success: true, message: "Checked in successfully!" };
-}
 
 export async function getAttendanceHistory(userId?: string) {
   const me = await getMe();
@@ -321,30 +281,3 @@ export const deleteAttendance = createSafeAction(
   }
 );
 
-/**
- * Gets attendance stats for the dashboard.
- */
-export async function getAttendanceStats() {
-  const me = await getMe();
-  if (!me) throw new Error("Unauthorized");
-  
-  const { supabase } = me;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const [totalToday, activeNow] = await Promise.all([
-    supabase
-      .from("attendance")
-      .select("*", { count: 'exact', head: true })
-      .gte("check_in_at", today.toISOString()),
-    supabase
-      .from("attendance")
-      .select("*", { count: 'exact', head: true })
-      .is("check_out_at", null)
-  ]);
-
-  return {
-    todayCount: totalToday.count || 0,
-    activeCount: activeNow.count || 0
-  };
-}

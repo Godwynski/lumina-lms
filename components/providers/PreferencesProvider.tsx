@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import React, { createContext, useEffect, useState, useCallback, useRef } from "react";
 import { isAbortError } from "@/lib/error-utils";
 
 type Preferences = Record<string, unknown>;
@@ -126,10 +126,4 @@ export function PreferencesProvider({
   );
 }
 
-export function usePreferences() {
-  const context = useContext(PreferencesContext);
-  if (context === undefined) {
-    throw new Error("usePreferences must be used within a PreferencesProvider");
-  }
-  return context;
-}
+
