@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger';
 import { logAuditActivity } from '@/lib/audit';
 import { revalidateTag, revalidatePath } from 'next/cache';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { sendNotification } from '@/lib/notifications';
+import { format } from 'date-fns';
 
 /**
  * Checks if a user is eligible to borrow books.
@@ -174,6 +176,7 @@ export const checkoutBook = createSafeAction(
   }),
   async ({ studentCardQr, bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
     // 1. Pre-validation: Eligibility Check (only if not preview)
+    let studentUserId: string | null = null;
     if (!previewOnly) {
        // First resolve the student to get user_id
        const { data: card } = await supabase
@@ -183,6 +186,7 @@ export const checkoutBook = createSafeAction(
          .single();
        
        if (card) {
+         studentUserId = card.user_id;
          await checkUserBorrowingEligibility(supabase, card.user_id);
        }
     }
@@ -234,6 +238,22 @@ export const checkoutBook = createSafeAction(
         null,
         { status: 'ACTIVE', book_qr: bookQr }
       );
+
+      // Notify the student
+      if (studentUserId) {
+        await sendNotification({
+          userId: studentUserId,
+          title: "Book Borrowed",
+          content: `You have successfully borrowed "${result.book_title}". Due date: ${result.due_date ? format(new Date(result.due_date), "MMM dd, yyyy") : 'N/A'}.`,
+          type: "CIRCULATION",
+          priority: "medium",
+          metadata: {
+            borrowingId: result.borrowing_id,
+            bookTitle: result.book_title,
+            dueDate: result.due_date
+          }
+        });
+      }
       
       revalidatePath('/circulation', 'page');
       revalidateTag('catalog', 'max');
@@ -261,6 +281,29 @@ export const returnBook = createSafeAction(
     isManual: z.boolean().default(false)
   }),
   async ({ bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
+    // Find the current borrower to notify them
+    let studentUserId: string | null = null;
+    if (!previewOnly) {
+      const { data: copy } = await supabase
+        .from('book_copies')
+        .select('id')
+        .eq('qr_string', bookQr.trim())
+        .maybeSingle();
+      
+      if (copy) {
+        const { data: record } = await supabase
+          .from('borrowing_records')
+          .select('user_id')
+          .eq('book_copy_id', copy.id)
+          .eq('status', 'ACTIVE')
+          .maybeSingle();
+        
+        if (record) {
+          studentUserId = record.user_id;
+        }
+      }
+    }
+
     const { data, error } = await supabase.rpc('process_qr_return', {
       p_librarian_id: String(staff.id),
       p_book_qr: bookQr.trim(),
@@ -310,6 +353,21 @@ export const returnBook = createSafeAction(
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );
+
+      // Notify the student
+      if (studentUserId) {
+        await sendNotification({
+          userId: studentUserId,
+          title: "Book Returned",
+          content: `You have successfully returned "${result.book_title}". Thank you!`,
+          type: "CIRCULATION",
+          priority: "medium",
+          metadata: {
+            bookTitle: result.book_title,
+            returnedAt: new Date().toISOString()
+          }
+        });
+      }
 
       revalidatePath('/circulation', 'page');
       revalidateTag('catalog', 'max');

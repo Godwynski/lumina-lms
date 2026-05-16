@@ -233,7 +233,7 @@ interface SendNotificationOptions {
  * Sends a notification to a specific user.
  * Uses the admin client to bypass RLS.
  */
-async function sendNotification({
+export async function sendNotification({
   userId,
   title,
   content,
