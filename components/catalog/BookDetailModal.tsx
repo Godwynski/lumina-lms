@@ -52,6 +52,7 @@ interface BookDetail {
   total_copies: number;
   categories: { name?: string } | { name?: string }[] | null;
   tags: string[] | null;
+  dewey_decimal: string | null;
 }
 
 interface AvailabilityStatus {
@@ -318,6 +319,7 @@ function StudentModalContent({
       {/* Metadata Grid */}
       <div className="grid grid-cols-2 gap-2">
         <MetaRow icon={Hash} label="ISBN" value={<span className="font-mono text-[11px]">{book.isbn || 'N/A'}</span>} />
+        <MetaRow icon={Tag} label="DDC" value={<span className="font-mono text-[11px]">{book.dewey_decimal || 'N/A'}</span>} />
         <MetaRow icon={Layers} label="Category" value={categoryName || 'Uncategorized'} />
         <MetaRow icon={MapPin} label="Location" value={book.section || 'General'} />
         <MetaRow icon={Library} label="Section" value={book.location || book.section || 'Main Floor'} />

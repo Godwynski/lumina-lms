@@ -35,6 +35,7 @@ export function ModernInventoryClient({
 
   // Derived values from URL
   const sortBy = (searchParams.get("sort") as "newest" | "title_asc" | "title_desc" | "availability_desc" | "availability_asc") || "newest";
+  const status = (searchParams.get("status")?.toUpperCase() as "ACTIVE" | "ARCHIVED" | "ALL") || "ACTIVE";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
   const urlQuery = searchParams.get("q") || "";
@@ -86,7 +87,7 @@ export function ModernInventoryClient({
     const params = new URLSearchParams(searchParams.toString());
     
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === "all" || (key === "page" && value === 1)) {
+      if (value === null || value === "all" || (key === "page" && value === 1) || (key === "status" && value === "ACTIVE")) {
         params.delete(key);
       } else {
         params.set(key, value.toString());
@@ -105,6 +106,7 @@ export function ModernInventoryClient({
 
   const setCategoryId = (id: string) => updateParams({ categoryId: id });
   const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
+  const setStatus = (s: typeof status) => updateParams({ status: s });
   const setPage = (p: number) => updateParams({ page: p });
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -158,6 +160,18 @@ export function ModernInventoryClient({
           </form>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Status Select */}
+            <Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
+              <SelectTrigger className="h-10 w-full min-w-[120px] rounded-2xl border border-border/10 bg-muted/10 px-4 text-xs font-bold shadow-none focus:ring-0 md:w-[130px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-border/10 shadow-2xl">
+                <SelectItem value="ACTIVE">Visible Only</SelectItem>
+                <SelectItem value="ARCHIVED">Archived Only</SelectItem>
+                <SelectItem value="ALL">Show All</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Sort Select */}
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
               <SelectTrigger className="h-10 w-full min-w-[140px] rounded-2xl border border-border/10 bg-muted/10 px-4 text-xs font-bold shadow-none focus:ring-0 md:w-[160px]">

@@ -27,6 +27,7 @@ export function AddBookClient() {
     section: '',
     cover_url: '',
     copies: 1,
+    dewey_decimal: '',
   });
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -184,6 +185,7 @@ export function AddBookClient() {
           location: formData.location,
           section: formData.section,
           cover_url: finalCoverUrl,
+          dewey_decimal: formData.dewey_decimal || null,
         },
         copiesCount: formData.copies
       });

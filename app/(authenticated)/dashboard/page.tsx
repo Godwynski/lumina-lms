@@ -9,7 +9,15 @@ export const metadata = {
 export default function ProtectedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; sort?: string; view?: string }>;
+  searchParams: Promise<{ 
+    page?: string; 
+    q?: string; 
+    stock?: string; 
+    categoryId?: string; 
+    sort?: string; 
+    view?: string;
+    status?: string;
+  }>;
 }) {
   return (
     <div className="flex flex-col gap-2">

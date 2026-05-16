@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 import { CatalogContent, CatalogSkeleton } from './CatalogContent';
 import { getMe } from '@/lib/auth-helpers';
 
-
 export const metadata = {
   title: 'Inventory | Lumina LMS',
   description: 'Manage physical book inventory and resources.',
@@ -14,7 +13,7 @@ export const metadata = {
 export default function CatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string }>;
 }) {
   return (
     <div className="space-y-4">
@@ -30,20 +29,21 @@ export default function CatalogPage({
 async function CatalogDataWrapper({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string }>;
 }) {
-  // Auth redirect — uses cache()-memoized getMe() shared with the layout
-  await getMe();
+  const me = await getMe();
+  const canManage = me?.role === 'admin' || me?.role === 'librarian' || me?.role === 'student_assistant';
   
   const params = await searchParams;
   const page = parseInt(params.page || '1', 10);
   const q = params.q || '';
   const stock = params.stock || 'all';
   const categoryId = params.categoryId || '';
+  const status = (params.status?.toUpperCase() as 'ACTIVE' | 'ARCHIVED' | 'ALL') || 'ACTIVE';
 
   // Both kick off in parallel — neither is awaited here
   const categoriesPromise = getCategories();
-  const dataPromise = getBooks(q, categoryId || undefined, page, 9);
+  const dataPromise = getBooks(q, categoryId || undefined, page, 12, 'newest', status);
 
   return (
     <CatalogContent
@@ -53,6 +53,7 @@ async function CatalogDataWrapper({
       q={q}
       stock={stock}
       categoryId={categoryId}
+      canManage={canManage}
     />
   );
 }

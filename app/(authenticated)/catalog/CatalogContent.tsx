@@ -16,6 +16,7 @@ interface CatalogContentProps {
   q: string;
   stock: string;
   categoryId: string;
+  canManage?: boolean;
 }
 
 export function CatalogSkeleton() {
@@ -32,7 +33,7 @@ export function CatalogSkeleton() {
   );
 }
 
-export function CatalogContent({ dataPromise, categories }: CatalogContentProps) {
+export function CatalogContent({ dataPromise, categories, canManage }: CatalogContentProps) {
   const data = use(dataPromise);
 
   const books = data?.data || [];
@@ -44,6 +45,7 @@ export function CatalogContent({ dataPromise, categories }: CatalogContentProps)
         books={books || []} 
         totalItems={totalCount} 
         categories={categories}
+        canManage={canManage}
       />
     </div>
   );
