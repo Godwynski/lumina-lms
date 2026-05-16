@@ -65,7 +65,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
-  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "student_assistant" | "student" | "review">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "student_assistant" | "student" | "review" | "archived">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
@@ -78,11 +78,16 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     librarian: "Librarian",
     student_assistant: "Student Assistant",
     student: "Student",
+    archived: "Archived",
   };
 
   // If librarian, remove 'admin' from filter options
-  const filterOptions = ["all", "review", "admin", "librarian", "student_assistant", "student"] as const;
-  const visibleTabs = isLibrarian ? filterOptions.filter(t => t !== "admin") : filterOptions;
+  const filterOptions = ["all", "review", "admin", "librarian", "student_assistant", "student", "archived"] as const;
+  const visibleTabs = filterOptions.filter(t => {
+    if (isLibrarian && t === "admin") return false;
+    if (currentRole !== "admin" && t === "archived") return false;
+    return true;
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -110,8 +115,13 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
 
       if (activeTab === "review") {
         queryBuilder = queryBuilder.eq("status", "PENDING");
+      } else if (activeTab === "archived") {
+        queryBuilder = queryBuilder.eq("status", "ARCHIVED");
       } else if (activeTab !== "all") {
-        queryBuilder = queryBuilder.eq("role", activeTab);
+        queryBuilder = queryBuilder.eq("role", activeTab).neq("status", "ARCHIVED");
+      } else {
+        // "all" tab: exclude archived
+        queryBuilder = queryBuilder.neq("status", "ARCHIVED");
       }
 
       // Librarian Restriction: Hide admins

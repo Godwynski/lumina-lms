@@ -179,8 +179,8 @@ export function UserDetailClient({
   };
 
   const handleStatusChange = (value: string) => {
-    if (isLibrarian && (value === "ARCHIVED" || value === "SUSPENDED")) {
-      toast.error("Librarians cannot suspend or archive users.");
+    if (!isAdmin && (value === "ARCHIVED" || value === "SUSPENDED")) {
+      toast.error("Only administrators can suspend or archive users.");
       return;
     }
     setForm(prev => ({ ...prev, status: value }));
@@ -189,8 +189,8 @@ export function UserDetailClient({
   const statusOptions = [
     { id: "ACTIVE", label: "Active", icon: CheckCircle2 },
     { id: "PENDING", label: "Pending", icon: Calendar },
-    { id: "SUSPENDED", label: "Suspended", icon: AlertCircle, restricted: isLibrarian },
-    { id: "ARCHIVED", label: "Archived", icon: Archive, restricted: isLibrarian },
+    { id: "SUSPENDED", label: "Suspended", icon: AlertCircle, restricted: !isAdmin },
+    { id: "ARCHIVED", label: "Archived", icon: Archive, restricted: !isAdmin },
   ];
 
   const roleOptions = [
@@ -392,7 +392,7 @@ export function UserDetailClient({
                     Other Information
                   </Button>
 
-                  {!isLibrarian && (
+                  {isAdmin && (
                     <Button
                       variant="ghost"
                       size="sm"
