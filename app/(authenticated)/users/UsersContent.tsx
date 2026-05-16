@@ -2,13 +2,21 @@
 
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, Filter } from "lucide-react";
 import { sanitizeFilterInput } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
@@ -67,6 +75,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const [totalUsers, setTotalUsers] = useState(initialData.count);
   const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "student_assistant" | "student" | "review" | "archived">("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const pageSize = 12;
 
   const isLibrarian = currentRole === "librarian";
@@ -209,14 +218,10 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
       cell: (user) => <StatusBadge status={user.status} />
     },
     {
-      header: "Meta",
+      header: "Academic Program",
       className: "text-xs text-muted-foreground",
       cell: (user) => (
-        <div className="flex items-center gap-2">
-          <span>{user.department}</span>
-          <span className="opacity-40">•</span>
-          <span>{user.joined}</span>
-        </div>
+        <span className="text-xs text-muted-foreground">{user.department || "No Program"}</span>
       )
     }
   ], []);
@@ -240,18 +245,39 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide gap-1 pb-1">
-              {visibleTabs.map((tab) => (
-                <Button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  variant={activeTab === tab ? "default" : "outline"}
-                  className="h-8 px-3 text-xs"
-                >
-                  {roleFilterLabels[tab]}
+            <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="h-9 px-3 gap-2">
+                  <Filter size={14} />
+                  <span className="hidden sm:inline">Filter</span>
+                  {activeTab !== "all" && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                      {roleFilterLabels[activeTab]}
+                    </Badge>
+                  )}
                 </Button>
-              ))}
-            </div>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle>Filter Users</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-2 py-4">
+                  {visibleTabs.map((tab) => (
+                    <Button
+                      key={tab}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setIsFilterModalOpen(false);
+                      }}
+                      variant={activeTab === tab ? "default" : "outline"}
+                      className="justify-start h-10 px-4 text-sm"
+                    >
+                      {roleFilterLabels[tab]}
+                    </Button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
             <div className="flex-1" />
             <Button 
               onClick={() => router.push('/users/new')} 

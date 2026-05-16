@@ -33,13 +33,13 @@ export function ActivitySection({
         <div className="flex items-center justify-between px-1">
           <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             <BookOpen className="h-3 w-3 text-primary" />
-            Current Loans
+            Current Borrows
           </h2>
         </div>
         {activeBorrows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
              <BookOpen size={24} className="mb-2" />
-             <p className="text-[10px] font-bold uppercase tracking-widest">No active loans</p>
+             <p className="text-[10px] font-bold uppercase tracking-widest">No active borrows</p>
           </div>
         ) : (
           <div className="grid gap-2">
