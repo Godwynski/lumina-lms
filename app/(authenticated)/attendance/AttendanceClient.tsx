@@ -13,9 +13,6 @@ import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable"
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
-import { 
-  toggleAttendanceByCard 
-} from "@/lib/actions/attendance";
 
 interface AttendanceRecord {
   id: string;
@@ -222,7 +219,6 @@ export function AttendanceClient({
       }>
         <AttendanceTable 
           historyPromise={historyPromise} 
-          isStaff={isStaff} 
         />
       </Suspense>
     </AdminTableShell>
@@ -232,10 +228,8 @@ export function AttendanceClient({
 
 function AttendanceTable({ 
   historyPromise, 
-  isStaff,
 }: { 
   historyPromise: Promise<AttendanceRecord[]>,
-  isStaff: boolean,
 }) {
   const history = use(historyPromise);
 
