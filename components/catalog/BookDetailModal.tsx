@@ -262,14 +262,14 @@ function StudentModalContent({
       {/* Cover + Title row */}
       <div className="flex gap-4 pr-6">
         <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/20 shadow-sm">
-          {book.cover_url ? (
-            <Image src={book.cover_url} alt={book.title} fill className="object-cover" sizes="96px" unoptimized />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-1">
-              <Library className="h-6 w-6 text-muted-foreground/15" />
-              <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/20">No Cover</span>
-            </div>
-          )}
+          <Image 
+            src={book.cover_url || "/images/default-book-cover.png"} 
+            alt={book.title} 
+            fill 
+            className="object-cover" 
+            sizes="96px" 
+            unoptimized 
+          />
           {/* Availability ribbon */}
           <div className={cn(
             "absolute bottom-0 left-0 right-0 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm",

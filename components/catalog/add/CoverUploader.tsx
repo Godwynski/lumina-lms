@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BookPlus, ImageIcon } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CoverUploaderProps {
@@ -20,33 +20,24 @@ export function CoverUploader({ coverPreviewUrl, coverUrl, onCoverSelected }: Co
         </h3>
         
         <div className="relative flex aspect-[2/3] flex-col items-center justify-center overflow-hidden rounded-xl border border-border/30 bg-muted/20 group transition-all">
-          {coverPreviewUrl || coverUrl ? (
-            <>
-              <Image 
-                src={coverPreviewUrl || coverUrl} 
-                alt="Preview" 
-                fill
-                className="object-cover transition-transform group-hover:scale-105"
-                unoptimized={true}
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  size="sm" 
-                  className="h-8 rounded-lg text-xs font-bold border border-white/20" 
-                  onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}
-                >
-                  Change Image
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center p-6 flex flex-col items-center">
-              <BookPlus className="mb-3 h-10 w-10 text-muted-foreground/30" />
-              <p className="text-[11px] text-muted-foreground/70 font-semibold uppercase tracking-widest">No Cover</p>
-            </div>
-          )}
+          <Image 
+            src={coverPreviewUrl || coverUrl || "/images/default-book-cover.png"} 
+            alt="Preview" 
+            fill
+            className="object-cover transition-transform group-hover:scale-105"
+            unoptimized={true}
+          />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+            <Button 
+              type="button" 
+              variant="secondary" 
+              size="sm" 
+              className="h-8 rounded-lg text-xs font-bold border border-white/20" 
+              onClick={() => (document.getElementById('file-upload') as HTMLInputElement).click()}
+            >
+              {(coverPreviewUrl || coverUrl) ? 'Change Image' : 'Upload Image'}
+            </Button>
+          </div>
         </div>
 
         <div className="mt-5 space-y-3">

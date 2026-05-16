@@ -335,21 +335,14 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
         {/* Left: Cover */}
         <div className="shrink-0 mx-auto md:mx-0 space-y-4">
           <div className="relative h-[280px] w-[190px] overflow-hidden rounded-2xl border border-border/40 bg-muted/20 shadow-none backdrop-blur-sm">
-            {book.cover_url ? (
-              <Image
-                src={book.cover_url}
-                alt={book.title}
-                fill
-                sizes="190px"
-                className="object-cover transition-transform duration-500 hover:scale-105"
-                unoptimized
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2">
-                <Library className="h-10 w-10 text-muted-foreground/15" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/20">No Cover</span>
-              </div>
-            )}
+            <Image
+              src={book.cover_url || "/images/default-book-cover.png"}
+              alt={book.title}
+              fill
+              sizes="190px"
+              className="object-cover transition-transform duration-500 hover:scale-105"
+              unoptimized
+            />
 
             {/* Availability ribbon */}
             <div className={`absolute bottom-0 left-0 right-0 px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm ${

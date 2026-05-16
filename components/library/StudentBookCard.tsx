@@ -4,7 +4,6 @@ import { m } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { 
-  Book as BookIcon, 
   Sparkles, 
   Ticket,
 } from "lucide-react";
@@ -82,21 +81,15 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
             </div>
 
             <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border/40 bg-muted/20 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
-              {book.cover_url ? (
-                <Image 
-                  src={book.cover_url} 
-                  alt={book.title} 
-                  fill 
-                  className="object-cover" 
-                  sizes="80px"
-                  priority={priority}
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary/5 text-primary/40">
-                  <BookIcon size={20} />
-                </div>
-              )}
+              <Image 
+                src={book.cover_url || "/images/default-book-cover.png"} 
+                alt={book.title} 
+                fill 
+                className="object-cover" 
+                sizes="80px"
+                priority={priority}
+                unoptimized
+              />
             </div>
           </div>
 

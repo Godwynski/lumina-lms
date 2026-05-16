@@ -10,7 +10,6 @@ import {
   addBookCopies,
 } from '@/lib/actions/catalog';
 import {
-  BookOpen,
   CheckCircle2,
   AlertCircle,
   Wrench,
@@ -320,13 +319,13 @@ export function AdminManagementContent({
       {!isEditing && (
         <div className="flex gap-4 pr-8">
           <div className="relative h-32 w-20 shrink-0 overflow-hidden rounded-xl border border-border/40 shadow-sm ring-1 ring-border/50">
-            {book.cover_url ? (
-              <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-muted/40">
-                <BookOpen className="h-6 w-6 text-muted-foreground/40" />
-              </div>
-            )}
+            <Image 
+              src={book.cover_url || "/images/default-book-cover.png"} 
+              alt={book.title} 
+              fill 
+              className="object-cover" 
+              unoptimized 
+            />
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">
             <div className="flex items-center gap-2 mb-1">

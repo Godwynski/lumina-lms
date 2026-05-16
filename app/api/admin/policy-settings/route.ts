@@ -164,5 +164,5 @@ export const POST = withAuthApi(
 
     return apiSuccess(result);
   },
-  { allowedRoles: ["admin"] }
+  { allowedRoles: ["admin", "librarian"] }
 );

@@ -4,7 +4,6 @@ import { m } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { 
-  Book as BookIcon, 
   MapPin, 
   Layers, 
 } from "lucide-react";
@@ -69,21 +68,15 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
             </div>
 
             <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 group-hover:shadow-md">
-              {book.cover_url ? (
-                <Image 
-                  src={book.cover_url} 
-                  alt={book.title} 
-                  fill 
-                  className="object-cover" 
-                  sizes="80px"
-                  priority={priority}
-                  unoptimized
-                />
-              ) : (
-                <div className={`flex h-full w-full items-center justify-center ${isOutOfStock ? "status-danger" : "text-muted-foreground/40"}`}>
-                  <BookIcon size={20} />
-                </div>
-              )}
+              <Image 
+                src={book.cover_url || "/images/default-book-cover.png"} 
+                alt={book.title} 
+                fill 
+                className="object-cover" 
+                sizes="80px"
+                priority={priority}
+                unoptimized
+              />
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
                    <span className="text-[8px] font-black uppercase tracking-tighter text-destructive rotate-[-15deg] border-2 border-destructive px-1 py-0.5 rounded-sm">OUT</span>

@@ -140,46 +140,6 @@ export const toggleAttendanceByCard = createSafeAction(
 );
 
 
-/**
- * Legacy/Simple check-in for the user themselves
- */
-export async function logAttendance() {
-  const me = await getMe();
-  if (!me) throw new Error("Unauthorized");
-
-  const { supabase, user } = me;
-
-  // Check if already logged today and still in
-  const { data: existing } = await supabase
-    .from("attendance")
-    .select("id")
-    .eq("user_id", user.id)
-    .is("check_out_at", null)
-    .maybeSingle();
-
-  if (existing) {
-    // Log out
-    await supabase.from("attendance").update({ check_out_at: new Date().toISOString() }).eq("id", existing.id);
-    revalidatePath("/attendance", "page");
-    return { success: true, message: "Logged out successfully!" };
-  }
-
-  const { error } = await supabase
-    .from("attendance")
-    .insert({
-      user_id: user.id,
-      check_in_at: new Date().toISOString()
-    });
-
-  if (error) {
-    return { success: false, message: "Failed to log attendance." };
-  }
-
-  revalidatePath("/dashboard", "page");
-  revalidatePath("/attendance", "page");
-  
-  return { success: true, message: "Checked in successfully!" };
-}
 
 export async function getAttendanceHistory(userId?: string) {
   const me = await getMe();
