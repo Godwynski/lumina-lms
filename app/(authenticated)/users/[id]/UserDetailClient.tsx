@@ -281,7 +281,12 @@ export function UserDetailClient({
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
                         value={form.phone}
-                        onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "");
+                          if (value.length <= 11) {
+                            setForm(prev => ({ ...prev, phone: value }));
+                          }
+                        }}
                         placeholder="Contact number"
                         className="h-10 rounded-lg pl-9 text-sm"
                         disabled={isReadOnly}

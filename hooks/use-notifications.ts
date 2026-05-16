@@ -161,18 +161,6 @@ export function useNotifications() {
     }
   }
 
-  const deleteNotification = async (id: string) => {
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      toast.error('Failed to delete notification')
-    } else {
-      setNotifications(prev => prev.filter(n => n.id !== id))
-    }
-  }
 
   return {
     notifications,
@@ -180,7 +168,6 @@ export function useNotifications() {
     loading,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
     refresh: async () => {
         // Use cached userId instead of re-fetching from auth endpoint
         const userId = userIdRef.current

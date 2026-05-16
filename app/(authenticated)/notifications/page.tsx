@@ -19,7 +19,6 @@ export default function NotificationsPage() {
     unreadCount, 
     markAsRead, 
     markAllAsRead, 
-    deleteNotification, 
     loading
   } = useNotifications()
 
@@ -81,7 +80,6 @@ export default function NotificationsPage() {
                notifications={filteredNotifications} 
                loading={loading}
                onMarkRead={markAsRead}
-               onDelete={deleteNotification}
                emptyMessage={search ? 'No matches found' : undefined}
              />
           </TabsContent>
@@ -90,7 +88,6 @@ export default function NotificationsPage() {
                notifications={unreadNotifications} 
                loading={loading}
                onMarkRead={markAsRead}
-               onDelete={deleteNotification}
                emptyMessage="No unread notifications"
              />
           </TabsContent>
@@ -99,7 +96,6 @@ export default function NotificationsPage() {
                notifications={readNotifications} 
                loading={loading}
                onMarkRead={markAsRead}
-               onDelete={deleteNotification}
                emptyMessage="No historical data"
              />
           </TabsContent>

@@ -128,9 +128,14 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
             <Input 
               id="phone"
               type="tel"
-              placeholder="e.g. 0912 345 6789"
+              placeholder="e.g. 09123456789"
               value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "");
+                if (value.length <= 11) {
+                  setFormData(prev => ({ ...prev, phone: value }));
+                }
+              }}
               className="h-11 rounded-xl transition-all focus-visible:ring-primary/20"
               required
             />

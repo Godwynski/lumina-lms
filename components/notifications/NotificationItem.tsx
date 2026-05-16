@@ -3,7 +3,6 @@
 import React, { memo } from 'react'
 import { 
   Check, 
-  Trash2, 
   AlertTriangle, 
   Clock, 
   Bookmark, 
@@ -25,7 +24,6 @@ import {
 interface NotificationItemProps {
   notification: Notification
   onMarkRead: (id: string) => void
-  onDelete: (id: string) => void
   variant?: 'compact' | 'full'
 }
 
@@ -60,7 +58,6 @@ const typeConfig = {
 export const NotificationItem = memo(({ 
   notification, 
   onMarkRead, 
-  onDelete,
   variant = 'full'
 }: NotificationItemProps) => {
   const config = typeConfig[notification.type as keyof typeof typeConfig] || typeConfig.SYSTEM
@@ -115,13 +112,6 @@ export const NotificationItem = memo(({
               <Check className="w-3 h-3" />
               Mark as read
             </button>
-            <button 
-              onClick={() => onDelete(notification.id)}
-              className="text-xs font-medium text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1.5"
-            >
-              <Trash2 className="w-3 h-3" />
-              Remove
-            </button>
           </div>
         )}
       </div>
@@ -144,13 +134,6 @@ export const NotificationItem = memo(({
                 Mark read
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem 
-              onClick={() => onDelete(notification.id)}
-              className="gap-2 text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

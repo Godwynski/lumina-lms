@@ -7,6 +7,11 @@ export function sanitizeStudentId(studentId: string) {
   return studentId.trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "_");
 }
 
+export function generateFacultyId() {
+  const suffix = Math.floor(100000 + Math.random() * 900000).toString();
+  return `FAC-${suffix}`;
+}
+
 /**
  * Parses the student number from a STI Alabang email address.
  * 
@@ -32,7 +37,9 @@ export function parseStudentIdFromEmail(email?: string | null): string | null {
       return `STU-${digitMatch[1]}`;
     }
     // Faculty pattern: no digits (or < 6) → FAC-{localpart}
-    return `FAC-${local}`;
+    const id = `FAC-${local}`;
+    if (id.includes("___")) return generateFacultyId();
+    return id;
   }
 
   // Non-STI domain: try to extract any 6+ digit sequence for student IDs
@@ -105,12 +112,19 @@ export function resolveStudentId(opts: {
     opts.role
   );
 
-  return (
+  const result = (
     normalizedStored ||
     parseStudentIdFromEmail(opts.email) ||
     parseStudentIdFromEmail(opts.fallbackEmail) ||
     (opts.userId ? `FAC-${sanitizeStudentId(opts.userId.slice(0, 12))}` : null)
   );
+
+  // If the ID is the literal blank template or contains placeholders, generate a real one
+  if (result && (result.includes("___") || result === "FAC-___________.______")) {
+    return generateFacultyId();
+  }
+
+  return result;
 }
 
 export function getDeterministicQrUrl(studentId: string) {

@@ -21,7 +21,6 @@ export function NotificationBell() {
     unreadCount, 
     markAsRead, 
     markAllAsRead, 
-    deleteNotification, 
     loading 
   } = useNotifications()
 
@@ -74,7 +73,6 @@ export function NotificationBell() {
             notifications={notifications}
             loading={loading}
             onMarkRead={markAsRead}
-            onDelete={deleteNotification}
             variant="compact"
           />
         </div>
