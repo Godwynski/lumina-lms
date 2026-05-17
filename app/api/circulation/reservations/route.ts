@@ -45,6 +45,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (userId && userId !== user.id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      const isStaff = Boolean(profile && ["admin", "librarian", "student_assistant"].includes(profile.role));
+      if (!isStaff) {
+        return NextResponse.json(
+          { ok: false, message: "Only staff members can reserve books on behalf of other users", code: "FORBIDDEN" },
+          { status: 403 }
+        );
+      }
+    }
+
     const { data, error } = await supabase.rpc("create_reservation_atomic", {
       p_actor_id: user.id,
       p_book_id: bookId,

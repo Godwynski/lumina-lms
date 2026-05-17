@@ -490,7 +490,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
         "max-h-[90vh] overflow-y-auto custom-scrollbar pt-12",
-        variant === 'admin' ? "sm:max-w-2xl" : "sm:max-w-lg"
+        variant === 'admin' ? "sm:max-w-3xl" : "sm:max-w-lg"
       )}>
         <DialogHeader className="sr-only">
           <DialogTitle>Book Details</DialogTitle>

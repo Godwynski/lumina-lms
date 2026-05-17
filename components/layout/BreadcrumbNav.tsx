@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 // Explicit mapping for professional labels
 const ROUTE_LABELS: Record<string, string> = {
+  "inventory": "Inventory",
   "catalog": "Inventory",
   "student-catalog": "Catalog",
   "circulation": "Circulation Desk",
@@ -17,6 +18,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "profile": "My Profile",
   "preferences": "Preferences",
   "security": "Security",
+  "attendance": "Attendance Logs",
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -54,6 +56,7 @@ function formatSegment(segment: string, parentSegment?: string) {
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
+  const { currentMode } = usePreferences();
 
   const clean = pathname.replace(/\?.*$/, "");
   if (clean === "/dashboard" || clean === "/dashboard/") {
@@ -70,17 +73,23 @@ export function BreadcrumbNav() {
   const current = pathSegments[pathSegments.length - 1];
   const parentSegment = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : undefined;
 
-  const title = formatSegment(current, parentSegment);
+  let title = formatSegment(current, parentSegment);
+  if (current === "history") {
+    title = currentMode === "staff" ? "Borrowing Logs" : "Borrow History";
+  }
 
   // For the back link, navigate to the parent path (e.g. /student-catalog) not the root segment
   let backHref = pathSegments.length > 1 ? `/${pathSegments.slice(0, -1).join("/")}` : null;
   let backLabel = parentSegment ? formatSegment(parentSegment) : null;
+  if (parentSegment === "history") {
+    backLabel = currentMode === "staff" ? "Borrowing Logs" : "Borrow History";
+  }
 
-  // Redirect "Inventory" (catalog) back links to dashboard for staff/admins
+  // Redirect "Inventory" (catalog) back links to inventory page
   // And update the label to reflect the destination
   if (backHref === "/catalog") {
-    backHref = "/dashboard";
-    backLabel = "Dashboard";
+    backHref = "/inventory";
+    backLabel = "Inventory";
   }
 
   return (
@@ -95,3 +104,4 @@ export function BreadcrumbNav() {
     </nav>
   );
 }
+

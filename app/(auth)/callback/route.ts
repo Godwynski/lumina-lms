@@ -37,11 +37,14 @@ export async function GET(request: Request) {
           const email = user.email?.toLowerCase() || "";
           
           // Domain Validation
-          // Student: lastname.id@Alabang.sti.edu.ph
-          const isFaculty = /^[a-z0-9-]+\.[a-z0-9-]+@alabang\.sti\.edu\.ph$/.test(email);
-          const isStudent = /^[a-z0-9-]+\.[a-z0-9-]+@alabang\.sti\.edu\.ph$/.test(email);
+          const isStiDomain = email.endsWith("@alabang.sti.edu.ph");
+          const localPart = email.split("@")[0] || "";
+          
+          const isStudent = isStiDomain && /(\d{6,})/.test(localPart);
+          const isFaculty = isStiDomain && !/(\d{6,})/.test(localPart);
+          const isTest = email.endsWith("@lumina.test");
 
-          if (!isFaculty && !isStudent) {
+          if (!isFaculty && !isStudent && !isTest) {
             await supabase.auth.signOut();
             return NextResponse.redirect(`${origin}/error?error=restricted_access`);
           }

@@ -300,3 +300,76 @@ export const deleteAttendance = createSafeAction(
   }
 );
 
+/**
+ * Checks out (logs out) all currently active attendance records.
+ * Used by librarians/admins at closing time.
+ */
+export const checkoutAllActiveAttendance = createSafeAction(
+  z.object({}),
+  async (_, { supabase }) => {
+    // 1. Get all active attendance sessions (where check_out_at is null)
+    const { data: activeRecords, error: getError } = await supabase
+      .from("attendance")
+      .select("id, user_id")
+      .is("check_out_at", null);
+
+    if (getError) {
+      logger.error("Attendance", "Failed to query active attendance records", {}, getError);
+      throw new Error("Database error while fetching active sessions.");
+    }
+
+    if (!activeRecords || activeRecords.length === 0) {
+      return { success: true, count: 0, message: "No active sessions to check out." };
+    }
+
+    const recordIds = activeRecords.map((r) => r.id);
+    const now = new Date().toISOString();
+
+    // 2. Bulk update check_out_at
+    const { error: updateError } = await supabase
+      .from("attendance")
+      .update({
+        check_out_at: now,
+        notes: "Batch logout by staff"
+      })
+      .in("id", recordIds);
+
+    if (updateError) {
+      logger.error("Attendance", "Failed to batch checkout sessions", { recordIds }, updateError);
+      throw new Error("Failed to register Time Out for active sessions.");
+    }
+
+    // 3. Send parallel notifications to all affected users
+    await Promise.all(
+      activeRecords.map(async (record) => {
+        try {
+          await sendNotification({
+            userId: record.user_id,
+            title: "Attendance: Auto Time Out",
+            content: `Your attendance session has been logged out by the system administrator at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })}.`,
+            type: "SYSTEM",
+            priority: "medium"
+          });
+        } catch (err) {
+          logger.error("Attendance", "Failed to send batch notification", { userId: record.user_id }, err);
+        }
+      })
+    );
+
+    revalidatePath("/attendance", "page");
+    revalidatePath("/dashboard", "page");
+
+    return [{ success: true, count: recordIds.length }, {
+      reason: `Batch logged out ${recordIds.length} active attendance sessions.`,
+      details: { closedIds: recordIds },
+      auditAction: "update",
+      auditEntity: "attendance"
+    }];
+  },
+  {
+    allowedRoles: ['admin', 'librarian'],
+    allowedPermissions: ['manage_attendance']
+  }
+);
+
+

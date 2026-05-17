@@ -39,7 +39,7 @@ export const getMe = cache(async () => {
 
   if (profileError || !profile) return null;
 
-  const role = metadataRole || normalizeUserRole(profile.role) || 'student';
+  const role = normalizeUserRole(profile.role) || metadataRole || 'student';
 
   return {
     user,

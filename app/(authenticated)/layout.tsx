@@ -54,7 +54,12 @@ export default async function ProtectedLayout({
 
   // ─── Shell returns immediately — streamed children fill in behind it ──────
   return (
-    <PreferencesProvider initialPreferences={preferences}>
+    <PreferencesProvider 
+      initialPreferences={preferences}
+      initialRole={role}
+      initialProfile={profile}
+      user={me.user}
+    >
       <SWRProvider>
         <SidebarProvider defaultOpen={defaultOpen}>
           {/* Nav streams in independently; skeleton perfectly mirrors real nav */}
