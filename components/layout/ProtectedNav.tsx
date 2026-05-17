@@ -38,7 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useLogout } from "@/hooks/use-logout";
 import {
@@ -64,81 +64,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-type Role = "student" | "student_assistant" | "librarian" | "super_admin" | null;
-
-interface Profile {
-  full_name?: string | null;
-  avatar_url?: string | null;
-  status?: string;
-  role?: string | null;
-  permissions?: {
-    manage_circulation?: boolean;
-    manage_attendance?: boolean;
-    view_admin_dashboard?: boolean;
-  } | null;
-}
-
-const ROLE_RANKS: Record<Exclude<Role, null>, number> = {
-  student: 1,
-  student_assistant: 2,
-  librarian: 3,
-  super_admin: 4,
-};
-
-function hasPermission(
-  userRole: Role, 
-  item: NavItem,
-  profile?: Profile | null
-): boolean {
-  const { minRole, exactRoles, permissionKey, excludeRoles } = item;
-  const isDeactivatedSA = userRole === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
-
-  if (excludeRoles && userRole && excludeRoles.includes(userRole)) {
-    return false;
-  }
-
-  // 1. Exact role match (highest priority)
-  if (exactRoles && exactRoles.length > 0) {
-    if (userRole && exactRoles.includes(userRole)) return true;
-    // If exactRoles is specified and no match, and no minRole fallback, deny access
-    if (!minRole) return false;
-  }
-
-  // 2. Minimum rank check
-  if (!userRole) return false;
-  const roleRank = ROLE_RANKS[userRole];
-  const minRank = minRole ? ROLE_RANKS[minRole] : 0;
-
-  if (roleRank < minRank) return false;
-
-  // 3. Specific permission requirement for staff/admin tools
-  if (permissionKey) {
-    if (userRole === "super_admin" || userRole === "librarian") return true;
-    const permissions = profile?.permissions;
-    if (!permissions || !permissions[permissionKey as keyof typeof permissions]) {
-      return false;
-    }
-  }
-
-  // 4. Deactivation check
-  if (isDeactivatedSA && (minRole !== "student" || permissionKey)) {
-    return false;
-  }
-
-  return true;
-}
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon?: React.ElementType;
-  minRole?: Exclude<Role, null>;
-  exactRoles?: Exclude<Role, null>[];
-  excludeRoles?: Exclude<Role, null>[];
-  permissionKey?: "manage_circulation" | "manage_attendance" | "view_admin_dashboard";
-};
-
-
+import { Role, Profile, NavItem, hasPermission, isStaff } from "@/lib/auth/permissions";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
@@ -169,9 +95,7 @@ export function ProtectedNav({
   const { role, profile } = usePreferences();
   const currentRole = role as Role;
   const currentProfile = profile as Profile | null;
-  const isStaff = currentRole === "super_admin" || 
-                  currentRole === "librarian" || 
-                  (currentRole === "student_assistant" && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+  const isStaffUser = isStaff(currentRole, currentProfile);
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
@@ -197,22 +121,6 @@ export function ProtectedNav({
   }, [pathname]);
 
 
-  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPendingRoute(null);
-  }, [pathname]);
-
-  const handleNavigate = useCallback((href: string) => {
-    if (pathname === href) return;
-    const pathWithoutQuery = pathname.split("?")[0];
-    const hrefBase = href.split("?")[0];
-    if (pathWithoutQuery === hrefBase && !href.includes("?tab=")) return;
-    
-    setPendingRoute(href);
-  }, [pathname]);
-
-  // Cache user data derived from props
   const userData = useMemo(() => ({
     name,
     email,
@@ -221,10 +129,6 @@ export function ProtectedNav({
   }), [name, email, avatarUrl, initials]);
 
   const isActive = useCallback((href: string) => {
-    if (pendingRoute !== null) {
-      return pendingRoute === href;
-    }
-
     const pathWithoutQuery = pathname.split("?")[0];
     const hrefBase = href.split("?")[0];
 
@@ -240,7 +144,7 @@ export function ProtectedNav({
     }
 
     return pathWithoutQuery.startsWith(hrefBase);
-  }, [pathname, currentTab, pendingRoute]);
+  }, [pathname, currentTab]);
 
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
@@ -284,7 +188,7 @@ export function ProtectedNav({
                                           (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
 
                 const displayLabel = item.href === "/history"
-                  ? (isStaff ? "Borrowing Logs" : "Borrow History")
+                  ? (isStaffUser ? "Borrowing Logs" : "Borrow History")
                   : item.href === "/attendance"
                   ? (hasAttendancePerm ? "Attendance Logs" : "My Attendance")
                   : item.label;
@@ -300,7 +204,6 @@ export function ProtectedNav({
                         className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
                         onClick={(e) => {
                           e.currentTarget.blur();
-                          handleNavigate(item.href);
                         }}
                         onMouseEnter={() => handlePrefetch(item.href)}
                       >
@@ -366,7 +269,6 @@ export function ProtectedNav({
                       className="flex w-full cursor-pointer items-center" 
                       onClick={(e) => {
                         e.currentTarget.blur();
-                        handleNavigate("/profile");
                       }}
                     >
                       <Settings className="mr-2 h-4 w-4" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useTransition, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
-import { toggleAttendanceByCard, getAttendanceHistory, checkoutAllActiveAttendance } from "@/lib/actions/attendance";
+import { toggleAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -45,9 +45,6 @@ export function AttendanceClient({
   const [cardNumber, setCardNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const activeSessionsCount = useMemo(() => {
-    return systemRecords.filter(r => !r.check_out_at).length;
-  }, [systemRecords]);
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,24 +68,6 @@ export function AttendanceClient({
     });
   };
 
-  const handleCheckoutAll = () => {
-    if (activeSessionsCount === 0) return;
-
-    const confirmMessage = `Are you sure you want to log out all ${activeSessionsCount} active students?`;
-    if (!window.confirm(confirmMessage)) return;
-
-    startTransition(async () => {
-      const result = await checkoutAllActiveAttendance({});
-      if (result.success) {
-        toast.success(`Successfully logged out ${result.data.count} active students.`, {
-          description: "All active attendance sessions have been marked completed.",
-          icon: <LogOut className="w-4 h-4 text-green-500" />
-        });
-      } else {
-        toast.error(result.error || "Failed to log out everyone.");
-      }
-    });
-  };
 
   const [showScanner, setShowScanner] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -229,21 +208,6 @@ export function AttendanceClient({
         >
           <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
           {showScanner ? "Close Camera" : "Open Camera"}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCheckoutAll}
-          className={cn(
-            "h-9 px-4 flex-1 md:flex-none justify-center font-bold transition-all duration-300 shrink-0",
-            activeSessionsCount > 0 
-              ? "border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white"
-              : "opacity-40 cursor-not-allowed text-muted-foreground border-border"
-          )}
-          disabled={isPending || activeSessionsCount === 0}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout Everyone ({activeSessionsCount})
         </Button>
       </div>
     </div>

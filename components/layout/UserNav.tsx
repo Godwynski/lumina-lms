@@ -28,6 +28,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useLogout } from "@/hooks/use-logout";
 
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+
 interface Profile {
   full_name?: string | null;
   avatar_url?: string | null;
@@ -45,9 +47,14 @@ interface UserNavProps {
   role: string | null;
 }
 
-export function UserNav({ user, profile, role }: UserNavProps) {
+export function UserNav({ user, profile: initialProfile, role: initialRole }: UserNavProps) {
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
+  // Hook into the realtime preferences provider
+  const { profile: liveProfile, role: liveRole } = usePreferences();
+  const profile = liveProfile || initialProfile;
+  const role = liveRole || initialRole;
 
   const handleSignOut = async () => {
     setLogoutDialogOpen(false);
