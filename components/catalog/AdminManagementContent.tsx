@@ -9,7 +9,10 @@ import {
   restoreBook,
   getBookAdminDetails,
   addBookCopies,
+  getCategories,
 } from '@/lib/actions/catalog';
+import { Textarea } from '@/components/ui/textarea';
+import { CompactPagination } from '@/components/ui/compact-pagination';
 import {
   CheckCircle2,
   AlertCircle,
@@ -24,6 +27,8 @@ import {
   Archive,
   RotateCw,
   Plus,
+  BookOpen,
+  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,22 +217,69 @@ export function AdminManagementContent({
   const [addCopiesLoading, setAddCopiesLoading] = useState(false);
 
   const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopyWithReservation['status']>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const COPIES_PER_PAGE = 3;
+
+  // Reset page when filter or copy list changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [copyFilter, copies.length]);
 
   const [editForm, setEditForm] = useState({
     title: initialBook.title,
     author: initialBook.author,
     isbn: initialBook.isbn || '',
+    category_id: initialBook.category_id || '',
+    description: initialBook.description || '',
+    published_year: initialBook.published_year ? String(initialBook.published_year) : '',
+    cover_url: initialBook.cover_url || '',
     section: initialBook.section || '',
     location: initialBook.location || '',
     dewey_decimal: initialBook.dewey_decimal || '',
   });
 
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  
+  useEffect(() => { 
+    setMounted(true); 
+  }, []);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await getCategories();
+        setCategories(data);
+      } catch (err) {
+        console.error('Failed to load categories', err);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  // Sync edit form with actual book state when opening edit mode
+  useEffect(() => {
+    if (isEditing) {
+      setEditForm({
+        title: book.title,
+        author: book.author,
+        isbn: book.isbn || '',
+        category_id: book.category_id || '',
+        description: book.description || '',
+        published_year: book.published_year ? String(book.published_year) : '',
+        cover_url: book.cover_url || '',
+        section: book.section || '',
+        location: book.location || '',
+        dewey_decimal: book.dewey_decimal || '',
+      });
+    }
+  }, [isEditing, book]);
 
   const fetchData = useCallback(async () => {
     try {
-      const { copies: updatedCopies, queue: updatedQueue } = await getBookAdminDetails(initialBook.id);
+      const { book: updatedBook, copies: updatedCopies, queue: updatedQueue } = await getBookAdminDetails(initialBook.id);
+      if (updatedBook) setBook(updatedBook);
       setCopies(updatedCopies);
       setReservationQueue(updatedQueue);
     } catch (err) {
@@ -246,14 +298,35 @@ export function AdminManagementContent({
   const handleUpdateBook = async () => {
     setUpdateLoading(true);
     try {
-      const result = await updateBook({ id: book.id, bookData: editForm });
+      const year = editForm.published_year.trim() ? parseInt(editForm.published_year.trim(), 10) : null;
+      if (year !== null && (isNaN(year) || year < 1000 || year > new Date().getFullYear() + 1)) {
+        throw new Error(`Published year must be between 1000 and ${new Date().getFullYear() + 1}`);
+      }
+
+      const submissionData = {
+        title: editForm.title,
+        author: editForm.author,
+        isbn: editForm.isbn || null,
+        category_id: editForm.category_id || null,
+        description: editForm.description || null,
+        published_year: year,
+        cover_url: editForm.cover_url || null,
+        section: editForm.section || null,
+        location: editForm.location || null,
+        dewey_decimal: editForm.dewey_decimal || null,
+      };
+
+      const result = await updateBook({ id: book.id, bookData: submissionData });
       if (!result.success) throw new Error(result.error);
-      setBook(prev => ({ ...prev, ...editForm }));
+      
       setIsEditing(false);
-      toast.success('Metadata updated');
+      toast.success('Book metadata updated');
+      
+      setLoading(true);
+      await fetchData();
       router.refresh();
-    } catch {
-      toast.error('Update failed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Update failed');
     } finally {
       setUpdateLoading(false);
     }
@@ -327,6 +400,12 @@ export function AdminManagementContent({
     : book.categories?.name;
 
   const filteredCopies = copies.filter(c => copyFilter === 'ALL' || c.status === copyFilter);
+  const totalPages = Math.ceil(filteredCopies.length / COPIES_PER_PAGE);
+  const activePage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedCopies = filteredCopies.slice(
+    (activePage - 1) * COPIES_PER_PAGE,
+    activePage * COPIES_PER_PAGE
+  );
   const isAvailable = book.available_copies > 0;
 
   return (
@@ -391,43 +470,127 @@ export function AdminManagementContent({
 
       {/* Edit Form */}
       {isEditing && (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-widest text-primary">Edit Metadata</h3>
-            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-6 px-2 text-[10px] font-bold uppercase">Cancel</Button>
+        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="mb-6 flex items-center justify-between border-b border-border/20 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-1 bg-primary rounded-full" />
+              <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">Edit Library Asset Metadata</h3>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-7 px-2.5 text-[10px] font-bold uppercase rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">Cancel</Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldGroup label="Title">
-              <Input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} className="h-9 rounded-xl text-xs" />
-            </FieldGroup>
-            <FieldGroup label="Author">
-              <Input value={editForm.author} onChange={e => setEditForm({ ...editForm, author: e.target.value })} className="h-9 rounded-xl text-xs" />
-            </FieldGroup>
-            <FieldGroup label="ISBN">
-              <Input value={editForm.isbn} onChange={e => setEditForm({ ...editForm, isbn: e.target.value })} className="h-9 rounded-xl text-xs" />
-            </FieldGroup>
-            <FieldGroup label="Location">
-              <Input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="h-9 rounded-xl text-xs" />
-            </FieldGroup>
-            <FieldGroup label="Section">
-              <Input value={editForm.section} onChange={e => setEditForm({ ...editForm, section: e.target.value })} className="h-9 rounded-xl text-xs" />
-            </FieldGroup>
-            <FieldGroup label="Dewey Decimal (DDC)">
-              <Input value={editForm.dewey_decimal} onChange={e => setEditForm({ ...editForm, dewey_decimal: e.target.value })} className="h-9 rounded-xl text-xs" />
-            </FieldGroup>
+          
+          <div className="space-y-6">
+            {/* Segment 1: Basic Information & Taxonomy */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+                <BookOpen size={13} className="text-primary/70" />
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Basic Information & Cataloging</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+                <FieldGroup label="Title" className="sm:col-span-2 md:col-span-6">
+                  <Input 
+                    value={editForm.title} 
+                    onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))} 
+                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
+                  />
+                </FieldGroup>
+                <FieldGroup label="Author" className="sm:col-span-1 md:col-span-2">
+                  <Input 
+                    value={editForm.author} 
+                    onChange={e => setEditForm(prev => ({ ...prev, author: e.target.value }))} 
+                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
+                  />
+                </FieldGroup>
+                <FieldGroup label="Category" className="sm:col-span-1 md:col-span-2">
+                  <Select 
+                    value={editForm.category_id || 'none'} 
+                    onValueChange={v => setEditForm(prev => ({ ...prev, category_id: v === 'none' ? '' : v }))}
+                  >
+                    <SelectTrigger className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus:ring-1 focus:ring-primary/40">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="border-border/40 shadow-xl">
+                      <SelectItem value="none" className="text-xs">General / Uncategorized</SelectItem>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldGroup>
+                <FieldGroup label="Published Year" className="sm:col-span-1 md:col-span-2">
+                  <Input 
+                    type="number" 
+                    min={1000} 
+                    max={new Date().getFullYear() + 1} 
+                    value={editForm.published_year} 
+                    onChange={e => setEditForm(prev => ({ ...prev, published_year: e.target.value }))} 
+                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
+                  />
+                </FieldGroup>
+                <FieldGroup label="ISBN" className="sm:col-span-1 md:col-span-3">
+                  <Input 
+                    value={editForm.isbn} 
+                    disabled
+                    className="h-9 rounded-xl text-xs bg-muted/40 border border-border/40 text-muted-foreground/70 cursor-not-allowed select-all" 
+                  />
+                </FieldGroup>
+                <FieldGroup label="Dewey Decimal (DDC)" className="sm:col-span-1 md:col-span-3">
+                  <Input 
+                    value={editForm.dewey_decimal} 
+                    onChange={e => setEditForm(prev => ({ ...prev, dewey_decimal: e.target.value }))} 
+                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
+                  />
+                </FieldGroup>
+              </div>
+            </div>
+
+            {/* Segment 2: Physical Placement & Description */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+                <MapPin size={13} className="text-primary/70" />
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Physical Placement & Description</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FieldGroup label="Location">
+                  <Input 
+                    value={editForm.location} 
+                    onChange={e => setEditForm(prev => ({ ...prev, location: e.target.value }))} 
+                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
+                    placeholder="e.g. Second Floor"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Section">
+                  <Input 
+                    value={editForm.section} 
+                    onChange={e => setEditForm(prev => ({ ...prev, section: e.target.value }))} 
+                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
+                    placeholder="e.g. Fiction Section"
+                  />
+                </FieldGroup>
+                <FieldGroup label="Description / Synopsis" className="sm:col-span-2">
+                  <Textarea 
+                    value={editForm.description} 
+                    onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} 
+                    className="min-h-[92px] rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40 resize-none custom-scrollbar" 
+                    placeholder="Enter book description or summary..."
+                  />
+                </FieldGroup>
+              </div>
+            </div>
           </div>
-          <div className="mt-6 flex items-center justify-between border-t border-primary/10 pt-4">
+
+          <div className="mt-6 flex items-center justify-between border-t border-border/20 pt-4">
              {book.is_active ? (
                showDeleteConfirm ? (
                  <div className="flex items-center gap-2">
-                   <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Archive?</span>
-                   <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[10px] font-black uppercase">
+                   <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Archive this asset?</span>
+                   <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[10px] font-black uppercase rounded-lg">
                      Confirm
                    </Button>
-                   <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[10px] font-bold uppercase">No</Button>
+                   <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[10px] font-bold uppercase rounded-lg">No</Button>
                  </div>
                ) : (
-                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[10px] font-black uppercase">
+                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[10px] font-black uppercase transition-colors">
                    <Archive size={12} className="mr-1.5" /> Archive Asset
                  </Button>
                )
@@ -437,16 +600,21 @@ export function AdminManagementContent({
                  size="sm" 
                  onClick={handleRestoreBook} 
                  disabled={restoreLoading}
-                 className="h-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-[10px] font-black uppercase"
+                 className="h-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-[10px] font-black uppercase transition-colors"
                >
                  {restoreLoading ? <Loader2 size={12} className="mr-1.5 animate-spin" /> : <RotateCw size={12} className="mr-1.5" />}
                  Restore Asset
                </Button>
              )}
-             <Button onClick={handleUpdateBook} disabled={updateLoading} size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase tracking-widest">
-               {updateLoading ? <Loader2 className="animate-spin h-3 w-3 mr-1.5" /> : <Save size={12} className="mr-1.5" />}
-               Save Changes
-             </Button>
+             <div className="flex items-center gap-2">
+               <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider">
+                 Cancel
+               </Button>
+               <Button onClick={handleUpdateBook} disabled={updateLoading} size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase tracking-widest">
+                 {updateLoading ? <Loader2 className="animate-spin h-3 w-3 mr-1.5" /> : <Save size={12} className="mr-1.5" />}
+                 Save Changes
+               </Button>
+             </div>
           </div>
         </div>
       )}
@@ -538,7 +706,7 @@ export function AdminManagementContent({
               <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">No matching assets found</p>
             </div>
           ) : (
-            filteredCopies.map((copy) => {
+            paginatedCopies.map((copy) => {
               const statusCfg = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG] ?? {
                 label: copy.status, icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border'
               };
@@ -587,7 +755,7 @@ export function AdminManagementContent({
                           {statusCfg.label}
                         </Badge>
                       )}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div>
                         <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
                       </div>
                     </div>
@@ -622,6 +790,18 @@ export function AdminManagementContent({
             })
           )}
         </div>
+
+        {!loading && filteredCopies.length > COPIES_PER_PAGE && (
+          <div className="pt-2 border-t border-border/10">
+            <CompactPagination
+              page={activePage}
+              totalItems={filteredCopies.length}
+              pageSize={COPIES_PER_PAGE}
+              onPageChange={setCurrentPage}
+              variant="ghost"
+            />
+          </div>
+        )}
       </div>
 
       <div className="pt-2 border-t border-border/20 hidden">

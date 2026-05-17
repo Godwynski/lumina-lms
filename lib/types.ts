@@ -20,6 +20,9 @@ export interface Book {
   cover_url?: string;
   section?: string;
   location?: string;
+  category_id?: string | null;
+  description?: string | null;
+  published_year?: number | null;
   total_copies?: number;
   available_copies: number;
   is_active?: boolean;

@@ -8,6 +8,7 @@ import { revalidateTag, revalidatePath } from 'next/cache';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendNotification } from '@/lib/notifications';
 import { format } from 'date-fns';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
  * Checks if a user is eligible to borrow books.
@@ -191,8 +192,9 @@ export const checkoutBook = createSafeAction(
        }
     }
 
-    // 2. Execute RPC
-    const { data, error } = await supabase.rpc('process_qr_checkout', {
+    // 2. Execute RPC using Admin Client to bypass client execution restrictions
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc('process_qr_checkout', {
       p_librarian_id: String(staff.id),
       p_card_qr: studentCardQr.trim(),
       p_book_qr: bookQr.trim(),
@@ -304,7 +306,8 @@ export const returnBook = createSafeAction(
       }
     }
 
-    const { data, error } = await supabase.rpc('process_qr_return', {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc('process_qr_return', {
       p_librarian_id: String(staff.id),
       p_book_qr: bookQr.trim(),
       p_idempotency_key: idempotencyKey ?? null,

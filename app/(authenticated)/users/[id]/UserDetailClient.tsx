@@ -364,7 +364,7 @@ export function UserDetailClient({
                       onClick={() => setPermissionsOpen(true)}
                     >
                       <Key className="h-3 w-3" />
-                      Permissions
+                      Manage Assistant Permissions
                     </Button>
                   )}
 
@@ -439,27 +439,39 @@ export function UserDetailClient({
       <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
+            <DialogTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
               <Key className="h-4 w-4" />
-              SA Permissions
+              Student Assistant Access Control
             </DialogTitle>
-            <DialogDescription>
-              Grant specific module access to this Student Assistant.
+            <DialogDescription className="text-xs">
+              Grant specific administrative and operational capabilities to this Student Assistant.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-1">
+          <div className="space-y-3 py-2">
             {[
-              { key: "manage_circulation", label: "Circulation", desc: "Checkouts & Returns" },
-              { key: "manage_attendance", label: "Attendance", desc: "Gate scans & records" },
-              { key: "view_admin_dashboard", label: "Admin Dashboard", desc: "View admin dashboard overview" },
+              { 
+                key: "manage_circulation", 
+                label: "Circulation Desk Access", 
+                desc: "Allows checking out library books, processing returns, managing reservations, and assisting other students at the desk." 
+              },
+              { 
+                key: "manage_attendance", 
+                label: "Attendance Desk & Scanner", 
+                desc: "Allows processing card scans (barcode/QR code entries), viewing today's overall student gate attendance logs, and accessing the Gate Scanner Console." 
+              },
+              { 
+                key: "view_admin_dashboard", 
+                label: "Administrative Dashboard", 
+                desc: "Allows access to administrative widgets, total active checkout statistics, student directory summaries, and general system analytics." 
+              },
             ].map(p => (
               <div
                 key={p.key}
-                className="flex items-center justify-between px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
+                className="flex items-start justify-between gap-4 px-3 py-3.5 rounded-xl hover:bg-muted/50 transition-all border border-border/40 bg-card"
               >
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium">{p.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{p.desc}</p>
+                <div className="space-y-1 pr-2">
+                  <p className="text-xs font-bold text-foreground">{p.label}</p>
+                  <p className="text-[10px] text-muted-foreground leading-normal">{p.desc}</p>
                 </div>
                 <Switch
                   checked={form.permissions?.[p.key] ?? false}
@@ -470,13 +482,24 @@ export function UserDetailClient({
                     }))
                   }
                   disabled={isReadOnly}
+                  className="mt-0.5 shrink-0"
                 />
               </div>
             ))}
+
+            {/* Unsaved Changes Alert Box */}
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 animate-in fade-in duration-300">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[10px] leading-normal font-medium text-amber-800">
+                <strong>Attention:</strong> These toggles adjust permissions locally. You must click <strong>&quot;Save Changes&quot;</strong> at the bottom of the main profile page to persist them to the database.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" className="w-full sm:w-auto h-9 font-bold">Done</Button>
+              <Button className="w-full sm:w-auto h-9 font-bold bg-primary text-primary-foreground hover:bg-primary/90">
+                Confirm & Close
+              </Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>

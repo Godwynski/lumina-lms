@@ -1,28 +1,28 @@
 import { Suspense } from "react";
-import { getMe, getPreferences } from "@/lib/auth-helpers";
+import { getMe } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AttendanceClient } from "./AttendanceClient";
 import { getAttendanceHistory } from "@/lib/actions/attendance";
 
+export const metadata = {
+  title: "Attendance Logs",
+  description: "View and manage library attendance sessions.",
+};
+
 export default async function AttendancePage() {
-  const [me, preferences] = await Promise.all([getMe(), getPreferences()]);
+  const me = await getMe();
   if (!me) redirect("/");
 
-  const isStaffRole = me.hasPermission('manage_attendance') && !me.isDeactivatedSA;
-  
-  const isAdminOrLibrarian = me.role === 'admin' || me.role === 'librarian';
+  const isStaff = me.hasPermission('manage_attendance') && !me.isDeactivatedSA;
 
-  // If staff is in student view, treat them as a student
-  // Admins and Librarians are forced to staff view
-  const isStaff = isStaffRole && (isAdminOrLibrarian || preferences.preferred_dashboard_view !== 'student');
-  
-  // If in student view, fetch specific history for the user
-  const historyPromise = getAttendanceHistory(isStaff ? undefined : me.user.id);
+  const systemTodayPromise = isStaff ? getAttendanceHistory(undefined) : undefined;
+  const personalHistoryPromise = getAttendanceHistory(me.user.id);
 
   return (
     <Suspense fallback={<AttendanceSkeleton />}>
       <AttendanceClient 
-        historyPromise={historyPromise} 
+        systemTodayPromise={systemTodayPromise}
+        personalHistoryPromise={personalHistoryPromise}
         isStaff={isStaff}
         userId={me.user.id}
       />

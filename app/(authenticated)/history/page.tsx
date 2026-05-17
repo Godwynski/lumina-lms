@@ -1,32 +1,39 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getMe, getPreferences } from "@/lib/auth-helpers";
+import { getMe } from "@/lib/auth-helpers";
 import { getBorrowingHistory } from "@/lib/actions/history";
 import HistoryContent, { HistorySkeleton } from "./HistoryContent";
 import { type BorrowingRecord } from "@/lib/actions/history";
 
 export type BorrowingHistoryResult = { records: BorrowingRecord[]; totalCount: number };
 
-export const metadata = {
-  title: "Borrow History | Lumina LMS",
-  description: "Track your library borrowing timeline and returns.",
-};
+export async function generateMetadata() {
+  const me = await getMe();
+  if (!me) return { title: "Borrow History | Lumina LMS" };
+
+  const isStaff = me.role === "admin" || 
+                  me.role === "librarian" || 
+                  (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+
+  return {
+    title: `${isStaff ? "Borrowing Logs" : "Borrow History"} | Lumina LMS`,
+    description: isStaff 
+      ? "View and manage complete library transaction registers and audit trails."
+      : "Track your library borrowing timeline and returns.",
+  };
+}
 
 // getMe() is cache()-memoized — reuses the auth resolved by the layout.
 // The .then() chain fires immediately without blocking the page shell.
 function buildHistoryPromise(page: number, status: string, q: string) {
-  return Promise.all([getMe(), getPreferences()]).then(async ([me, preferences]) => {
+  return getMe().then(async (me) => {
     if (!me) redirect("/");
     
-    const preferredView = preferences.preferred_dashboard_view;
-    
     // Admin, Librarian and active SA can see all records, others see only their own.
-    const isStaffRole = me.role === "admin" || 
-                        me.role === "librarian" || 
-                        (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+    const isStaff = me.role === "admin" || 
+                    me.role === "librarian" || 
+                    (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
     
-    const isAdminOrLibrarian = me.role === "admin" || me.role === "librarian";
-    const isStaff = isStaffRole && (isAdminOrLibrarian || preferredView !== 'student');
     const userId = isStaff ? null : me.user.id;
     
     return getBorrowingHistory(userId, page, 10, status, q);
@@ -61,13 +68,12 @@ async function HistoryPageContent({
   const status = params.status || "all";
   const q = params.q || "";
 
-  // Get current user and preferences in parallel
-  const [me, preferences] = await Promise.all([getMe(), getPreferences()]);
+  const me = await getMe();
   if (!me) redirect("/");
 
-  const preferredView = preferences.preferred_dashboard_view;
-  const isAdminOrLibrarian = me.role === 'admin' || me.role === 'librarian';
-  const isStaff = (isAdminOrLibrarian || (me.role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE')) && (isAdminOrLibrarian || preferredView !== 'student');
+  const isStaff = me.role === "admin" || 
+                  me.role === "librarian" || 
+                  (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
 
   // Fire the DB promise immediately — no await, passed straight to HistoryContent
   const historyPromise = buildHistoryPromise(page, status, q);

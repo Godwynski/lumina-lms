@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useTransition, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
-import { toggleAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
+import { toggleAttendanceByCard, getAttendanceHistory, checkoutAllActiveAttendance } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
 import { createClient } from "@/lib/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AttendanceRecord {
   id: string;
@@ -25,20 +26,28 @@ interface AttendanceRecord {
 }
 
 export function AttendanceClient({ 
-  historyPromise,
+  systemTodayPromise,
+  personalHistoryPromise,
   isStaff = false,
   userId
 }: { 
-  historyPromise: Promise<AttendanceRecord[]>,
+  systemTodayPromise?: Promise<AttendanceRecord[]>,
+  personalHistoryPromise: Promise<AttendanceRecord[]>,
   isStaff?: boolean,
   userId: string
 }) {
-  const initialHistory = use(historyPromise);
-  const [records, setRecords] = useState(initialHistory);
+  const initialSystemToday = systemTodayPromise ? use(systemTodayPromise) : [];
+  const initialPersonal = use(personalHistoryPromise);
+
+  const [systemRecords, setSystemRecords] = useState(initialSystemToday);
+  const [personalRecords, setPersonalRecords] = useState(initialPersonal);
   const [isPending, startTransition] = useTransition();
   const [cardNumber, setCardNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const activeSessionsCount = useMemo(() => {
+    return systemRecords.filter(r => !r.check_out_at).length;
+  }, [systemRecords]);
 
   const handleScan = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +71,25 @@ export function AttendanceClient({
     });
   };
 
+  const handleCheckoutAll = () => {
+    if (activeSessionsCount === 0) return;
+
+    const confirmMessage = `Are you sure you want to log out all ${activeSessionsCount} active students?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    startTransition(async () => {
+      const result = await checkoutAllActiveAttendance({});
+      if (result.success) {
+        toast.success(`Successfully logged out ${result.data.count} active students.`, {
+          description: "All active attendance sessions have been marked completed.",
+          icon: <LogOut className="w-4 h-4 text-green-500" />
+        });
+      } else {
+        toast.error(result.error || "Failed to log out everyone.");
+      }
+    });
+  };
+
   const [showScanner, setShowScanner] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -80,7 +108,7 @@ export function AttendanceClient({
     }
   }, [isStaff, showScanner]);
 
-  // Cleanup timeout on unmount
+  // Realtime subscription to refresh attendance logs automatically
   useEffect(() => {
     const supabase = createClient();
     
@@ -91,12 +119,20 @@ export function AttendanceClient({
         schema: 'public', 
         table: 'attendance' 
       }, async () => {
-        // Refresh the attendance history
         try {
-          const freshData = await getAttendanceHistory(isStaff ? undefined : userId);
-          setRecords(freshData);
+          if (isStaff) {
+            const [freshSystem, freshPersonal] = await Promise.all([
+              getAttendanceHistory(undefined),
+              getAttendanceHistory(userId)
+            ]);
+            setSystemRecords(freshSystem);
+            setPersonalRecords(freshPersonal);
+          } else {
+            const freshPersonal = await getAttendanceHistory(userId);
+            setPersonalRecords(freshPersonal);
+          }
         } catch (error) {
-          console.error("Failed to refresh attendance history:", error);
+          console.error("Failed to refresh attendance logs:", error);
         }
       })
       .subscribe();
@@ -108,7 +144,6 @@ export function AttendanceClient({
   }, [isStaff, userId]);
 
   const handleQRScan = useCallback((data: string) => {
-    // Synchronous ref guard — blocks the very next callback frame
     if (isProcessingRef.current) return;
 
     const cleanData = data.trim();
@@ -116,17 +151,14 @@ export function AttendanceClient({
 
     const now = Date.now();
 
-    // Block if same card scanned within interval
     if (lastScannedRef.current === cleanData && now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
       return;
     }
 
-    // Block if ANY scan happened too recently
     if (now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
       return;
     }
 
-    // Lock synchronously BEFORE any async work
     isProcessingRef.current = true;
     lastScannedRef.current = cleanData;
     lastScanTimeRef.current = now;
@@ -144,7 +176,6 @@ export function AttendanceClient({
             icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
           });
 
-          // Clear "last scanned" after 5 seconds to allow re-scanning
           if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
           scanTimeoutRef.current = setTimeout(() => {
             lastScannedRef.current = null;
@@ -152,23 +183,19 @@ export function AttendanceClient({
 
         } else {
           toast.error(result.error);
-          lastScannedRef.current = null; // Allow immediate retry on error
+          lastScannedRef.current = null; 
         }
       } finally {
         setIsProcessing(false);
-        // Release the synchronous lock after a short delay
-        // to prevent immediate re-trigger from the html5-qrcode callback
         setTimeout(() => {
           isProcessingRef.current = false;
         }, 500);
       }
     });
-  }, [startTransition]);
-
-
+  }, []);
 
   const scannerControls = (
-    <div className="flex flex-1 items-center gap-3">
+    <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-3 w-full">
       <form onSubmit={handleScan} className="flex flex-1 items-center gap-3">
         <div className="relative flex-1">
           <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -186,131 +213,232 @@ export function AttendanceClient({
           type="submit" 
           size="sm"
           disabled={isPending || isProcessing || !cardNumber.trim()}
-          className="h-9 px-4 font-bold"
+          className="h-9 px-4 font-bold shrink-0"
         >
           {isPending || isProcessing ? "..." : "Process"}
         </Button>
       </form>
-      <div className="w-px h-6 bg-border/40 mx-1" />
-      <Button
-        variant={showScanner ? "secondary" : "outline"}
-        size="sm"
-        onClick={() => setShowScanner(!showScanner)}
-        className="h-9 px-4"
-        disabled={isPending}
-      >
-        <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
-        {showScanner ? "Close Camera" : "Open Camera"}
-      </Button>
+      <div className="hidden md:block w-px h-6 bg-border/40 mx-1" />
+      <div className="flex items-center gap-2">
+        <Button
+          variant={showScanner ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setShowScanner(!showScanner)}
+          className="h-9 px-4 flex-1 md:flex-none justify-center shrink-0"
+          disabled={isPending}
+        >
+          <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
+          {showScanner ? "Close Camera" : "Open Camera"}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCheckoutAll}
+          className={cn(
+            "h-9 px-4 flex-1 md:flex-none justify-center font-bold transition-all duration-300 shrink-0",
+            activeSessionsCount > 0 
+              ? "border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white"
+              : "opacity-40 cursor-not-allowed text-muted-foreground border-border"
+          )}
+          disabled={isPending || activeSessionsCount === 0}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout Everyone ({activeSessionsCount})
+        </Button>
+      </div>
     </div>
   );
 
-  return (
-    <AdminTableShell
-      controls={isStaff ? scannerControls : (
-        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
-          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
-          {format(new Date(), "MMMM dd, yyyy")}
-        </div>
-      )}
-      className="max-w-5xl"
-    >
-      {isStaff && showScanner && (
-        <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
-          {isProcessing && (
-            <div className="absolute inset-0 z-10 bg-background/20 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
-              <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Processing...</span>
-              </div>
+  if (isStaff) {
+    return (
+      <div className="mx-auto w-full max-w-5xl space-y-6">
+        <Tabs defaultValue="scanner" className="w-full space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/10 pb-4">
+            <div>
+              <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+                Attendance Logs
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Process student and visitor card scans, or view personal attendance records.
+              </p>
             </div>
-          )}
-          <QRScanner 
-            onScan={handleQRScan}
-            onClose={() => setShowScanner(false)}
-            stopOnScan={false}
-            className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
-          />
-        </div>
-      )}
+            <TabsList className="bg-muted/50 p-1 rounded-xl border border-border/50 self-start sm:self-auto">
+              <TabsTrigger value="scanner" className="font-bold px-4 py-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Scanner Console
+              </TabsTrigger>
+              <TabsTrigger value="personal" className="font-bold px-4 py-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                My Attendance
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-      <Suspense fallback={
-        <div className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Logs...</p>
-        </div>
-      }>
-        <AttendanceTable 
-          history={records} 
-        />
-      </Suspense>
-    </AdminTableShell>
+          <TabsContent value="scanner" className="space-y-4 outline-none">
+            <AdminTableShell
+              controls={scannerControls}
+              className="max-w-none animate-in fade-in-50 duration-300"
+            >
+              {showScanner && (
+                <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
+                  {isProcessing && (
+                    <div className="absolute inset-0 z-10 bg-background/20 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
+                      <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
+                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Processing...</span>
+                      </div>
+                    </div>
+                  )}
+                  <QRScanner 
+                    onScan={handleQRScan}
+                    onClose={() => setShowScanner(false)}
+                    stopOnScan={false}
+                    className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
+                  />
+                </div>
+              )}
+
+              <Suspense fallback={<TableLoadingSkeleton />}>
+                <AttendanceTable history={systemRecords} isPersonal={false} />
+              </Suspense>
+            </AdminTableShell>
+          </TabsContent>
+
+          <TabsContent value="personal" className="space-y-4 outline-none">
+            <AdminTableShell
+              controls={
+                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
+                  <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+                  All-Time Personal History
+                </div>
+              }
+              className="max-w-none animate-in fade-in-50 duration-300"
+            >
+              <Suspense fallback={<TableLoadingSkeleton />}>
+                <AttendanceTable history={personalRecords} isPersonal={true} />
+              </Suspense>
+            </AdminTableShell>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-5xl space-y-6">
+      <div className="border-b border-border/10 pb-4">
+        <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+          My Attendance
+        </h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Your personal record of checked-in and checked-out sessions.
+        </p>
+      </div>
+      <AdminTableShell
+        controls={
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
+            <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+            All-Time History
+          </div>
+        }
+        className="max-w-none animate-in fade-in-50 duration-300"
+      >
+        <Suspense fallback={<TableLoadingSkeleton />}>
+          <AttendanceTable history={personalRecords} isPersonal={true} />
+        </Suspense>
+      </AdminTableShell>
+    </div>
   );
 }
 
+function TableLoadingSkeleton() {
+  return (
+    <div className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <p className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Logs...</p>
+    </div>
+  );
+}
 
 function AttendanceTable({ 
   history, 
+  isPersonal = false
 }: { 
   history: AttendanceRecord[],
+  isPersonal?: boolean
 }) {
-
-
-  const columns = useMemo<LuminaColumn<AttendanceRecord>[]>(() => [
-    {
-      header: "User",
-      cell: (record) => (
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
-              {(record.profiles?.full_name || "Student").charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="truncate font-medium text-foreground">{record.profiles?.full_name || "Student"}</p>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-              {format(new Date(record.check_in_at), "MMM dd, yyyy")}
-            </p>
+  const columns = useMemo<LuminaColumn<AttendanceRecord>[]>(() => {
+    const cols: LuminaColumn<AttendanceRecord>[] = [];
+    
+    if (!isPersonal) {
+      cols.push({
+        header: "User",
+        cell: (record) => (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                {(record.profiles?.full_name || "Student").charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-foreground">{record.profiles?.full_name || "Student"}</p>
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                {format(new Date(record.check_in_at), "MMM dd, yyyy")}
+              </p>
+            </div>
           </div>
-        </div>
-      )
-    },
-    {
-      header: "Check In",
-      cell: (record) => (
-        <div className="flex items-center gap-1.5 text-xs font-medium">
-          <LogIn className="w-3.5 h-3.5 text-muted-foreground/50" />
-          {format(new Date(record.check_in_at), "hh:mm a")}
-        </div>
-      )
-    },
-    {
-      header: "Check Out",
-      cell: (record) => (
-        <div className="flex items-center gap-1.5 text-xs font-medium">
-          {record.check_out_at ? (
-            <>
-              <LogOut className="w-3.5 h-3.5 text-muted-foreground/50" />
-              {format(new Date(record.check_out_at), "hh:mm a")}
-            </>
-          ) : (
-            <span className="text-green-600 font-bold uppercase tracking-widest text-[9px] animate-pulse">
-              Active Session
-            </span>
-          )}
-        </div>
-      )
-    },
-    {
-      header: "Status",
-      className: "w-[120px]",
-      cell: (record) => (
-        <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
-      )
+        )
+      });
+    } else {
+      cols.push({
+        header: "Date",
+        cell: (record) => (
+          <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+            <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+            {format(new Date(record.check_in_at), "MMMM dd, yyyy")}
+          </div>
+        )
+      });
     }
-  ], []);
+
+    cols.push(
+      {
+        header: "Check In",
+        cell: (record) => (
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            <LogIn className="w-3.5 h-3.5 text-muted-foreground/50" />
+            {format(new Date(record.check_in_at), "hh:mm a")}
+          </div>
+        )
+      },
+      {
+        header: "Check Out",
+        cell: (record) => (
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            {record.check_out_at ? (
+              <>
+                <LogOut className="w-3.5 h-3.5 text-muted-foreground/50" />
+                {format(new Date(record.check_out_at), "hh:mm a")}
+              </>
+            ) : (
+              <span className="text-green-600 font-bold uppercase tracking-widest text-[9px] animate-pulse">
+                Active Session
+              </span>
+            )}
+          </div>
+        )
+      },
+      {
+        header: "Status",
+        className: "w-[120px]",
+        cell: (record) => (
+          <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
+        )
+      }
+    );
+
+    return cols;
+  }, [isPersonal]);
 
   return (
     <LuminaTable
@@ -320,37 +448,53 @@ function AttendanceTable({
       noBorder
       emptyState={{
         title: "No logs found",
-        description: "There are no attendance records for today yet.",
+        description: "There are no attendance records to display.",
         icon: Clock
       }}
       renderMobileRow={(record) => (
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-muted text-muted-foreground">
-                {(record.profiles?.full_name || "S").charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-muted-foreground font-bold uppercase">
-                  {format(new Date(record.check_in_at), "MMM dd")}
-                </span>
-                <span className="opacity-20 text-[10px]">•</span>
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <LogIn className="w-2.5 h-2.5" />
-                  {format(new Date(record.check_in_at), "hh:mm a")}
+            {!isPersonal ? (
+              <>
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-muted text-muted-foreground">
+                    {(record.profiles?.full_name || "S").charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">
+                      {format(new Date(record.check_in_at), "MMM dd")}
+                    </span>
+                    <span className="opacity-20 text-[10px]">•</span>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <LogIn className="w-2.5 h-2.5" />
+                      {format(new Date(record.check_in_at), "hh:mm a")}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="min-w-0">
+                <p className="font-bold text-sm">
+                  {format(new Date(record.check_in_at), "MMMM dd, yyyy")}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
+                    <LogIn className="w-2.5 h-2.5 text-green-500" />
+                    In: {format(new Date(record.check_in_at), "hh:mm a")}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
             {record.check_out_at && (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
-                <LogOut className="w-2.5 h-2.5" />
-                {format(new Date(record.check_out_at), "hh:mm a")}
+                <LogOut className="w-2.5 h-2.5 text-orange-500" />
+                Out: {format(new Date(record.check_out_at), "hh:mm a")}
               </div>
             )}
           </div>

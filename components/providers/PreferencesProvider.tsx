@@ -1,7 +1,10 @@
 "use client";
 
-import React, { createContext, useEffect, useState, useCallback, useRef } from "react";
+import React, { createContext, useEffect, useState, useCallback, useRef, useContext } from "react";
 import { isAbortError } from "@/lib/error-utils";
+import { createClient } from "@/lib/supabase/client";
+import { type User } from "@supabase/supabase-js";
+import { type UserRole, type ProfileData } from "@/lib/types";
 
 type Preferences = Record<string, unknown>;
 
@@ -10,20 +13,29 @@ interface PreferencesContextType {
   loading: boolean;
   updatePreferences: (newPrefs: Preferences) => Promise<void>;
   refreshPreferences: () => Promise<void>;
+  role: UserRole | null;
+  profile: (ProfileData & { role?: string; status?: string }) | null;
+  currentMode: "staff" | "student";
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
 
 export function PreferencesProvider({ 
   children,
-  initialPreferences = {}
+  initialPreferences = {},
+  initialRole = null,
+  initialProfile = null,
+  user = null,
 }: { 
   children: React.ReactNode;
   initialPreferences?: Preferences | Promise<Preferences>;
+  initialRole?: UserRole | null;
+  initialProfile?: (ProfileData & { role?: string; status?: string }) | null;
+  user?: User | null;
 }) {
   const isPromise = initialPreferences instanceof Promise;
-  // Track whether we've already resolved the initial promise to prevent re-runs
   const resolvedRef = useRef(false);
+  const [supabase] = useState(() => createClient());
 
   const [preferences, setPreferences] = useState<Preferences>(
     isPromise ? {} : (initialPreferences as Preferences)
@@ -33,6 +45,16 @@ export function PreferencesProvider({
     !initialPreferences || 
     Object.keys(initialPreferences as Preferences).length === 0
   );
+
+  // Unified role and profile states, listening in real-time
+  const [role, setRole] = useState<UserRole | null>(initialRole);
+  const [profile, setProfile] = useState<(ProfileData & { role?: string; status?: string }) | null>(initialProfile);
+
+  // Sync initial state if props change on mount
+  useEffect(() => {
+    setRole(initialRole);
+    setProfile(initialProfile);
+  }, [initialRole, initialProfile]);
 
   const fetchPreferences = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -50,10 +72,8 @@ export function PreferencesProvider({
   }, []);
 
   useEffect(() => {
-    // Skip if we've already resolved the initial data
     if (resolvedRef.current) return;
 
-    // Check if initialPreferences is a promise or thenable
     const isThenable = initialPreferences && 
       (initialPreferences instanceof Promise || typeof (initialPreferences as Record<string, unknown>).then === 'function');
 
@@ -75,7 +95,6 @@ export function PreferencesProvider({
       return;
     }
 
-    // If we have initial preferences from the server, we don't need to fetch on mount.
     if (initialPreferences && Object.keys(initialPreferences as Preferences).length > 0) {
       resolvedRef.current = true;
       setLoading(false);
@@ -88,8 +107,54 @@ export function PreferencesProvider({
     return () => controller.abort();
   }, [fetchPreferences, initialPreferences]);
 
+  // Real-time subscription for profile and preference updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const profileChannel = supabase
+      .channel(`app-profile-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newProfile = payload.new as ProfileData & { role?: string; status?: string };
+          setProfile(newProfile);
+          if (newProfile.role) {
+            setRole(newProfile.role.toLowerCase() as UserRole);
+          }
+        }
+      )
+      .subscribe();
+
+    const prefsChannel = supabase
+      .channel(`app-prefs-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ui_preferences",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const nextPrefs = (payload.new as { preferences?: Record<string, unknown> })?.preferences || {};
+          setPreferences(nextPrefs);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(profileChannel);
+      void supabase.removeChannel(prefsChannel);
+    };
+  }, [user?.id, supabase]);
+
   const updatePreferences = async (newPrefs: Preferences) => {
-    // Optimistic update
     setPreferences(prev => ({ ...prev, ...newPrefs }));
 
     try {
@@ -107,10 +172,21 @@ export function PreferencesProvider({
       setPreferences(data.preferences || {});
     } catch (error) {
       console.error("Error updating preferences:", error);
-      // Revert if failed
       fetchPreferences();
     }
   };
+
+  // Centrally calculated view mode (staff or student)
+  const isDeactivatedSA = role === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
+  const hasAnyPermission = role === "student_assistant"
+    ? !!(profile?.permissions?.manage_circulation || profile?.permissions?.manage_attendance || profile?.permissions?.view_admin_dashboard)
+    : true;
+
+  const currentMode: "staff" | "student" = (isDeactivatedSA || (role === "student_assistant" && !hasAnyPermission))
+    ? "student" 
+    : (role === "admin" || role === "librarian" || role === "student_assistant")
+      ? "staff"
+      : "student";
 
   return (
     <PreferencesContext.Provider
@@ -119,11 +195,22 @@ export function PreferencesProvider({
         loading,
         updatePreferences,
         refreshPreferences: fetchPreferences,
+        role,
+        profile,
+        currentMode,
       }}
     >
       {children}
     </PreferencesContext.Provider>
   );
+}
+
+export function usePreferences() {
+  const context = useContext(PreferencesContext);
+  if (context === undefined) {
+    throw new Error("usePreferences must be used within a PreferencesProvider");
+  }
+  return context;
 }
 
 

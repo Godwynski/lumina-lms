@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Settings,
   BookOpen,
+  BookMarked,
   Users,
   RefreshCw,
   ScrollText,
@@ -17,13 +18,9 @@ import {
   UserCheck,
   History,
   BarChart3,
-  Layout,
-  User as UserIcon,
 } from "lucide-react";
 
-import { updateUiPreference } from "@/lib/actions/preferences";
-import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+
 
 
 import { Logo } from "@/components/layout/Logo";
@@ -42,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useLogout } from "@/hooks/use-logout";
 import {
   Dialog,
@@ -140,22 +138,23 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["admin", "librarian", "student_assistant"] },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student" },
+  { href: "/inventory", label: "Inventory", icon: BookMarked, minRole: "student_assistant", permissionKey: "view_admin_dashboard" },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/attendance", label: "Attendance", icon: UserCheck, minRole: "student" },
+  { href: "/attendance", label: "Attendance Logs", icon: UserCheck, minRole: "student" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin", permissionKey: "view_admin_dashboard" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
 export function ProtectedNav({
-  role,
+  role: _initialRole,
   user,
-  profile,
-  preferences,
+  profile: _initialProfile,
+  preferences: _initialPreferences,
 }: {
   role?: string | null;
   user?: User | null;
@@ -163,114 +162,14 @@ export function ProtectedNav({
   preferences?: Record<string, unknown>;
 }) {
   const pathname = usePathname();
-  const normalizedRole = typeof role === "string" ? role.trim().toLowerCase() as Role : null;
-  const [supabase] = useState(() => createClient());
-  const [currentRole, setCurrentRole] = useState<Role>(normalizedRole);
-  const [currentProfile, setCurrentProfile] = useState<Profile | null>(profile ?? null);
-  const [currentPrefs, setCurrentPrefs] = useState<Record<string, unknown>>(preferences || {});
-
-  // Sync state if props change (e.g. initial server load)
-  useEffect(() => {
-    setCurrentRole(normalizedRole);
-    setCurrentProfile(profile ?? null);
-    setCurrentPrefs(preferences || {});
-  }, [normalizedRole, profile, preferences]);
-
-  // Real-time subscription for profile and permission changes
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const profileChannel = supabase
-      .channel(`nav-profile-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "profiles",
-          filter: `id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newProfile = payload.new as Profile;
-          setCurrentProfile(newProfile);
-          if (newProfile.role) {
-            setCurrentRole(newProfile.role.toLowerCase() as Role);
-          }
-        }
-      )
-      .subscribe();
-
-    const prefsChannel = supabase
-      .channel(`nav-prefs-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ui_preferences",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const nextPrefs = (payload.new as { preferences?: Record<string, unknown> })?.preferences || {};
-          setCurrentPrefs(nextPrefs);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(profileChannel);
-      supabase.removeChannel(prefsChannel);
-    };
-  }, [user?.id, supabase]);
-
+  const { role, profile } = usePreferences();
+  const currentRole = role as Role;
+  const currentProfile = profile as Profile | null;
+  const isStaff = currentRole === "admin" || 
+                  currentRole === "librarian" || 
+                  (currentRole === "student_assistant" && currentProfile?.status?.toUpperCase() === 'ACTIVE');
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [isPending, startTransition] = React.useTransition();
-
-  const isDeactivatedSA = currentRole === "student_assistant" && 
-    currentProfile?.status?.toUpperCase() !== "ACTIVE";
-
-  const hasAnyPermission = currentRole === "student_assistant"
-    ? !!(currentProfile?.permissions?.manage_circulation || currentProfile?.permissions?.manage_attendance || currentProfile?.permissions?.view_admin_dashboard)
-    : true;
-
-  const currentMode = (isDeactivatedSA || (currentRole === "student_assistant" && !hasAnyPermission))
-    ? "student" 
-    : (currentRole === "admin" || currentRole === "librarian")
-      ? "staff"
-      : ((currentPrefs?.preferred_dashboard_view as "student" | "staff") || 
-         (currentRole === "student" ? "student" : "staff"));
-
-  const handleToggleMode = () => {
-    const newMode = currentMode === "staff" ? "student" : "staff";
-    
-    // Update local state immediately for instant UI feedback
-    setCurrentPrefs(prev => ({
-      ...prev,
-      preferred_dashboard_view: newMode
-    }));
-
-    startTransition(async () => {
-      const result = await updateUiPreference({
-        key: "preferred_dashboard_view",
-        value: newMode,
-      });
-
-      if (result.success) {
-        const viewLabel = newMode === "staff" 
-          ? (currentRole === "admin" ? "Admin" : currentRole === "librarian" ? "Librarian" : "Staff")
-          : "Personal";
-        toast.success(`Switched to ${viewLabel} View`);
-      } else {
-        // Revert on failure
-        setCurrentPrefs(prev => ({
-          ...prev,
-          preferred_dashboard_view: currentMode
-        }));
-        toast.error("Failed to switch mode");
-      }
-    });
-  };
 
 
   const handleSignOut = async () => {
@@ -341,33 +240,10 @@ export function ProtectedNav({
 
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
-      // 1. Core Permission Check (Role Rank + Specific Permission Key)
-      if (!hasPermission(currentRole, item, currentProfile)) return false;
-
-      // 2. View Mode Filtering
-      if (currentMode === "staff") {
-        // Staff View: Hide purely student-facing modules
-        const studentOnly = ["/student-catalog", "/history"];
-        if (studentOnly.includes(item.href)) return false;
-
-        // Special case: Attendance only shows in staff view if you have manage permission
-        // otherwise it stays in Personal View to avoid confusion with the management table
-        if (item.href === "/attendance" && currentRole === "student_assistant") {
-           const hasAttendancePerm = currentProfile?.permissions?.manage_attendance;
-           if (!hasAttendancePerm) return false;
-        }
-
-        // Apply explicit exclusions
-        if (currentRole && item.excludeRoles?.includes(currentRole)) return false;
-      } else {
-        // Personal/Student View: Only show basic personal modules
-        const personalModules = ["/dashboard", "/student-catalog", "/attendance", "/history"];
-        return personalModules.includes(item.href);
-      }
-
-      return true;
+      // Core Permission Check (Role Rank + Specific Permission Key)
+      return hasPermission(currentRole, item, currentProfile);
     });
-  }, [currentRole, currentProfile, currentMode]);
+  }, [currentRole, currentProfile]);
 
   const handlePrefetch = useCallback((_href: string) => {
     // Next.js Link already handles prefetching on hover
@@ -398,28 +274,39 @@ export function ProtectedNav({
         <nav className="flex flex-col h-full" aria-label="Main Navigation">
           <SidebarGroup className="flex-1">
             <SidebarMenu>
-              {visibleItems.map(item => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href)}
-                    tooltip={item.label}
-                  >
-                    <Link 
-                      href={item.href} 
-                      className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
-                      onClick={(e) => {
-                        e.currentTarget.blur();
-                        handleNavigate(item.href);
-                      }}
-                      onMouseEnter={() => handlePrefetch(item.href)}
+              {visibleItems.map(item => {
+                const hasAttendancePerm = currentRole === "admin" || 
+                                          currentRole === "librarian" || 
+                                          (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+
+                const displayLabel = item.href === "/history"
+                  ? (isStaff ? "Borrowing Logs" : "Borrow History")
+                  : item.href === "/attendance"
+                  ? (hasAttendancePerm ? "Attendance Logs" : "My Attendance")
+                  : item.label;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.href)}
+                      tooltip={displayLabel}
                     >
-                      {item.icon && <item.icon className="shrink-0" />}
-                      <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      <Link 
+                        href={item.href} 
+                        className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
+                        onClick={(e) => {
+                          e.currentTarget.blur();
+                          handleNavigate(item.href);
+                        }}
+                        onMouseEnter={() => handlePrefetch(item.href)}
+                      >
+                        {item.icon && <item.icon className="shrink-0" />}
+                        <span className="truncate group-data-[collapsible=icon]:hidden">{displayLabel}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroup>
         </nav>
@@ -483,29 +370,7 @@ export function ProtectedNav({
                     </Link>
                   </DropdownMenuItem>
 
-                  {(currentRole === "student_assistant" && !isDeactivatedSA && hasAnyPermission) && (
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        handleToggleMode();
-                      }}
-                      disabled={isPending}
-                    >
-                      {currentMode === "staff" ? (
-                        <>
-                          <UserIcon className="mr-2 h-4 w-4" />
-                          <span>Switch to Personal View</span>
-                        </>
-                      ) : (
-                        <>
-                          <Layout className="mr-2 h-4 w-4" />
-                          <span>Switch to Staff View</span>
-                        </>
-                      )}
-                      {isPending && <Loader2 className="ml-auto h-3 w-3 animate-spin" />}
-                    </DropdownMenuItem>
-                  )}
+
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
