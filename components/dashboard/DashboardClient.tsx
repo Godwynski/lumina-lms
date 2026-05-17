@@ -258,17 +258,22 @@ export function DashboardClient({
       <div className="space-y-6 pb-14 overflow-x-hidden relative">
         <LiveActivityTicker />
 
-        {/* Flat Minimalist Stats Grid */}
+        {/* Enhanced Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card 
             role="button"
             onClick={() => router.push('/attendance')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <UserCheck size={12} className="text-primary" /> Today&apos;s Visitors
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Today&apos;s Visitors
+              </div>
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                <UserCheck size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.attendanceToday}
             </div>
           </Card>
@@ -276,12 +281,17 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/users')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <Users size={12} className="text-primary" /> Total Users
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Total Users
+              </div>
+              <div className="p-2 rounded-lg bg-green-500/10 text-green-600 group-hover:scale-110 transition-transform">
+                <Users size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.totalUsers}
             </div>
           </Card>
@@ -289,12 +299,17 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/inventory')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <BookMarked size={12} className="text-primary" /> Inventory
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Inventory
+              </div>
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 group-hover:scale-110 transition-transform">
+                <BookMarked size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.totalBooks}
             </div>
           </Card>
@@ -302,12 +317,17 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/circulation')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <RefreshCw size={12} className="text-primary" /> Active Loans
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Active Loans
+              </div>
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-110 transition-transform">
+                <RefreshCw size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.activeBorrows}
             </div>
           </Card>
@@ -322,56 +342,56 @@ export function DashboardClient({
             <Card 
               role="button"
               onClick={() => router.push('/users')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-primary/10 text-primary">
-                <Users size={16} />
+              <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                <Users size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">User Directory</p>
-                <p className="text-[9px] text-muted-foreground truncate">Manage student profiles</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">User Directory</p>
+                <p className="text-[10px] text-muted-foreground truncate">Manage student profiles</p>
               </div>
             </Card>
 
             <Card 
               role="button"
               onClick={() => router.push('/audit')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-amber-500/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-amber-500/10 text-amber-600">
-                <ScrollText size={16} />
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all">
+                <ScrollText size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">Audit Logs</p>
-                <p className="text-[9px] text-muted-foreground truncate">Track changes & security</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">Audit Logs</p>
+                <p className="text-[10px] text-muted-foreground truncate">Track changes & security</p>
               </div>
             </Card>
 
             <Card 
               role="button"
               onClick={() => router.push('/policies')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-green-500/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-green-500/10 text-green-600">
-                <Settings size={16} />
+              <div className="p-2.5 rounded-lg bg-green-500/10 text-green-600 group-hover:scale-110 group-hover:bg-green-500 group-hover:text-white transition-all">
+                <Settings size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">Settings & Policies</p>
-                <p className="text-[9px] text-muted-foreground truncate">Adjust parameters & rules</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">Settings & Policies</p>
+                <p className="text-[10px] text-muted-foreground truncate">Adjust parameters & rules</p>
               </div>
             </Card>
 
             <Card 
               role="button"
               onClick={() => router.push('/analytics')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-blue-500/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-blue-500/10 text-blue-600">
-                <BarChart3 size={16} />
+              <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                <BarChart3 size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">System Analytics</p>
-                <p className="text-[9px] text-muted-foreground truncate">View usage statistics</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">System Analytics</p>
+                <p className="text-[10px] text-muted-foreground truncate">View usage statistics</p>
               </div>
             </Card>
           </div>
@@ -384,11 +404,11 @@ export function DashboardClient({
               <BookMarked size={12} className="text-primary" /> Recently Cataloged Books
             </h2>
           </div>
-          <div className="border border-border/10 bg-card/5 rounded-xl p-3">
+          <div className="border border-border/40 bg-card/50 shadow-sm rounded-xl p-4">
             {stats.recentBooks.length === 0 ? (
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {stats.recentBooks.map((book) => (
                   <Card 
                     key={book.id}
@@ -397,22 +417,22 @@ export function DashboardClient({
                       setSelectedBookId(book.id);
                       setModalOpen(true);
                     }}
-                    className="border border-border/10 bg-card/5 shadow-none transition-all hover:bg-muted/10 hover:border-primary/10 cursor-pointer group flex items-center gap-3 p-2 rounded-xl"
+                    className="group relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer flex items-center gap-3 p-3 rounded-xl"
                   >
-                    <div className="relative h-10 w-7 shrink-0 rounded bg-muted/20 overflow-hidden shadow-sm ring-1 ring-border/5 group-hover:ring-primary/20 transition-all">
+                    <div className="relative h-12 w-9 shrink-0 rounded bg-muted/20 overflow-hidden ring-1 ring-border/10 group-hover:ring-primary/30 transition-all shadow-sm">
                       <Image 
                         src={book.cover_url || "/images/default-book-cover.png"} 
                         alt="" 
                         fill 
-                        className="object-cover" 
+                        className="object-cover group-hover:scale-105 transition-transform duration-300" 
                         unoptimized 
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">
+                      <p className="truncate text-[13px] font-bold text-foreground/90 group-hover:text-primary transition-colors">
                         {book.title}
                       </p>
-                      <p className="truncate text-[10px] text-muted-foreground">
+                      <p className="truncate text-[10px] text-muted-foreground mt-0.5">
                         {book.author}
                       </p>
                     </div>
@@ -445,29 +465,34 @@ export function DashboardClient({
           <div 
             role="button"
             onClick={() => router.push('/users')}
-            className="flex items-center justify-between p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer"
+            className="flex items-center justify-between p-4 bg-amber-500/10 rounded-xl border border-amber-500/30 shadow-sm hover:bg-amber-500/20 hover:shadow-md transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-2 text-[10px] font-bold text-amber-700 uppercase tracking-widest">
-              <AlertTriangle size={14} className="text-amber-600 animate-pulse" />
+            <div className="flex items-center gap-3 text-[11px] font-bold text-amber-700 uppercase tracking-widest">
+              <AlertTriangle size={16} className="text-amber-600 animate-pulse" />
               {stats.pendingApprovals} Pending Card Applications Need Review
             </div>
-            <span className="text-[9px] font-bold text-amber-600 flex items-center gap-1">
-              Approve Cards <ArrowRight size={10} />
+            <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              Approve Cards <ArrowRight size={12} />
             </span>
           </div>
         )}
 
-        {/* Flat Minimalist Stats Grid */}
+        {/* Enhanced Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card 
             role="button"
             onClick={() => router.push('/circulation')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <RefreshCw size={12} className="text-primary" /> Active Loans
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Active Loans
+              </div>
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-110 transition-transform">
+                <RefreshCw size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.activeBorrows}
             </div>
           </Card>
@@ -475,12 +500,17 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/users')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <AlertTriangle size={12} className="text-primary" /> Pending Cards
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Pending Cards
+              </div>
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 group-hover:scale-110 transition-transform">
+                <AlertTriangle size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.pendingApprovals}
             </div>
           </Card>
@@ -488,12 +518,17 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/attendance')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <UserCheck size={12} className="text-primary" /> Today&apos;s Visitors
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Today&apos;s Visitors
+              </div>
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                <UserCheck size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.attendanceToday}
             </div>
           </Card>
@@ -501,12 +536,17 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/inventory')}
-            className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
+            className="relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <BookMarked size={12} className="text-primary" /> Inventory
+            <div className="flex items-start justify-between mb-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                Inventory
+              </div>
+              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 group-hover:scale-110 transition-transform">
+                <BookMarked size={16} />
+              </div>
             </div>
-            <div className="text-2xl font-black text-foreground/90 mt-2">
+            <div className="text-3xl font-black text-foreground tracking-tight">
               {stats.totalBooks}
             </div>
           </Card>
@@ -521,56 +561,56 @@ export function DashboardClient({
             <Card 
               role="button"
               onClick={() => router.push('/circulation')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-primary/10 text-primary">
-                <RefreshCw size={16} />
+              <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                <RefreshCw size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">Circulation Desk</p>
-                <p className="text-[9px] text-muted-foreground truncate">Checkout & return books</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">Circulation Desk</p>
+                <p className="text-[10px] text-muted-foreground truncate">Checkout & return books</p>
               </div>
             </Card>
 
             <Card 
               role="button"
               onClick={() => router.push('/inventory')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-amber-500/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-amber-500/10 text-amber-600">
-                <BookMarked size={16} />
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all">
+                <BookMarked size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">Inventory</p>
-                <p className="text-[9px] text-muted-foreground truncate">Manage book collections</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">Inventory</p>
+                <p className="text-[10px] text-muted-foreground truncate">Manage book collections</p>
               </div>
             </Card>
 
             <Card 
               role="button"
               onClick={() => router.push('/users')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-green-500/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-green-500/10 text-green-600">
-                <Users size={16} />
+              <div className="p-2.5 rounded-lg bg-green-500/10 text-green-600 group-hover:scale-110 group-hover:bg-green-500 group-hover:text-white transition-all">
+                <Users size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">User Directory</p>
-                <p className="text-[9px] text-muted-foreground truncate">Approve cards & students</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">User Directory</p>
+                <p className="text-[10px] text-muted-foreground truncate">Approve cards & students</p>
               </div>
             </Card>
 
             <Card 
               role="button"
               onClick={() => router.push('/policies')}
-              className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl"
+              className="group border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-blue-500/30 transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl"
             >
-              <div className="p-2 rounded bg-blue-500/10 text-blue-600">
-                <Settings size={16} />
+              <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                <Settings size={18} />
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">Settings & Policies</p>
-                <p className="text-[9px] text-muted-foreground truncate">Configure rules & terms</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground/90 truncate">Settings & Policies</p>
+                <p className="text-[10px] text-muted-foreground truncate">Configure rules & terms</p>
               </div>
             </Card>
           </div>
@@ -583,11 +623,11 @@ export function DashboardClient({
               <BookMarked size={12} className="text-primary" /> Recently Cataloged Books
             </h2>
           </div>
-          <div className="border border-border/10 bg-card/5 rounded-xl p-3">
+          <div className="border border-border/40 bg-card/50 shadow-sm rounded-xl p-4">
             {stats.recentBooks.length === 0 ? (
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {stats.recentBooks.map((book) => (
                   <Card 
                     key={book.id}
@@ -596,22 +636,22 @@ export function DashboardClient({
                       setSelectedBookId(book.id);
                       setModalOpen(true);
                     }}
-                    className="border border-border/10 bg-card/5 shadow-none transition-all hover:bg-muted/10 hover:border-primary/10 cursor-pointer group flex items-center gap-3 p-2 rounded-xl"
+                    className="group relative overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer flex items-center gap-3 p-3 rounded-xl"
                   >
-                    <div className="relative h-10 w-7 shrink-0 rounded bg-muted/20 overflow-hidden shadow-sm ring-1 ring-border/5 group-hover:ring-primary/20 transition-all">
+                    <div className="relative h-12 w-9 shrink-0 rounded bg-muted/20 overflow-hidden ring-1 ring-border/10 group-hover:ring-primary/30 transition-all shadow-sm">
                       <Image 
                         src={book.cover_url || "/images/default-book-cover.png"} 
                         alt="" 
                         fill 
-                        className="object-cover" 
+                        className="object-cover group-hover:scale-105 transition-transform duration-300" 
                         unoptimized 
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">
+                      <p className="truncate text-[13px] font-bold text-foreground/90 group-hover:text-primary transition-colors">
                         {book.title}
                       </p>
-                      <p className="truncate text-[10px] text-muted-foreground">
+                      <p className="truncate text-[10px] text-muted-foreground mt-0.5">
                         {book.author}
                       </p>
                     </div>

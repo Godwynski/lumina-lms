@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
 import { createClient } from "@/lib/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 interface AttendanceRecord {
   id: string;
@@ -252,74 +252,37 @@ export function AttendanceClient({
   if (isStaff) {
     return (
       <div className="mx-auto w-full max-w-5xl space-y-6">
-        <Tabs defaultValue="scanner" className="w-full space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/10 pb-4">
-            <div>
-              <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
-                Attendance Logs
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Process student and visitor card scans, or view personal attendance records.
-              </p>
-            </div>
-            <TabsList className="bg-muted/50 p-1 rounded-xl border border-border/50 self-start sm:self-auto">
-              <TabsTrigger value="scanner" className="font-bold px-4 py-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                Scanner Console
-              </TabsTrigger>
-              <TabsTrigger value="personal" className="font-bold px-4 py-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                My Attendance
-              </TabsTrigger>
-            </TabsList>
-          </div>
 
-          <TabsContent value="scanner" className="space-y-4 outline-none">
-            <AdminTableShell
-              controls={scannerControls}
-              className="max-w-none animate-in fade-in-50 duration-300"
-            >
-              {showScanner && (
-                <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
-                  {isProcessing && (
-                    <div className="absolute inset-0 z-10 bg-background/20 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
-                      <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                        <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Processing...</span>
-                      </div>
-                    </div>
-                  )}
-                  <QRScanner 
-                    onScan={handleQRScan}
-                    onClose={() => setShowScanner(false)}
-                    stopOnScan={false}
-                    className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
-                  />
+
+        <AdminTableShell
+          controls={scannerControls}
+          className="max-w-none animate-in fade-in-50 duration-300"
+        >
+          {showScanner && (
+            <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
+              {isProcessing && (
+                <div className="absolute inset-0 z-10 bg-background/20 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
+                  <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
+                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Processing...</span>
+                  </div>
                 </div>
               )}
+              <QRScanner 
+                onScan={handleQRScan}
+                onClose={() => setShowScanner(false)}
+                stopOnScan={false}
+                className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
+              />
+            </div>
+          )}
 
-              <Suspense fallback={<TableLoadingSkeleton />}>
-                <AttendanceTable history={systemRecords} isPersonal={false} />
-              </Suspense>
-            </AdminTableShell>
-          </TabsContent>
-
-          <TabsContent value="personal" className="space-y-4 outline-none">
-            <AdminTableShell
-              controls={
-                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
-                  <CalendarIcon className="w-3.5 h-3.5 text-primary" />
-                  All-Time Personal History
-                </div>
-              }
-              className="max-w-none animate-in fade-in-50 duration-300"
-            >
-              <Suspense fallback={<TableLoadingSkeleton />}>
-                <AttendanceTable history={personalRecords} isPersonal={true} />
-              </Suspense>
-            </AdminTableShell>
-          </TabsContent>
-        </Tabs>
+          <Suspense fallback={<TableLoadingSkeleton />}>
+            <AttendanceTable history={systemRecords} isPersonal={false} />
+          </Suspense>
+        </AdminTableShell>
       </div>
     );
   }
