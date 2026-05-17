@@ -36,7 +36,7 @@ export function InventoryGrid({
           title="Vault is Empty"
           description="No physical assets were found matching your criteria. Start by populating your catalog."
           action={canManage ? {
-            href: "/catalog/add",
+            href: "/inventory/add",
             label: "Initialize First Entry",
             icon: Plus,
           } : undefined}
