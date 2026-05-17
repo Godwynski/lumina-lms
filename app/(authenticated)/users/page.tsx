@@ -13,7 +13,7 @@ function buildUsersPromise() {
     if (!me) redirect("/");
     const { supabase, role } = me;
 
-    if (role !== "admin" && role !== "librarian") {
+    if (role !== "super_admin" && role !== "librarian") {
       redirect("/dashboard");
     }
 
@@ -24,7 +24,7 @@ function buildUsersPromise() {
 
     // Librarian Restriction: Hide admins from initial fetch
     if (role === "librarian") {
-      query = query.neq("role", "admin");
+      query = query.neq("role", "super_admin");
     }
 
     const { data, count, error } = await query
@@ -58,7 +58,7 @@ export default function UsersPage() {
 function UserPageWrapper({ usersPromise }: { usersPromise: ReturnType<typeof buildUsersPromise> }) {
   const { currentRole } = use(usersPromise);
   
-  return <UsersContent usersPromise={usersPromise} currentRole={currentRole as "admin" | "librarian" | "student_assistant" | "student"} />;
+  return <UsersContent usersPromise={usersPromise} currentRole={currentRole as "super_admin" | "librarian" | "student_assistant" | "student"} />;
 }
 
 function UsersSkeleton() {

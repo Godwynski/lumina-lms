@@ -69,7 +69,7 @@ function normalizeIdByRole(id: string | null, role?: string | null): string | nu
   if (/^\d+$/.test(upper)) return `STU-${upper}`;
 
   // Staff/admin/librarian without FAC- prefix
-  const staffRoles = ["admin", "librarian", "staff"];
+  const staffRoles = ["super_admin", "librarian", "staff"];
   if (role && staffRoles.includes(role.toLowerCase())) {
     return `FAC-${upper}`;
   }

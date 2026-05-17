@@ -100,7 +100,7 @@ export function NewUserClient() {
                 <SelectItem value="librarian">Librarian</SelectItem>
                 <SelectItem value="student_assistant">Staff / SA</SelectItem>
                 <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="super_admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>

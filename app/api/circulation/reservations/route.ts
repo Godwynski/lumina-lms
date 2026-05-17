@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id)
         .single();
 
-      const isStaff = Boolean(profile && ["admin", "librarian", "student_assistant"].includes(profile.role));
+      const isStaff = Boolean(profile && ["super_admin", "librarian", "student_assistant"].includes(profile.role));
       if (!isStaff) {
         return NextResponse.json(
           { ok: false, message: "Only staff members can reserve books on behalf of other users", code: "FORBIDDEN" },
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    const isStaff = Boolean(profile && ["admin", "librarian", "student_assistant"].includes(profile.role));
+    const isStaff = Boolean(profile && ["super_admin", "librarian", "student_assistant"].includes(profile.role));
 
     const searchParams = request.nextUrl.searchParams;
     const bookId = searchParams.get("bookId");

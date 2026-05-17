@@ -20,7 +20,7 @@ export interface AnalyticsSummary {
 export async function getAnalyticsSummary(range: AnalyticsRange): Promise<AnalyticsSummary> {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
-  if (!['admin', 'librarian'].includes(me.role)) throw new Error("Forbidden");
+  if (!['super_admin', 'librarian'].includes(me.role)) throw new Error("Forbidden");
 
   const { supabase } = me;
   const now = new Date();

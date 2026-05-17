@@ -11,7 +11,7 @@ export async function generateMetadata() {
   const me = await getMe();
   if (!me) return { title: "Borrow History | Lumina LMS" };
 
-  const isStaff = me.role === "admin" || 
+  const isStaff = me.role === "super_admin" || 
                   me.role === "librarian" || 
                   (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
 
@@ -30,7 +30,7 @@ function buildHistoryPromise(page: number, status: string, q: string) {
     if (!me) redirect("/");
     
     // Admin, Librarian and active SA can see all records, others see only their own.
-    const isStaff = me.role === "admin" || 
+    const isStaff = me.role === "super_admin" || 
                     me.role === "librarian" || 
                     (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
     
@@ -71,7 +71,7 @@ async function HistoryPageContent({
   const me = await getMe();
   if (!me) redirect("/");
 
-  const isStaff = me.role === "admin" || 
+  const isStaff = me.role === "super_admin" || 
                   me.role === "librarian" || 
                   (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
 

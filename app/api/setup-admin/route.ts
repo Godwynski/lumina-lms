@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const { count: adminCount } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('role', 'admin');
+      .eq('role', 'super_admin');
 
     if (adminCount && adminCount > 0) {
       return NextResponse.json({ error: 'Admin already initialized' }, { status: 403 });
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       .upsert(
         {
           id: userId,
-          role: 'admin',
+          role: 'super_admin',
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' }

@@ -9,7 +9,7 @@ async function CirculationGuard({ children }: { children: React.ReactNode }) {
   
   const { role, profile } = me;
 
-  if (!['admin', 'librarian', 'student_assistant'].includes(role)) {
+  if (!['super_admin', 'librarian', 'student_assistant'].includes(role)) {
     redirect('/dashboard');
   }
 

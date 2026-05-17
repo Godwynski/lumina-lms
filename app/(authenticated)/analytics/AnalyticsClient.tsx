@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState, useEffect, useTransition, useCallback } from 'react';
+import Link from 'next/link';
 import { Clock, BookOpen, Library, UserCircle2, Sparkles } from 'lucide-react';
 import { TrendChart, StatusPieChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange } from '@/lib/actions/analytics';
@@ -96,29 +97,37 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
             label: "Daily Traffic", 
             value: stats.attendanceToday, 
             icon: Clock, 
-            desc: "Check-ins today" 
+            desc: "Check-ins today",
+            href: "/attendance"
           },
           { 
             label: "Active Borrows", 
             value: stats.activeBorrows, 
             icon: BookOpen, 
-            desc: "Currently out" 
+            desc: "Currently out",
+            href: "/history?status=ACTIVE"
           },
           { 
             label: "Inventory", 
             value: stats.totalBooks, 
             icon: Library, 
-            desc: "Total volumes" 
+            desc: "Total volumes",
+            href: "/inventory"
           },
           { 
             label: "Members", 
             value: stats.totalUsers, 
             icon: UserCircle2, 
-            desc: "Registered users" 
+            desc: "Registered users",
+            href: "/users"
           },
         ].map((stat, i) => (
-          <div key={i} className="relative group bg-muted/5 border border-border/40 p-6 rounded-2xl hover:bg-muted/10 hover:border-primary/20 transition-all duration-300">
-            <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-primary/60">
+          <Link 
+            key={i} 
+            href={stat.href}
+            className="relative group bg-muted/5 border border-border/40 p-6 rounded-2xl hover:bg-muted/10 hover:border-primary/20 transition-all duration-300 block cursor-pointer active:scale-[0.98]"
+          >
+            <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
               <stat.icon size={24} strokeWidth={2.5} />
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/80 mb-4">{stat.label}</p>
@@ -126,7 +135,7 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
               <p className="text-3xl font-black text-foreground tracking-tighter">{stat.value}</p>
               <p className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-tight">{stat.desc}</p>
             </div>
-          </div>
+          </Link>
         ))}
       </section>
 
@@ -240,4 +249,4 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
       </section>
     </div>
   );
-}
+}

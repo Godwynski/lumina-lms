@@ -43,7 +43,7 @@ export const GET = withAuthApi(
 
     return apiSuccess(data);
   },
-  { allowedRoles: ["admin", "librarian"] }
+  { allowedRoles: ["super_admin", "librarian"] }
 );
 
 export const POST = withAuthApi(
@@ -164,5 +164,5 @@ export const POST = withAuthApi(
 
     return apiSuccess(result);
   },
-  { allowedRoles: ["admin", "librarian"] }
+  { allowedRoles: ["super_admin", "librarian"] }
 );

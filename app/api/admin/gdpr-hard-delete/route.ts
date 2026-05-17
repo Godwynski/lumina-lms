@@ -82,5 +82,5 @@ export const POST = withAuthApi(async (request, { supabase, profile }) => {
     message: "User profile anonymized successfully",
     result: data,
   });
-}, { allowedRoles: ['admin'] });
+}, { allowedRoles: ['super_admin'] });
 

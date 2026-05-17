@@ -64,7 +64,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-type Role = "student" | "student_assistant" | "librarian" | "admin" | null;
+type Role = "student" | "student_assistant" | "librarian" | "super_admin" | null;
 
 interface Profile {
   full_name?: string | null;
@@ -82,7 +82,7 @@ const ROLE_RANKS: Record<Exclude<Role, null>, number> = {
   student: 1,
   student_assistant: 2,
   librarian: 3,
-  admin: 4,
+  super_admin: 4,
 };
 
 function hasPermission(
@@ -109,7 +109,7 @@ function hasPermission(
 
   // 3. Specific permission requirement for staff/admin tools
   if (permissionKey) {
-    if (userRole === "admin" || userRole === "librarian") return true;
+    if (userRole === "super_admin" || userRole === "librarian") return true;
     const permissions = profile?.permissions;
     if (!permissions || !permissions[permissionKey as keyof typeof permissions]) {
       return false;
@@ -146,7 +146,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { href: "/attendance", label: "Attendance Logs", icon: UserCheck, minRole: "student" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "admin", permissionKey: "view_admin_dashboard" },
+  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "super_admin", permissionKey: "view_admin_dashboard" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
@@ -165,7 +165,7 @@ export function ProtectedNav({
   const { role, profile } = usePreferences();
   const currentRole = role as Role;
   const currentProfile = profile as Profile | null;
-  const isStaff = currentRole === "admin" || 
+  const isStaff = currentRole === "super_admin" || 
                   currentRole === "librarian" || 
                   (currentRole === "student_assistant" && currentProfile?.status?.toUpperCase() === 'ACTIVE');
   const { logout, isLoggingOut } = useLogout();
@@ -275,7 +275,7 @@ export function ProtectedNav({
           <SidebarGroup className="flex-1">
             <SidebarMenu>
               {visibleItems.map(item => {
-                const hasAttendancePerm = currentRole === "admin" || 
+                const hasAttendancePerm = currentRole === "super_admin" || 
                                           currentRole === "librarian" || 
                                           (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
 

@@ -92,7 +92,7 @@ export default function HistoryContent({
     return record.status?.toUpperCase() === "OVERDUE" || (record.status?.toUpperCase() === "ACTIVE" && new Date(record.due_date) < new Date());
   };
 
-  const isPrivileged = userRole === "admin" || userRole === "librarian";
+  const isPrivileged = userRole === "super_admin" || userRole === "librarian";
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged

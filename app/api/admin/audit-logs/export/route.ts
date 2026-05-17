@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       .eq("id", user.user.id)
       .single();
 
-    if (profile?.role !== "admin") {
+    if (profile?.role !== "super_admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Build CSV content
-    const headers = ["Timestamp", "Admin", "Email", "Entity", "Action", "Reason", "Old Value", "New Value"];
+    const headers = ["Timestamp", "super_admin", "Email", "Entity", "Action", "Reason", "Old Value", "New Value"];
     const rows = (logs || []).map((log) => [
       log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "",
       log.profiles?.full_name || "Unknown",

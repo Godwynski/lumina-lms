@@ -8,10 +8,7 @@ export const normalizeUserRole = (value: unknown): UserRole | null => {
   if (typeof value !== 'string') return null;
   const role = value.trim().toLowerCase();
   
-  // Mapping deprecated 'staff' role to 'student_assistant'
-  if (role === 'staff') return 'student_assistant';
-  
-  if (role === 'admin' || role === 'librarian' || role === 'student_assistant' || role === 'student') {
+  if (role === 'super_admin' || role === 'librarian' || role === 'student_assistant' || role === 'student') {
     return role as UserRole;
   }
   return null;
@@ -51,11 +48,11 @@ export const getMe = cache(async () => {
       permissions: UserPermissions | null;
     },
     role: role as UserRole,
-    isStaff: ['admin', 'librarian', 'student_assistant'].includes(role),
-    isAdmin: role === 'admin',
+    isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
+    isAdmin: role === 'super_admin',
     isDeactivatedSA: role === 'student_assistant' && profile.status?.toUpperCase() !== 'ACTIVE',
     hasPermission: (permission: keyof UserPermissions) => {
-      if (role === 'admin' || role === 'librarian') return true;
+      if (role === 'super_admin' || role === 'librarian') return true;
       const perms = (profile.permissions as UserPermissions | null);
       return !!perms?.[permission];
     },

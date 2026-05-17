@@ -131,7 +131,7 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
         bookId={book.id}
         open={modalOpen}
         onOpenChange={setModalOpen}
-        variant="admin"
+        variant="super_admin"
         initialData={book}
         canManage={canManage}
       />

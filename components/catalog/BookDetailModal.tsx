@@ -70,7 +70,7 @@ interface BookDetailModalProps {
   bookId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  variant: 'student' | 'admin';
+  variant: 'student' | 'super_admin';
   initialData?: Partial<Book>;
   canManage?: boolean;
   onCancelSuccess?: () => void;
@@ -473,7 +473,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
   }, [initialData, variant]);
 
   const placeholderAdminData = useMemo(() => {
-    if (initialData && variant === 'admin') {
+    if (initialData && variant === 'super_admin') {
       return { 
         book: initialData as Book,
         copies: undefined as BookCopyWithReservation[] | undefined,
@@ -490,7 +490,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
         "max-h-[90vh] overflow-y-auto custom-scrollbar pt-12",
-        variant === 'admin' ? "sm:max-w-3xl" : "sm:max-w-lg"
+        variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg"
       )}>
         <DialogHeader className="sr-only">
           <DialogTitle>Book Details</DialogTitle>
@@ -520,7 +520,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
           </div>
         )}
 
-        {!error && activeAdminData && variant === 'admin' && (
+        {!error && activeAdminData && variant === 'super_admin' && (
           <div>
             <AdminManagementContent 
               initialBook={activeAdminData.book} 

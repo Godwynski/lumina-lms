@@ -8,7 +8,7 @@ async function CatalogGuard({ children }: { children: React.ReactNode }) {
   
   const { role } = me;
 
-  if (!['admin', 'librarian'].includes(role)) {
+  if (!['super_admin', 'librarian'].includes(role)) {
     redirect('/student-catalog');
   }
 

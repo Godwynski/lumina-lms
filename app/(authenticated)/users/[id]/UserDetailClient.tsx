@@ -41,9 +41,9 @@ export function UserDetailClient({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [secondaryOpen, setSecondaryOpen] = useState(false);
 
-  const isAdmin = currentRole === "admin";
+  const isAdmin = currentRole === "super_admin";
   const isLibrarian = currentRole === "librarian";
-  const isTargetAdmin = initialUser.role === "admin";
+  const isTargetAdmin = initialUser.role === "super_admin";
   const isReadOnly = isLibrarian && isTargetAdmin;
 
   const [form, setForm] = useState({
@@ -194,7 +194,7 @@ export function UserDetailClient({
   ];
 
   const roleOptions = [
-    { id: "admin", label: "Administrator", icon: Shield, hidden: !isAdmin },
+    { id: "super_admin", label: "Administrator", icon: Shield, hidden: !isAdmin },
     { id: "librarian", label: "Librarian", icon: Building },
     { id: "student_assistant", label: "Student Assistant", icon: UserCheck },
     { id: "student", label: "Student", icon: UserIcon },
