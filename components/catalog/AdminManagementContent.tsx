@@ -523,6 +523,11 @@ export function AdminManagementContent({
                     min={1000} 
                     max={new Date().getFullYear() + 1} 
                     value={editForm.published_year} 
+                    onKeyDown={(e) => {
+                      if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
                     onChange={e => setEditForm(prev => ({ ...prev, published_year: e.target.value }))} 
                     className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
                   />
@@ -664,6 +669,11 @@ export function AdminManagementContent({
                     min={1} 
                     max={50} 
                     value={copiesToAdd} 
+                    onKeyDown={(e) => {
+                      if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
                     onChange={e => setCopiesToAdd(parseInt(e.target.value) || 1)} 
                     className="h-8 w-14 text-center text-xs px-1 rounded-md"
                   />
