@@ -13,6 +13,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import NavAnimatePresence from "./NavAnimatePresence";
 import { SWRProvider } from "./_components/SWRProvider";
 import { cookies } from "next/headers";
+import { isAccessBlocked as checkAccessBlocked, type Profile } from "@/lib/auth/permissions";
 
 export default async function ProtectedLayout({
   children,
@@ -43,10 +44,7 @@ export default async function ProtectedLayout({
     redirect("/error?error=archived_account");
   }
 
-  const isAccessBlocked =
-    profile?.status === "PENDING" ||
-    profile?.status === "SUSPENDED" ||
-    profile?.status === "INACTIVE";
+  const isAccessBlocked = checkAccessBlocked(profile as Profile);
 
   if (isAccessBlocked && !isPrivileged && role !== "student_assistant") {
     return <AccountPendingScreen profile={profile} isStudent={isStudent} />;

@@ -8,6 +8,7 @@ import { updateAvatarUrl } from "@/lib/actions/profile";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ImageCropper } from "./ImageCropper";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 interface AvatarManagerProps {
   initialAvatarUrl: string | null;
@@ -16,10 +17,13 @@ interface AvatarManagerProps {
 
 export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps) {
   const [isUploading, setIsUploading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [tempImage, setTempImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+  const { profile } = usePreferences();
+
+  // Use the realtime profile avatar if available, otherwise fallback to initial
+  const avatarUrl = profile?.avatar_url ?? initialAvatarUrl;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -49,10 +53,20 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // 1. Delete existing files in the user's avatar directory to save space
+      const { data: existingFiles } = await supabase.storage
+        .from("avatars")
+        .list(user.id);
+        
+      if (existingFiles && existingFiles.length > 0) {
+        const filesToRemove = existingFiles.map((f) => `${user.id}/${f.name}`);
+        await supabase.storage.from("avatars").remove(filesToRemove);
+      }
+
+      // 2. Upload the new cropped and resized blob
       const fileName = `${user.id}/${Date.now()}.jpg`;
       const filePath = `${fileName}`;
 
-      // 1. Upload the cropped and resized blob
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, croppedBlob, {
@@ -62,16 +76,14 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
 
       if (uploadError) throw uploadError;
 
-      // 2. Get Public URL
+      // 3. Get Public URL
       const { data: { publicUrl } } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
-      // 3. Update Profile Table
+      // 4. Update Profile Table
       await updateAvatarUrl(publicUrl);
 
-      // 4. Update local state
-      setAvatarUrl(publicUrl);
       toast.success("Profile picture updated.");
     } catch (error: unknown) {
       console.error("Upload error:", error);

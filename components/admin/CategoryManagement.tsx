@@ -290,7 +290,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
               draftCategory={draftCategories.find((c) => c.id === category.id)}
               isBulkEditing={isBulkEditing}
               isChanged={changedSet.has(category.id)}
-              onDraftChange={(field, value) => handleDraftChange(category.id, field, value)}
+              onDraftChange={(field: keyof Category, value: string) => handleDraftChange(category.id, field, value)}
               onEdit={openDialog}
               onArchive={handleArchive}
               onRestore={handleRestore}
