@@ -90,8 +90,12 @@ function hasPermission(
   item: NavItem,
   profile?: Profile | null
 ): boolean {
-  const { minRole, exactRoles, permissionKey } = item;
+  const { minRole, exactRoles, permissionKey, excludeRoles } = item;
   const isDeactivatedSA = userRole === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
+
+  if (excludeRoles && userRole && excludeRoles.includes(userRole)) {
+    return false;
+  }
 
   // 1. Exact role match (highest priority)
   if (exactRoles && exactRoles.length > 0) {
@@ -138,7 +142,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student" },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["super_admin", "librarian"] },
   { href: "/inventory", label: "Inventory", icon: BookMarked, minRole: "student_assistant", permissionKey: "view_admin_dashboard" },
   { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
   { href: "/history", label: "Borrow History", icon: History, minRole: "student" },

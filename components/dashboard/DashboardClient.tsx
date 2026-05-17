@@ -292,7 +292,7 @@ export function DashboardClient({
             className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
           >
             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <BookMarked size={12} className="text-primary" /> Catalog Assets
+              <BookMarked size={12} className="text-primary" /> Inventory
             </div>
             <div className="text-2xl font-black text-foreground/90 mt-2">
               {stats.totalBooks}
@@ -504,7 +504,7 @@ export function DashboardClient({
             className="border border-border/10 bg-card/5 shadow-none hover:bg-muted/10 transition-all cursor-pointer p-4 flex flex-col justify-between rounded-xl"
           >
             <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-1.5">
-              <BookMarked size={12} className="text-primary" /> Catalog Books
+              <BookMarked size={12} className="text-primary" /> Inventory
             </div>
             <div className="text-2xl font-black text-foreground/90 mt-2">
               {stats.totalBooks}
@@ -541,7 +541,7 @@ export function DashboardClient({
                 <BookMarked size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground/90 truncate">Catalog Assets</p>
+                <p className="text-xs font-bold text-foreground/90 truncate">Inventory</p>
                 <p className="text-[9px] text-muted-foreground truncate">Manage book collections</p>
               </div>
             </Card>
