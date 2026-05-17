@@ -44,7 +44,8 @@ export function UserDetailClient({
   const isAdmin = currentRole === "super_admin";
   const isLibrarian = currentRole === "librarian";
   const isTargetAdmin = initialUser.role === "super_admin";
-  const isReadOnly = isLibrarian && isTargetAdmin;
+  const isTargetLibrarian = initialUser.role === "librarian";
+  const isReadOnly = isLibrarian && (isTargetAdmin || isTargetLibrarian);
 
   const [form, setForm] = useState({
     name: initialUser.name,
@@ -313,7 +314,7 @@ export function UserDetailClient({
                     <Select 
                       value={form.role} 
                       onValueChange={(val) => setForm(prev => ({ ...prev, role: val as User["role"] }))}
-                      disabled={isReadOnly}
+                      disabled={isReadOnly || isLibrarian}
                     >
                       <SelectTrigger className="w-full h-10 rounded-lg">
                         <SelectValue />

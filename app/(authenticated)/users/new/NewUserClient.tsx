@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section, FieldGroup } from "@/components/settings/SettingsShared";
 
-export function NewUserClient() {
+export function NewUserClient({ currentRole }: { currentRole?: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [inviteEmail, setInviteEmail] = useState("");
@@ -20,6 +20,9 @@ export function NewUserClient() {
   const [inviteDept, setInviteDept] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isLibrarian = currentRole === "librarian";
+  const isSuperAdmin = currentRole === "super_admin";
 
   const isDirty = inviteEmail.length > 0 || inviteDept.length > 0;
 
@@ -92,15 +95,15 @@ export function NewUserClient() {
           </Section>
           <div className="space-y-2">
             <Label>Assign Role</Label>
-            <Select value={inviteRole} onValueChange={setInviteRole}>
+            <Select value={inviteRole} onValueChange={setInviteRole} disabled={isLibrarian}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="librarian">Librarian</SelectItem>
-                <SelectItem value="student_assistant">Staff / SA</SelectItem>
+                {!isLibrarian && <SelectItem value="librarian">Librarian</SelectItem>}
+                {!isLibrarian && <SelectItem value="student_assistant">Staff / SA</SelectItem>}
                 <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="super_admin">Admin</SelectItem>
+                {isSuperAdmin && <SelectItem value="super_admin">Admin</SelectItem>}
               </SelectContent>
             </Select>
           </div>
