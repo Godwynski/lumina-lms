@@ -290,7 +290,7 @@ export function ModernInventoryClient({
 
           {/* Add Item Button */}
           {canManage && (
-            <Link href="/catalog/add" className="shrink-0">
+            <Link href="/inventory/add" className="shrink-0">
               <Button className="h-12 rounded-[1.5rem] px-5 text-xs font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
                 <Plus className="sm:mr-2 h-5 w-5 transition-transform group-hover:rotate-90" />
                 <span className="hidden sm:inline">Add Item</span>
