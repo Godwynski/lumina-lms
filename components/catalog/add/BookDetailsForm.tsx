@@ -158,6 +158,11 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               min="1"
               max="100"
               value={formData.copies}
+              onKeyDown={(e) => {
+                if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
+                  e.preventDefault();
+                }
+              }}
               onChange={e => onUpdate({ copies: parseInt(e.target.value) || 0 })}
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm font-bold text-foreground transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
             />
