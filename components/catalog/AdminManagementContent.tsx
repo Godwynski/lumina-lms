@@ -675,7 +675,7 @@ export function AdminManagementContent({
                       }
                     }}
                     onChange={e => setCopiesToAdd(parseInt(e.target.value) || 1)} 
-                    className="h-8 w-14 text-center text-xs px-1 rounded-md"
+                    className="h-8 w-14 text-center text-xs px-1 rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-8 px-3 text-[10px] font-medium">
                     {addCopiesLoading ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : 'Confirm'}

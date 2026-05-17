@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Section = memo(({ 
@@ -165,17 +166,20 @@ export function RunMaintenanceTool() {
 
 export function TestEmailTool() {
   const [isSending, setIsSending] = useState(false);
+  const [targetEmail, setTargetEmail] = useState("");
 
   const handleTest = async () => {
     setIsSending(true);
     try {
       const res = await fetch("/api/test-email", { 
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail || undefined })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("Test email sent! Check your inbox.");
+      toast.success(data.message || "Test email sent! Check your inbox.");
+      setTargetEmail(""); // clear on success
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Test failed");
     } finally {
@@ -188,18 +192,27 @@ export function TestEmailTool() {
       <div className="space-y-1">
         <h4 className="text-sm font-medium text-foreground">Configuration Test</h4>
         <p className="text-xs text-muted-foreground">
-          Sends a professional test email to your account to verify SMTP.
+          Sends a professional test email to your account to verify email delivery.
         </p>
       </div>
-      <Button 
-        onClick={handleTest} 
-        disabled={isSending}
-        variant="secondary"
-        size="sm"
-        className="h-8 rounded-lg text-xs font-medium"
-      >
-        {isSending ? "Sending..." : "Send Test Email"}
-      </Button>
+      <div className="flex items-center gap-3">
+        <Input 
+          type="email"
+          placeholder="Test email address (optional)" 
+          value={targetEmail}
+          onChange={(e) => setTargetEmail(e.target.value)}
+          className="h-8 text-xs max-w-[250px]"
+        />
+        <Button 
+          onClick={handleTest} 
+          disabled={isSending}
+          variant="secondary"
+          size="sm"
+          className="h-8 rounded-lg text-xs font-medium shrink-0"
+        >
+          {isSending ? "Sending..." : "Send Test Email"}
+        </Button>
+      </div>
     </div>
   );
 }
