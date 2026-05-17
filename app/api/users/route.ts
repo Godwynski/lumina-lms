@@ -63,7 +63,7 @@ export const GET = withAuthApi(
 );
 
 export const POST = withAuthApi(
-  async (request, { supabase, user }) => {
+  async (request, { supabase, user, role: requesterRole }) => {
     let body: { email?: unknown; role?: unknown; department?: unknown };
     try {
       body = await request.json();
@@ -73,21 +73,19 @@ export const POST = withAuthApi(
 
     const email =
       typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    const role = normalizeUserRole(body.role as string);
+    const requestedRole = normalizeUserRole(body.role as string);
     const department =
       typeof body.department === "string" ? body.department.trim() : "";
 
-    const requesterRole = role;
-    const createdRole = normalizeUserRole(body.role as string);
-    if (requesterRole === "librarian" && createdRole === "super_admin") {
-      return apiError("Librarians cannot create admin users", "FORBIDDEN", 403);
+    if (requesterRole === "librarian" && body.role && requestedRole !== "student") {
+      return apiError("Librarians are not allowed to assign roles", "FORBIDDEN", 403);
     }
 
     if (!email) {
       return apiError("Email is required", "EMAIL_REQUIRED", 400);
     }
 
-    if (role === "student" && body.role !== "student") {
+    if (requestedRole === "student" && body.role !== "student") {
        // if it defaulted to student but user didn't want student, it might be invalid
        // but normalizeUserRole is robust. Let's just check if it's one of managers.
     }
@@ -112,7 +110,7 @@ export const POST = withAuthApi(
 
     const updates: Record<string, unknown> = {};
     if (Object.prototype.hasOwnProperty.call(profile, "role"))
-      updates.role = role;
+      updates.role = requestedRole;
     if (Object.prototype.hasOwnProperty.call(profile, "status"))
       updates.status = "PENDING";
     if (Object.prototype.hasOwnProperty.call(profile, "department"))
@@ -142,7 +140,7 @@ export const POST = withAuthApi(
       "profile",
       profile.id,
       "role_updated",
-      `Upgraded user ${email} to ${role} (status set to pending)`,
+      `Upgraded user ${email} to ${requestedRole} (status set to pending)`,
       { department: updates.department },
       { role: profile.role, status: profile.status, department: profile.department },
       { role: updated.role, status: updated.status, department: updated.department }
@@ -192,8 +190,13 @@ export const PATCH = withAuthApi(
     }
 
     // Librarian Restriction: Cannot target admins
-    if (requesterRole === "librarian" && profile.role === "super_admin") {
-      return apiError("Librarians cannot modify admin accounts", "FORBIDDEN", 403);
+    if (requesterRole === "librarian") {
+      if (profile.role === "super_admin") {
+        return apiError("Librarians cannot modify admin accounts", "FORBIDDEN", 403);
+      }
+      if (profile.role === "librarian" && user.id !== id) {
+        return apiError("Librarians cannot modify fellow librarian accounts", "FORBIDDEN", 403);
+      }
     }
     
     // Check permissions: Manager roles can edit others, users can edit themselves
@@ -231,8 +234,8 @@ export const PATCH = withAuthApi(
       Object.prototype.hasOwnProperty.call(profile, "role")
     ) {
       const nextRole = normalizeUserRole(nextRoleInput);
-      if (requesterRole === "librarian" && nextRole === "super_admin") {
-        return apiError("Librarians cannot promote users to admin", "FORBIDDEN", 403);
+      if (requesterRole === "librarian" && nextRole !== profile.role) {
+        return apiError("Librarians are not allowed to assign or change user roles", "FORBIDDEN", 403);
       }
       updates.role = nextRole;
     }

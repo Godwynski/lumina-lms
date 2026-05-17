@@ -9,7 +9,7 @@ async function NewUserContent() {
   const me = await getMe();
   if (!me) redirect("/");
 
-  return <NewUserClient />;
+  return <NewUserClient currentRole={me.role} />;
 }
 
 export default function NewUserPage() {
