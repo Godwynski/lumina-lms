@@ -18,13 +18,13 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || profile.role !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden. Admin only.' }, { status: 403 });
     }
 
     const { email: targetEmail } = await request.json().catch(() => ({ email: null }));
     const to = targetEmail || profile.email;
-    const name = profile.full_name || 'Admin';
+    const name = profile.full_name || 'super_admin';
 
     if (!to) {
       return NextResponse.json({ error: 'No recipient email found' }, { status: 400 });

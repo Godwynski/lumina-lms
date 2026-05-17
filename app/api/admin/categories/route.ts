@@ -14,7 +14,7 @@ function toSlug(value: string) {
 
 export async function GET() {
   try {
-    const { supabase } = await assertRole(["admin", "librarian"]);
+    const { supabase } = await assertRole(["super_admin", "librarian"]);
     const { data, error } = await supabase
       .from("categories")
       .select("*")
@@ -37,7 +37,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, supabase } = await assertRole(["admin", "librarian"]);
+    const { user, supabase } = await assertRole(["super_admin", "librarian"]);
 
     const body = await request.json();
     const rawName = typeof body.name === "string" ? body.name.trim() : "";

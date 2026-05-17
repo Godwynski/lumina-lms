@@ -3,7 +3,7 @@ import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const MANAGER_ROLES: UserRole[] = ["admin", "librarian"];
+const MANAGER_ROLES: UserRole[] = ["super_admin", "librarian"];
 
 function mapProfileToUser(row: Record<string, unknown>) {
   const createdAt = typeof row.created_at === "string" ? row.created_at : null;
@@ -44,7 +44,7 @@ export const GET = withAuthApi(
 
     // Librarian Restriction: Hide admins
     if (requesterRole === "librarian") {
-      query = query.neq("role", "admin");
+      query = query.neq("role", "super_admin");
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -79,7 +79,7 @@ export const POST = withAuthApi(
 
     const requesterRole = role;
     const createdRole = normalizeUserRole(body.role as string);
-    if (requesterRole === "librarian" && createdRole === "admin") {
+    if (requesterRole === "librarian" && createdRole === "super_admin") {
       return apiError("Librarians cannot create admin users", "FORBIDDEN", 403);
     }
 
@@ -192,12 +192,12 @@ export const PATCH = withAuthApi(
     }
 
     // Librarian Restriction: Cannot target admins
-    if (requesterRole === "librarian" && profile.role === "admin") {
+    if (requesterRole === "librarian" && profile.role === "super_admin") {
       return apiError("Librarians cannot modify admin accounts", "FORBIDDEN", 403);
     }
     
     // Check permissions: Manager roles can edit others, users can edit themselves
-    if (requesterRole !== "admin" && requesterRole !== "librarian" && user.id !== id) {
+    if (requesterRole !== "super_admin" && requesterRole !== "librarian" && user.id !== id) {
       return apiError("Forbidden: Insufficient permissions", "FORBIDDEN", 403);
     }
 
@@ -231,7 +231,7 @@ export const PATCH = withAuthApi(
       Object.prototype.hasOwnProperty.call(profile, "role")
     ) {
       const nextRole = normalizeUserRole(nextRoleInput);
-      if (requesterRole === "librarian" && nextRole === "admin") {
+      if (requesterRole === "librarian" && nextRole === "super_admin") {
         return apiError("Librarians cannot promote users to admin", "FORBIDDEN", 403);
       }
       updates.role = nextRole;
@@ -244,7 +244,7 @@ export const PATCH = withAuthApi(
       Object.prototype.hasOwnProperty.call(profile, "status")
     ) {
       if (nextStatus === "ARCHIVED" || nextStatus === "SUSPENDED") {
-        if (requesterRole !== "admin") {
+        if (requesterRole !== "super_admin") {
           return apiError("Only admins can archive or suspend users", "FORBIDDEN", 403);
         }
       }

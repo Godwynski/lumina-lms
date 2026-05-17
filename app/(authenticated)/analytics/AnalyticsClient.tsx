@@ -249,4 +249,4 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
       </section>
     </div>
   );
-}
+}
