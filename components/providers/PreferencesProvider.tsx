@@ -184,7 +184,7 @@ export function PreferencesProvider({
 
   const currentMode: "staff" | "student" = (isDeactivatedSA || (role === "student_assistant" && !hasAnyPermission))
     ? "student" 
-    : (role === "admin" || role === "librarian" || role === "student_assistant")
+    : (role === "super_admin" || role === "librarian" || role === "student_assistant")
       ? "staff"
       : "student";
 

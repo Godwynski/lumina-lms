@@ -16,7 +16,7 @@ async function assertStaffCatalogAccess() {
   if (!me || !me.isStaff) throw new Error('Unauthorized');
   
   // Only admin, librarian, and student assistant can access the catalog inventory
-  if (me.role !== 'admin' && me.role !== 'librarian' && me.role !== 'student_assistant') {
+  if (me.role !== 'super_admin' && me.role !== 'librarian' && me.role !== 'student_assistant') {
     throw new Error('Access denied: Inventory management is restricted to authorized staff roles.');
   }
 
@@ -185,7 +185,7 @@ export const createBook = createSafeAction(
   { 
     auditAction: "create", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian']
+    allowedRoles: ['super_admin', 'librarian']
   }
 );
 
@@ -223,7 +223,7 @@ export const updateBook = createSafeAction(
   { 
     auditAction: "update", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian']
+    allowedRoles: ['super_admin', 'librarian']
   }
 );
 
@@ -265,7 +265,7 @@ export const softDeleteBook = createSafeAction(
   { 
     auditAction: "archive", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian']
+    allowedRoles: ['super_admin', 'librarian']
   }
 );
 
@@ -294,7 +294,7 @@ export const restoreBook = createSafeAction(
   { 
     auditAction: "restore", 
     auditEntity: "book", 
-    allowedRoles: ['admin', 'librarian']
+    allowedRoles: ['super_admin', 'librarian']
   }
 );
 
@@ -336,7 +336,7 @@ export const addBookCopies = createSafeAction(
   { 
     auditAction: "create", 
     auditEntity: "book_copy", 
-    allowedRoles: ['admin', 'librarian']
+    allowedRoles: ['super_admin', 'librarian']
   }
 );
 
@@ -382,7 +382,7 @@ export const updateBookCopyStatus = createSafeAction(
   { 
     auditAction: "update_status", 
     auditEntity: "book_copy", 
-    allowedRoles: ['admin', 'librarian']
+    allowedRoles: ['super_admin', 'librarian']
   }
 );
 

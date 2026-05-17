@@ -30,7 +30,7 @@ export type User = {
   name: string;
   email: string;
   avatarUrl: string | null;
-  role: "admin" | "librarian" | "student_assistant" | "student";
+  role: "super_admin" | "librarian" | "student_assistant" | "student";
   status: string;
   department: string;
   joined: string;
@@ -73,7 +73,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
-  const [activeTab, setActiveTab] = useState<"all" | "admin" | "librarian" | "student_assistant" | "student" | "review" | "archived">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "super_admin" | "librarian" | "student_assistant" | "student" | "review" | "archived">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const pageSize = 12;
@@ -83,18 +83,18 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const roleFilterLabels: Record<string, string> = {
     all: "All",
     review: "Pending Review",
-    admin: "Admin",
+    super_admin: "Super Admin",
     librarian: "Librarian",
     student_assistant: "Student Assistant",
     student: "Student",
     archived: "Archived",
   };
 
-  // If librarian, remove 'admin' from filter options
-  const filterOptions = ["all", "review", "admin", "librarian", "student_assistant", "student", "archived"] as const;
+  // If librarian, remove 'super_admin' from filter options
+  const filterOptions = ["all", "review", "super_admin", "librarian", "student_assistant", "student", "archived"] as const;
   const visibleTabs = filterOptions.filter(t => {
-    if (isLibrarian && t === "admin") return false;
-    if (t === "archived" && !["admin", "librarian"].includes(currentRole)) return false;
+    if (isLibrarian && t === "super_admin") return false;
+    if (t === "archived" && !["super_admin", "librarian"].includes(currentRole)) return false;
     return true;
   });
 
@@ -133,9 +133,9 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
         queryBuilder = queryBuilder.neq("status", "ARCHIVED");
       }
 
-      // Librarian Restriction: Hide admins
+      // Librarian Restriction: Hide super admins
       if (isLibrarian) {
-        queryBuilder = queryBuilder.neq("role", "admin");
+        queryBuilder = queryBuilder.neq("role", "super_admin");
       }
 
       if (debouncedSearch) {

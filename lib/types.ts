@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'librarian' | 'student_assistant' | 'student';
+export type UserRole = 'super_admin' | 'librarian' | 'student_assistant' | 'student';
 
 export type UserPermissions = {
   manage_circulation?: boolean;

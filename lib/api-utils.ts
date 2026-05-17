@@ -69,7 +69,7 @@ export function withAuthApi(
         return apiError("Account archived. Please contact administration.", "FORBIDDEN", 403);
       }
 
-      const isActuallyStaff = role === 'admin' || role === 'librarian' || (role === 'student_assistant' && profile.status?.toUpperCase() === 'ACTIVE');
+      const isActuallyStaff = role === 'super_admin' || role === 'librarian' || (role === 'student_assistant' && profile.status?.toUpperCase() === 'ACTIVE');
 
       if (options.requireStaff && !isActuallyStaff) {
         return apiError("Forbidden: Staff access required or account disabled", "FORBIDDEN", 403);

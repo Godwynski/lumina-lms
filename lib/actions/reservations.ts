@@ -163,7 +163,7 @@ export const cancelReservation = createSafeAction(
   {
     auditAction: "cancel",
     auditEntity: "reservation",
-    allowedRoles: ['admin', 'librarian', 'student_assistant', 'student']
+    allowedRoles: ['super_admin', 'librarian', 'student_assistant', 'student']
   }
 );
 

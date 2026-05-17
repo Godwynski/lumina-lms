@@ -161,7 +161,7 @@ export const resolveScan = createSafeAction(
 
     throw new Error(errorMessage);
   },
-  { allowedRoles: ['admin', 'librarian', 'student_assistant'], allowedPermissions: ['manage_circulation'] }
+  { allowedRoles: ['super_admin', 'librarian', 'student_assistant'], allowedPermissions: ['manage_circulation'] }
 );
 
 /**
@@ -267,7 +267,7 @@ export const checkoutBook = createSafeAction(
   { 
     auditAction: 'checkout', 
     auditEntity: 'borrowing_record', 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
+    allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
     allowedPermissions: ['manage_circulation']
   }
 );
@@ -382,7 +382,7 @@ export const returnBook = createSafeAction(
   { 
     auditAction: 'return', 
     auditEntity: 'book_copy', 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
+    allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
     allowedPermissions: ['manage_circulation']
   }
 );

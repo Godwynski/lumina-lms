@@ -50,13 +50,13 @@ export async function getDashboardStats({
   const { user, supabase } = me;
   const userId = user.id;
 
-  const isActuallyStaff = role === 'admin' || 
+  const isActuallyStaff = role === 'super_admin' || 
                           role === 'librarian' || 
                           (role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE');
 
 
   const isManager = isActuallyStaff;
-  const canReviewApprovals = role === 'admin' || role === 'librarian';
+  const canReviewApprovals = role === 'super_admin' || role === 'librarian';
 
   const safeWrap = async <T>(promise: Promise<T>, defaultValue: T): Promise<T> => {
     try {

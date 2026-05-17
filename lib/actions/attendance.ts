@@ -153,7 +153,7 @@ export const toggleAttendanceByCard = createSafeAction(
     }
   },
   { 
-    allowedRoles: ['admin', 'librarian', 'student_assistant'],
+    allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
     allowedPermissions: ['manage_attendance']
   }
 );
@@ -166,7 +166,7 @@ export async function getAttendanceHistory(userId?: string) {
 
   const { supabase } = me;
   
-  const isStaff = me.role === 'admin' || 
+  const isStaff = me.role === 'super_admin' || 
                   me.role === 'librarian' || 
                   (me.role === 'student_assistant' && 
                    me.profile?.status?.toUpperCase() === 'ACTIVE' &&
@@ -253,7 +253,7 @@ export const updateAttendance = createSafeAction(
     }];
   },
   {
-    allowedRoles: ['admin', 'librarian'],
+    allowedRoles: ['super_admin', 'librarian'],
     allowedPermissions: ['manage_attendance'],
     auditAction: "update",
     auditEntity: "attendance"
@@ -295,7 +295,7 @@ export const deleteAttendance = createSafeAction(
     }];
   },
   {
-    allowedRoles: ['admin'],
+    allowedRoles: ['super_admin'],
     allowedPermissions: ['manage_attendance']
   }
 );
@@ -367,7 +367,7 @@ export const checkoutAllActiveAttendance = createSafeAction(
     }];
   },
   {
-    allowedRoles: ['admin', 'librarian'],
+    allowedRoles: ['super_admin', 'librarian'],
     allowedPermissions: ['manage_attendance']
   }
 );

@@ -16,6 +16,8 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -182,10 +184,10 @@ export function ModernInventoryClient({
 
               <div className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <SheetTitle className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
                     Filters
-                  </h2>
-                  <p className="text-xs text-muted-foreground font-medium">Refine your search results</p>
+                  </SheetTitle>
+                  <SheetDescription className="text-xs text-muted-foreground font-medium">Refine your search results</SheetDescription>
                 </div>
 
                 <Separator className="bg-border/10" />

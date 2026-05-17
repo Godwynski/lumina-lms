@@ -22,7 +22,7 @@ export function PoliciesSection({ role, settingsPromise, categoriesPromise }: Po
           <PolicyStreamWrapper 
             promise={settingsPromise} 
             categoriesPromise={categoriesPromise} 
-            canEdit={role === "admin" || role === "librarian"} 
+            canEdit={role === "super_admin" || role === "librarian"} 
             role={role}
           />
         </Suspense>

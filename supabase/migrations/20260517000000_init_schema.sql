@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- 2. CUSTOM TYPES & ENUMS
 DO $$ BEGIN
-    CREATE TYPE public.user_role AS ENUM ('admin', 'librarian', 'staff', 'student', 'student_assistant');
+    CREATE TYPE public.user_role AS ENUM ('super_admin', 'librarian', 'student', 'student_assistant');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -307,7 +307,7 @@ BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = auth.uid()
-    AND role IN ('admin', 'librarian', 'staff', 'student_assistant')
+    AND role IN ('super_admin', 'librarian', 'student_assistant')
   );
 END;
 $$;
@@ -521,7 +521,7 @@ BEGIN
     -- 2. If reserving on behalf of another user, verify that p_actor_id has a staff role.
     IF v_target_id <> p_actor_id THEN
         SELECT role INTO v_actor_role FROM public.profiles WHERE id = p_actor_id;
-        IF v_actor_role NOT IN ('admin', 'librarian', 'student_assistant') THEN
+        IF v_actor_role NOT IN ('super_admin', 'librarian', 'student_assistant') THEN
             RETURN jsonb_build_object('ok', false, 'code', 'FORBIDDEN', 'message', 'Only library staff can reserve books on behalf of other users.');
         END IF;
     END IF;
@@ -905,7 +905,7 @@ ALTER TABLE public.violations ENABLE ROW LEVEL SECURITY;
 -- announcements Policies
 CREATE POLICY "Admins can manage announcements" ON public.announcements
   FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['admin'::public.user_role, 'librarian'::public.user_role])));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role])));
 
 CREATE POLICY "Announcements are viewable by everyone" ON public.announcements
   FOR SELECT TO public
@@ -918,11 +918,11 @@ CREATE POLICY "Users can self check-in" ON public.attendance
 
 CREATE POLICY "Staff can insert attendance" ON public.attendance
   FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
 
 CREATE POLICY "Staff can view all attendance" ON public.attendance
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
 
 CREATE POLICY "Users can view own attendance" ON public.attendance
   FOR SELECT TO authenticated
@@ -930,7 +930,7 @@ CREATE POLICY "Users can view own attendance" ON public.attendance
 
 CREATE POLICY "Staff can update attendance" ON public.attendance
   FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
 
 CREATE POLICY "Users can self check-out" ON public.attendance
   FOR UPDATE TO authenticated
@@ -944,11 +944,11 @@ CREATE POLICY "Staff can view all audit logs" ON public.audit_logs
 -- book_copies Policies
 CREATE POLICY "Staff can delete book_copies" ON public.book_copies
   FOR DELETE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 CREATE POLICY "Staff can insert book_copies" ON public.book_copies
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 CREATE POLICY "Book copies are viewable by everyone" ON public.book_copies
   FOR SELECT TO public
@@ -956,16 +956,16 @@ CREATE POLICY "Book copies are viewable by everyone" ON public.book_copies
 
 CREATE POLICY "Staff can update book_copies" ON public.book_copies
   FOR UPDATE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 -- books Policies
 CREATE POLICY "Staff can delete books" ON public.books
   FOR DELETE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 CREATE POLICY "Staff can insert books" ON public.books
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 CREATE POLICY "Books are viewable by everyone" ON public.books
   FOR SELECT TO public
@@ -973,7 +973,7 @@ CREATE POLICY "Books are viewable by everyone" ON public.books
 
 CREATE POLICY "Staff can update books" ON public.books
   FOR UPDATE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 -- borrowing_records Policies
 CREATE POLICY "Staff can insert borrowing records" ON public.borrowing_records
@@ -995,11 +995,11 @@ CREATE POLICY "Staff can update borrowing records" ON public.borrowing_records
 -- categories Policies
 CREATE POLICY "Staff can delete categories" ON public.categories
   FOR DELETE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 CREATE POLICY "Staff can insert categories" ON public.categories
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 CREATE POLICY "Categories are viewable by everyone" ON public.categories
   FOR SELECT TO public
@@ -1007,7 +1007,7 @@ CREATE POLICY "Categories are viewable by everyone" ON public.categories
 
 CREATE POLICY "Staff can update categories" ON public.categories
   FOR UPDATE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
 
 -- checkout_idempotency Policies
 CREATE POLICY "Staff can manage checkout idempotency" ON public.checkout_idempotency
@@ -1035,7 +1035,7 @@ CREATE POLICY "Users can view own library card" ON public.library_cards
 
 CREATE POLICY "Staff can view all library cards" ON public.library_cards
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
 
 -- notifications Policies
 CREATE POLICY "Users can view own notifications" ON public.notifications
