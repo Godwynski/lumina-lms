@@ -41,7 +41,7 @@ async function InventoryDataWrapper({
     ? !!(me.profile?.permissions?.manage_circulation || me.profile?.permissions?.manage_attendance || me.profile?.permissions?.view_admin_dashboard)
     : true;
 
-  const isStaff = role === 'admin' || role === 'librarian' || (role === 'student_assistant' && !isDeactivatedSA && hasAnyPermission);
+  const isStaff = role === 'super_admin' || role === 'librarian' || (role === 'student_assistant' && !isDeactivatedSA && hasAnyPermission);
 
   if (!isStaff) {
     redirect('/dashboard');
@@ -65,7 +65,7 @@ async function InventoryDataWrapper({
       q={q}
       stock={stock}
       categoryId={categoryId}
-      canManage={role === 'admin' || role === 'librarian'}
+      canManage={role === 'super_admin' || role === 'librarian'}
     />
   );
 }

@@ -14,7 +14,7 @@ export default async function AnalyticsPage() {
   
   const { role } = me;
 
-  if (role !== 'admin' && role !== 'librarian') {
+  if (role !== 'super_admin' && role !== 'librarian') {
     return <div className="p-8 text-center text-muted-foreground">Unauthorized access</div>;
   }
 

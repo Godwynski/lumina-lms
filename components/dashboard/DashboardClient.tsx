@@ -253,7 +253,7 @@ export function DashboardClient({
       : "student";
 
   // CASE 1: ADMINISTRATOR VIEW
-  if (role === "admin") {
+  if (role === "super_admin") {
     return (
       <div className="space-y-6 pb-14 overflow-x-hidden relative">
         <LiveActivityTicker />
