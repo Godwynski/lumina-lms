@@ -533,6 +533,8 @@ export function DashboardClient({
             </div>
           </Card>
 
+
+
           <Card 
             role="button"
             onClick={() => router.push('/inventory')}

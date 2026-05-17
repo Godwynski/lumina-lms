@@ -203,7 +203,7 @@ export function AttendanceClient({
             ref={inputRef}
             value={cardNumber}
             onChange={(e) => setCardNumber(e.target.value)}
-            placeholder="Scan Library Card..."
+            placeholder="Library Card ID..."
             className="h-9 pl-9 pr-3 bg-background/50"
             disabled={isPending}
             autoComplete="off"
