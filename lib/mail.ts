@@ -233,7 +233,8 @@ export async function sendTestEmail(to: string, userName: string) {
     });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    logger.error('mail', 'Test email failed', { error });
-    return { success: false, error };
+    const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+    logger.error('mail', 'Test email failed', undefined, error);
+    return { success: false, error: errorMessage };
   }
 }

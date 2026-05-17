@@ -192,7 +192,7 @@ export function TestEmailTool() {
       <div className="space-y-1">
         <h4 className="text-sm font-medium text-foreground">Configuration Test</h4>
         <p className="text-xs text-muted-foreground">
-          Sends a professional test email to your account to verify email delivery.
+          Sends a test email via the configured provider. <strong>Note:</strong> If using Mailtrap Sandbox, emails will be intercepted and won't reach your actual inbox. Check the Mailtrap dashboard.
         </p>
       </div>
       <div className="flex items-center gap-3">
