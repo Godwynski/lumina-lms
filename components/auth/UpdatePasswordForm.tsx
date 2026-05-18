@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { AuthErrorAlert } from "@/components/auth/auth-feedback";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -25,7 +25,6 @@ export function UpdatePasswordForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -33,13 +32,12 @@ export function UpdatePasswordForm({
     e.preventDefault();
     const supabase = createClient();
     setIsLoading(true);
-    setError(null);
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       router.push("/protected");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      toast.error(error instanceof Error ? error.message : "An error occurred");
       setIsLoading(false);
     }
   };
@@ -81,8 +79,6 @@ export function UpdatePasswordForm({
                 </Button>
               </div>
             </div>
-
-            {error ? <AuthErrorAlert message={error} /> : null}
 
             <Button
               type="submit"

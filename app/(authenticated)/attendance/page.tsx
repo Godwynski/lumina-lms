@@ -9,13 +9,22 @@ export const metadata = {
   description: "View and manage library attendance sessions.",
 };
 
-export default async function AttendancePage() {
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
+}
+
+export default async function AttendancePage({ searchParams }: PageProps) {
   const me = await getMe();
   if (!me) redirect("/");
 
-  const isStaff = me.hasPermission('manage_attendance') && !me.isDeactivatedSA;
+  // Resolve searchParams since they are dynamic in Next.js 15
+  const resolvedParams = await searchParams;
+  const viewParam = typeof resolvedParams.view === 'string' ? resolvedParams.view : '';
 
-  const systemTodayPromise = isStaff ? getAttendanceHistory(undefined) : undefined;
+  const hasAttendancePerm = me.hasPermission('manage_attendance') && !me.isDeactivatedSA;
+  const showSystemLogs = hasAttendancePerm && viewParam === 'logs';
+
+  const systemTodayPromise = showSystemLogs ? getAttendanceHistory(undefined) : undefined;
   const personalHistoryPromise = getAttendanceHistory(me.user.id);
 
   return (
@@ -23,7 +32,7 @@ export default async function AttendancePage() {
       <AttendanceClient 
         systemTodayPromise={systemTodayPromise}
         personalHistoryPromise={personalHistoryPromise}
-        isStaff={isStaff}
+        isStaff={showSystemLogs}
         userId={me.user.id}
       />
     </Suspense>

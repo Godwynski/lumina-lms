@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { AuthErrorAlert } from "@/components/auth/auth-feedback";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -23,7 +23,6 @@ export function ForgotPasswordForm({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -31,7 +30,6 @@ export function ForgotPasswordForm({
     e.preventDefault();
     const supabase = createClient();
     setIsLoading(true);
-    setError(null);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/update-password`,
@@ -39,7 +37,7 @@ export function ForgotPasswordForm({
       if (error) throw error;
       setSuccess(true);
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An unexpected error occurred");
+      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -97,8 +95,6 @@ export function ForgotPasswordForm({
                     className="h-11 rounded-xl border-input bg-background px-3.5 text-sm transition-all focus-visible:ring-primary/20"
                   />
                 </div>
-
-                {error && <AuthErrorAlert message={error} />}
 
                 <Button
                   type="submit"

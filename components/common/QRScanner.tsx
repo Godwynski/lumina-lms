@@ -5,6 +5,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Camera, StopCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -168,16 +169,50 @@ export function QRScanner({
       }
     } catch (err) {
       if (isMountedRef.current) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Scanner start error:", err);
         
-        if (errorMessage.includes("NotReadableError") || errorMessage.includes("video source")) {
-          setError("Camera is currently in use by another application or tab.");
-        } else if (errorMessage.includes("Permission")) {
-          setError("Camera permission denied. Please allow access in browser settings.");
-        } else {
-          setError("Failed to access camera. Please check permissions and hardware.");
+        const errStr = String(err);
+        const errMessage = (err && typeof err === "object" && "message" in err) ? String((err as Record<string, unknown>).message) : "";
+        const errName = (err && typeof err === "object" && "name" in err) ? String((err as Record<string, unknown>).name) : "";
+        const fullErrorText = `${errStr} ${errMessage} ${errName}`.toLowerCase();
+        
+        let errorMsg = "Failed to access camera. Please verify device connection and permissions.";
+        
+        if (
+          fullErrorText.includes("notreadableerror") || 
+          fullErrorText.includes("readable") || 
+          fullErrorText.includes("could not start video source") || 
+          fullErrorText.includes("video source") || 
+          fullErrorText.includes("concurrent")
+        ) {
+          errorMsg = "Camera is currently in use by another application, tab, or is blocked by system locks.";
+        } else if (
+          fullErrorText.includes("notallowederror") || 
+          fullErrorText.includes("permission") || 
+          fullErrorText.includes("denied")
+        ) {
+          errorMsg = "Camera permission denied. Please allow camera access in your browser settings.";
+        } else if (
+          fullErrorText.includes("notfounderror") || 
+          fullErrorText.includes("devicesnotfound") || 
+          fullErrorText.includes("no camera") || 
+          fullErrorText.includes("not found")
+        ) {
+          errorMsg = "No camera device detected. Please ensure your camera is connected and active.";
+        } else if (
+          fullErrorText.includes("overconstrainederror") || 
+          fullErrorText.includes("constraint")
+        ) {
+          errorMsg = "Could not find a camera matching the requested constraints (e.g. environment facing).";
+        } else if (
+          fullErrorText.includes("securityerror") || 
+          fullErrorText.includes("secure context")
+        ) {
+          errorMsg = "Camera access is blocked by security policies. Ensure this site uses HTTPS.";
         }
+
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
     } finally {
       isStartingRef.current = false;

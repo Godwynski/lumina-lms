@@ -7,17 +7,27 @@ import { type BorrowingRecord } from "@/lib/actions/history";
 
 export type BorrowingHistoryResult = { records: BorrowingRecord[]; totalCount: number };
 
-export async function generateMetadata() {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const me = await getMe();
-  if (!me) return { title: "Borrow History | Lumina LMS" };
+  if (!me) return { title: "My Borrowing | Lumina LMS" };
 
-  const isStaff = me.role === "super_admin" || 
-                  me.role === "librarian" || 
-                  (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+  const params = await searchParams;
+  const view = params.view || "";
+
+  const isStaff = me.role === "super_admin" || me.role === "librarian";
+  const hasCirculationPerm = me.role === "student_assistant" && 
+                             !!me.profile?.permissions?.manage_circulation && 
+                             me.profile?.status?.toUpperCase() === 'ACTIVE';
+
+  const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
 
   return {
-    title: `${isStaff ? "Borrowing Logs" : "Borrow History"} | Lumina LMS`,
-    description: isStaff 
+    title: `${showAllLogs ? "Borrowing Logs" : "My Borrowing"} | Lumina LMS`,
+    description: showAllLogs 
       ? "View and manage complete library transaction registers and audit trails."
       : "Track your library borrowing timeline and returns.",
   };
@@ -25,16 +35,18 @@ export async function generateMetadata() {
 
 // getMe() is cache()-memoized — reuses the auth resolved by the layout.
 // The .then() chain fires immediately without blocking the page shell.
-function buildHistoryPromise(page: number, status: string, q: string) {
+function buildHistoryPromise(page: number, status: string, q: string, view: string) {
   return getMe().then(async (me) => {
     if (!me) redirect("/");
     
-    // Admin, Librarian and active SA can see all records, others see only their own.
-    const isStaff = me.role === "super_admin" || 
-                    me.role === "librarian" || 
-                    (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
+    const isStaff = me.role === "super_admin" || me.role === "librarian";
+    const hasCirculationPerm = me.role === "student_assistant" && 
+                               !!me.profile?.permissions?.manage_circulation && 
+                               me.profile?.status?.toUpperCase() === 'ACTIVE';
+
+    const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
     
-    const userId = isStaff ? null : me.user.id;
+    const userId = showAllLogs ? null : me.user.id;
     
     return getBorrowingHistory(userId, page, 10, status, q);
   }) as Promise<BorrowingHistoryResult>;
@@ -45,7 +57,7 @@ function buildHistoryPromise(page: number, status: string, q: string) {
 export default function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; q?: string; view?: string }>;
 }) {
   return (
     <div className="space-y-6 w-full">
@@ -61,22 +73,19 @@ export default function HistoryPage({
 async function HistoryPageContent({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; q?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
   const status = params.status || "all";
   const q = params.q || "";
+  const view = params.view || "";
 
   const me = await getMe();
   if (!me) redirect("/");
 
-  const isStaff = me.role === "super_admin" || 
-                  me.role === "librarian" || 
-                  (me.role === "student_assistant" && me.profile?.status?.toUpperCase() === 'ACTIVE');
-
   // Fire the DB promise immediately — no await, passed straight to HistoryContent
-  const historyPromise = buildHistoryPromise(page, status, q);
+  const historyPromise = buildHistoryPromise(page, status, q, view);
 
   return (
     <HistoryContent
@@ -84,7 +93,7 @@ async function HistoryPageContent({
       page={page}
       statusFilter={status}
       searchQuery={q}
-      userRole={isStaff ? me.role : 'student'}
+      userRole={me.role}
     />
   );
 }

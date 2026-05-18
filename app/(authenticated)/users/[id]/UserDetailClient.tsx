@@ -33,7 +33,6 @@ export function UserDetailClient({
   const router = useRouter();
   const [user, setUser] = useState<User>(initialUser);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Modals
   const [permissionsOpen, setPermissionsOpen] = useState(false);
@@ -72,7 +71,6 @@ export function UserDetailClient({
 
   const handleUpdateProfile = async () => {
     setIsSaving(true);
-    setError(null);
 
     try {
       const response = await fetch("/api/users", {
@@ -124,7 +122,6 @@ export function UserDetailClient({
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to update profile";
-      setError(msg);
       toast.error(msg);
     } finally {
       setIsSaving(false);
@@ -204,12 +201,6 @@ export function UserDetailClient({
   return (
     <SettingsShell isDirty={isDirty}>
       <div className="flex flex-col gap-6 pt-2">
-        {error && (
-          <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
-            {error}
-          </div>
-        )}
-
         <div className="grid gap-6">
 
           {/* ───── Section 1: User Identity & Core Access ───── */}

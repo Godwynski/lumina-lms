@@ -3,19 +3,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBook, getCategories } from '@/lib/actions/catalog';
-import { Save, Info } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { compressImage } from '@/lib/image-utils';
 import { ISBNLookupBar } from '@/components/catalog/add/ISBNLookupBar';
 import { BookDetailsForm } from '@/components/catalog/add/BookDetailsForm';
 import { CoverUploader } from '@/components/catalog/add/CoverUploader';
+import { toast } from 'sonner';
 
 export function AddBookClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isbnLoading, setIsbnLoading] = useState(false);
-  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -40,7 +40,6 @@ export function AddBookClient() {
     if (!sourceIsbn) return;
     
     setIsbnLoading(true);
-    setError('');
     
     try {
       const cleanIsbn = sourceIsbn.replace(/[- ]/g, '');
@@ -93,10 +92,10 @@ export function AddBookClient() {
       }
 
       if (!bookFound) {
-        setError('Book not found in any database. Please enter details manually.');
+        toast.error('Book not found in any database. Please enter details manually.');
       }
     } catch {
-      setError('Failed to fetch book data. Please check your connection.');
+      toast.error('Failed to fetch book data. Please check your connection.');
     } finally {
       setIsbnLoading(false);
     }
@@ -127,7 +126,6 @@ export function AddBookClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       let finalCoverUrl = formData.cover_url;
@@ -190,7 +188,7 @@ export function AddBookClient() {
       router.push('/inventory');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to add book';
-      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -202,13 +200,6 @@ export function AddBookClient() {
 
   return (
     <div className="w-full space-y-6 max-w-6xl mx-auto">
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-xl text-sm flex items-center gap-3 font-medium">
-          <Info className="w-5 h-5 shrink-0" />
-          {error}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 relative overflow-hidden">

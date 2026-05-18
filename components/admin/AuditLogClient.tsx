@@ -15,7 +15,6 @@ import {
   Search, 
   Download, 
   Filter, 
-  Database,
   RefreshCw,
   ChevronRight,
   SlidersHorizontal
@@ -262,6 +261,15 @@ export function AuditLogClient() {
     keepPreviousData: true,
   });
 
+  useEffect(() => {
+    if (error) {
+      const msg = error.status === 401 || error.status === 403 
+        ? "Access Denied: Please ensure your session is active and you have administrative permissions."
+        : (error.info?.error || error.message || "An unexpected error occurred while communicating with the server.");
+      toast.error(msg);
+    }
+  }, [error]);
+
   const handleExport = async () => {
     try {
       const exportParams = new URLSearchParams({
@@ -446,26 +454,7 @@ export function AuditLogClient() {
       }
     >
       <div className="py-6 px-2">
-        {error && (
-          <div className="p-12 text-center bg-destructive/5 rounded-[2.5rem] border border-destructive/10">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive mb-4">
-              <Database className="h-6 w-6" />
-            </div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-destructive mb-1">
-              {error.status === 401 || error.status === 403 ? "Access Denied" : "Failed to Fetch Logs"}
-            </h3>
-            <p className="text-xs text-muted-foreground font-medium max-w-sm mx-auto">
-              {error.status === 401 || error.status === 403 
-                ? "Please ensure your session is active and you have administrative permissions."
-                : (error.info?.error || error.message || "An unexpected error occurred while communicating with the server.")}
-            </p>
-            {error.status && error.status !== 401 && error.status !== 403 && (
-              <div className="mt-4 inline-block px-3 py-1 bg-destructive/10 text-destructive text-[10px] font-mono rounded-lg border border-destructive/20">
-                HTTP {error.status}
-              </div>
-            )}
-          </div>
-        )}
+
 
         {data?.logs?.length === 0 && (
           <div className="h-64 flex flex-col items-center justify-center gap-3 opacity-60 bg-muted/5 rounded-[2.5rem] border border-border/10 border-dashed">

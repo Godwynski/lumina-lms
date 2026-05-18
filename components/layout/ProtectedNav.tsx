@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
@@ -64,7 +64,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-import { Role, Profile, NavItem, hasPermission, isStaff } from "@/lib/auth/permissions";
+import { Role, Profile, NavItem, hasPermission } from "@/lib/auth/permissions";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
@@ -92,10 +92,10 @@ export function ProtectedNav({
   preferences?: Record<string, unknown>;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { role, profile } = usePreferences();
   const currentRole = role as Role;
   const currentProfile = profile as Profile | null;
-  const isStaffUser = isStaff(currentRole, currentProfile);
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
@@ -182,22 +182,88 @@ export function ProtectedNav({
         <nav className="flex flex-col h-full" aria-label="Main Navigation">
           <SidebarGroup className="flex-1">
             <SidebarMenu>
-              {visibleItems.map(item => {
+              {(() => {
+                const navItemsToRender: Array<{
+                  href: string;
+                  label: string;
+                  icon: NavItem["icon"];
+                  isActive: boolean;
+                }> = [];
+
                 const hasAttendancePerm = currentRole === "super_admin" || 
                                           currentRole === "librarian" || 
                                           (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
 
-                const displayLabel = item.href === "/history"
-                  ? (isStaffUser ? "Borrowing Logs" : "Borrow History")
-                  : item.href === "/attendance"
-                  ? (hasAttendancePerm ? "Attendance Logs" : "My Attendance")
-                  : item.label;
-                return (
+                const hasCirculationPerm = currentRole === "super_admin" || 
+                                           currentRole === "librarian" || 
+                                           (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_circulation && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+
+                const viewParam = searchParams.get("view");
+
+                visibleItems.forEach(item => {
+                  if (item.href === "/history") {
+                    if (currentRole === "student_assistant" && hasCirculationPerm) {
+                      // Student Assistant with circulation permission gets BOTH My Borrowing and Borrowing Logs
+                      navItemsToRender.push({
+                        href: "/history",
+                        label: "My Borrowing",
+                        icon: item.icon,
+                        isActive: pathname === "/history" && viewParam !== "logs"
+                      });
+                      navItemsToRender.push({
+                        href: "/history?view=logs",
+                        label: "Borrowing Logs",
+                        icon: item.icon,
+                        isActive: pathname === "/history" && viewParam === "logs"
+                      });
+                    } else {
+                      const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
+                      navItemsToRender.push({
+                        href: "/history",
+                        label: isStaffUser ? "Borrowing Logs" : "My Borrowing",
+                        icon: item.icon,
+                        isActive: pathname === "/history"
+                      });
+                    }
+                  } else if (item.href === "/attendance") {
+                    if (currentRole === "student_assistant" && hasAttendancePerm) {
+                      // Student Assistant with attendance permission gets BOTH My Attendance and Attendance Logs
+                      navItemsToRender.push({
+                        href: "/attendance",
+                        label: "My Attendance",
+                        icon: item.icon,
+                        isActive: pathname === "/attendance" && viewParam !== "logs"
+                      });
+                      navItemsToRender.push({
+                        href: "/attendance?view=logs",
+                        label: "Attendance Logs",
+                        icon: item.icon,
+                        isActive: pathname === "/attendance" && viewParam === "logs"
+                      });
+                    } else {
+                      navItemsToRender.push({
+                        href: "/attendance",
+                        label: hasAttendancePerm ? "Attendance Logs" : "My Attendance",
+                        icon: item.icon,
+                        isActive: pathname === "/attendance"
+                      });
+                    }
+                  } else {
+                    navItemsToRender.push({
+                      href: item.href,
+                      label: item.label,
+                      icon: item.icon,
+                      isActive: isActive(item.href)
+                    });
+                  }
+                });
+
+                return navItemsToRender.map(item => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
-                      isActive={isActive(item.href)}
-                      tooltip={displayLabel}
+                      isActive={item.isActive}
+                      tooltip={item.label}
                     >
                       <Link 
                         href={item.href} 
@@ -208,12 +274,12 @@ export function ProtectedNav({
                         onMouseEnter={() => handlePrefetch(item.href)}
                       >
                         {item.icon && <item.icon className="shrink-0" />}
-                        <span className="truncate group-data-[collapsible=icon]:hidden">{displayLabel}</span>
+                        <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
-              })}
+                ));
+              })()}
             </SidebarMenu>
           </SidebarGroup>
         </nav>

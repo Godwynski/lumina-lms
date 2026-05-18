@@ -19,7 +19,6 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
   const [inviteRole, setInviteRole] = useState("student");
   const [inviteDept, setInviteDept] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const isLibrarian = currentRole === "librarian";
   const isSuperAdmin = currentRole === "super_admin";
@@ -29,7 +28,6 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
   const handleInvite = async () => {
     if (!inviteEmail) return;
     setIsSaving(true);
-    setError(null);
     try {
       const email = inviteEmail.trim().toLowerCase();
       const { data: profile, error: profileError } = await supabase
@@ -59,7 +57,6 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to invite user";
-      setError(msg);
       toast.error(msg);
     } finally {
       setIsSaving(false);
@@ -69,11 +66,6 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
   return (
     <SettingsShell isDirty={isDirty}>
       <div className="flex flex-col gap-6 pt-2">
-        {error && (
-          <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
-            {error}
-          </div>
-        )}
         <div className="grid gap-6">
           <Section title="Access Details" icon={Mail} hideHeaderOnMobile>
             <div className="flex flex-col gap-4">
