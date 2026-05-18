@@ -337,7 +337,7 @@ export function AuditLogClient() {
                   <SelectItem value="all" className="text-xs py-2">All Actions</SelectItem>
                   <SelectItem value="create" className="text-xs py-2">Create</SelectItem>
                   <SelectItem value="update" className="text-xs py-2">Update</SelectItem>
-                  <SelectItem value="delete" className="text-xs py-2">Delete</SelectItem>
+                  <SelectItem value="archive" className="text-xs py-2">Archive</SelectItem>
                   <SelectItem value="login" className="text-xs py-2">Login</SelectItem>
                 </SelectContent>
               </Select>
@@ -529,6 +529,7 @@ export function AuditLogClient() {
                           <Badge variant="outline" className={cn(
                             "font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded shadow-xs border-transparent",
                             log.action === "create" ? "bg-green-500/10 text-green-600" :
+                            log.action === "archive" ? "bg-amber-500/10 text-amber-600" :
                             log.action === "delete" ? "bg-red-500/10 text-red-600" :
                             "bg-primary/10 text-primary"
                           )}>
