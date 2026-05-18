@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
 import { createClient } from "@/lib/supabase/client";
+import { CompactPagination } from "@/components/ui/compact-pagination";
 
 
 interface AttendanceRecord {
@@ -44,6 +45,18 @@ export function AttendanceClient({
   const [isPending, startTransition] = useTransition();
   const [cardNumber, setCardNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [personalPage, setPersonalPage] = useState(1);
+  const PERSONAL_PAGE_SIZE = 10;
+
+  const totalPersonalItems = personalRecords.length;
+  const totalPages = Math.max(1, Math.ceil(totalPersonalItems / PERSONAL_PAGE_SIZE));
+  const activePersonalPage = Math.min(personalPage, totalPages);
+
+  const paginatedPersonalRecords = useMemo(() => {
+    const start = (activePersonalPage - 1) * PERSONAL_PAGE_SIZE;
+    return personalRecords.slice(start, start + PERSONAL_PAGE_SIZE);
+  }, [personalRecords, activePersonalPage]);
 
 
   const handleScan = (e: React.FormEvent) => {
@@ -252,15 +265,7 @@ export function AttendanceClient({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <div className="border-b border-border/10 pb-4">
-        <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
-          My Attendance
-        </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Your personal record of checked-in and checked-out sessions.
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-5xl">
       <AdminTableShell
         controls={
           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
@@ -268,10 +273,21 @@ export function AttendanceClient({
             All-Time History
           </div>
         }
+        pagination={
+          totalPersonalItems > 0 ? (
+            <CompactPagination
+              page={activePersonalPage}
+              totalItems={totalPersonalItems}
+              pageSize={PERSONAL_PAGE_SIZE}
+              onPageChange={setPersonalPage}
+              variant="ghost"
+            />
+          ) : null
+        }
         className="max-w-none animate-in fade-in-50 duration-300"
       >
         <Suspense fallback={<TableLoadingSkeleton />}>
-          <AttendanceTable history={personalRecords} isPersonal={true} />
+          <AttendanceTable history={paginatedPersonalRecords} isPersonal={true} />
         </Suspense>
       </AdminTableShell>
     </div>

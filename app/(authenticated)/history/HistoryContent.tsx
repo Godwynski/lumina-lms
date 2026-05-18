@@ -10,6 +10,8 @@ import { BorrowingRecord } from "@/lib/actions/history";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { type UserRole } from "@/lib/auth-helpers";
+import { AdminTableShell } from "@/components/admin/AdminTableShell";
+import { CompactPagination } from "@/components/ui/compact-pagination";
 
 
 interface HistoryContentProps {
@@ -179,51 +181,63 @@ export default function HistoryContent({
     }
   ];
 
-  return (
-    <div className="space-y-4 w-full">
-      {/* Header Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border border-border/10 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm font-sans">
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            updateFilters({ q: localSearch, page: 1 });
-          }}
-          className="relative w-full sm:max-w-xs"
-        >
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-          <Input
-            type="text"
-            placeholder="Search timeline..."
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            className="h-10 rounded-xl pl-9 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
-          />
-        </form>
-        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
-          {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => updateFilters({ status, page: 1 })}
-              className={cn(
-                "rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                statusFilter === status
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              )}
-            >
-              {status === "all" ? "All" : status.toLowerCase()}
-            </button>
-          ))}
-        </div>
+  const filterControls = (
+    <div className="flex flex-wrap items-center justify-between gap-4 w-full font-sans">
+      <form 
+        onSubmit={(e) => {
+          e.preventDefault();
+          updateFilters({ q: localSearch, page: 1 });
+        }}
+        className="relative w-full sm:max-w-xs"
+      >
+        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+        <Input
+          type="text"
+          placeholder="Search timeline..."
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          className="h-10 rounded-xl pl-9 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
+        />
+      </form>
+      <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
+        {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
+          <button
+            key={status}
+            onClick={() => updateFilters({ status, page: 1 })}
+            className={cn(
+              "rounded-lg px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
+              statusFilter === status
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
+                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            )}
+          >
+            {status === "all" ? "All" : status.toLowerCase()}
+          </button>
+        ))}
       </div>
+    </div>
+  );
 
+  return (
+    <AdminTableShell
+      controls={filterControls}
+      pagination={
+        totalCount > 0 ? (
+          <CompactPagination
+            page={page}
+            totalItems={totalCount}
+            pageSize={10}
+            onPageChange={(p) => updateFilters({ page: p })}
+            variant="ghost"
+          />
+        ) : null
+      }
+      className="max-w-none animate-in fade-in-50 duration-300"
+    >
       <LuminaTable
         data={records}
         columns={columns}
-        totalCount={totalCount}
-        page={page}
-        pageSize={10}
-        onPageChange={(p) => updateFilters({ page: p })}
+        noBorder
         emptyState={{
           title: searchQuery || statusFilter !== "all" ? "No matches found" : "Timeline empty",
           description: searchQuery || statusFilter !== "all" 
@@ -232,14 +246,13 @@ export default function HistoryContent({
               ? "No borrowing records exist in the system yet."
               : "Your borrowing history will appear here.",
           icon: BookOpen,
-
           action: {
             label: "Clear All Filters",
             onClick: () => updateFilters({ q: "", status: "all", page: 1 })
           }
         }}
       />
-    </div>
+    </AdminTableShell>
   );
 }
 
