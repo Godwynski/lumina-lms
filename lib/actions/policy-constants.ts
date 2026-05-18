@@ -76,7 +76,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
       { question: "How do I borrow a book?", answer: "Open the catalog, find a title, then present your digital library card QR at the circulation desk for checkout." },
       { question: "What if the catalog says available but I cannot find it?", answer: "Open the book details and use the report action. The librarian queue will be notified for shelf verification." },
       { question: "Can I use the card on my phone only?", answer: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed." },
-      { question: "Where can I see my current borrows?", answer: "Use Borrow History from the dashboard quick actions to review active and past borrowing records." }
+      { question: "Where can I see my current borrows?", answer: "Use My Borrowing from the dashboard quick actions to review active and past borrowing records." }
     ]),
     label: "FAQ Management",
     description: "Questions shown on the student dashboard.",

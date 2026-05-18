@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 // Explicit mapping for professional labels
@@ -10,7 +10,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "catalog": "Inventory",
   "student-catalog": "Catalog",
   "circulation": "Circulation Desk",
-  "history": "Borrow History",
+  "history": "My Borrowing",
   "users": "User Directory",
   "policies": "System Policies",
   "audit": "Audit Logs",
@@ -56,7 +56,8 @@ function formatSegment(segment: string, parentSegment?: string) {
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
-  const { currentMode } = usePreferences();
+  const searchParams = useSearchParams();
+  const { role } = usePreferences();
 
   const clean = pathname.replace(/\?.*$/, "");
   if (clean === "/dashboard" || clean === "/dashboard/") {
@@ -73,16 +74,29 @@ export function BreadcrumbNav() {
   const current = pathSegments[pathSegments.length - 1];
   const parentSegment = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : undefined;
 
+  const viewParam = searchParams.get("view");
   let title = formatSegment(current, parentSegment);
   if (current === "history") {
-    title = currentMode === "staff" ? "Borrowing Logs" : "Borrow History";
+    const isStaffUser = (role === "super_admin" || role === "librarian") || 
+                        (role === "student_assistant" && viewParam === "logs");
+    title = isStaffUser ? "Borrowing Logs" : "My Borrowing";
+  } else if (current === "attendance") {
+    const isStaffUser = (role === "super_admin" || role === "librarian") || 
+                        (role === "student_assistant" && viewParam === "logs");
+    title = isStaffUser ? "Attendance Logs" : "My Attendance";
   }
 
   // For the back link, navigate to the parent path (e.g. /student-catalog) not the root segment
   let backHref = pathSegments.length > 1 ? `/${pathSegments.slice(0, -1).join("/")}` : null;
   let backLabel = parentSegment ? formatSegment(parentSegment) : null;
   if (parentSegment === "history") {
-    backLabel = currentMode === "staff" ? "Borrowing Logs" : "Borrow History";
+    const isStaffUser = (role === "super_admin" || role === "librarian") || 
+                        (role === "student_assistant" && viewParam === "logs");
+    backLabel = isStaffUser ? "Borrowing Logs" : "My Borrowing";
+  } else if (parentSegment === "attendance") {
+    const isStaffUser = (role === "super_admin" || role === "librarian") || 
+                        (role === "student_assistant" && viewParam === "logs");
+    backLabel = isStaffUser ? "Attendance Logs" : "My Attendance";
   }
 
   // Redirect "Inventory" (catalog) back links to inventory page

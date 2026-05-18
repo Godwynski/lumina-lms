@@ -94,7 +94,10 @@ export default function HistoryContent({
     return record.status?.toUpperCase() === "OVERDUE" || (record.status?.toUpperCase() === "ACTIVE" && new Date(record.due_date) < new Date());
   };
 
-  const isPrivileged = userRole === "super_admin" || userRole === "librarian";
+  const viewParam = searchParams.get("view");
+  const isPrivileged = userRole === "super_admin" || 
+                       userRole === "librarian" || 
+                       (userRole === "student_assistant" && viewParam === "logs");
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged
