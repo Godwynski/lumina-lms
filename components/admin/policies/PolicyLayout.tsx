@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { 
-  AlertCircle, 
   ShieldCheck, 
   History, 
   Ticket, 
@@ -25,6 +24,8 @@ import { AnnualResetTool, RunMaintenanceTool, TestEmailTool } from "../../settin
 import { SystemAnnouncement } from "../system-announcement";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+import { toast } from "sonner";
 
 const CATEGORY_MAP: Record<string, { label: string; icon: React.ElementType; group: string }> = {
   circulation: { label: "Circulation", icon: History, group: "System Core" },
@@ -92,6 +93,12 @@ export function PolicyLayout({
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   const changedKeys = useMemo(
     () => Object.keys(DEFAULT_POLICIES).filter((key) => (formData[key] ?? "") !== (initialValues[key] ?? "")),
@@ -169,12 +176,7 @@ export function PolicyLayout({
   return (
     <div className="w-full max-w-6xl mx-auto pb-12">
       <div className="mb-4 space-y-2">
-        {error && (
-          <div className="flex items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-[10px] font-bold text-destructive">
-            <AlertCircle size={14} />
-            {error}
-          </div>
-        )}
+
         {saved && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/10 bg-primary/5 px-4 py-2 text-[10px] font-bold text-primary/80">
             <ShieldCheck size={14} />

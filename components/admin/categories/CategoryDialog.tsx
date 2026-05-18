@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -53,6 +55,12 @@ export function CategoryDialog({
   loading,
   error,
 }: CategoryDialogProps) {
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-[3rem] border-border/40 bg-background p-0 shadow-2xl sm:max-w-md overflow-hidden">
@@ -170,11 +178,7 @@ export function CategoryDialog({
               />
             </div>
 
-            {error && (
-              <div className="rounded-2xl bg-rose-500/[0.03] border border-rose-500/10 p-4 text-[10px] font-bold text-rose-500 uppercase tracking-widest animate-in fade-in slide-in-from-top-2 duration-300">
-                {error}
-              </div>
-            )}
+
           </div>
         </div>
 

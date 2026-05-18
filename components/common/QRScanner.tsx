@@ -5,6 +5,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Camera, StopCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -175,6 +176,8 @@ export function QRScanner({
         const errName = (err && typeof err === "object" && "name" in err) ? String((err as Record<string, unknown>).name) : "";
         const fullErrorText = `${errStr} ${errMessage} ${errName}`.toLowerCase();
         
+        let errorMsg = "Failed to access camera. Please verify device connection and permissions.";
+        
         if (
           fullErrorText.includes("notreadableerror") || 
           fullErrorText.includes("readable") || 
@@ -182,33 +185,34 @@ export function QRScanner({
           fullErrorText.includes("video source") || 
           fullErrorText.includes("concurrent")
         ) {
-          setError("Camera is currently in use by another application, tab, or is blocked by system locks.");
+          errorMsg = "Camera is currently in use by another application, tab, or is blocked by system locks.";
         } else if (
           fullErrorText.includes("notallowederror") || 
           fullErrorText.includes("permission") || 
           fullErrorText.includes("denied")
         ) {
-          setError("Camera permission denied. Please allow camera access in your browser settings.");
+          errorMsg = "Camera permission denied. Please allow camera access in your browser settings.";
         } else if (
           fullErrorText.includes("notfounderror") || 
           fullErrorText.includes("devicesnotfound") || 
           fullErrorText.includes("no camera") || 
           fullErrorText.includes("not found")
         ) {
-          setError("No camera device detected. Please ensure your camera is connected and active.");
+          errorMsg = "No camera device detected. Please ensure your camera is connected and active.";
         } else if (
           fullErrorText.includes("overconstrainederror") || 
           fullErrorText.includes("constraint")
         ) {
-          setError("Could not find a camera matching the requested constraints (e.g. environment facing).");
+          errorMsg = "Could not find a camera matching the requested constraints (e.g. environment facing).";
         } else if (
           fullErrorText.includes("securityerror") || 
           fullErrorText.includes("secure context")
         ) {
-          setError("Camera access is blocked by security policies. Ensure this site uses HTTPS.");
-        } else {
-          setError("Failed to access camera. Please verify device connection and permissions.");
+          errorMsg = "Camera access is blocked by security policies. Ensure this site uses HTTPS.";
         }
+
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
     } finally {
       isStartingRef.current = false;

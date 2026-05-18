@@ -4,7 +4,6 @@ import { useState, useEffect, useTransition, useCallback, useMemo } from 'react'
 import Image from 'next/image';
 import {
   MapPin,
-  BookOpen,
   CheckCircle2,
   Clock,
   Ticket,
@@ -426,6 +425,12 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
     }
   }, [open, fetchData]);
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
   // Real-time synchronization for the modal content
   useEffect(() => {
     if (!open || !bookId) return;
@@ -498,16 +503,6 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
         </DialogHeader>
 
         {!error && !activeAdminData && !activeStudentData && <ModalSkeleton />}
-
-        {error && (
-          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-border/60 bg-muted/20">
-              <BookOpen className="h-5 w-5 text-muted-foreground/20" />
-            </div>
-            <p className="text-sm font-bold text-foreground/60">{error}</p>
-            <Button variant="ghost" size="sm" onClick={fetchData} className="mt-2 text-[10px] font-black uppercase">Try Again</Button>
-          </div>
-        )}
 
         {!error && activeStudentData && variant === 'student' && (
           <div>
