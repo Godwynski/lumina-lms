@@ -523,9 +523,6 @@ export function AuditLogClient() {
                             <span className="font-bold text-foreground truncate max-w-[150px]" title={log.profiles?.full_name || log.profiles?.email || log.admin_id}>
                               {log.profiles?.full_name || log.profiles?.email || "System"}
                             </span>
-                            <span className="text-[9px] text-muted-foreground font-mono truncate max-w-[150px]" title={log.admin_id}>
-                              {log.admin_id.split('-')[0]}
-                            </span>
                           </div>
                         </td>
                         <td className="p-3">

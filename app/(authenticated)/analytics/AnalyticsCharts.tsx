@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   LineChart, 
   Line, 
@@ -20,6 +21,7 @@ interface TrendChartProps {
   data: TrendDataPoint[];
   title: string;
   color: string;
+  href?: string;
 }
 
 interface CustomTooltipProps {
@@ -45,7 +47,9 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-export function TrendChart({ data, title, color }: TrendChartProps) {
+
+
+export function TrendChart({ data, title, color, href }: TrendChartProps) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -61,19 +65,30 @@ export function TrendChart({ data, title, color }: TrendChartProps) {
     { label: '', count: 0 }
   ] : data;
 
-  return (
-    <div className="w-full h-[280px] flex flex-col group/chart border border-border/40 rounded-2xl p-4 bg-muted/[0.02] relative overflow-hidden">
+  const content = (
+    <div className={cn(
+      "w-full h-[280px] flex flex-col group/chart border border-border/40 rounded-2xl p-4 bg-muted/[0.02] relative overflow-hidden transition-all duration-300",
+      href && "hover:bg-muted/10 hover:border-primary/20 cursor-pointer active:scale-[0.99]"
+    )}>
+      {/* Subtle background glow */}
+      {href && <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />}
+      
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
+        {href && (
+          <span className="text-[9px] font-black text-primary/40 group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
+            View Details →
+          </span>
+        )}
       </div>
       
       <div className="flex-1 w-full relative z-10 min-h-0">
         <div className={cn("w-full h-full transition-all duration-1000", !hasData && "grayscale")}>
           {mounted && (
-            <ResponsiveContainer width="100%" height="100%" debounce={100}>
+            <ResponsiveContainer width="100%" height="100%" debounce={100} minWidth={0} minHeight={0} initialDimension={{ width: 100, height: 100 }}>
               <LineChart data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid 
                   strokeDasharray="8 8" 
@@ -115,10 +130,17 @@ export function TrendChart({ data, title, color }: TrendChartProps) {
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link href={href} className="block w-full">{content}</Link>;
+  }
+
+  return content;
 }
 
 interface StatusPieChartProps {
   data: { name: string; value: number }[];
+  href?: string;
 }
 
 const COLORS = [
@@ -128,7 +150,7 @@ const COLORS = [
   'hsl(var(--primary) / 0.15)'
 ];
 
-export function StatusPieChart({ data }: StatusPieChartProps) {
+export function StatusPieChart({ data, href }: StatusPieChartProps) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -138,14 +160,17 @@ export function StatusPieChart({ data }: StatusPieChartProps) {
   const hasData = data && data.length > 0 && data.some(d => d.value > 0);
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
-  return (
-    <div className="w-full h-[240px] relative flex flex-col border border-border/40 rounded-2xl p-4 bg-muted/[0.02] overflow-hidden">
+  const content = (
+    <div className={cn(
+      "w-full h-[240px] relative flex flex-col border border-border/40 rounded-2xl p-4 bg-muted/[0.02] overflow-hidden transition-all duration-300",
+      href && "hover:bg-muted/10 hover:border-primary/20 cursor-pointer active:scale-[0.99]"
+    )}>
       {/* Subtle background glow */}
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />
       
       <div className="flex-1 relative z-10 min-h-0">
         {mounted && (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 100, height: 100 }}>
             <PieChart>
               <Pie
                 data={hasData ? data : [{ name: 'Empty', value: 1 }]}
@@ -217,6 +242,12 @@ export function StatusPieChart({ data }: StatusPieChartProps) {
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link href={href} className="block w-full">{content}</Link>;
+  }
+
+  return content;
 }
 
 export function ChartSkeleton({ title }: { title: string }) {

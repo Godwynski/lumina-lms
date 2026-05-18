@@ -29,6 +29,7 @@ export default async function AnalyticsPage() {
       }>
         <AnalyticsClient 
           statsPromise={statsPromise}
+          role={role}
         />
       </Suspense>
     </div>
