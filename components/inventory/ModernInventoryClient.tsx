@@ -175,7 +175,7 @@ export function ModernInventoryClient({
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:max-w-md rounded-l-3xl border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
+            <SheetContent showCloseButton={false} side="right" className="w-full sm:max-w-md rounded-l-3xl border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
               <div className="absolute top-0 right-0 p-4 z-10">
                 <SheetClose className="rounded-full h-8 w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
                    <X className="h-4 w-4" />
