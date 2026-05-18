@@ -14,7 +14,7 @@ export interface AnalyticsSummary {
   attendanceTrends: TrendDataPoint[];
   borrowingTrends: TrendDataPoint[];
   statusDistribution: { name: string; value: number }[];
-  popularBooks: { title: string; count: number }[];
+  popularBooks: { id: string; title: string; count: number }[];
 }
 
 export async function getAnalyticsSummary(range: AnalyticsRange): Promise<AnalyticsSummary> {
@@ -61,7 +61,7 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
       .gte('borrowed_at', startDate.toISOString()),
     supabase
       .from('borrowing_records')
-      .select('book_copies(books(title))')
+      .select('book_copies(books(id, title))')
       .limit(100)
   ]);
 
@@ -80,18 +80,22 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
   }));
 
   // Process Popular Books
-  const bookCounts: Record<string, number> = {};
+  const bookCounts: Record<string, { title: string; count: number }> = {};
   popularBooksData?.forEach(record => {
-    const bookData = record.book_copies as unknown as { books: { title: string } | null } | null;
+    const bookData = record.book_copies as unknown as { books: { id: string; title: string } | null } | null;
+    const id = bookData?.books?.id;
     const title = bookData?.books?.title;
-    if (title) {
-      bookCounts[title] = (bookCounts[title] || 0) + 1;
+    if (id && title) {
+      if (!bookCounts[id]) {
+        bookCounts[id] = { title, count: 0 };
+      }
+      bookCounts[id].count += 1;
     }
   });
   const popularBooks = Object.entries(bookCounts)
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 5)
-    .map(([title, count]) => ({ title, count }));
+    .map(([id, { title, count }]) => ({ id, title, count }));
 
   return {
     attendanceTrends,

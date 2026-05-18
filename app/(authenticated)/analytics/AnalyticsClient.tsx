@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Clock, BookOpen, Library, UserCircle2, Sparkles } from 'lucide-react';
 import { TrendChart, StatusPieChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange } from '@/lib/actions/analytics';
+import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -21,6 +22,7 @@ type DashboardStats = {
 
 interface AnalyticsProps {
   statsPromise: Promise<DashboardStats>;
+  role: 'super_admin' | 'librarian';
 }
 
 const RANGES: { label: string; value: AnalyticsRange }[] = [
@@ -29,11 +31,13 @@ const RANGES: { label: string; value: AnalyticsRange }[] = [
   { label: '1 Year', value: '1y' },
 ];
 
-export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
+export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   const stats = use(statsPromise);
   const [range, setRange] = useState<AnalyticsRange>('30d');
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const loadSummary = useCallback(async () => {
     try {
@@ -149,6 +153,7 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
               data={summary.attendanceTrends} 
               title="Traffic Distribution" 
               color="hsl(var(--primary))" 
+              href="/attendance"
             />
           )}
           {isPending && summary && (
@@ -166,6 +171,7 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
               data={summary.borrowingTrends} 
               title="Circulation Trends" 
               color="hsl(var(--primary))" 
+              href="/history"
             />
           )}
           {isPending && summary && (
@@ -186,7 +192,7 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
           </div>
           <div className="flex-1 flex items-center justify-center">
             {summary ? (
-              <StatusPieChart data={summary.statusDistribution} />
+              <StatusPieChart data={summary.statusDistribution} href="/history" />
             ) : (
               <div className="h-[240px] w-full flex flex-col items-center justify-center gap-4 animate-pulse">
                 <div className="w-32 h-32 rounded-full border-[12px] border-muted/10" />
@@ -207,10 +213,17 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
             {summary ? (
               <div className="divide-y divide-border/5">
                 {summary.popularBooks.length > 0 ? summary.popularBooks.map((book, i) => (
-                  <div key={i} className="flex items-center justify-between py-5 px-6 hover:bg-primary/[0.02] transition-colors group">
+                  <button 
+                    key={i} 
+                    onClick={() => {
+                      setSelectedBookId(book.id);
+                      setModalOpen(true);
+                    }}
+                    className="w-full text-left flex items-center justify-between py-5 px-6 hover:bg-primary/[0.04] transition-colors group focus:outline-none focus:bg-primary/[0.04]"
+                  >
                     <div className="flex items-center gap-4 min-w-0">
                       <span className="text-[10px] font-black text-muted-foreground/20 w-4 group-hover:text-primary/40 transition-colors">0{i + 1}</span>
-                      <p className="text-sm font-bold text-foreground truncate">{book.title}</p>
+                      <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{book.title}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="h-1 w-12 bg-muted/20 rounded-full overflow-hidden hidden sm:block">
@@ -224,7 +237,7 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
                         <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-tight">borrows</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 )) : (
                   <div className="flex items-center justify-center py-20">
                     <p className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/30 italic">No circulation data recorded</p>
@@ -247,6 +260,15 @@ export function AnalyticsClient({ statsPromise }: AnalyticsProps) {
           </div>
         </div>
       </section>
+      {selectedBookId && (
+        <BookDetailModal
+          bookId={selectedBookId}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          variant="super_admin"
+          canManage={role === 'super_admin'}
+        />
+      )}
     </div>
   );
 }
