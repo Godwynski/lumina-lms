@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("audit_logs")
-      .select("*, profiles(full_name, email)")
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
@@ -48,12 +48,50 @@ export async function GET(request: NextRequest) {
     
     if (queryParam) {
       const safe = sanitizeFilterInput(queryParam);
-      query = query.or(`entity_type.ilike.%${safe}%,action.ilike.%${safe}%`);
+      
+      // Lookup profiles that match the search query by name or email
+      const { data: matchingProfiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
+      
+      const profileIds = matchingProfiles?.map(p => p.id) || [];
+      
+      let orConditions = [
+        `entity_type.ilike.%${safe}%`,
+        `action.ilike.%${safe}%`,
+        `reason.ilike.%${safe}%`
+      ];
+
+      // Add matching profile IDs to the search if found
+      if (profileIds.length > 0) {
+        orConditions.push(`admin_id.in.(${profileIds.join(',')})`);
+      }
+      
+      query = query.or(orConditions.join(','));
     }
 
     const { data: logs, error } = await query;
 
     if (error) throw error;
+
+    // Manual join since audit_logs has no FK to profiles
+    const adminIds = [...new Set((logs || []).map(l => l.admin_id).filter(Boolean))];
+    let profilesMap = new Map();
+
+    if (adminIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", adminIds);
+      
+      profiles?.forEach(p => profilesMap.set(p.id, p));
+    }
+
+    const logsWithProfiles = (logs || []).map(log => ({
+      ...log,
+      profiles: profilesMap.get(log.admin_id) || null
+    }));
 
     const formatParam = searchParams.get("format") || "csv";
     const columnsParam = searchParams.get("columns");
@@ -64,7 +102,7 @@ export async function GET(request: NextRequest) {
       : ["created_at", "full_name", "email", "entity_type", "action", "reason", "old_value", "new_value", "details"];
 
     if (formatParam === "json") {
-      const jsonLogs = (logs || []).map((log) => {
+      const jsonLogs = (logsWithProfiles || []).map((log) => {
         const item: Record<string, unknown> = {};
         selectedCols.forEach((col) => {
           if (col === "created_at") item.created_at = log.created_at;
@@ -104,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     const headers = selectedCols.map((col) => headerMap[col] || col);
 
-    const rows = (logs || []).map((log) => {
+    const rows = (logsWithProfiles || []).map((log) => {
       return selectedCols.map((col) => {
         let val: unknown = "";
         if (col === "created_at") {
