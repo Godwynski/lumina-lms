@@ -43,6 +43,8 @@ export async function getDashboardStats({
   totalUsers: number;
   archivedBooks: number;
   archivedUsers: number;
+  overdueBorrows: number;
+  readyHolds: number;
 }> {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -77,6 +79,8 @@ export async function getDashboardStats({
     totalUsersResult,
     archivedBooksResult,
     archivedUsersResult,
+    overdueBorrowsResult,
+    readyHoldsResult,
   ] = await Promise.all([
     safeWrap(
       Promise.resolve(
@@ -161,6 +165,30 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
+    canReviewApprovals
+      ? safeWrap(
+          Promise.resolve(
+            supabase
+              .from('borrowing_records')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'OVERDUE')
+              .then(res => ({ count: res.count ?? 0 }))
+          ),
+          { count: 0 }
+        )
+      : Promise.resolve({ count: 0 }),
+    canReviewApprovals
+      ? safeWrap(
+          Promise.resolve(
+            supabase
+              .from('reservations')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'READY')
+              .then(res => ({ count: res.count ?? 0 }))
+          ),
+          { count: 0 }
+        )
+      : Promise.resolve({ count: 0 }),
   ]);
 
   interface SupabaseCountResult { count: number | null }
@@ -177,5 +205,7 @@ export async function getDashboardStats({
     totalUsers: (totalUsersResult as SupabaseCountResult).count || 0,
     archivedBooks: (archivedBooksResult as SupabaseCountResult).count || 0,
     archivedUsers: (archivedUsersResult as SupabaseCountResult).count || 0,
+    overdueBorrows: (overdueBorrowsResult as SupabaseCountResult).count || 0,
+    readyHolds: (readyHoldsResult as SupabaseCountResult).count || 0,
   };
 }

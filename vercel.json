@@ -12,5 +12,11 @@
         { "key": "X-DNS-Prefetch-Control", "value": "on" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 0 * * *"
+    }
   ]
 }

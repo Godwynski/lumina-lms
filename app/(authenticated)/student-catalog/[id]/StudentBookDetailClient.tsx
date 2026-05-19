@@ -311,10 +311,10 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
     startTransition(async () => {
       try {
         await cancelReservation(resId);
-        toast.success('Reservation cancelled');
+        toast.success('Reservation cancelled', { id: 'reservation-toast' });
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to cancel');
+        toast.error(err instanceof Error ? err.message : 'Failed to cancel', { id: 'reservation-toast' });
       }
     });
   };

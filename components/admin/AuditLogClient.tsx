@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "./AdminTableShell";
+import { AuditLogExportImportModal } from "./AuditLogExportImportModal";
 
 // --- Types & Interfaces ---
 
@@ -228,6 +229,7 @@ export function AuditLogClient() {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [isExportImportOpen, setIsExportImportOpen] = useState(false);
 
   const pageSize = 20; // Increased page size for dense table
 
@@ -287,7 +289,8 @@ export function AuditLogClient() {
   };
 
   return (
-    <AdminTableShell
+    <>
+      <AdminTableShell
       className="min-h-[calc(100vh-140px)]"
       controls={
         <div className="flex flex-col gap-3 w-full p-1">
@@ -377,11 +380,11 @@ export function AuditLogClient() {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={handleExport}
+                  onClick={() => setIsExportImportOpen(true)}
                   className="h-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
                 >
                   <Download className="h-3.5 w-3.5 xl:mr-2" />
-                  <span className="hidden xl:inline">Export CSV</span>
+                  <span className="hidden xl:inline">Export / Import</span>
                 </Button>
               </div>
             </div>
@@ -401,11 +404,11 @@ export function AuditLogClient() {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={handleExport}
+                  onClick={() => setIsExportImportOpen(true)}
                   className="h-10 flex-1 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
                 >
                   <Download className="h-3.5 w-3.5 mr-2" />
-                  Export CSV
+                  Export / Import
                 </Button>
             </div>
           </div>
@@ -638,5 +641,18 @@ export function AuditLogClient() {
         )}
       </div>
     </AdminTableShell>
+    <AuditLogExportImportModal
+      isOpen={isExportImportOpen}
+      onClose={() => setIsExportImportOpen(false)}
+      onImportSuccess={() => mutate()}
+      currentFilters={{
+        query: debouncedSearch,
+        entityType,
+        actionType,
+        startDate,
+        endDate,
+      }}
+    />
+  </>
   );
 }

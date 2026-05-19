@@ -55,22 +55,85 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Build CSV content
-    const headers = ["Timestamp", "super_admin", "Email", "Entity", "Action", "Reason", "Old Value", "New Value"];
-    const rows = (logs || []).map((log) => [
-      log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "",
-      log.profiles?.full_name || "Unknown",
-      log.profiles?.email || "",
-      log.entity_type,
-      log.action,
-      `"${(log.reason || "").replace(/"/g, '""')}"`,
-      `"${log.old_value ? JSON.stringify(log.old_value).replace(/"/g, '""') : ""}"`,
-      `"${log.new_value ? JSON.stringify(log.new_value).replace(/"/g, '""') : ""}"`,
-    ]);
+    const formatParam = searchParams.get("format") || "csv";
+    const columnsParam = searchParams.get("columns");
+
+    // Build Export Content
+    const selectedCols = columnsParam
+      ? columnsParam.split(",")
+      : ["created_at", "full_name", "email", "entity_type", "action", "reason", "old_value", "new_value", "details"];
+
+    if (formatParam === "json") {
+      const jsonLogs = (logs || []).map((log) => {
+        const item: Record<string, any> = {};
+        selectedCols.forEach((col) => {
+          if (col === "created_at") item.created_at = log.created_at;
+          else if (col === "full_name") item.admin_name = log.profiles?.full_name || "Unknown";
+          else if (col === "email") item.admin_email = log.profiles?.email || "";
+          else if (col === "entity_type") item.entity_type = log.entity_type;
+          else if (col === "action") item.action = log.action;
+          else if (col === "reason") item.reason = log.reason;
+          else if (col === "old_value") item.old_value = log.old_value;
+          else if (col === "new_value") item.new_value = log.new_value;
+          else if (col === "details") item.details = log.details;
+          else if (col in log) item[col] = log[col as keyof typeof log];
+        });
+        return item;
+      });
+
+      return new NextResponse(JSON.stringify(jsonLogs, null, 2), {
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Disposition": `attachment; filename="audit_logs_${format(new Date(), "yyyyMMdd_HHmm")}.json"`,
+        },
+      });
+    }
+
+    // Default to CSV
+    const headerMap: Record<string, string> = {
+      created_at: "Timestamp",
+      full_name: "Admin Name",
+      email: "Email",
+      entity_type: "Entity",
+      action: "Action",
+      reason: "Reason",
+      old_value: "Old Value",
+      new_value: "New Value",
+      details: "Details",
+    };
+
+    const headers = selectedCols.map((col) => headerMap[col] || col);
+
+    const rows = (logs || []).map((log) => {
+      return selectedCols.map((col) => {
+        let val: any = "";
+        if (col === "created_at") {
+          val = log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "";
+        } else if (col === "full_name") {
+          val = log.profiles?.full_name || "Unknown";
+        } else if (col === "email") {
+          val = log.profiles?.email || "";
+        } else if (col === "old_value") {
+          val = log.old_value ? JSON.stringify(log.old_value) : "";
+        } else if (col === "new_value") {
+          val = log.new_value ? JSON.stringify(log.new_value) : "";
+        } else if (col === "details") {
+          val = log.details ? JSON.stringify(log.details) : "";
+        } else {
+          val = log[col as keyof typeof log] || "";
+        }
+
+        const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+        if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
+          return `"${strVal.replace(/"/g, '""')}"`;
+        }
+        return strVal;
+      });
+    });
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(","))
+      ...rows.map((row) => row.join(",")),
     ].join("\n");
 
     return new NextResponse(csvContent, {

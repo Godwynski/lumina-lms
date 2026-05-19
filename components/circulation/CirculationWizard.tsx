@@ -222,7 +222,7 @@ export function CirculationWizard() {
       const message = err instanceof Error ? err.message : 'Process failed.';
       logger.error('Circulation', 'Scan process error', {}, err);
       setNotice({ tone: 'error', text: message });
-      toast.error(message);
+      toast.error(message, { id: 'circulation-error-toast' });
     } finally {
       setIsProcessing(false);
       logger.info('Circulation', 'Scan processing finished');
