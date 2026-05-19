@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 export const Section = memo(({ 
@@ -167,19 +168,25 @@ export function RunMaintenanceTool() {
 export function TestEmailTool() {
   const [isSending, setIsSending] = useState(false);
   const [targetEmail, setTargetEmail] = useState("");
+  const [emailType, setEmailType] = useState("overdue");
 
   const handleTest = async () => {
+    if (!targetEmail.trim()) {
+      toast.error("Please enter an email address first.");
+      return;
+    }
+
     setIsSending(true);
     try {
       const res = await fetch("/api/test-email", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: targetEmail || undefined })
+        body: JSON.stringify({ email: targetEmail.trim(), type: emailType })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(data.message || "Test email sent! Check your inbox.");
-      setTargetEmail(""); // clear on success
+      // Intentionally not clearing targetEmail so the user can test multiple times easily.
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Test failed");
     } finally {
@@ -192,20 +199,29 @@ export function TestEmailTool() {
       <div className="space-y-1">
         <h4 className="text-sm font-medium text-foreground">Configuration Test</h4>
         <p className="text-xs text-muted-foreground">
-          Sends a test email via the configured provider. <strong>Note:</strong> If using Mailtrap Sandbox, emails will be intercepted and won&apos;t reach your actual inbox. Check the Mailtrap dashboard.
+          Sends a test email to verify your email configuration.
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <Input 
           type="email"
-          placeholder="Test email address (optional)" 
+          placeholder="Test email address" 
           value={targetEmail}
           onChange={(e) => setTargetEmail(e.target.value)}
-          className="h-8 text-xs max-w-[250px]"
+          className="h-8 text-xs sm:max-w-[250px]"
         />
+        <Select value={emailType} onValueChange={setEmailType}>
+          <SelectTrigger className="h-8 w-full sm:w-[150px] text-xs">
+            <SelectValue placeholder="Email Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="overdue" className="text-xs">Overdue Notice</SelectItem>
+            <SelectItem value="due_soon" className="text-xs">Due Soon Notice</SelectItem>
+          </SelectContent>
+        </Select>
         <Button 
           onClick={handleTest} 
-          disabled={isSending}
+          disabled={isSending || !targetEmail.trim()}
           variant="secondary"
           size="sm"
           className="h-8 rounded-lg text-xs font-medium shrink-0"
