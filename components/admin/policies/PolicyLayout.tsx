@@ -393,11 +393,6 @@ export function PolicyLayout({
       <PolicyCommitModal
         isOpen={isCommitModalOpen}
         onClose={() => setIsCommitModalOpen(false)}
-        onAbort={() => {
-          setFormData(initialValues);
-          setIsCommitModalOpen(false);
-          toast.success("All unsaved changes discarded");
-        }}
         onConfirm={handleConfirmCommit}
         changedKeys={changedKeys}
         initialValues={initialValues}
@@ -405,31 +400,29 @@ export function PolicyLayout({
         loading={loading}
       />
       <Dialog open={pendingCategory !== null} onOpenChange={(open) => { if (!open) setPendingCategory(null); }}>
-        <DialogContent className="sm:max-w-[420px] border-border/40 bg-background rounded-[3rem] p-0 overflow-hidden shadow-2xl">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
-          
-          <div className="p-8 md:p-10 space-y-6">
+        <DialogContent className="sm:max-w-[400px] border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
+          <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-              <div className="h-16 w-16 rounded-[1.5rem] bg-amber-500/[0.03] flex items-center justify-center text-amber-500 shadow-inner border border-amber-500/5 ring-4 ring-amber-500/5">
-                <AlertTriangle className="h-8 w-8" />
+              <div className="h-11 w-11 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/10">
+                <AlertTriangle className="h-5 w-5" />
               </div>
-              <div className="px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-[0.15em] text-amber-600 dark:text-amber-400 shadow-xs">
+              <div className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-[9px] font-bold uppercase tracking-wider text-destructive border border-destructive/10">
                 Unsaved Changes
               </div>
             </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black tracking-tight text-foreground">Unsaved Policy Changes</h3>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold tracking-tight text-foreground">Unsaved Policy Changes</h3>
               <p className="text-xs text-muted-foreground/75 leading-relaxed font-medium">
                 You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?
               </p>
             </div>
           </div>
 
-          <div className="p-8 md:p-10 pt-0 flex gap-4">
+          <div className="p-6 pt-0 flex gap-3">
             <Button
               variant="outline"
               onClick={() => setPendingCategory(null)}
-              className="flex-1 h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border-border/40 hover:bg-muted/40 hover:border-border transition-all duration-300"
+              className="flex-1 h-10 rounded-lg text-xs font-semibold uppercase tracking-wider border-border/60 hover:bg-muted/40 transition-all"
             >
               Cancel
             </Button>
@@ -443,7 +436,7 @@ export function PolicyLayout({
                   toast.success("Changes discarded");
                 }
               }}
-              className="flex-[1.2] h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300"
+              className="flex-1 h-10 rounded-lg text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
             >
               Discard & Move
             </Button>

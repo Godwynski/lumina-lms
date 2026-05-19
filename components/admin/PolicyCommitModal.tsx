@@ -9,7 +9,6 @@ interface CommitModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => void;
-  onAbort?: () => void;
   changedKeys: string[];
   initialValues: Record<string, string>;
   formData: Record<string, string>;
@@ -23,7 +22,6 @@ export function PolicyCommitModal({
   isOpen,
   onClose,
   onConfirm,
-  onAbort,
   changedKeys,
   initialValues,
   formData,
@@ -100,55 +98,53 @@ export function PolicyCommitModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[520px] border-border/40 bg-background rounded-[3rem] p-0 overflow-hidden shadow-2xl">
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-        
-        <div className="p-8 md:p-10 space-y-10">
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] md:max-h-[85vh] flex flex-col border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
+        <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
           <DialogHeader className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="h-16 w-16 rounded-[1.5rem] bg-primary/[0.03] flex items-center justify-center text-primary shadow-inner border border-primary/5 ring-4 ring-primary/5">
-                <Check className="h-8 w-8" />
+              <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                <Check className="h-5 w-5" />
               </div>
-              <div className="px-4 py-1.5 rounded-full bg-muted/40 border border-border/40 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 shadow-xs">
+              <div className="px-2.5 py-0.5 rounded-full bg-primary/10 text-[9px] font-bold uppercase tracking-wider text-primary border border-primary/10">
                 Draft Changes
               </div>
             </div>
-            <div className="space-y-2">
-              <DialogTitle className="text-3xl font-black tracking-tight text-foreground">Review Updates</DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground/60 leading-relaxed font-medium">
-                You are about to commit <span className="text-foreground font-bold">{changedKeys.length}</span> modifications to the system policies.
+            <div className="space-y-1">
+              <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Review Updates</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground font-medium">
+                You are about to commit <span className="text-foreground font-semibold">{changedKeys.length}</span> modifications to the system policies.
               </DialogDescription>
             </div>
           </DialogHeader>
 
-          <div className="space-y-8">
+          <div className="space-y-5">
             <div className={cn(
-              "max-h-[300px] overflow-y-auto -mx-2 px-2 space-y-4 custom-scrollbar pr-4",
+              "max-h-[160px] md:max-h-[220px] overflow-y-auto space-y-3 custom-scrollbar pr-1 shrink-0",
               "scrollbar-thin scrollbar-thumb-muted-foreground/10"
             )}>
               {changedKeys.map(key => (
-                <div key={key} className="group relative p-5 rounded-[2rem] bg-muted/5 border border-border/10 hover:bg-muted/10 hover:border-primary/10 transition-all duration-500 shadow-xs">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                <div key={key} className="group relative p-4 rounded-xl bg-card border border-border/60 hover:border-primary/30 transition-all duration-300 shadow-xs flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 group-hover:text-primary transition-colors">
                       {formatKey(key)}
                     </span>
                     {renderDiffDetails(key, initialValues[key], formData[key])}
                   </div>
-                  <div className="absolute top-5 right-5 h-8 w-8 rounded-full bg-primary/[0.03] flex items-center justify-center text-primary/30 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-500 border border-primary/5">
-                    <Check className="h-4 w-4" />
+                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/10 shrink-0">
+                    <Check className="h-3 w-3" />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 ml-1">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/75">
                   Audit Protocol Reason
                 </label>
                 <span className={cn(
-                  "text-[9px] font-bold uppercase transition-colors",
-                  isFormValid ? "text-emerald-500" : "text-amber-500"
+                  "text-[9px] font-semibold uppercase transition-colors",
+                  isFormValid ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
                 )}>
                   {reason.length < 10 ? `${10 - reason.length} chars min` : 'Validated'}
                 </span>
@@ -158,10 +154,10 @@ export function PolicyCommitModal({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Provide a detailed reason for these changes for the audit log..."
-                  className="min-h-[120px] rounded-[1.5rem] border-border/20 bg-muted/5 text-xs font-medium focus:bg-background transition-all duration-500 p-5 resize-none shadow-inner focus:ring-4 focus:ring-primary/5 focus:border-primary/20"
+                  className="min-h-[100px] rounded-xl border border-input/60 bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 transition-all p-4 resize-none placeholder:text-muted-foreground/40"
                 />
-                <div className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/[0.03] text-[10px] text-amber-600/80 font-black uppercase tracking-wider border border-amber-500/10 backdrop-blur-sm shadow-xs">
-                  <Info className="h-3 w-3" />
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/5 text-[9px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider border border-amber-500/10 backdrop-blur-xs">
+                  <Info className="h-2.5 w-2.5" />
                   <span>Permanent Log</span>
                 </div>
               </div>
@@ -169,26 +165,23 @@ export function PolicyCommitModal({
           </div>
         </div>
 
-        <div className="p-8 md:p-10 pt-0 flex gap-4">
+        <div className="p-6 pt-0 flex gap-3 shrink-0">
           <Button
             variant="outline"
-            onClick={onAbort || onClose}
+            onClick={onClose}
             disabled={loading}
-            className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border-border/40 hover:bg-muted/40 hover:border-border transition-all duration-300"
+            className="flex-1 h-11 rounded-lg text-xs font-semibold uppercase tracking-wider border-border/60 hover:bg-muted/40 transition-all"
           >
-            Abort
+            Cancel
           </Button>
           <Button
             onClick={() => onConfirm(reason)}
             disabled={loading || !isFormValid}
-            className={cn(
-              "flex-[2] h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl transition-all duration-500 hover:scale-[1.02] active:scale-95",
-              "shadow-primary/20 hover:shadow-primary/30"
-            )}
+            className="flex-[1.5] h-11 rounded-lg text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
           >
             {loading ? (
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              <div className="flex items-center gap-2">
+                <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 Processing
               </div>
             ) : "Confirm & Commit"}
