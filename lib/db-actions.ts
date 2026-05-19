@@ -605,6 +605,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     status: string;
     renewal_count: number;
     returned_at?: string | null;
+    returned_by?: string | null;
   }[] = [];
   const activeCopiesToUpdate: string[] = [];
 
@@ -769,6 +770,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     queue_position: number;
     reserved_at: string;
     fulfilled_at?: string | null;
+    copy_id?: string | null;
   }[] = [];
   if (bookCalculus) {
     reservationsToSeed.push({
