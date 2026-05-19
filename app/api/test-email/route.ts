@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendTestEmail } from '@/lib/mail';
+import { sendOverdueEmail, sendDueSoonEmail } from '@/lib/mail';
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden. Admin only.' }, { status: 403 });
     }
 
-    const { email: targetEmail } = await request.json().catch(() => ({ email: null }));
+    const { email: targetEmail, type } = await request.json().catch(() => ({ email: null, type: 'overdue' }));
     const to = targetEmail || profile.email;
     const name = profile.full_name || 'super_admin';
 
@@ -30,7 +30,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No recipient email found' }, { status: 400 });
     }
 
-    const result = await sendTestEmail(to, name);
+    let result;
+    if (type === 'due_soon') {
+      const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString();
+      result = await sendDueSoonEmail({
+        to,
+        userName: name,
+        bookTitle: 'The Pragmatic Programmer (Test)',
+        dueDate,
+      });
+    } else {
+      const dueDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString();
+      result = await sendOverdueEmail({
+        to,
+        userName: name,
+        bookTitle: 'Clean Code (Test)',
+        dueDate,
+        overdueDays: 5,
+      });
+    }
 
     if (result.success) {
       return NextResponse.json({ success: true, message: `Test email sent to ${to}`, messageId: result.messageId });
