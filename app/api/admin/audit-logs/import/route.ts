@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and clean up records
-    const cleanedLogs: any[] = [];
+    const cleanedLogs: Record<string, unknown>[] = [];
     const entityTypes = [
       "book",
       "book_copy",
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       "system",
     ];
 
-    for (const log of logs) {
+    for (const log of logs as Record<string, unknown>[]) {
       // Basic validations
       if (!log.entity_type || !log.action) {
         return NextResponse.json(
@@ -114,10 +114,11 @@ export async function POST(request: NextRequest) {
       success: true,
       count: insertedCount,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error importing audit logs:", error);
+    const message = error instanceof Error ? error.message : "Failed to import audit logs";
     return NextResponse.json(
-      { error: error?.message || "Failed to import audit logs" },
+      { error: message },
       { status: 500 }
     );
   }

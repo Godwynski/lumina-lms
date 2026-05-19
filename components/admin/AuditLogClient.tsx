@@ -272,22 +272,6 @@ export function AuditLogClient() {
     }
   }, [error]);
 
-  const handleExport = async () => {
-    try {
-      const exportParams = new URLSearchParams({
-        ...(debouncedSearch && { query: debouncedSearch }),
-        ...(entityType !== "all" && { entityType }),
-        ...(actionType !== "all" && { actionType }),
-        ...(startDate && { startDate }),
-        ...(endDate && { endDate }),
-      });
-      window.open(`/api/admin/audit-logs/export?${exportParams.toString()}`, '_blank');
-      toast.success("Audit log export started");
-    } catch {
-      toast.error("Failed to export audit logs");
-    }
-  };
-
   return (
     <>
       <AdminTableShell

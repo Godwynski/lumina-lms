@@ -6,19 +6,10 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Download,
   Upload,
@@ -46,6 +37,18 @@ interface AuditLogExportImportModalProps {
     startDate?: string;
     endDate?: string;
   };
+}
+
+interface ParsedAuditLog {
+  created_at?: string | null;
+  admin_id?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  action?: string | null;
+  reason?: string | null;
+  old_value?: unknown;
+  new_value?: unknown;
+  details?: unknown;
 }
 
 const AVAILABLE_COLUMNS = [
@@ -79,7 +82,7 @@ export function AuditLogExportImportModal({
   // Import States
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-  const [parsedLogs, setParsedLogs] = useState<any[]>([]);
+  const [parsedLogs, setParsedLogs] = useState<ParsedAuditLog[]>([]);
   const [parsedMeta, setParsedMeta] = useState<{
     total: number;
     validCount: number;
@@ -171,7 +174,7 @@ export function AuditLogExportImportModal({
 
     reader.onload = (event) => {
       try {
-        let logsArray: any[] = [];
+        let logsArray: ParsedAuditLog[] = [];
 
         if (fileType === "json") {
           const text = event.target?.result as string;
@@ -193,23 +196,23 @@ export function AuditLogExportImportModal({
             });
 
             // Parse embedded JSON strings for values
-            const parseJsonSafe = (val: any) => {
+            const parseJsonSafe = (val: unknown) => {
               if (!val) return null;
               if (typeof val === "object") return val;
               try {
-                return JSON.parse(val);
+                return JSON.parse(String(val));
               } catch {
                 return val;
               }
             };
 
             return {
-              created_at: cleanRow.timestamp || cleanRow.created_at || cleanRow.time || null,
-              admin_id: cleanRow.admin_id || null,
-              entity_type: cleanRow.entity || cleanRow.entity_type || null,
-              entity_id: cleanRow.entity_id || null,
-              action: cleanRow.action || null,
-              reason: cleanRow.reason || null,
+              created_at: (cleanRow.timestamp || cleanRow.created_at || cleanRow.time || null) as string | null,
+              admin_id: (cleanRow.admin_id || null) as string | null,
+              entity_type: (cleanRow.entity || cleanRow.entity_type || null) as string | null,
+              entity_id: (cleanRow.entity_id || null) as string | null,
+              action: (cleanRow.action || null) as string | null,
+              reason: (cleanRow.reason || null) as string | null,
               old_value: parseJsonSafe(cleanRow.old_value || cleanRow.old_state),
               new_value: parseJsonSafe(cleanRow.new_value || cleanRow.new_state),
               details: parseJsonSafe(cleanRow.details || cleanRow.metadata || {}),
@@ -245,7 +248,7 @@ export function AuditLogExportImportModal({
           }
 
           if (log.created_at) {
-            const d = new Date(log.created_at);
+            const d = new Date(String(log.created_at));
             if (!isNaN(d.getTime())) {
               if (!minDate || d < minDate) minDate = d;
               if (!maxDate || d > maxDate) maxDate = d;
@@ -276,8 +279,9 @@ export function AuditLogExportImportModal({
         } else {
           toast.success(`Successfully parsed ${validCount} audit records.`);
         }
-      } catch (err: any) {
-        toast.error(`File parsing error: ${err?.message || "Unknown error"}`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        toast.error(`File parsing error: ${message}`);
         setImportFile(null);
       } finally {
         setIsParsing(false);
@@ -325,8 +329,9 @@ export function AuditLogExportImportModal({
       if (onImportSuccess) {
         onImportSuccess();
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to commit audit logs restoration");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to commit audit logs restoration";
+      toast.error(message);
     } finally {
       setIsImporting(false);
     }

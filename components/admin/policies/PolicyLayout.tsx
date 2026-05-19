@@ -12,11 +12,13 @@ import {
   User, 
   RefreshCw,
   Megaphone,
-  Tag
+  Tag,
+  AlertTriangle
 } from "lucide-react";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { cn } from "@/lib/utils";
 import { PolicyCommitModal } from "../PolicyCommitModal";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CategoryManagement } from "../CategoryManagement";
 import { PolicySimulationPanel } from "../PolicySimulationPanel";
 import { PolicyField } from "./PolicyField";
@@ -53,6 +55,16 @@ export function PolicyLayout({
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("circulation");
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
+  const [pendingCategory, setPendingCategory] = useState<string | null>(null);
+
+  const handleCategoryClick = (categoryId: string) => {
+    if (categoryId === activeCategory) return;
+    if (changedKeys.length > 0) {
+      setPendingCategory(categoryId);
+    } else {
+      setActiveCategory(categoryId);
+    }
+  };
 
   // Realtime synchronization
   useEffect(() => {
@@ -104,6 +116,17 @@ export function PolicyLayout({
     () => Object.keys(DEFAULT_POLICIES).filter((key) => (formData[key] ?? "") !== (initialValues[key] ?? "")),
     [formData, initialValues],
   );
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (changedKeys.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [changedKeys]);
 
   // Defined the full set of categories in order
   const sidebarItems = useMemo(() => {
@@ -192,7 +215,7 @@ export function PolicyLayout({
             {sidebarItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => setActiveCategory(item.id)}
+                onClick={() => handleCategoryClick(item.id)}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
                   activeCategory === item.id 
@@ -218,7 +241,7 @@ export function PolicyLayout({
                 {items.map(item => (
                   <button
                     key={item.id}
-                    onClick={() => setActiveCategory(item.id)}
+                    onClick={() => handleCategoryClick(item.id)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group relative",
                       activeCategory === item.id 
@@ -346,12 +369,24 @@ export function PolicyLayout({
                   {changedKeys.length} unsaved changes
                 </span>
              </div>
-             <Button
-                onClick={() => setIsCommitModalOpen(true)}
-                className="h-9 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
-             >
-                Review Changes
-             </Button>
+             <div className="flex items-center gap-2">
+               <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFormData(initialValues);
+                    toast.success("All unsaved changes discarded");
+                  }}
+                  className="h-9 rounded-xl px-4 text-[10px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
+               >
+                  Discard
+               </Button>
+               <Button
+                  onClick={() => setIsCommitModalOpen(true)}
+                  className="h-9 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
+               >
+                  Review Changes
+               </Button>
+             </div>
           </div>
         </div>
       )}
@@ -364,6 +399,50 @@ export function PolicyLayout({
         formData={formData}
         loading={loading}
       />
+      <Dialog open={pendingCategory !== null} onOpenChange={(open) => { if (!open) setPendingCategory(null); }}>
+        <DialogContent className="sm:max-w-[400px] border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="h-11 w-11 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/10">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-[9px] font-bold uppercase tracking-wider text-destructive border border-destructive/10">
+                Unsaved Changes
+              </div>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold tracking-tight text-foreground">Unsaved Policy Changes</h3>
+              <p className="text-xs text-muted-foreground/75 leading-relaxed font-medium">
+                You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 pt-0 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setPendingCategory(null)}
+              className="flex-1 h-10 rounded-lg text-xs font-semibold uppercase tracking-wider border-border/60 hover:bg-muted/40 transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingCategory) {
+                  setFormData(initialValues);
+                  setActiveCategory(pendingCategory);
+                  setPendingCategory(null);
+                  toast.success("Changes discarded");
+                }
+              }}
+              className="flex-1 h-10 rounded-lg text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
+            >
+              Discard & Move
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
