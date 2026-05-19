@@ -8,7 +8,6 @@ import { CirculationStepper } from './CirculationStepper';
 import { ScanStep } from './steps/ScanStep';
 import { ReviewStep } from './steps/ReviewStep';
 import { SuccessStep } from './steps/SuccessStep';
-import { StatusNotice } from './StatusNotice';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import { resolveScan, checkoutBook, returnBook } from '@/lib/actions/circulation';
@@ -39,10 +38,6 @@ interface PendingReturn {
   idempotencyKey: string;
 }
 
-interface Notice {
-  tone: 'ok' | 'warn' | 'error';
-  text: string;
-}
 
 const CHECKOUT_STEPS = [
   { id: 1, label: 'Student Identification' },
@@ -89,7 +84,6 @@ export function CirculationWizard() {
   const [activeStudent, setActiveStudent] = useState<ActiveStudent | null>(null);
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
   const [pendingReturn, setPendingReturn] = useState<PendingReturn | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [reservationData, setReservationData] = useState<{ ready: boolean; studentName?: string }>({ ready: false });
@@ -147,7 +141,6 @@ export function CirculationWizard() {
     setActiveStudent(null);
     setPendingCheckout(null);
     setPendingReturn(null);
-    setNotice(null);
     setIsProcessing(false);
     setIsConfirmed(false);
     setReservationData({ ready: false });
@@ -163,7 +156,6 @@ export function CirculationWizard() {
 
   const processScan = async (value: string, isManual: boolean = false): Promise<boolean> => {
     setIsProcessing(true);
-    setNotice(null);
     logger.info('Circulation', `Processing scan: ${value}`, { mode, hasStudent: !!activeStudent });
 
     try {
@@ -173,11 +165,11 @@ export function CirculationWizard() {
           
           if (result.success && result.data.type === 'student') {
             setActiveStudent(result.data.data as ActiveStudent);
-            setNotice({ tone: 'ok', text: 'Student verified. Please scan the book copy.' });
+            toast.success('Student verified. Please scan the book copy.');
             playScanCue('success');
             return true;
           } else {
-            setNotice({ tone: 'error', text: result.error || 'Invalid student card.' });
+            toast.error(result.error || 'Invalid student card.');
             playScanCue('error');
             return false;
           }
@@ -199,7 +191,7 @@ export function CirculationWizard() {
             playScanCue('success');
             return true;
           } else {
-            setNotice({ tone: 'error', text: result.error || 'Could not validate book.' });
+            toast.error(result.error || 'Could not validate book.');
             playScanCue('error');
             return false;
           }
@@ -219,7 +211,7 @@ export function CirculationWizard() {
           playScanCue('success');
           return true;
         } else {
-          setNotice({ tone: 'error', text: result.error || 'Return validation failed.' });
+          toast.error(result.error || 'Return validation failed.');
           playScanCue('error');
           return false;
         }
@@ -227,7 +219,6 @@ export function CirculationWizard() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Process failed.';
       logger.error('Circulation', 'Scan process error', {}, err);
-      setNotice({ tone: 'error', text: message });
       toast.error(message, { id: 'circulation-error-toast' });
       return false;
     } finally {
@@ -238,7 +229,6 @@ export function CirculationWizard() {
 
   const confirmAction = async () => {
     setIsProcessing(true);
-    setNotice(null);
 
     try {
       if (mode === 'checkout' && activeStudent && pendingCheckout) {
@@ -253,7 +243,7 @@ export function CirculationWizard() {
         if (result.success) {
           setIsConfirmed(true);
         } else {
-          setNotice({ tone: 'error', text: result.error || 'Failed to confirm checkout.' });
+          toast.error(result.error || 'Failed to confirm checkout.');
         }
       } else if (mode === 'return' && pendingReturn) {
         const result = await returnBook({
@@ -269,12 +259,12 @@ export function CirculationWizard() {
             setReservationData({ ready: true, studentName: result.data.reserved_for });
           }
         } else {
-          setNotice({ tone: 'error', text: result.error || 'Failed to confirm return.' });
+          toast.error(result.error || 'Failed to confirm return.');
         }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Network failure during confirmation.';
-      setNotice({ tone: 'error', text: message });
+      toast.error(message);
     } finally {
       setIsProcessing(false);
     }
@@ -390,7 +380,6 @@ export function CirculationWizard() {
           )}
         </div>
 
-        <StatusNotice notice={notice} className="mt-8" />
       </main>
     </div>
   );
