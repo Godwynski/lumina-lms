@@ -52,8 +52,11 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
     }
   }
   
-  if (categoryId) {
-    dbQuery = dbQuery.eq('category_id', categoryId);
+  if (categoryId && categoryId !== 'all') {
+    const categoryIds = categoryId.split(',').filter(Boolean);
+    if (categoryIds.length > 0) {
+      dbQuery = dbQuery.in('category_id', categoryIds);
+    }
   }
 
   if (section) {

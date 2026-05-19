@@ -170,6 +170,8 @@ export function AttendanceClient({
             icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
           });
 
+          setShowScanner(false);
+
           if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
           scanTimeoutRef.current = setTimeout(() => {
             lastScannedRef.current = null;

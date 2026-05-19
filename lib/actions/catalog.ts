@@ -135,8 +135,11 @@ export async function getBooks(
     }
   }
   
-  if (categoryId) {
-    dbQuery = dbQuery.eq('category_id', categoryId);
+  if (categoryId && categoryId !== 'all') {
+    const categoryIds = categoryId.split(',').filter(Boolean);
+    if (categoryIds.length > 0) {
+      dbQuery = dbQuery.in('category_id', categoryIds);
+    }
   }
   
   // Apply server-side sorting

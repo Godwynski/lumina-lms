@@ -13,7 +13,8 @@ export interface TrendDataPoint {
 export interface AnalyticsSummary {
   attendanceTrends: TrendDataPoint[];
   borrowingTrends: TrendDataPoint[];
-  statusDistribution: { name: string; value: number }[];
+  categoryDistribution: { name: string; value: number }[];
+  peakHours: { hour: string; count: number }[];
   popularBooks: { id: string; title: string; count: number }[];
 }
 
@@ -57,7 +58,7 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
       .gte('check_in_at', startDate.toISOString()),
     supabase
       .from('borrowing_records')
-      .select('borrowed_at, status')
+      .select('borrowed_at, status, book_copies(books(categories(name)))')
       .gte('borrowed_at', startDate.toISOString()),
     supabase
       .from('borrowing_records')
@@ -69,15 +70,47 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
   const attendanceTrends = processTrends(attendanceData?.map(d => d.check_in_at) || [], startDate, now, groupBy);
   const borrowingTrends = processTrends(borrowingData?.map(d => d.borrowed_at) || [], startDate, now, groupBy);
 
-  // Process Status Distribution
-  const statusCounts: Record<string, number> = {};
-  borrowingData?.forEach(record => {
-    statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
+  // Process Peak Visiting Hours (8 AM to 6 PM)
+  const hourCounts: Record<number, number> = {};
+  for (let h = 8; h <= 18; h++) {
+    hourCounts[h] = 0;
+  }
+  attendanceData?.forEach(record => {
+    if (record.check_in_at) {
+      const date = new Date(record.check_in_at);
+      const hour = date.getHours();
+      if (hour >= 8 && hour <= 18) {
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      }
+    }
   });
-  const statusDistribution = Object.entries(statusCounts).map(([name, value]) => ({ 
-    name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '), 
+
+  const peakHours = Object.entries(hourCounts).map(([hStr, count]) => {
+    const h = parseInt(hStr, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayHour = h % 12 === 0 ? 12 : h % 12;
+    return {
+      hour: `${displayHour} ${ampm}`,
+      count
+    };
+  });
+
+  const categoryCounts: Record<string, number> = {};
+  borrowingData?.forEach(record => {
+    const bookCopy = record.book_copies as unknown as {
+      books: {
+        categories: {
+          name: string;
+        } | null;
+      } | null;
+    } | null;
+    const categoryName = bookCopy?.books?.categories?.name || 'General';
+    categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1;
+  });
+  const categoryDistribution = Object.entries(categoryCounts).map(([name, value]) => ({ 
+    name, 
     value 
-  }));
+  })).sort((a, b) => b.value - a.value);
 
   // Process Popular Books
   const bookCounts: Record<string, { title: string; count: number }> = {};
@@ -100,7 +133,8 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
   return {
     attendanceTrends,
     borrowingTrends,
-    statusDistribution,
+    categoryDistribution,
+    peakHours,
     popularBooks
   };
 }
