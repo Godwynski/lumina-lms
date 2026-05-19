@@ -70,12 +70,13 @@ export function AttendanceClient({
       });
       if (result.success) {
         toast.success(result.data.message, {
+          id: "attendance-toast",
           description: result.data.status === "IN" ? "Checked in successfully." : "Checked out successfully.",
           icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
         });
         setCardNumber("");
       } else {
-        toast.error(result.error);
+        toast.error(result.error, { id: "attendance-toast-error" });
         setCardNumber("");
       }
     });
@@ -164,6 +165,7 @@ export function AttendanceClient({
         });
         if (result.success) {
           toast.success(result.data.message, {
+            id: "attendance-qr-toast",
             description: result.data.description,
             icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
           });
@@ -174,7 +176,7 @@ export function AttendanceClient({
           }, 5000);
 
         } else {
-          toast.error(result.error);
+          toast.error(result.error, { id: "attendance-qr-toast-error" });
           lastScannedRef.current = null; 
         }
       } finally {
