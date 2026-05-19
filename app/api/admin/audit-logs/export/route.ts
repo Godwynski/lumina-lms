@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     if (formatParam === "json") {
       const jsonLogs = (logs || []).map((log) => {
-        const item: Record<string, any> = {};
+        const item: Record<string, unknown> = {};
         selectedCols.forEach((col) => {
           if (col === "created_at") item.created_at = log.created_at;
           else if (col === "full_name") item.admin_name = log.profiles?.full_name || "Unknown";
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     const rows = (logs || []).map((log) => {
       return selectedCols.map((col) => {
-        let val: any = "";
+        let val: unknown = "";
         if (col === "created_at") {
           val = log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "";
         } else if (col === "full_name") {

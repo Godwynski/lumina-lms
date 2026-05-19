@@ -48,6 +48,23 @@ export interface ParsedBook {
   dewey_decimal: string;
   tags: string;
 }
+
+export interface ExportBook {
+  id: string;
+  title: string;
+  author: string;
+  isbn: string | null;
+  dewey_decimal: string | null;
+  description: string | null;
+  published_year: number | null;
+  cover_url: string | null;
+  tags: string[] | null;
+  location: string | null;
+  section: string | null;
+  is_active: boolean;
+  created_at: string;
+  categories: { name: string } | Array<{ name: string }> | null;
+}
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -299,16 +316,16 @@ export function ModernInventoryClient({
   };
 
   // Helper to map dynamic book columns
-  const getMappedExportRows = (data: any[]) => {
+  const getMappedExportRows = (data: ExportBook[]) => {
     return data.map(b => {
-      const row: Record<string, any> = {};
+      const row: Record<string, string | number> = {};
       if (selectedExportColumns.includes("title")) row['Title'] = b.title;
       if (selectedExportColumns.includes("author")) row['Author'] = b.author;
       if (selectedExportColumns.includes("isbn")) row['ISBN'] = b.isbn || '';
       if (selectedExportColumns.includes("dewey_decimal")) row['Dewey Decimal'] = b.dewey_decimal || '';
       if (selectedExportColumns.includes("category")) {
         row['Category'] = Array.isArray(b.categories) 
-          ? b.categories.map((c: any) => c?.name).filter(Boolean).join(', ') 
+          ? b.categories.map((c) => c?.name).filter(Boolean).join(', ') 
           : b.categories?.name || 'Uncategorized';
       }
       if (selectedExportColumns.includes("published_year")) row['Published Year'] = b.published_year || '';
@@ -385,16 +402,16 @@ export function ModernInventoryClient({
   const handleExportJSON = async () => {
     setIsExportingJSON(true);
     try {
-      const data = await getBooksForExport();
-      const rows = data.map((b: any) => {
-        const row: Record<string, any> = {};
+      const data = await getBooksForExport() as ExportBook[];
+      const rows = data.map((b) => {
+        const row: Record<string, string | number | string[] | null> = {};
         if (selectedExportColumns.includes("title")) row.title = b.title;
         if (selectedExportColumns.includes("author")) row.author = b.author;
         if (selectedExportColumns.includes("isbn")) row.isbn = b.isbn || '';
         if (selectedExportColumns.includes("dewey_decimal")) row.dewey_decimal = b.dewey_decimal || '';
         if (selectedExportColumns.includes("category")) {
           row.category = Array.isArray(b.categories) 
-            ? b.categories.map((c: any) => c?.name).filter(Boolean).join(', ') 
+            ? b.categories.map((c) => c?.name).filter(Boolean).join(', ') 
             : b.categories?.name || 'Uncategorized';
         }
         if (selectedExportColumns.includes("published_year")) row.published_year = b.published_year || null;

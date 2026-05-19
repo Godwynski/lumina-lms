@@ -9,6 +9,7 @@ interface CommitModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => void;
+  onAbort?: () => void;
   changedKeys: string[];
   initialValues: Record<string, string>;
   formData: Record<string, string>;
@@ -22,6 +23,7 @@ export function PolicyCommitModal({
   isOpen,
   onClose,
   onConfirm,
+  onAbort,
   changedKeys,
   initialValues,
   formData,
@@ -170,7 +172,7 @@ export function PolicyCommitModal({
         <div className="p-8 md:p-10 pt-0 flex gap-4">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={onAbort || onClose}
             disabled={loading}
             className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border-border/40 hover:bg-muted/40 hover:border-border transition-all duration-300"
           >

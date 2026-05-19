@@ -100,7 +100,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
             <Input
               type="text" 
               value={formData.isbn}
-              onChange={e => onUpdate({ isbn: e.target.value })}
+              onChange={e => onUpdate({ isbn: e.target.value.replace(/\D/g, '') })}
               placeholder="9780132350884"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />

@@ -29,7 +29,7 @@ export function ISBNLookupBar({
           <Input
             type="text" 
             value={isbn}
-            onChange={(e) => onIsbnChange(e.target.value)}
+            onChange={(e) => onIsbnChange(e.target.value.replace(/\D/g, ''))}
             className="h-10 w-full rounded-xl border-border/40 bg-background px-4 text-sm transition-all focus:ring-2 focus:ring-primary/20"
             placeholder="Enter ISBN-10 or ISBN-13"
           />
