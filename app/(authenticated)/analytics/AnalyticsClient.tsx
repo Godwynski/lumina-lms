@@ -2,8 +2,8 @@
 
 import { use, useState, useEffect, useTransition, useCallback } from 'react';
 import Link from 'next/link';
-import { Clock, BookOpen, Library, UserCircle2, Sparkles } from 'lucide-react';
-import { TrendChart, StatusPieChart, ChartSkeleton } from './AnalyticsCharts';
+import { Clock, BookOpen, Library, UserCircle2 } from 'lucide-react';
+import { TrendChart, CategoryPieChart, PeakHoursBarChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange } from '@/lib/actions/analytics';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { cn } from '@/lib/utils';
@@ -147,13 +147,12 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="relative overflow-hidden">
           {!summary ? (
-            <ChartSkeleton title="Traffic Distribution" />
+            <ChartSkeleton title="Peak Visiting Hours" />
           ) : (
-            <TrendChart 
-              data={summary.attendanceTrends} 
-              title="Traffic Distribution" 
+            <PeakHoursBarChart 
+              data={summary.peakHours} 
+              title="Peak Visiting Hours" 
               color="hsl(var(--primary))" 
-              href="/attendance"
             />
           )}
           {isPending && summary && (
@@ -186,20 +185,17 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Pie Chart */}
         <div className="lg:col-span-5 flex flex-col">
-          <div className="flex items-center justify-between mb-8">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">Asset Allocation</p>
-            <Sparkles size={14} className="text-primary/30" />
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            {summary ? (
-              <StatusPieChart data={summary.statusDistribution} href="/history" />
-            ) : (
-              <div className="h-[240px] w-full flex flex-col items-center justify-center gap-4 animate-pulse">
+          {summary ? (
+            <CategoryPieChart data={summary.categoryDistribution} title="Genre Popularity" />
+          ) : (
+            <div className="w-full h-[280px] flex flex-col animate-pulse border border-border/40 rounded-2xl p-4 bg-muted/[0.02]">
+              <div className="w-24 h-3 bg-muted/20 rounded mb-8" />
+              <div className="flex-1 flex flex-col items-center justify-center gap-4">
                 <div className="w-32 h-32 rounded-full border-[12px] border-muted/10" />
                 <div className="w-24 h-2 bg-muted/10 rounded" />
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Popular List */}

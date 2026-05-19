@@ -161,7 +161,7 @@ export function CirculationWizard() {
     router.replace(`?${params.toString()}`);
   };
 
-  const processScan = async (value: string, isManual: boolean = false) => {
+  const processScan = async (value: string, isManual: boolean = false): Promise<boolean> => {
     setIsProcessing(true);
     setNotice(null);
     logger.info('Circulation', `Processing scan: ${value}`, { mode, hasStudent: !!activeStudent });
@@ -175,9 +175,11 @@ export function CirculationWizard() {
             setActiveStudent(result.data.data as ActiveStudent);
             setNotice({ tone: 'ok', text: 'Student verified. Please scan the book copy.' });
             playScanCue('success');
+            return true;
           } else {
             setNotice({ tone: 'error', text: result.error || 'Invalid student card.' });
             playScanCue('error');
+            return false;
           }
         } else {
           const result = await checkoutBook({ 
@@ -195,9 +197,11 @@ export function CirculationWizard() {
               idempotencyKey: crypto.randomUUID(),
             });
             playScanCue('success');
+            return true;
           } else {
             setNotice({ tone: 'error', text: result.error || 'Could not validate book.' });
             playScanCue('error');
+            return false;
           }
         }
       } else {
@@ -213,9 +217,11 @@ export function CirculationWizard() {
              idempotencyKey: crypto.randomUUID(),
           });
           playScanCue('success');
+          return true;
         } else {
           setNotice({ tone: 'error', text: result.error || 'Return validation failed.' });
           playScanCue('error');
+          return false;
         }
       }
     } catch (err: unknown) {
@@ -223,6 +229,7 @@ export function CirculationWizard() {
       logger.error('Circulation', 'Scan process error', {}, err);
       setNotice({ tone: 'error', text: message });
       toast.error(message, { id: 'circulation-error-toast' });
+      return false;
     } finally {
       setIsProcessing(false);
       logger.info('Circulation', 'Scan processing finished');

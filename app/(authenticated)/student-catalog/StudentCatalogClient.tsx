@@ -4,10 +4,18 @@ import { useState, use, useEffect, useTransition, useCallback } from 'react';
 import {
   Search,
   X,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { Book, Category as CatalogCategory } from '@/lib/types';
 import { cn } from "@/lib/utils";
@@ -188,7 +196,22 @@ export function StudentCatalogClient({
     return () => clearTimeout(timer);
   }, [localQuery, debouncedQuery, updateParams]);
 
-  const handleCatChange = (val: string) => updateParams({ category: val === 'all' ? null : val, page: 1 });
+  const selectedIds = selectedCategory ? selectedCategory.split(',').filter(Boolean) : [];
+
+  const handleCatToggle = (id: string) => {
+    let newSelected: string[];
+    if (selectedIds.includes(id)) {
+      newSelected = selectedIds.filter((cid) => cid !== id);
+    } else {
+      newSelected = [...selectedIds, id];
+    }
+    const val = newSelected.join(',');
+    updateParams({ category: val || null, page: 1 });
+  };
+
+  const handleCatClear = () => {
+    updateParams({ category: null, page: 1 });
+  };
   const handleAvailableToggle = () => updateParams({ available: !availableOnly ? 'true' : null, page: 1 });
   const handleSortChange = (val: string) => updateParams({ sort: val });
   const handlePageChange = (p: number) => updateParams({ page: p });
@@ -224,22 +247,47 @@ export function StudentCatalogClient({
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            <Select
-              value={selectedCategory || 'all'}
-              onValueChange={handleCatChange}
-            >
-              <SelectTrigger className="h-9 min-w-[140px] rounded-xl border-border/40 bg-background/50 text-xs font-bold shadow-none focus:ring-0">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-9 min-w-[140px] rounded-xl border-border/40 bg-background/50 text-[11px] font-bold shadow-none hover:bg-muted/10 justify-between px-3",
+                    selectedIds.length > 0 && "border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                  )}
+                >
+                  <span>
+                    {selectedIds.length === 0 
+                      ? "All Categories" 
+                      : selectedIds.length === 1 
+                        ? categories.find(c => c.id === selectedIds[0])?.name || "1 Category"
+                        : `${selectedIds.length} Categories`}
+                  </span>
+                  <ChevronDown className="ml-2 h-3.5 w-3.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 max-h-[300px] overflow-y-auto no-scrollbar bg-card border border-border/10 rounded-xl">
+                <DropdownMenuCheckboxItem
+                  checked={selectedIds.length === 0}
+                  onCheckedChange={handleCatClear}
+                  className="text-xs font-medium cursor-pointer"
+                >
+                  All Categories
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator className="bg-border/10" />
                 {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
+                  <DropdownMenuCheckboxItem
+                    key={category.id}
+                    checked={selectedIds.includes(category.id)}
+                    onCheckedChange={() => handleCatToggle(category.id)}
+                    className="text-xs font-medium cursor-pointer"
+                  >
                     {category.name}
-                  </SelectItem>
+                  </DropdownMenuCheckboxItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button
               type="button"

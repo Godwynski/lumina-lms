@@ -517,6 +517,17 @@ export function ModernInventoryClient({
     });
   };
 
+  const selectedCategoryIds = categoryId === "all" ? [] : categoryId.split(",").filter(Boolean);
+  const handleCategoryToggle = (id: string) => {
+    let newSelected: string[];
+    if (selectedCategoryIds.includes(id)) {
+      newSelected = selectedCategoryIds.filter((cid) => cid !== id);
+    } else {
+      newSelected = [...selectedCategoryIds, id];
+    }
+    const val = newSelected.join(",");
+    updateParams({ categoryId: val || "all" });
+  };
   const setCategoryId = (id: string) => updateParams({ categoryId: id });
   const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
   const setStatus = (s: typeof status) => updateParams({ status: s });
@@ -641,30 +652,33 @@ export function ModernInventoryClient({
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Categories</label>
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant={categoryId === "all" ? "default" : "outline"}
+                        variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCategoryId("all")}
                         className={cn(
                           "h-9 rounded-lg px-4 text-[10px] font-bold uppercase tracking-wider transition-all",
-                          categoryId === "all" ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10"
+                          selectedCategoryIds.length === 0 ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10"
                         )}
                       >
                         All Items
                       </Button>
-                      {categories.map((cat) => (
-                        <Button
-                          key={cat.id}
-                          variant={categoryId === cat.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCategoryId(cat.id)}
-                          className={cn(
-                            "h-10 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest transition-all",
-                            categoryId === cat.id ? "bg-primary shadow-lg shadow-primary/20" : "bg-muted/5 border-border/10"
-                          )}
-                        >
-                          {cat.name}
-                        </Button>
-                      ))}
+                      {categories.map((cat) => {
+                        const isSelected = selectedCategoryIds.includes(cat.id);
+                        return (
+                          <Button
+                            key={cat.id}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleCategoryToggle(cat.id)}
+                            className={cn(
+                              "h-10 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest transition-all",
+                              isSelected ? "bg-primary shadow-lg shadow-primary/20" : "bg-muted/5 border-border/10"
+                            )}
+                          >
+                            {cat.name}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
