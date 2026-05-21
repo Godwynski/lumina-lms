@@ -267,45 +267,52 @@ export function ModernInventoryClient({
 
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    for (let i = 0; i < rawList.length; i++) {
-      const isbn = rawList[i];
-      setIsbnProgress(prev => ({ ...prev, current: i + 1, currentIsbn: isbn }));
+    const BATCH_SIZE = 3;
+    let completedCount = 0;
 
-      try {
-        const res = await lookupAndImportISBN(isbn);
-        
-        if (res.success) {
-          if (res.status === 'exists') {
-            setIsbnLogs(prev => [...prev, {
-              isbn,
-              status: 'exists',
-              message: `[RESOLVED] "${res.title}" already in catalog. Stock incremented by 1 copy.`
-            }]);
+    for (let i = 0; i < rawList.length; i += BATCH_SIZE) {
+      const batch = rawList.slice(i, i + BATCH_SIZE);
+
+      await Promise.all(batch.map(async (isbn) => {
+        try {
+          const res = await lookupAndImportISBN(isbn);
+
+          if (res.success) {
+            if (res.status === 'exists') {
+              setIsbnLogs(prev => [...prev, {
+                isbn,
+                status: 'exists',
+                message: `[RESOLVED] "${res.title}" already in catalog. Stock incremented by 1 copy.`
+              }]);
+            } else {
+              setIsbnLogs(prev => [...prev, {
+                isbn,
+                status: 'success',
+                message: `[IMPORTED] "${res.title}" by ${res.author} successfully cataloged.`
+              }]);
+            }
           } else {
             setIsbnLogs(prev => [...prev, {
               isbn,
-              status: 'success',
-              message: `[IMPORTED] "${res.title}" by ${res.author} successfully cataloged.`
+              status: 'error',
+              message: `[FAILED] ISBN ${isbn}: ${res.error || 'Metadata lookup empty'}`
             }]);
           }
-        } else {
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
           setIsbnLogs(prev => [...prev, {
             isbn,
             status: 'error',
-            message: `[FAILED] ISBN ${isbn}: ${res.error || 'Metadata lookup empty'}`
+            message: `[ERROR] ISBN ${isbn}: ${errMsg}`
           }]);
+        } finally {
+          completedCount++;
+          setIsbnProgress(prev => ({ ...prev, current: completedCount, currentIsbn: isbn }));
         }
-      } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        setIsbnLogs(prev => [...prev, {
-          isbn,
-          status: 'error',
-          message: `[ERROR] ISBN ${isbn}: ${errMsg}`
-        }]);
-      }
+      }));
 
       // Safe throttling sleep to prevent "Too Many Requests" (429) errors from Google Books/Open Library
-      if (i < rawList.length - 1) {
+      if (i + BATCH_SIZE < rawList.length) {
         await sleep(500);
       }
     }
