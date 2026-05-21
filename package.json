@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
     "seed": "ts-node -T scripts/seed.ts",
-    "clean": "ts-node -T scripts/clean.ts"
+    "clean": "ts-node -T scripts/clean.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -72,6 +73,7 @@
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }
