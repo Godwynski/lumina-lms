@@ -1,5 +1,4 @@
 {
-  "name": "system",
   "private": true,
   "engines": {
     "node": ">=24 <25",
