@@ -63,7 +63,7 @@ export function useNotifications() {
       if (!active) return
 
       // Subscribe to new notifications with a unique channel name to avoid collisions
-      const channelName = `notifications-${user.id}-${Math.random().toString(36).slice(2, 9)}`
+      const channelName = `notifications-${user.id}-${crypto.randomUUID()}`
       channel = supabase
         .channel(channelName)
         .on(
