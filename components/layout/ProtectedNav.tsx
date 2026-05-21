@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useMemo, useCallback } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
 import { useLogout } from "@/hooks/use-logout";
 import {
   Dialog,
@@ -92,7 +93,7 @@ export function ProtectedNav({
   preferences?: Record<string, unknown>;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParamsLite();
   const { role, profile } = usePreferences();
   const currentRole = role as Role;
   const currentProfile = profile as Profile | null;
@@ -157,6 +158,87 @@ export function ProtectedNav({
     // Next.js Link already handles prefetching on hover
   }, []);
 
+  // ── Memoised nav-item list (previously an un-memoised IIFE) ─────────────
+  const viewParam = searchParams.get("view");
+
+  const hasAttendancePerm = currentRole === "super_admin" ||
+    currentRole === "librarian" ||
+    (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+
+  const hasCirculationPerm = currentRole === "super_admin" ||
+    currentRole === "librarian" ||
+    (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_circulation && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+
+  const navItemsToRender = useMemo(() => {
+    const items: Array<{
+      href: string;
+      label: string;
+      icon: NavItem["icon"];
+      isActive: boolean;
+    }> = [];
+
+    visibleItems.forEach(item => {
+      if (item.href === "/history") {
+        if (currentRole === "student_assistant" && hasCirculationPerm) {
+          // Student Assistant with circulation permission gets BOTH My Borrowing and Borrowing Logs
+          items.push({
+            href: "/history",
+            label: "My Borrowing",
+            icon: item.icon,
+            isActive: pathname === "/history" && viewParam !== "logs"
+          });
+          items.push({
+            href: "/history?view=logs",
+            label: "Borrowing Logs",
+            icon: item.icon,
+            isActive: pathname === "/history" && viewParam === "logs"
+          });
+        } else {
+          const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
+          items.push({
+            href: "/history",
+            label: isStaffUser ? "Borrowing Logs" : "My Borrowing",
+            icon: item.icon,
+            isActive: pathname === "/history"
+          });
+        }
+      } else if (item.href === "/attendance") {
+        if (currentRole === "student_assistant" && hasAttendancePerm) {
+          // Student Assistant with attendance permission gets BOTH My Attendance and Attendance Logs
+          items.push({
+            href: "/attendance",
+            label: "My Attendance",
+            icon: item.icon,
+            isActive: pathname === "/attendance" && viewParam !== "logs"
+          });
+          items.push({
+            href: "/attendance?view=logs",
+            label: "Attendance Logs",
+            icon: item.icon,
+            isActive: pathname === "/attendance" && viewParam === "logs"
+          });
+        } else {
+          const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
+          items.push({
+            href: isStaffUser ? "/attendance?view=logs" : "/attendance",
+            label: hasAttendancePerm ? "Attendance Logs" : "My Attendance",
+            icon: item.icon,
+            isActive: pathname === "/attendance"
+          });
+        }
+      } else {
+        items.push({
+          href: item.href,
+          label: item.label,
+          icon: item.icon,
+          isActive: isActive(item.href)
+        });
+      }
+    });
+
+    return items;
+  }, [visibleItems, currentRole, hasCirculationPerm, hasAttendancePerm, pathname, viewParam, isActive]);
+
 
   return (
     <Sidebar 
@@ -182,105 +264,27 @@ export function ProtectedNav({
         <nav className="flex flex-col h-full" aria-label="Main Navigation">
           <SidebarGroup className="flex-1">
             <SidebarMenu>
-              {(() => {
-                const navItemsToRender: Array<{
-                  href: string;
-                  label: string;
-                  icon: NavItem["icon"];
-                  isActive: boolean;
-                }> = [];
-
-                const hasAttendancePerm = currentRole === "super_admin" || 
-                                          currentRole === "librarian" || 
-                                          (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
-
-                const hasCirculationPerm = currentRole === "super_admin" || 
-                                           currentRole === "librarian" || 
-                                           (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_circulation && currentProfile?.status?.toUpperCase() === 'ACTIVE');
-
-                const viewParam = searchParams.get("view");
-
-                visibleItems.forEach(item => {
-                  if (item.href === "/history") {
-                    if (currentRole === "student_assistant" && hasCirculationPerm) {
-                      // Student Assistant with circulation permission gets BOTH My Borrowing and Borrowing Logs
-                      navItemsToRender.push({
-                        href: "/history",
-                        label: "My Borrowing",
-                        icon: item.icon,
-                        isActive: pathname === "/history" && viewParam !== "logs"
-                      });
-                      navItemsToRender.push({
-                        href: "/history?view=logs",
-                        label: "Borrowing Logs",
-                        icon: item.icon,
-                        isActive: pathname === "/history" && viewParam === "logs"
-                      });
-                    } else {
-                      const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
-                      navItemsToRender.push({
-                        href: "/history",
-                        label: isStaffUser ? "Borrowing Logs" : "My Borrowing",
-                        icon: item.icon,
-                        isActive: pathname === "/history"
-                      });
-                    }
-                  } else if (item.href === "/attendance") {
-                    if (currentRole === "student_assistant" && hasAttendancePerm) {
-                      // Student Assistant with attendance permission gets BOTH My Attendance and Attendance Logs
-                      navItemsToRender.push({
-                        href: "/attendance",
-                        label: "My Attendance",
-                        icon: item.icon,
-                        isActive: pathname === "/attendance" && viewParam !== "logs"
-                      });
-                      navItemsToRender.push({
-                        href: "/attendance?view=logs",
-                        label: "Attendance Logs",
-                        icon: item.icon,
-                        isActive: pathname === "/attendance" && viewParam === "logs"
-                      });
-                    } else {
-                      const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
-                      navItemsToRender.push({
-                        href: isStaffUser ? "/attendance?view=logs" : "/attendance",
-                        label: hasAttendancePerm ? "Attendance Logs" : "My Attendance",
-                        icon: item.icon,
-                        isActive: pathname === "/attendance"
-                      });
-                    }
-                  } else {
-                    navItemsToRender.push({
-                      href: item.href,
-                      label: item.label,
-                      icon: item.icon,
-                      isActive: isActive(item.href)
-                    });
-                  }
-                });
-
-                return navItemsToRender.map(item => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={item.isActive}
-                      tooltip={item.label}
+              {navItemsToRender.map(item => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={item.isActive}
+                    tooltip={item.label}
+                  >
+                    <Link 
+                      href={item.href} 
+                      className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
+                      onClick={(e) => {
+                        e.currentTarget.blur();
+                      }}
+                      onMouseEnter={() => handlePrefetch(item.href)}
                     >
-                      <Link 
-                        href={item.href} 
-                        className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
-                        onClick={(e) => {
-                          e.currentTarget.blur();
-                        }}
-                        onMouseEnter={() => handlePrefetch(item.href)}
-                      >
-                        {item.icon && <item.icon className="shrink-0" />}
-                        <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ));
-              })()}
+                      {item.icon && <item.icon className="shrink-0" />}
+                      <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroup>
         </nav>
