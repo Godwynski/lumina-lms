@@ -47,11 +47,16 @@ export async function clearDatabase(supabase: SupabaseClient) {
 
   for (const table of tablesToDelete) {
     logInfo(`Deleting records from ${table}...`);
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
+    let query = supabase.from(table).delete();
     
+    if (table === 'library_cards') {
+      // Keep library cards for demo access users
+      query = query.not('user_id', 'in', `(${Object.values(profileIds).join(',')})`);
+    } else {
+      query = query.neq('id', '00000000-0000-0000-0000-000000000000');
+    }
+
+    const { error } = await query;
     if (error) {
       logInfo(`⚠️ Error deleting from ${table}: ${error.message}`);
     } else {
@@ -103,7 +108,7 @@ export async function clearDatabase(supabase: SupabaseClient) {
     }
   }
 
-  logInfo('✨ Database purge completed successfully!');
+  logInfo('✨ Database purge completed successfully! (Preserved demo library cards)');
   return log;
 }
 
@@ -240,6 +245,9 @@ export async function seedCatalog(supabase: SupabaseClient) {
     { name: 'History & Biography', slug: 'history-biography', description: 'Global historical events, biographical memoirs, and cultural studies.' },
     { name: 'Business & Economics', slug: 'business-economics', description: 'Finance, marketing, management, macro/microeconomics, and entrepreneurship.' },
     { name: 'Philosophy & Ethics', slug: 'philosophy-ethics', description: 'Ancient philosophies, logic, ethics, and modern philosophical discourse.' },
+    { name: 'Art & Design', slug: 'art-design', description: 'Visual arts, graphic design, architecture, photography, and user experience design.' },
+    { name: 'Health & Medicine', slug: 'health-medicine', description: 'Human anatomy, clinical medicine, public health, nutrition, and mental health.' },
+    { name: 'Law & Politics', slug: 'law-politics', description: 'Constitutional law, international relations, political theory, and public policy.' },
   ];
 
   const { data: catData, error: catError } = await supabase
@@ -257,6 +265,7 @@ export async function seedCatalog(supabase: SupabaseClient) {
 
   logInfo('🌱 Inserting books...');
   const booksToSeed = [
+    // Computer Science
     {
       title: 'Clean Code',
       author: 'Robert C. Martin',
@@ -310,6 +319,59 @@ export async function seedCatalog(supabase: SupabaseClient) {
       published_year: 2017
     },
     {
+      title: 'Refactoring: Improving the Design of Existing Code',
+      author: 'Martin Fowler',
+      isbn: '9780134757599',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780134757599-L.jpg',
+      category_id: catMap.get('computer-science'),
+      tags: ['refactoring', 'software-design', 'clean-code'],
+      location: 'Shelf A3',
+      section: 'Computer Science',
+      dewey_decimal: '005.11',
+      description: 'Martin Fowler’s guide to improving the design of existing code without changing its external behavior.',
+      published_year: 2018
+    },
+    {
+      title: 'Design Patterns: Elements of Reusable Object-Oriented Software',
+      author: 'Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides',
+      isbn: '9780201633610',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780201633610-L.jpg',
+      category_id: catMap.get('computer-science'),
+      tags: ['design-patterns', 'oop', 'software-architecture'],
+      location: 'Shelf A3',
+      section: 'Computer Science',
+      dewey_decimal: '005.12',
+      description: 'The seminal textbook on object-oriented software design patterns from the "Gang of Four".',
+      published_year: 1994
+    },
+    {
+      title: 'The Mythical Man-Month',
+      author: 'Frederick P. Brooks Jr.',
+      isbn: '9780201835953',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780201835953-L.jpg',
+      category_id: catMap.get('computer-science'),
+      tags: ['project-management', 'software-engineering', 'classics'],
+      location: 'Shelf A4',
+      section: 'Computer Science',
+      dewey_decimal: '005.1',
+      description: 'Influential essays on software engineering and project management.',
+      published_year: 1995
+    },
+    {
+      title: 'Compilers: Principles, Techniques, and Tools',
+      author: 'Alfred V. Aho, Monica S. Lam, Ravi Sethi, Jeffrey D. Ullman',
+      isbn: '9780321486813',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780321486813-L.jpg',
+      category_id: catMap.get('computer-science'),
+      tags: ['compilers', 'computer-science', 'parser'],
+      location: 'Shelf A4',
+      section: 'Computer Science',
+      dewey_decimal: '005.453',
+      description: 'Known as the "Dragon Book", this is the definitive guide to compiler construction.',
+      published_year: 2006
+    },
+    // Mathematics
+    {
       title: 'Calculus Vol 1',
       author: 'Tom M. Apostol',
       isbn: '9788126515196',
@@ -335,6 +397,33 @@ export async function seedCatalog(supabase: SupabaseClient) {
       description: 'Renowned professor Gilbert Strang introduces linear algebra with clear explanations and real-world examples.',
       published_year: 2005
     },
+    {
+      title: 'Linear Algebra Done Right',
+      author: 'Sheldon Axler',
+      isbn: '9783319110790',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9783319110790-L.jpg',
+      category_id: catMap.get('mathematics'),
+      tags: ['linear-algebra', 'theory', 'pure-math'],
+      location: 'Shelf B2',
+      section: 'Mathematics',
+      dewey_decimal: '512.5',
+      description: 'A popular undergraduate textbook focusing on linear operators on finite-dimensional vector spaces.',
+      published_year: 2015
+    },
+    {
+      title: 'Gödel, Escher, Bach: An Eternal Golden Braid',
+      author: 'Douglas R. Hofstadter',
+      isbn: '9780465026562',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780465026562-L.jpg',
+      category_id: catMap.get('mathematics'),
+      tags: ['math-logic', 'cognitive-science', 'philosophy'],
+      location: 'Shelf B2',
+      section: 'Mathematics',
+      dewey_decimal: '510.1',
+      description: 'A Pulitzer Prize-winning book exploring common themes in the lives and works of mathematician Kurt Gödel, artist M.C. Escher, and composer Johann Sebastian Bach.',
+      published_year: 1979
+    },
+    // Science & Tech
     {
       title: 'A Brief History of Time',
       author: 'Stephen Hawking',
@@ -362,6 +451,20 @@ export async function seedCatalog(supabase: SupabaseClient) {
       published_year: 1976
     },
     {
+      title: 'Cosmos',
+      author: 'Carl Sagan',
+      isbn: '9780375508325',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780375508325-L.jpg',
+      category_id: catMap.get('science-technology'),
+      tags: ['astronomy', 'science-history', 'popular-science'],
+      location: 'Shelf C2',
+      section: 'Science',
+      dewey_decimal: '520',
+      description: 'Carl Sagan’s classic exploration of the universe, science, and the human journey of discovery.',
+      published_year: 1980
+    },
+    // Literature & Fiction
+    {
       title: 'To Kill a Mockingbird',
       author: 'Harper Lee',
       isbn: '9780446310789',
@@ -387,6 +490,46 @@ export async function seedCatalog(supabase: SupabaseClient) {
       description: 'Winston Smith toes the Party line, rewriting history to satisfy the Ministry of Truth. But deep inside, he harbors a rebellion.',
       published_year: 1949
     },
+    {
+      title: 'The Great Gatsby',
+      author: 'F. Scott Fitzgerald',
+      isbn: '9780743273565',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780743273565-L.jpg',
+      category_id: catMap.get('literature-fiction'),
+      tags: ['classic', 'american-literature', 'fiction'],
+      location: 'Shelf D3',
+      section: 'Literature',
+      dewey_decimal: '813.52',
+      description: 'The story of the mysteriously wealthy Jay Gatsby and his love for the beautiful Daisy Buchanan.',
+      published_year: 1925
+    },
+    {
+      title: 'Brave New World',
+      author: 'Aldous Huxley',
+      isbn: '9780060850524',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780060850524-L.jpg',
+      category_id: catMap.get('literature-fiction'),
+      tags: ['dystopian', 'classic', 'science-fiction'],
+      location: 'Shelf D3',
+      section: 'Literature',
+      dewey_decimal: '823.912',
+      description: 'A dystopian novel detailing a genetically modified and consumerist society.',
+      published_year: 1932
+    },
+    {
+      title: 'The Hobbit',
+      author: 'J.R.R. Tolkien',
+      isbn: '9780345339683',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780345339683-L.jpg',
+      category_id: catMap.get('literature-fiction'),
+      tags: ['fantasy', 'adventure', 'classics'],
+      location: 'Shelf D4',
+      section: 'Literature',
+      dewey_decimal: '823.912',
+      description: 'Bilbo Baggins is whisked away from his comfortable hobbit hole by Gandalf the wizard and a band of dwarves.',
+      published_year: 1937
+    },
+    // History & Biography
     {
       title: 'Sapiens: A Brief History of Humankind',
       author: 'Yuval Noah Harari',
@@ -414,6 +557,33 @@ export async function seedCatalog(supabase: SupabaseClient) {
       published_year: 1947
     },
     {
+      title: 'Guns, Germs, and Steel',
+      author: 'Jared Diamond',
+      isbn: '9780393317558',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780393317558-L.jpg',
+      category_id: catMap.get('history-biography'),
+      tags: ['history', 'anthropology', 'geography'],
+      location: 'Shelf E3',
+      section: 'History',
+      dewey_decimal: '303.4',
+      description: 'An exploration of how environmental factors shaped the modern world’s geopolitical inequalities.',
+      published_year: 1997
+    },
+    {
+      title: 'Steve Jobs',
+      author: 'Walter Isaacson',
+      isbn: '9781451648539',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781451648539-L.jpg',
+      category_id: catMap.get('history-biography'),
+      tags: ['biography', 'technology', 'entrepreneurship'],
+      location: 'Shelf E4',
+      section: 'Biography',
+      dewey_decimal: '920',
+      description: 'The definitive biography of Apple co-founder Steve Jobs based on interviews conducted over two years.',
+      published_year: 2011
+    },
+    // Business & Economics
+    {
       title: 'Thinking, Fast and Slow',
       author: 'Daniel Kahneman',
       isbn: '9780374275631',
@@ -440,6 +610,33 @@ export async function seedCatalog(supabase: SupabaseClient) {
       published_year: 1949
     },
     {
+      title: 'The Lean Startup',
+      author: 'Eric Ries',
+      isbn: '9780307887894',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780307887894-L.jpg',
+      category_id: catMap.get('business-economics'),
+      tags: ['business', 'startups', 'entrepreneurship'],
+      location: 'Shelf F3',
+      section: 'Business',
+      dewey_decimal: '658.11',
+      description: 'A methodology for developing businesses and products through validated learning and rapid experimentation.',
+      published_year: 2011
+    },
+    {
+      title: 'Zero to One',
+      author: 'Peter Thiel',
+      isbn: '9780804139298',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780804139298-L.jpg',
+      category_id: catMap.get('business-economics'),
+      tags: ['startups', 'entrepreneurship', 'strategy'],
+      location: 'Shelf F4',
+      section: 'Business',
+      dewey_decimal: '658.11',
+      description: 'Notes on startups, how to build the future, and creating a monopoly.',
+      published_year: 2014
+    },
+    // Philosophy & Ethics
+    {
       title: 'The Republic',
       author: 'Plato',
       isbn: '9780140455113',
@@ -464,6 +661,139 @@ export async function seedCatalog(supabase: SupabaseClient) {
       dewey_decimal: '188',
       description: 'A series of personal writings by the Roman Emperor Marcus Aurelius, offering Stoic guidance on life.',
       published_year: 180
+    },
+    {
+      title: "Man's Search for Meaning",
+      author: 'Viktor E. Frankl',
+      isbn: '9780807014295',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780807014295-L.jpg',
+      category_id: catMap.get('philosophy-ethics'),
+      tags: ['psychology', 'philosophy', 'memoir'],
+      location: 'Shelf G3',
+      section: 'Philosophy',
+      dewey_decimal: '150.195',
+      description: 'Frankl’s experiences in concentration camps and his development of logotherapy, exploring the human search for purpose.',
+      published_year: 1946
+    },
+    // Art & Design
+    {
+      title: 'The Design of Everyday Things',
+      author: 'Don Norman',
+      isbn: '9780465050659',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780465050659-L.jpg',
+      category_id: catMap.get('art-design'),
+      tags: ['ux-design', 'ergonomics', 'product-design'],
+      location: 'Shelf H1',
+      section: 'Art & Design',
+      dewey_decimal: '745.2',
+      description: 'A fundamental book on design and usability, arguing that everyday objects should be intuitive.',
+      published_year: 1988
+    },
+    {
+      title: "Don't Make Me Think",
+      author: 'Steve Krug',
+      isbn: '9780321965516',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780321965516-L.jpg',
+      category_id: catMap.get('art-design'),
+      tags: ['web-usability', 'ux-design', 'interface-design'],
+      location: 'Shelf H1',
+      section: 'Art & Design',
+      dewey_decimal: '006.7',
+      description: 'A common-sense guide to web usability, focusing on simple design principles.',
+      published_year: 2000
+    },
+    // Health & Medicine
+    {
+      title: 'The Emperor of All Maladies',
+      author: 'Siddhartha Mukherjee',
+      isbn: '9781439170915',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781439170915-L.jpg',
+      category_id: catMap.get('health-medicine'),
+      tags: ['medicine', 'history', 'science'],
+      location: 'Shelf I1',
+      section: 'Health & Medicine',
+      dewey_decimal: '616.994',
+      description: 'A biography of cancer, documenting its history, treatment research, and human toll.',
+      published_year: 2010
+    },
+    {
+      title: 'Being Mortal',
+      author: 'Atul Gawande',
+      isbn: '9781250076229',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781250076229-L.jpg',
+      category_id: catMap.get('health-medicine'),
+      tags: ['medicine', 'ethics', 'society'],
+      location: 'Shelf I1',
+      section: 'Health & Medicine',
+      dewey_decimal: '362.175',
+      description: 'Gawande addresses aging and end-of-life care, focusing on quality of life rather than just survival.',
+      published_year: 2014
+    },
+    {
+      title: 'Why We Sleep',
+      author: 'Matthew Walker',
+      isbn: '9781501144317',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781501144317-L.jpg',
+      category_id: catMap.get('health-medicine'),
+      tags: ['neuroscience', 'sleep-science', 'health'],
+      location: 'Shelf I2',
+      section: 'Health & Medicine',
+      dewey_decimal: '612.821',
+      description: 'An exploration of the vital importance of sleep for human health, cognitive function, and longevity.',
+      published_year: 2017
+    },
+    // Law & Politics
+    {
+      title: 'A Promised Land',
+      author: 'Barack Obama',
+      isbn: '9781524763169',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781524763169-L.jpg',
+      category_id: catMap.get('law-politics'),
+      tags: ['memoir', 'politics', 'history'],
+      location: 'Shelf J1',
+      section: 'Politics',
+      dewey_decimal: '973.932',
+      description: 'The first volume of presidential memoirs by the 44th president of the United States.',
+      published_year: 2020
+    },
+    {
+      title: 'Educated',
+      author: 'Tara Westover',
+      isbn: '9780399590504',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780399590504-L.jpg',
+      category_id: catMap.get('literature-fiction'),
+      tags: ['memoir', 'biography', 'education'],
+      location: 'Shelf E4',
+      section: 'Biography',
+      dewey_decimal: '920.72',
+      description: 'A memoir about a young girl who leaves her survivalist family in Idaho to pursue higher education.',
+      published_year: 2018
+    },
+    {
+      title: 'Atomic Habits',
+      author: 'James Clear',
+      isbn: '9780735211292',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780735211292-L.jpg',
+      category_id: catMap.get('business-economics'),
+      tags: ['self-help', 'productivity', 'habits'],
+      location: 'Shelf F5',
+      section: 'Self Help',
+      dewey_decimal: '158.1',
+      description: 'An easy and proven way to build good habits and break bad ones.',
+      published_year: 2018
+    },
+    {
+      title: 'Deep Work',
+      author: 'Cal Newport',
+      isbn: '9781455586691',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781455586691-L.jpg',
+      category_id: catMap.get('computer-science'),
+      tags: ['productivity', 'focus', 'self-help'],
+      location: 'Shelf A5',
+      section: 'Self Help',
+      dewey_decimal: '650.1',
+      description: 'Rules for focused success in a distracted world.',
+      published_year: 2016
     }
   ];
 
@@ -480,11 +810,31 @@ export async function seedCatalog(supabase: SupabaseClient) {
 
   logInfo('🌱 Inserting book copies (all marked as AVAILABLE)...');
   const copies: { book_id: string; condition: string; status: string }[] = [];
+  
   for (const book of bookData) {
-    copies.push({ book_id: book.id, condition: 'New', status: 'AVAILABLE' });
-    copies.push({ book_id: book.id, condition: 'Good', status: 'AVAILABLE' });
-    copies.push({ book_id: book.id, condition: 'Good', status: 'AVAILABLE' });
-    copies.push({ book_id: book.id, condition: 'Fair', status: 'MAINTENANCE' });
+    // Choose number of copies dynamically based on title popularity
+    let numCopies = 3;
+    if (['Clean Code', 'Introduction to Algorithms', 'Atomic Habits', 'The Design of Everyday Things'].includes(book.title)) {
+      numCopies = 5;
+    } else if (['Linear Algebra Done Right', 'Gödel, Escher, Bach: An Eternal Golden Braid', 'A Promised Land'].includes(book.title)) {
+      numCopies = 2;
+    } else if (['Calculus Vol 1'].includes(book.title)) {
+      numCopies = 1;
+    }
+
+    for (let i = 0; i < numCopies; i++) {
+      let condition = 'Good';
+      if (i === 0) {
+        condition = 'New';
+      } else if (i === numCopies - 1 && numCopies > 2) {
+        condition = 'Fair';
+      } else if (i === 1) {
+        condition = 'Good';
+      } else {
+        condition = 'Worn';
+      }
+      copies.push({ book_id: book.id, condition, status: 'AVAILABLE' });
+    }
   }
 
   const { data: insertedCopies, error: copyError } = await supabase
@@ -558,145 +908,96 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     return list && list[index] ? list[index].id : null;
   };
 
-  const copyCleanCodeId = getCopyId('Clean Code', 0);
-  const copyPragmaticId = getCopyId('The Pragmatic Programmer', 0);
-  const copyAlgorithmsId = getCopyId('Introduction to Algorithms', 0);
-  const copyDataIntensiveId = getCopyId('Designing Data-Intensive Applications', 0);
-  const copyCalculusId = getCopyId('Calculus Vol 1', 0);
-  const copyLinearAlgebraId = getCopyId('Linear Algebra and Its Applications', 0);
-  const copyBriefHistoryId = getCopyId('A Brief History of Time', 0);
-  const copySelfishGeneId = getCopyId('The Selfish Gene', 0);
-
   const now = new Date();
-  const dueFuture1 = new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toISOString();
-  const dueFuture2 = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString();
-  const dueFuture3 = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000).toISOString();
-  const dueFuture4 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
-
-  const borrowPast1 = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString();
-  const duePast1 = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
-  const returnPast1 = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
-
-  const borrowPast2 = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString();
-  const duePast2 = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString();
-  const returnPast2 = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString();
-
-  const borrowPast3 = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString();
-  const duePast3 = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString();
-  const returnPast3 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  const borrowPast4 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString();
-  const duePast4 = new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000).toISOString();
-  const returnPast4 = new Date(now.getTime()).toISOString();
-
-  const borrowsToSeed: {
-    user_id: string;
-    book_copy_id: string;
-    processed_by: string;
-    borrowed_at: string;
-    due_date: string;
-    status: string;
-    returned_at?: string | null;
-    returned_by?: string | null;
-  }[] = [];
+  const borrowsToSeed: any[] = [];
   const activeCopiesToUpdate: string[] = [];
 
-  if (copyCleanCodeId) {
-    borrowsToSeed.push({
-      user_id: profileIds.godwynStudent,
-      book_copy_id: copyCleanCodeId,
-      processed_by: profileIds.rhedLibrarian,
-      borrowed_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      due_date: dueFuture1,
-      status: 'ACTIVE'
-    });
-    activeCopiesToUpdate.push(copyCleanCodeId);
+  // Active Borrows (due in the future)
+  const activeConfigs = [
+    { title: 'Clean Code', copyIdx: 0, student: 'godwynStudent', daysAgo: 2, dueDays: 12 },
+    { title: 'Deep Work', copyIdx: 0, student: 'godwynStudent', daysAgo: 4, dueDays: 10 },
+    { title: 'Calculus Vol 1', copyIdx: 0, student: 'kayleStudent', daysAgo: 1, dueDays: 13 },
+    { title: 'A Brief History of Time', copyIdx: 0, student: 'jericoSA', daysAgo: 3, dueDays: 11 },
+    { title: 'Introduction to Algorithms', copyIdx: 0, student: 'luminaSA', daysAgo: 4, dueDays: 10 },
+    { title: 'Designing Data-Intensive Applications', copyIdx: 0, student: 'luminaSA', daysAgo: 5, dueDays: 9 },
+    { title: 'The Design of Everyday Things', copyIdx: 0, student: 'kennethAdmin', daysAgo: 2, dueDays: 12 },
+  ];
+
+  for (const conf of activeConfigs) {
+    const copyId = getCopyId(conf.title, conf.copyIdx);
+    if (copyId) {
+      borrowsToSeed.push({
+        user_id: (profileIds as any)[conf.student],
+        book_copy_id: copyId,
+        processed_by: profileIds.rhedLibrarian,
+        borrowed_at: new Date(now.getTime() - conf.daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+        due_date: new Date(now.getTime() + conf.dueDays * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'ACTIVE'
+      });
+      activeCopiesToUpdate.push(copyId);
+    }
   }
 
-  if (copyCalculusId) {
-    borrowsToSeed.push({
-      user_id: profileIds.kayleStudent,
-      book_copy_id: copyCalculusId,
-      processed_by: profileIds.luminaLibrarian,
-      borrowed_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      due_date: dueFuture2,
-      status: 'ACTIVE'
-    });
-    activeCopiesToUpdate.push(copyCalculusId);
+  // Overdue Borrows (due in the past)
+  const overdueConfigs = [
+    { title: 'The Pragmatic Programmer', copyIdx: 1, student: 'godwynStudent', daysAgo: 20, dueDaysAgo: 6 },
+    { title: 'Zero to One', copyIdx: 0, student: 'kayleStudent', daysAgo: 25, dueDaysAgo: 11 },
+    { title: 'Atomic Habits', copyIdx: 1, student: 'kennethAdmin', daysAgo: 30, dueDaysAgo: 16 },
+  ];
+
+  for (const conf of overdueConfigs) {
+    const copyId = getCopyId(conf.title, conf.copyIdx);
+    if (copyId) {
+      borrowsToSeed.push({
+        user_id: (profileIds as any)[conf.student],
+        book_copy_id: copyId,
+        processed_by: profileIds.luminaLibrarian,
+        borrowed_at: new Date(now.getTime() - conf.daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+        due_date: new Date(now.getTime() - conf.dueDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'OVERDUE'
+      });
+      activeCopiesToUpdate.push(copyId);
+    }
   }
 
-  if (copyBriefHistoryId) {
-    borrowsToSeed.push({
-      user_id: profileIds.jericoSA,
-      book_copy_id: copyBriefHistoryId,
-      processed_by: profileIds.rhedLibrarian,
-      borrowed_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      due_date: dueFuture3,
-      status: 'ACTIVE'
-    });
-    activeCopiesToUpdate.push(copyBriefHistoryId);
-  }
+  // Returned Borrows (completed borrows - 20 records)
+  const returnedConfigs = [
+    { title: 'The Pragmatic Programmer', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 35, returnDaysAgo: 21 },
+    { title: 'Refactoring: Improving the Design of Existing Code', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 22, returnDaysAgo: 10 },
+    { title: 'Design Patterns: Elements of Reusable Object-Oriented Software', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 28, returnDaysAgo: 14 },
+    { title: 'Linear Algebra and Its Applications', copyIdx: 0, student: 'luminaSA', borrowDaysAgo: 19, returnDaysAgo: 5 },
+    { title: 'The Selfish Gene', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 18, returnDaysAgo: 4 },
+    { title: 'Cosmos', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 17, returnDaysAgo: 3 },
+    { title: 'To Kill a Mockingbird', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 16, returnDaysAgo: 2 },
+    { title: '1984', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 15, returnDaysAgo: 1 },
+    { title: 'The Great Gatsby', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 14, returnDaysAgo: 0 },
+    { title: 'Brave New World', copyIdx: 0, student: 'luminaSA', borrowDaysAgo: 13, returnDaysAgo: 2 },
+    { title: 'The Hobbit', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 12, returnDaysAgo: 3 },
+    { title: 'Sapiens: A Brief History of Humankind', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 11, returnDaysAgo: 4 },
+    { title: 'The Diary of a Young Girl', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 10, returnDaysAgo: 2 },
+    { title: 'Guns, Germs, and Steel', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 9, returnDaysAgo: 1 },
+    { title: 'Steve Jobs', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 8, returnDaysAgo: 0 },
+    { title: 'Thinking, Fast and Slow', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 7, returnDaysAgo: 1 },
+    { title: 'The Intelligent Investor', copyIdx: 0, student: 'luminaSA', borrowDaysAgo: 6, returnDaysAgo: 2 },
+    { title: 'The Lean Startup', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 5, returnDaysAgo: 1 },
+    { title: 'The Republic', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 4, returnDaysAgo: 0 },
+    { title: 'Meditations', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 3, returnDaysAgo: 1 },
+  ];
 
-  if (copyAlgorithmsId) {
-    borrowsToSeed.push({
-      user_id: profileIds.luminaSA,
-      book_copy_id: copyAlgorithmsId,
-      processed_by: profileIds.luminaLibrarian,
-      borrowed_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      due_date: dueFuture4,
-      status: 'ACTIVE'
-    });
-    activeCopiesToUpdate.push(copyAlgorithmsId);
-  }
-
-  // Returned records
-  if (copyPragmaticId) {
-    borrowsToSeed.push({
-      user_id: profileIds.godwynStudent,
-      book_copy_id: copyPragmaticId,
-      processed_by: profileIds.rhedLibrarian,
-      borrowed_at: borrowPast1,
-      due_date: duePast1,
-      returned_at: returnPast1,
-      returned_by: profileIds.rhedLibrarian,
-      status: 'RETURNED'
-    });
-  }
-  if (copySelfishGeneId) {
-    borrowsToSeed.push({
-      user_id: profileIds.kayleStudent,
-      book_copy_id: copySelfishGeneId,
-      processed_by: profileIds.luminaLibrarian,
-      borrowed_at: borrowPast2,
-      due_date: duePast2,
-      returned_at: returnPast2,
-      returned_by: profileIds.luminaLibrarian,
-      status: 'RETURNED'
-    });
-  }
-  if (copyDataIntensiveId) {
-    borrowsToSeed.push({
-      user_id: profileIds.luminaSA,
-      book_copy_id: copyDataIntensiveId,
-      processed_by: profileIds.rhedLibrarian,
-      borrowed_at: borrowPast3,
-      due_date: duePast3,
-      returned_at: returnPast3,
-      returned_by: profileIds.rhedLibrarian,
-      status: 'RETURNED'
-    });
-  }
-  if (copyLinearAlgebraId) {
-    borrowsToSeed.push({
-      user_id: profileIds.rhedLibrarian,
-      book_copy_id: copyLinearAlgebraId,
-      processed_by: profileIds.luminaLibrarian,
-      borrowed_at: borrowPast4,
-      due_date: duePast4,
-      returned_at: returnPast4,
-      returned_by: profileIds.luminaLibrarian,
-      status: 'RETURNED'
-    });
+  for (const conf of returnedConfigs) {
+    const copyId = getCopyId(conf.title, conf.copyIdx);
+    if (copyId) {
+      borrowsToSeed.push({
+        user_id: (profileIds as any)[conf.student],
+        book_copy_id: copyId,
+        processed_by: profileIds.rhedLibrarian,
+        borrowed_at: new Date(now.getTime() - conf.borrowDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
+        due_date: new Date(now.getTime() - (conf.borrowDaysAgo - 14) * 24 * 60 * 60 * 1000).toISOString(),
+        returned_at: new Date(now.getTime() - conf.returnDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
+        returned_by: profileIds.rhedLibrarian,
+        status: 'RETURNED'
+      });
+    }
   }
 
   if (borrowsToSeed.length > 0) {
@@ -723,150 +1024,269 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
         logInfo('✅ Updated borrowed copies status to BORROWED');
       }
     }
-
   }
 
   // Reservations
+  const bookRefactoring = books.find(b => b.title === 'Refactoring: Improving the Design of Existing Code');
+  const bookSteveJobs = books.find(b => b.title === 'Steve Jobs');
   const bookCleanCode = books.find(b => b.title === 'Clean Code');
-  const bookCalculus = books.find(b => b.title === 'Calculus Vol 1');
   const bookSapiens = books.find(b => b.title === 'Sapiens: A Brief History of Humankind');
 
-  const reservationsToSeed: {
-    user_id: string;
-    book_id: string;
-    status: string;
-    queue_position: number;
-    reserved_at: string;
-    fulfilled_at?: string | null;
-    copy_id?: string | null;
-  }[] = [];
-  if (bookCalculus) {
+  const refactoringCopies = bookCopiesMap['Refactoring: Improving the Design of Existing Code'] || [];
+  const cleanCodeCopies = bookCopiesMap['Clean Code'] || [];
+  const sapiensCopies = bookCopiesMap['Sapiens: A Brief History of Humankind'] || [];
+
+  const reservationsToSeed: any[] = [];
+  const reservedCopiesToUpdate: string[] = [];
+
+  if (bookRefactoring && refactoringCopies[1]) {
+    reservationsToSeed.push({
+      user_id: profileIds.kayleStudent,
+      book_id: bookRefactoring.id,
+      copy_id: refactoringCopies[1].id,
+      status: 'READY',
+      queue_position: 1,
+      reserved_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      hold_expires_at: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
+    });
     reservationsToSeed.push({
       user_id: profileIds.godwynStudent,
-      book_id: bookCalculus.id,
+      book_id: bookRefactoring.id,
+      status: 'ACTIVE',
+      queue_position: 2,
+      reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    reservedCopiesToUpdate.push(refactoringCopies[1].id);
+  }
+
+  if (bookSteveJobs) {
+    reservationsToSeed.push({
+      user_id: profileIds.jericoSA,
+      book_id: bookSteveJobs.id,
       status: 'ACTIVE',
       queue_position: 1,
       reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
     });
   }
-  if (bookCleanCode) {
-    const cleanCodeCopy2 = getCopyId('Clean Code', 1);
+
+  if (bookCleanCode && cleanCodeCopies[1]) {
     reservationsToSeed.push({
       user_id: profileIds.kayleStudent,
       book_id: bookCleanCode.id,
+      copy_id: cleanCodeCopies[1].id,
       status: 'FULFILLED',
-      copy_id: cleanCodeCopy2,
       queue_position: 1,
-      reserved_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      fulfilled_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      reserved_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      fulfilled_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
     });
   }
-  if (bookSapiens) {
+
+  if (bookSapiens && sapiensCopies[1]) {
     reservationsToSeed.push({
-      user_id: profileIds.jericoSA,
+      user_id: profileIds.godwynStudent,
       book_id: bookSapiens.id,
-      status: 'ACTIVE',
+      copy_id: sapiensCopies[1].id,
+      status: 'EXPIRED',
       queue_position: 1,
-      reserved_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      reserved_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      hold_expires_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
     });
   }
 
   if (reservationsToSeed.length > 0) {
     const { error: reservationError } = await supabase.from('reservations').insert(reservationsToSeed);
-    if (reservationError) logInfo(`❌ Error seeding reservations: ${reservationError.message}`);
-    else logInfo('✅ Seeded reservations');
+    if (reservationError) {
+      logInfo(`❌ Error seeding reservations: ${reservationError.message}`);
+    } else {
+      logInfo('✅ Seeded reservations');
+    }
   }
 
-  // Attendance
-  const attendanceToSeed = [
+  if (reservedCopiesToUpdate.length > 0) {
+    const { error: updateReservedError } = await supabase
+      .from('book_copies')
+      .update({ status: 'RESERVED' })
+      .in('id', reservedCopiesToUpdate);
+    if (updateReservedError) {
+      logInfo(`❌ Error updating reserved copies status: ${updateReservedError.message}`);
+    } else {
+      logInfo('✅ Updated reserved book copies status to RESERVED');
+    }
+  }
+
+  // Attendance (30 completed records over past 15 days)
+  const attendanceToSeed: any[] = [];
+  const profilesForAttendance = [
+    profileIds.godwynStudent,
+    profileIds.kayleStudent,
+    profileIds.jericoSA,
+    profileIds.luminaSA,
+    profileIds.rhedLibrarian
+  ];
+  
+  for (let d = 1; d <= 15; d++) {
+    const dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
+    const index1 = (d * 3) % profilesForAttendance.length;
+    const index2 = (d * 7 + 1) % profilesForAttendance.length;
+    
+    const checkIn1 = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 8 + (d % 3), d % 60);
+    const checkOut1 = new Date(checkIn1.getTime() + (3 + (d % 4)) * 60 * 60 * 1000);
+    
+    const checkIn2 = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 13 + (d % 2), (d * 5) % 60);
+    const checkOut2 = new Date(checkIn2.getTime() + (2 + (d % 3)) * 60 * 60 * 1000);
+    
+    attendanceToSeed.push({
+      user_id: profilesForAttendance[index1],
+      check_in_at: checkIn1.toISOString(),
+      check_out_at: checkOut1.toISOString(),
+      notes: d % 3 === 0 ? 'Study session' : d % 3 === 1 ? 'Research work' : 'Group meeting'
+    });
+    
+    attendanceToSeed.push({
+      user_id: profilesForAttendance[index2],
+      check_in_at: checkIn2.toISOString(),
+      check_out_at: checkOut2.toISOString(),
+      notes: d % 2 === 0 ? 'Library assistant duty' : 'Studying calculus'
+    });
+  }
+
+  const { error: attendanceError } = await supabase.from('attendance').insert(attendanceToSeed);
+  if (attendanceError) {
+    logInfo(`❌ Error seeding attendance: ${attendanceError.message}`);
+  } else {
+    logInfo('✅ Seeded completed attendance records');
+  }
+
+  // Notifications (5 records)
+  const notificationsToSeed = [
     {
       user_id: profileIds.godwynStudent,
-      check_in_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000 - 8 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000).toISOString(),
-      notes: 'Study session'
+      title: 'Welcome to Lumina Library!',
+      content: 'Your digital library card is now active. Explore the catalog and enjoy borrowing resources.',
+      type: 'SYSTEM',
+      priority: 'medium',
+      is_read: true,
+      metadata: {}
     },
     {
       user_id: profileIds.godwynStudent,
-      check_in_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000 - 7 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000).toISOString(),
-      notes: 'Group project research'
+      title: 'Book Borrow Confirmed',
+      content: 'You have borrowed "Clean Code". It is due on ' + new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toLocaleDateString() + '.',
+      type: 'CIRCULATION',
+      priority: 'medium',
+      is_read: false,
+      metadata: {}
+    },
+    {
+      user_id: profileIds.godwynStudent,
+      title: 'OVERDUE NOTICE: "The Pragmatic Programmer"',
+      content: 'The copy of "The Pragmatic Programmer" you borrowed was due on ' + new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toLocaleDateString() + '. Please return it immediately to avoid account suspension.',
+      type: 'CIRCULATION',
+      priority: 'high',
+      is_read: false,
+      metadata: {}
     },
     {
       user_id: profileIds.kayleStudent,
-      check_in_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000 - 6 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000).toISOString(),
-      notes: 'Calculus assignment work'
+      title: 'Reservation Ready for Pickup',
+      content: 'Your reservation for "Refactoring" is ready. You have until ' + new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toLocaleDateString() + ' to pick it up at the circulation desk.',
+      type: 'CIRCULATION',
+      priority: 'high',
+      is_read: false,
+      metadata: {}
     },
     {
-      user_id: profileIds.kayleStudent,
-      check_in_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000).toISOString(),
-      notes: 'Reading'
-    },
-    {
-      user_id: profileIds.jericoSA,
-      check_in_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000 - 9 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000).toISOString(),
-      notes: 'Library duty shift'
-    },
-    {
-      user_id: profileIds.jericoSA,
-      check_in_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 - 8 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000).toISOString(),
-      notes: 'Shelf organizing shift'
-    },
-    {
-      user_id: profileIds.luminaSA,
-      check_in_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 - 9 * 60 * 60 * 1000).toISOString(),
-      check_out_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000).toISOString(),
-      notes: 'Morning shift'
+      user_id: profileIds.kennethAdmin,
+      title: 'System Policy Setting Updated',
+      content: 'Admin Lumina Admin updated key: "loan_period_days" to "14".',
+      type: 'SYSTEM',
+      priority: 'low',
+      is_read: true,
+      metadata: {}
     }
   ];
 
-  const { error: attendanceError } = await supabase.from('attendance').insert(attendanceToSeed);
-  if (attendanceError) logInfo(`❌ Error seeding attendance: ${attendanceError.message}`);
-  else logInfo('✅ Seeded completed attendance records');
+  const { error: notificationError } = await supabase.from('notifications').insert(notificationsToSeed);
+  if (notificationError) {
+    logInfo(`❌ Error seeding notifications: ${notificationError.message}`);
+  } else {
+    logInfo('✅ Seeded notifications');
+  }
 
-
-
-  // Reports
-  if (bookCleanCode && bookCalculus) {
+  // Reports (3 damage reports)
+  const bookCleanCodeObj = books.find(b => b.title === 'Clean Code');
+  const bookCalculusObj = books.find(b => b.title === 'Calculus Vol 1');
+  if (bookCleanCodeObj && bookCalculusObj && bookSteveJobs) {
     const reportsToSeed = [
       {
-        book_id: bookCleanCode.id,
+        book_id: bookCleanCodeObj.id,
         user_id: profileIds.godwynStudent,
         notes: 'Pages 102 to 110 are heavily smeared with ink and illegible. Reporting for review.',
         status: 'resolved',
         created_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        book_id: bookCalculus.id,
+        book_id: bookCalculusObj.id,
         user_id: profileIds.kayleStudent,
         notes: 'The front cover page is partially torn off.',
         status: 'pending',
         created_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        book_id: bookSteveJobs.id,
+        user_id: profileIds.jericoSA,
+        notes: 'Water damage detected on the last 20 pages, pages are warped but readable.',
+        status: 'pending',
+        created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
 
     const { error: reportError } = await supabase.from('reports').insert(reportsToSeed);
-    if (reportError) logInfo(`❌ Error seeding reports: ${reportError.message}`);
-    else logInfo('✅ Seeded reports');
+    if (reportError) {
+      logInfo(`❌ Error seeding reports: ${reportError.message}`);
+    } else {
+      logInfo('✅ Seeded reports');
+    }
   }
 
-  // Audit Logs
+  // Audit Logs (4 logs)
   const auditLogsToSeed = [
+    {
+      admin_id: profileIds.luminaAdmin,
+      entity_type: 'books',
+      action: 'CREATE_BOOK',
+      reason: 'Standard catalog initialization',
+      details: { count: books.length }
+    },
     {
       admin_id: profileIds.luminaAdmin,
       entity_type: 'system_settings',
       action: 'UPDATE_SYSTEM_SETTINGS',
       reason: 'Revised loan policy per admin instruction',
       details: { key: 'loan_period_days', value: '14' }
+    },
+    {
+      admin_id: profileIds.kennethAdmin,
+      entity_type: 'profiles',
+      action: 'UPDATE_USER_ROLE',
+      reason: 'Promoted to Student Assistant role',
+      details: { user_id: profileIds.jericoSA, role: 'student_assistant' }
+    },
+    {
+      admin_id: profileIds.rhedLibrarian,
+      entity_type: 'books',
+      action: 'UPDATE_BOOK_DETAILS',
+      reason: 'Updated location shelf coordinates',
+      details: { book_title: 'The Design of Everyday Things', old_location: 'Shelf H1', new_location: 'Shelf H1-A' }
     }
   ];
 
   const { error: auditError } = await supabase.from('audit_logs').insert(auditLogsToSeed);
-  if (auditError) logInfo(`❌ Error seeding audit logs: ${auditError.message}`);
-  else logInfo('✅ Seeded audit logs');
+  if (auditError) {
+    logInfo(`❌ Error seeding audit logs: ${auditError.message}`);
+  } else {
+    logInfo('✅ Seeded audit logs');
+  }
 
   logInfo('✨ Operational history and logs seeding completed successfully!');
   return log;
@@ -892,6 +1312,7 @@ export async function seedDatabase(supabase: SupabaseClient) {
 
   // Add Announcements
   logInfo('🌱 Adding announcements...');
+  const now = new Date();
   const announcementsToSeed = [
     {
       title: 'Lumina Library System Upgrade',
@@ -899,7 +1320,7 @@ export async function seedDatabase(supabase: SupabaseClient) {
       priority: 'medium',
       is_active: true,
       target_role: null,
-      starts_at: new Date().toISOString(),
+      starts_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: profileIds.luminaAdmin
     },
     {
@@ -908,7 +1329,7 @@ export async function seedDatabase(supabase: SupabaseClient) {
       priority: 'high',
       is_active: true,
       target_role: 'student',
-      starts_at: new Date().toISOString(),
+      starts_at: new Date(now.getTime()).toISOString(),
       created_by: profileIds.rhedLibrarian
     },
     {
@@ -917,8 +1338,17 @@ export async function seedDatabase(supabase: SupabaseClient) {
       priority: 'medium',
       is_active: true,
       target_role: 'librarian',
-      starts_at: new Date().toISOString(),
+      starts_at: new Date(now.getTime()).toISOString(),
       created_by: profileIds.luminaAdmin
+    },
+    {
+      title: 'Urgent: Maintenance in West Wing Study Area',
+      content: 'Due to air conditioning repairs, the West Wing study room will be closed this Wednesday. Please use main hall study desks.',
+      priority: 'critical',
+      is_active: true,
+      target_role: null,
+      starts_at: new Date(now.getTime()).toISOString(),
+      created_by: profileIds.kennethAdmin
     }
   ];
 
@@ -946,7 +1376,8 @@ export async function seedDatabase(supabase: SupabaseClient) {
     { type: 'module', value: 'Announcements' },
     { type: 'module', value: 'Reports' },
     { type: 'module', value: 'Settings' },
-    { type: 'module', value: 'Dashboard' }
+    { type: 'module', value: 'Dashboard' },
+    { type: 'module', value: 'Penalties' }
   ];
   const { error: optionsError } = await supabase
     .from('checklist_dropdown_options')
@@ -962,7 +1393,9 @@ export async function seedDatabase(supabase: SupabaseClient) {
   const itemsToSeed = [
     { problem: 'UI overflow in catalog cards on mobile screens', explanation: 'The tags section stretches too wide and breaks the grid layout.', user_role: 'student', module: 'Catalog', is_completed: false },
     { problem: 'Session timeout occurs too quickly during scan operations', explanation: 'Librarians get logged out during continuous book checking scans.', user_role: 'librarian', module: 'Circulation', is_completed: true },
-    { problem: 'Audit logs fail to capture custom settings change events', explanation: 'Changing settings through the admin dashboard settings page is not logging correctly.', user_role: 'super_admin', module: 'Settings', is_completed: false }
+    { problem: 'Audit logs fail to capture custom settings change events', explanation: 'Changing settings through the admin dashboard settings page is not logging correctly.', user_role: 'super_admin', module: 'Settings', is_completed: false },
+    { problem: 'Overdue auto-status update cron fails intermittently', explanation: 'Some profiles do not get marked as suspended when having 3+ overdue items.', user_role: 'super_admin', module: 'Penalties', is_completed: false },
+    { problem: 'QR scanner camera fails to open on Safari (iOS)', explanation: 'Permission request prompts do not trigger on Safari browsers.', user_role: 'student_assistant', module: 'Circulation', is_completed: false }
   ];
   const { error: itemsError } = await supabase
     .from('checklist_items')

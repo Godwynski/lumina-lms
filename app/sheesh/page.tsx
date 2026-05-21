@@ -470,6 +470,7 @@ export default function SheeshPage() {
     
     const config = ACTIONS_CONFIG[devActionType];
     setShowConfirmModal(false);
+    setIsSettingsOpen(true);
     setIsRunningDevAction(true);
     setDevStatus("RUNNING");
     setDevLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] 🚀 Running: ${config.title}...`]);
@@ -545,7 +546,7 @@ export default function SheeshPage() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 pt-10">
         
         {/* Simple Minimalist Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-primary/10 rounded-lg">
               <ListTodo className="w-5 h-5 text-primary" />
@@ -557,13 +558,33 @@ export default function SheeshPage() {
               <p className="text-xs text-muted-foreground">Log, filter, and track system issues in real-time.</p>
             </div>
           </div>
-          <Link 
-            href="/dashboard" 
-            className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border/40 bg-card/45 hover:bg-card/85"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Exit Dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDevActionClick("seed")}
+              disabled={isRunningDevAction}
+              className="text-xs font-semibold h-9 px-3.5 border-border hover:bg-muted/40"
+            >
+              Seed
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDevActionClick("clear")}
+              disabled={isRunningDevAction}
+              className="text-xs font-semibold h-9 px-3.5 border-rose-500/20 text-rose-500 hover:bg-rose-500/5 hover:text-rose-600 transition-colors"
+            >
+              Clean
+            </Button>
+            <Link 
+              href="/dashboard" 
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border/40 bg-card/45 hover:bg-card/85"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Exit Dashboard
+            </Link>
+          </div>
         </div>
 
         {/* Compact Metrics Dashboard Cards */}

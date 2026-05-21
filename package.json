@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
-    "seed": "ts-node -T scripts/seed.ts"
+    "seed": "ts-node -T scripts/seed.ts",
+    "clean": "ts-node -T scripts/clean.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
