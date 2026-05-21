@@ -24,7 +24,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     example: "Example: 14 days.",
     category: "circulation",
     icon: "Calendar",
-    validation: { min: 1, max: 180, type: "number" }
+    validation: { min: 1, max: 90, type: "number" }
   },
   max_borrow_limit: { 
     value: "5", 
@@ -33,7 +33,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     example: "Example: 5 books.",
     category: "circulation",
     icon: "BookCopy",
-    validation: { min: 1, max: 50, type: "number" }
+    validation: { min: 1, max: 20, type: "number" }
   },
   hold_expiry_days: { 
     value: "7", 
@@ -42,7 +42,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     example: "Example: 7 days.",
     category: "reservations",
     icon: "Clock",
-    validation: { min: 1, max: 30, type: "number" }
+    validation: { min: 1, max: 14, type: "number" }
   },
   max_reservations_per_student: { 
     value: "3", 
@@ -51,7 +51,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     example: "Example: 3 books.",
     category: "reservations",
     icon: "Ticket",
-    validation: { min: 1, max: 20, type: "number" }
+    validation: { min: 1, max: 10, type: "number" }
   },
   student_faq_list: { 
     value: JSON.stringify([
@@ -83,7 +83,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     example: "Example: 1 day.",
     category: "broadcasts",
     icon: "Megaphone",
-    validation: { min: 1, max: 14, type: "number" }
+    validation: { min: 1, max: 7, type: "number" }
   }
 };
 
