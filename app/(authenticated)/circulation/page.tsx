@@ -17,7 +17,7 @@ export default function CirculationPage() {
 
 function CirculationPageSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-pulse">
+    <div className="w-full space-y-6 animate-pulse">
       <div className="flex justify-between items-center border-b pb-2.5">
         <Skeleton className="h-10 w-48 rounded-2xl ml-auto" />
       </div>

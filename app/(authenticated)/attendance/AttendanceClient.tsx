@@ -232,7 +232,7 @@ export function AttendanceClient({
 
   if (isStaff) {
     return (
-      <div className="mx-auto w-full max-w-5xl space-y-6">
+      <div className="w-full space-y-6">
 
 
         <AdminTableShell
@@ -269,7 +269,7 @@ export function AttendanceClient({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="w-full">
       <AdminTableShell
         controls={
           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">

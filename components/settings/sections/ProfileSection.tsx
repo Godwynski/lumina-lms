@@ -25,7 +25,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
 
 
   return (
-    <div className="w-full max-w-5xl mx-auto pb-12">
+    <div className="w-full pb-12">
       <Section>
         <div className="grid gap-6">
           {/* Profile Section Content */}

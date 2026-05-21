@@ -10,7 +10,7 @@ interface SecuritySectionProps {
 
 export function SecuritySection({ role }: SecuritySectionProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto pb-12">
+    <div className="w-full pb-12">
       <div className="grid gap-6">
 
         {/* Identity & Access Card */}

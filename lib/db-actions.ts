@@ -909,7 +909,16 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
   };
 
   const now = new Date();
-  const borrowsToSeed: any[] = [];
+  const borrowsToSeed: {
+    user_id: string;
+    book_copy_id: string;
+    processed_by: string;
+    borrowed_at: string;
+    due_date: string;
+    status: string;
+    returned_at?: string;
+    returned_by?: string;
+  }[] = [];
   const activeCopiesToUpdate: string[] = [];
 
   // Active Borrows (due in the future)
@@ -927,7 +936,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     const copyId = getCopyId(conf.title, conf.copyIdx);
     if (copyId) {
       borrowsToSeed.push({
-        user_id: (profileIds as any)[conf.student],
+        user_id: profileIds[conf.student as keyof typeof profileIds],
         book_copy_id: copyId,
         processed_by: profileIds.rhedLibrarian,
         borrowed_at: new Date(now.getTime() - conf.daysAgo * 24 * 60 * 60 * 1000).toISOString(),
@@ -949,7 +958,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     const copyId = getCopyId(conf.title, conf.copyIdx);
     if (copyId) {
       borrowsToSeed.push({
-        user_id: (profileIds as any)[conf.student],
+        user_id: profileIds[conf.student as keyof typeof profileIds],
         book_copy_id: copyId,
         processed_by: profileIds.luminaLibrarian,
         borrowed_at: new Date(now.getTime() - conf.daysAgo * 24 * 60 * 60 * 1000).toISOString(),
@@ -988,7 +997,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     const copyId = getCopyId(conf.title, conf.copyIdx);
     if (copyId) {
       borrowsToSeed.push({
-        user_id: (profileIds as any)[conf.student],
+        user_id: profileIds[conf.student as keyof typeof profileIds],
         book_copy_id: copyId,
         processed_by: profileIds.rhedLibrarian,
         borrowed_at: new Date(now.getTime() - conf.borrowDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
@@ -1036,7 +1045,16 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
   const cleanCodeCopies = bookCopiesMap['Clean Code'] || [];
   const sapiensCopies = bookCopiesMap['Sapiens: A Brief History of Humankind'] || [];
 
-  const reservationsToSeed: any[] = [];
+  const reservationsToSeed: {
+    user_id: string;
+    book_id: string;
+    copy_id?: string;
+    status: string;
+    queue_position: number;
+    reserved_at: string;
+    hold_expires_at?: string;
+    fulfilled_at?: string;
+  }[] = [];
   const reservedCopiesToUpdate: string[] = [];
 
   if (bookRefactoring && refactoringCopies[1]) {
@@ -1115,7 +1133,12 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
   }
 
   // Attendance (30 completed records over past 15 days)
-  const attendanceToSeed: any[] = [];
+  const attendanceToSeed: {
+    user_id: string;
+    check_in_at: string;
+    check_out_at?: string;
+    notes?: string;
+  }[] = [];
   const profilesForAttendance = [
     profileIds.godwynStudent,
     profileIds.kayleStudent,

@@ -271,7 +271,7 @@ export function CirculationWizard() {
   };
 
   return (
-    <div className="max-w-[850px] mx-auto space-y-8 pb-12">
+    <div className="w-full space-y-8 pb-12">
       {/* Centered Compact Stepper */}
       <div className="bg-card/30 border border-border/10 rounded-2xl p-6 pb-10 backdrop-blur-sm">
         <CirculationStepper steps={steps} currentStep={currentStep} />

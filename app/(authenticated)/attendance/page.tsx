@@ -22,7 +22,8 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   const viewParam = typeof resolvedParams.view === 'string' ? resolvedParams.view : '';
 
   const hasAttendancePerm = me.hasPermission('manage_attendance') && !me.isDeactivatedSA;
-  const showSystemLogs = hasAttendancePerm && viewParam === 'logs';
+  const isStaff = me.role === 'super_admin' || me.role === 'librarian';
+  const showSystemLogs = hasAttendancePerm && (viewParam === 'logs' || isStaff);
 
   const systemTodayPromise = showSystemLogs ? getAttendanceHistory(undefined) : undefined;
   const personalHistoryPromise = getAttendanceHistory(me.user.id);
@@ -41,7 +42,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
 
 function AttendanceSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 animate-pulse">
+    <div className="w-full space-y-6 animate-pulse">
 
       <div className="h-12 w-full bg-muted/30 rounded-2xl" />
       <div className="rounded-2xl border border-border/10 bg-card/50 overflow-hidden">

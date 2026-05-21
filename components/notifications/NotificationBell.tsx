@@ -31,6 +31,7 @@ export function NotificationBell() {
           variant="ghost" 
           size="icon" 
           className="relative h-10 w-10 rounded-xl hover:bg-primary/5 hover:text-primary transition-all active:scale-95"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -80,12 +81,11 @@ export function NotificationBell() {
         <DropdownMenuSeparator className="m-0 opacity-50" />
         
         <div className="p-3 bg-muted/5">
-          <Link href="/notifications" className="block">
-            <button 
-              className="w-full py-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-primary transition-all text-center"
-            >
-              Expand Activity Log
-            </button>
+          <Link 
+            href="/notifications" 
+            className="block w-full py-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-primary transition-all text-center"
+          >
+            Expand Activity Log
           </Link>
         </div>
       </DropdownMenuContent>

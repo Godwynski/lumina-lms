@@ -197,7 +197,7 @@ export function PolicyLayout({
   const activeKeys = Object.keys(DEFAULT_POLICIES).filter(k => DEFAULT_POLICIES[k as keyof typeof DEFAULT_POLICIES].category === activeCategory);
 
   return (
-    <div className="w-full max-w-6xl mx-auto pb-12">
+    <div className="w-full pb-12">
       <div className="mb-4 space-y-2">
 
         {saved && (

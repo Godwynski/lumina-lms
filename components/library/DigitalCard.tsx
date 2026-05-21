@@ -22,6 +22,7 @@ interface DigitalCardProps {
   cardId?: string;
   academicYear?: string;
   roleLabel?: string;
+  onQrClick?: () => void;
 }
 
 
@@ -41,16 +42,15 @@ export default function DigitalCard({
   cardId,
   academicYear,
   roleLabel,
+  onQrClick,
 }: DigitalCardProps) {
   if (side === "back") {
     return (
       <CardBack
-        cardNumber={cardNumber}
         address={address}
         phone={phone}
         exportMode={exportMode}
         cardId={cardId}
-        studentId={studentId}
         roleLabel={roleLabel}
       />
     );
@@ -69,6 +69,7 @@ export default function DigitalCard({
       exportMode={exportMode}
       cardId={cardId}
       academicYear={academicYear}
+      onQrClick={onQrClick}
     />
   );
 }
@@ -83,6 +84,7 @@ function CardFront({
   exportMode,
   cardId,
   academicYear,
+  onQrClick,
 }: Omit<DigitalCardProps, "side">) {
   const statusConfig = {
     active: "status-success",
@@ -156,7 +158,16 @@ function CardFront({
           </div>
 
           <div className="flex flex-col items-center justify-start gap-1.5 sm:gap-2">
-            <div className="w-full border border-foreground bg-card p-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)]">
+            <button
+              type="button"
+              onClick={onQrClick}
+              disabled={!onQrClick}
+              aria-label="Expand QR code"
+              className={cn(
+                "w-full border border-foreground bg-card p-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0068b3] rounded-none",
+                onQrClick ? "cursor-pointer transition-all hover:scale-105 active:scale-95 hover:border-[#0068b3]" : "cursor-default"
+              )}
+            >
               {qrUrl ? (
                 <Image
                   src={qrUrl}
@@ -171,7 +182,7 @@ function CardFront({
                   <QrCode className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
-            </div>
+            </button>
             <div className="flex flex-col items-center leading-none">
               <p className="font-mono text-[11px] font-black tracking-tighter text-foreground sm:text-[14px] break-all text-center">{cardNumber}</p>
               <p className="mt-0.5 text-center text-[6px] font-bold uppercase tracking-tight text-muted-foreground/80 sm:text-[8px]">Scan</p>
@@ -195,16 +206,14 @@ function FieldLine({ label, value }: { label: string; value: string }) {
 }
 
 function CardBack({
-  cardNumber,
   address,
   phone,
   exportMode,
   cardId,
-  studentId,
   roleLabel,
 }: Pick<
   DigitalCardProps,
-  "cardNumber" | "address" | "phone" | "exportMode" | "cardId" | "studentId" | "roleLabel"
+  "address" | "phone" | "exportMode" | "cardId" | "roleLabel"
 >) {
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -228,11 +237,7 @@ function CardBack({
           </div>
         </div>
 
-        <div className="grid h-[calc(100%-52px)] grid-rows-[auto_auto_1fr_auto] gap-2 p-2 sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4">
-          <div className="flex flex-col justify-between border-b border-foreground pb-1 sm:flex-row sm:items-center">
-             <p className="text-[8px] font-bold text-foreground uppercase tracking-wider sm:text-[10px]">Student ID: <span className="font-mono">{studentId}</span></p>
-             <p className="text-[8px] font-medium text-muted-foreground uppercase tracking-wider sm:text-[10px]">Card No: {cardNumber}</p>
-          </div>
+        <div className="grid h-[calc(100%-52px)] grid-rows-[auto_1fr_auto] gap-2 p-2 sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4">
           <div className="grid gap-1.5">
             <div>
               <p className="text-[11px] font-medium text-foreground sm:text-xs">Address:</p>
