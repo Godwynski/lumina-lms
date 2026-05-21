@@ -94,7 +94,7 @@ export const resolveScan = createSafeAction(
             status: 'ACTIVE',
             user_id: profile.id,
             profiles: profile
-          } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+          } as NonNullable<typeof card>;
         }
       }
 
