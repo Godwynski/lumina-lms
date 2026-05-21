@@ -186,7 +186,7 @@ describe('withAuthApi', () => {
     const response = await wrappedHandler(mockRequest, mockContext);
 
     expect(response.status).toBe(403);
-    expect(response.body.message).toContain('Missing required permission');
+    expect((response as unknown as { body: { message: string } }).body.message).toContain('Missing required permission');
   });
 
   it('should allow student assistants with correct permissions', async () => {
