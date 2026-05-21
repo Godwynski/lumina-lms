@@ -74,7 +74,7 @@ export async function runMaintenanceTasks() {
     if (dueSoonError) throw dueSoonError;
 
     const records = (dueSoon as unknown as BorrowingRecordWithDetails[]) || [];
-    for (const record of records) {
+    await Promise.all(records.map(async (record) => {
       const book = record.book_copy?.book;
       const dueDate = new Date(record.due_date);
       const { success } = await sendNotification({
@@ -109,7 +109,7 @@ export async function runMaintenanceTasks() {
         
         results.remindersSent++;
       }
-    }
+    }));
   } catch (err: unknown) {
     results.errors.push(`Reminders error: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -131,7 +131,7 @@ export async function runMaintenanceTasks() {
     if (overdueError) throw overdueError;
 
     const records = (overdue as unknown as BorrowingRecordWithDetails[]) || [];
-    for (const record of records) {
+    await Promise.all(records.map(async (record) => {
       const book = record.book_copy?.book;
       const dueDate = new Date(record.due_date);
       const overdueDays = Math.floor((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
@@ -179,7 +179,7 @@ export async function runMaintenanceTasks() {
           results.overdueTagged++;
         }
       }
-    }
+    }));
   } catch (err: unknown) {
     results.errors.push(`Overdue check error: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -195,7 +195,7 @@ export async function runMaintenanceTasks() {
 
     if (expiredError) throw expiredError;
 
-    for (const res of expired || []) {
+    await Promise.all((expired || []).map(async (res) => {
       // Mark as cancelled/expired
       const { error: updateError } = await supabaseAdmin
         .from('reservations')
@@ -212,7 +212,7 @@ export async function runMaintenanceTasks() {
         });
         results.reservationsExpired++;
       }
-    }
+    }));
   } catch (err: unknown) {
     results.errors.push(`Reservation expiry error: ${err instanceof Error ? err.message : String(err)}`);
   }
