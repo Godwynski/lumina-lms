@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { withAuthApi } from './api-utils';
-import { NextResponse } from 'next/server';
 import { getMe } from './auth-helpers';
 import { logger } from './logger';
 import { isAbortError } from './error-utils';
@@ -8,13 +7,13 @@ import { isAbortError } from './error-utils';
 // Mock dependencies
 vi.mock('next/server', () => {
   class NextResponseMock {
-    body: any;
-    options: any;
-    constructor(body: any, options: any) {
+    body: unknown;
+    options: unknown;
+    constructor(body: unknown, options: unknown) {
       this.body = body;
-      Object.assign(this, options);
+      Object.assign(this, options || {});
     }
-    static json = vi.fn((body, options) => ({ body, ...options }));
+    static json = vi.fn((body: unknown, options: unknown) => ({ body, ...(options as Record<string, unknown> || {}) }));
   }
 
   return {
@@ -41,7 +40,7 @@ vi.mock('./error-utils', () => ({
 describe('withAuthApi', () => {
   let mockRequest: Request;
   let mockContext: Record<string, unknown>;
-  let mockHandler: any;
+  let mockHandler: Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,7 +50,7 @@ describe('withAuthApi', () => {
   });
 
   it('should return 401 Unauthorized if user is not authenticated', async () => {
-    (getMe as any).mockResolvedValue(null);
+    (getMe as Mock).mockResolvedValue(null);
 
     const wrappedHandler = withAuthApi(mockHandler);
     const response = await wrappedHandler(mockRequest, mockContext);
@@ -66,7 +65,7 @@ describe('withAuthApi', () => {
   });
 
   it('should return 403 Forbidden if profile is archived', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ARCHIVED' },
       role: 'student',
@@ -85,7 +84,7 @@ describe('withAuthApi', () => {
   });
 
   it('should return 403 Forbidden if requireStaff is true and user is not staff', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE' },
       role: 'student',
@@ -104,7 +103,7 @@ describe('withAuthApi', () => {
   });
 
   it('should pass requireStaff check for active student_assistant', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE', id: '1', email: 'test@test.com', role: 'student_assistant' },
       role: 'student_assistant',
@@ -118,7 +117,7 @@ describe('withAuthApi', () => {
   });
 
   it('should fail requireStaff check for disabled student_assistant', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'INACTIVE', id: '1', email: 'test@test.com', role: 'student_assistant' },
       role: 'student_assistant',
@@ -133,7 +132,7 @@ describe('withAuthApi', () => {
   });
 
   it('should check allowedRoles correctly', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE' },
       role: 'student',
@@ -146,7 +145,7 @@ describe('withAuthApi', () => {
   });
 
   it('disabled SA falls back to student role for allowedRoles check', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'INACTIVE', id: '1', email: 'test@test.com', role: 'student_assistant' },
       role: 'student_assistant',
@@ -176,7 +175,7 @@ describe('withAuthApi', () => {
   });
 
   it('should check allowedPermissions for student assistants', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE', permissions: { can_manage_books: true }, id: '1', email: 'test@test.com', role: 'student_assistant' },
       role: 'student_assistant',
@@ -191,7 +190,7 @@ describe('withAuthApi', () => {
   });
 
   it('should allow student assistants with correct permissions', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE', permissions: { can_manage_books: true }, id: '1', email: 'test@test.com', role: 'student_assistant' },
       role: 'student_assistant',
@@ -205,7 +204,7 @@ describe('withAuthApi', () => {
   });
 
   it('should execute handler and return its result on success', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE', id: '1', email: 'test@test.com', role: 'student' },
       role: 'student',
@@ -223,7 +222,7 @@ describe('withAuthApi', () => {
   });
 
   it('should handle handler exceptions gracefully', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE', id: '1', email: 'test@test.com', role: 'student' },
       role: 'student',
@@ -232,7 +231,7 @@ describe('withAuthApi', () => {
 
     const error = new Error('Database error');
     mockHandler.mockRejectedValue(error);
-    (isAbortError as any).mockReturnValue(false);
+    (isAbortError as Mock).mockReturnValue(false);
 
     const wrappedHandler = withAuthApi(mockHandler);
     const response = await wrappedHandler(mockRequest, mockContext);
@@ -247,7 +246,7 @@ describe('withAuthApi', () => {
   });
 
   it('should handle abort exceptions gracefully (499)', async () => {
-    (getMe as any).mockResolvedValue({
+    (getMe as Mock).mockResolvedValue({
       user: { id: '123' },
       profile: { status: 'ACTIVE', id: '1', email: 'test@test.com', role: 'student' },
       role: 'student',
@@ -256,7 +255,7 @@ describe('withAuthApi', () => {
 
     const error = new Error('AbortError');
     mockHandler.mockRejectedValue(error);
-    (isAbortError as any).mockReturnValue(true);
+    (isAbortError as Mock).mockReturnValue(true);
 
     const wrappedHandler = withAuthApi(mockHandler);
     const response = await wrappedHandler(mockRequest, mockContext);
