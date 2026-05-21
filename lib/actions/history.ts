@@ -20,7 +20,7 @@ export type BorrowingRecord = {
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;
-  renewal_count: number;
+
   books: BookInfo | null;
   profiles: {
     id: string;
@@ -45,7 +45,7 @@ export async function getBorrowingHistory(
   let query = supabase
     .from("borrowing_records")
     .select(`
-      id, book_copy_id, user_id, status, borrowed_at, due_date, returned_at, renewal_count,
+      id, book_copy_id, user_id, status, borrowed_at, due_date, returned_at,
       book_copies!inner (
         books!inner (
           id, title, author, cover_url
@@ -91,7 +91,7 @@ export async function getBorrowingHistory(
     borrowed_at: record.borrowed_at as string,
     due_date: record.due_date as string,
     returned_at: record.returned_at as string | null,
-    renewal_count: record.renewal_count as number,
+
     books: (record.book_copies as { books: BookInfo } | null)?.books || null,
     profiles: record.profiles as BorrowingRecord["profiles"],
   }));

@@ -388,8 +388,7 @@ async function seed() {
       processed_by: profileIds.rhedLibrarian,
       borrowed_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture1,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     },
     {
       user_id: profileIds.kayleStudent,
@@ -397,8 +396,7 @@ async function seed() {
       processed_by: profileIds.luminaLibrarian,
       borrowed_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture2,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     },
     {
       user_id: profileIds.jericoSA,
@@ -406,8 +404,7 @@ async function seed() {
       processed_by: profileIds.rhedLibrarian,
       borrowed_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture3,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     },
     {
       user_id: profileIds.luminaSA,
@@ -415,8 +412,7 @@ async function seed() {
       processed_by: profileIds.luminaLibrarian,
       borrowed_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture4,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     },
 
     // 4 RETURNED Borrows
@@ -428,8 +424,7 @@ async function seed() {
       due_date: duePast1,
       returned_at: returnPast1,
       returned_by: profileIds.rhedLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     },
     {
       user_id: profileIds.kayleStudent,
@@ -439,8 +434,7 @@ async function seed() {
       due_date: duePast2,
       returned_at: returnPast2,
       returned_by: profileIds.luminaLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     },
     {
       user_id: profileIds.luminaSA,
@@ -450,8 +444,7 @@ async function seed() {
       due_date: duePast3,
       returned_at: returnPast3,
       returned_by: profileIds.rhedLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     },
     {
       user_id: profileIds.rhedLibrarian,
@@ -461,8 +454,7 @@ async function seed() {
       due_date: duePast4,
       returned_at: returnPast4,
       returned_by: profileIds.luminaLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     }
   ];
 
@@ -489,29 +481,6 @@ async function seed() {
     return;
   }
   console.info('✅ Updated borrowed book copies status to BORROWED');
-
-  // 6. Seed Renewals
-  const returnedBorrowRecord = borrowData.find(b => b.status === 'RETURNED' && b.user_id === profileIds.godwynStudent);
-  if (returnedBorrowRecord) {
-    const renewalsToSeed = [
-      {
-        borrowing_record_id: returnedBorrowRecord.id,
-        renewed_by: profileIds.rhedLibrarian,
-        renewed_at: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        new_due_date: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString()
-      }
-    ];
-
-    const { error: renewalError } = await supabase
-      .from('renewals')
-      .insert(renewalsToSeed);
-
-    if (renewalError) {
-      console.error('Error seeding renewals:', renewalError);
-    } else {
-      console.info('✅ Seeded renewals');
-    }
-  }
 
   // 7. Seed Reservations
   const bookCleanCodeObj = bookData.find(b => b.title === 'Clean Code');
@@ -614,71 +583,7 @@ async function seed() {
     console.info('✅ Seeded completed attendance records');
   }
 
-  // 9. Seed Fines
-  const finesToSeed = [
-    {
-      user_id: profileIds.godwynStudent,
-      amount: 50.00,
-      status: 'PAID',
-      reason: 'Damaged page (spilled coffee) on To Kill a Mockingbird',
-      created_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      amount: 20.00,
-      status: 'UNPAID',
-      reason: 'Lost accompanying media CD for Linear Algebra',
-      created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
 
-  const { error: fineError } = await supabase
-    .from('fines')
-    .insert(finesToSeed);
-
-  if (fineError) {
-    console.error('Error seeding fines:', fineError);
-  } else {
-    console.info('✅ Seeded fines');
-  }
-
-  // 10. Seed Violations
-  const violationsToSeed = [
-    {
-      user_id: profileIds.godwynStudent,
-      violation_type: 'LOUD_CONDUCT',
-      severity: 'low',
-      points: 2,
-      description: 'Loud talking and laughing in the quiet study zone on the second floor.',
-      incident_date: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'RESOLVED',
-      resolved_at: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-      resolution_notes: 'Student was verbally warned and complied immediately. Resolved.'
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      violation_type: 'EATING_DRINKING',
-      severity: 'low',
-      points: 1,
-      description: 'Eating chips and drinking soda in the computer laboratory section.',
-      incident_date: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'RESOLVED',
-      resolved_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      resolution_notes: 'Resolved after student moved items to the lobby areas.'
-    }
-  ];
-
-  const { error: violationError } = await supabase
-    .from('violations')
-    .insert(violationsToSeed);
-
-  if (violationError) {
-    console.error('Error seeding violations:', violationError);
-  } else {
-    console.info('✅ Seeded violations');
-  }
-
-  // 11. Seed Notifications
   const notificationsToSeed = [
     {
       user_id: profileIds.godwynStudent,
@@ -695,15 +600,6 @@ async function seed() {
       content: 'You have borrowed "Clean Code". It is due on ' + new Date(dueFuture1).toLocaleDateString() + '.',
       type: 'CIRCULATION',
       priority: 'medium',
-      is_read: false,
-      metadata: {}
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      title: 'Outstanding Fine Notice',
-      content: 'You have a pending fine of Php 20.00 for: Lost accompanying media CD for Linear Algebra. Please settle at the circulation desk.',
-      type: 'FINE',
-      priority: 'high',
       is_read: false,
       metadata: {}
     }
@@ -803,13 +699,6 @@ async function seed() {
       action: 'UPDATE_SYSTEM_SETTINGS',
       reason: 'Revised loan policy per admin instruction',
       details: { key: 'loan_period_days', value: '14' }
-    },
-    {
-      admin_id: profileIds.rhedLibrarian,
-      entity_type: 'violations',
-      action: 'RESOLVE_VIOLATION',
-      reason: 'Student paid the fine and completed community shelf assistance hour.',
-      details: { student_id: 'STU-376375' }
     }
   ];
 
@@ -821,6 +710,47 @@ async function seed() {
     console.error('Error seeding audit logs:', auditError);
   } else {
     console.info('✅ Seeded audit logs');
+  }
+
+  // 15. Seed Checklist Options
+  console.info('🌱 Seeding checklist options...');
+  const optionsToSeed = [
+    { type: 'user_role', value: 'student' },
+    { type: 'user_role', value: 'librarian' },
+    { type: 'user_role', value: 'student_assistant' },
+    { type: 'user_role', value: 'super_admin' },
+    { type: 'module', value: 'Authentication' },
+    { type: 'module', value: 'Catalog' },
+    { type: 'module', value: 'Circulation' },
+    { type: 'module', value: 'Attendance' },
+    { type: 'module', value: 'Announcements' },
+    { type: 'module', value: 'Reports' },
+    { type: 'module', value: 'Settings' },
+    { type: 'module', value: 'Dashboard' }
+  ];
+  const { error: optionsError } = await supabase
+    .from('checklist_dropdown_options')
+    .insert(optionsToSeed);
+  if (optionsError) {
+    console.error('Error seeding checklist options:', optionsError);
+  } else {
+    console.info('✅ Seeded checklist options');
+  }
+
+  // 16. Seed Checklist Items
+  console.info('🌱 Seeding checklist items...');
+  const itemsToSeed = [
+    { problem: 'UI overflow in catalog cards on mobile screens', explanation: 'The tags section stretches too wide and breaks the grid layout.', user_role: 'student', module: 'Catalog', is_completed: false },
+    { problem: 'Session timeout occurs too quickly during scan operations', explanation: 'Librarians get logged out during continuous book checking scans.', user_role: 'librarian', module: 'Circulation', is_completed: true },
+    { problem: 'Audit logs fail to capture custom settings change events', explanation: 'Changing settings through the admin dashboard settings page is not logging correctly.', user_role: 'super_admin', module: 'Settings', is_completed: false }
+  ];
+  const { error: itemsError } = await supabase
+    .from('checklist_items')
+    .insert(itemsToSeed);
+  if (itemsError) {
+    console.error('Error seeding checklist items:', itemsError);
+  } else {
+    console.info('✅ Seeded checklist items');
   }
 
   console.info('✨ Seeding completed successfully!');
