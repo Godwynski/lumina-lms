@@ -199,7 +199,7 @@ export function AddBookClient() {
   };
 
   return (
-    <div className="w-full space-y-6 max-w-6xl mx-auto">
+    <div className="w-full space-y-6">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 relative overflow-hidden">

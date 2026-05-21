@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react";
 import DigitalCard from "./DigitalCard";
 import { m } from "framer-motion";
-import { Download, RefreshCw, RotateCcw, Wallet } from "lucide-react";
+import { Download, RefreshCw, RotateCcw, Wallet, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface MyCardContainerProps {
   initialData: {
@@ -85,6 +93,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
   const [isRefreshingAssets, setIsRefreshingAssets] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showBack, setShowBack] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
 
@@ -360,6 +369,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               side="front"
               academicYear={data.academicYear}
               roleLabel={data.roleLabel}
+              onQrClick={() => setIsQrOpen(true)}
             />
           </div>
 
@@ -423,6 +433,43 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             </div>
           </div>
         </m.div>
+
+        <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
+          <DialogContent className="max-w-[320px] sm:max-w-[360px] border border-border/20 bg-card/95 backdrop-blur-md p-6 rounded-2xl shadow-xl flex flex-col items-center text-center gap-4">
+            <DialogHeader className="w-full flex flex-col items-center">
+              <DialogTitle className="text-lg font-black tracking-tight text-foreground uppercase">
+                {data.fullName}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mt-1">
+                Library Card QR
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="relative group w-48 h-48 sm:w-56 sm:h-56 border border-foreground/20 bg-white p-3 rounded-2xl shadow-inner flex items-center justify-center transition-all hover:scale-[1.02]">
+              {data.qrUrl ? (
+                <Image
+                  src={data.qrUrl}
+                  alt={`QR code for ${data.cardNumber}`}
+                  width={200}
+                  height={200}
+                  className="w-full h-full object-contain"
+                  unoptimized
+                />
+              ) : (
+                <QrCode className="h-12 w-12 text-muted-foreground" />
+              )}
+            </div>
+            
+            <div className="flex flex-col items-center gap-1">
+              <p className="font-mono text-base sm:text-lg font-black tracking-tighter text-foreground">
+                {data.cardNumber}
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                Card Number
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -520,6 +567,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             phone={data.phone}
             side="front"
             academicYear={data.academicYear}
+            onQrClick={() => setIsQrOpen(true)}
           />
         </div>
 
@@ -604,6 +652,42 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
         </ul>
       </div>
+      <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
+        <DialogContent className="max-w-[320px] sm:max-w-[360px] border border-border/20 bg-card/95 backdrop-blur-md p-6 rounded-2xl shadow-xl flex flex-col items-center text-center gap-4">
+          <DialogHeader className="w-full flex flex-col items-center">
+            <DialogTitle className="text-lg font-black tracking-tight text-foreground uppercase">
+              {data.fullName}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mt-1">
+              Library Card QR
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="relative group w-48 h-48 sm:w-56 sm:h-56 border border-foreground/20 bg-white p-3 rounded-2xl shadow-inner flex items-center justify-center transition-all hover:scale-[1.02]">
+            {data.qrUrl ? (
+              <Image
+                src={data.qrUrl}
+                alt={`QR code for ${data.cardNumber}`}
+                width={200}
+                height={200}
+                className="w-full h-full object-contain"
+                unoptimized
+              />
+            ) : (
+              <QrCode className="h-12 w-12 text-muted-foreground" />
+            )}
+          </div>
+          
+          <div className="flex flex-col items-center gap-1">
+            <p className="font-mono text-base sm:text-lg font-black tracking-tighter text-foreground">
+              {data.cardNumber}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+              Card Number
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

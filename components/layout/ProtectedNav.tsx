@@ -241,8 +241,9 @@ export function ProtectedNav({
                         isActive: pathname === "/attendance" && viewParam === "logs"
                       });
                     } else {
+                      const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
                       navItemsToRender.push({
-                        href: "/attendance",
+                        href: isStaffUser ? "/attendance?view=logs" : "/attendance",
                         label: hasAttendancePerm ? "Attendance Logs" : "My Attendance",
                         icon: item.icon,
                         isActive: pathname === "/attendance"

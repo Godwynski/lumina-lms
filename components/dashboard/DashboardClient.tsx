@@ -267,8 +267,8 @@ export function DashboardClient({
         desc: "Manage book collections",
         path: "/inventory",
         icon: BookMarked,
-        color: "group-hover:border-purple-500/30",
-        iconBg: "bg-purple-500/10 text-purple-600 group-hover:bg-purple-500 group-hover:text-white",
+        color: "group-hover:border-primary/30",
+        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
         show: true,
       },
       {
@@ -276,8 +276,8 @@ export function DashboardClient({
         desc: "Approve cards & profiles",
         path: "/users",
         icon: Users,
-        color: "group-hover:border-green-500/30",
-        iconBg: "bg-green-500/10 text-green-600 group-hover:bg-green-500 group-hover:text-white",
+        color: "group-hover:border-primary/30",
+        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
         show: true,
       },
       {
@@ -285,8 +285,8 @@ export function DashboardClient({
         desc: "Track library attendance",
         path: "/attendance",
         icon: UserCheck,
-        color: "group-hover:border-amber-500/30",
-        iconBg: "bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white",
+        color: "group-hover:border-primary/30",
+        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
         show: true,
       },
       {
@@ -294,8 +294,8 @@ export function DashboardClient({
         desc: "View usage statistics",
         path: "/analytics",
         icon: BarChart3,
-        color: "group-hover:border-blue-500/30",
-        iconBg: "bg-blue-500/10 text-blue-600 group-hover:bg-blue-500 group-hover:text-white",
+        color: "group-hover:border-primary/30",
+        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
         show: true,
       },
       {
@@ -303,8 +303,8 @@ export function DashboardClient({
         desc: "Track database changes",
         path: "/audit",
         icon: ScrollText,
-        color: "group-hover:border-red-500/30",
-        iconBg: "bg-red-500/10 text-red-600 group-hover:bg-red-500 group-hover:text-white",
+        color: "group-hover:border-primary/30",
+        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
         show: role === 'super_admin',
       },
       {
@@ -312,8 +312,8 @@ export function DashboardClient({
         desc: "Adjust system parameters",
         path: "/policies",
         icon: Settings,
-        color: "group-hover:border-indigo-500/30",
-        iconBg: "bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white",
+        color: "group-hover:border-primary/30",
+        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
         show: role === 'super_admin',
       },
     ].filter(item => item.show);
@@ -348,18 +348,20 @@ export function DashboardClient({
                   <Card 
                     role="button"
                     onClick={() => router.push('/users')}
-                    className="group border border-amber-500/20 bg-amber-500/[0.03] hover:bg-amber-500/10 hover:border-amber-500/35 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
+                    className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 group-hover:scale-105 transition-transform shrink-0">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                         <Users size={16} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-amber-900 truncate">Card Applications</p>
-                        <p className="text-[10px] text-amber-600/90 mt-0.5 font-bold truncate">{stats.pendingApprovals} pending review</p>
+                        <p className="text-xs font-bold text-foreground truncate">Card Applications</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
+                          <span className="font-bold text-foreground">{stats.pendingApprovals}</span> pending review
+                        </p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-amber-500 group-hover:translate-x-0.5 transition-transform shrink-0 ml-2" />
+                    <ArrowRight size={14} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                   </Card>
                 )}
 
@@ -367,18 +369,20 @@ export function DashboardClient({
                   <Card 
                     role="button"
                     onClick={() => router.push('/circulation')}
-                    className="group border border-red-500/20 bg-red-500/[0.03] hover:bg-red-500/10 hover:border-red-500/35 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
+                    className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-red-500/10 text-red-600 group-hover:scale-105 transition-transform shrink-0">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                         <AlertTriangle size={16} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-red-900 truncate">Overdue Loans</p>
-                        <p className="text-[10px] text-red-600/90 mt-0.5 font-bold truncate">{stats.overdueBorrows} books outstanding</p>
+                        <p className="text-xs font-bold text-foreground truncate">Overdue Loans</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
+                          <span className="font-bold text-foreground">{stats.overdueBorrows}</span> books outstanding
+                        </p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-red-500 group-hover:translate-x-0.5 transition-transform shrink-0 ml-2" />
+                    <ArrowRight size={14} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                   </Card>
                 )}
 
@@ -386,18 +390,20 @@ export function DashboardClient({
                   <Card 
                     role="button"
                     onClick={() => router.push('/circulation')}
-                    className="group border border-blue-500/20 bg-blue-500/[0.03] hover:bg-blue-500/10 hover:border-blue-500/35 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
+                    className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-105 transition-transform shrink-0">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                         <BookMarked size={16} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-blue-900 truncate">Holds Ready</p>
-                        <p className="text-[10px] text-blue-600/90 mt-0.5 font-bold truncate">{stats.readyHolds} waiting for pickup</p>
+                        <p className="text-xs font-bold text-foreground truncate">Holds Ready</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
+                          <span className="font-bold text-foreground">{stats.readyHolds}</span> waiting for pickup
+                        </p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-blue-500 group-hover:translate-x-0.5 transition-transform shrink-0 ml-2" />
+                    <ArrowRight size={14} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                   </Card>
                 )}
               </div>
@@ -434,7 +440,7 @@ export function DashboardClient({
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 Active Loans
               </div>
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-105 transition-transform">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <RefreshCw size={16} />
               </div>
             </div>
@@ -452,7 +458,7 @@ export function DashboardClient({
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 Book Catalog
               </div>
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 group-hover:scale-105 transition-transform">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <BookMarked size={16} />
               </div>
             </div>
@@ -470,7 +476,7 @@ export function DashboardClient({
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 User Profiles
               </div>
-              <div className="p-2 rounded-lg bg-green-500/10 text-green-600 group-hover:scale-105 transition-transform">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <Users size={16} />
               </div>
             </div>
@@ -624,9 +630,9 @@ export function DashboardClient({
                 <Card 
                   role="button"
                   onClick={() => router.push('/attendance')}
-                  className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-green-500/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
+                  className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
                 >
-                  <div className="p-2 rounded-lg bg-green-500/10 text-green-600 group-hover:scale-105 transition-transform shrink-0">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                     <UserCheck size={16} />
                   </div>
                   <div className="min-w-0">
@@ -639,9 +645,9 @@ export function DashboardClient({
               <Card 
                 role="button"
                 onClick={() => router.push('/student-catalog')}
-                className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-blue-500/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
+                className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
               >
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 group-hover:scale-105 transition-transform shrink-0">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                   <BookOpen size={16} />
                 </div>
                 <div className="min-w-0">
