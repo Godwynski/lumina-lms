@@ -25,9 +25,8 @@ export async function clearDatabase(supabase: SupabaseClient) {
 
   // Deletion in order to respect foreign key constraints
   const tablesToDelete = [
-    'renewals',
-    'fines',
-    'violations',
+    'checklist_items',
+    'checklist_dropdown_options',
     'borrowing_records',
     'reservations',
     'book_copies',
@@ -116,12 +115,9 @@ export async function clearLogsAndBorrows(supabase: SupabaseClient) {
     log.push(msg);
   };
 
-  logInfo('🧹 Clearing only logs, borrowing history, violations, and attendance...');
+  logInfo('🧹 Clearing only logs, borrowing history, and attendance...');
 
   const tablesToDelete = [
-    'renewals',
-    'fines',
-    'violations',
     'borrowing_records',
     'reservations',
     'audit_logs',
@@ -176,9 +172,6 @@ export async function clearCatalog(supabase: SupabaseClient) {
 
   // Deleting catalog-dependent records first to satisfy FKs
   const tablesToDelete = [
-    'renewals',
-    'fines',
-    'violations',
     'borrowing_records',
     'reservations',
     'reports',
@@ -603,7 +596,6 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
     borrowed_at: string;
     due_date: string;
     status: string;
-    renewal_count: number;
     returned_at?: string | null;
     returned_by?: string | null;
   }[] = [];
@@ -616,8 +608,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       processed_by: profileIds.rhedLibrarian,
       borrowed_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture1,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     });
     activeCopiesToUpdate.push(copyCleanCodeId);
   }
@@ -629,8 +620,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       processed_by: profileIds.luminaLibrarian,
       borrowed_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture2,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     });
     activeCopiesToUpdate.push(copyCalculusId);
   }
@@ -642,8 +632,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       processed_by: profileIds.rhedLibrarian,
       borrowed_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture3,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     });
     activeCopiesToUpdate.push(copyBriefHistoryId);
   }
@@ -655,8 +644,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       processed_by: profileIds.luminaLibrarian,
       borrowed_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
       due_date: dueFuture4,
-      status: 'ACTIVE',
-      renewal_count: 0
+      status: 'ACTIVE'
     });
     activeCopiesToUpdate.push(copyAlgorithmsId);
   }
@@ -671,8 +659,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       due_date: duePast1,
       returned_at: returnPast1,
       returned_by: profileIds.rhedLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     });
   }
   if (copySelfishGeneId) {
@@ -684,8 +671,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       due_date: duePast2,
       returned_at: returnPast2,
       returned_by: profileIds.luminaLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     });
   }
   if (copyDataIntensiveId) {
@@ -697,8 +683,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       due_date: duePast3,
       returned_at: returnPast3,
       returned_by: profileIds.rhedLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     });
   }
   if (copyLinearAlgebraId) {
@@ -710,8 +695,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       due_date: duePast4,
       returned_at: returnPast4,
       returned_by: profileIds.luminaLibrarian,
-      status: 'RETURNED',
-      renewal_count: 0
+      status: 'RETURNED'
     });
   }
 
@@ -740,22 +724,6 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       }
     }
 
-    // Seed Renewals
-    const returnedBorrowRecord = insertedBorrows.find(b => b.status === 'RETURNED' && b.user_id === profileIds.godwynStudent);
-    if (returnedBorrowRecord) {
-      const renewalsToSeed = [
-        {
-          borrowing_record_id: returnedBorrowRecord.id,
-          renewed_by: profileIds.rhedLibrarian,
-          renewed_at: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-          new_due_date: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ];
-
-      const { error: renewalError } = await supabase.from('renewals').insert(renewalsToSeed);
-      if (renewalError) logInfo(`❌ Error seeding renewals: ${renewalError.message}`);
-      else logInfo('✅ Seeded renewals');
-    }
   }
 
   // Reservations
@@ -859,56 +827,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
   if (attendanceError) logInfo(`❌ Error seeding attendance: ${attendanceError.message}`);
   else logInfo('✅ Seeded completed attendance records');
 
-  // Fines & Violations
-  const finesToSeed = [
-    {
-      user_id: profileIds.godwynStudent,
-      amount: 50.00,
-      status: 'PAID',
-      reason: 'Damaged page (spilled coffee) on To Kill a Mockingbird',
-      created_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      amount: 20.00,
-      status: 'UNPAID',
-      reason: 'Lost accompanying media CD for Linear Algebra',
-      created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
 
-  const { error: fineError } = await supabase.from('fines').insert(finesToSeed);
-  if (fineError) logInfo(`❌ Error seeding fines: ${fineError.message}`);
-  else logInfo('✅ Seeded fines');
-
-  const violationsToSeed = [
-    {
-      user_id: profileIds.godwynStudent,
-      violation_type: 'LOUD_CONDUCT',
-      severity: 'low',
-      points: 2,
-      description: 'Loud talking and laughing in the quiet study zone on the second floor.',
-      incident_date: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'RESOLVED',
-      resolved_at: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-      resolution_notes: 'Student was verbally warned and complied immediately. Resolved.'
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      violation_type: 'EATING_DRINKING',
-      severity: 'low',
-      points: 1,
-      description: 'Eating chips and drinking soda in the computer laboratory section.',
-      incident_date: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'RESOLVED',
-      resolved_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      resolution_notes: 'Resolved after student moved items to the lobby areas.'
-    }
-  ];
-
-  const { error: violationError } = await supabase.from('violations').insert(violationsToSeed);
-  if (violationError) logInfo(`❌ Error seeding violations: ${violationError.message}`);
-  else logInfo('✅ Seeded violations');
 
   // Reports
   if (bookCleanCode && bookCalculus) {
@@ -942,13 +861,6 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       action: 'UPDATE_SYSTEM_SETTINGS',
       reason: 'Revised loan policy per admin instruction',
       details: { key: 'loan_period_days', value: '14' }
-    },
-    {
-      admin_id: profileIds.rhedLibrarian,
-      entity_type: 'violations',
-      action: 'RESOLVE_VIOLATION',
-      reason: 'Student paid the fine and completed community shelf assistance hour.',
-      details: { student_id: 'STU-376375' }
     }
   ];
 
@@ -1018,6 +930,47 @@ export async function seedDatabase(supabase: SupabaseClient) {
     logInfo(`❌ Error seeding announcements: ${announcementError.message}`);
   } else {
     logInfo('✅ Seeded announcements');
+  }
+
+  // Seed Checklist Options
+  logInfo('🌱 Seeding checklist options...');
+  const optionsToSeed = [
+    { type: 'user_role', value: 'student' },
+    { type: 'user_role', value: 'librarian' },
+    { type: 'user_role', value: 'student_assistant' },
+    { type: 'user_role', value: 'super_admin' },
+    { type: 'module', value: 'Authentication' },
+    { type: 'module', value: 'Catalog' },
+    { type: 'module', value: 'Circulation' },
+    { type: 'module', value: 'Attendance' },
+    { type: 'module', value: 'Announcements' },
+    { type: 'module', value: 'Reports' },
+    { type: 'module', value: 'Settings' },
+    { type: 'module', value: 'Dashboard' }
+  ];
+  const { error: optionsError } = await supabase
+    .from('checklist_dropdown_options')
+    .insert(optionsToSeed);
+  if (optionsError) {
+    logInfo(`❌ Error seeding checklist options: ${optionsError.message}`);
+  } else {
+    logInfo('✅ Seeded checklist options');
+  }
+
+  // Seed Checklist Items
+  logInfo('🌱 Seeding checklist items...');
+  const itemsToSeed = [
+    { problem: 'UI overflow in catalog cards on mobile screens', explanation: 'The tags section stretches too wide and breaks the grid layout.', user_role: 'student', module: 'Catalog', is_completed: false },
+    { problem: 'Session timeout occurs too quickly during scan operations', explanation: 'Librarians get logged out during continuous book checking scans.', user_role: 'librarian', module: 'Circulation', is_completed: true },
+    { problem: 'Audit logs fail to capture custom settings change events', explanation: 'Changing settings through the admin dashboard settings page is not logging correctly.', user_role: 'super_admin', module: 'Settings', is_completed: false }
+  ];
+  const { error: itemsError } = await supabase
+    .from('checklist_items')
+    .insert(itemsToSeed);
+  if (itemsError) {
+    logInfo(`❌ Error seeding checklist items: ${itemsError.message}`);
+  } else {
+    logInfo('✅ Seeded checklist items');
   }
 
   logInfo('✨ Full database seeding completed successfully!');

@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS public.books (
     available_copies INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     dewey_decimal TEXT,
+    description TEXT,
+    published_year INTEGER,
     search_vector TSVECTOR GENERATED ALWAYS AS (
         setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
         setweight(to_tsvector('english', coalesce(author, '')), 'B') ||
@@ -112,7 +114,6 @@ CREATE TABLE IF NOT EXISTS public.borrowing_records (
     due_date TIMESTAMPTZ NOT NULL,
     returned_at TIMESTAMPTZ,
     status public."BorrowStatus" DEFAULT 'ACTIVE'::public."BorrowStatus",
-    renewal_count INTEGER DEFAULT 0,
     returned_by UUID REFERENCES public.profiles(id),
     reminder_sent BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -223,15 +224,6 @@ CREATE TABLE IF NOT EXISTS public.announcements (
     created_by UUID REFERENCES public.profiles(id)
 );
 
--- Renewals Table
-CREATE TABLE IF NOT EXISTS public.renewals (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    borrowing_record_id UUID REFERENCES public.borrowing_records(id) NOT NULL,
-    renewed_by UUID REFERENCES public.profiles(id) NOT NULL,
-    renewed_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    new_due_date TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
-);
 
 -- Reports Table
 CREATE TABLE IF NOT EXISTS public.reports (
@@ -250,8 +242,7 @@ CREATE TABLE IF NOT EXISTS public.deleted_profile_info (
     original_profile_id UUID UNIQUE REFERENCES public.profiles(id),
     anonymized_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     deletion_reason TEXT,
-    retained_borrow_count INTEGER DEFAULT 0 NOT NULL,
-    retained_fine_count INTEGER DEFAULT 0 NOT NULL
+    retained_borrow_count INTEGER DEFAULT 0 NOT NULL
 );
 
 -- Rate Limit Log Table
@@ -262,32 +253,6 @@ CREATE TABLE IF NOT EXISTS public.rate_limit_log (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Fines Table
-CREATE TABLE IF NOT EXISTS public.fines (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    borrowing_record_id UUID REFERENCES public.borrowing_records(id) ON DELETE CASCADE,
-    amount NUMERIC DEFAULT 0 NOT NULL,
-    status TEXT DEFAULT 'UNPAID'::text CHECK (status = ANY (ARRAY['UNPAID'::text, 'PAID'::text, 'OPEN'::text, 'CANCELLED'::text])),
-    reason TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
-);
-
--- Violations Table
-CREATE TABLE IF NOT EXISTS public.violations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    violation_type TEXT NOT NULL,
-    severity TEXT DEFAULT 'low'::text CHECK (severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'critical'::text])),
-    points INTEGER DEFAULT 0 NOT NULL,
-    description TEXT,
-    incident_date TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    status TEXT DEFAULT 'ACTIVE'::text CHECK (status = ANY (ARRAY['ACTIVE'::text, 'RESOLVED'::text, 'CANCELLED'::text])),
-    resolved_at TIMESTAMPTZ,
-    resolution_notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
-);
 
 -- 5. INDEXES & VECTOR OPTIMIZATIONS
 CREATE INDEX IF NOT EXISTS books_search_vector_idx ON public.books USING GIN(search_vector);
@@ -599,7 +564,6 @@ DECLARE
   v_active_borrows    INTEGER := 0;
   v_max_borrow_limit  INTEGER;
   v_loan_days         INTEGER;
-  v_fine_threshold    NUMERIC;
   v_due_date          TIMESTAMPTZ;
   v_borrowing_id      UUID;
   v_existing          JSONB;
@@ -641,11 +605,10 @@ BEGIN
   -- Read policy settings from system_settings
   SELECT
     COALESCE(MAX(CASE WHEN key = 'max_borrow_limit'      THEN value::INTEGER END), 5),
-    COALESCE(MAX(CASE WHEN key = 'loan_period_days'      THEN value::INTEGER END), 14),
-    COALESCE(MAX(CASE WHEN key = 'max_outstanding_fines' THEN value::NUMERIC  END), 100)
-  INTO v_max_borrow_limit, v_loan_days, v_fine_threshold
+    COALESCE(MAX(CASE WHEN key = 'loan_period_days'      THEN value::INTEGER END), 14)
+  INTO v_max_borrow_limit, v_loan_days
   FROM public.system_settings
-  WHERE key IN ('max_borrow_limit', 'loan_period_days', 'max_outstanding_fines');
+  WHERE key IN ('max_borrow_limit', 'loan_period_days');
 
   -- Check active borrow count
   SELECT COUNT(*) INTO v_active_borrows
@@ -887,18 +850,15 @@ ALTER TABLE public.borrowing_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checkout_idempotency ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deleted_profile_info ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.library_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rate_limit_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.renewals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.return_idempotency ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ui_preferences ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.violations ENABLE ROW LEVEL SECURITY;
 
 -- 10. CONSOLIDATED RLS POLICIES
 
@@ -1019,15 +979,6 @@ CREATE POLICY "Staff can view deleted profile info" ON public.deleted_profile_in
   FOR SELECT TO authenticated
   USING (public.is_staff());
 
--- fines Policies
-CREATE POLICY "Staff can manage all fines" ON public.fines
-  FOR ALL TO authenticated
-  USING (public.is_staff());
-
-CREATE POLICY "Users can view own fines" ON public.fines
-  FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
-
 -- library_cards Policies
 CREATE POLICY "Users can view own library card" ON public.library_cards
   FOR SELECT TO authenticated
@@ -1057,19 +1008,6 @@ CREATE POLICY "Users can update own profile" ON public.profiles
 
 -- rate_limit_log Policies
 CREATE POLICY "Staff can view rate limit logs" ON public.rate_limit_log
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
-
--- renewals Policies
-CREATE POLICY "Staff can manage renewals" ON public.renewals
-  FOR ALL TO authenticated
-  USING (public.is_staff());
-
-CREATE POLICY "Users can view own renewals" ON public.renewals
-  FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.borrowing_records WHERE borrowing_records.id = renewals.borrowing_record_id AND borrowing_records.user_id = auth.uid()));
-
-CREATE POLICY "Staff can view all renewals" ON public.renewals
   FOR SELECT TO authenticated
   USING (public.is_staff());
 
@@ -1126,15 +1064,6 @@ CREATE POLICY "Users can update own preferences" ON public.ui_preferences
   FOR UPDATE TO authenticated
   USING ((SELECT auth.uid()) = user_id);
 
--- violations Policies
-CREATE POLICY "Staff can manage all violations" ON public.violations
-  FOR ALL TO authenticated
-  USING (public.is_staff());
-
-CREATE POLICY "Users can view own violations" ON public.violations
-  FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
-
 -- 11. SENSITIVE PRIVILEGE REVOCATIONS (REST/CLIENT-SIDE PROTECTION)
 REVOKE EXECUTE ON FUNCTION public.process_qr_checkout(uuid, text, text, text, boolean) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.process_qr_return(uuid, text, text, boolean) FROM PUBLIC, anon, authenticated;
@@ -1145,9 +1074,9 @@ REVOKE EXECUTE ON FUNCTION public.auto_checkout_forgotten_attendance() FROM PUBL
 INSERT INTO public.system_settings (key, value, description, data_type) VALUES
 ('max_borrow_limit', '5', 'Max books a student can borrow at once', 'number'),
 ('loan_period_days', '14', 'Standard borrowing duration in days', 'number'),
-('hold_expiry_days', '3', 'Days a student has to pick up a reserved book', 'number'),
-('max_outstanding_fines', '100', 'Maximum fine amount allowed before blocking checkouts', 'number')
+('hold_expiry_days', '3', 'Days a student has to pick up a reserved book', 'number')
 ON CONFLICT (key) DO NOTHING;
+
 
 -- 13. STORAGE BUCKETS CONFIGURATION & STORAGE POLICIES
 -- Setup default storage buckets
@@ -1193,3 +1122,49 @@ CREATE POLICY "Book Covers Authenticated Delete" ON storage.objects
 CREATE POLICY "Public Read" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id IN ('avatars', 'book-covers', 'library-cards'));
+
+
+-- =========================================================================
+-- CHECKLIST & OPTIMIZED NOTES FOR DEV SANDBOX
+-- =========================================================================
+
+-- 1. Create table for dropdown options
+CREATE TABLE IF NOT EXISTS public.checklist_dropdown_options (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT NOT NULL, -- 'user_role' or 'module'
+    value TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE (type, value)
+);
+
+-- 2. Create table for checklist items
+CREATE TABLE IF NOT EXISTS public.checklist_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    problem TEXT NOT NULL,
+    explanation TEXT,
+    user_role TEXT,
+    module TEXT,
+    is_completed BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. Enable RLS
+ALTER TABLE public.checklist_dropdown_options ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.checklist_items ENABLE ROW LEVEL SECURITY;
+
+-- 4. Add permissive public policies (No Auth required)
+CREATE POLICY "Allow public read" ON public.checklist_dropdown_options FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON public.checklist_dropdown_options FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update" ON public.checklist_dropdown_options FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete" ON public.checklist_dropdown_options FOR DELETE USING (true);
+
+CREATE POLICY "Allow public read" ON public.checklist_items FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON public.checklist_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update" ON public.checklist_items FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete" ON public.checklist_items FOR DELETE USING (true);
+
+-- 5. Enable Supabase Realtime Replication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_dropdown_options;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_items;
+

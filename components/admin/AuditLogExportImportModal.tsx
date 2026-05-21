@@ -64,6 +64,46 @@ const AVAILABLE_COLUMNS = [
   { id: "details", label: "Meta Details", desc: "Additional raw JSON metadata" },
 ];
 
+function parseAnyDate(val: unknown): Date | null {
+  if (val === null || val === undefined || val === "") return null;
+
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+
+  // Try to handle numbers or numeric strings
+  const num = Number(val);
+  if (!isNaN(num)) {
+    // Is it a Unix timestamp in milliseconds? (e.g. 1779321600000)
+    if (num >= 100000000000) {
+      const d = new Date(num);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Is it a Unix timestamp in seconds? (e.g. 1779321600)
+    if (num >= 100000000 && num < 100000000000) {
+      const d = new Date(num * 1000);
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Is it an Excel serial date? (e.g. 46161.58082175926)
+    // Excel date serial numbers are positive numbers representing days since 1899-12-30.
+    // We restrict range to [10000, 2000000] to avoid treating small numbers/years as serial dates.
+    if (num >= 10000 && num < 2000000) {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const msPerDay = 86400000;
+      const d = new Date(excelEpoch.getTime() + num * msPerDay);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // Try parsing as standard date string
+  if (typeof val === "string") {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
 export function AuditLogExportImportModal({
   isOpen,
   onClose,
@@ -206,8 +246,10 @@ export function AuditLogExportImportModal({
               }
             };
 
+            const rawDate = cleanRow.timestamp || cleanRow.created_at || cleanRow.time || null;
+            const parsedDate = parseAnyDate(rawDate);
             return {
-              created_at: (cleanRow.timestamp || cleanRow.created_at || cleanRow.time || null) as string | null,
+              created_at: parsedDate ? parsedDate.toISOString() : null,
               admin_id: (cleanRow.admin_id || null) as string | null,
               entity_type: (cleanRow.entity || cleanRow.entity_type || null) as string | null,
               entity_id: (cleanRow.entity_id || null) as string | null,

@@ -35,24 +35,6 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     icon: "BookCopy",
     validation: { min: 1, max: 50, type: "number" }
   },
-  max_renewal_count: { 
-    value: "3", 
-    label: "Max Renewals",
-    description: "Number of times a borrow can be extended.",
-    example: "Example: 3 times.",
-    category: "circulation",
-    icon: "RotateCw",
-    validation: { min: 0, max: 10, type: "number" }
-  },
-  renewal_period_days: { 
-    value: "14", 
-    label: "Renewal Period",
-    description: "Days added per renewal.",
-    example: "Example: 14 days.",
-    category: "circulation",
-    icon: "History",
-    validation: { min: 1, max: 90, type: "number" }
-  },
   hold_expiry_days: { 
     value: "7", 
     label: "Hold Shelf Life",
