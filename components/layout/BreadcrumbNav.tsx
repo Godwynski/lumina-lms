@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
 
 // Explicit mapping for professional labels
 const ROUTE_LABELS: Record<string, string> = {
@@ -56,7 +57,7 @@ function formatSegment(segment: string, parentSegment?: string) {
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParamsLite();
   const { role } = usePreferences();
 
   const clean = pathname.replace(/\?.*$/, "");
