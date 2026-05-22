@@ -94,9 +94,9 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { 
   getBooksForExport, 
-  batchImportBooks, 
-  lookupAndImportISBN 
+  batchImportBooks
 } from "@/lib/actions/catalog";
+import { useBatchTask } from "@/components/providers/BatchTaskProvider";
 
 interface ModernInventoryClientProps {
   books: Book[];
@@ -147,9 +147,7 @@ export function ModernInventoryClient({
 
   // ISBN Fallback States
   const [isbnInput, setIsbnInput] = useState("");
-  const [isISBNProcessing, setIsISBNProcessing] = useState(false);
-  const [isbnProgress, setIsbnProgress] = useState({ current: 0, total: 0, currentIsbn: "" });
-  const [isbnLogs, setIsbnLogs] = useState<{ isbn: string; status: "success" | "exists" | "error"; message: string }[]>([]);
+  const { isISBNProcessing, isbnProgress, isbnLogs, startISBNLookup } = useBatchTask();
 
   // Export States
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
@@ -160,7 +158,7 @@ export function ModernInventoryClient({
   const [isExportingJSON, setIsExportingJSON] = useState(false);
   const [isExportingZip, setIsExportingZip] = useState(false);
 
-  // Handle spreadsheet file selection and parsing on the client
+  // Handle spreadsheet or JSON file selection and parsing on the client
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -169,23 +167,39 @@ export function ModernInventoryClient({
     setIsParsing(true);
     setImportResults(null);
 
+    const fileType = file.name.split(".").pop()?.toLowerCase();
     const reader = new FileReader();
+    
     reader.onload = (event) => {
       try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
-
-        if (json.length === 0) {
-          toast.error("The spreadsheet appears to be empty.");
+        let jsonArray: Record<string, unknown>[] = [];
+        
+        if (fileType === "json") {
+          const text = event.target?.result as string;
+          const parsed = JSON.parse(text);
+          jsonArray = Array.isArray(parsed) ? parsed : [parsed];
+        } else if (fileType === "csv" || fileType === "xlsx" || fileType === "xls") {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          jsonArray = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+        } else {
+          toast.error("Unsupported file format.");
           setIsParsing(false);
+          setImportFile(null);
+          return;
+        }
+
+        if (jsonArray.length === 0) {
+          toast.error("The file appears to be empty.");
+          setIsParsing(false);
+          setImportFile(null);
           return;
         }
 
         // Normalize headers/keys
-        const normalized: ParsedBook[] = json.map((row) => {
+        const normalized: ParsedBook[] = jsonArray.map((row) => {
           const cleanRow: Record<string, unknown> = {};
           Object.keys(row).forEach(key => {
             const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -203,7 +217,7 @@ export function ModernInventoryClient({
             location: String(cleanRow.location || cleanRow.shelving || cleanRow.shelf || ""),
             section: String(cleanRow.section || ""),
             dewey_decimal: String(cleanRow.dewey || cleanRow.dewey_decimal || cleanRow.call_number || ""),
-            tags: String(cleanRow.tags || cleanRow.subjects || cleanRow.keywords || "")
+            tags: Array.isArray(cleanRow.tags) ? cleanRow.tags.join(', ') : String(cleanRow.tags || cleanRow.subjects || cleanRow.keywords || "")
           };
         });
 
@@ -212,13 +226,18 @@ export function ModernInventoryClient({
         toast.success(`Successfully parsed ${validBooks.length} valid book records.`);
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        toast.error(`Error reading spreadsheet: ${errMsg}`);
+        toast.error(`Error reading file: ${errMsg}`);
+        setImportFile(null);
       } finally {
         setIsParsing(false);
       }
     };
     
-    reader.readAsArrayBuffer(file);
+    if (fileType === "json") {
+      reader.readAsText(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
   };
 
   // Run the batch import server action
@@ -247,8 +266,8 @@ export function ModernInventoryClient({
     }
   };
 
-  // Process sequential ISBN lookup with 500ms throttling to avoid rate limits
-  const handleStartISBNLookup = async () => {
+  // Process sequential ISBN lookup using global provider
+  const handleStartISBNLookup = () => {
     const rawList = isbnInput
       .split(/[\n,]/)
       .map(isbn => isbn.trim().replace(/[- ]/g, ''))
@@ -259,67 +278,7 @@ export function ModernInventoryClient({
       return;
     }
 
-    setIsISBNProcessing(true);
-    setIsbnProgress({ current: 0, total: rawList.length, currentIsbn: rawList[0] });
-    setIsbnLogs([]);
-
-    toast.info(`Starting lookup sequence for ${rawList.length} ISBNs. Please keep this dialog open.`);
-
-    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-    const BATCH_SIZE = 3;
-    let completedCount = 0;
-
-    for (let i = 0; i < rawList.length; i += BATCH_SIZE) {
-      const batch = rawList.slice(i, i + BATCH_SIZE);
-
-      await Promise.all(batch.map(async (isbn) => {
-        try {
-          const res = await lookupAndImportISBN(isbn);
-
-          if (res.success) {
-            if (res.status === 'exists') {
-              setIsbnLogs(prev => [...prev, {
-                isbn,
-                status: 'exists',
-                message: `[RESOLVED] "${res.title}" already in catalog. Stock incremented by 1 copy.`
-              }]);
-            } else {
-              setIsbnLogs(prev => [...prev, {
-                isbn,
-                status: 'success',
-                message: `[IMPORTED] "${res.title}" by ${res.author} successfully cataloged.`
-              }]);
-            }
-          } else {
-            setIsbnLogs(prev => [...prev, {
-              isbn,
-              status: 'error',
-              message: `[FAILED] ISBN ${isbn}: ${res.error || 'Metadata lookup empty'}`
-            }]);
-          }
-        } catch (err: unknown) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          setIsbnLogs(prev => [...prev, {
-            isbn,
-            status: 'error',
-            message: `[ERROR] ISBN ${isbn}: ${errMsg}`
-          }]);
-        } finally {
-          completedCount++;
-          setIsbnProgress(prev => ({ ...prev, current: completedCount, currentIsbn: isbn }));
-        }
-      }));
-
-      // Safe throttling sleep to prevent "Too Many Requests" (429) errors from Google Books/Open Library
-      if (i + BATCH_SIZE < rawList.length) {
-        await sleep(500);
-      }
-    }
-
-    setIsISBNProcessing(false);
-    toast.success("ISBN import sequence completed!");
-    router.refresh();
+    startISBNLookup(rawList);
   };
 
   // Helper to map dynamic book columns
@@ -770,7 +729,7 @@ export function ModernInventoryClient({
                       <div className="border-2 border-dashed border-border/20 rounded-2xl p-8 flex flex-col items-center justify-center bg-muted/5 transition-all hover:border-primary/30 relative">
                         <input
                           type="file"
-                          accept=".csv,.xlsx,.xls"
+                          accept=".json,.csv,.xlsx,.xls"
                           onChange={handleFileChange}
                           className="absolute inset-0 opacity-0 cursor-pointer"
                           disabled={isParsing || isImporting}
@@ -778,7 +737,7 @@ export function ModernInventoryClient({
                         {isParsing ? (
                           <>
                             <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
-                            <p className="text-sm font-semibold">Reading spreadsheet content...</p>
+                            <p className="text-sm font-semibold">Reading file content...</p>
                           </>
                         ) : importFile ? (
                           <>
@@ -800,7 +759,7 @@ export function ModernInventoryClient({
                         ) : (
                           <>
                             <Upload className="h-8 w-8 text-muted-foreground/50 mb-3" />
-                            <p className="text-sm font-semibold">Choose CSV or Excel Spreadsheet</p>
+                            <p className="text-sm font-semibold">Choose JSON, CSV or Excel File</p>
                             <p className="text-xs text-muted-foreground mt-1">Drag and drop or click to browse</p>
                             <p className="text-[10px] text-muted-foreground/40 mt-3 uppercase tracking-wider">Required headers: Title, Author (Optional: ISBN, Category, Copies)</p>
                           </>

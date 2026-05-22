@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { format } from "date-fns";
 import { isAbortError } from "@/lib/error-utils";
 import { connection } from "next/server";
+import * as XLSX from "xlsx";
 
 
 export async function GET(request: NextRequest) {
@@ -161,17 +162,34 @@ export async function GET(request: NextRequest) {
           val = log[col as keyof typeof log] || "";
         }
 
+        return val;
+      });
+    });
+
+    if (formatParam === "xlsx") {
+      const dataForXlsx = [headers, ...rows];
+      const worksheet = XLSX.utils.aoa_to_sheet(dataForXlsx);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs");
+      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+      return new NextResponse(buffer, {
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="audit_logs_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx"`,
+        },
+      });
+    }
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map(val => {
         const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
         if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }
         return strVal;
-      });
-    });
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
+      }).join(",")),
     ].join("\n");
 
     return new NextResponse(csvContent, {

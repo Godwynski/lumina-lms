@@ -113,7 +113,7 @@ export function AuditLogExportImportModal({
   const [activeTab, setActiveTab] = useState<"export" | "import">("export");
 
   // Export States
-  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
+  const [exportFormat, setExportFormat] = useState<"csv" | "json" | "xlsx">("csv");
   const [selectedColumns, setSelectedColumns] = useState<string[]>(
     AVAILABLE_COLUMNS.map((c) => c.id)
   );
@@ -457,7 +457,7 @@ export function AuditLogExportImportModal({
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   File Output Format
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setExportFormat("csv")}
@@ -489,6 +489,23 @@ export function AuditLogExportImportModal({
                     <div>
                       <div className="text-xs font-bold">Developer JSON</div>
                       <div className="text-[10px] opacity-70 mt-0.5">Structured database format</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setExportFormat("xlsx")}
+                    className={cn(
+                      "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all col-span-2 sm:col-span-1",
+                      exportFormat === "xlsx"
+                        ? "bg-primary/[0.04] border-primary text-primary"
+                        : "bg-muted/10 border-border/20 text-muted-foreground hover:bg-muted/20"
+                    )}
+                  >
+                    <FileSpreadsheet className="h-5 w-5 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold">Excel XLSX</div>
+                      <div className="text-[10px] opacity-70 mt-0.5">Native MS Excel format</div>
                     </div>
                   </button>
                 </div>
