@@ -19,8 +19,8 @@ export async function POST(request: Request) {
     // Initialize the Supabase admin client using the service role key.
     // WARNING: This bypasses RLS. Only use the service role key in secure server routes.
     const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "http://localhost:54321",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || "dummy"
     );
 
     // 0. Prevent re-running if an admin already exists

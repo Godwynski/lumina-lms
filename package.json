@@ -8,6 +8,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
