@@ -376,7 +376,7 @@ export function DashboardClient({
                         <AlertTriangle size={16} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate">Overdue Loans</p>
+                        <p className="text-xs font-bold text-foreground truncate">Overdue Borrows</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
                           <span className="font-bold text-foreground">{stats.overdueBorrows}</span> books outstanding
                         </p>
@@ -438,7 +438,7 @@ export function DashboardClient({
           >
             <div className="flex items-start justify-between mb-4">
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
-                Active Loans
+                Active Borrows
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <RefreshCw size={16} />

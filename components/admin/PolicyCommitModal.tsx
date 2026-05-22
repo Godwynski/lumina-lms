@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, ArrowRight, Info } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 
 interface CommitModalProps {
   isOpen: boolean;
@@ -126,7 +127,7 @@ export function PolicyCommitModal({
                 <div key={key} className="group relative p-4 rounded-xl bg-card border border-border/60 hover:border-primary/30 transition-all duration-300 shadow-xs flex items-center justify-between gap-4">
                   <div className="flex flex-col gap-1 min-w-0 flex-1">
                     <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 group-hover:text-primary transition-colors">
-                      {formatKey(key)}
+                      {DEFAULT_POLICIES[key]?.label ?? formatKey(key)}
                     </span>
                     {renderDiffDetails(key, initialValues[key], formData[key])}
                   </div>

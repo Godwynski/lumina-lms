@@ -1285,7 +1285,7 @@ export async function seedLogsAndBorrows(supabase: SupabaseClient) {
       admin_id: profileIds.luminaAdmin,
       entity_type: 'system_settings',
       action: 'UPDATE_SYSTEM_SETTINGS',
-      reason: 'Revised loan policy per admin instruction',
+      reason: 'Revised borrowing policy per admin instruction',
       details: { key: 'loan_period_days', value: '14' }
     },
     {

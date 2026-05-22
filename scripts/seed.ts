@@ -1544,7 +1544,7 @@ async function seed() {
 
   // --- Returned Borrows (120 records) ---
   // Spread over 180 days to 15 days ago
-  console.info('🌱 Generating 120 completed loans (RETURNED)...');
+  console.info('🌱 Generating 120 completed borrows (RETURNED)...');
   for (let i = 1; i <= 120; i++) {
     const borrowDayOffset = 15 + (i * 1.35); // 15 to ~177 days ago
     const borrowDate = new Date(now.getTime() - borrowDayOffset * 24 * 60 * 60 * 1000);
@@ -1577,7 +1577,7 @@ async function seed() {
   let activePoolIndex = 0;
 
   // --- Active Borrows (25 records, due in future) ---
-  console.info('🌱 Generating 25 active loans (ACTIVE)...');
+  console.info('🌱 Generating 25 active borrows (ACTIVE)...');
   for (let i = 1; i <= 25; i++) {
     const borrowDate = new Date(now.getTime() - (i % 8 + 1) * 24 * 60 * 60 * 1000);
     const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -1598,7 +1598,7 @@ async function seed() {
   }
 
   // --- Overdue Borrows (15 records, due in past) ---
-  console.info('🌱 Generating 15 overdue loans (OVERDUE)...');
+  console.info('🌱 Generating 15 overdue borrows (OVERDUE)...');
   for (let i = 1; i <= 15; i++) {
     const borrowDate = new Date(now.getTime() - (20 + i) * 24 * 60 * 60 * 1000); // 21 to 35 days ago
     const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000); // 7 to 21 days ago (overdue)
@@ -1841,7 +1841,7 @@ async function seed() {
     { title: 'OVERDUE NOTICE', content: 'You have a book copy that is past its due date. Please return it to the circulation desk immediately.', type: 'CIRCULATION', priority: 'high' },
     { title: 'Hold Ready for Pickup', content: 'Your reserved book is now ready. Please retrieve it at the circulation desk within 3 days.', type: 'CIRCULATION', priority: 'high' },
     { title: 'Account Status Warning', content: 'Your library account has been flagged for multiple overdue items.', type: 'SYSTEM', priority: 'high' },
-    { title: 'System settings updated', content: 'Library loan settings were adjusted by a system administrator.', type: 'SYSTEM', priority: 'low' },
+    { title: 'System settings updated', content: 'Library borrowing settings were adjusted by a system administrator.', type: 'SYSTEM', priority: 'low' },
   ];
 
   // Distribute 30 notifications across users
@@ -2007,7 +2007,7 @@ async function seed() {
   const auditLogsToSeed: any[] = [];
   const auditActions = [
     { entity: 'books', action: 'CREATE_BOOK', reason: 'Standard catalog expansion' },
-    { entity: 'system_settings', action: 'UPDATE_SYSTEM_SETTINGS', reason: 'Revised loan policy per admin instruction' },
+    { entity: 'system_settings', action: 'UPDATE_SYSTEM_SETTINGS', reason: 'Revised borrowing policy per admin instruction' },
     { entity: 'profiles', action: 'UPDATE_USER_ROLE', reason: 'Assigned library staff permissions' },
     { entity: 'books', action: 'UPDATE_BOOK_DETAILS', reason: 'Corrected author and published year info' },
     { entity: 'book_copies', action: 'DELETE_BOOK_COPY', reason: 'Copy written off due to severe physical damage' },

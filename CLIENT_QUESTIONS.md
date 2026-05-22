@@ -15,7 +15,7 @@ This document contains required clarifications needed from the client to finaliz
 
 ## 3. Circulation & Borrowing Policies
 - [ ] **Borrowing Limits:** What is the maximum number of items a standard user can check out at once? Does this limit change based on user roles (e.g., Faculty borrow limits vs. Student borrow limits)?
-- [ ] **Loan Durations:** What is the standard duration for a checkout? Are there special categories of books that have restricted checkout times (e.g., reference books that are overnight only)?
+- [ ] **Borrowing Durations:** What is the standard duration for a checkout? Are there special categories of books that have restricted checkout times (e.g., reference books that are overnight only)?
 - [ ] **Renewals:** Can users renew books through the system online? If so, what is the maximum number of times a book can be renewed before the user must physically present it?
 
 ## 4. Audit Logging & Compliance

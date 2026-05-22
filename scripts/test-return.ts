@@ -51,7 +51,7 @@ async function testOverdueReturn() {
   const qrString = copy?.qr_string;
   const originalCopyStatus = copy?.status;
 
-  console.log(`✅ Found Overdue Loan:`);
+  console.log(`✅ Found Overdue Borrow:`);
   console.log(`   - Book: "${bookTitle}"`);
   console.log(`   - Copy QR Code: "${qrString}"`);
   console.log(`   - Due Date: ${record.due_date}`);
