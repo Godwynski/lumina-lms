@@ -4,7 +4,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createSafeAction } from './action-utils';
 import { z } from 'zod';
 
-// ... Removed unused getSystemSetting helper
 /**
  * Assigns a specific book copy to the next person in the reservation queue.
  * If no one is waiting, marks the copy as AVAILABLE.
