@@ -28,6 +28,7 @@ export const mapProfileToUser = (row: Record<string, unknown>): User => ({
   student_id: typeof row.student_id === "string" ? row.student_id : null,
   address: typeof row.address === "string" ? row.address : null,
   phone: typeof row.phone === "string" ? row.phone : null,
+  updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
   onboarding_completed: Boolean(row.onboarding_completed),
   library_card: Array.isArray(row.library_cards) ? row.library_cards[0] : (row.library_cards as User["library_card"]) || null,
   permissions: (row.permissions as Record<string, boolean>) || {},

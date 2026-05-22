@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
 import { useLogout } from "@/hooks/use-logout";
 import {
@@ -114,7 +115,8 @@ export function ProtectedNav({
 
   const name = currentProfile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const email = user?.email || "";
-  const avatarUrl = currentProfile?.avatar_url || user?.user_metadata?.avatar_url;
+  const rawAvatarUrl = currentProfile?.avatar_url || user?.user_metadata?.avatar_url;
+  const avatarUrl = bustAvatarCache(rawAvatarUrl, profile?.updated_at);
   const initials = name
     .split(" ")
     .map((n: string) => n[0])

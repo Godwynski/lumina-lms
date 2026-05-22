@@ -34,6 +34,7 @@ function mapProfileToUser(row: Record<string, unknown>) {
       : "Unknown",
     address: typeof row.address === "string" ? row.address : null,
     phone: typeof row.phone === "string" ? row.phone : null,
+    updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
     permissions: (row.permissions as Record<string, boolean>) || {},
   };
 }

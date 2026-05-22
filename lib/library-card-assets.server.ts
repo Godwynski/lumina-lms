@@ -257,7 +257,10 @@ export async function ensureStaticLibraryCardAssets(opts: {
   if (profileUrlToSave && profileUrlToSave !== profile.avatar_url) {
     await admin
       .from("profiles")
-      .update({ avatar_url: profileUrlToSave })
+      .update({
+        avatar_url: profileUrlToSave,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", opts.userId);
   }
 

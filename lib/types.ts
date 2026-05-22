@@ -87,6 +87,7 @@ export type ProfileData = {
   address: string | null;
   phone: string | null;
   status?: string;
+  updated_at?: string | null;
   onboarding_completed?: boolean;
   permissions?: UserPermissions | null;
 };

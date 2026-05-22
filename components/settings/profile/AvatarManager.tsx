@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ImageCropper } from "./ImageCropper";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 
 interface AvatarManagerProps {
   initialAvatarUrl: string | null;
@@ -23,7 +24,8 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
   const { profile } = usePreferences();
 
   // Use the realtime profile avatar if available, otherwise fallback to initial
-  const avatarUrl = profile?.avatar_url ?? initialAvatarUrl;
+  const rawAvatarUrl = profile?.avatar_url ?? initialAvatarUrl;
+  const avatarUrl = bustAvatarCache(rawAvatarUrl, profile?.updated_at);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

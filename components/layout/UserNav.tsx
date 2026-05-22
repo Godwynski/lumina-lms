@@ -29,6 +29,7 @@ import { useState } from "react";
 import { useLogout } from "@/hooks/use-logout";
 
 import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 
 interface Profile {
   full_name?: string | null;
@@ -62,7 +63,8 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
   };
 
   const name = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
-  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const rawAvatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+  const avatarUrl = bustAvatarCache(rawAvatarUrl, liveProfile?.updated_at);
   const initials = name
     .split(" ")
     .map((n: string) => n[0])

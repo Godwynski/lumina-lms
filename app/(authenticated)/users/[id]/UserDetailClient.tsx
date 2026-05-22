@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
@@ -21,6 +21,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section, FieldGroup } from "@/components/settings/SettingsShared";
+import { createClient } from "@/lib/supabase/client";
+import { mapProfileToUser } from "@/lib/utils/mappers";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { User } from "../UsersContent";
 
 export function UserDetailClient({
@@ -33,6 +36,45 @@ export function UserDetailClient({
   const router = useRouter();
   const [user, setUser] = useState<User>(initialUser);
   const [isSaving, setIsSaving] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
+
+  // Realtime subscription for profile changes (e.g. avatar updates from the user)
+  useEffect(() => {
+    const channelId = `user-detail-${initialUser.id}-${Math.random().toString(36).slice(2, 9)}`;
+    const channel = supabase
+      .channel(channelId)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${initialUser.id}`,
+        },
+        (payload) => {
+          const updatedRow = payload.new as Record<string, unknown>;
+          const mapped = mapProfileToUser(updatedRow);
+          setUser(prev => ({
+            ...prev,
+            name: mapped.name,
+            avatarUrl: mapped.avatarUrl,
+            role: mapped.role,
+            status: mapped.status,
+            department: mapped.department,
+            student_id: mapped.student_id,
+            address: mapped.address,
+            phone: mapped.phone,
+            updatedAt: mapped.updatedAt,
+            permissions: mapped.permissions,
+          }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [initialUser.id, supabase]);
 
   // Modals
   const [permissionsOpen, setPermissionsOpen] = useState(false);
@@ -209,7 +251,7 @@ export function UserDetailClient({
               {/* Left Column: Avatar & ID */}
               <div className="flex flex-col items-center gap-4 rounded-xl border border-border/40 bg-muted/20 p-5 lg:w-56 shrink-0">
                 <Avatar className="h-24 w-24 rounded-2xl border-2 border-background shadow-lg">
-                  <AvatarImage src={user.avatarUrl || undefined} alt={form.name} className="object-cover" />
+                <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={form.name} className="object-cover" />
                   <AvatarFallback className="rounded-2xl bg-muted text-xl font-bold">
                     {form.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
