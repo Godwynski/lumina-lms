@@ -182,12 +182,12 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'profiles' }, 
         (payload) => {
-          console.log('Realtime change received for profiles:', payload);
+          console.info('Realtime change received for profiles:', payload);
           void loadUsersRef.current();
         }
       )
       .subscribe((status) => {
-        console.log(`Subscription status for ${channelId}:`, status);
+        console.info(`Subscription status for ${channelId}:`, status);
       });
 
     return () => {
