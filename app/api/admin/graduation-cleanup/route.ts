@@ -61,73 +61,112 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     }
 
-    // For each student, check their status (would normally sync with MS Graph)
-    // For now, we'll deactivate students who don't have active borrowing records
+    const studentIds = students.map((s) => s.id);
+
+    // Batch fetch active borrowing records
+    const { data: activeBorrowsData, error: borrowsError } = await supabase
+      .from("borrowing_records")
+      .select("user_id")
+      .in("user_id", studentIds)
+      .eq("status", "ACTIVE");
+
+    if (borrowsError) {
+      throw borrowsError;
+    }
+
+    // Set of student IDs that have active borrows
+    const studentsWithActiveBorrows = new Set(
+      activeBorrowsData?.map((record) => record.user_id) || []
+    );
+
+    const studentsToDeactivate = [];
+    const studentsToSkip = [];
+
     for (const student of students) {
-      try {
-        // Check if student has active borrowings
-        const { count: activeBorrows } = await supabase
-          .from("borrowing_records")
-          .select("*", { count: "exact" })
-          .eq("user_id", student.id)
-          .eq("status", "ACTIVE");
+      const hasActiveBorrows = studentsWithActiveBorrows.has(student.id);
 
-        // If no active borrows and status is active, candidate for deactivation
-        const activeBorrowCount = activeBorrows ?? 0;
-        if (activeBorrowCount === 0 && student.status === "ACTIVE") {
-          if (!dryRun) {
-            // Deactivate student
-            const { error: updateError } = await supabase
-              .from("profiles")
-              .update({ status: "GRADUATED" })
-              .eq("id", student.id);
-
-            if (updateError) throw updateError;
-
-            // Deactivate library card
-            await supabase
-              .from("library_cards")
-              .update({ status: "EXPIRED" })
-              .eq("user_id", student.id);
-
-            // Log audit entry using unified utility
-            await logAuditActivity(
-              user.id,
-              "profile",
-              student.id,
-              "update",
-              "Batch graduation cleanup - no active borrows",
-              { batch: true },
-              { status: student.status },
-              { status: "GRADUATED" }
-            );
-          }
-
-          result.deactivatedCount++;
-          result.details.push({
-            userId: student.id,
-            email: student.email || "unknown",
-            status: "deactivated",
-            reason: "No active borrowing records",
-          });
-        } else {
-          result.skippedCount++;
-          result.details.push({
-            userId: student.id,
-            email: student.email || "unknown",
-            status: "skipped",
-            reason: activeBorrowCount > 0 ? "Has active borrows" : "Already inactive",
-          });
-        }
-      } catch (err) {
-        result.errorCount++;
-        result.details.push({
-          userId: student.id,
-          email: student.email || "unknown",
-          status: "error",
-          reason: err instanceof Error ? err.message : "Unknown error",
+      if (!hasActiveBorrows && student.status === "ACTIVE") {
+        studentsToDeactivate.push(student);
+      } else {
+        studentsToSkip.push({
+          student,
+          reason: hasActiveBorrows ? "Has active borrows" : "Already inactive",
         });
       }
+    }
+
+    if (!dryRun && studentsToDeactivate.length > 0) {
+      try {
+        const deactivatedStudentIds = studentsToDeactivate.map((s) => s.id);
+
+        // Bulk update profiles
+        const { error: updateProfilesError } = await supabase
+          .from("profiles")
+          .update({ status: "GRADUATED" })
+          .in("id", deactivatedStudentIds);
+
+        if (updateProfilesError) throw updateProfilesError;
+
+        // Bulk update library cards
+        const { error: updateCardsError } = await supabase
+          .from("library_cards")
+          .update({ status: "EXPIRED" })
+          .in("user_id", deactivatedStudentIds);
+
+        if (updateCardsError) throw updateCardsError;
+
+      } catch (err) {
+        // If bulk update fails, all candidates fail
+        for (const student of studentsToDeactivate) {
+          result.errorCount++;
+          result.details.push({
+            userId: student.id,
+            email: student.email || "unknown",
+            status: "error",
+            reason: err instanceof Error ? err.message : "Bulk update failed",
+          });
+        }
+        studentsToDeactivate.length = 0; // Clear successfully deactivated candidates
+      }
+
+      // Log audit entries individually to preserve existing behavior
+      for (const student of studentsToDeactivate) {
+        try {
+          await logAuditActivity(
+            user.id,
+            "profile",
+            student.id,
+            "update",
+            "Batch graduation cleanup - no active borrows",
+            { batch: true },
+            { status: student.status },
+            { status: "GRADUATED" }
+          );
+        } catch (auditErr) {
+          console.error("Failed to log audit activity for student", student.id, auditErr);
+        }
+      }
+    }
+
+    // Populate results
+    for (const student of studentsToDeactivate) {
+      result.deactivatedCount++;
+      result.details.push({
+        userId: student.id,
+        email: student.email || "unknown",
+        status: "deactivated",
+        reason: "No active borrowing records",
+      });
+    }
+
+    for (const item of studentsToSkip) {
+      result.skippedCount++;
+      result.details.push({
+        userId: item.student.id,
+        email: item.student.email || "unknown",
+        status: "skipped",
+        reason: item.reason,
+      });
     }
 
     if (!dryRun && result.deactivatedCount > 0) {

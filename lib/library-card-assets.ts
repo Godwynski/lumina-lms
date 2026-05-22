@@ -8,7 +8,10 @@ export function sanitizeStudentId(studentId: string) {
 }
 
 export function generateFacultyId() {
-  const suffix = Math.floor(100000 + Math.random() * 900000).toString();
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  const secureRandom = array[0] / (0xFFFFFFFF + 1);
+  const suffix = Math.floor(100000 + secureRandom * 900000).toString();
   return `FAC-${suffix}`;
 }
 

@@ -8,12 +8,18 @@ import {
   seedCatalog 
 } from "@/lib/db-actions";
 import { NextResponse } from "next/server";
+import { withAuthApi } from "@/lib/api-utils";
 
-export async function POST(req: Request) {
-  try {
-    const { action } = await req.json();
+export const POST = withAuthApi(
+  async (req: Request) => {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Not available in production" }, { status: 403 });
+    }
 
-    const adminClient = createAdminClient();
+    try {
+      const { action } = await req.json();
+
+      const adminClient = createAdminClient();
 
     let logs: string[] = [];
 
@@ -42,13 +48,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, logs });
-  } catch (error) {
-    console.error("Error in /api/sheesh route:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+      return NextResponse.json({ success: true, logs });
+    } catch (error) {
+      console.error("Error in /api/sheesh route:", error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Internal server error" },
+        { status: 500 }
+      );
+    }
+  },
+  { allowedRoles: ["super_admin"] }
+);
+
 export const dynamic = "force-dynamic";

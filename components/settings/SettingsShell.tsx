@@ -6,10 +6,6 @@ import { NavigationGuard } from "@/components/layout/NavigationGuard";
 interface SettingsShellProps {
   isDirty?: boolean;
   children: React.ReactNode;
-  // Deprecated redundant props
-  title?: string;
-  description?: string;
-  role?: string;
 }
 
 export function SettingsShell({ 
