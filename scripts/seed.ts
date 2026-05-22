@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-// Define profiles/users we expect in the DB
+// Define profiles/users in the DB
 const profileIds = {
   godwynStudent: 'f1d742df-ca66-4ac8-a4e2-7369c1dc4460',
   kayleStudent: '00000000-0000-0000-0000-000000000006',
@@ -28,7 +28,7 @@ const profileIds = {
 };
 
 async function seed() {
-  console.info('🌱 Starting database seed...');
+  console.info('🌱 Starting database seed with expanded and varied dataset...');
 
   // --- Clean-up Phase ---
   console.info('🧹 Cleaning up existing data in dependency order...');
@@ -44,6 +44,7 @@ async function seed() {
   await supabase.from('borrowing_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('checkout_idempotency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('return_idempotency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  
   // Preserve library cards that belong to the demo profiles
   await supabase.from('library_cards').delete().not('user_id', 'in', `(${Object.values(profileIds).join(',')})`);
   await supabase.from('book_copies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -79,15 +80,18 @@ async function seed() {
 
   const catMap = new Map(catData.map(c => [c.slug, c.id]));
 
-  // 2. Seed Books
+  // Helper to get category ID
+  const getCatId = (slug: string) => catMap.get(slug);
+
+  // 2. Define 100 Books (10 per category)
   const booksToSeed = [
-    // Computer Science
+    // --- COMPUTER SCIENCE ---
     {
       title: 'Clean Code',
       author: 'Robert C. Martin',
       isbn: '9780132350884',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780132350884-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['programming', 'software-design', 'clean-code'],
       location: 'Shelf A1',
       section: 'Computer Science',
@@ -100,7 +104,7 @@ async function seed() {
       author: 'Andrew Hunt & David Thomas',
       isbn: '9780135957059',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780135957059-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['software-engineering', 'best-practices', 'pragmatic'],
       location: 'Shelf A1',
       section: 'Computer Science',
@@ -113,7 +117,7 @@ async function seed() {
       author: 'Thomas H. Cormen',
       isbn: '9780262033848',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780262033848-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['algorithms', 'data-structures', 'cs-core'],
       location: 'Shelf A2',
       section: 'Computer Science',
@@ -126,7 +130,7 @@ async function seed() {
       author: 'Martin Kleppmann',
       isbn: '9781449373320',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9781449373320-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['system-design', 'databases', 'distributed-systems'],
       location: 'Shelf A2',
       section: 'Computer Science',
@@ -139,7 +143,7 @@ async function seed() {
       author: 'Martin Fowler',
       isbn: '9780134757599',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780134757599-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['refactoring', 'software-design', 'clean-code'],
       location: 'Shelf A3',
       section: 'Computer Science',
@@ -152,7 +156,7 @@ async function seed() {
       author: 'Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides',
       isbn: '9780201633610',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780201633610-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['design-patterns', 'oop', 'software-architecture'],
       location: 'Shelf A3',
       section: 'Computer Science',
@@ -165,7 +169,7 @@ async function seed() {
       author: 'Frederick P. Brooks Jr.',
       isbn: '9780201835953',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780201835953-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['project-management', 'software-engineering', 'classics'],
       location: 'Shelf A4',
       section: 'Computer Science',
@@ -178,7 +182,7 @@ async function seed() {
       author: 'Alfred V. Aho, Monica S. Lam, Ravi Sethi, Jeffrey D. Ullman',
       isbn: '9780321486813',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780321486813-L.jpg',
-      category_id: catMap.get('computer-science'),
+      category_id: getCatId('computer-science'),
       tags: ['compilers', 'computer-science', 'parser'],
       location: 'Shelf A4',
       section: 'Computer Science',
@@ -186,13 +190,39 @@ async function seed() {
       description: 'Known as the "Dragon Book", this is the definitive guide to compiler construction.',
       published_year: 2006
     },
-    // Mathematics
+    {
+      title: 'Structure and Interpretation of Computer Programs',
+      author: 'Harold Abelson & Gerald Jay Sussman',
+      isbn: '9780262510875',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780262510875-L.jpg',
+      category_id: getCatId('computer-science'),
+      tags: ['lisp', 'programming-languages', 'computer-science'],
+      location: 'Shelf A5',
+      section: 'Computer Science',
+      dewey_decimal: '005.1',
+      description: 'A classic introduction to computer science using Scheme/Lisp.',
+      published_year: 1996
+    },
+    {
+      title: 'Code Complete',
+      author: 'Steve McConnell',
+      isbn: '9780735619678',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780735619678-L.jpg',
+      category_id: getCatId('computer-science'),
+      tags: ['software-construction', 'coding-style', 'programming'],
+      location: 'Shelf A5',
+      section: 'Computer Science',
+      dewey_decimal: '005.1',
+      description: 'A comprehensive handbook of software construction and best coding practices.',
+      published_year: 2004
+    },
+    // --- MATHEMATICS ---
     {
       title: 'Calculus Vol 1',
       author: 'Tom M. Apostol',
       isbn: '9788126515196',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9788126515196-L.jpg',
-      category_id: catMap.get('mathematics'),
+      category_id: getCatId('mathematics'),
       tags: ['calculus', 'math-analysis', 'textbook'],
       location: 'Shelf B1',
       section: 'Mathematics',
@@ -205,7 +235,7 @@ async function seed() {
       author: 'Gilbert Strang',
       isbn: '9780030105678',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780030105678-L.jpg',
-      category_id: catMap.get('mathematics'),
+      category_id: getCatId('mathematics'),
       tags: ['linear-algebra', 'matrices', 'textbook'],
       location: 'Shelf B1',
       section: 'Mathematics',
@@ -218,7 +248,7 @@ async function seed() {
       author: 'Sheldon Axler',
       isbn: '9783319110790',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9783319110790-L.jpg',
-      category_id: catMap.get('mathematics'),
+      category_id: getCatId('mathematics'),
       tags: ['linear-algebra', 'theory', 'pure-math'],
       location: 'Shelf B2',
       section: 'Mathematics',
@@ -231,21 +261,99 @@ async function seed() {
       author: 'Douglas R. Hofstadter',
       isbn: '9780465026562',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780465026562-L.jpg',
-      category_id: catMap.get('mathematics'),
+      category_id: getCatId('mathematics'),
       tags: ['math-logic', 'cognitive-science', 'philosophy'],
       location: 'Shelf B2',
       section: 'Mathematics',
       dewey_decimal: '510.1',
-      description: 'A Pulitzer Prize-winning book exploring common themes in the lives and works of mathematician Kurt Gödel, artist M.C. Escher, and composer Johann Sebastian Bach.',
+      description: 'A Pulitzer Prize-winning book exploring common themes in math, logic, art, and music.',
       published_year: 1979
     },
-    // Science & Tech
+    {
+      title: 'Introduction to Topology',
+      author: 'Bert Mendelson',
+      isbn: '9780486663524',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780486663524-L.jpg',
+      category_id: getCatId('mathematics'),
+      tags: ['topology', 'pure-mathematics', 'geometry'],
+      location: 'Shelf B3',
+      section: 'Mathematics',
+      dewey_decimal: '514',
+      description: 'A classic, highly accessible introduction to metric spaces and topological spaces.',
+      published_year: 1990
+    },
+    {
+      title: 'Discrete Mathematics and Its Applications',
+      author: 'Kenneth H. Rosen',
+      isbn: '9780073383095',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780073383095-L.jpg',
+      category_id: getCatId('mathematics'),
+      tags: ['discrete-math', 'logic', 'computer-science-math'],
+      location: 'Shelf B3',
+      section: 'Mathematics',
+      dewey_decimal: '511.3',
+      description: 'The standard textbook on discrete mathematical structures for computer science students.',
+      published_year: 2011
+    },
+    {
+      title: 'Abstract Algebra',
+      author: 'David S. Dummit & Richard M. Foote',
+      isbn: '9780471433347',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780471433347-L.jpg',
+      category_id: getCatId('mathematics'),
+      tags: ['algebra', 'groups-rings-fields', 'pure-math'],
+      location: 'Shelf B4',
+      section: 'Mathematics',
+      dewey_decimal: '512.02',
+      description: 'A comprehensive, clear textbook covering the core topics of abstract algebra.',
+      published_year: 2003
+    },
+    {
+      title: 'Probability and Random Processes',
+      author: 'Geoffrey Grimmett & David Stirzaker',
+      isbn: '9780198572220',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780198572220-L.jpg',
+      category_id: getCatId('mathematics'),
+      tags: ['probability', 'statistics', 'random-processes'],
+      location: 'Shelf B4',
+      section: 'Mathematics',
+      dewey_decimal: '519.2',
+      description: 'A detailed treatment of probability theory and random variables.',
+      published_year: 2001
+    },
+    {
+      title: 'Calculus on Manifolds',
+      author: 'Michael Spivak',
+      isbn: '9780805390216',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780805390216-L.jpg',
+      category_id: getCatId('mathematics'),
+      tags: ['calculus', 'differential-geometry', 'analysis'],
+      location: 'Shelf B5',
+      section: 'Mathematics',
+      dewey_decimal: '515',
+      description: 'A modern approach to advanced calculus in several variables on manifolds.',
+      published_year: 1965
+    },
+    {
+      title: 'The Princeton Companion to Mathematics',
+      author: 'Timothy Gowers',
+      isbn: '9780691118802',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780691118802-L.jpg',
+      category_id: getCatId('mathematics'),
+      tags: ['math-reference', 'history-of-math', 'encyclopedia'],
+      location: 'Shelf B5',
+      section: 'Mathematics',
+      dewey_decimal: '510',
+      description: 'An expansive reference guide to the key concepts, branches, and practitioners of modern mathematics.',
+      published_year: 2008
+    },
+    // --- SCIENCE & TECHNOLOGY ---
     {
       title: 'A Brief History of Time',
       author: 'Stephen Hawking',
       isbn: '9780553380163',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780553380163-L.jpg',
-      category_id: catMap.get('science-technology'),
+      category_id: getCatId('science-technology'),
       tags: ['astrophysics', 'popular-science', 'cosmology'],
       location: 'Shelf C1',
       section: 'Science',
@@ -258,9 +366,9 @@ async function seed() {
       author: 'Richard Dawkins',
       isbn: '9780198788607',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780198788607-L.jpg',
-      category_id: catMap.get('science-technology'),
+      category_id: getCatId('science-technology'),
       tags: ['evolutionary-biology', 'genetics', 'science'],
-      location: 'Shelf C2',
+      location: 'Shelf C1',
       section: 'Science',
       dewey_decimal: '576.82',
       description: 'Dawkins explains how natural selection operates at the level of genes, transforming our understanding of biology.',
@@ -271,7 +379,7 @@ async function seed() {
       author: 'Carl Sagan',
       isbn: '9780375508325',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780375508325-L.jpg',
-      category_id: catMap.get('science-technology'),
+      category_id: getCatId('science-technology'),
       tags: ['astronomy', 'science-history', 'popular-science'],
       location: 'Shelf C2',
       section: 'Science',
@@ -279,13 +387,104 @@ async function seed() {
       description: 'Carl Sagan’s classic exploration of the universe, science, and the human journey of discovery.',
       published_year: 1980
     },
-    // Literature & Fiction
+    {
+      title: 'The Elegant Universe',
+      author: 'Brian Greene',
+      isbn: '9780393058581',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780393058581-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['string-theory', 'physics', 'relativity'],
+      location: 'Shelf C2',
+      section: 'Science',
+      dewey_decimal: '539.7',
+      description: 'Superstrings, hidden dimensions, and the quest for the ultimate theory of physics.',
+      published_year: 1999
+    },
+    {
+      title: 'A Short History of Nearly Everything',
+      author: 'Bill Bryson',
+      isbn: '9780767908177',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780767908177-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['general-science', 'history-of-science', 'popular-science'],
+      location: 'Shelf C3',
+      section: 'Science',
+      dewey_decimal: '500',
+      description: 'A witty and informative journey through the history of scientific discovery and human knowledge.',
+      published_year: 2003
+    },
+    {
+      title: 'The Gene: An Intimate History',
+      author: 'Siddhartha Mukherjee',
+      isbn: '9781476715490',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781476715490-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['genetics', 'biology', 'science-history'],
+      location: 'Shelf C3',
+      section: 'Science',
+      dewey_decimal: '576.5',
+      description: 'The story of the birth, growth, and future of genetics, told with Mukherjee’s signature narrative drive.',
+      published_year: 2016
+    },
+    {
+      title: 'Silent Spring',
+      author: 'Rachel Carson',
+      isbn: '9780618249060',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780618249060-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['ecology', 'environmentalism', 'pesticides'],
+      location: 'Shelf C4',
+      section: 'Science',
+      dewey_decimal: '363.7',
+      description: 'The seminal environmental book exposing the dangers of synthetic pesticides and launching the ecological movement.',
+      published_year: 1962
+    },
+    {
+      title: 'The Double Helix',
+      author: 'James D. Watson',
+      isbn: '9780743216302',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780743216302-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['dna', 'molecular-biology', 'memoir'],
+      location: 'Shelf C4',
+      section: 'Science',
+      dewey_decimal: '572.8',
+      description: 'Watson’s personal account of the discovery of the structure of DNA, offering a look inside scientific competition.',
+      published_year: 1968
+    },
+    {
+      title: 'Chaos: Making a New Science',
+      author: 'James Gleick',
+      isbn: '9780143113454',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780143113454-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['chaos-theory', 'physics', 'mathematics'],
+      location: 'Shelf C5',
+      section: 'Science',
+      dewey_decimal: '501',
+      description: 'The story of the breakthroughs in the physics of complexity and fractal structures.',
+      published_year: 1987
+    },
+    {
+      title: "Gödel's Proof",
+      author: 'Ernest Nagel & James R. Newman',
+      isbn: '9780415355286',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780415355286-L.jpg',
+      category_id: getCatId('science-technology'),
+      tags: ['logic', 'mathematical-logic', 'incompleteness'],
+      location: 'Shelf C5',
+      section: 'Science',
+      dewey_decimal: '511.3',
+      description: 'A short, readable, and highly precise explanation of Kurt Gödel’s famous incompleteness theorems.',
+      published_year: 1958
+    },
+    // --- LITERATURE & FICTION ---
     {
       title: 'To Kill a Mockingbird',
       author: 'Harper Lee',
       isbn: '9780446310789',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780446310789-L.jpg',
-      category_id: catMap.get('literature-fiction'),
+      category_id: getCatId('literature-fiction'),
       tags: ['classic', 'american-literature', 'fiction'],
       location: 'Shelf D1',
       section: 'Literature',
@@ -298,9 +497,9 @@ async function seed() {
       author: 'George Orwell',
       isbn: '9780451524935',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780451524935-L.jpg',
-      category_id: catMap.get('literature-fiction'),
+      category_id: getCatId('literature-fiction'),
       tags: ['dystopian', 'classic', 'political-fiction'],
-      location: 'Shelf D2',
+      location: 'Shelf D1',
       section: 'Literature',
       dewey_decimal: '823.912',
       description: 'Winston Smith toes the Party line, rewriting history to satisfy the Ministry of Truth. But deep inside, he harbors a rebellion.',
@@ -311,9 +510,9 @@ async function seed() {
       author: 'F. Scott Fitzgerald',
       isbn: '9780743273565',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780743273565-L.jpg',
-      category_id: catMap.get('literature-fiction'),
+      category_id: getCatId('literature-fiction'),
       tags: ['classic', 'american-literature', 'fiction'],
-      location: 'Shelf D3',
+      location: 'Shelf D2',
       section: 'Literature',
       dewey_decimal: '813.52',
       description: 'The story of the mysteriously wealthy Jay Gatsby and his love for the beautiful Daisy Buchanan.',
@@ -324,9 +523,9 @@ async function seed() {
       author: 'Aldous Huxley',
       isbn: '9780060850524',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780060850524-L.jpg',
-      category_id: catMap.get('literature-fiction'),
+      category_id: getCatId('literature-fiction'),
       tags: ['dystopian', 'classic', 'science-fiction'],
-      location: 'Shelf D3',
+      location: 'Shelf D2',
       section: 'Literature',
       dewey_decimal: '823.912',
       description: 'A dystopian novel detailing a genetically modified and consumerist society.',
@@ -337,21 +536,99 @@ async function seed() {
       author: 'J.R.R. Tolkien',
       isbn: '9780345339683',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780345339683-L.jpg',
-      category_id: catMap.get('literature-fiction'),
+      category_id: getCatId('literature-fiction'),
       tags: ['fantasy', 'adventure', 'classics'],
-      location: 'Shelf D4',
+      location: 'Shelf D3',
       section: 'Literature',
       dewey_decimal: '823.912',
       description: 'Bilbo Baggins is whisked away from his comfortable hobbit hole by Gandalf the wizard and a band of dwarves.',
       published_year: 1937
     },
-    // History & Biography
+    {
+      title: 'Crime and Punishment',
+      author: 'Fyodor Dostoevsky',
+      isbn: '9780140449136',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780140449136-L.jpg',
+      category_id: getCatId('literature-fiction'),
+      tags: ['russian-classics', 'psychological-novel', 'philosophy'],
+      location: 'Shelf D3',
+      section: 'Literature',
+      dewey_decimal: '891.73',
+      description: 'The psychological struggles of Raskolnikov, a poor student in St. Petersburg who kills a pawnbroker.',
+      published_year: 1866
+    },
+    {
+      title: 'Pride and Prejudice',
+      author: 'Jane Austen',
+      isbn: '9780141439518',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780141439518-L.jpg',
+      category_id: getCatId('literature-fiction'),
+      tags: ['romance', 'classic-literature', 'satire'],
+      location: 'Shelf D4',
+      section: 'Literature',
+      dewey_decimal: '823.7',
+      description: 'A romantic comedy of manners detailing the turbulent relationship between Elizabeth Bennet and Mr. Darcy.',
+      published_year: 1813
+    },
+    {
+      title: 'Fahrenheit 451',
+      author: 'Ray Bradbury',
+      isbn: '9781451673319',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781451673319-L.jpg',
+      category_id: getCatId('literature-fiction'),
+      tags: ['sci-fi', 'dystopian', 'classics'],
+      location: 'Shelf D4',
+      section: 'Literature',
+      dewey_decimal: '813.54',
+      description: 'A future society where books are outlawed and "firemen" burn any that are found.',
+      published_year: 1953
+    },
+    {
+      title: 'One Hundred Years of Solitude',
+      author: 'Gabriel García Márquez',
+      isbn: '9780060883287',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780060883287-L.jpg',
+      category_id: getCatId('literature-fiction'),
+      tags: ['magical-realism', 'colombian', 'literary-classic'],
+      location: 'Shelf D5',
+      section: 'Literature',
+      dewey_decimal: '863',
+      description: 'The multi-generational story of the Buendía family, whose patriarch founded the town of Macondo.',
+      published_year: 1967
+    },
+    {
+      title: 'Moby Dick',
+      author: 'Herman Melville',
+      isbn: '9781503280786',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781503280786-L.jpg',
+      category_id: getCatId('literature-fiction'),
+      tags: ['adventure', 'classics', 'sea-fiction'],
+      location: 'Shelf D5',
+      section: 'Literature',
+      dewey_decimal: '813.3',
+      description: 'Sailor Ishmael’s narrative of the obsessive quest of Ahab, captain of the Pequod, for revenge on Moby Dick.',
+      published_year: 1851
+    },
+    {
+      title: 'Educated',
+      author: 'Tara Westover',
+      isbn: '9780399590504',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780399590504-L.jpg',
+      category_id: getCatId('literature-fiction'),
+      tags: ['memoir', 'biography', 'education'],
+      location: 'Shelf D5',
+      section: 'Literature',
+      dewey_decimal: '920.72',
+      description: 'A memoir about a young girl who leaves her survivalist family in Idaho to pursue higher education.',
+      published_year: 2018
+    },
+    // --- HISTORY & BIOGRAPHY ---
     {
       title: 'Sapiens: A Brief History of Humankind',
       author: 'Yuval Noah Harari',
       isbn: '9780062316097',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780062316097-L.jpg',
-      category_id: catMap.get('history-biography'),
+      category_id: getCatId('history-biography'),
       tags: ['history', 'anthropology', 'human-evolution'],
       location: 'Shelf E1',
       section: 'History',
@@ -364,9 +641,9 @@ async function seed() {
       author: 'Anne Frank',
       isbn: '9780553296983',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780553296983-L.jpg',
-      category_id: catMap.get('history-biography'),
+      category_id: getCatId('history-biography'),
       tags: ['biography', 'world-war-ii', 'history'],
-      location: 'Shelf E2',
+      location: 'Shelf E1',
       section: 'History',
       dewey_decimal: '940.5318',
       description: 'The classic diary of a young Jewish girl during the Nazi occupation of the Netherlands.',
@@ -377,9 +654,9 @@ async function seed() {
       author: 'Jared Diamond',
       isbn: '9780393317558',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780393317558-L.jpg',
-      category_id: catMap.get('history-biography'),
+      category_id: getCatId('history-biography'),
       tags: ['history', 'anthropology', 'geography'],
-      location: 'Shelf E3',
+      location: 'Shelf E2',
       section: 'History',
       dewey_decimal: '303.4',
       description: 'An exploration of how environmental factors shaped the modern world’s geopolitical inequalities.',
@@ -390,21 +667,99 @@ async function seed() {
       author: 'Walter Isaacson',
       isbn: '9781451648539',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9781451648539-L.jpg',
-      category_id: catMap.get('history-biography'),
+      category_id: getCatId('history-biography'),
       tags: ['biography', 'technology', 'entrepreneurship'],
-      location: 'Shelf E4',
+      location: 'Shelf E2',
       section: 'Biography',
       dewey_decimal: '920',
       description: 'The definitive biography of Apple co-founder Steve Jobs based on interviews conducted over two years.',
       published_year: 2011
     },
-    // Business & Economics
+    {
+      title: 'Team of Rivals: The Political Genius of Abraham Lincoln',
+      author: 'Doris Kearns Goodwin',
+      isbn: '9780684824901',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780684824901-L.jpg',
+      category_id: getCatId('history-biography'),
+      tags: ['presidential-biography', 'lincoln', 'us-history'],
+      location: 'Shelf E3',
+      section: 'History',
+      dewey_decimal: '973.7',
+      description: 'A study of Lincoln’s political mastery in incorporating his major rivals into his cabinet.',
+      published_year: 2005
+    },
+    {
+      title: 'The Guns of August',
+      author: 'Barbara W. Tuchman',
+      isbn: '9780345386236',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780345386236-L.jpg',
+      category_id: getCatId('history-biography'),
+      tags: ['world-war-i', 'military-history', 'europe'],
+      location: 'Shelf E3',
+      section: 'History',
+      dewey_decimal: '940.4',
+      description: 'The classic narrative of the opening month of World War I, highlighting diplomatic and military failures.',
+      published_year: 1962
+    },
+    {
+      title: 'Alexander Hamilton',
+      author: 'Ron Chernow',
+      isbn: '9780143034759',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780143034759-L.jpg',
+      category_id: getCatId('history-biography'),
+      tags: ['biography', 'founding-fathers', 'american-history'],
+      location: 'Shelf E4',
+      section: 'Biography',
+      dewey_decimal: '973.4',
+      description: 'The sweeping biography of the founding father who shaped America’s financial and political structure.',
+      published_year: 2004
+    },
+    {
+      title: 'Leonardo da Vinci',
+      author: 'Walter Isaacson',
+      isbn: '9781501139154',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781501139154-L.jpg',
+      category_id: getCatId('history-biography'),
+      tags: ['biography', 'renaissance', 'art-history'],
+      location: 'Shelf E4',
+      section: 'Biography',
+      dewey_decimal: '709.2',
+      description: 'An intimate study of the genius who combined art, anatomy, science, and technology.',
+      published_year: 2017
+    },
+    {
+      title: 'The Rise and Fall of the Third Reich',
+      author: 'William L. Shirer',
+      isbn: '9781451651683',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781451651683-L.jpg',
+      category_id: getCatId('history-biography'),
+      tags: ['nazi-germany', 'world-war-ii', 'history'],
+      location: 'Shelf E5',
+      section: 'History',
+      dewey_decimal: '943.086',
+      description: 'The monumentally detailed history of Nazi Germany based on captured German archives.',
+      published_year: 1960
+    },
+    {
+      title: 'Nelson Mandela: Long Walk to Freedom',
+      author: 'Nelson Mandela',
+      isbn: '9780316548182',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780316548182-L.jpg',
+      category_id: getCatId('history-biography'),
+      tags: ['autobiography', 'apartheid', 'human-rights'],
+      location: 'Shelf E5',
+      section: 'Biography',
+      dewey_decimal: '920',
+      description: 'Mandela’s inspiring autobiography detailing his early life, imprisonment, and rise to president of South Africa.',
+      published_year: 1994
+    },
+    // --- BUSINESS & ECONOMICS ---
     {
       title: 'Thinking, Fast and Slow',
       author: 'Daniel Kahneman',
       isbn: '9780374275631',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780374275631-L.jpg',
-      category_id: catMap.get('business-economics'),
+      category_id: getCatId('business-economics'),
       tags: ['economics', 'psychology', 'decision-making'],
       location: 'Shelf F1',
       section: 'Business',
@@ -417,9 +772,9 @@ async function seed() {
       author: 'Benjamin Graham',
       isbn: '9780060555665',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780060555665-L.jpg',
-      category_id: catMap.get('business-economics'),
+      category_id: getCatId('business-economics'),
       tags: ['finance', 'investing', 'business-classic'],
-      location: 'Shelf F2',
+      location: 'Shelf F1',
       section: 'Business',
       dewey_decimal: '332.6',
       description: 'The classic text on value investing, providing time-tested strategies for financial success.',
@@ -430,9 +785,9 @@ async function seed() {
       author: 'Eric Ries',
       isbn: '9780307887894',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780307887894-L.jpg',
-      category_id: catMap.get('business-economics'),
+      category_id: getCatId('business-economics'),
       tags: ['business', 'startups', 'entrepreneurship'],
-      location: 'Shelf F3',
+      location: 'Shelf F2',
       section: 'Business',
       dewey_decimal: '658.11',
       description: 'A methodology for developing businesses and products through validated learning and rapid experimentation.',
@@ -443,21 +798,99 @@ async function seed() {
       author: 'Peter Thiel',
       isbn: '9780804139298',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780804139298-L.jpg',
-      category_id: catMap.get('business-economics'),
+      category_id: getCatId('business-economics'),
       tags: ['startups', 'entrepreneurship', 'strategy'],
-      location: 'Shelf F4',
+      location: 'Shelf F2',
       section: 'Business',
       dewey_decimal: '658.11',
       description: 'Notes on startups, how to build the future, and creating a monopoly.',
       published_year: 2014
     },
-    // Philosophy & Ethics
+    {
+      title: 'Atomic Habits',
+      author: 'James Clear',
+      isbn: '9780735211292',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780735211292-L.jpg',
+      category_id: getCatId('business-economics'),
+      tags: ['self-help', 'productivity', 'habits'],
+      location: 'Shelf F3',
+      section: 'Self Help',
+      dewey_decimal: '158.1',
+      description: 'An easy and proven way to build good habits and break bad ones.',
+      published_year: 2018
+    },
+    {
+      title: 'Good to Great',
+      author: 'Jim Collins',
+      isbn: '9780066620992',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780066620992-L.jpg',
+      category_id: getCatId('business-economics'),
+      tags: ['management', 'leadership', 'organizational-growth'],
+      location: 'Shelf F3',
+      section: 'Business',
+      dewey_decimal: '658',
+      description: 'Why some companies make the leap to great performance, and others don’t.',
+      published_year: 2001
+    },
+    {
+      title: 'Freakonomics',
+      author: 'Steven D. Levitt & Stephen J. Dubner',
+      isbn: '9780060731335',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780060731335-L.jpg',
+      category_id: getCatId('business-economics'),
+      tags: ['behavioral-economics', 'incentives', 'social-issues'],
+      location: 'Shelf F4',
+      section: 'Business',
+      dewey_decimal: '330',
+      description: 'A rogue economist explores the hidden side of everything, from cheat patterns to incentive structures.',
+      published_year: 2005
+    },
+    {
+      title: 'The Black Swan',
+      author: 'Nassim Nicholas Taleb',
+      isbn: '9781400063512',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781400063512-L.jpg',
+      category_id: getCatId('business-economics'),
+      tags: ['probability', 'finance', 'risk-management'],
+      location: 'Shelf F4',
+      section: 'Business',
+      dewey_decimal: '330',
+      description: 'The impact of the highly improbable, exposing human blindness to randomness and large shocks.',
+      published_year: 2007
+    },
+    {
+      title: 'Capital in the Twenty-First Century',
+      author: 'Thomas Piketty',
+      isbn: '9780674430006',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780674430006-L.jpg',
+      category_id: getCatId('business-economics'),
+      tags: ['wealth-inequality', 'macroeconomics', 'capitalism'],
+      location: 'Shelf F5',
+      section: 'Business',
+      dewey_decimal: '330.1',
+      description: 'The definitive macroeconomic study analyzing structural dynamics of wealth inequality over centuries.',
+      published_year: 2013
+    },
+    {
+      title: 'Outliers: The Story of Success',
+      author: 'Malcolm Gladwell',
+      isbn: '9780316017923',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780316017923-L.jpg',
+      category_id: getCatId('business-economics'),
+      tags: ['sociology', 'success', 'popular-psychology'],
+      location: 'Shelf F5',
+      section: 'Business',
+      dewey_decimal: '302',
+      description: 'Gladwell looks at the cultural, family, and generational factors that lead to extreme high achievement.',
+      published_year: 2008
+    },
+    // --- PHILOSOPHY & ETHICS ---
     {
       title: 'The Republic',
       author: 'Plato',
       isbn: '9780140455113',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780140455113-L.jpg',
-      category_id: catMap.get('philosophy-ethics'),
+      category_id: getCatId('philosophy-ethics'),
       tags: ['philosophy', 'political-science', 'classics'],
       location: 'Shelf G1',
       section: 'Philosophy',
@@ -470,9 +903,9 @@ async function seed() {
       author: 'Marcus Aurelius',
       isbn: '9780812968255',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780812968255-L.jpg',
-      category_id: catMap.get('philosophy-ethics'),
+      category_id: getCatId('philosophy-ethics'),
       tags: ['philosophy', 'stoicism', 'classics'],
-      location: 'Shelf G2',
+      location: 'Shelf G1',
       section: 'Philosophy',
       dewey_decimal: '188',
       description: 'A series of personal writings by the Roman Emperor Marcus Aurelius, offering Stoic guidance on life.',
@@ -483,21 +916,112 @@ async function seed() {
       author: 'Viktor E. Frankl',
       isbn: '9780807014295',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780807014295-L.jpg',
-      category_id: catMap.get('philosophy-ethics'),
+      category_id: getCatId('philosophy-ethics'),
       tags: ['psychology', 'philosophy', 'memoir'],
-      location: 'Shelf G3',
+      location: 'Shelf G2',
       section: 'Philosophy',
       dewey_decimal: '150.195',
       description: 'Frankl’s experiences in concentration camps and his development of logotherapy, exploring the human search for purpose.',
       published_year: 1946
     },
-    // Art & Design
+    {
+      title: 'Beyond Good and Evil',
+      author: 'Friedrich Nietzsche',
+      isbn: '9780140449235',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780140449235-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['existentialism', 'ethics', 'philosophy'],
+      location: 'Shelf G2',
+      section: 'Philosophy',
+      dewey_decimal: '193',
+      description: 'Nietzsche attacks traditional morality and outlines his concepts of the will to power and individual self-creation.',
+      published_year: 1886
+    },
+    {
+      title: 'Thus Spoke Zarathustra',
+      author: 'Friedrich Nietzsche',
+      isbn: '9780140441628',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780140441628-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['philosophy', 'existentialism', 'classics'],
+      location: 'Shelf G3',
+      section: 'Philosophy',
+      dewey_decimal: '193',
+      description: 'Nietzsche’s masterpiece detailing the concepts of the Übermensch, the death of God, and eternal recurrence.',
+      published_year: 1883
+    },
+    {
+      title: 'Nicomachean Ethics',
+      author: 'Aristotle',
+      isbn: '9780199213610',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780199213610-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['ethics', 'virtue-ethics', 'classics'],
+      location: 'Shelf G3',
+      section: 'Philosophy',
+      dewey_decimal: '185',
+      description: 'Aristotle’s foundational study on virtue, happiness, character development, and practical wisdom.',
+      published_year: -340
+    },
+    {
+      title: 'Critique of Pure Reason',
+      author: 'Immanuel Kant',
+      isbn: '9780521558280',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780521558280-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['epistemology', 'metaphysics', 'german-idealism'],
+      location: 'Shelf G4',
+      section: 'Philosophy',
+      dewey_decimal: '193',
+      description: 'Kant explores the limits and structure of human understanding and synthetic a priori knowledge.',
+      published_year: 1781
+    },
+    {
+      title: 'Ethics',
+      author: 'Benedict de Spinoza',
+      isbn: '9780140435719',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780140435719-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['pantheism', 'metaphysics', 'rationalism'],
+      location: 'Shelf G4',
+      section: 'Philosophy',
+      dewey_decimal: '170',
+      description: 'Written in a geometric style, Spinoza outlines his vision of God, nature, mind, and human freedom.',
+      published_year: 1677
+    },
+    {
+      title: 'The Ethics of Ambiguity',
+      author: 'Simone de Beauvoir',
+      isbn: '9781504054225',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781504054225-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['existentialism', 'ethics', 'feminism'],
+      location: 'Shelf G5',
+      section: 'Philosophy',
+      dewey_decimal: '194',
+      description: 'Beauvoir applies existentialist principles to ethics, arguing that individual freedom requires the freedom of others.',
+      published_year: 1947
+    },
+    {
+      title: 'Zen and the Art of Motorcycle Maintenance',
+      author: 'Robert M. Pirsig',
+      isbn: '9780060589462',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780060589462-L.jpg',
+      category_id: getCatId('philosophy-ethics'),
+      tags: ['philosophy-of-quality', 'novel', 'inquiry'],
+      location: 'Shelf G5',
+      section: 'Philosophy',
+      dewey_decimal: '100',
+      description: 'A philosophical inquiry into the nature of Quality, told through a motorcycle trip with a father and son.',
+      published_year: 1974
+    },
+    // --- ART & DESIGN ---
     {
       title: 'The Design of Everyday Things',
       author: 'Don Norman',
       isbn: '9780465050659',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780465050659-L.jpg',
-      category_id: catMap.get('art-design'),
+      category_id: getCatId('art-design'),
       tags: ['ux-design', 'ergonomics', 'product-design'],
       location: 'Shelf H1',
       section: 'Art & Design',
@@ -510,7 +1034,7 @@ async function seed() {
       author: 'Steve Krug',
       isbn: '9780321965516',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9780321965516-L.jpg',
-      category_id: catMap.get('art-design'),
+      category_id: getCatId('art-design'),
       tags: ['web-usability', 'ux-design', 'interface-design'],
       location: 'Shelf H1',
       section: 'Art & Design',
@@ -518,13 +1042,117 @@ async function seed() {
       description: 'A common-sense guide to web usability, focusing on simple design principles.',
       published_year: 2000
     },
-    // Health & Medicine
+    {
+      title: 'Interaction of Color',
+      author: 'Josef Albers',
+      isbn: '9780300179354',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780300179354-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['color-theory', 'fine-art', 'education'],
+      location: 'Shelf H2',
+      section: 'Art & Design',
+      dewey_decimal: '701.8',
+      description: 'A masterclass in color perception, demonstrating how color changes relative to its environment.',
+      published_year: 1963
+    },
+    {
+      title: 'Grid Systems in Graphic Design',
+      author: 'Josef Müller-Brockmann',
+      isbn: '9783721201451',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9783721201451-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['typography', 'layout', 'swiss-design'],
+      location: 'Shelf H2',
+      section: 'Art & Design',
+      dewey_decimal: '741.6',
+      description: 'The definitive guide to grid systems, introducing order, hierarchy, and structure into graphic design.',
+      published_year: 1981
+    },
+    {
+      title: 'About Face: The Essentials of Interaction Design',
+      author: 'Alan Cooper',
+      isbn: '9781118766576',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781118766576-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['interaction-design', 'product-management', 'ui-ux'],
+      location: 'Shelf H3',
+      section: 'Art & Design',
+      dewey_decimal: '006.76',
+      description: 'Cooper’s guide to designing high-quality interaction patterns and user interfaces.',
+      published_year: 2014
+    },
+    {
+      title: 'Universal Principles of Design',
+      author: 'William Lidwell',
+      isbn: '9781592535873',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781592535873-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['design-rules', 'usability', 'problem-solving'],
+      location: 'Shelf H3',
+      section: 'Art & Design',
+      dewey_decimal: '745.4',
+      description: 'A cross-disciplinary encyclopedia of design rules, combining psychology, engineering, and visual design.',
+      published_year: 2003
+    },
+    {
+      title: 'The Elements of User Experience',
+      author: 'Jesse James Garrett',
+      isbn: '9780321683687',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780321683687-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['ux-architecture', 'content-strategy', 'user-research'],
+      location: 'Shelf H4',
+      section: 'Art & Design',
+      dewey_decimal: '006.7',
+      description: 'Garrett’s model dividing UX design into five planes: strategy, scope, structure, skeleton, and surface.',
+      published_year: 2002
+    },
+    {
+      title: 'Thinking with Type',
+      author: 'Ellen Lupton',
+      isbn: '9781568989693',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781568989693-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['typography', 'fonts', 'layout'],
+      location: 'Shelf H4',
+      section: 'Art & Design',
+      dewey_decimal: '686.2',
+      description: 'A practical, visually stunning guide to typesetting, hierarchy, page grids, and custom font pairings.',
+      published_year: 2004
+    },
+    {
+      title: 'Ways of Seeing',
+      author: 'John Berger',
+      isbn: '9780140135152',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780140135152-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['art-criticism', 'visual-culture', 'ideology'],
+      location: 'Shelf H5',
+      section: 'Art & Design',
+      dewey_decimal: '701',
+      description: 'A classic critique of classical art history, showing how our social context shapes how we view pictures.',
+      published_year: 1972
+    },
+    {
+      title: 'Steal Like an Artist',
+      author: 'Austin Kleon',
+      isbn: '9780761169253',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780761169253-L.jpg',
+      category_id: getCatId('art-design'),
+      tags: ['creativity', 'self-help', 'art'],
+      location: 'Shelf H5',
+      section: 'Art & Design',
+      dewey_decimal: '700.1',
+      description: 'An illustrated guide to unlocking creativity, arguing that all creative work is built on what came before.',
+      published_year: 2012
+    },
+    // --- HEALTH & MEDICINE ---
     {
       title: 'The Emperor of All Maladies',
       author: 'Siddhartha Mukherjee',
       isbn: '9781439170915',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9781439170915-L.jpg',
-      category_id: catMap.get('health-medicine'),
+      category_id: getCatId('health-medicine'),
       tags: ['medicine', 'history', 'science'],
       location: 'Shelf I1',
       section: 'Health & Medicine',
@@ -537,7 +1165,7 @@ async function seed() {
       author: 'Atul Gawande',
       isbn: '9781250076229',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9781250076229-L.jpg',
-      category_id: catMap.get('health-medicine'),
+      category_id: getCatId('health-medicine'),
       tags: ['medicine', 'ethics', 'society'],
       location: 'Shelf I1',
       section: 'Health & Medicine',
@@ -550,7 +1178,7 @@ async function seed() {
       author: 'Matthew Walker',
       isbn: '9781501144317',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9781501144317-L.jpg',
-      category_id: catMap.get('health-medicine'),
+      category_id: getCatId('health-medicine'),
       tags: ['neuroscience', 'sleep-science', 'health'],
       location: 'Shelf I2',
       section: 'Health & Medicine',
@@ -558,13 +1186,104 @@ async function seed() {
       description: 'An exploration of the vital importance of sleep for human health, cognitive function, and longevity.',
       published_year: 2017
     },
-    // Law & Politics
+    {
+      title: 'The Checklist Manifesto',
+      author: 'Atul Gawande',
+      isbn: '9780312430009',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780312430009-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['systems', 'safety', 'medicine'],
+      location: 'Shelf I2',
+      section: 'Health & Medicine',
+      dewey_decimal: '610',
+      description: 'Gawande explains how simple checklists can radically improve outcomes in medicine, aviation, and engineering.',
+      published_year: 2009
+    },
+    {
+      title: 'Gut: The Inside Story of Our Body\'s Most Underrated Organ',
+      author: 'Giulia Enders',
+      isbn: '9781771641494',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781771641494-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['biology', 'digestive-system', 'popular-science'],
+      location: 'Shelf I3',
+      section: 'Health & Medicine',
+      dewey_decimal: '612.3',
+      description: 'A charming, witty, and highly informative dive into our digestive system and its link to mental health.',
+      published_year: 2014
+    },
+    {
+      title: 'When Breath Becomes Air',
+      author: 'Paul Kalanithi',
+      isbn: '9780812988406',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780812988406-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['memoir', 'neurosurgery', 'mortality'],
+      location: 'Shelf I3',
+      section: 'Health & Medicine',
+      dewey_decimal: '616.99409',
+      description: 'A young neurosurgeon diagnosed with terminal lung cancer writes a moving reflection on facing death and fatherhood.',
+      published_year: 2016
+    },
+    {
+      title: 'Deep Medicine: How Artificial Intelligence Can Make Healthcare Human Again',
+      author: 'Eric Topol',
+      isbn: '9781541644632',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9781541644632-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['digital-health', 'artificial-intelligence', 'future-medicine'],
+      location: 'Shelf I4',
+      section: 'Health & Medicine',
+      dewey_decimal: '610.285',
+      description: 'Topol details how AI can automate repetitive medical tasks, restoring the physician-patient connection.',
+      published_year: 2019
+    },
+    {
+      title: 'Internal Medicine',
+      author: 'Dennis R. M.D. Novak',
+      isbn: '9780781711200',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780781711200-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['textbook', 'clinical-medicine', 'reference'],
+      location: 'Shelf I4',
+      section: 'Health & Medicine',
+      dewey_decimal: '616',
+      description: 'A core textbook detailing diagnosis and therapeutic strategies for adult internal medical conditions.',
+      published_year: 1999
+    },
+    {
+      title: 'The Body: A Guide for Occupants',
+      author: 'Bill Bryson',
+      isbn: '9780385539302',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780385539302-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['anatomy', 'physiology', 'popular-science'],
+      location: 'Shelf I5',
+      section: 'Health & Medicine',
+      dewey_decimal: '612',
+      description: 'A grand tour of the human body, detailing how it works, how it heals, and how it occasionally breaks down.',
+      published_year: 2019
+    },
+    {
+      title: 'Outlive: The Science and Art of Longevity',
+      author: 'Peter Attia',
+      isbn: '9780593236598',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780593236598-L.jpg',
+      category_id: getCatId('health-medicine'),
+      tags: ['preventive-medicine', 'longevity', 'exercise-science'],
+      location: 'Shelf I5',
+      section: 'Health & Medicine',
+      dewey_decimal: '613',
+      description: 'A comprehensive preventive guide to extending healthy life span and avoiding chronic diseases.',
+      published_year: 2023
+    },
+    // --- LAW & POLITICS ---
     {
       title: 'A Promised Land',
       author: 'Barack Obama',
       isbn: '9781524763169',
       cover_url: 'https://covers.openlibrary.org/b/isbn/9781524763169-L.jpg',
-      category_id: catMap.get('law-politics'),
+      category_id: getCatId('law-politics'),
       tags: ['memoir', 'politics', 'history'],
       location: 'Shelf J1',
       section: 'Politics',
@@ -573,43 +1292,121 @@ async function seed() {
       published_year: 2020
     },
     {
-      title: 'Educated',
-      author: 'Tara Westover',
-      isbn: '9780399590504',
-      cover_url: 'https://covers.openlibrary.org/b/isbn/9780399590504-L.jpg',
-      category_id: catMap.get('literature-fiction'),
-      tags: ['memoir', 'biography', 'education'],
-      location: 'Shelf E4',
-      section: 'Biography',
-      dewey_decimal: '920.72',
-      description: 'A memoir about a young girl who leaves her survivalist family in Idaho to pursue higher education.',
-      published_year: 2018
+      title: 'The Clash of Civilizations',
+      author: 'Samuel P. Huntington',
+      isbn: '9780684844411',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780684844411-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['geopolitics', 'international-relations', 'history'],
+      location: 'Shelf J1',
+      section: 'Politics',
+      dewey_decimal: '327',
+      description: 'Huntington argues that after the Cold War, cultural and religious identities will be the primary source of conflict.',
+      published_year: 1996
     },
     {
-      title: 'Atomic Habits',
-      author: 'James Clear',
-      isbn: '9780735211292',
-      cover_url: 'https://covers.openlibrary.org/b/isbn/9780735211292-L.jpg',
-      category_id: catMap.get('business-economics'),
-      tags: ['self-help', 'productivity', 'habits'],
-      location: 'Shelf F5',
-      section: 'Self Help',
-      dewey_decimal: '158.1',
-      description: 'An easy and proven way to build good habits and break bad ones.',
-      published_year: 2018
+      title: 'On Liberty',
+      author: 'John Stuart Mill',
+      isbn: '9780486421643',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780486421643-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['liberalism', 'utilitarianism', 'political-philosophy'],
+      location: 'Shelf J2',
+      section: 'Politics',
+      dewey_decimal: '323',
+      description: 'Mill’s defense of individual liberty, detailing the harm principle and free speech rights.',
+      published_year: 1859
     },
     {
-      title: 'Deep Work',
-      author: 'Cal Newport',
-      isbn: '9781455586691',
-      cover_url: 'https://covers.openlibrary.org/b/isbn/9781455586691-L.jpg',
-      category_id: catMap.get('computer-science'),
-      tags: ['productivity', 'focus', 'self-help'],
-      location: 'Shelf A5',
-      section: 'Self Help',
-      dewey_decimal: '650.1',
-      description: 'Rules for focused success in a distracted world.',
-      published_year: 2016
+      title: 'The Prince',
+      author: 'Niccolò Machiavelli',
+      isbn: '9780393964080',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780393964080-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['statecraft', 'political-realism', 'classics'],
+      location: 'Shelf J2',
+      section: 'Politics',
+      dewey_decimal: '320',
+      description: 'The classic treatise on political power, statecraft, and pragmatic leadership.',
+      published_year: 1532
+    },
+    {
+      title: 'Leviathan',
+      author: 'Thomas Hobbes',
+      isbn: '9780140431957',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780140431957-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['social-contract', 'political-philosophy', 'sovereignty'],
+      location: 'Shelf J3',
+      section: 'Politics',
+      dewey_decimal: '320.1',
+      description: 'Hobbes argues for absolute sovereignty to escape the chaotic "state of nature" and preserve order.',
+      published_year: 1651
+    },
+    {
+      title: 'The Federalist Papers',
+      author: 'Alexander Hamilton, James Madison, John Jay',
+      isbn: '9780451528896',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780451528896-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['constitutional-law', 'us-history', 'founding-documents'],
+      location: 'Shelf J3',
+      section: 'Politics',
+      dewey_decimal: '342.73',
+      description: 'A collection of 85 essays arguing for the ratification of the United States Constitution.',
+      published_year: 1788
+    },
+    {
+      title: 'The Tyranny of Merit',
+      author: 'Michael J. Sandel',
+      isbn: '9780374228446',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780374228446-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['justice', 'ethics', 'politics'],
+      location: 'Shelf J4',
+      section: 'Politics',
+      dewey_decimal: '320.01',
+      description: 'Sandel questions how the meritocratic ideal has divided societies, calling for a return to the common good.',
+      published_year: 2020
+    },
+    {
+      title: 'Political Order and Political Decay',
+      author: 'Francis Fukuyama',
+      isbn: '9780374227357',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780374227357-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['political-institutions', 'state-building', 'democracy'],
+      location: 'Shelf J4',
+      section: 'Politics',
+      dewey_decimal: '320.9',
+      description: 'Fukuyama explores how states construct effective, rule-of-law institutions, and why they decay.',
+      published_year: 2014
+    },
+    {
+      title: 'Why Nations Fail',
+      author: 'Daron Acemoglu & James A. Robinson',
+      isbn: '9780307719218',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780307719218-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['economics', 'institutions', 'world-development'],
+      location: 'Shelf J5',
+      section: 'Politics',
+      dewey_decimal: '330',
+      description: 'Acemoglu and Robinson show that inclusive political institutions, rather than geography or culture, drive long-term prosperity.',
+      published_year: 2012
+    },
+    {
+      title: 'The Spirit of the Laws',
+      author: 'Montesquieu',
+      isbn: '9780521369749',
+      cover_url: 'https://covers.openlibrary.org/b/isbn/9780521369749-L.jpg',
+      category_id: getCatId('law-politics'),
+      tags: ['law', 'separation-of-powers', 'political-theory'],
+      location: 'Shelf J5',
+      section: 'Politics',
+      dewey_decimal: '320.1',
+      description: 'Montesquieu outlines his influential theories on the division of political power into branches.',
+      published_year: 1748
     }
   ];
 
@@ -628,17 +1425,27 @@ async function seed() {
   const copies: any[] = [];
   const bookCopiesMap: { [bookTitle: string]: any[] } = {};
 
+  // Simple deterministic string hashing helper for distribution
+  const getSimpleHash = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return Math.abs(hash);
+  };
+
   for (const book of bookData) {
     bookCopiesMap[book.title] = [];
     
-    // Choose number of copies dynamically based on title popularity
+    // Choose number of copies dynamically (between 2 and 5)
+    const hashVal = getSimpleHash(book.title);
     let numCopies = 3;
-    if (['Clean Code', 'Introduction to Algorithms', 'Atomic Habits', 'The Design of Everyday Things'].includes(book.title)) {
+    if (['Clean Code', 'Introduction to Algorithms', 'Atomic Habits', 'The Design of Everyday Things', 'Deep Work', 'Sapiens: A Brief History of Humankind'].includes(book.title)) {
       numCopies = 5;
-    } else if (['Linear Algebra Done Right', 'Gödel, Escher, Bach: An Eternal Golden Braid', 'A Promised Land'].includes(book.title)) {
+    } else if (hashVal % 4 === 0) {
+      numCopies = 4;
+    } else if (hashVal % 5 === 0) {
       numCopies = 2;
-    } else if (['Calculus Vol 1'].includes(book.title)) {
-      numCopies = 1;
     }
 
     for (let i = 0; i < numCopies; i++) {
@@ -648,12 +1455,20 @@ async function seed() {
       if (i === 0) {
         condition = 'New';
       } else if (i === numCopies - 1 && numCopies > 2) {
-        status = 'MAINTENANCE';
         condition = 'Fair';
       } else if (i === 1) {
         condition = 'Good';
-      } else {
+      } else if (i === 2) {
         condition = 'Worn';
+      } else {
+        condition = 'Damaged';
+      }
+
+      // Add variety for maintenance or lost books (unrelated to borrows)
+      if ((hashVal + i) % 17 === 0) {
+        status = 'MAINTENANCE';
+      } else if ((hashVal + i) % 31 === 0) {
+        status = 'LOST';
       }
 
       copies.push({ book_id: book.id, condition, status });
@@ -702,100 +1517,104 @@ async function seed() {
   }
   console.info('✅ Seeded library cards');
 
-  // 5. Seed Borrowing Records
+  // 5. Seed Borrowing Records (160 records total: 120 returned, 25 active, 15 overdue)
   const now = new Date();
   const borrowsToSeed: any[] = [];
   const activeCopiesToUpdate: string[] = [];
-  const reservedCopiesToUpdate: string[] = [];
 
-  // Active Borrows (due in the future)
-  const activeConfigs = [
-    { title: 'Clean Code', copyIdx: 0, student: 'godwynStudent', daysAgo: 2, dueDays: 12 },
-    { title: 'Deep Work', copyIdx: 0, student: 'godwynStudent', daysAgo: 4, dueDays: 10 },
-    { title: 'Calculus Vol 1', copyIdx: 0, student: 'kayleStudent', daysAgo: 1, dueDays: 13 },
-    { title: 'A Brief History of Time', copyIdx: 0, student: 'jericoSA', daysAgo: 3, dueDays: 11 },
-    { title: 'Introduction to Algorithms', copyIdx: 0, student: 'luminaSA', daysAgo: 4, dueDays: 10 },
-    { title: 'Designing Data-Intensive Applications', copyIdx: 0, student: 'luminaSA', daysAgo: 5, dueDays: 9 },
-    { title: 'The Design of Everyday Things', copyIdx: 0, student: 'kennethAdmin', daysAgo: 2, dueDays: 12 },
+  // Categorize our users who borrow books
+  const borrowers = [
+    profileIds.godwynStudent,
+    profileIds.kayleStudent,
+    profileIds.jericoSA,
+    profileIds.luminaSA,
   ];
 
-  for (const conf of activeConfigs) {
-    const bookCopies = bookCopiesMap[conf.title];
-    if (bookCopies && bookCopies[conf.copyIdx]) {
-      const copy = bookCopies[conf.copyIdx];
+  // Pool of copy IDs and helper tracking
+  const allCopies = [...insertedCopies].filter(c => c.status === 'AVAILABLE');
+  
+  // Deterministic selector function to assign copies to borrows
+  let copyIndex = 0;
+  const selectCopy = () => {
+    if (allCopies.length === 0) return null;
+    const copy = allCopies[copyIndex % allCopies.length];
+    copyIndex++;
+    return copy;
+  };
+
+  // --- Returned Borrows (120 records) ---
+  // Spread over 180 days to 15 days ago
+  console.info('🌱 Generating 120 completed loans (RETURNED)...');
+  for (let i = 1; i <= 120; i++) {
+    const borrowDayOffset = 15 + (i * 1.35); // 15 to ~177 days ago
+    const borrowDate = new Date(now.getTime() - borrowDayOffset * 24 * 60 * 60 * 1000);
+    const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    
+    // Most returned within 1-13 days, some overdue and returned in 15-20 days
+    const returnedDays = (i % 8 === 0) ? 17 : (i % 3 === 0) ? 10 : 6;
+    const returnedDate = new Date(borrowDate.getTime() + returnedDays * 24 * 60 * 60 * 1000);
+    
+    const borrowerId = borrowers[i % borrowers.length];
+    const copy = selectCopy();
+    
+    if (copy) {
       borrowsToSeed.push({
-        user_id: (profileIds as any)[conf.student],
+        user_id: borrowerId,
         book_copy_id: copy.id,
         processed_by: profileIds.rhedLibrarian,
-        borrowed_at: new Date(now.getTime() - conf.daysAgo * 24 * 60 * 60 * 1000).toISOString(),
-        due_date: new Date(now.getTime() + conf.dueDays * 24 * 60 * 60 * 1000).toISOString(),
+        borrowed_at: borrowDate.toISOString(),
+        due_date: dueDate.toISOString(),
+        returned_at: returnedDate.toISOString(),
+        returned_by: profileIds.luminaLibrarian,
+        status: 'RETURNED'
+      });
+    }
+  }
+
+  // Reset copy allocation tracking so active/overdue borrows grab dedicated/unique copies
+  // and do not overlap.
+  const activePool = allCopies.slice(0, 50); // reserve first 50 copies for active/overdue borrows
+  let activePoolIndex = 0;
+
+  // --- Active Borrows (25 records, due in future) ---
+  console.info('🌱 Generating 25 active loans (ACTIVE)...');
+  for (let i = 1; i <= 25; i++) {
+    const borrowDate = new Date(now.getTime() - (i % 8 + 1) * 24 * 60 * 60 * 1000);
+    const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const borrowerId = borrowers[i % borrowers.length];
+    
+    const copy = activePool[activePoolIndex++];
+    if (copy) {
+      borrowsToSeed.push({
+        user_id: borrowerId,
+        book_copy_id: copy.id,
+        processed_by: profileIds.rhedLibrarian,
+        borrowed_at: borrowDate.toISOString(),
+        due_date: dueDate.toISOString(),
         status: 'ACTIVE'
       });
       activeCopiesToUpdate.push(copy.id);
     }
   }
 
-  // Overdue Borrows (due in the past)
-  const overdueConfigs = [
-    { title: 'The Pragmatic Programmer', copyIdx: 1, student: 'godwynStudent', daysAgo: 20, dueDaysAgo: 6 },
-    { title: 'Zero to One', copyIdx: 0, student: 'kayleStudent', daysAgo: 25, dueDaysAgo: 11 },
-    { title: 'Atomic Habits', copyIdx: 1, student: 'kennethAdmin', daysAgo: 30, dueDaysAgo: 16 },
-  ];
-
-  for (const conf of overdueConfigs) {
-    const bookCopies = bookCopiesMap[conf.title];
-    if (bookCopies && bookCopies[conf.copyIdx]) {
-      const copy = bookCopies[conf.copyIdx];
+  // --- Overdue Borrows (15 records, due in past) ---
+  console.info('🌱 Generating 15 overdue loans (OVERDUE)...');
+  for (let i = 1; i <= 15; i++) {
+    const borrowDate = new Date(now.getTime() - (20 + i) * 24 * 60 * 60 * 1000); // 21 to 35 days ago
+    const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000); // 7 to 21 days ago (overdue)
+    const borrowerId = borrowers[i % borrowers.length];
+    
+    const copy = activePool[activePoolIndex++];
+    if (copy) {
       borrowsToSeed.push({
-        user_id: (profileIds as any)[conf.student],
+        user_id: borrowerId,
         book_copy_id: copy.id,
         processed_by: profileIds.luminaLibrarian,
-        borrowed_at: new Date(now.getTime() - conf.daysAgo * 24 * 60 * 60 * 1000).toISOString(),
-        due_date: new Date(now.getTime() - conf.dueDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
+        borrowed_at: borrowDate.toISOString(),
+        due_date: dueDate.toISOString(),
         status: 'OVERDUE'
       });
       activeCopiesToUpdate.push(copy.id);
-    }
-  }
-
-  // Returned Borrows (completed borrows - 20 records)
-  const returnedConfigs = [
-    { title: 'The Pragmatic Programmer', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 35, returnDaysAgo: 21 },
-    { title: 'Refactoring: Improving the Design of Existing Code', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 22, returnDaysAgo: 10 },
-    { title: 'Design Patterns: Elements of Reusable Object-Oriented Software', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 28, returnDaysAgo: 14 },
-    { title: 'Linear Algebra and Its Applications', copyIdx: 0, student: 'luminaSA', borrowDaysAgo: 19, returnDaysAgo: 5 },
-    { title: 'The Selfish Gene', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 18, returnDaysAgo: 4 },
-    { title: 'Cosmos', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 17, returnDaysAgo: 3 },
-    { title: 'To Kill a Mockingbird', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 16, returnDaysAgo: 2 },
-    { title: '1984', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 15, returnDaysAgo: 1 },
-    { title: 'The Great Gatsby', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 14, returnDaysAgo: 0 },
-    { title: 'Brave New World', copyIdx: 0, student: 'luminaSA', borrowDaysAgo: 13, returnDaysAgo: 2 },
-    { title: 'The Hobbit', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 12, returnDaysAgo: 3 },
-    { title: 'Sapiens: A Brief History of Humankind', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 11, returnDaysAgo: 4 },
-    { title: 'The Diary of a Young Girl', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 10, returnDaysAgo: 2 },
-    { title: 'Guns, Germs, and Steel', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 9, returnDaysAgo: 1 },
-    { title: 'Steve Jobs', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 8, returnDaysAgo: 0 },
-    { title: 'Thinking, Fast and Slow', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 7, returnDaysAgo: 1 },
-    { title: 'The Intelligent Investor', copyIdx: 0, student: 'luminaSA', borrowDaysAgo: 6, returnDaysAgo: 2 },
-    { title: 'The Lean Startup', copyIdx: 0, student: 'godwynStudent', borrowDaysAgo: 5, returnDaysAgo: 1 },
-    { title: 'The Republic', copyIdx: 0, student: 'kayleStudent', borrowDaysAgo: 4, returnDaysAgo: 0 },
-    { title: 'Meditations', copyIdx: 0, student: 'jericoSA', borrowDaysAgo: 3, returnDaysAgo: 1 },
-  ];
-
-  for (const conf of returnedConfigs) {
-    const bookCopies = bookCopiesMap[conf.title];
-    if (bookCopies && bookCopies[conf.copyIdx]) {
-      const copy = bookCopies[conf.copyIdx];
-      borrowsToSeed.push({
-        user_id: (profileIds as any)[conf.student],
-        book_copy_id: copy.id,
-        processed_by: profileIds.rhedLibrarian,
-        borrowed_at: new Date(now.getTime() - conf.borrowDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
-        due_date: new Date(now.getTime() - (conf.borrowDaysAgo - 14) * 24 * 60 * 60 * 1000).toISOString(),
-        returned_at: new Date(now.getTime() - conf.returnDaysAgo * 24 * 60 * 60 * 1000).toISOString(),
-        returned_by: profileIds.rhedLibrarian,
-        status: 'RETURNED'
-      });
     }
   }
 
@@ -822,59 +1641,101 @@ async function seed() {
   }
   console.info('✅ Updated borrowed book copies status to BORROWED');
 
-  // 7. Seed Reservations
-  const bookRefactoring = bookData.find(b => b.title === 'Refactoring: Improving the Design of Existing Code')!;
-  const bookSteveJobs = bookData.find(b => b.title === 'Steve Jobs')!;
-  const bookCleanCode = bookData.find(b => b.title === 'Clean Code')!;
-  const bookSapiens = bookData.find(b => b.title === 'Sapiens: A Brief History of Humankind')!;
-  
-  const refactoringCopies = bookCopiesMap['Refactoring: Improving the Design of Existing Code'];
-  const cleanCodeCopies = bookCopiesMap['Clean Code'];
-  const sapiensCopies = bookCopiesMap['Sapiens: A Brief History of Humankind'];
+  // 6. Seed Reservations (20 records: 5 READY, 5 ACTIVE, 5 FULFILLED, 3 EXPIRED, 2 CANCELLED)
+  const reservationsToSeed: any[] = [];
+  const reservedCopiesToUpdate: string[] = [];
 
-  const reservationsToSeed = [
-    {
-      user_id: profileIds.kayleStudent,
-      book_id: bookRefactoring.id,
-      copy_id: refactoringCopies[1].id,
-      status: 'READY',
-      queue_position: 1,
-      reserved_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      hold_expires_at: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      user_id: profileIds.godwynStudent,
-      book_id: bookRefactoring.id,
-      status: 'ACTIVE',
-      queue_position: 2,
-      reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      user_id: profileIds.jericoSA,
-      book_id: bookSteveJobs.id,
-      status: 'ACTIVE',
-      queue_position: 1,
-      reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      book_id: bookCleanCode.id,
-      copy_id: cleanCodeCopies[1].id,
-      status: 'FULFILLED',
-      queue_position: 1,
-      reserved_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      fulfilled_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      user_id: profileIds.godwynStudent,
-      book_id: bookSapiens.id,
-      copy_id: sapiensCopies[1].id,
-      status: 'EXPIRED',
-      queue_position: 1,
-      reserved_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      hold_expires_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  const availableForRes = [...insertedCopies].filter(c => !activeCopiesToUpdate.includes(c.id) && c.status === 'AVAILABLE');
+  let resCopyIndex = 0;
+
+  // Pick some books for reservations
+  const bookListForReservations = bookData.slice(0, 15);
+
+  // 5 READY (Hold is ready at library desk)
+  for (let i = 0; i < 5; i++) {
+    const book = bookListForReservations[i];
+    const copy = availableForRes[resCopyIndex++];
+    if (copy) {
+      reservationsToSeed.push({
+        user_id: borrowers[i % borrowers.length],
+        book_id: book.id,
+        copy_id: copy.id,
+        status: 'READY',
+        queue_position: 1,
+        reserved_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        hold_expires_at: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString()
+      });
+      reservedCopiesToUpdate.push(copy.id);
     }
-  ];
+  }
+
+  // 5 ACTIVE (Waiting in queue)
+  for (let i = 5; i < 10; i++) {
+    const book = bookListForReservations[i];
+    reservationsToSeed.push({
+      user_id: borrowers[i % borrowers.length],
+      book_id: book.id,
+      status: 'ACTIVE',
+      queue_position: 1,
+      reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    // Add second queue position to show queue mechanics
+    if (i === 5) {
+      reservationsToSeed.push({
+        user_id: borrowers[(i + 1) % borrowers.length],
+        book_id: book.id,
+        status: 'ACTIVE',
+        queue_position: 2,
+        reserved_at: new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString()
+      });
+    }
+  }
+
+  // 5 FULFILLED (Succeeded hold in the past)
+  for (let i = 10; i < 15; i++) {
+    const book = bookListForReservations[i];
+    const copy = availableForRes[resCopyIndex++];
+    if (copy) {
+      reservationsToSeed.push({
+        user_id: borrowers[i % borrowers.length],
+        book_id: book.id,
+        copy_id: copy.id,
+        status: 'FULFILLED',
+        queue_position: 1,
+        reserved_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        fulfilled_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      });
+    }
+  }
+
+  // 3 EXPIRED (User didn't pick up)
+  for (let i = 0; i < 3; i++) {
+    const book = bookListForReservations[i];
+    const copy = availableForRes[resCopyIndex++];
+    if (copy) {
+      reservationsToSeed.push({
+        user_id: borrowers[i % borrowers.length],
+        book_id: book.id,
+        copy_id: copy.id,
+        status: 'EXPIRED',
+        queue_position: 1,
+        reserved_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+        hold_expires_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      });
+    }
+  }
+
+  // 2 CANCELLED
+  for (let i = 3; i < 5; i++) {
+    const book = bookListForReservations[i];
+    reservationsToSeed.push({
+      user_id: borrowers[i % borrowers.length],
+      book_id: book.id,
+      status: 'CANCELLED',
+      queue_position: 1,
+      reserved_at: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString()
+    });
+  }
 
   const { error: reservationError } = await supabase
     .from('reservations')
@@ -887,7 +1748,6 @@ async function seed() {
   }
 
   // Update book_copies statuses that are currently reserved to 'RESERVED'
-  reservedCopiesToUpdate.push(refactoringCopies[1].id);
   const { error: updateReservedError } = await supabase
     .from('book_copies')
     .update({ status: 'RESERVED' })
@@ -899,39 +1759,66 @@ async function seed() {
   }
   console.info('✅ Updated reserved book copies status to RESERVED');
 
-  // 8. Seed Attendance (30 historical completed attendances)
+  // 7. Seed Attendance (155 records total: 150 historical, 5 active today)
+  console.info('🌱 Generating 150 historical attendance records over 50 days...');
   const attendanceToSeed: any[] = [];
-  const profilesForAttendance = [
+  const attendees = [
     profileIds.godwynStudent,
     profileIds.kayleStudent,
     profileIds.jericoSA,
     profileIds.luminaSA,
     profileIds.rhedLibrarian
   ];
-  
-  for (let d = 1; d <= 15; d++) {
+
+  const attendanceNotes = [
+    'Study session', 'Research work', 'Group meeting', 'Studying calculus', 
+    'Library assistant duty', 'Consulting librarian', 'Reading novel', 'Web design team project'
+  ];
+
+  // 150 Historical records
+  for (let d = 1; d <= 50; d++) {
+    // Generate checkins for weekdays mostly
     const dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
-    const index1 = (d * 3) % profilesForAttendance.length;
-    const index2 = (d * 7 + 1) % profilesForAttendance.length;
-    
-    const checkIn1 = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 8 + (d % 3), d % 60);
-    const checkOut1 = new Date(checkIn1.getTime() + (3 + (d % 4)) * 60 * 60 * 1000);
-    
-    const checkIn2 = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 13 + (d % 2), (d * 5) % 60);
-    const checkOut2 = new Date(checkIn2.getTime() + (2 + (d % 3)) * 60 * 60 * 1000);
-    
+    const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
+    const visitsCount = isWeekend ? 1 : (d % 3 === 0) ? 4 : (d % 3 === 1) ? 3 : 2;
+
+    for (let v = 0; v < visitsCount; v++) {
+      const attendeeId = attendees[(d * 7 + v) % attendees.length];
+      const checkInHour = 8 + (v * 3) + (d % 3);
+      const checkInMinutes = (d * 11 + v * 13) % 60;
+      const checkInTime = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), checkInHour, checkInMinutes);
+      
+      const durationHours = 2 + (v % 3) + (d % 2);
+      const checkOutTime = new Date(checkInTime.getTime() + durationHours * 60 * 60 * 1000);
+      
+      const isForgottenCheckout = (d % 15 === 0 && v === 0);
+      
+      attendanceToSeed.push({
+        user_id: attendeeId,
+        check_in_at: checkInTime.toISOString(),
+        check_out_at: isForgottenCheckout ? null : checkOutTime.toISOString(),
+        notes: isForgottenCheckout ? 'System auto-checkout: forgotten checkout' : attendanceNotes[(d + v) % attendanceNotes.length]
+      });
+    }
+  }
+
+  // 5 Active Check-ins (currently in the library, check_out_at is null)
+  console.info('🌱 Generating 5 active check-ins for today...');
+  const activeCheckins = [
+    { user: profileIds.godwynStudent, hourAgo: 2, note: 'Reviewing computer science research' },
+    { user: profileIds.kayleStudent, hourAgo: 1, note: 'Reading literature classics' },
+    { user: profileIds.jericoSA, hourAgo: 3, note: 'Library assistant daily shift' },
+    { user: profileIds.luminaSA, hourAgo: 1.5, note: 'Study group session for math' },
+    { user: profileIds.rhedLibrarian, hourAgo: 0.5, note: 'Preparing catalog checklist' }
+  ];
+
+  for (const ac of activeCheckins) {
+    const checkInTime = new Date(now.getTime() - ac.hourAgo * 60 * 60 * 1000);
     attendanceToSeed.push({
-      user_id: profilesForAttendance[index1],
-      check_in_at: checkIn1.toISOString(),
-      check_out_at: checkOut1.toISOString(),
-      notes: d % 3 === 0 ? 'Study session' : d % 3 === 1 ? 'Research work' : 'Group meeting'
-    });
-    
-    attendanceToSeed.push({
-      user_id: profilesForAttendance[index2],
-      check_in_at: checkIn2.toISOString(),
-      check_out_at: checkOut2.toISOString(),
-      notes: d % 2 === 0 ? 'Library assistant duty' : 'Studying calculus'
+      user_id: ac.user,
+      check_in_at: checkInTime.toISOString(),
+      check_out_at: null,
+      notes: ac.note
     });
   }
 
@@ -942,57 +1829,38 @@ async function seed() {
   if (attendanceError) {
     console.error('Error seeding attendance:', attendanceError);
   } else {
-    console.info('✅ Seeded completed attendance records');
+    console.info('✅ Seeded completed and active attendance records');
   }
 
-  // 9. Seed Notifications
-  const notificationsToSeed = [
-    {
-      user_id: profileIds.godwynStudent,
-      title: 'Welcome to Lumina Library!',
-      content: 'Your digital library card is now active. Explore the catalog and enjoy borrowing resources.',
-      type: 'SYSTEM',
-      priority: 'medium',
-      is_read: true,
-      metadata: {}
-    },
-    {
-      user_id: profileIds.godwynStudent,
-      title: 'Book Borrow Confirmed',
-      content: 'You have borrowed "Clean Code". It is due on ' + new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000).toLocaleDateString() + '.',
-      type: 'CIRCULATION',
-      priority: 'medium',
-      is_read: false,
-      metadata: {}
-    },
-    {
-      user_id: profileIds.godwynStudent,
-      title: 'OVERDUE NOTICE: "The Pragmatic Programmer"',
-      content: 'The copy of "The Pragmatic Programmer" you borrowed was due on ' + new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toLocaleDateString() + '. Please return it immediately to avoid account suspension.',
-      type: 'CIRCULATION',
-      priority: 'high',
-      is_read: false,
-      metadata: {}
-    },
-    {
-      user_id: profileIds.kayleStudent,
-      title: 'Reservation Ready for Pickup',
-      content: 'Your reservation for "Refactoring" is ready. You have until ' + new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toLocaleDateString() + ' to pick it up at the circulation desk.',
-      type: 'CIRCULATION',
-      priority: 'high',
-      is_read: false,
-      metadata: {}
-    },
-    {
-      user_id: profileIds.kennethAdmin,
-      title: 'System Policy Setting Updated',
-      content: 'Admin Lumina Admin updated key: "loan_period_days" to "14".',
-      type: 'SYSTEM',
-      priority: 'low',
-      is_read: true,
-      metadata: {}
-    }
+  // 8. Seed Notifications (30 records)
+  console.info('🌱 Generating 30 notifications of different priorities and statuses...');
+  const notificationsToSeed: any[] = [];
+  const notificationTitles = [
+    { title: 'Welcome to Lumina Library!', content: 'Your digital library card is now active. Explore the catalog and enjoy borrowing resources.', type: 'SYSTEM', priority: 'low' },
+    { title: 'Book Borrow Confirmed', content: 'You have checked out a book copy successfully. Remember to return it before the due date.', type: 'CIRCULATION', priority: 'medium' },
+    { title: 'OVERDUE NOTICE', content: 'You have a book copy that is past its due date. Please return it to the circulation desk immediately.', type: 'CIRCULATION', priority: 'high' },
+    { title: 'Hold Ready for Pickup', content: 'Your reserved book is now ready. Please retrieve it at the circulation desk within 3 days.', type: 'CIRCULATION', priority: 'high' },
+    { title: 'Account Status Warning', content: 'Your library account has been flagged for multiple overdue items.', type: 'SYSTEM', priority: 'high' },
+    { title: 'System settings updated', content: 'Library loan settings were adjusted by a system administrator.', type: 'SYSTEM', priority: 'low' },
   ];
+
+  // Distribute 30 notifications across users
+  const allUsers = Object.values(profileIds);
+  for (let i = 1; i <= 30; i++) {
+    const config = notificationTitles[i % notificationTitles.length];
+    const isRead = i % 3 !== 0; // 2/3 are read
+    const userId = allUsers[i % allUsers.length];
+    
+    notificationsToSeed.push({
+      user_id: userId,
+      title: config.title,
+      content: config.content + (config.title === 'Book Borrow Confirmed' ? ' (ID: ' + i + ')' : ''),
+      type: config.type,
+      priority: config.priority,
+      is_read: isRead,
+      metadata: {}
+    });
+  }
 
   const { error: notificationError } = await supabase
     .from('notifications')
@@ -1004,7 +1872,8 @@ async function seed() {
     console.info('✅ Seeded notifications');
   }
 
-  // 10. Seed Announcements
+  // 9. Seed Announcements (8 records)
+  console.info('🌱 Seeding announcements...');
   const announcementsToSeed = [
     {
       title: 'Lumina Library System Upgrade',
@@ -1012,7 +1881,7 @@ async function seed() {
       priority: 'medium',
       is_active: true,
       target_role: null,
-      starts_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      starts_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: profileIds.luminaAdmin
     },
     {
@@ -1041,6 +1910,43 @@ async function seed() {
       target_role: null,
       starts_at: new Date(now.getTime()).toISOString(),
       created_by: profileIds.kennethAdmin
+    },
+    {
+      title: 'New Digital Resource Subscriptions',
+      content: 'Access to IEEE Xplore and SpringerLink databases is now available through our school portal.',
+      priority: 'low',
+      is_active: true,
+      target_role: null,
+      starts_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.luminaSuperAdmin
+    },
+    {
+      title: 'Librarian Training Workshop',
+      content: 'All staff and librarians must attend the digital cataloging refresher workshop at 10 AM on Saturday.',
+      priority: 'medium',
+      is_active: true,
+      target_role: 'librarian',
+      starts_at: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.luminaAdmin
+    },
+    {
+      title: 'Holiday Closure Notice',
+      content: 'Lumina Library will be closed on June 12 for Independence Day. Plan your borrows accordingly.',
+      priority: 'medium',
+      is_active: false,
+      target_role: null,
+      starts_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(now.getTime() - 19 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.kennethAdmin
+    },
+    {
+      title: 'Book Donation Drive 2026',
+      content: 'Help build our community shelf! Drop off your gently used books at the library main lobby.',
+      priority: 'low',
+      is_active: true,
+      target_role: null,
+      starts_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.rhedLibrarian
     }
   ];
 
@@ -1054,30 +1960,37 @@ async function seed() {
     console.info('✅ Seeded announcements');
   }
 
-  // 11. Seed Reports
-  const reportsToSeed = [
-    {
-      book_id: bookCleanCode.id,
-      user_id: profileIds.godwynStudent,
-      notes: 'Pages 102 to 110 are heavily smeared with ink and illegible. Reporting for review.',
-      status: 'resolved',
-      created_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      book_id: bookRefactoring.id,
-      user_id: profileIds.kayleStudent,
-      notes: 'The front cover page is partially torn off.',
-      status: 'pending',
-      created_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      book_id: bookSteveJobs.id,
-      user_id: profileIds.jericoSA,
-      notes: 'Water damage detected on the last 20 pages, pages are warped but readable.',
-      status: 'pending',
-      created_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
-    }
+  // 10. Seed Reports (15 records)
+  console.info('🌱 Seeding 15 book damage/issue reports...');
+  const reportsToSeed: any[] = [];
+  const reportNotes = [
+    'Pages are heavily smeared with ink and illegible.',
+    'The front cover page is partially torn off.',
+    'Water damage detected on the last 20 pages, pages are warped.',
+    'Spill stains on chapters 2 and 3.',
+    'Pages 45-48 are missing from the binding.',
+    'Cover binding is completely separated from the pages.',
+    'Heavily annotated with pencil and highlights.',
+    'Barcode scanner is unable to read the QR label due to scratches.',
+    'The book smells of dampness and has minor mold on back cover.',
+    'Pages 120-130 are stuck together.'
   ];
+  
+  const reportStatuses = ['pending', 'resolved', 'dismissed'];
+
+  for (let i = 0; i < 15; i++) {
+    const book = bookData[i * 4 % bookData.length];
+    const user = allUsers[i % allUsers.length];
+    const status = reportStatuses[i % reportStatuses.length];
+    
+    reportsToSeed.push({
+      book_id: book.id,
+      user_id: user,
+      notes: reportNotes[i % reportNotes.length] + ' (Report #' + (i + 1) + ')',
+      status: status,
+      created_at: new Date(now.getTime() - (i + 1) * 2 * 24 * 60 * 60 * 1000).toISOString()
+    });
+  }
 
   const { error: reportError } = await supabase
     .from('reports')
@@ -1089,37 +2002,34 @@ async function seed() {
     console.info('✅ Seeded reports');
   }
 
-  // 12. Seed Audit Logs
-  const auditLogsToSeed = [
-    {
-      admin_id: profileIds.luminaAdmin,
-      entity_type: 'books',
-      action: 'CREATE_BOOK',
-      reason: 'Standard catalog initialization',
-      details: { count: bookData.length }
-    },
-    {
-      admin_id: profileIds.luminaAdmin,
-      entity_type: 'system_settings',
-      action: 'UPDATE_SYSTEM_SETTINGS',
-      reason: 'Revised loan policy per admin instruction',
-      details: { key: 'loan_period_days', value: '14' }
-    },
-    {
-      admin_id: profileIds.kennethAdmin,
-      entity_type: 'profiles',
-      action: 'UPDATE_USER_ROLE',
-      reason: 'Promoted to Student Assistant role',
-      details: { user_id: profileIds.jericoSA, role: 'student_assistant' }
-    },
-    {
-      admin_id: profileIds.rhedLibrarian,
-      entity_type: 'books',
-      action: 'UPDATE_BOOK_DETAILS',
-      reason: 'Updated location shelf coordinates',
-      details: { book_title: 'The Design of Everyday Things', old_location: 'Shelf H1', new_location: 'Shelf H1-A' }
-    }
+  // 11. Seed Audit Logs (25 records)
+  console.info('🌱 Seeding 25 administrative audit logs...');
+  const auditLogsToSeed: any[] = [];
+  const auditActions = [
+    { entity: 'books', action: 'CREATE_BOOK', reason: 'Standard catalog expansion' },
+    { entity: 'system_settings', action: 'UPDATE_SYSTEM_SETTINGS', reason: 'Revised loan policy per admin instruction' },
+    { entity: 'profiles', action: 'UPDATE_USER_ROLE', reason: 'Assigned library staff permissions' },
+    { entity: 'books', action: 'UPDATE_BOOK_DETAILS', reason: 'Corrected author and published year info' },
+    { entity: 'book_copies', action: 'DELETE_BOOK_COPY', reason: 'Copy written off due to severe physical damage' },
+    { entity: 'reports', action: 'RESOLVE_REPORT', reason: 'Checked physical copy and repaired binding' },
   ];
+
+  for (let i = 1; i <= 25; i++) {
+    const actionConfig = auditActions[i % auditActions.length];
+    const adminId = [profileIds.kennethAdmin, profileIds.luminaAdmin, profileIds.luminaSuperAdmin][i % 3];
+    
+    auditLogsToSeed.push({
+      admin_id: adminId,
+      entity_type: actionConfig.entity,
+      action: actionConfig.action,
+      reason: actionConfig.reason + ' (Audit #' + i + ')',
+      details: {
+        timestamp: new Date(now.getTime() - i * 60 * 60 * 1000).toISOString(),
+        triggered_by: adminId,
+        ip_address: '192.168.1.' + (10 + i)
+      }
+    });
+  }
 
   const { error: auditError } = await supabase
     .from('audit_logs')
@@ -1131,7 +2041,7 @@ async function seed() {
     console.info('✅ Seeded audit logs');
   }
 
-  // 13. Seed Checklist Options
+  // 12. Seed Checklist Dropdown Options
   console.info('🌱 Seeding checklist options...');
   const optionsToSeed = [
     { type: 'user_role', value: 'student' },
@@ -1157,14 +2067,19 @@ async function seed() {
     console.info('✅ Seeded checklist options');
   }
 
-  // 14. Seed Checklist Items
+  // 13. Seed Checklist Items (10 items)
   console.info('🌱 Seeding checklist items...');
   const itemsToSeed = [
     { problem: 'UI overflow in catalog cards on mobile screens', explanation: 'The tags section stretches too wide and breaks the grid layout.', user_role: 'student', module: 'Catalog', is_completed: false },
     { problem: 'Session timeout occurs too quickly during scan operations', explanation: 'Librarians get logged out during continuous book checking scans.', user_role: 'librarian', module: 'Circulation', is_completed: true },
     { problem: 'Audit logs fail to capture custom settings change events', explanation: 'Changing settings through the admin dashboard settings page is not logging correctly.', user_role: 'super_admin', module: 'Settings', is_completed: false },
     { problem: 'Overdue auto-status update cron fails intermittently', explanation: 'Some profiles do not get marked as suspended when having 3+ overdue items.', user_role: 'super_admin', module: 'Penalties', is_completed: false },
-    { problem: 'QR scanner camera fails to open on Safari (iOS)', explanation: 'Permission request prompts do not trigger on Safari browsers.', user_role: 'student_assistant', module: 'Circulation', is_completed: false }
+    { problem: 'QR scanner camera fails to open on Safari (iOS)', explanation: 'Permission request prompts do not trigger on Safari browsers.', user_role: 'student_assistant', module: 'Circulation', is_completed: false },
+    { problem: 'Attendance chart displays incorrect timezone coordinates', explanation: 'The daily activity chart offsets hours by GMT+0 rather than local time.', user_role: 'super_admin', module: 'Dashboard', is_completed: true },
+    { problem: 'Profile page takes 3+ seconds to resolve loading state', explanation: 'SWR fetches user details and borrows concurrently, triggering waterfalled DB requests.', user_role: 'student', module: 'Authentication', is_completed: false },
+    { problem: 'Reports filter dropdown items are misaligned', explanation: 'Filter status buttons wrap onto new lines on small display panels.', user_role: 'librarian', module: 'Reports', is_completed: true },
+    { problem: 'Announcement target role defaults to null on creation', explanation: 'Omitting target role results in SQL constraint error instead of general audience.', user_role: 'librarian', module: 'Announcements', is_completed: false },
+    { problem: 'Library card asset download fails with high-res avatars', explanation: 'HTML-to-image canvas rendering hits timeouts when loading external network pictures.', user_role: 'student', module: 'Settings', is_completed: false },
   ];
   const { error: itemsError } = await supabase
     .from('checklist_items')

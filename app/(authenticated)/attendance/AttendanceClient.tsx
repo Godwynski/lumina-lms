@@ -224,7 +224,7 @@ export function AttendanceClient({
           disabled={isPending}
         >
           <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
-          {showScanner ? "Close Camera" : "Open Camera"}
+          {showScanner ? "Close Camera" : "Scan Library Card"}
         </Button>
       </div>
     </div>

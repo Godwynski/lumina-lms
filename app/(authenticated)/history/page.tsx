@@ -23,7 +23,7 @@ export async function generateMetadata({
                              !!me.profile?.permissions?.manage_circulation && 
                              me.profile?.status?.toUpperCase() === 'ACTIVE';
 
-  const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
+  const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
 
   return {
     title: `${showAllLogs ? "Borrowing Logs" : "My Borrowing"} | Lumina LMS`,
@@ -44,7 +44,7 @@ function buildHistoryPromise(page: number, status: string, q: string, view: stri
                                !!me.profile?.permissions?.manage_circulation && 
                                me.profile?.status?.toUpperCase() === 'ACTIVE';
 
-    const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
+    const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
     
     const userId = showAllLogs ? null : me.user.id;
     

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
+import { useState, use, useEffect, useTransition } from "react";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -48,6 +48,7 @@ export default function HistoryContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [isPending, startTransition] = useTransition();
 
   // Realtime refresh
   useEffect(() => {
@@ -77,7 +78,9 @@ export default function HistoryContent({
         params.set(key, value.toString());
       }
     });
-    router.push(`/history?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/history?${params.toString()}`);
+    });
   };
 
   const formatDate = (dateStr: string) => {
@@ -93,9 +96,10 @@ export default function HistoryContent({
   };
 
   const viewParam = searchParams.get("view");
-  const isPrivileged = userRole === "super_admin" || 
-                       userRole === "librarian" || 
-                       (userRole === "student_assistant" && viewParam === "logs");
+  const isPrivileged = (userRole === "super_admin" || 
+                        userRole === "librarian" || 
+                        userRole === "student_assistant") && 
+                       viewParam === "logs";
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged
@@ -233,7 +237,10 @@ export default function HistoryContent({
           />
         ) : null
       }
-      className="max-w-none animate-in fade-in-50 duration-300"
+      className={cn(
+        "max-w-none animate-in fade-in-50 duration-300 transition-opacity",
+        isPending && "opacity-50 pointer-events-none"
+      )}
     >
       <LuminaTable
         data={records}

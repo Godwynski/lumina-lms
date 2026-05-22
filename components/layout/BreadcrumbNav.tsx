@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
@@ -59,6 +60,11 @@ export function BreadcrumbNav() {
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
   const { role } = usePreferences();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const clean = pathname.replace(/\?.*$/, "");
   if (clean === "/dashboard" || clean === "/dashboard/") {
@@ -75,12 +81,12 @@ export function BreadcrumbNav() {
   const current = pathSegments[pathSegments.length - 1];
   const parentSegment = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : undefined;
 
-  const viewParam = searchParams.get("view");
+  const viewParam = mounted ? searchParams.get("view") : null;
   let title = formatSegment(current, parentSegment);
   if (current === "history") {
-    const isStaffUser = (role === "super_admin" || role === "librarian") || 
-                        (role === "student_assistant" && viewParam === "logs");
-    title = isStaffUser ? "Borrowing Logs" : "My Borrowing";
+    const isViewingLogs = viewParam === "logs" && 
+                          (role === "super_admin" || role === "librarian" || role === "student_assistant");
+    title = isViewingLogs ? "Borrowing Logs" : "My Borrowing";
   } else if (current === "attendance") {
     const isStaffUser = (role === "super_admin" || role === "librarian") || 
                         (role === "student_assistant" && viewParam === "logs");
@@ -91,9 +97,9 @@ export function BreadcrumbNav() {
   let backHref = pathSegments.length > 1 ? `/${pathSegments.slice(0, -1).join("/")}` : null;
   let backLabel = parentSegment ? formatSegment(parentSegment) : null;
   if (parentSegment === "history") {
-    const isStaffUser = (role === "super_admin" || role === "librarian") || 
-                        (role === "student_assistant" && viewParam === "logs");
-    backLabel = isStaffUser ? "Borrowing Logs" : "My Borrowing";
+    const isViewingLogs = viewParam === "logs" && 
+                          (role === "super_admin" || role === "librarian" || role === "student_assistant");
+    backLabel = isViewingLogs ? "Borrowing Logs" : "My Borrowing";
   } else if (parentSegment === "attendance") {
     const isStaffUser = (role === "super_admin" || role === "librarian") || 
                         (role === "student_assistant" && viewParam === "logs");

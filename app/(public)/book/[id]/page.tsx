@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { ChevronLeft, MapPin, Hash, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ReportMissingButton } from '@/components/common/ReportMissingButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense } from 'react';
 
@@ -88,14 +87,6 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
             </div>
           </div>
         )}
-
-        <div className="pt-6">
-          <ReportMissingButton
-            bookId={id}
-            disabled={book.available_copies === 0}
-            userType="public"
-          />
-        </div>
       </div>
     </div>
   );

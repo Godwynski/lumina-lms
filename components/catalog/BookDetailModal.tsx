@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
-import { ReportMissingButton } from '@/components/common/ReportMissingButton';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -348,11 +347,6 @@ function StudentModalContent({
             {isPending ? 'Cancelling…' : 'Cancel'}
           </Button>
         )}
-        <ReportMissingButton
-          bookId={book.id}
-          disabled={!isAvailable}
-          userType="student"
-        />
       </div>
 
 
