@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function AttendancePage({ searchParams }: PageProps) {
