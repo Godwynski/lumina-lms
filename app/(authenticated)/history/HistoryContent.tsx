@@ -80,8 +80,6 @@ export default function HistoryContent({
     router.push(`/history?${params.toString()}`);
   };
 
-// Redundant badge logic removed, using centralized StatusBadge
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
