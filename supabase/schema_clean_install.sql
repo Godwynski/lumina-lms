@@ -743,7 +743,7 @@ BEGIN
   INTO v_borrow
   FROM public.borrowing_records br
   LEFT JOIN public.profiles p ON p.id = br.user_id
-  WHERE br.book_copy_id = v_copy.id AND br.status = 'ACTIVE'
+  WHERE br.book_copy_id = v_copy.id AND br.status IN ('ACTIVE', 'OVERDUE')
   ORDER BY br.borrowed_at DESC
   LIMIT 1
   FOR UPDATE OF br;

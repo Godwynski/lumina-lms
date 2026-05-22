@@ -297,7 +297,7 @@ export const returnBook = createSafeAction(
           .from('borrowing_records')
           .select('user_id')
           .eq('book_copy_id', copy.id)
-          .eq('status', 'ACTIVE')
+          .in('status', ['ACTIVE', 'OVERDUE'])
           .maybeSingle();
         
         if (record) {
