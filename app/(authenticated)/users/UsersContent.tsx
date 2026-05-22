@@ -166,23 +166,32 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     void loadUsers(true);
   }, [loadUsers]);
 
+  const loadUsersRef = React.useRef(loadUsers);
+  useEffect(() => {
+    loadUsersRef.current = loadUsers;
+  }, [loadUsers]);
+
   // Realtime subscription
   useEffect(() => {
+    const channelId = `users-realtime-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel('users-realtime')
+      .channel(channelId)
       .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'profiles' }, 
-        () => {
-          void loadUsers();
+        (payload) => {
+          console.log('Realtime change received for profiles:', payload);
+          void loadUsersRef.current();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Subscription status for ${channelId}:`, status);
+      });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [supabase, loadUsers]);
+  }, [supabase]);
 
   const handleUserClick = useCallback((u: User) => {
     router.push(`/users/${u.id}`);
