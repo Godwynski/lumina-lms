@@ -1,8 +1,8 @@
 {
   "private": true,
   "engines": {
-    "node": ">=24 <25",
-    "npm": ">=11 <12"
+    "node": "24.x",
+    "npm": ">=11"
   },
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "analyze": "cross-env ANALYZE=true next build",
+    "analyze": "cross-env ANALYZE=true NEXT_BUNDLE_ANALYZE=true next build",
     "seed": "ts-node -T scripts/seed.ts",
     "clean": "ts-node -T scripts/clean.ts"
   },

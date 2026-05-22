@@ -55,7 +55,7 @@ export function withAuthApi(
   ) => Promise<NextResponse>,
   options: AuthOptions = {}
 ) {
-  return async (req: Request, context: Record<string, unknown>) => {
+  return async (req: Request, context: { params: Promise<Record<string, string>> } & Record<string, unknown>) => {
     try {
       const me = await getMe();
 
