@@ -1,12 +1,10 @@
 import type { NextConfig } from "next";
-import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : '';
 
-const nextConfig = {
-  output: 'standalone',
+const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: [
       "lucide-react",
@@ -83,9 +81,9 @@ const nextConfig = {
       },
     ];
   },
-} satisfies NextConfig;
+};
 
-export default withBundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-})(nextConfig);
-
+export default process.env.ANALYZE === "true"
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  ? require("@next/bundle-analyzer")({ enabled: true })(nextConfig)
+  : nextConfig;
