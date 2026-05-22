@@ -84,11 +84,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default async function config(): Promise<NextConfig> {
-  if (process.env.ANALYZE === "true") {
-    const withBundleAnalyzer = (await import("@next/bundle-analyzer")).default;
-    return withBundleAnalyzer({ enabled: true })(nextConfig);
-  }
-  return nextConfig;
-}
-
+export default process.env.ANALYZE === "true"
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  ? require("@next/bundle-analyzer")({ enabled: true })(nextConfig)
+  : nextConfig;
