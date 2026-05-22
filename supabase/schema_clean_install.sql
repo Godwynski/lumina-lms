@@ -1183,4 +1183,14 @@ CREATE POLICY "Allow public delete" ON public.checklist_items FOR DELETE USING (
 -- 5. Enable Supabase Realtime Replication
 ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_dropdown_options;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.books;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.book_copies;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.borrowing_records;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.reservations;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.system_settings;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.announcements;
 
