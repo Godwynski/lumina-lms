@@ -12,6 +12,7 @@ import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import NavAnimatePresence from "./NavAnimatePresence";
 import { SWRProvider } from "./_components/SWRProvider";
+import { BatchTaskProvider } from "@/components/providers/BatchTaskProvider";
 import { cookies } from "next/headers";
 import { isAccessBlocked as checkAccessBlocked, type Profile } from "@/lib/auth/permissions";
 
@@ -59,42 +60,44 @@ export default async function ProtectedLayout({
       user={me.user}
     >
       <SWRProvider>
-        <SidebarProvider defaultOpen={defaultOpen}>
-          {/* Nav streams in independently; skeleton perfectly mirrors real nav */}
-          <Suspense fallback={<NavSkeleton />}>
-            <StreamedNav />
-          </Suspense>
-
-          <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
-            {/* Mobile header */}
-            <div className="md:hidden sticky top-0 z-40 flex w-full h-[52px] shrink-0 items-center justify-between border-b border-border bg-background/90 backdrop-blur-md px-3.5 shadow-sm">
-              <div className="flex flex-1 items-center gap-3 overflow-hidden">
-                <SidebarTrigger className="shrink-0" />
-                <div className="truncate text-sm font-semibold tracking-tight">
-                  <Suspense fallback={<div className="h-4 w-24 animate-pulse bg-muted/20 rounded" />}>
-                    <BreadcrumbNav />
-                  </Suspense>
-                </div>
-              </div>
-              <div className="ml-2 shrink-0 flex items-center gap-2">
-                <NotificationBell />
-                <StreamedUserNav />
-              </div>
-            </div>
-
-            {/* Desktop header */}
-            <Suspense fallback={<div className="h-16 border-b border-border/40 bg-background/60 animate-pulse hidden md:block" />}>
-              <MainHeader />
+        <BatchTaskProvider>
+          <SidebarProvider defaultOpen={defaultOpen}>
+            {/* Nav streams in independently; skeleton perfectly mirrors real nav */}
+            <Suspense fallback={<NavSkeleton />}>
+              <StreamedNav />
             </Suspense>
 
-            {/* Page content */}
-            <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
+            <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
+              {/* Mobile header */}
+              <div className="md:hidden sticky top-0 z-40 flex w-full h-[52px] shrink-0 items-center justify-between border-b border-border bg-background/90 backdrop-blur-md px-3.5 shadow-sm">
+                <div className="flex flex-1 items-center gap-3 overflow-hidden">
+                  <SidebarTrigger className="shrink-0" />
+                  <div className="truncate text-sm font-semibold tracking-tight">
+                    <Suspense fallback={<div className="h-4 w-24 animate-pulse bg-muted/20 rounded" />}>
+                      <BreadcrumbNav />
+                    </Suspense>
+                  </div>
+                </div>
+                <div className="ml-2 shrink-0 flex items-center gap-2">
+                  <NotificationBell />
+                  <StreamedUserNav />
+                </div>
+              </div>
+
+              {/* Desktop header */}
+              <Suspense fallback={<div className="h-16 border-b border-border/40 bg-background/60 animate-pulse hidden md:block" />}>
+                <MainHeader />
+              </Suspense>
+
+              {/* Page content */}
+              <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
                 <NavAnimatePresence>
                   {children}
                 </NavAnimatePresence>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
+        </BatchTaskProvider>
       </SWRProvider>
     </PreferencesProvider>
   );
