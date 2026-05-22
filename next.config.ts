@@ -1,11 +1,10 @@
 import type { NextConfig } from "next";
-import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : '';
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   output: 'standalone',
   experimental: {
     optimizePackageImports: [
@@ -83,9 +82,13 @@ const nextConfig = {
       },
     ];
   },
-} satisfies NextConfig;
+};
 
-export default withBundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-})(nextConfig);
+export default async function config(): Promise<NextConfig> {
+  if (process.env.ANALYZE === "true") {
+    const withBundleAnalyzer = (await import("@next/bundle-analyzer")).default;
+    return withBundleAnalyzer({ enabled: true })(nextConfig);
+  }
+  return nextConfig;
+}
 
