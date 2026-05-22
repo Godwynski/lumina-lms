@@ -5,7 +5,6 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : '';
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   experimental: {
     optimizePackageImports: [
       "lucide-react",
