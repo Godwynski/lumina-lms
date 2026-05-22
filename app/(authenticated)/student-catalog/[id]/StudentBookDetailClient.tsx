@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
-import { ReportMissingButton } from '@/components/common/ReportMissingButton';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -481,11 +480,6 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
                 {isPending ? 'Cancelling…' : 'Cancel Reservation'}
               </Button>
             )}
-            <ReportMissingButton
-              bookId={id}
-              disabled={!isAvailable}
-              userType="student"
-            />
           </div>
 
           {/* Cancel Confirmation Dialog */}

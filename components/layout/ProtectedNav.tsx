@@ -38,7 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
 import { useLogout } from "@/hooks/use-logout";
@@ -95,6 +95,12 @@ export function ProtectedNav({
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
   const { role, profile } = usePreferences();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const currentRole = role as Role;
   const currentProfile = profile as Profile | null;
   const { logout, isLoggingOut } = useLogout();
@@ -159,7 +165,7 @@ export function ProtectedNav({
   }, []);
 
   // ── Memoised nav-item list (previously an un-memoised IIFE) ─────────────
-  const viewParam = searchParams.get("view");
+  const viewParam = mounted ? searchParams.get("view") : null;
 
   const hasAttendancePerm = currentRole === "super_admin" ||
     currentRole === "librarian" ||
@@ -179,28 +185,41 @@ export function ProtectedNav({
 
     visibleItems.forEach(item => {
       if (item.href === "/history") {
-        if (currentRole === "student_assistant" && hasCirculationPerm) {
-          // Student Assistant with circulation permission gets BOTH My Borrowing and Borrowing Logs
-          items.push({
-            href: "/history",
-            label: "My Borrowing",
-            icon: item.icon,
-            isActive: pathname === "/history" && viewParam !== "logs"
-          });
+        const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
+        
+        if (isStaffUser) {
+          // Staff gets ONLY Borrowing Logs
           items.push({
             href: "/history?view=logs",
             label: "Borrowing Logs",
             icon: item.icon,
-            isActive: pathname === "/history" && viewParam === "logs"
-          });
-        } else {
-          const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
-          items.push({
-            href: "/history",
-            label: isStaffUser ? "Borrowing Logs" : "My Borrowing",
-            icon: item.icon,
             isActive: pathname === "/history"
           });
+        } else {
+          const isSAWithCirculation = currentRole === "student_assistant" && hasCirculationPerm;
+          if (isSAWithCirculation) {
+            // Authorized Student Assistants get BOTH My Borrowing and Borrowing Logs
+            items.push({
+              href: "/history",
+              label: "My Borrowing",
+              icon: item.icon,
+              isActive: pathname === "/history" && viewParam !== "logs"
+            });
+            items.push({
+              href: "/history?view=logs",
+              label: "Borrowing Logs",
+              icon: item.icon,
+              isActive: pathname === "/history" && viewParam === "logs"
+            });
+          } else {
+            // Regular students (and SAs without circulation permission) get ONLY My Borrowing
+            items.push({
+              href: "/history",
+              label: "My Borrowing",
+              icon: item.icon,
+              isActive: pathname === "/history"
+            });
+          }
         }
       } else if (item.href === "/attendance") {
         if (currentRole === "student_assistant" && hasAttendancePerm) {

@@ -9,6 +9,7 @@ import {
 } from "@/lib/db-actions";
 import { NextResponse } from "next/server";
 import { withAuthApi } from "@/lib/api-utils";
+import { revalidateTag } from "next/cache";
 
 export const POST = withAuthApi(
   async (req: Request) => {
@@ -21,32 +22,38 @@ export const POST = withAuthApi(
 
       const adminClient = createAdminClient();
 
-    let logs: string[] = [];
+      let logs: string[] = [];
 
-    switch (action) {
-      case "seed":
-      case "seed-all":
-        logs = await seedDatabase(adminClient);
-        break;
-      case "clear":
-      case "clear-all":
-        logs = await clearDatabase(adminClient);
-        break;
-      case "clear-logs-borrows":
-        logs = await clearLogsAndBorrows(adminClient);
-        break;
-      case "seed-logs-borrows":
-        logs = await seedLogsAndBorrows(adminClient);
-        break;
-      case "clear-catalog":
-        logs = await clearCatalog(adminClient);
-        break;
-      case "seed-catalog":
-        logs = await seedCatalog(adminClient);
-        break;
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-    }
+      switch (action) {
+        case "seed":
+        case "seed-all":
+          logs = await seedDatabase(adminClient);
+          break;
+        case "clear":
+        case "clear-all":
+          logs = await clearDatabase(adminClient);
+          break;
+        case "clear-logs-borrows":
+          logs = await clearLogsAndBorrows(adminClient);
+          break;
+        case "seed-logs-borrows":
+          logs = await seedLogsAndBorrows(adminClient);
+          break;
+        case "clear-catalog":
+          logs = await clearCatalog(adminClient);
+          break;
+        case "seed-catalog":
+          logs = await seedCatalog(adminClient);
+          break;
+        default:
+          return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+      }
+
+      // Invalidate all related caches so changes are immediately visible
+      revalidateTag("books", "max");
+      revalidateTag("public-books", "max");
+      revalidateTag("categories", "max");
+      revalidateTag("catalog", "max");
 
       return NextResponse.json({ success: true, logs });
     } catch (error) {
@@ -61,3 +68,4 @@ export const POST = withAuthApi(
 );
 
 export const dynamic = "force-dynamic";
+
