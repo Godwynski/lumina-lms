@@ -5,3 +5,4 @@ export const dynamic = 'force-dynamic'
 export default function SheeshPage() {
   return <SheeshClient />
 }
+export const dynamic = "force-dynamic";
