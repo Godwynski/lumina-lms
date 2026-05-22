@@ -79,8 +79,9 @@ export function useNotifications() {
             const newNotification = payload.new as Notification
             setNotifications(prev => [newNotification, ...prev])
             
-            // Show toast
+            // Show toast (deduplicated by notification ID)
             toast.info(newNotification.title, {
+              id: `notification-${newNotification.id}`,
               description: newNotification.content,
             })
           }
