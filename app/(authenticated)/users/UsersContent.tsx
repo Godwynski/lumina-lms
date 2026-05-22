@@ -23,6 +23,7 @@ import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable"
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoleBadge } from "@/components/common/RoleBadge";
 import { mapProfileToUser } from "@/lib/utils/mappers";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { UserRole } from "@/lib/auth-helpers";
 
 export type User = {
@@ -37,6 +38,7 @@ export type User = {
   student_id: string | null;
   address: string | null;
   phone: string | null;
+  updatedAt: string | null;
   onboarding_completed?: boolean;
   library_card?: {
     card_number: string;
@@ -180,12 +182,12 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'profiles' }, 
         (payload) => {
-          console.log('Realtime change received for profiles:', payload);
+          console.info('Realtime change received for profiles:', payload);
           void loadUsersRef.current();
         }
       )
       .subscribe((status) => {
-        console.log(`Subscription status for ${channelId}:`, status);
+        console.info(`Subscription status for ${channelId}:`, status);
       });
 
     return () => {
@@ -203,7 +205,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
       cell: (user) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+            <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
@@ -310,7 +312,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           renderMobileRow={(user) => (
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={user.avatarUrl ?? undefined} alt={user.name} className="object-cover" />
+              <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
