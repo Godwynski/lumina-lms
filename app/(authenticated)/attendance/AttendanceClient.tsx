@@ -69,9 +69,9 @@ export function AttendanceClient({
         isManual: true 
       });
       if (result.success) {
-        toast.success(result.data.message, {
+        toast.success("Transaction recorded", {
           id: "attendance-toast",
-          description: result.data.status === "IN" ? "Checked in successfully." : "Checked out successfully.",
+          description: result.data.message,
           icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
         });
         setCardNumber("");
@@ -164,9 +164,9 @@ export function AttendanceClient({
           isManual: false 
         });
         if (result.success) {
-          toast.success(result.data.message, {
+          toast.success("Transaction recorded", {
             id: "attendance-qr-toast",
-            description: result.data.description,
+            description: result.data.message,
             icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
           });
 
