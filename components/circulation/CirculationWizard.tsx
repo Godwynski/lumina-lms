@@ -242,6 +242,9 @@ export function CirculationWizard() {
         
         if (result.success) {
           setIsConfirmed(true);
+          toast.success('Transaction recorded', {
+            description: 'Ensure the physical copy matches.',
+          });
         } else {
           toast.error(result.error || 'Failed to confirm checkout.');
         }
@@ -255,6 +258,9 @@ export function CirculationWizard() {
 
         if (result.success) {
           setIsConfirmed(true);
+          toast.success('Transaction recorded', {
+            description: 'Ensure the physical copy matches.',
+          });
           if (result.data.reservation_ready) {
             setReservationData({ ready: true, studentName: result.data.reserved_for });
           }

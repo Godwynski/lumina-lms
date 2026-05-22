@@ -368,7 +368,7 @@ export function DashboardClient({
                 {isOverdue && (
                   <Card 
                     role="button"
-                    onClick={() => router.push('/circulation')}
+                    onClick={() => router.push('/history?view=logs&status=OVERDUE')}
                     className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -433,7 +433,7 @@ export function DashboardClient({
 
           <Card 
             role="button"
-            onClick={() => router.push('/circulation')}
+            onClick={() => router.push('/history?view=logs&status=ACTIVE')}
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-4">

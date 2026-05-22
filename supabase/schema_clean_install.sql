@@ -749,22 +749,38 @@ BEGIN
   FOR UPDATE OF br;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'No active borrow record found for this copy.');
-  END IF;
+    IF v_copy.status = 'BORROWED' THEN
+      -- Auto-recover orphaned copy state
+      IF p_preview_only THEN
+        RETURN jsonb_build_object(
+          'ok', true, 'preview', true,
+          'book_title',   v_copy.title,
+          'student_name', 'System Recovery (No Record)'
+        );
+      END IF;
+      -- No record to update, skip updating borrowing_records
+    ELSE
+      IF v_copy.status = 'AVAILABLE' THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'This book copy is already Available.');
+      ELSE
+        RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'This book copy is not borrowed (Status: ' || v_copy.status || ').');
+      END IF;
+    END IF;
+  ELSE
+    -- Preview mode
+    IF p_preview_only THEN
+      RETURN jsonb_build_object(
+        'ok', true, 'preview', true,
+        'book_title',   v_copy.title,
+        'student_name', COALESCE(v_borrow.full_name, 'Student')
+      );
+    END IF;
 
-  -- Preview mode
-  IF p_preview_only THEN
-    RETURN jsonb_build_object(
-      'ok', true, 'preview', true,
-      'book_title',   v_copy.title,
-      'student_name', COALESCE(v_borrow.full_name, 'Student')
-    );
+    -- Mark borrow record as returned
+    UPDATE public.borrowing_records
+    SET status = 'RETURNED', returned_at = v_now, updated_at = v_now
+    WHERE id = v_borrow.id;
   END IF;
-
-  -- Mark borrow record as returned
-  UPDATE public.borrowing_records
-  SET status = 'RETURNED', returned_at = v_now, updated_at = v_now
-  WHERE id = v_borrow.id;
 
   -- Atomically check for next queued reservation for this book
   SELECT r.id, r.user_id
