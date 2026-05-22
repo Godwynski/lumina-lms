@@ -11,7 +11,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "analyze": "cross-env ANALYZE=true next build",
+    "analyze": "cross-env ANALYZE=true NEXT_BUNDLE_ANALYZE=true next build",
     "seed": "ts-node -T scripts/seed.ts",
     "clean": "ts-node -T scripts/clean.ts"
   },
