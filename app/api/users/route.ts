@@ -110,12 +110,32 @@ export const POST = withAuthApi(
     }
 
     if (requestedRole === "super_admin" && profile.role !== "super_admin") {
-      const { count, error: countError } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("role", "super_admin");
-      if (!countError && count && count > 0) {
-        return apiError("Only one super administrator is allowed in the system.", "SUPER_ADMIN_EXISTS", 400);
+      if (requesterRole === "super_admin") {
+        const adminClient = createAdminClient();
+        const { error: transferError } = await adminClient
+          .rpc("transfer_super_admin_ownership", {
+            p_current_admin_id: user.id,
+            p_new_admin_id: profile.id
+          });
+        if (transferError) {
+          return apiError(transferError.message, "DATABASE_ERROR", 400);
+        }
+        await logAuditActivity(
+          user.id,
+          "system",
+          null,
+          "ownership_transferred",
+          `Super admin ownership transferred from ${user.email || user.id} to ${email}`,
+          { from: user.id, to: profile.id }
+        );
+      } else {
+        const { count, error: countError } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "super_admin");
+        if (!countError && count && count > 0) {
+          return apiError("Only one super administrator is allowed in the system.", "SUPER_ADMIN_EXISTS", 400);
+        }
       }
     }
 
@@ -249,12 +269,32 @@ export const PATCH = withAuthApi(
         return apiError("Librarians are not allowed to assign or change user roles", "FORBIDDEN", 403);
       }
       if (nextRole === "super_admin" && profile.role !== "super_admin") {
-        const { count, error: countError } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("role", "super_admin");
-        if (!countError && count && count > 0) {
-          return apiError("Only one super administrator is allowed in the system.", "SUPER_ADMIN_EXISTS", 400);
+        if (requesterRole === "super_admin") {
+          const adminClient = createAdminClient();
+          const { error: transferError } = await adminClient
+            .rpc("transfer_super_admin_ownership", {
+              p_current_admin_id: user.id,
+              p_new_admin_id: id
+            });
+          if (transferError) {
+            return apiError(transferError.message, "DATABASE_ERROR", 400);
+          }
+          await logAuditActivity(
+            user.id,
+            "system",
+            null,
+            "ownership_transferred",
+            `Super admin ownership transferred from ${user.id} to ${profile.email || id}`,
+            { from: user.id, to: id }
+          );
+        } else {
+          const { count, error: countError } = await supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("role", "super_admin");
+          if (!countError && count && count > 0) {
+            return apiError("Only one super administrator is allowed in the system.", "SUPER_ADMIN_EXISTS", 400);
+          }
         }
       }
       updates.role = nextRole;

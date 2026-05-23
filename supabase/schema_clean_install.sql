@@ -278,6 +278,35 @@ BEGIN
 END;
 $$;
 
+-- Atomic transaction-safe ownership transfer function
+CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+ AS $$
+BEGIN
+  -- Verify p_current_admin_id is indeed a super_admin
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_current_admin_id AND role = 'super_admin'::public.user_role) THEN
+    RAISE EXCEPTION 'Current user is not the super admin';
+  END IF;
+
+  -- Verify p_new_admin_id exists
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_new_admin_id) THEN
+    RAISE EXCEPTION 'Target user does not exist';
+  END IF;
+
+  -- Perform the transfer in a single atomic update statement to avoid RLS/uniqueness transient violations
+  UPDATE public.profiles
+  SET role = CASE
+    WHEN id = p_current_admin_id THEN 'librarian'::public.user_role
+    WHEN id = p_new_admin_id THEN 'super_admin'::public.user_role
+    ELSE role
+  END
+  WHERE id IN (p_current_admin_id, p_new_admin_id);
+END;
+$$;
+
 -- Auto student_id set based on email pattern matching
 CREATE OR REPLACE FUNCTION public.auto_set_student_id()
  RETURNS trigger
