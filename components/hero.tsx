@@ -126,44 +126,47 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
               <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
             </Button>
 
-            <div className="w-full space-y-4 mt-2">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
+            {/* Hide the demo access buttons on the landing page */}
+            {false && (
+              <div className="w-full space-y-4 mt-2">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
+                    <span className="bg-background px-4 text-muted-foreground/60">Quick Demo Access</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
-                  <span className="bg-background px-4 text-muted-foreground/60">Quick Demo Access</span>
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  {[
+                    { label: "super_admin", email: "admin@lumina.test", icon: ShieldCheck, color: "hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] hover:text-emerald-500 dark:hover:text-emerald-400" },
+                    { label: "Librarian", email: "librarian@lumina.test", icon: BookOpen, color: "hover:border-indigo-500/50 hover:bg-indigo-500/[0.04] hover:text-indigo-500 dark:hover:text-indigo-400" },
+                    { label: "Staff", email: "staff@lumina.test", icon: UserCheck, color: "hover:border-sky-500/50 hover:bg-sky-500/[0.04] hover:text-sky-500 dark:hover:text-sky-400" },
+                    { label: "Student", email: "student@lumina.test", icon: GraduationCap, color: "hover:border-amber-500/50 hover:bg-amber-500/[0.04] hover:text-amber-500 dark:hover:text-amber-400" },
+                  ].map((roleItem) => {
+                    const Icon = roleItem.icon;
+                    const isThisLoading = loadingEmail === roleItem.email;
+                    return (
+                      <Button
+                        key={roleItem.email}
+                        type="button"
+                        variant="outline"
+                        className={`h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-300 flex items-center justify-start px-4 gap-2.5 ${roleItem.color}`}
+                        onClick={() => signInWithCredentials(roleItem.email)}
+                        disabled={isLoading}
+                      >
+                        {isThisLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                        ) : (
+                          <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110" />
+                        )}
+                        <span>{isThisLoading ? "Signing in..." : roleItem.label}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 w-full">
-                {[
-                  { label: "super_admin", email: "admin@lumina.test", icon: ShieldCheck, color: "hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] hover:text-emerald-500 dark:hover:text-emerald-400" },
-                  { label: "Librarian", email: "librarian@lumina.test", icon: BookOpen, color: "hover:border-indigo-500/50 hover:bg-indigo-500/[0.04] hover:text-indigo-500 dark:hover:text-indigo-400" },
-                  { label: "Staff", email: "staff@lumina.test", icon: UserCheck, color: "hover:border-sky-500/50 hover:bg-sky-500/[0.04] hover:text-sky-500 dark:hover:text-sky-400" },
-                  { label: "Student", email: "student@lumina.test", icon: GraduationCap, color: "hover:border-amber-500/50 hover:bg-amber-500/[0.04] hover:text-amber-500 dark:hover:text-amber-400" },
-                ].map((roleItem) => {
-                  const Icon = roleItem.icon;
-                  const isThisLoading = loadingEmail === roleItem.email;
-                  return (
-                    <Button
-                      key={roleItem.email}
-                      type="button"
-                      variant="outline"
-                      className={`h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-300 flex items-center justify-start px-4 gap-2.5 ${roleItem.color}`}
-                      onClick={() => signInWithCredentials(roleItem.email)}
-                      disabled={isLoading}
-                    >
-                      {isThisLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-                      ) : (
-                        <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110" />
-                      )}
-                      <span>{isThisLoading ? "Signing in..." : roleItem.label}</span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
+            )}
           </div>
         )}
       </m.div>
