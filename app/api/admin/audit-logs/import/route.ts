@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { connection } from "next/server";
 
@@ -120,10 +121,11 @@ export async function POST(request: NextRequest) {
     // Perform batch insertion
     const batchSize = 100;
     let insertedCount = 0;
+    const adminSupabase = createAdminClient();
 
     for (let i = 0; i < cleanedLogs.length; i += batchSize) {
       const batch = cleanedLogs.slice(i, i + batchSize);
-      const { error: insertError } = await supabase
+      const { error: insertError } = await adminSupabase
         .from("audit_logs")
         .insert(batch);
 
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the import/restore event itself in the audit log
-    await supabase.from("audit_logs").insert({
+    await adminSupabase.from("audit_logs").insert({
       admin_id: user.user.id,
       entity_type: "system",
       action: "update",
