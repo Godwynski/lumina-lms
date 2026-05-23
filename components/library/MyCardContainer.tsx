@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Image from "next/image";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +91,7 @@ type AssetStatusResponse = {
 };
 
 export default function MyCardContainer({ initialData, variant = "page" }: MyCardContainerProps) {
+  const { profile } = usePreferences();
   const [data, setData] = useState(initialData);
   const [isRefreshingAssets, setIsRefreshingAssets] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -362,7 +365,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               department={data.department}
               status={data.status}
               expiryDate={data.expiryDate}
-              avatarUrl={data.avatarUrl}
+              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
               qrUrl={data.qrUrl}
               address={data.address}
               phone={data.phone}
@@ -381,7 +384,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               department={data.department}
               status={data.status}
               expiryDate={data.expiryDate}
-              avatarUrl={data.avatarUrl}
+              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
               qrUrl={data.qrUrl}
               address={data.address}
               phone={data.phone}
@@ -401,7 +404,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 department={data.department}
                 status={data.status}
                 expiryDate={data.expiryDate}
-                avatarUrl={data.avatarUrl}
+                avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
                 qrUrl={data.qrUrl}
                 address={data.address}
                 phone={data.phone}
@@ -420,7 +423,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 department={data.department}
                 status={data.status}
                 expiryDate={data.expiryDate}
-                avatarUrl={data.avatarUrl}
+                avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
                 qrUrl={data.qrUrl}
                 address={data.address}
                 phone={data.phone}
@@ -561,7 +564,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             department={data.department}
             status={data.status}
             expiryDate={data.expiryDate}
-            avatarUrl={data.avatarUrl}
+            avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
             qrUrl={data.qrUrl}
             address={data.address}
             phone={data.phone}
@@ -579,7 +582,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             department={data.department}
             status={data.status}
             expiryDate={data.expiryDate}
-            avatarUrl={data.avatarUrl}
+            avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
             qrUrl={data.qrUrl}
             address={data.address}
             phone={data.phone}
@@ -597,7 +600,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               department={data.department}
               status={data.status}
               expiryDate={data.expiryDate}
-              avatarUrl={data.avatarUrl}
+              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
               qrUrl={data.qrUrl}
               address={data.address}
               phone={data.phone}
@@ -615,7 +618,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               department={data.department}
               status={data.status}
               expiryDate={data.expiryDate}
-              avatarUrl={data.avatarUrl}
+              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
               qrUrl={data.qrUrl}
               address={data.address}
               phone={data.phone}
