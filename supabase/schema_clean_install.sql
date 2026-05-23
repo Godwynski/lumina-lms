@@ -296,14 +296,15 @@ BEGIN
     RAISE EXCEPTION 'Target user does not exist';
   END IF;
 
-  -- Perform the transfer in a single atomic update statement to avoid RLS/uniqueness transient violations
+  -- 1. Demote current super admin to librarian first to avoid transient uniqueness violation
   UPDATE public.profiles
-  SET role = CASE
-    WHEN id = p_current_admin_id THEN 'librarian'::public.user_role
-    WHEN id = p_new_admin_id THEN 'super_admin'::public.user_role
-    ELSE role
-  END
-  WHERE id IN (p_current_admin_id, p_new_admin_id);
+  SET role = 'librarian'::public.user_role
+  WHERE id = p_current_admin_id;
+
+  -- 2. Promote target user to super admin
+  UPDATE public.profiles
+  SET role = 'super_admin'::public.user_role
+  WHERE id = p_new_admin_id;
 END;
 $$;
 
