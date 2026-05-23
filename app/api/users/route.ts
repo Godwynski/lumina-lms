@@ -109,6 +109,16 @@ export const POST = withAuthApi(
       );
     }
 
+    if (requestedRole === "super_admin" && profile.role !== "super_admin") {
+      const { count, error: countError } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "super_admin");
+      if (!countError && count && count > 0) {
+        return apiError("Only one super administrator is allowed in the system.", "SUPER_ADMIN_EXISTS", 400);
+      }
+    }
+
     const updates: Record<string, unknown> = {};
     if (Object.prototype.hasOwnProperty.call(profile, "role"))
       updates.role = requestedRole;
@@ -237,6 +247,15 @@ export const PATCH = withAuthApi(
       const nextRole = normalizeUserRole(nextRoleInput);
       if (requesterRole === "librarian" && nextRole !== profile.role) {
         return apiError("Librarians are not allowed to assign or change user roles", "FORBIDDEN", 403);
+      }
+      if (nextRole === "super_admin" && profile.role !== "super_admin") {
+        const { count, error: countError } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "super_admin");
+        if (!countError && count && count > 0) {
+          return apiError("Only one super administrator is allowed in the system.", "SUPER_ADMIN_EXISTS", 400);
+        }
       }
       updates.role = nextRole;
     }

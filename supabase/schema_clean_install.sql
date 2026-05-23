@@ -258,6 +258,7 @@ CREATE TABLE IF NOT EXISTS public.rate_limit_log (
 CREATE INDEX IF NOT EXISTS books_search_vector_idx ON public.books USING GIN(search_vector);
 CREATE INDEX IF NOT EXISTS book_copies_qr_idx ON public.book_copies(qr_string);
 CREATE INDEX IF NOT EXISTS profiles_student_id_idx ON public.profiles(student_id);
+CREATE UNIQUE INDEX IF NOT EXISTS one_super_admin_idx ON public.profiles(role) WHERE (role = 'super_admin'::public.user_role);
 
 -- 6. TRIGGER & HELPER FUNCTIONS
 
