@@ -28,6 +28,18 @@ export async function updateAvatarUrl(url: string) {
     throw new Error("Failed to update profile picture.");
   }
 
+  // Sync library card assets
+  try {
+    const { ensureStaticLibraryCardAssets } = await import("@/lib/library-card-assets.server");
+    await ensureStaticLibraryCardAssets({
+      userId: user.id,
+      fallbackEmail: user.email,
+      fallbackAvatarUrl: url,
+    });
+  } catch (err) {
+    console.error("Failed to sync static library card assets:", err);
+  }
+
   // Log the activity
   await logAuditActivity(
     user.id,
