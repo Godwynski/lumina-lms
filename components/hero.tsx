@@ -127,7 +127,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
             </Button>
 
             {/* Hide the demo access buttons on the landing page */}
-            {false && (
+            {true && (
               <div className="w-full space-y-4 mt-2">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
