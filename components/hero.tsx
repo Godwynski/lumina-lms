@@ -139,7 +139,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                 </div>
                 <div className="grid grid-cols-2 gap-3 w-full">
                   {[
-                    { label: "super_admin", email: "admin@lumina.test", icon: ShieldCheck, color: "hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] hover:text-emerald-500 dark:hover:text-emerald-400" },
+                    { label: "Super Admin", email: "admin@lumina.test", icon: ShieldCheck, color: "hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] hover:text-emerald-500 dark:hover:text-emerald-400" },
                     { label: "Librarian", email: "librarian@lumina.test", icon: BookOpen, color: "hover:border-indigo-500/50 hover:bg-indigo-500/[0.04] hover:text-indigo-500 dark:hover:text-indigo-400" },
                     { label: "Staff", email: "staff@lumina.test", icon: UserCheck, color: "hover:border-sky-500/50 hover:bg-sky-500/[0.04] hover:text-sky-500 dark:hover:text-sky-400" },
                     { label: "Student", email: "student@lumina.test", icon: GraduationCap, color: "hover:border-amber-500/50 hover:bg-amber-500/[0.04] hover:text-amber-500 dark:hover:text-amber-400" },
