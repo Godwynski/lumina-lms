@@ -13,7 +13,11 @@ export async function POST(request: Request) {
       );
     }
 
-    await request.json();
+    try {
+      await request.json();
+    } catch {
+      // Optional request body
+    }
 
     // Update status to archived instead of hard delete
     const { error } = await supabase

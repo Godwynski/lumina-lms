@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeFilterInput, cn, hasEnvVars } from './utils';
+import { sanitizeFilterInput, cn, hasEnvVars, toSlug, formatDisplayDate, formatDisplayTime } from './utils';
 
 describe('sanitizeFilterInput', () => {
   it('leaves normal strings intact', () => {
@@ -108,3 +108,39 @@ describe('hasEnvVars', () => {
     expect(Boolean(hasEnvVars)).toBe(true);
   });
 });
+
+describe('toSlug', () => {
+  it('converts titles to lowercase hyphenated slugs', () => {
+    expect(toSlug('Computer Science & AI')).toBe('computer-science-ai');
+    expect(toSlug('  The Great Gatsby!  ')).toBe('the-great-gatsby');
+  });
+
+  it('strips leading and trailing hyphens', () => {
+    expect(toSlug('---hello world---')).toBe('hello-world');
+  });
+});
+
+describe('formatDisplayDate', () => {
+  it('formats ISO strings into readable US dates', () => {
+    expect(formatDisplayDate('2026-10-06T12:00:00Z')).toBe('Oct 6, 2026');
+  });
+
+  it('returns fallback dash for null, undefined, or invalid dates', () => {
+    expect(formatDisplayDate(null)).toBe('—');
+    expect(formatDisplayDate(undefined)).toBe('—');
+    expect(formatDisplayDate('invalid-date')).toBe('—');
+  });
+});
+
+describe('formatDisplayTime', () => {
+  it('formats dates into localized time', () => {
+    const formatted = formatDisplayTime('2026-10-06T12:00:00Z', 'UTC');
+    expect(formatted).toMatch(/12:00\s*PM/i);
+  });
+
+  it('returns fallback dash for invalid dates', () => {
+    expect(formatDisplayTime(null)).toBe('—');
+    expect(formatDisplayTime('bad')).toBe('—');
+  });
+});
+

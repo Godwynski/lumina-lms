@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, ArrowRight, Info } from "lucide-react";
+import { Check, ArrowRight, Info, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
@@ -182,7 +182,7 @@ export function PolicyCommitModal({
           >
             {loading ? (
               <div className="flex items-center gap-2">
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Processing
               </div>
             ) : "Confirm & Commit"}

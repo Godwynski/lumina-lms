@@ -64,8 +64,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { logs } = body;
+    let body: { logs?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+    const { logs } = body || {};
 
     if (!Array.isArray(logs) || logs.length === 0) {
       return NextResponse.json(

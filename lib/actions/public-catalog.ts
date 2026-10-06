@@ -1,8 +1,7 @@
 'use server'
 
-import { createClient, createSafeClient } from '@/lib/supabase/server';
+import { createSafeClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
-import { logger } from '../logger';
 import { fetchBooksCore, fetchCategoriesCore } from './books-core';
 
 // Data fetching function for search, intended to be wrapped by cache
@@ -46,31 +45,6 @@ export async function getPublicBooksCached(
 }
 
 
-export async function reportMissingBook(bookId: string, notes?: string) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user;
-
-  if (!user) {
-    throw new Error('Not authenticated');
-  }
-
-  const { error } = await supabase
-    .from('reports')
-    .insert({
-      book_id: bookId,
-      user_id: user.id,
-      notes,
-    });
-
-  if (error) {
-    logger.error('catalog', `Failed to insert report for book ${bookId}`, { error });
-    return { success: false, error: 'Failed to submit report' };
-  }
-
-  logger.info('catalog', `Student reported missing book ID: ${bookId}`, { notes });
-  return { success: true };
-}
 
 async function getCategories() {
   return fetchCategoriesCore();

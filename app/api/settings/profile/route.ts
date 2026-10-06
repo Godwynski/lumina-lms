@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { ProfilePatchSchema } from "@/lib/validations/api";
 
 export async function PATCH(request: Request) {
   try {
@@ -12,21 +13,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await request.json()) as { 
-      displayName?: string; 
-      address?: string; 
-      phone?: string;
-      department?: string;
-    };
-    
-    const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
-    const address = typeof body.address === "string" ? body.address.trim() : "";
-    const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-    const department = typeof body.department === "string" ? body.department.trim() : "";
-
-    if (!displayName) {
-      return NextResponse.json({ error: "Display name is required" }, { status: 400 });
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
+
+    const parseResult = ProfilePatchSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || "Display name is required" },
+        { status: 400 }
+      );
+    }
+
+    const { displayName, address, phone, department } = parseResult.data;
 
     // Check current profile to see if we need to reset status
     const { data: currentProfile } = await supabase

@@ -2,6 +2,7 @@ import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { UserCreateSchema, UserPatchSchema } from "@/lib/validations/api";
 
 const MANAGER_ROLES: UserRole[] = ["super_admin", "librarian"];
 
@@ -65,30 +66,25 @@ export const GET = withAuthApi(
 
 export const POST = withAuthApi(
   async (request, { supabase, user, role: requesterRole }) => {
-    let body: { email?: unknown; role?: unknown; department?: unknown };
+    let rawBody: unknown;
     try {
-      body = await request.json();
+      rawBody = await request.json();
     } catch {
       return apiError("Invalid JSON body", "BAD_REQUEST", 400);
     }
 
-    const email =
-      typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const parseResult = UserCreateSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return apiError(parseResult.error.issues[0]?.message || "Invalid input", "VALIDATION_ERROR", 400);
+    }
+
+    const body = parseResult.data;
+    const email = body.email.toLowerCase();
     const requestedRole = normalizeUserRole(body.role as string);
-    const department =
-      typeof body.department === "string" ? body.department.trim() : "";
+    const department = body.department || "";
 
     if (requesterRole === "librarian" && body.role && requestedRole !== "student") {
       return apiError("Librarians are not allowed to assign roles", "FORBIDDEN", 403);
-    }
-
-    if (!email) {
-      return apiError("Email is required", "EMAIL_REQUIRED", 400);
-    }
-
-    if (requestedRole === "student" && body.role !== "student") {
-       // if it defaulted to student but user didn't want student, it might be invalid
-       // but normalizeUserRole is robust. Let's just check if it's one of managers.
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -186,29 +182,20 @@ export const POST = withAuthApi(
 
 export const PATCH = withAuthApi(
   async (request, { supabase, user, role: requesterRole }) => {
-    let body: {
-      id?: unknown;
-      name?: unknown;
-      email?: unknown;
-      role?: unknown;
-      status?: unknown;
-      department?: unknown;
-      student_id?: unknown;
-      permissions?: unknown;
-      address?: unknown;
-      phone?: unknown;
-    };
-
+    let rawBody: unknown;
     try {
-      body = await request.json();
+      rawBody = await request.json();
     } catch {
       return apiError("Invalid JSON body", "BAD_REQUEST", 400);
     }
 
-    const id = typeof body.id === "string" ? body.id.trim() : "";
-    if (!id) {
-      return apiError("User id is required", "ID_REQUIRED", 400);
+    const parseResult = UserPatchSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return apiError(parseResult.error.issues[0]?.message || "Invalid update input", "VALIDATION_ERROR", 400);
     }
+
+    const body = parseResult.data;
+    const id = body.id;
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")

@@ -5,7 +5,7 @@ import { toggleAttendanceByCard, getAttendanceHistory } from "@/lib/actions/atte
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Clock, Calendar as CalendarIcon, ScanLine, LogIn, LogOut, Camera } from "lucide-react";
+import { Clock, Calendar as CalendarIcon, ScanLine, LogIn, LogOut, Camera, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
@@ -301,7 +301,7 @@ export function AttendanceClient({
 function TableLoadingSkeleton() {
   return (
     <div className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
       <p className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Logs...</p>
     </div>
   );

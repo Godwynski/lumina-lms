@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendBulkNotifications } from '@/lib/notifications'
 import { NextResponse } from 'next/server'
+import { BulkNotificationSchema } from '@/lib/validations/api'
 
 export async function POST(request: Request) {
   try {
@@ -23,11 +24,22 @@ export async function POST(request: Request) {
     }
 
     // 2. Parse request body
-    const { userIds, title, content, type, priority, metadata } = await request.json()
-
-    if (!userIds || !Array.isArray(userIds) || !title || !content) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
+
+    const parseResult = BulkNotificationSchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    const { userIds, title, content, type, priority, metadata } = parseResult.data
 
     // 3. Send bulk notifications
     const result = await sendBulkNotifications(userIds, {

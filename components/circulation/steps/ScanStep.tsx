@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle } from 'lucide-react';
+import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
@@ -108,7 +108,7 @@ export function ScanStep({
                     
                     {(isProcessing || isInitializing) && (
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
-                            <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                            <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
                             {isInitializing && <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">Initializing...</span>}
                         </div>
                     )}

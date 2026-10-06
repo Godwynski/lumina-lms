@@ -4,7 +4,7 @@ import { useState, use, useEffect, useTransition } from "react";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BorrowingRecord } from "@/lib/actions/history";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
@@ -83,13 +83,7 @@ export default function HistoryContent({
     });
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+  const formatDate = (dateStr: string) => formatDisplayDate(dateStr);
 
   const isOverdue = (record: BorrowingRecord) => {
     return record.status?.toUpperCase() === "OVERDUE" || (record.status?.toUpperCase() === "ACTIVE" && new Date(record.due_date) < new Date());

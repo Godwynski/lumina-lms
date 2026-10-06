@@ -3,14 +3,8 @@ import { isAbortError } from "@/lib/error-utils";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { assertRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
-
-function toSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { toSlug } from "@/lib/utils";
+import { CategoryCreateSchema } from "@/lib/validations/api";
 
 export async function GET() {
   try {
@@ -39,19 +33,23 @@ export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await assertRole(["super_admin", "librarian"]);
 
-    const body = await request.json();
-    const rawName = typeof body.name === "string" ? body.name.trim() : "";
-    const rawSlug = typeof body.slug === "string" ? body.slug.trim() : "";
-    const description = typeof body.description === "string" ? body.description.trim() : null;
-    const name = rawName;
-    const slug = toSlug(rawSlug || rawName);
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
-    if (!name || !slug) {
+    const parseResult = CategoryCreateSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "name and slug are required" },
+        { error: parseResult.error.issues[0]?.message || "name and slug are required" },
         { status: 400 }
       );
     }
+
+    const { name, slug: rawSlug, description } = parseResult.data;
+    const slug = toSlug(rawSlug || name);
 
     const { data, error } = await supabase
       .from("categories")

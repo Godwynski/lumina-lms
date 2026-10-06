@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { getCroppedImg } from "@/lib/utils/image";
+import { getCroppedImg } from "@/lib/image-utils";
 import { Loader2 } from "lucide-react";
 
 import type { Point, Area } from "react-easy-crop";

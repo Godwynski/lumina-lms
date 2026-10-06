@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { type LucideIcon } from "lucide-react";
+import { type LucideIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 
@@ -158,7 +158,7 @@ export function LuminaTable<T extends { id: string | number }>({
               <tr>
                 <td colSpan={columns.length} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Refreshing...</span>
                   </div>
                 </td>

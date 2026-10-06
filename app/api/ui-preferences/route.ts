@@ -27,7 +27,12 @@ export const GET = withAuthApi(async (req, { user, supabase }) => {
 });
 
 export const PATCH = withAuthApi(async (request, { user, supabase }) => {
-  const payload = await request.json();
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return apiError("Invalid JSON body", "BAD_REQUEST", 400);
+  }
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return apiError("Invalid payload", "INVALID_PAYLOAD", 400);
   }
