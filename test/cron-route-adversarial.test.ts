@@ -151,25 +151,21 @@ describe('Cron Route & Timing-Safe Comparison Adversarial Verification', () => {
       const res = await GET(req);
       expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data.error).toBe('SMTP service down');
+      expect(data.error).toBe('Internal server error');
     });
 
-    it('allows execution if CRON_SECRET is not configured', async () => {
+    it('rejects execution with 500 if CRON_SECRET is not configured (fail closed)', async () => {
       delete process.env.CRON_SECRET;
-      const mockResults = { maintenance: 'ok' };
-      vi.mocked(runMaintenanceTasks).mockResolvedValueOnce(
-        mockResults as unknown as Awaited<ReturnType<typeof runMaintenanceTasks>>
-      );
 
       const req = new Request('http://localhost:3000/api/cron', {
         method: 'GET',
       });
 
       const res = await GET(req);
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(500);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(runMaintenanceTasks).toHaveBeenCalledTimes(1);
+      expect(data.error).toBe('Server configuration error');
+      expect(runMaintenanceTasks).not.toHaveBeenCalled();
     });
   });
 });

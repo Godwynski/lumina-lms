@@ -16,7 +16,7 @@ vi.mock('./supabase/server', () => ({
   createClient: vi.fn(async () => mockSupabase.client),
 }));
 
-import { normalizeUserRole, getMe, assertRole, getUserRole } from './auth-helpers';
+import { normalizeUserRole, getMe, assertRole, getUserRole, getPreferences } from './auth-helpers';
 
 describe('normalizeUserRole', () => {
   it('returns valid roles as-is for correct lowercase strings', () => {
@@ -233,6 +233,43 @@ describe('getMe', () => {
     const me = await getMe();
     expect(me?.role).toBe('student');
   });
+
+  it('returns null cleanly if supabase.auth.getUser() returns refresh_token_not_found AuthApiError', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        name: 'AuthApiError',
+        status: 400,
+        code: 'refresh_token_not_found',
+        message: 'Invalid Refresh Token: Refresh Token Not Found',
+      },
+    });
+
+    const me = await getMe();
+    expect(me).toBeNull();
+  });
+
+  it('returns null cleanly if supabase.auth.getUser() throws refresh_token_not_found AuthApiError', async () => {
+    const error = new Error('Invalid Refresh Token: Refresh Token Not Found');
+    Object.assign(error, {
+      name: 'AuthApiError',
+      status: 400,
+      code: 'refresh_token_not_found',
+      __isAuthError: true,
+    });
+    mockSupabase.auth.getUser.mockRejectedValue(error);
+
+    const me = await getMe();
+    expect(me).toBeNull();
+  });
+
+  it('returns null cleanly if createClient() throws an unexpected error', async () => {
+    const { createClient } = await import('./supabase/server');
+    vi.mocked(createClient).mockRejectedValueOnce(new Error('Cookie store failure'));
+
+    const me = await getMe();
+    expect(me).toBeNull();
+  });
 });
 
 describe('assertRole', () => {
@@ -308,3 +345,50 @@ describe('getUserRole', () => {
     expect(role).toBeNull();
   });
 });
+
+describe('getPreferences', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase = createMockSupabaseClient();
+  });
+
+  it('returns empty object when unauthenticated', async () => {
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+    const prefs = await getPreferences();
+    expect(prefs).toEqual({});
+  });
+
+  it('returns preferences when authenticated and record exists', async () => {
+    const mockUser = { id: 'user-pref-1', app_metadata: {} };
+    const mockProfile = { id: 'user-pref-1', role: 'student', status: 'ACTIVE' };
+
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
+    mockSupabase.setTableResponse('profiles', mockProfile);
+    mockSupabase.setTableResponse('ui_preferences', { preferences: { theme: 'dark', compactMode: true } });
+
+    const prefs = await getPreferences();
+    expect(prefs).toEqual({ theme: 'dark', compactMode: true });
+  });
+
+  it('returns empty object if query returns error', async () => {
+    const mockUser = { id: 'user-pref-2', app_metadata: {} };
+    const mockProfile = { id: 'user-pref-2', role: 'student', status: 'ACTIVE' };
+
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
+    mockSupabase.setTableResponse('profiles', mockProfile);
+    mockSupabase.setTableResponse('ui_preferences', null, { message: 'DB error' });
+
+    const prefs = await getPreferences();
+    expect(prefs).toEqual({});
+  });
+
+  it('returns empty object if getMe or createClient throws', async () => {
+    const { createClient } = await import('./supabase/server');
+    vi.mocked(createClient).mockRejectedValueOnce(new Error('Fatal connection crash'));
+
+    const prefs = await getPreferences();
+    expect(prefs).toEqual({});
+  });
+});
+

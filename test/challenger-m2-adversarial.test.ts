@@ -601,15 +601,16 @@ describe('Milestone 2 Empirical Challenger Adversarial Verification', () => {
         expect(safeCompare(base, diffLast)).toBe(false);
       });
 
-      it('prevents timing leak on different lengths by executing dummy timingSafeEqual before returning false', () => {
+      it('prevents timing leak on different lengths by hashing inputs to equal length buffers before comparison', () => {
         const spy = vi.spyOn(crypto, 'timingSafeEqual');
         const tokenA = 'Bearer short';
         const tokenB = 'Bearer very-very-long-secret-key';
 
         const result = safeCompare(tokenA, tokenB);
         expect(result).toBe(false);
-        // Dummy timingSafeEqual call executes to burn cycles
-        expect(spy).toHaveBeenCalledWith(Buffer.from(tokenA), Buffer.from(tokenA));
+        const hashA = crypto.createHash('sha256').update(tokenA).digest();
+        const hashB = crypto.createHash('sha256').update(tokenB).digest();
+        expect(spy).toHaveBeenCalledWith(hashA, hashB);
         spy.mockRestore();
       });
 
