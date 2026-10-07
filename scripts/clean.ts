@@ -31,6 +31,9 @@ async function clean() {
   console.info('🧹 Cleaning up database tables in dependency order...');
   
   try {
+    await supabase.from('rate_limit_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('deleted_profile_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('ui_preferences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('checklist_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('checklist_dropdown_options').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');

@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS public.books (
     tags TEXT[] DEFAULT '{}'::text[],
     location TEXT,
     section TEXT,
-    total_copies INTEGER DEFAULT 0,
-    available_copies INTEGER DEFAULT 0,
+    total_copies INTEGER NOT NULL DEFAULT 0,
+    available_copies INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     dewey_decimal TEXT,
     description TEXT,
@@ -60,13 +60,17 @@ CREATE TABLE IF NOT EXISTS public.books (
         setweight(to_tsvector('english', coalesce(isbn, '')), 'C')
     ) STORED,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT books_total_copies_check CHECK (total_copies >= 0),
+    CONSTRAINT books_available_copies_check CHECK (available_copies >= 0),
+    CONSTRAINT books_available_lte_total_check CHECK (available_copies <= total_copies),
+    CONSTRAINT books_published_year_check CHECK (published_year IS NULL OR (published_year >= -3000 AND published_year <= 2100))
 );
 
 -- Book Copies Table
 CREATE TABLE IF NOT EXISTS public.book_copies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    book_id UUID REFERENCES public.books(id) ON DELETE CASCADE,
+    book_id UUID NOT NULL REFERENCES public.books(id) ON DELETE CASCADE,
     qr_string TEXT UNIQUE NOT NULL DEFAULT ('QR-'::text || nextval('public.book_copy_qr_seq'::regclass)),
     status TEXT DEFAULT 'AVAILABLE'::text CHECK (status = ANY (ARRAY['AVAILABLE'::text, 'BORROWED'::text, 'MAINTENANCE'::text, 'LOST'::text, 'RESERVED'::text])),
     condition TEXT,
@@ -81,12 +85,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT UNIQUE,
     full_name TEXT,
     avatar_url TEXT,
-    role public.user_role DEFAULT 'student'::public.user_role,
+    role public.user_role NOT NULL DEFAULT 'student'::public.user_role,
     student_id TEXT UNIQUE,
     department TEXT,
     phone TEXT,
     address TEXT,
-    status TEXT DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'ACTIVE'::text, 'INACTIVE'::text, 'SUSPENDED'::text, 'GRADUATED'::text, 'DELETED'::text, 'ARCHIVED'::text])),
+    status TEXT NOT NULL DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'ACTIVE'::text, 'INACTIVE'::text, 'SUSPENDED'::text, 'GRADUATED'::text, 'DELETED'::text, 'ARCHIVED'::text])),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     onboarding_completed BOOLEAN DEFAULT FALSE,
@@ -96,43 +100,48 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Library Cards Table
 CREATE TABLE IF NOT EXISTS public.library_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID UNIQUE NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     card_number TEXT UNIQUE NOT NULL,
     status TEXT DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'ACTIVE'::text, 'SUSPENDED'::text, 'EXPIRED'::text, 'ARCHIVED'::text])),
     issued_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at TIMESTAMPTZ,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT library_cards_dates_check CHECK (expires_at IS NULL OR expires_at > issued_at)
 );
 
 -- Borrowing Records Table
 CREATE TABLE IF NOT EXISTS public.borrowing_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) NOT NULL,
-    book_copy_id UUID REFERENCES public.book_copies(id) NOT NULL,
-    processed_by UUID REFERENCES public.profiles(id),
+    user_id UUID NOT NULL CONSTRAINT borrowing_records_user_id_fkey REFERENCES public.profiles(id) ON DELETE RESTRICT,
+    book_copy_id UUID NOT NULL CONSTRAINT borrowing_records_book_copy_id_fkey REFERENCES public.book_copies(id) ON DELETE RESTRICT,
+    processed_by UUID CONSTRAINT borrowing_records_processed_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
     borrowed_at TIMESTAMPTZ DEFAULT NOW(),
     due_date TIMESTAMPTZ NOT NULL,
     returned_at TIMESTAMPTZ,
     status public."BorrowStatus" DEFAULT 'ACTIVE'::public."BorrowStatus",
-    returned_by UUID REFERENCES public.profiles(id),
+    returned_by UUID CONSTRAINT borrowing_records_returned_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
     reminder_sent BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT borrowing_records_due_date_check CHECK (due_date >= borrowed_at),
+    CONSTRAINT borrowing_records_returned_at_check CHECK (returned_at IS NULL OR returned_at >= borrowed_at)
 );
 
 -- Reservations Table
 CREATE TABLE IF NOT EXISTS public.reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) NOT NULL,
-    book_id UUID REFERENCES public.books(id) NOT NULL,
-    copy_id UUID REFERENCES public.book_copies(id),
+    user_id UUID NOT NULL CONSTRAINT reservations_user_id_fkey REFERENCES public.profiles(id) ON DELETE CASCADE,
+    book_id UUID NOT NULL CONSTRAINT reservations_book_id_fkey REFERENCES public.books(id) ON DELETE CASCADE,
+    copy_id UUID CONSTRAINT reservations_copy_id_fkey REFERENCES public.book_copies(id) ON DELETE SET NULL,
     status public."ReservationStatus" DEFAULT 'ACTIVE'::public."ReservationStatus",
-    queue_position INTEGER NOT NULL,
+    queue_position INTEGER NOT NULL CHECK (queue_position > 0),
     reserved_at TIMESTAMPTZ DEFAULT NOW(),
     hold_expires_at TIMESTAMPTZ,
     fulfilled_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT reservations_hold_dates_check CHECK (hold_expires_at IS NULL OR hold_expires_at >= reserved_at),
+    CONSTRAINT reservations_fulfilled_dates_check CHECK (fulfilled_at IS NULL OR fulfilled_at >= reserved_at)
 );
 
 -- System Settings Table
@@ -141,10 +150,10 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
     key TEXT UNIQUE NOT NULL,
     value TEXT NOT NULL,
     description TEXT,
-    data_type TEXT DEFAULT 'string'::text,
+    data_type TEXT DEFAULT 'string'::text CHECK (data_type IN ('string', 'number', 'boolean', 'json')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_by UUID REFERENCES public.profiles(id)
+    updated_by UUID CONSTRAINT system_settings_updated_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
 -- Audit Logs Table
@@ -179,11 +188,11 @@ CREATE TABLE IF NOT EXISTS public.return_idempotency (
 -- Notifications Table
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     type TEXT DEFAULT 'SYSTEM'::text,
-    priority TEXT DEFAULT 'medium'::text,
+    priority TEXT DEFAULT 'medium'::text CHECK (priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'critical'::text])),
     is_read BOOLEAN DEFAULT FALSE,
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -193,17 +202,18 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 -- Attendance Table
 CREATE TABLE IF NOT EXISTS public.attendance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     check_in_at TIMESTAMPTZ DEFAULT NOW(),
     check_out_at TIMESTAMPTZ,
     notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT attendance_checkout_check CHECK (check_out_at IS NULL OR check_out_at >= check_in_at)
 );
 
 -- UI Preferences Table
 CREATE TABLE IF NOT EXISTS public.ui_preferences (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID UNIQUE NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     preferences JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -221,15 +231,16 @@ CREATE TABLE IF NOT EXISTS public.announcements (
     expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    created_by UUID REFERENCES public.profiles(id)
+    created_by UUID CONSTRAINT announcements_created_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
+    CONSTRAINT announcements_dates_check CHECK (expires_at IS NULL OR expires_at >= starts_at)
 );
 
 
 -- Reports Table
 CREATE TABLE IF NOT EXISTS public.reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    book_id UUID REFERENCES public.books(id),
-    user_id UUID REFERENCES auth.users(id),
+    book_id UUID CONSTRAINT reports_book_id_fkey REFERENCES public.books(id) ON DELETE CASCADE,
+    user_id UUID CONSTRAINT reports_user_id_fkey REFERENCES auth.users(id) ON DELETE SET NULL,
     notes TEXT,
     status TEXT DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'resolved'::text, 'dismissed'::text])),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -239,26 +250,57 @@ CREATE TABLE IF NOT EXISTS public.reports (
 -- Deleted Profiles Archive Table
 CREATE TABLE IF NOT EXISTS public.deleted_profile_info (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    original_profile_id UUID UNIQUE REFERENCES public.profiles(id),
+    original_profile_id UUID UNIQUE CONSTRAINT deleted_profile_info_original_profile_id_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
     anonymized_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     deletion_reason TEXT,
-    retained_borrow_count INTEGER DEFAULT 0 NOT NULL
+    retained_borrow_count INTEGER DEFAULT 0 NOT NULL CHECK (retained_borrow_count >= 0)
 );
 
 -- Rate Limit Log Table
 CREATE TABLE IF NOT EXISTS public.rate_limit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) NOT NULL,
+    user_id UUID NOT NULL CONSTRAINT rate_limit_log_user_id_fkey REFERENCES auth.users(id) ON DELETE CASCADE,
     action_key TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 
 -- 5. INDEXES & VECTOR OPTIMIZATIONS
+-- Full-text search vector index
 CREATE INDEX IF NOT EXISTS books_search_vector_idx ON public.books USING GIN(search_vector);
-CREATE INDEX IF NOT EXISTS book_copies_qr_idx ON public.book_copies(qr_string);
-CREATE INDEX IF NOT EXISTS profiles_student_id_idx ON public.profiles(student_id);
+
+-- Super admin singleton partial unique index
 CREATE UNIQUE INDEX IF NOT EXISTS one_super_admin_idx ON public.profiles(role) WHERE (role = 'super_admin'::public.user_role);
+
+-- Mandatory Foreign Key B-Tree Indexes (prevents sequential scans on joins and parent deletes)
+CREATE INDEX IF NOT EXISTS books_category_id_idx ON public.books(category_id);
+CREATE INDEX IF NOT EXISTS book_copies_book_id_idx ON public.book_copies(book_id);
+CREATE INDEX IF NOT EXISTS borrowing_records_user_id_idx ON public.borrowing_records(user_id);
+CREATE INDEX IF NOT EXISTS borrowing_records_book_copy_id_idx ON public.borrowing_records(book_copy_id);
+CREATE INDEX IF NOT EXISTS borrowing_records_processed_by_idx ON public.borrowing_records(processed_by);
+CREATE INDEX IF NOT EXISTS borrowing_records_returned_by_idx ON public.borrowing_records(returned_by);
+CREATE INDEX IF NOT EXISTS reservations_user_id_idx ON public.reservations(user_id);
+CREATE INDEX IF NOT EXISTS reservations_book_id_idx ON public.reservations(book_id);
+CREATE INDEX IF NOT EXISTS reservations_copy_id_idx ON public.reservations(copy_id);
+CREATE INDEX IF NOT EXISTS system_settings_updated_by_idx ON public.system_settings(updated_by);
+CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS attendance_user_id_idx ON public.attendance(user_id);
+CREATE INDEX IF NOT EXISTS announcements_created_by_idx ON public.announcements(created_by);
+CREATE INDEX IF NOT EXISTS reports_book_id_idx ON public.reports(book_id);
+CREATE INDEX IF NOT EXISTS reports_user_id_idx ON public.reports(user_id);
+CREATE INDEX IF NOT EXISTS rate_limit_log_user_id_idx ON public.rate_limit_log(user_id);
+CREATE INDEX IF NOT EXISTS audit_logs_admin_id_idx ON public.audit_logs(admin_id);
+
+-- High-Frequency Composite & Partial Indexes
+CREATE INDEX IF NOT EXISTS borrowing_records_user_status_idx ON public.borrowing_records(user_id, status);
+CREATE INDEX IF NOT EXISTS borrowing_records_user_borrowed_idx ON public.borrowing_records(user_id, borrowed_at DESC);
+CREATE INDEX IF NOT EXISTS borrowing_records_due_active_idx ON public.borrowing_records(due_date) WHERE status = 'ACTIVE' AND reminder_sent = false;
+CREATE INDEX IF NOT EXISTS reservations_queue_idx ON public.reservations(book_id, status, queue_position, created_at);
+CREATE INDEX IF NOT EXISTS reservations_user_book_status_idx ON public.reservations(user_id, book_id, status);
+CREATE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendance(user_id) WHERE check_out_at IS NULL;
+CREATE INDEX IF NOT EXISTS attendance_checkout_cron_idx ON public.attendance(check_in_at) WHERE check_out_at IS NULL;
+CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON public.notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_unread_idx ON public.notifications(user_id) WHERE is_read = false;
 
 -- 6. TRIGGER & HELPER FUNCTIONS
 
@@ -266,17 +308,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_super_admin_idx ON public.profiles(role) W
 CREATE OR REPLACE FUNCTION public.is_staff()
  RETURNS boolean
  LANGUAGE plpgsql
+ STABLE
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = auth.uid()
+    WHERE id = (SELECT auth.uid())
+    AND status = 'ACTIVE'
     AND role IN ('super_admin', 'librarian', 'student_assistant')
   );
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.is_staff() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_staff() TO authenticated, anon;
 
 -- Atomic transaction-safe ownership transfer function
 CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
@@ -286,6 +333,13 @@ CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin
  SET search_path = public, pg_temp
  AS $$
 BEGIN
+  -- Verify caller is service_role OR an authenticated super_admin whose UID matches p_current_admin_id
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF (SELECT auth.uid()) IS NULL OR (SELECT auth.uid()) <> p_current_admin_id THEN
+      RAISE EXCEPTION 'Unauthorized: Only the current super admin can transfer ownership.';
+    END IF;
+  END IF;
+
   -- Verify p_current_admin_id is indeed a super_admin
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = p_current_admin_id AND role = 'super_admin'::public.user_role) THEN
     RAISE EXCEPTION 'Current user is not the super admin';
@@ -308,12 +362,13 @@ BEGIN
 END;
 $$;
 
+
 -- Auto student_id set based on email pattern matching
 CREATE OR REPLACE FUNCTION public.auto_set_student_id()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_local_part TEXT;
@@ -369,7 +424,7 @@ CREATE OR REPLACE FUNCTION public.fn_sync_book_counts()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 BEGIN
     IF (TG_OP = 'DELETE') THEN
@@ -405,7 +460,7 @@ CREATE OR REPLACE FUNCTION public.auto_checkout_forgotten_attendance()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
+ SET search_path = public, pg_temp
 AS $$
 BEGIN
   -- Close any open attendance records from previous days
@@ -426,7 +481,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 DECLARE
   card_number_val TEXT;
@@ -455,18 +510,64 @@ BEGIN
 END;
 $$;
 
+-- Prevents patron/student self-promotion or status/permission escalation
+CREATE OR REPLACE FUNCTION public.fn_guard_profile_updates()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- Service role and administrative users can update all fields
+  IF COALESCE((auth.jwt() ->> 'role'), '') = 'service_role' OR current_user = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = (SELECT auth.uid())
+    AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  -- Non-administrative users updating their own profile cannot change role, status, student_id, or permissions
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'Cannot modify role: unauthorized self-promotion';
+  END IF;
+
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    RAISE EXCEPTION 'Cannot modify status: unauthorized status escalation';
+  END IF;
+
+  IF NEW.student_id IS DISTINCT FROM OLD.student_id AND OLD.student_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Cannot modify student_id: identifier is immutable once set';
+  END IF;
+
+  IF NEW.permissions IS DISTINCT FROM OLD.permissions THEN
+    RAISE EXCEPTION 'Cannot modify permissions: unauthorized permission escalation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
 -- 7. TABLE TRIGGERS
 CREATE OR REPLACE TRIGGER trg_auto_student_id
     BEFORE INSERT ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION public.auto_set_student_id();
 
 CREATE OR REPLACE TRIGGER tr_sync_book_counts
-    AFTER INSERT OR UPDATE OR DELETE ON public.book_copies
+    AFTER INSERT OR UPDATE OF status, book_id OR DELETE ON public.book_copies
     FOR EACH ROW EXECUTE FUNCTION public.fn_sync_book_counts();
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+CREATE OR REPLACE TRIGGER trg_guard_profile_updates
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.fn_guard_profile_updates();
 
 -- 8. ATOMIC SECURITY-DEFINER RPCs
 
@@ -475,15 +576,15 @@ CREATE OR REPLACE FUNCTION public.compress_reservation_queue(p_book_id uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 BEGIN
     WITH updated_queue AS (
         SELECT id, row_number() OVER (ORDER BY created_at ASC) as new_pos
-        FROM reservations
+        FROM public.reservations
         WHERE book_id = p_book_id AND status = 'ACTIVE'
     )
-    UPDATE reservations r
+    UPDATE public.reservations r
     SET queue_position = u.new_pos, updated_at = NOW()
     FROM updated_queue u
     WHERE r.id = u.id AND r.queue_position IS DISTINCT FROM u.new_pos;
@@ -495,7 +596,7 @@ CREATE OR REPLACE FUNCTION public.create_reservation_atomic(p_actor_id uuid, p_b
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
+ SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_target_id      UUID    := COALESCE(p_target_user_id, p_actor_id);
@@ -508,15 +609,20 @@ DECLARE
     v_actor_role     user_role;
 BEGIN
     -- Authorization Enforcements:
-    -- 1. Enforce that if auth.uid() is not null (invoked from authenticated client),
-    --    the p_actor_id must match auth.uid().
-    IF auth.uid() IS NOT NULL AND p_actor_id <> auth.uid() THEN
-        RETURN jsonb_build_object('ok', false, 'code', 'UNAUTHORIZED', 'message', 'Actor ID must match authenticated user.');
+    -- 1. Require authentication: anonymous callers are prohibited unless executed via service_role.
+    IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+        IF (SELECT auth.uid()) IS NULL THEN
+            RETURN jsonb_build_object('ok', false, 'code', 'UNAUTHORIZED', 'message', 'Authentication required.');
+        END IF;
+
+        IF p_actor_id <> (SELECT auth.uid()) THEN
+            RETURN jsonb_build_object('ok', false, 'code', 'UNAUTHORIZED', 'message', 'Actor ID must match authenticated user.');
+        END IF;
     END IF;
 
-    -- 2. If reserving on behalf of another user, verify that p_actor_id has a staff role.
+    -- 2. If reserving on behalf of another user, verify that p_actor_id has an active staff role.
     IF v_target_id <> p_actor_id THEN
-        SELECT role INTO v_actor_role FROM public.profiles WHERE id = p_actor_id;
+        SELECT role INTO v_actor_role FROM public.profiles WHERE id = p_actor_id AND status = 'ACTIVE';
         IF v_actor_role NOT IN ('super_admin', 'librarian', 'student_assistant') THEN
             RETURN jsonb_build_object('ok', false, 'code', 'FORBIDDEN', 'message', 'Only library staff can reserve books on behalf of other users.');
         END IF;
@@ -587,7 +693,7 @@ CREATE OR REPLACE FUNCTION public.process_qr_checkout(p_librarian_id uuid, p_car
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_card              RECORD;
@@ -656,7 +762,7 @@ BEGIN
   FROM public.book_copies bc
   JOIN public.books b ON b.id = bc.book_id
   WHERE bc.qr_string = p_book_qr
-  FOR UPDATE;
+  FOR UPDATE OF bc;
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', false, 'code', 'COPY_NOT_FOUND', 'message', 'Book copy not found.');
@@ -733,7 +839,7 @@ CREATE OR REPLACE FUNCTION public.process_qr_return(p_librarian_id uuid, p_book_
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_copy              RECORD;
@@ -762,7 +868,7 @@ BEGIN
   FROM public.book_copies bc
   JOIN public.books b ON b.id = bc.book_id
   WHERE bc.qr_string = p_book_qr
-  FOR UPDATE;
+  FOR UPDATE OF bc;
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', false, 'code', 'COPY_NOT_FOUND', 'message', 'Book copy not found.');
@@ -912,7 +1018,8 @@ ALTER TABLE public.ui_preferences ENABLE ROW LEVEL SECURITY;
 -- announcements Policies
 CREATE POLICY "Admins can manage announcements" ON public.announcements
   FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role])));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
 CREATE POLICY "Announcements are viewable by everyone" ON public.announcements
   FOR SELECT TO public
@@ -925,11 +1032,11 @@ CREATE POLICY "Users can self check-in" ON public.attendance
 
 CREATE POLICY "Staff can insert attendance" ON public.attendance
   FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  WITH CHECK (public.is_staff());
 
 CREATE POLICY "Staff can view all attendance" ON public.attendance
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  USING (public.is_staff());
 
 CREATE POLICY "Users can view own attendance" ON public.attendance
   FOR SELECT TO authenticated
@@ -937,11 +1044,13 @@ CREATE POLICY "Users can view own attendance" ON public.attendance
 
 CREATE POLICY "Staff can update attendance" ON public.attendance
   FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 CREATE POLICY "Users can self check-out" ON public.attendance
   FOR UPDATE TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 -- audit_logs Policies
 CREATE POLICY "Staff can view all audit logs" ON public.audit_logs
@@ -949,13 +1058,13 @@ CREATE POLICY "Staff can view all audit logs" ON public.audit_logs
   USING (public.is_staff());
 
 -- book_copies Policies
-CREATE POLICY "Staff can delete book_copies" ON public.book_copies
+CREATE POLICY "Librarians can delete book_copies" ON public.book_copies
   FOR DELETE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
 CREATE POLICY "Staff can insert book_copies" ON public.book_copies
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  WITH CHECK (public.is_staff());
 
 CREATE POLICY "Book copies are viewable by everyone" ON public.book_copies
   FOR SELECT TO public
@@ -963,24 +1072,26 @@ CREATE POLICY "Book copies are viewable by everyone" ON public.book_copies
 
 CREATE POLICY "Staff can update book_copies" ON public.book_copies
   FOR UPDATE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- books Policies
-CREATE POLICY "Staff can delete books" ON public.books
+CREATE POLICY "Librarians can delete books" ON public.books
   FOR DELETE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
 CREATE POLICY "Staff can insert books" ON public.books
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  WITH CHECK (public.is_staff());
 
 CREATE POLICY "Books are viewable by everyone" ON public.books
   FOR SELECT TO public
-  USING (true);
+  USING (is_active = true OR public.is_staff());
 
 CREATE POLICY "Staff can update books" ON public.books
   FOR UPDATE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- borrowing_records Policies
 CREATE POLICY "Staff can insert borrowing records" ON public.borrowing_records
@@ -997,16 +1108,17 @@ CREATE POLICY "Users can view own borrowing records" ON public.borrowing_records
 
 CREATE POLICY "Staff can update borrowing records" ON public.borrowing_records
   FOR UPDATE TO authenticated
-  USING (public.is_staff());
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- categories Policies
-CREATE POLICY "Staff can delete categories" ON public.categories
+CREATE POLICY "Librarians can delete categories" ON public.categories
   FOR DELETE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
 CREATE POLICY "Staff can insert categories" ON public.categories
   FOR INSERT TO authenticated
-  WITH CHECK ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  WITH CHECK (public.is_staff());
 
 CREATE POLICY "Categories are viewable by everyone" ON public.categories
   FOR SELECT TO public
@@ -1014,17 +1126,19 @@ CREATE POLICY "Categories are viewable by everyone" ON public.categories
 
 CREATE POLICY "Staff can update categories" ON public.categories
   FOR UPDATE TO authenticated
-  USING ((SELECT (profiles.role)::text FROM public.profiles WHERE profiles.id = auth.uid()) = ANY (ARRAY['super_admin'::text, 'librarian'::text, 'student_assistant'::text]));
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- checkout_idempotency Policies
 CREATE POLICY "Staff can manage checkout idempotency" ON public.checkout_idempotency
   FOR ALL TO authenticated
-  USING (public.is_staff());
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- deleted_profile_info Policies
-CREATE POLICY "Staff can view deleted profile info" ON public.deleted_profile_info
+CREATE POLICY "Librarians can view deleted profile info" ON public.deleted_profile_info
   FOR SELECT TO authenticated
-  USING (public.is_staff());
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
 -- library_cards Policies
 CREATE POLICY "Users can view own library card" ON public.library_cards
@@ -1033,7 +1147,7 @@ CREATE POLICY "Users can view own library card" ON public.library_cards
 
 CREATE POLICY "Staff can view all library cards" ON public.library_cards
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])));
+  USING (public.is_staff());
 
 -- notifications Policies
 CREATE POLICY "Users can view own notifications" ON public.notifications
@@ -1042,16 +1156,40 @@ CREATE POLICY "Users can view own notifications" ON public.notifications
 
 CREATE POLICY "Users can update own notifications" ON public.notifications
   FOR UPDATE TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 -- profiles Policies
-CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
-  FOR SELECT TO public
+CREATE POLICY "Authenticated users can view profiles" ON public.profiles
+  FOR SELECT TO authenticated
   USING (true);
 
 CREATE POLICY "Users can update own profile" ON public.profiles
   FOR UPDATE TO authenticated
-  USING ((SELECT auth.uid()) = id);
+  USING ((SELECT auth.uid()) = id)
+  WITH CHECK (
+    (SELECT auth.uid()) = id
+    AND role = (SELECT p.role FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
+    AND status = (SELECT p.status FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
+    AND permissions IS NOT DISTINCT FROM (SELECT p.permissions FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
+  );
+
+CREATE POLICY "Admins can update profiles" ON public.profiles
+  FOR UPDATE TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+    )
+  );
 
 -- rate_limit_log Policies
 CREATE POLICY "Staff can view rate limit logs" ON public.rate_limit_log
@@ -1059,44 +1197,56 @@ CREATE POLICY "Staff can view rate limit logs" ON public.rate_limit_log
   USING (public.is_staff());
 
 -- reports Policies
-CREATE POLICY "Staff can manage reports" ON public.reports
-  FOR ALL TO authenticated
-  USING (public.is_staff());
+CREATE POLICY "Users can insert own reports" ON public.reports
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "Users can view own reports" ON public.reports
   FOR SELECT TO authenticated
   USING ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Staff can view all reports" ON public.reports
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
+CREATE POLICY "Staff can manage reports" ON public.reports
+  FOR ALL TO authenticated
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- reservations Policies
-CREATE POLICY "Staff can manage reservations" ON public.reservations
-  FOR ALL TO authenticated
-  USING (public.is_staff());
-
 CREATE POLICY "Users can view own reservations" ON public.reservations
   FOR SELECT TO authenticated
   USING ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Staff can view all reservations" ON public.reservations
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
+CREATE POLICY "Staff can manage reservations" ON public.reservations
+  FOR ALL TO authenticated
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- return_idempotency Policies
 CREATE POLICY "Staff can manage return idempotency" ON public.return_idempotency
   FOR ALL TO authenticated
-  USING (public.is_staff());
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- system_settings Policies
-CREATE POLICY "Staff can manage system settings" ON public.system_settings
-  FOR ALL TO authenticated
-  USING (public.is_staff());
-
 CREATE POLICY "System settings are viewable by everyone" ON public.system_settings
   FOR SELECT TO public
   USING (true);
+
+CREATE POLICY "Admins can manage system settings" ON public.system_settings
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+    )
+  );
 
 -- ui_preferences Policies
 CREATE POLICY "Users can insert own preferences" ON public.ui_preferences
@@ -1109,6 +1259,11 @@ CREATE POLICY "Users can view own preferences" ON public.ui_preferences
 
 CREATE POLICY "Users can update own preferences" ON public.ui_preferences
   FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can delete own preferences" ON public.ui_preferences
+  FOR DELETE TO authenticated
   USING ((SELECT auth.uid()) = user_id);
 
 -- 11. SENSITIVE PRIVILEGE REVOCATIONS (REST/CLIENT-SIDE PROTECTION)
@@ -1116,6 +1271,20 @@ REVOKE EXECUTE ON FUNCTION public.process_qr_checkout(uuid, text, text, text, bo
 REVOKE EXECUTE ON FUNCTION public.process_qr_return(uuid, text, text, boolean) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.compress_reservation_queue(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.auto_checkout_forgotten_attendance() FROM PUBLIC, anon, authenticated;
+
+-- Trigger functions revoked from direct execution
+REVOKE EXECUTE ON FUNCTION public.auto_set_student_id() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_sync_book_counts() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_guard_profile_updates() FROM PUBLIC, anon, authenticated;
+
+-- Administrative RPCs revoked from public/anon
+REVOKE EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) TO authenticated, service_role;
+
+-- Reservation RPC revoked from public/anon, granted to authenticated
+REVOKE EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) TO authenticated, service_role;
 
 -- 12. DEFAULT SYSTEM SETTINGS SEED VALUES
 INSERT INTO public.system_settings (key, value, description, data_type) VALUES
@@ -1140,35 +1309,60 @@ ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 -- Avatar Policies
 CREATE POLICY "Avatar User Insert" ON storage.objects
   FOR INSERT TO authenticated
-  WITH CHECK ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text));
+  WITH CHECK ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = ((SELECT auth.uid())::text)));
 
 CREATE POLICY "Avatar User Update" ON storage.objects
   FOR UPDATE TO authenticated
-  USING ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text))
-  WITH CHECK ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text));
+  USING ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = ((SELECT auth.uid())::text)))
+  WITH CHECK ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = ((SELECT auth.uid())::text)));
 
 CREATE POLICY "Avatar User Delete" ON storage.objects
   FOR DELETE TO authenticated
-  USING ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text));
+  USING ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = ((SELECT auth.uid())::text)));
 
--- Book Cover Policies
-CREATE POLICY "Book Covers Authenticated Insert" ON storage.objects
+-- Book Cover Policies (Restricted to Staff)
+CREATE POLICY "Staff insert book covers" ON storage.objects
   FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'book-covers'::text);
+  WITH CHECK (bucket_id = 'book-covers'::text AND public.is_staff());
 
-CREATE POLICY "Book Covers Authenticated Update" ON storage.objects
+CREATE POLICY "Staff update book covers" ON storage.objects
   FOR UPDATE TO authenticated
-  USING (bucket_id = 'book-covers'::text)
-  WITH CHECK (bucket_id = 'book-covers'::text);
+  USING (bucket_id = 'book-covers'::text AND public.is_staff())
+  WITH CHECK (bucket_id = 'book-covers'::text AND public.is_staff());
 
-CREATE POLICY "Book Covers Authenticated Delete" ON storage.objects
+CREATE POLICY "Staff delete book covers" ON storage.objects
   FOR DELETE TO authenticated
-  USING (bucket_id = 'book-covers'::text);
+  USING (bucket_id = 'book-covers'::text AND public.is_staff());
 
--- Public Read access for public buckets
+-- Public Read access for public buckets (library-cards excluded to protect student PII)
 CREATE POLICY "Public Read" ON storage.objects
   FOR SELECT TO public
-  USING (bucket_id IN ('avatars', 'book-covers', 'library-cards'));
+  USING (bucket_id IN ('avatars', 'book-covers'));
+
+-- Library Cards Privacy Policy (Only staff or card owner can view)
+CREATE POLICY "Authorized view library cards" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'library-cards'::text AND (
+      public.is_staff() OR
+      (storage.foldername(name))[1] = ((SELECT auth.uid())::text) OR
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = (SELECT auth.uid())
+        AND (
+          name LIKE '%' || UPPER(REPLACE(student_id, '-', '_')) || '%' OR
+          name LIKE '%' || UPPER(student_id) || '%' OR
+          name LIKE '%' || ((SELECT auth.uid())::text) || '%'
+        )
+      )
+    )
+  );
+
+-- Staff manage library cards in storage
+CREATE POLICY "Staff manage library card assets" ON storage.objects
+  FOR ALL TO authenticated
+  USING (bucket_id = 'library-cards'::text AND public.is_staff())
+  WITH CHECK (bucket_id = 'library-cards'::text AND public.is_staff());
 
 
 -- =========================================================================
@@ -1178,7 +1372,7 @@ CREATE POLICY "Public Read" ON storage.objects
 -- 1. Create table for dropdown options
 CREATE TABLE IF NOT EXISTS public.checklist_dropdown_options (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type TEXT NOT NULL, -- 'user_role' or 'module'
+    type TEXT NOT NULL CHECK (type IN ('user_role', 'module')),
     value TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE (type, value)
@@ -1200,16 +1394,24 @@ CREATE TABLE IF NOT EXISTS public.checklist_items (
 ALTER TABLE public.checklist_dropdown_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checklist_items ENABLE ROW LEVEL SECURITY;
 
--- 4. Add permissive public policies (No Auth required)
-CREATE POLICY "Allow public read" ON public.checklist_dropdown_options FOR SELECT USING (true);
-CREATE POLICY "Allow public insert" ON public.checklist_dropdown_options FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update" ON public.checklist_dropdown_options FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete" ON public.checklist_dropdown_options FOR DELETE USING (true);
+-- 4. Authenticated read and staff-only management policies
+CREATE POLICY "Allow authenticated read checklist dropdowns" ON public.checklist_dropdown_options
+  FOR SELECT TO authenticated
+  USING (true);
 
-CREATE POLICY "Allow public read" ON public.checklist_items FOR SELECT USING (true);
-CREATE POLICY "Allow public insert" ON public.checklist_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update" ON public.checklist_items FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete" ON public.checklist_items FOR DELETE USING (true);
+CREATE POLICY "Staff manage checklist dropdown options" ON public.checklist_dropdown_options
+  FOR ALL TO authenticated
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
+
+CREATE POLICY "Allow authenticated read checklist items" ON public.checklist_items
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "Staff manage checklist items" ON public.checklist_items
+  FOR ALL TO authenticated
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- 5. Enable Supabase Realtime Replication
 ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_dropdown_options;
