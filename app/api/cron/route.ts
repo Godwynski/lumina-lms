@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { runMaintenanceTasks } from '@/lib/notifications';
+import { safeCompare } from '@/lib/server-utils';
 
 export async function GET(request: Request) {
   // Vercel Cron sends an Authorization header with a Bearer token matching CRON_SECRET
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   if (
     process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+    (!authHeader || !safeCompare(authHeader, `Bearer ${process.env.CRON_SECRET}`))
   ) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { inviteUser } from "@/lib/actions/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ import { Section, FieldGroup } from "@/components/settings/SettingsShared";
 
 export function NewUserClient({ currentRole }: { currentRole?: string }) {
   const router = useRouter();
-  const supabase = createClient();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("student");
   const [inviteDept, setInviteDept] = useState("");
@@ -30,27 +29,15 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
     setIsSaving(true);
     try {
       const email = inviteEmail.trim().toLowerCase();
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
+      const res = await inviteUser({
+        email,
+        role: inviteRole,
+        department: inviteDept.trim() || undefined,
+      });
 
-      if (profileError) throw profileError;
-      if (!profile) throw new Error("No account found for that email. They must sign in first.");
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          role: inviteRole,
-          status: "PENDING",
-          department: inviteDept.trim() || "General",
-        })
-        .eq("id", profile.id)
-        .select("*")
-        .single();
-
-      if (updateError) throw updateError;
+      if (!res.success) {
+        throw new Error(res.error);
+      }
       
       toast.success(`Access granted to ${email}`);
       router.push("/users");

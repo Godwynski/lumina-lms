@@ -3,42 +3,9 @@ import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UserCreateSchema, UserPatchSchema } from "@/lib/validations/api";
+import { mapProfileToUser } from "@/lib/utils/mappers";
 
 const MANAGER_ROLES: UserRole[] = ["super_admin", "librarian"];
-
-function mapProfileToUser(row: Record<string, unknown>) {
-  const createdAt = typeof row.created_at === "string" ? row.created_at : null;
-  const created = createdAt ? new Date(createdAt) : null;
-  const email = typeof row.email === "string" ? row.email : "";
-  const nameFromEmail = email
-    .split("@")[0]
-    ?.split(".")
-    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : ""))
-    .join(" ");
-
-  return {
-    id: String(row.id ?? ""),
-    name:
-      typeof row.full_name === "string" && row.full_name.trim()
-        ? row.full_name
-        : nameFromEmail || "Unnamed User",
-    email,
-    role: normalizeUserRole(row.role as string),
-    status: typeof row.status === "string" ? row.status.toUpperCase() : "ACTIVE",
-    student_id: typeof row.student_id === "string" ? row.student_id : null,
-    department:
-      typeof row.department === "string" && row.department.trim()
-        ? row.department
-        : "General",
-    joined: created
-      ? created.toLocaleDateString("en-US", { month: "short", year: "numeric" })
-      : "Unknown",
-    address: typeof row.address === "string" ? row.address : null,
-    phone: typeof row.phone === "string" ? row.phone : null,
-    updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
-    permissions: (row.permissions as Record<string, boolean>) || {},
-  };
-}
 
 export const GET = withAuthApi(
   async (request, { supabase, role: requesterRole }) => {

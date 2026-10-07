@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAuditActivity } from "@/lib/audit";
 import { ReservationCreateSchema } from "@/lib/validations/api";
+import { isStaff, type Role } from "@/lib/auth/permissions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,12 +42,12 @@ export async function POST(request: NextRequest) {
     if (userId && userId !== user.id) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, status")
         .eq("id", user.id)
         .single();
 
-      const isStaff = Boolean(profile && ["super_admin", "librarian", "student_assistant"].includes(profile.role));
-      if (!isStaff) {
+      const isStaffUser = Boolean(profile && isStaff(profile.role as Role, profile));
+      if (!isStaffUser) {
         return NextResponse.json(
           { ok: false, message: "Only staff members can reserve books on behalf of other users", code: "FORBIDDEN" },
           { status: 403 }
@@ -139,11 +140,11 @@ export async function GET(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, status")
       .eq("id", user.id)
       .single();
 
-    const isStaff = Boolean(profile && ["super_admin", "librarian", "student_assistant"].includes(profile.role));
+    const isStaffUser = Boolean(profile && isStaff(profile.role as Role, profile));
 
     const searchParams = request.nextUrl.searchParams;
     const bookId = searchParams.get("bookId");
@@ -155,11 +156,11 @@ export async function GET(request: NextRequest) {
       query = query.eq("book_id", bookId);
     }
     if (userId) {
-      if (!isStaff && userId !== user.id) {
+      if (!isStaffUser && userId !== user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       query = query.eq("user_id", userId);
-    } else if (!isStaff) {
+    } else if (!isStaffUser) {
       query = query.eq("user_id", user.id);
     }
 

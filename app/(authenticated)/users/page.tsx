@@ -2,7 +2,7 @@ import { Suspense, use } from "react";
 import { getMe } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { UsersContent } from "./UsersContent";
-import { mapProfileToUser } from "@/lib/utils/mappers";
+import { getUsers } from "@/lib/actions/users";
 
 const PAGE_SIZE = 12;
 
@@ -11,31 +11,17 @@ const PAGE_SIZE = 12;
 function buildUsersPromise() {
   return getMe().then(async (me) => {
     if (!me) redirect("/");
-    const { supabase, role } = me;
+    const { role } = me;
 
     if (role !== "super_admin" && role !== "librarian") {
       redirect("/dashboard");
     }
 
-    let query = supabase
-      .from("profiles")
-      .select("*", { count: "exact" })
-      .neq("status", "ARCHIVED");
-
-    // Librarian Restriction: Hide admins from initial fetch
-    if (role === "librarian") {
-      query = query.neq("role", "super_admin");
-    }
-
-    const { data, count, error } = await query
-      .order("created_at", { ascending: false })
-      .range(0, PAGE_SIZE - 1);
-
-    if (error) throw error;
+    const { users, total } = await getUsers({ tab: "all", page: 1, pageSize: PAGE_SIZE });
 
     return {
-      users: (data || []).map((row) => mapProfileToUser(row as Record<string, unknown>)),
-      count: count || 0,
+      users,
+      count: total,
       currentRole: role,
     };
   });

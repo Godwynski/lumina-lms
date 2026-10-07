@@ -67,3 +67,16 @@ export function formatDisplayTime(
   });
 }
 
+/**
+ * Safely extracts a display category name from Supabase relation shapes (array or single object).
+ */
+export function getCategoryName(categories: unknown): string {
+  if (Array.isArray(categories)) {
+    return categories[0]?.name || "Uncategorized";
+  }
+  if (categories && typeof categories === "object" && "name" in categories) {
+    return (categories as { name?: string }).name || "Uncategorized";
+  }
+  return "Uncategorized";
+}
+

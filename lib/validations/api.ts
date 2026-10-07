@@ -33,7 +33,8 @@ export const CategoryUpdateSchema = z.object({
 });
 
 export const BulkNotificationSchema = z.object({
-  userIds: z.array(z.string().uuid("Invalid user ID")).min(1, "At least one user ID is required"),
+  userIds: z.array(z.string().uuid("Invalid user ID")).optional(),
+  target: z.enum(["all", "students"]).optional(),
   title: z.string().trim().min(1, "Title is required").max(200),
   content: z.string().trim().min(1, "Content is required"),
   type: z
@@ -49,13 +50,9 @@ export const BulkNotificationSchema = z.object({
     .optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
-export const ProfilePatchSchema = z.object({
-  displayName: z.string().trim().min(1, "Display name is required").max(150),
-  address: z.string().trim().max(255).optional().default(""),
-  phone: z.string().trim().max(50).optional().default(""),
-  department: z.string().trim().max(100).optional().default(""),
+}).refine(data => (data.userIds && data.userIds.length > 0) || Boolean(data.target), {
+  message: "Either userIds or target must be provided",
+  path: ["userIds"],
 });
 
 export const ReservationCreateSchema = z.object({

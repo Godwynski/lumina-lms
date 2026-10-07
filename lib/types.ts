@@ -6,10 +6,35 @@ export type UserPermissions = {
   view_admin_dashboard?: boolean;
 };
 
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  role: "super_admin" | "librarian" | "student_assistant" | "student";
+  status: string;
+  department: string;
+  joined: string;
+  student_id: string | null;
+  address: string | null;
+  phone: string | null;
+  updatedAt: string | null;
+  onboarding_completed?: boolean;
+  library_card?: {
+    card_number: string;
+    status: string;
+    expires_at?: string | null;
+  } | null;
+  permissions?: Record<string, boolean>;
+};
+
 export interface Category {
   id: string;
   name: string;
+  slug?: string;
   description?: string;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface Book {

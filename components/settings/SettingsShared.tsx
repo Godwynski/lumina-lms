@@ -5,7 +5,6 @@ import { memo, useState } from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,32 +57,6 @@ export const FieldGroup = memo(({
   );
 });
 FieldGroup.displayName = "FieldGroup";
-
-export const PremiumToggle = memo(({ 
-  title, 
-  description, 
-  checked, 
-  onChange 
-}: { 
-  title: string; 
-  description: string; 
-  checked: boolean; 
-  onChange: (v: boolean) => void 
-}) => {
-  return (
-    <div
-      onClick={() => onChange(!checked)}
-      className="flex w-full cursor-pointer items-center justify-between py-4 border-b border-border/40 last:border-0 group"
-    >
-      <div className="max-w-[80%] space-y-0.5">
-        <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{title}</h4>
-        <p className="text-xs text-muted-foreground leading-normal">{description}</p>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} onClick={(e) => e.stopPropagation()} />
-    </div>
-  );
-});
-PremiumToggle.displayName = "PremiumToggle";
 
 export function AnnualResetTool() {
   const [isResetting, setIsResetting] = useState(false);

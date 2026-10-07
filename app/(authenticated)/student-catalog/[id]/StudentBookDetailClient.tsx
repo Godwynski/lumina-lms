@@ -4,6 +4,7 @@ import { use, useState, useTransition, useEffect, useCallback, useRef } from 're
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { getCategoryName } from '@/lib/utils';
 import {
   MapPin,
   BookOpen,
@@ -298,9 +299,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   }
 
   const isAvailable = book.available_copies > 0;
-  const categoryName = Array.isArray(book.categories)
-    ? book.categories[0]?.name
-    : (book.categories as { name?: string })?.name;
+  const categoryName = getCategoryName(book.categories);
 
   const handleCancelReservation = () => {
     const resId = availability.reservationId;

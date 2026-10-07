@@ -1,6 +1,7 @@
 import { getBooks, getCategories } from '@/lib/actions/catalog';
 import { Suspense } from 'react';
 import { getMe } from '@/lib/auth-helpers';
+import { isStaff } from '@/lib/auth/permissions';
 import { redirect } from 'next/navigation';
 import { LiveActivityTicker } from '@/components/dashboard/LiveActivityTicker';
 import { CatalogContent, CatalogSkeleton } from '../catalog/CatalogContent';
@@ -36,14 +37,13 @@ async function InventoryDataWrapper({
   }
 
   const role = me.role;
-  const isDeactivatedSA = role === 'student_assistant' && me.profile?.status?.toUpperCase() !== 'ACTIVE';
   const hasAnyPermission = role === 'student_assistant'
     ? !!(me.profile?.permissions?.manage_circulation || me.profile?.permissions?.manage_attendance || me.profile?.permissions?.view_admin_dashboard)
     : true;
 
-  const isStaff = role === 'super_admin' || role === 'librarian' || (role === 'student_assistant' && !isDeactivatedSA && hasAnyPermission);
+  const isStaffUser = isStaff(role, me.profile) && hasAnyPermission;
 
-  if (!isStaff) {
+  if (!isStaffUser) {
     redirect('/dashboard');
   }
 

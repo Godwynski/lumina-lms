@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeFilterInput, cn, hasEnvVars, toSlug, formatDisplayDate, formatDisplayTime } from './utils';
+import { sanitizeFilterInput, cn, hasEnvVars, toSlug, formatDisplayDate, formatDisplayTime, getCategoryName } from './utils';
 
 describe('sanitizeFilterInput', () => {
   it('leaves normal strings intact', () => {
@@ -141,6 +141,31 @@ describe('formatDisplayTime', () => {
   it('returns fallback dash for invalid dates', () => {
     expect(formatDisplayTime(null)).toBe('—');
     expect(formatDisplayTime('bad')).toBe('—');
+  });
+});
+
+describe('getCategoryName', () => {
+  it('extracts category name when categories is an array of objects', () => {
+    expect(getCategoryName([{ name: 'Computer Science' }])).toBe('Computer Science');
+    expect(getCategoryName([{ name: 'Fiction' }, { name: 'Drama' }])).toBe('Fiction');
+  });
+
+  it('extracts category name when categories is a single object', () => {
+    expect(getCategoryName({ name: 'Science' })).toBe('Science');
+  });
+
+  it('returns Uncategorized when array is empty or name is missing', () => {
+    expect(getCategoryName([])).toBe('Uncategorized');
+    expect(getCategoryName([{}])).toBe('Uncategorized');
+    expect(getCategoryName([{ name: '' }])).toBe('Uncategorized');
+  });
+
+  it('returns Uncategorized for null, undefined, primitives, or malformed inputs', () => {
+    expect(getCategoryName(null)).toBe('Uncategorized');
+    expect(getCategoryName(undefined)).toBe('Uncategorized');
+    expect(getCategoryName('not-an-object')).toBe('Uncategorized');
+    expect(getCategoryName(123)).toBe('Uncategorized');
+    expect(getCategoryName({})).toBe('Uncategorized');
   });
 });
 

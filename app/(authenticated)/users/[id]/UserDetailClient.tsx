@@ -24,7 +24,7 @@ import { Section, FieldGroup } from "@/components/settings/SettingsShared";
 import { createClient } from "@/lib/supabase/client";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
-import type { User } from "../UsersContent";
+import type { User } from "@/lib/types";
 
 export function UserDetailClient({
   initialUser,

@@ -209,3 +209,20 @@ export async function getDashboardStats({
     readyHolds: (readyHoldsResult as SupabaseCountResult).count || 0,
   };
 }
+
+/**
+ * Resolves the book title for a specific book copy ID.
+ * Decouples client realtime listeners from direct relational join queries.
+ */
+export async function getBookCopyTitle(bookCopyId: string): Promise<string> {
+  const me = await getMe();
+  if (!me) return 'Resource';
+  const { supabase } = me;
+  const { data: copy } = await supabase
+    .from('book_copies')
+    .select('books(title)')
+    .eq('id', bookCopyId)
+    .single();
+
+  return (copy?.books as unknown as { title: string } | null)?.title || 'Resource';
+}

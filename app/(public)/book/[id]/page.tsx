@@ -5,6 +5,7 @@ import { ChevronLeft, MapPin, Hash, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense } from 'react';
+import { getCategoryName } from '@/lib/utils';
 
 async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -69,9 +70,7 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
           <div className="flex items-center text-sm text-muted-foreground">
             <Tag className="w-4 h-4 mr-2 text-muted-foreground/60" />
             <span className="font-medium mr-2">Category:</span>
-            {Array.isArray(book.categories) 
-              ? book.categories[0]?.name 
-              : (book.categories as { name?: string })?.name || 'Uncategorized'}
+            {getCategoryName(book.categories)}
           </div>
         </div>
 

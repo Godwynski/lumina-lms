@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import { Megaphone, Loader2, Users, Send, Target } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,7 +17,6 @@ export function SystemAnnouncement() {
   const [content, setContent] = useState('')
   const [target, setTarget] = useState<'all' | 'students'>('students')
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
 
   /**
    * Handles sending the announcement to the selected target group.
@@ -31,27 +29,11 @@ export function SystemAnnouncement() {
 
     setLoading(true)
     try {
-      // 1. Fetch target user IDs
-      let query = supabase.from('profiles').select('id')
-      if (target === 'students') {
-        query = query.eq('role', 'student')
-      }
-
-      const { data, error: fetchError } = await query
-      if (fetchError) throw fetchError
-
-      const userIds = data.map(u => u.id)
-      if (userIds.length === 0) {
-        toast.error('No users found in the selected target group')
-        return
-      }
-
-      // 2. Send bulk notifications via API
       const response = await fetch('/api/notifications/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          userIds, 
+          target, 
           title: title.trim(), 
           content: content.trim(), 
           type: 'SYSTEM', 
@@ -59,12 +41,12 @@ export function SystemAnnouncement() {
         })
       })
 
+      const data = await response.json()
       if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || 'Failed to dispatch notifications')
+        throw new Error(data.error || 'Failed to dispatch notifications')
       }
 
-      toast.success(`Announcement successfully dispatched to ${userIds.length} users`)
+      toast.success(`Announcement successfully dispatched to ${data.count ?? 'all'} users`)
       setTitle('')
       setContent('')
     } catch (error: unknown) {

@@ -23,7 +23,7 @@ export async function GET(
       .eq("id", user.id)
       .single();
 
-    if (!profile || !["admin", "librarian"].includes(String(profile.role))) {
+    if (!profile || !["super_admin", "librarian"].includes(String(profile.role))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -69,7 +69,7 @@ export async function PUT(
       .eq("id", user.user.id)
       .single();
 
-    if (!["admin", "librarian"].includes(profile?.role)) {
+    if (!["super_admin", "librarian"].includes(profile?.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -155,7 +155,7 @@ export async function DELETE(
       .eq("id", user.user.id)
       .single();
 
-    if (profile?.role !== "admin") {
+    if (profile?.role !== "super_admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

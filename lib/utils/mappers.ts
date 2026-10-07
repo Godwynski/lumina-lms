@@ -1,4 +1,4 @@
-import { User } from "@/app/(authenticated)/users/UsersContent";
+import type { User } from "@/lib/types";
 
 /**
  * Standard mapper for Profile records from Supabase to the internal UI User type.

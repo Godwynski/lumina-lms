@@ -15,16 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { QRScanner } from "@/components/common/QRScanner";
 import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
-
-
-interface AttendanceRecord {
-  id: string;
-  check_in_at: string;
-  check_out_at: string | null;
-  profiles?: {
-    full_name: string | null;
-  };
-}
+import type { AttendanceRecord } from "@/lib/actions/attendance";
 
 export function AttendanceClient({ 
   systemTodayPromise,

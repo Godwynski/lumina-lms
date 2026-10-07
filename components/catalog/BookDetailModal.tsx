@@ -30,7 +30,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { getBookAdminDetails, getBookPublicDetails } from '@/lib/actions/catalog';
-import { cn } from '@/lib/utils';
+import { cn, getCategoryName } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { AdminManagementContent } from './AdminManagementContent';
@@ -227,9 +227,7 @@ function StudentModalContent({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const isAvailable = book.available_copies > 0;
-  const categoryName = Array.isArray(book.categories)
-    ? book.categories[0]?.name
-    : (book.categories as { name?: string })?.name;
+  const categoryName = getCategoryName(book.categories);
 
   const handleCancelReservation = () => {
     const resId = availability.reservationId;

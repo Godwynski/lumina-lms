@@ -5,7 +5,6 @@ import {
   CategoryCreateSchema,
   CategoryUpdateSchema,
   BulkNotificationSchema,
-  ProfilePatchSchema,
   ReservationCreateSchema,
 } from '../api';
 
@@ -107,26 +106,13 @@ describe('API Validation Schemas', () => {
       });
       expect(result.success).toBe(false);
     });
-  });
-
-  describe('ProfilePatchSchema', () => {
-    it('validates valid profile update with defaults', () => {
-      const result = ProfilePatchSchema.safeParse({
-        displayName: 'John Doe',
+    it('validates bulk notification with target audience', () => {
+      const result = BulkNotificationSchema.safeParse({
+        target: 'students',
+        title: 'Announcement',
+        content: 'Notice for all students',
       });
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.address).toBe('');
-        expect(result.data.phone).toBe('');
-        expect(result.data.department).toBe('');
-      }
-    });
-
-    it('rejects empty displayName', () => {
-      const result = ProfilePatchSchema.safeParse({
-        displayName: '   ',
-      });
-      expect(result.success).toBe(false);
     });
   });
 

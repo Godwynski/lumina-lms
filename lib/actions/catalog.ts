@@ -1,6 +1,7 @@
 'use server';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { toSlug } from '@/lib/utils';
 
 interface RawCopy {
   id: string;
@@ -579,11 +580,7 @@ async function getOrCreateCategoryByName(supabase: SupabaseClient, name: string)
   }
 
   // 2. If it doesn't exist, create it!
-  const slug = cleanName
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+  const slug = toSlug(cleanName);
 
   const { data: created, error: createError } = await supabase
     .from('categories')

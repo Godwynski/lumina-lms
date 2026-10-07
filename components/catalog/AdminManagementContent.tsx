@@ -37,7 +37,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import { FieldGroup } from '@/components/settings/SettingsShared';
-import { cn } from '@/lib/utils';
+import { cn, getCategoryName } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 
@@ -395,9 +395,7 @@ export function AdminManagementContent({
     }
   };
 
-  const categoryName = Array.isArray(book.categories)
-    ? book.categories[0]?.name
-    : book.categories?.name;
+  const categoryName = getCategoryName(book.categories);
 
   const filteredCopies = copies.filter(c => copyFilter === 'ALL' || c.status === copyFilter);
   const totalPages = Math.ceil(filteredCopies.length / COPIES_PER_PAGE);
