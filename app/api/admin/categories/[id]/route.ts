@@ -1,13 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-
-function toSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { toSlug } from "@/lib/utils";
+import { CategoryUpdateSchema } from "@/lib/validations/api";
 
 export async function GET(
   request: NextRequest,
@@ -29,7 +23,7 @@ export async function GET(
       .eq("id", user.id)
       .single();
 
-    if (!profile || !["admin", "librarian"].includes(String(profile.role))) {
+    if (!profile || !["super_admin", "librarian"].includes(String(profile.role))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -75,11 +69,26 @@ export async function PUT(
       .eq("id", user.user.id)
       .single();
 
-    if (!["admin", "librarian"].includes(profile?.role)) {
+    if (!["super_admin", "librarian"].includes(profile?.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const parseResult = CategoryUpdateSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || "Invalid category update" },
+        { status: 400 }
+      );
+    }
+
+    const body = parseResult.data;
     const { id } = await params;
 
     // Fetch existing record for partial update
@@ -93,11 +102,11 @@ export async function PUT(
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
-    const name = typeof body.name === "string" ? body.name.trim() : existing.name;
-    const rawSlug = typeof body.slug === "string" ? body.slug.trim() : existing.slug;
+    const name = body.name !== undefined ? body.name : existing.name;
+    const rawSlug = body.slug !== undefined ? body.slug : existing.slug;
     const slug = toSlug(rawSlug || name);
-    const description = typeof body.description === "string" ? body.description.trim() : existing.description;
-    const is_active = typeof body.is_active === "boolean" ? body.is_active : existing.is_active;
+    const description = body.description !== undefined ? body.description : existing.description;
+    const is_active = body.is_active !== undefined ? body.is_active : existing.is_active;
 
     if (!name || !slug) {
       return NextResponse.json({ error: "name and slug are required" }, { status: 400 });
@@ -114,8 +123,6 @@ export async function PUT(
       .eq("id", id)
       .select()
       .single();
-
-    if (error) throw error;
 
     if (error) throw error;
 
@@ -148,7 +155,7 @@ export async function DELETE(
       .eq("id", user.user.id)
       .single();
 
-    if (profile?.role !== "admin") {
+    if (profile?.role !== "super_admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

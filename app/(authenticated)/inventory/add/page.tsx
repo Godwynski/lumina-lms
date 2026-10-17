@@ -13,7 +13,7 @@ export default function AddBookPage() {
   );
 }
 
-function AddBookSkeleton() {
+export function AddBookSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-4">

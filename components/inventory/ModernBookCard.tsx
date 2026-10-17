@@ -22,6 +22,7 @@ interface ModernBookCardProps {
 export function ModernBookCard({ book, priority = false, canManage = true }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   const [modalOpen, setModalOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState(book.cover_url || "/images/default-book-cover.png");
   
   return (
     <>
@@ -77,13 +78,14 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
 
             <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
               <Image 
-                src={book.cover_url || "/images/default-book-cover.png"} 
+                src={imgSrc} 
                 alt={book.title} 
                 fill 
                 className="object-cover" 
                 sizes="80px"
                 priority={priority}
                 unoptimized
+                onError={() => setImgSrc("/images/default-book-cover.png")}
               />
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">

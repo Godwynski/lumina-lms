@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
@@ -93,6 +93,7 @@ export function ProtectedNav({
   profile?: Profile | null;
   preferences?: Record<string, unknown>;
 }) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
   const { role, profile } = usePreferences();
@@ -162,9 +163,11 @@ export function ProtectedNav({
     });
   }, [currentRole, currentProfile]);
 
-  const handlePrefetch = useCallback((_href: string) => {
-    // Next.js Link already handles prefetching on hover
-  }, []);
+  const handlePrefetch = useCallback((href: string) => {
+    if (href && href !== '#' && !href.startsWith('javascript:')) {
+      router.prefetch(href);
+    }
+  }, [router]);
 
   // ── Memoised nav-item list (previously an un-memoised IIFE) ─────────────
   const viewParam = mounted ? searchParams.get("view") : null;
@@ -270,6 +273,8 @@ export function ProtectedNav({
         <SidebarTrigger className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors group-data-[collapsible=icon]:flex" />
         <Link 
           href="/dashboard" 
+          prefetch={true}
+          onMouseEnter={() => handlePrefetch("/dashboard")}
           className="flex items-center gap-3 shrink-0 group-data-[collapsible=icon]:hidden" 
           aria-label="Lumina LMS Platform"
         >
@@ -294,6 +299,7 @@ export function ProtectedNav({
                   >
                     <Link 
                       href={item.href} 
+                      prefetch={true}
                       className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
                       onClick={(e) => {
                         e.currentTarget.blur();
@@ -358,10 +364,12 @@ export function ProtectedNav({
                   <DropdownMenuItem asChild>
                     <Link 
                       href="/profile" 
+                      prefetch={true}
                       className="flex w-full cursor-pointer items-center" 
                       onClick={(e) => {
                         e.currentTarget.blur();
                       }}
+                      onMouseEnter={() => handlePrefetch("/profile")}
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>My Profile</span>

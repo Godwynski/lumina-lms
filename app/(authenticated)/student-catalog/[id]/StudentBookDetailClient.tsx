@@ -4,21 +4,17 @@ import { use, useState, useTransition, useEffect, useCallback, useRef } from 're
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { getCategoryName } from '@/lib/utils';
 import {
   MapPin,
   BookOpen,
-  CheckCircle2,
-  Clock,
-  Ticket,
   CalendarDays,
   Tag,
   Hash,
   Layers,
   AlertTriangle,
-  Sparkles,
   Library,
   ArrowRight,
-  XCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
@@ -26,38 +22,11 @@ import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
-
-interface BookDetail {
-  id: string;
-  title: string;
-  author: string;
-  isbn: string | null;
-  cover_url: string | null;
-  section: string | null;
-  location: string | null;
-  available_copies: number;
-  total_copies: number;
-  categories: { name?: string } | { name?: string }[] | null;
-  tags: string[] | null;
-}
-
-interface AvailabilityStatus {
-  nextAvailableDate: string | null;
-  hasReservation: boolean;
-  isReady: boolean;
-  queuePosition: number | null;
-  holdExpiresAt: string | null;
-  reservationId: string | null;
-}
+import type { BookDetail, AvailabilityStatus } from '@/components/catalog/types';
+import { StatusBanner } from '@/components/catalog/StatusBanner';
+import { CopyMeter } from '@/components/catalog/CopyMeter';
+import { MetaTile } from '@/components/catalog/MetaTile';
+import { CancelReservationDialog } from '@/components/catalog/CancelReservationDialog';
 
 interface Props {
   bookPromise: Promise<BookDetail | null>;
@@ -65,171 +34,13 @@ interface Props {
   id: string;
 }
 
-// ─── Status Banner ────────────────────────────────────────────────────────────
-
-function StatusBanner({
-  book,
-  availability,
-}: {
-  book: BookDetail;
-  availability: AvailabilityStatus;
-}) {
-  const isAvailable = book.available_copies > 0;
-
-  if (availability.isReady) {
-    const deadline = availability.holdExpiresAt
-      ? new Date(availability.holdExpiresAt).toLocaleDateString(undefined, {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-        })
-      : null;
-
-    return (
-      <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4 backdrop-blur-sm">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 shadow-inner">
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-emerald-700 uppercase tracking-tight leading-tight">Copy Ready for Pickup</p>
-          {deadline && (
-            <p className="mt-0.5 text-[11px] font-bold text-emerald-600/70">
-              Claim at the desk by <span className="text-emerald-700 font-black underline decoration-emerald-500/30 underline-offset-2">{deadline}</span>
-            </p>
-          )}
-        </div>
-        <div className="shrink-0 animate-pulse">
-          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_2px_rgba(16,185,129,0.4)]" />
-        </div>
-      </div>
-    );
-  }
-
-  if (availability.hasReservation && availability.queuePosition) {
-    return (
-      <div className="flex items-center gap-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4 backdrop-blur-sm">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-inner">
-          <Ticket className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-primary uppercase tracking-tight leading-tight">
-            Queue Position #{availability.queuePosition}
-          </p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground/70">
-            We&apos;ll notify you when a copy is assigned to you.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAvailable) {
-    return (
-      <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 px-4 py-4 backdrop-blur-sm">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 shadow-inner">
-          <CheckCircle2 className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-emerald-700 uppercase tracking-tight leading-tight">
-            {book.available_copies} {book.available_copies === 1 ? 'copy' : 'copies'} on shelf
-          </p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground/70">
-            Reserve to secure this title for your next visit.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // All copies borrowed
-  const returnDate = availability.nextAvailableDate
-    ? new Date(availability.nextAvailableDate).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-      })
-    : null;
-
-  return (
-    <div className="flex items-center gap-4 rounded-2xl border border-amber-500/10 bg-amber-500/5 px-4 py-4 backdrop-blur-sm">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 shadow-inner">
-        <Clock className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-black text-amber-700 uppercase tracking-tight leading-tight">Currently Unavailable</p>
-        <p className="mt-0.5 text-[11px] font-bold text-amber-600/70">
-          {returnDate ? (
-            <>Estimated availability <span className="text-amber-700 font-black">{returnDate}</span></>
-          ) : (
-            'Join the queue to be first in line when a copy returns.'
-          )}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Copy Progress Bar ─────────────────────────────────────────────────────────
-
-function CopyMeter({ available, total }: { available: number; total: number }) {
-  const pct = total === 0 ? 0 : Math.round((available / total) * 100);
-  const borrowed = total - available;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground">
-        <span className="uppercase tracking-widest">Copy Availability</span>
-        <span>{available}/{total} free</span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60">
-        <div
-          className="h-full rounded-full bg-emerald-500 transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex gap-3 text-[10px] font-bold">
-        <span className="flex items-center gap-1 text-emerald-600">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          {available} on shelf
-        </span>
-        <span className="flex items-center gap-1 text-amber-600">
-          <span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />
-          {borrowed} borrowed
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Metadata Tile ─────────────────────────────────────────────────────────────
-
-function MetaTile({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="group rounded-2xl border border-border/40 bg-card/20 p-4 shadow-none transition-all hover:border-primary/20 hover:bg-muted/30 backdrop-blur-sm">
-      <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mb-2">
-        <Icon className="h-3 w-3" />
-        {label}
-      </p>
-      <p className="text-sm font-black text-foreground uppercase tracking-tight leading-snug">{value || '—'}</p>
-    </div>
-  );
-}
-
-// ─── Main Component ────────────────────────────────────────────────────────────
-
 export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }: Props) {
   const router = useRouter();
   const book = use(bookPromise);
   const availability = use(availabilityPromise);
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState(book?.cover_url || "/images/default-book-cover.png");
   const [supabase] = useState(() => createClient());
 
   // Debounced router.refresh
@@ -237,9 +48,11 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   const debouncedRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     }, 1500);
-  }, [router]);
+  }, [router, startTransition]);
 
   // Real-time synchronization
   useEffect(() => {
@@ -298,9 +111,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   }
 
   const isAvailable = book.available_copies > 0;
-  const categoryName = Array.isArray(book.categories)
-    ? book.categories[0]?.name
-    : (book.categories as { name?: string })?.name;
+  const categoryName = getCategoryName(book.categories);
 
   const handleCancelReservation = () => {
     const resId = availability.reservationId;
@@ -319,14 +130,16 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   };
 
   const handleReserveSuccess = (_queuePosition: number, _status: 'READY' | 'ACTIVE') => {
-    router.refresh();
+    startTransition(() => {
+      router.refresh();
+    });
   };
 
   return (
     <div className="p-4 md:p-6 space-y-5">
 
       {/* ── Status Banner ── */}
-      <StatusBanner book={book} availability={availability} />
+      <StatusBanner book={book} availability={availability} variant="full" />
 
       {/* ── Main 2-col layout ── */}
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
@@ -335,12 +148,13 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
         <div className="shrink-0 mx-auto md:mx-0 space-y-4">
           <div className="relative h-[280px] w-[190px] overflow-hidden rounded-2xl border border-border/40 bg-muted/20 shadow-none backdrop-blur-sm">
             <Image
-              src={book.cover_url || "/images/default-book-cover.png"}
-              alt={book.title}
+              src={imgSrc}
+              alt={book?.title || 'Book Cover'}
               fill
               sizes="190px"
               className="object-cover transition-transform duration-500 hover:scale-105"
               unoptimized
+              onError={() => setImgSrc("/images/default-book-cover.png")}
             />
 
             {/* Availability ribbon */}
@@ -401,21 +215,25 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               icon={Hash}
               label="ISBN"
               value={<span className="font-mono text-xs">{book.isbn || 'N/A'}</span>}
+              variant="stacked"
             />
             <MetaTile
               icon={Layers}
               label="Category"
               value={categoryName || 'Uncategorized'}
+              variant="stacked"
             />
             <MetaTile
               icon={MapPin}
               label="Shelf Location"
               value={book.section || 'General'}
+              variant="stacked"
             />
             <MetaTile
               icon={Library}
               label="Section"
               value={book.location || book.section || 'Main Floor'}
+              variant="stacked"
             />
           </div>
 
@@ -483,43 +301,14 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
           </div>
 
           {/* Cancel Confirmation Dialog */}
-          <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-                  <XCircle className="h-6 w-6 text-destructive" />
-                </div>
-                <DialogTitle className="text-center">Cancel Reservation?</DialogTitle>
-                <DialogDescription className="text-center">
-                  {availability.isReady ? (
-                    <>
-                      Your copy of <span className="font-semibold text-foreground">&ldquo;{book.title}&rdquo;</span> is currently held for you.
-                      Cancelling will release it back to the shelf for anyone to borrow.
-                    </>
-                  ) : (
-                    <>
-                      You&apos;ll lose your queue position for <span className="font-semibold text-foreground">&ldquo;{book.title}&rdquo;</span>. You can always reserve again later.
-                    </>
-                  )}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex gap-2 sm:justify-center pt-2">
-                <DialogClose asChild>
-                  <Button variant="outline" className="flex-1 sm:flex-none">
-                    Keep Reservation
-                  </Button>
-                </DialogClose>
-                <Button
-                  variant="destructive"
-                  onClick={handleCancelReservation}
-                  disabled={isPending}
-                  className="flex-1 sm:flex-none"
-                >
-                  {isPending ? 'Cancelling…' : 'Yes, Cancel'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <CancelReservationDialog
+            open={cancelDialogOpen}
+            onOpenChange={setCancelDialogOpen}
+            bookTitle={book.title}
+            isCancelling={isPending}
+            onConfirmCancel={handleCancelReservation}
+            isReady={availability.isReady}
+          />
 
           {/* Help hints */}
           <div className="grid gap-2 sm:grid-cols-2 pt-1">

@@ -48,9 +48,14 @@ export const GET = withAuthApi(
 
 export const POST = withAuthApi(
   async (request, { user }) => {
-    const body = await request.json();
-    const key = typeof body.key === "string" ? body.key.trim() : "";
-    const value = typeof body.value === "string" ? body.value.trim() : "";
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return apiError("Invalid JSON body", "BAD_REQUEST", 400);
+    }
+    const key = typeof body?.key === "string" ? body.key.trim() : "";
+    const value = typeof body?.value === "string" ? body.value.trim() : "";
     const description =
       typeof body.description === "string"
         ? body.description.trim()

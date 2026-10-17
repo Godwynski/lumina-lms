@@ -12,11 +12,13 @@ type BookInfo = {
   cover_url: string | null;
 };
 
+export type BorrowStatus = "ACTIVE" | "RETURNED" | "OVERDUE";
+
 export type BorrowingRecord = {
   id: string;
   book_copy_id: string;
   user_id: string;
-  status: "ACTIVE" | "RETURNED" | "OVERDUE" | "LOST";
+  status: BorrowStatus;
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;

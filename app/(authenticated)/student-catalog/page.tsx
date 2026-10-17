@@ -4,7 +4,7 @@ import { getMyReservations } from '@/lib/actions/reservations';
 import { StudentCatalogClient } from './StudentCatalogClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
-function CatalogSkeletonView() {
+export function CatalogSkeletonView() {
   return (
     <div className="space-y-6 animate-pulse">
       <div className="flex flex-col gap-2">

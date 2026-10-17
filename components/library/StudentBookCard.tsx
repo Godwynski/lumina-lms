@@ -29,6 +29,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
   const isOutOfStock = book.available_copies === 0;
   const isReady = reservedInfo?.status === "READY";
   const [modalOpen, setModalOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState(book.cover_url || "/images/default-book-cover.png");
   
   return (
     <m.div
@@ -82,13 +83,14 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
 
             <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border/40 bg-muted/20 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
               <Image 
-                src={book.cover_url || "/images/default-book-cover.png"} 
+                src={imgSrc} 
                 alt={book.title} 
                 fill 
                 className="object-cover" 
                 sizes="80px"
                 priority={priority}
                 unoptimized
+                onError={() => setImgSrc("/images/default-book-cover.png")}
               />
             </div>
           </div>

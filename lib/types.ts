@@ -6,10 +6,35 @@ export type UserPermissions = {
   view_admin_dashboard?: boolean;
 };
 
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  role: "super_admin" | "librarian" | "student_assistant" | "student";
+  status: string;
+  department: string;
+  joined: string;
+  student_id: string | null;
+  address: string | null;
+  phone: string | null;
+  updatedAt: string | null;
+  onboarding_completed?: boolean;
+  library_card?: {
+    card_number: string;
+    status: string;
+    expires_at?: string | null;
+  } | null;
+  permissions?: Record<string, boolean>;
+};
+
 export interface Category {
   id: string;
   name: string;
+  slug?: string;
   description?: string;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface Book {
@@ -36,39 +61,43 @@ export interface Book {
   created_at?: string;
 }
 
-interface BookCopy {
+export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
+
+export interface BookCopy {
   id: string;
   book_id: string;
-  status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
+  status: BookCopyStatus;
   qr_string: string;
   accession_number: string;
   condition?: string;
   created_at: string;
 }
 
-interface ReservationReserver {
+export interface ReservationReserver {
   id: string;
   full_name: string | null;
   email: string | null;
   student_id: string | null;
 }
 
-interface CopyReservation {
+export type ReservationStatus = 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
+
+export interface CopyReservation {
   id: string;
-  status: 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
+  status: ReservationStatus;
   queue_position: number;
   hold_expires_at: string | null;
   profiles: ReservationReserver | null;
 }
 
 export interface BookCopyWithReservation extends Omit<BookCopy, 'status'> {
-  status: 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
+  status: BookCopyStatus;
   reservation: CopyReservation | null;
 }
 
 export interface Reservation {
   id: string;
-  status: string;
+  status: ReservationStatus;
   queue_position: number;
   hold_expires_at: string | null;
   books: {
@@ -81,6 +110,8 @@ export interface Reservation {
 export type ProfileData = {
   id: string;
   full_name: string | null;
+  email?: string | null;
+  role?: UserRole;
   student_id: string | null;
   department: string | null;
   avatar_url: string | null;
@@ -88,6 +119,7 @@ export type ProfileData = {
   phone: string | null;
   status?: string;
   updated_at?: string | null;
+  created_at?: string;
   onboarding_completed?: boolean;
   permissions?: UserPermissions | null;
 };

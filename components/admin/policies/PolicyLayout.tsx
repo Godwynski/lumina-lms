@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState, Suspense, useEffect } from "react";
+import { use, useMemo, useState, Suspense, useEffect, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -75,14 +75,18 @@ export function PolicyLayout({
         'postgres_changes',
         { event: '*', schema: 'public', table: 'system_settings' },
         () => {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'categories' },
         () => {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .subscribe();
@@ -184,7 +188,9 @@ export function PolicyLayout({
         }
       }
 
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {

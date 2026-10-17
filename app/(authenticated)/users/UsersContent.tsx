@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
 import { Search, Filter } from "lucide-react";
-import { sanitizeFilterInput } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,42 +21,11 @@ import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoleBadge } from "@/components/common/RoleBadge";
-import { mapProfileToUser } from "@/lib/utils/mappers";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { UserRole } from "@/lib/auth-helpers";
-
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-  role: "super_admin" | "librarian" | "student_assistant" | "student";
-  status: string;
-  department: string;
-  joined: string;
-  student_id: string | null;
-  address: string | null;
-  phone: string | null;
-  updatedAt: string | null;
-  onboarding_completed?: boolean;
-  library_card?: {
-    card_number: string;
-    status: string;
-    expires_at: string | null;
-  } | null;
-  permissions?: Record<string, boolean>;
-};
-
-type ProfileRow = {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-  avatar_url: string | null;
-  role: string | null;
-  status: string | null;
-  department: string | null;
-  created_at: string | null;
-};
+import type { User } from "@/lib/types";
+import { getUsers } from "@/lib/actions/users";
+export type { User };
 
 
 interface UsersContentProps {
@@ -120,49 +88,21 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     setIsLoadingUsers(true);
     setLoadError(null);
     try {
-      let queryBuilder = supabase
-        .from("profiles")
-        .select("*", { count: "exact" });
+      const res = await getUsers({
+        tab: activeTab,
+        search: debouncedSearch,
+        page: currentPage,
+        pageSize,
+      });
 
-      if (activeTab === "review") {
-        queryBuilder = queryBuilder.eq("status", "PENDING");
-      } else if (activeTab === "archived") {
-        queryBuilder = queryBuilder.eq("status", "ARCHIVED");
-      } else if (activeTab !== "all") {
-        queryBuilder = queryBuilder.eq("role", activeTab).neq("status", "ARCHIVED");
-      } else {
-        // "all" tab: exclude archived
-        queryBuilder = queryBuilder.neq("status", "ARCHIVED");
-      }
-
-      // Librarian Restriction: Hide super admins
-      if (isLibrarian) {
-        queryBuilder = queryBuilder.neq("role", "super_admin");
-      }
-
-      if (debouncedSearch) {
-        const safe = sanitizeFilterInput(debouncedSearch);
-        queryBuilder = queryBuilder.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
-      }
-
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      const { data, error, count } = await queryBuilder
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-
-      const nextUsers = ((data ?? []) as ProfileRow[]).map(mapProfileToUser);
-      setUsers(nextUsers);
-      setTotalUsers(count ?? 0);
+      setUsers(res.users);
+      setTotalUsers(res.total);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Failed to load users");
     } finally {
       setIsLoadingUsers(false);
     }
-  }, [supabase, currentPage, debouncedSearch, activeTab, pageSize, isLibrarian]);
+  }, [currentPage, debouncedSearch, activeTab, pageSize]);
 
   useEffect(() => {
     void loadUsers(true);

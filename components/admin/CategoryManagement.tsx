@@ -8,14 +8,7 @@ import { CategoryDialog } from "./categories/CategoryDialog";
 
 import { toast } from "sonner";
 import { Category } from "@/types/admin";
-
-function toSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { toSlug } from "@/lib/utils";
 
 /**
  * Main management interface for system categories.
@@ -52,7 +45,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     if (category) {
       setFormData({
         name: category.name,
-        slug: category.slug,
+        slug: category.slug || "",
         description: category.description || "",
       });
       setEditingId(category.id);

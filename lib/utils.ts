@@ -23,3 +23,60 @@ export const hasEnvVars =
 export function sanitizeFilterInput(input: string): string {
   return input.replace(/[(),.:*\\"]/g, '').trim();
 }
+
+/**
+ * Transforms a string into a URL-friendly slug.
+ */
+export function toSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/**
+ * Format a date string or Date object into a readable display date.
+ * Defaults to "en-US" short month, numeric day, and numeric year (e.g., "Jan 1, 2026").
+ */
+export function formatDisplayDate(
+  date: string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }
+): string {
+  if (!date) return "—";
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleDateString("en-US", options);
+}
+
+/**
+ * Format a date into a localized time string.
+ */
+export function formatDisplayTime(
+  date: string | Date | null | undefined,
+  timeZone = "Asia/Manila"
+): string {
+  if (!date) return "—";
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone,
+  });
+}
+
+/**
+ * Safely extracts a display category name from Supabase relation shapes (array or single object).
+ */
+export function getCategoryName(categories: unknown): string {
+  if (Array.isArray(categories)) {
+    return categories[0]?.name || "Uncategorized";
+  }
+  if (categories && typeof categories === "object" && "name" in categories) {
+    return (categories as { name?: string }).name || "Uncategorized";
+  }
+  return "Uncategorized";
+}
+

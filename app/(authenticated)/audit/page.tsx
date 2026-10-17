@@ -34,7 +34,7 @@ async function AuditAuthGate() {
   );
 }
 
-function AuditSkeleton() {
+export function AuditSkeleton() {
   return (
     <div className="space-y-4">
       <div className="h-10 w-full bg-muted rounded-lg animate-pulse" />

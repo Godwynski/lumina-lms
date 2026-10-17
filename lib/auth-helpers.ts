@@ -17,47 +17,60 @@ export const normalizeUserRole = (value: unknown): UserRole | null => {
 /**
  * Returns the currently authenticated user's profile and role.
  * Wrapped in React cache() for request-level memoization.
+ * 
+ * Resilient against invalid or expired refresh tokens (AuthApiError 400 refresh_token_not_found):
+ * returns null cleanly without throwing unhandled exceptions to server runtimes.
  */
 export const getMe = cache(async () => {
-  const supabase = await createClient();
-  const { data, error: userError } = await supabase.auth.getUser();
-  const user = data?.user;
+  try {
+    const supabase = await createClient();
+    const { data, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !user) return null;
+    // If an auth error occurred (such as refresh_token_not_found, expired session, etc.),
+    // treat the visitor as unauthenticated and return null cleanly.
+    if (userError || !data?.user) return null;
 
-  // Faster path: Get role from metadata if available
-  const metadataRole = normalizeUserRole(user.app_metadata?.role);
+    const user = data.user;
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+    // Faster path: Get role from metadata if available
+    const metadataRole = normalizeUserRole(user.app_metadata?.role);
 
-  if (profileError || !profile) return null;
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-  const role = normalizeUserRole(profile.role) || metadataRole || 'student';
+    if (profileError || !profile) return null;
 
-  return {
-    user,
-    profile: profile as unknown as ProfileData & { 
-      id: string; 
-      email: string | null; 
-      role: string; 
-      status: string;
-      permissions: UserPermissions | null;
-    },
-    role: role as UserRole,
-    isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
-    isAdmin: role === 'super_admin',
-    isDeactivatedSA: role === 'student_assistant' && profile.status?.toUpperCase() !== 'ACTIVE',
-    hasPermission: (permission: keyof UserPermissions) => {
-      if (role === 'super_admin' || role === 'librarian') return true;
-      const perms = (profile.permissions as UserPermissions | null);
-      return !!perms?.[permission];
-    },
-    supabase
-  };
+    const role = normalizeUserRole(profile.role) || metadataRole || 'student';
+
+    return {
+      user,
+      profile: profile as unknown as ProfileData & { 
+        id: string; 
+        email: string | null; 
+        role: string; 
+        status: string;
+        permissions: UserPermissions | null;
+      },
+      role: role as UserRole,
+      isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
+      isAdmin: role === 'super_admin',
+      isDeactivatedSA: role === 'student_assistant' && profile.status?.toUpperCase() !== 'ACTIVE',
+      hasPermission: (permission: keyof UserPermissions) => {
+        if (role === 'super_admin' || role === 'librarian') return true;
+        const perms = (profile.permissions as UserPermissions | null);
+        return !!perms?.[permission];
+      },
+      supabase
+    };
+  } catch {
+    // Intercept any thrown AuthApiError, network issues, or unexpected exceptions.
+    // Invalid/expired refresh tokens indicate an unauthenticated guest/expired session,
+    // so return null cleanly without throwing unhandled exceptions.
+    return null;
+  }
 });
 
 /**
@@ -65,22 +78,26 @@ export const getMe = cache(async () => {
  * Wrapped in React cache() for request-level memoization.
  */
 export const getPreferences = cache(async () => {
-  const me = await getMe();
-  if (!me) return {};
+  try {
+    const me = await getMe();
+    if (!me) return {};
 
-  const { supabase, user } = me;
-  const { data, error } = await supabase
-    .from('ui_preferences')
-    .select('preferences')
-    .eq('user_id', user.id)
-    .maybeSingle();
+    const { supabase, user } = me;
+    const { data, error } = await supabase
+      .from('ui_preferences')
+      .select('preferences')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-  if (error) {
-    console.error('[AUTH-HELPERS] Failed to fetch preferences:', error.message);
+    if (error) {
+      console.error('[AUTH-HELPERS] Failed to fetch preferences:', error.message);
+      return {};
+    }
+
+    return (data?.preferences as Record<string, unknown>) ?? {};
+  } catch {
     return {};
   }
-
-  return (data?.preferences as Record<string, unknown>) ?? {};
 });
 
 /**

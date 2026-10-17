@@ -73,20 +73,26 @@ export function StudentCatalogClient({
     const channel = supabase
       .channel('catalog-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'book_copies' }, () => {
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
       })
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [router, startTransition]);
 
 
   // Build the initial map from server data

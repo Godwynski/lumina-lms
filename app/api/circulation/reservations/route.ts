@@ -1,14 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAuditActivity } from "@/lib/audit";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-interface ReservationRequest {
-  bookId: string;
-  userId?: string;
-}
+import { ReservationCreateSchema } from "@/lib/validations/api";
+import { isStaff, type Role } from "@/lib/auth/permissions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,39 +15,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: ReservationRequest = await request.json();
-    const { bookId, userId } = body;
-
-    if (!bookId) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
       return NextResponse.json(
-        { ok: false, message: "bookId is required" },
+        { ok: false, message: "Invalid JSON body" },
         { status: 400 }
       );
     }
 
-    if (!UUID_RE.test(bookId)) {
+    const parseResult = ReservationCreateSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { ok: false, message: "bookId must be a valid UUID" },
+        {
+          ok: false,
+          message: parseResult.error.issues[0]?.message || "Invalid reservation data",
+          errors: parseResult.error.issues,
+        },
         { status: 400 }
       );
     }
 
-    if (userId && !UUID_RE.test(userId)) {
-      return NextResponse.json(
-        { ok: false, message: "userId must be a valid UUID" },
-        { status: 400 }
-      );
-    }
+    const { bookId, userId } = parseResult.data;
 
     if (userId && userId !== user.id) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, status")
         .eq("id", user.id)
         .single();
 
-      const isStaff = Boolean(profile && ["super_admin", "librarian", "student_assistant"].includes(profile.role));
-      if (!isStaff) {
+      const isStaffUser = Boolean(profile && isStaff(profile.role as Role, profile));
+      if (!isStaffUser) {
         return NextResponse.json(
           { ok: false, message: "Only staff members can reserve books on behalf of other users", code: "FORBIDDEN" },
           { status: 403 }
@@ -146,11 +140,11 @@ export async function GET(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, status")
       .eq("id", user.id)
       .single();
 
-    const isStaff = Boolean(profile && ["super_admin", "librarian", "student_assistant"].includes(profile.role));
+    const isStaffUser = Boolean(profile && isStaff(profile.role as Role, profile));
 
     const searchParams = request.nextUrl.searchParams;
     const bookId = searchParams.get("bookId");
@@ -162,11 +156,11 @@ export async function GET(request: NextRequest) {
       query = query.eq("book_id", bookId);
     }
     if (userId) {
-      if (!isStaff && userId !== user.id) {
+      if (!isStaffUser && userId !== user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       query = query.eq("user_id", userId);
-    } else if (!isStaff) {
+    } else if (!isStaffUser) {
       query = query.eq("user_id", user.id);
     }
 

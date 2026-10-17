@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getBookCopyTitle } from '@/lib/actions/dashboard';
 import { AnimatePresence, m } from 'framer-motion';
 import { Zap, BookOpen, History, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -77,13 +78,7 @@ export function LiveActivityTicker() {
         const bookCopyId = payload.new.book_copy_id;
         if (!bookCopyId) return;
 
-        const { data: copy } = await supabase
-          .from('book_copies')
-          .select('books(title)')
-          .eq('id', bookCopyId)
-          .single();
-
-        const bookTitle = (copy?.books as unknown as { title: string } | null)?.title || 'Resource';
+        const bookTitle = await getBookCopyTitle(bookCopyId);
         const event: LibraryEvent = {
           id: payload.new.id,
           type: payload.new.status === 'RETURNED' ? 'return' : 'borrow',

@@ -40,7 +40,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   );
 }
 
-function AttendanceSkeleton() {
+export function AttendanceSkeleton() {
   return (
     <div className="w-full space-y-6 animate-pulse">
 

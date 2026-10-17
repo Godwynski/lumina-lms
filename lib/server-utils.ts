@@ -9,16 +9,9 @@ export function safeCompare(a: string, b: string): boolean {
     return false;
   }
   
-  // To use timingSafeEqual, budgets must be equal length Buffers
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  
-  if (bufA.length !== bufB.length) {
-    // Still do a comparison to mimic timing (though length check 
-    // itself leaks length, the timing safe part protects the content)
-    crypto.timingSafeEqual(bufA, bufA);
-    return false;
-  }
-  
-  return crypto.timingSafeEqual(bufA, bufB);
+  // Pre-hash both inputs with SHA-256 to ensure strictly equal 32-byte buffers,
+  // eliminating length-leakage timing variance.
+  const hashA = crypto.createHash('sha256').update(a).digest();
+  const hashB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB) && a === b;
 }

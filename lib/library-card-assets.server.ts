@@ -28,7 +28,7 @@ type LibraryCardRow = {
   card_number: string;
 };
 
-export async function checkStaticLibraryCardAssets(opts: {
+async function checkStaticLibraryCardAssets(opts: {
   studentId: string;
 }) {
   const admin = createAdminClient();

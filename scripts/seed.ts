@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 
+dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -1570,9 +1571,55 @@ async function seed() {
     }
   }
 
-  
-  
-  
+  // --- Active Borrows (12 records: current active loans) ---
+  console.info('🌱 Generating 12 active borrows...');
+  const activeCopiesToUpdate: string[] = [];
+  for (let i = 1; i <= 12; i++) {
+    const borrowDayOffset = 1 + (i % 8); // 1 to 8 days ago
+    const borrowDate = new Date(now.getTime() - borrowDayOffset * 24 * 60 * 60 * 1000);
+    const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000); // 6 to 13 days in future
+
+    const borrowerId = borrowers[(i + 1) % borrowers.length];
+    const copy = selectCopy();
+
+    if (copy) {
+      borrowsToSeed.push({
+        user_id: borrowerId,
+        book_copy_id: copy.id,
+        processed_by: profileIds.rhedLibrarian,
+        borrowed_at: borrowDate.toISOString(),
+        due_date: dueDate.toISOString(),
+        status: 'ACTIVE'
+      });
+      activeCopiesToUpdate.push(copy.id);
+    }
+  }
+
+  // --- Overdue Borrows (6 records: past due date for circulation alerts) ---
+  console.info('🌱 Generating 6 overdue borrows...');
+  const overdueCopiesToUpdate: string[] = [];
+  for (let i = 1; i <= 6; i++) {
+    const borrowDayOffset = 18 + i * 2; // 20 to 30 days ago
+    const borrowDate = new Date(now.getTime() - borrowDayOffset * 24 * 60 * 60 * 1000);
+    const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000); // 6 to 16 days ago (OVERDUE)
+
+    const borrowerId = borrowers[i % borrowers.length];
+    const copy = selectCopy();
+
+    if (copy) {
+      borrowsToSeed.push({
+        user_id: borrowerId,
+        book_copy_id: copy.id,
+        processed_by: profileIds.luminaLibrarian,
+        borrowed_at: borrowDate.toISOString(),
+        due_date: dueDate.toISOString(),
+        status: 'ACTIVE',
+        reminder_sent: true
+      });
+      overdueCopiesToUpdate.push(copy.id);
+    }
+  }
+
   const { data: borrowData, error: borrowError } = await supabase
     .from('borrowing_records')
     .insert(borrowsToSeed)
@@ -1582,11 +1629,107 @@ async function seed() {
     console.error('Error seeding borrowing records:', borrowError);
     return;
   }
-  console.info(`✅ Seeded ${borrowData.length} borrowing records`);
+  console.info(`✅ Seeded ${borrowData.length} borrowing records (120 returned, 12 active, 6 overdue)`);
 
-  
-  
-  // 7. Seed Attendance (155 records total: 150 historical, 5 active today)
+  // Update book_copies status for borrowed copies
+  const allBorrowedCopies = [...activeCopiesToUpdate, ...overdueCopiesToUpdate];
+  if (allBorrowedCopies.length > 0) {
+    await supabase
+      .from('book_copies')
+      .update({ status: 'BORROWED' })
+      .in('id', allBorrowedCopies);
+    console.info(`✅ Updated ${allBorrowedCopies.length} book copies to BORROWED status`);
+  }
+
+  // 6. Seed Reservations (2 READY for pickup, 4 ACTIVE in queue)
+  console.info('🌱 Seeding reservations (READY and ACTIVE)...');
+  const reservationsToSeed: any[] = [];
+  const reservedCopiesToUpdate: string[] = [];
+
+  // 2 READY reservations for immediate pickup
+  const readyBook1 = bookData[0]; // Clean Code
+  const readyCopy1 = bookCopiesMap[readyBook1.title]?.find(c => c.status === 'AVAILABLE' && !allBorrowedCopies.includes(c.id));
+  if (readyCopy1) {
+    reservationsToSeed.push({
+      user_id: profileIds.kayleStudent,
+      book_id: readyBook1.id,
+      copy_id: readyCopy1.id,
+      status: 'READY',
+      queue_position: 1,
+      reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      hold_expires_at: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    reservedCopiesToUpdate.push(readyCopy1.id);
+  }
+
+  const readyBook2 = bookData[1]; // Pragmatic Programmer
+  const readyCopy2 = bookCopiesMap[readyBook2.title]?.find(c => c.status === 'AVAILABLE' && !allBorrowedCopies.includes(c.id));
+  if (readyCopy2) {
+    reservationsToSeed.push({
+      user_id: profileIds.godwynStudent,
+      book_id: readyBook2.id,
+      copy_id: readyCopy2.id,
+      status: 'READY',
+      queue_position: 1,
+      reserved_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      hold_expires_at: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    reservedCopiesToUpdate.push(readyCopy2.id);
+  }
+
+  // 4 ACTIVE reservations in queue for high-demand titles
+  const queuedBook1 = bookData[2]; // Designing Data-Intensive Applications
+  reservationsToSeed.push({
+    user_id: profileIds.jericoSA,
+    book_id: queuedBook1.id,
+    status: 'ACTIVE',
+    queue_position: 1,
+    reserved_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  });
+  reservationsToSeed.push({
+    user_id: profileIds.luminaSA,
+    book_id: queuedBook1.id,
+    status: 'ACTIVE',
+    queue_position: 2,
+    reserved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  });
+
+  const queuedBook2 = bookData[3]; // Structure and Interpretation
+  reservationsToSeed.push({
+    user_id: profileIds.godwynStudent,
+    book_id: queuedBook2.id,
+    status: 'ACTIVE',
+    queue_position: 1,
+    reserved_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  });
+  reservationsToSeed.push({
+    user_id: profileIds.kayleStudent,
+    book_id: queuedBook2.id,
+    status: 'ACTIVE',
+    queue_position: 2,
+    reserved_at: new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString()
+  });
+
+  const { data: resData, error: resError } = await supabase
+    .from('reservations')
+    .insert(reservationsToSeed)
+    .select();
+
+  if (resError) {
+    console.error('Error seeding reservations:', resError);
+  } else {
+    console.info(`✅ Seeded ${resData.length} reservations`);
+  }
+
+  if (reservedCopiesToUpdate.length > 0) {
+    await supabase
+      .from('book_copies')
+      .update({ status: 'RESERVED' })
+      .in('id', reservedCopiesToUpdate);
+    console.info(`✅ Updated ${reservedCopiesToUpdate.length} book copies to RESERVED status`);
+  }
+
+  // 7. Seed Attendance (150 historical + 5 active today)
   console.info('🌱 Generating 150 historical attendance records over 50 days...');
   const attendanceToSeed: any[] = [];
   const attendees = [
@@ -1604,7 +1747,6 @@ async function seed() {
 
   // 150 Historical records
   for (let d = 1; d <= 50; d++) {
-    // Generate checkins for weekdays mostly
     const dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
     const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
     const visitsCount = isWeekend ? 1 : (d % 3 === 0) ? 4 : (d % 3 === 1) ? 3 : 2;
@@ -1627,7 +1769,40 @@ async function seed() {
     }
   }
 
-  
+  // 5 Active check-ins today (Currently in library: check_out_at is NULL)
+  console.info('🌱 Generating 5 active attendance sessions today...');
+  const todayMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 15);
+  attendanceToSeed.push({
+    user_id: profileIds.godwynStudent,
+    check_in_at: new Date(todayMorning.getTime()).toISOString(),
+    check_out_at: null,
+    notes: 'Thesis defense rehearsal'
+  });
+  attendanceToSeed.push({
+    user_id: profileIds.kayleStudent,
+    check_in_at: new Date(todayMorning.getTime() + 45 * 60 * 1000).toISOString(),
+    check_out_at: null,
+    notes: 'CapStone mock testing'
+  });
+  attendanceToSeed.push({
+    user_id: profileIds.jericoSA,
+    check_in_at: new Date(todayMorning.getTime() + 90 * 60 * 1000).toISOString(),
+    check_out_at: null,
+    notes: 'Circulation desk duty'
+  });
+  attendanceToSeed.push({
+    user_id: profileIds.luminaSA,
+    check_in_at: new Date(todayMorning.getTime() + 120 * 60 * 1000).toISOString(),
+    check_out_at: null,
+    notes: 'Catalog shelving'
+  });
+  attendanceToSeed.push({
+    user_id: profileIds.rhedLibrarian,
+    check_in_at: new Date(todayMorning.getTime() - 60 * 60 * 1000).toISOString(),
+    check_out_at: null,
+    notes: 'Library supervision'
+  });
+
   const { error: attendanceError } = await supabase
     .from('attendance')
     .insert(attendanceToSeed);
@@ -1635,10 +1810,138 @@ async function seed() {
   if (attendanceError) {
     console.error('Error seeding attendance:', attendanceError);
   } else {
-    console.info('✅ Seeded completed and active attendance records');
+    console.info(`✅ Seeded ${attendanceToSeed.length} attendance records (150 historical, 5 active today)`);
   }
 
-  console.info('✨ Seeding completed successfully!');
+  // 8. Seed Announcements
+  console.info('🌱 Seeding announcements...');
+  const announcements = [
+    {
+      title: 'Upcoming Capstone Mock Defense & Extended Library Hours',
+      content: 'The library will remain open until 9:00 PM throughout the midterm defense period to support students conducting research and prototype testing.',
+      priority: 'high',
+      is_active: true,
+      starts_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.kennethAdmin
+    },
+    {
+      title: 'New Computer Science & Artificial Intelligence Titles Added',
+      content: 'Over 20 new books covering machine learning, systems architecture, and distributed databases are now available on 2nd Floor Shelf A.',
+      priority: 'medium',
+      is_active: true,
+      starts_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(now.getTime() + 25 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.rhedLibrarian
+    },
+    {
+      title: 'Digital QR Borrowing & Fast Check-In Guidelines',
+      content: 'Students can now present their digital library card QR code on mobile devices for instant checkout at the counter scanner.',
+      priority: 'medium',
+      is_active: true,
+      starts_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.rhedLibrarian
+    },
+    {
+      title: 'Reminder: Quiet Study Zone on 3rd Floor',
+      content: 'Please observe silence in the designated quiet study areas. Group discussions are welcomed in the collaboration pods on the 1st floor.',
+      priority: 'low',
+      is_active: true,
+      starts_at: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: profileIds.rhedLibrarian
+    }
+  ];
+
+  await supabase.from('announcements').insert(announcements);
+  console.info(`✅ Seeded ${announcements.length} announcements`);
+
+  // 9. Seed Reports
+  console.info('🌱 Seeding book condition reports...');
+  const reports = [
+    {
+      book_id: bookData[0].id,
+      user_id: profileIds.kayleStudent,
+      notes: 'Page 45 has a minor binding tear, book remains readable.',
+      status: 'pending'
+    },
+    {
+      book_id: bookData[2].id,
+      user_id: profileIds.godwynStudent,
+      notes: 'Barcode sticker worn, request replacement barcode label.',
+      status: 'pending'
+    },
+    {
+      book_id: bookData[1].id,
+      user_id: profileIds.jericoSA,
+      notes: 'Repaired cover crease on copy ACC-00004.',
+      status: 'resolved'
+    }
+  ];
+
+  await supabase.from('reports').insert(reports);
+  console.info(`✅ Seeded ${reports.length} reports`);
+
+  // 10. Seed Checklist Dropdowns & Items
+  console.info('🌱 Seeding checklist verification items...');
+  const checklistDropdowns = [
+    { type: 'user_role', value: 'super_admin' },
+    { type: 'user_role', value: 'librarian' },
+    { type: 'user_role', value: 'student_assistant' },
+    { type: 'user_role', value: 'student' },
+    { type: 'module', value: 'Circulation' },
+    { type: 'module', value: 'Catalog' },
+    { type: 'module', value: 'Attendance' },
+    { type: 'module', value: 'Security' },
+  ];
+  await supabase.from('checklist_dropdown_options').upsert(checklistDropdowns, { onConflict: 'type,value' });
+
+  const checklistItems = [
+    { problem: 'QR Barcode Scanner Verification', explanation: 'Verify that digital cards can be scanned cleanly at the counter.', user_role: 'librarian', module: 'Circulation', is_completed: true },
+    { problem: 'Overdue Loan Penalty Calculation', explanation: 'Ensure that overdue loans highlight correctly in red across tables.', user_role: 'librarian', module: 'Circulation', is_completed: true },
+    { problem: 'Hold Pickup Expiration Cron Trigger', explanation: 'Verify atomic reservation expiration frees copies automatically.', user_role: 'super_admin', module: 'Security', is_completed: true },
+    { problem: 'Live Gate Attendance Tracker', explanation: 'Confirm active patrons display on the live attendance monitor.', user_role: 'student_assistant', module: 'Attendance', is_completed: true }
+  ];
+  await supabase.from('checklist_items').insert(checklistItems);
+  console.info(`✅ Seeded checklist verification items`);
+
+  // 11. Seed Audit Logs
+  console.info('🌱 Seeding administrative audit logs...');
+  const auditLogs = [
+    {
+      admin_id: profileIds.kennethAdmin,
+      entity_type: 'system_settings',
+      action: 'UPDATE',
+      old_value: { max_borrow_limit: 3 },
+      new_value: { max_borrow_limit: 5 },
+      reason: 'Midterm defense preparation: raised borrowing limits for patrons',
+      details: { ip: '127.0.0.1', client: 'Lumina Web Admin' }
+    },
+    {
+      admin_id: profileIds.rhedLibrarian,
+      entity_type: 'books',
+      entity_id: bookData[0].id,
+      action: 'INSERT',
+      old_value: null,
+      new_value: { title: bookData[0].title, total_copies: 3 },
+      reason: 'New acquisition: Clean Code (Robert C. Martin)',
+      details: { source: 'STI Library Acquisitions' }
+    },
+    {
+      admin_id: profileIds.rhedLibrarian,
+      entity_type: 'library_cards',
+      action: 'ISSUANCE',
+      old_value: null,
+      new_value: { card_number: 'LIB-2026-STU-001', user: 'student@lumina.test' },
+      reason: 'Digital student library card activated for demo access',
+      details: { status: 'ACTIVE' }
+    }
+  ];
+  await supabase.from('audit_logs').insert(auditLogs);
+  console.info(`✅ Seeded ${auditLogs.length} audit logs`);
+
+  console.info('✨ Mock defense dataset seeded successfully with zero errors!');
 }
 
 seed().catch(err => {

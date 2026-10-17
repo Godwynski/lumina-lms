@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Layers, Type, Hash, AlignLeft, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, toSlug } from "@/lib/utils";
 
 
 interface CategoryFormData {
@@ -34,13 +34,6 @@ interface CategoryDialogProps {
   error: string | null;
 }
 
-function toSlug(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
 
 /**
  * Dialog for creating or editing a single category entry.

@@ -1,21 +1,17 @@
 'use client';
 
-import { Suspense } from 'react';
 import { CirculationWizard } from '@/components/circulation/CirculationWizard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CirculationPage() {
   return (
     <div className="w-full space-y-6">
-
-      <Suspense fallback={<CirculationPageSkeleton />}>
-        <CirculationWizard />
-      </Suspense>
+      <CirculationWizard />
     </div>
   );
 }
 
-function CirculationPageSkeleton() {
+export function CirculationPageSkeleton() {
   return (
     <div className="w-full space-y-6 animate-pulse">
       <div className="flex justify-between items-center border-b pb-2.5">
