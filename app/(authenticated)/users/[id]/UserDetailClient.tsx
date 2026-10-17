@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
@@ -20,7 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
-import { Section, FieldGroup } from "@/components/settings/SettingsShared";
+import { Section } from "@/components/settings/SettingsShared";
+import { FieldGroup } from "@/components/common/FieldGroup";
 import { createClient } from "@/lib/supabase/client";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
@@ -161,7 +162,9 @@ export function UserDetailClient({
         permissions: form.permissions,
       });
       toast.success("Account updated successfully");
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to update profile";
       toast.error(msg);
@@ -209,7 +212,9 @@ export function UserDetailClient({
       setForm(prev => ({ ...prev, status: updated.status }));
       setVerificationOpen(false);
       toast.success("Identity verified and account activated!");
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to approve account";
       toast.error(msg);

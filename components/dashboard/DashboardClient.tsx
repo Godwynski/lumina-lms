@@ -93,9 +93,11 @@ export function DashboardClient({
   const debouncedRefresh = useCallback(() => {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     refreshTimeoutRef.current = setTimeout(() => {
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     }, 500);
-  }, [router]);
+  }, [router, startTransition]);
   
   // Unwrap promises using 'use' hook
   const stats = use(statsPromise);

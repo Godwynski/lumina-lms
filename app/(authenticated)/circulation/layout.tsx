@@ -1,7 +1,6 @@
 import { getMe } from '@/lib/auth-helpers';
 import { UserPermissions } from '@/lib/types';
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 
 async function CirculationGuard({ children }: { children: React.ReactNode }) {
   const me = await getMe();
@@ -31,11 +30,9 @@ export default function CirculationLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
-      <CirculationGuard>
-        {children}
-      </CirculationGuard>
-    </Suspense>
+    <CirculationGuard>
+      {children}
+    </CirculationGuard>
   );
 }
 

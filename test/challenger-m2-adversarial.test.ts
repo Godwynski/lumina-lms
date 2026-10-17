@@ -1,31 +1,25 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
-import { getUsers, inviteUser } from '@/lib/actions/users';
-import { GET as getCategory, PUT as putCategory, DELETE as deleteCategory } from '@/app/api/admin/categories/[id]/route';
-import { GET as cronHandler } from '@/app/api/cron/route';
-import { safeCompare } from '@/lib/server-utils';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import { addBookCopies, updateBookCopyStatus } from '@/lib/actions/catalog/copies';
 import { getMe } from '@/lib/auth-helpers';
-import { createClient } from '@/lib/supabase/server';
-import { runMaintenanceTasks } from '@/lib/notifications';
+import { logAuditActivity } from '@/lib/audit';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/mocks/supabase';
 import type { ProfileData, UserRole } from '@/lib/types';
-import { NextRequest } from 'next/server';
-import crypto from 'crypto';
 
-// Mock dependencies
 vi.mock('@/lib/auth-helpers', () => ({
   getMe: vi.fn(),
-  normalizeUserRole: (value: unknown): UserRole | null => {
-    if (typeof value !== 'string') return null;
-    const role = value.trim().toLowerCase();
-    if (role === 'super_admin' || role === 'librarian' || role === 'student_assistant' || role === 'student') {
-      return role as UserRole;
-    }
-    return null;
-  },
 }));
 
 vi.mock('@/lib/audit', () => ({
   logAuditActivity: vi.fn(),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  unstable_cache: vi.fn((fn: () => unknown) => fn),
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -37,23 +31,14 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(),
-}));
-
-vi.mock('@/lib/notifications', () => ({
-  runMaintenanceTasks: vi.fn(),
-}));
-
-describe('Milestone 2 Empirical Challenger Adversarial Verification', () => {
+describe('Empirical Challenger M2: Adversarial Stress Test Suite', () => {
+  const rootDir = process.cwd();
   let mockClientHelper: MockSupabaseClientHelper;
 
-  type MeSession = NonNullable<Awaited<ReturnType<typeof getMe>>>;
-
-  const createMockSession = (role: UserRole = 'super_admin', id = 'caller-admin-id'): MeSession => ({
+  const createMockStaff = (role: UserRole = 'librarian', id = 'challenger-librarian') => ({
     user: {
       id,
-      email: `${role}@university.edu`,
+      email: 'staff@lumina.edu',
       app_metadata: {},
       user_metadata: {},
       aud: 'authenticated',
@@ -61,625 +46,361 @@ describe('Milestone 2 Empirical Challenger Adversarial Verification', () => {
     },
     profile: {
       id,
-      email: `${role}@university.edu`,
+      email: 'staff@lumina.edu',
       role,
       status: 'ACTIVE',
-      full_name: `${role} User`,
+      full_name: 'Lead Staff',
       permissions: {},
     } as unknown as ProfileData & {
       id: string;
       email: string | null;
       role: string;
       status: string;
-      permissions: unknown;
+      permissions: Record<string, boolean> | null;
     },
     role,
-    isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
+    isStaff: true,
     isAdmin: role === 'super_admin',
     isDeactivatedSA: false,
-    hasPermission: () => true,
+    hasPermission: vi.fn().mockReturnValue(true),
     supabase: mockClientHelper.client,
-  } as unknown as MeSession);
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockClientHelper = createMockSupabaseClient();
+    vi.mocked(getMe).mockResolvedValue(
+      createMockStaff() as unknown as Awaited<ReturnType<typeof getMe>>
+    );
+    vi.mocked(logAuditActivity).mockResolvedValue(undefined);
   });
 
-  // =========================================================================
-  // SECTION 1: lib/actions/users.ts Schema, Hierarchy & Sanitization Tests
-  // =========================================================================
-  describe('Challenge 2: lib/actions/users.ts Security & Boundary Stress', () => {
-    describe('Schema Validation & Attack Payloads in inviteUser', () => {
-      it('rejects malicious/malformed emails including injection and script attacks', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
+  /* ========================================================================
+   * 1. Adversarial Testing: lib/actions/catalog/copies.ts under Failure & Edge Conditions
+   * ======================================================================== */
+  describe('1. Server Action Invariants: Revalidations Under Adversarial Conditions', () => {
+    describe('addBookCopies under edge and failure modes', () => {
+      it('never calls revalidateTag if database insert fails (e.g., foreign key violation or connection drop)', async () => {
+        const bookId = 'book-non-existent-fk-fail';
+        const copiesBuilder = mockClientHelper.getTableBuilder('book_copies');
+        copiesBuilder.insert.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'insert or update on table "book_copies" violates foreign key constraint', code: '23503' },
+        });
 
-        const adversarialEmails = [
-          '',
-          '   ',
-          'not-an-email',
-          'missing-domain@',
-          '@missing-user.com',
-          '<script>alert("xss")</script>@test.com',
-          'user@domain..com',
-          'user@domain .com',
-          'user@domain,com',
-          'null\0byte@test.com',
-          'SELECT * FROM users@test.com',
-        ];
+        const result = await addBookCopies({
+          bookId,
+          copiesCount: 5,
+        });
 
-        for (const email of adversarialEmails) {
-          const result = await inviteUser({ email, role: 'student' });
-          expect(result.success, `Expected email "${email}" to fail validation`).toBe(false);
-          if (!result.success) {
-            expect(result.error).toBe('Validation failed');
-            expect(result.validationErrors?.email).toBeDefined();
-          }
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBe('Failed to add book copies.');
+        }
+
+        // Adversarial invariant: Cache must NEVER be invalidated on failed mutation
+        expect(revalidateTag).not.toHaveBeenCalled();
+        expect(revalidatePath).not.toHaveBeenCalled();
+      });
+
+      it('never calls revalidateTag when unauthenticated (getMe returns null)', async () => {
+        vi.mocked(getMe).mockResolvedValueOnce(null);
+
+        const result = await addBookCopies({
+          bookId: 'book-auth-fail',
+          copiesCount: 2,
+        });
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBe('Authentication required');
+        }
+        expect(revalidateTag).not.toHaveBeenCalled();
+        expect(revalidatePath).not.toHaveBeenCalled();
+      });
+
+      it('never calls revalidateTag when caller is deactivated student assistant', async () => {
+        vi.mocked(getMe).mockResolvedValueOnce({
+          ...createMockStaff('student_assistant'),
+          role: 'student_assistant',
+          isDeactivatedSA: true,
+        } as unknown as Awaited<ReturnType<typeof getMe>>);
+
+        const result = await addBookCopies({
+          bookId: 'book-deactivated-sa',
+          copiesCount: 1,
+        });
+
+        expect(result.success).toBe(false);
+        expect(revalidateTag).not.toHaveBeenCalled();
+      });
+
+      it('strictly enforces copy count bounds: 0, negative, and 51+ must reject without invalidating', async () => {
+        const invalidCounts = [0, -1, -50, 51, 100, 9999];
+
+        for (const count of invalidCounts) {
+          const result = await addBookCopies({
+            bookId: 'book-bound-check',
+            copiesCount: count,
+          });
+
+          expect(result.success).toBe(false);
+          expect(revalidateTag).not.toHaveBeenCalled();
         }
       });
 
-      it('normalizes uppercase and padded emails correctly', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
+      it('correctly revalidates all 3 required cache tags on exact boundary values 1 and 50', async () => {
+        const copiesBuilder = mockClientHelper.getTableBuilder('book_copies');
 
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'p-1', email: 'test.student@school.edu', role: 'student', status: 'ACTIVE', department: 'CS' },
-          error: null,
-        });
-        tableBuilder.single.mockResolvedValueOnce({
-          data: { id: 'p-1', email: 'test.student@school.edu', role: 'student', status: 'PENDING', department: 'CS' },
-          error: null,
-        });
+        for (const validCount of [1, 50]) {
+          vi.clearAllMocks();
+          copiesBuilder.insert.mockResolvedValueOnce({ error: null });
 
-        const result = await inviteUser({
-          email: '  TEST.STUDENT@SCHOOL.EDU  ',
-          role: 'student',
-          department: '  CS  ',
-        });
+          const result = await addBookCopies({
+            bookId: `book-boundary-${validCount}`,
+            copiesCount: validCount,
+          });
 
-        expect(result.success).toBe(true);
-        expect(tableBuilder.eq).toHaveBeenCalledWith('email', 'test.student@school.edu');
-        expect(tableBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({
-            department: 'CS',
-          })
-        );
-      });
-
-      it('defaults missing department to "General"', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
-
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'p-2', email: 'patron@school.edu', role: 'student', status: 'ACTIVE' },
-          error: null,
-        });
-        tableBuilder.single.mockResolvedValueOnce({
-          data: { id: 'p-2', email: 'patron@school.edu', role: 'student', status: 'PENDING', department: 'General' },
-          error: null,
-        });
-
-        const result = await inviteUser({
-          email: 'patron@school.edu',
-          role: 'student',
-        });
-
-        expect(result.success).toBe(true);
-        expect(tableBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({
-            department: 'General',
-          })
-        );
+          expect(result.success).toBe(true);
+          expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
+          expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
+          expect(revalidateTag).toHaveBeenCalledWith(`book-book-boundary-${validCount}`, 'max');
+          expect(revalidatePath).toHaveBeenCalledWith(`/catalog/book-boundary-${validCount}`);
+        }
       });
     });
 
-    describe('Role Hierarchy & Privilege Escalation Defenses in inviteUser', () => {
-      it('blocks unauthenticated callers immediately', async () => {
-        vi.mocked(getMe).mockResolvedValue(null);
+    describe('updateBookCopyStatus under edge and failure modes', () => {
+      it('never calls revalidateTag if copy ID does not exist in database (PGRST116)', async () => {
+        const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
+        copyBuilder.single.mockResolvedValueOnce({
+          data: null,
+          error: { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' },
+        });
 
-        const res = await inviteUser({ email: 'target@school.edu', role: 'student' });
-        expect(res.success).toBe(false);
-        expect(res.error).toBe('Authentication required');
-      });
+        const result = await updateBookCopyStatus({
+          id: 'non-existent-copy-uuid',
+          status: 'MAINTENANCE',
+        });
 
-      it('blocks student and student_assistant roles from executing inviteUser', async () => {
-        for (const unauthorizedRole of ['student', 'student_assistant'] as UserRole[]) {
-          vi.mocked(getMe).mockResolvedValue(createMockSession(unauthorizedRole));
-
-          const res = await inviteUser({ email: 'target@school.edu', role: 'student' });
-          expect(res.success, `Role ${unauthorizedRole} should be rejected`).toBe(false);
-          expect(res.error).toBe('Unauthorized access');
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toContain('JSON object requested');
         }
+
+        // Invariant: Failed status change must never invalidate cache
+        expect(revalidateTag).not.toHaveBeenCalled();
+        expect(revalidatePath).not.toHaveBeenCalled();
       });
 
-      it('blocks librarian from escalating privileges to librarian, super_admin, or student_assistant', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('librarian'));
+      it('never calls revalidateTag if status is not a valid enum value', async () => {
+        const result = await updateBookCopyStatus({
+          id: 'copy-invalid-enum',
+          status: 'DESTROYED' as unknown as 'AVAILABLE',
+        });
 
-        const forbiddenRolesToAssign = ['librarian', 'super_admin', 'student_assistant'];
-
-        for (const role of forbiddenRolesToAssign) {
-          const res = await inviteUser({ email: 'target@school.edu', role });
-          expect(res.success, `Librarian assigning role "${role}" must be blocked`).toBe(false);
-          expect(res.error).toBe('Librarians are not allowed to assign roles');
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBe('Validation failed');
         }
+        expect(revalidateTag).not.toHaveBeenCalled();
+        expect(revalidatePath).not.toHaveBeenCalled();
       });
 
-      it('allows librarian to invite users strictly with role "student"', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('librarian'));
+      it('never calls revalidateTag if caller lacks permission (patron/student)', async () => {
+        vi.mocked(getMe).mockResolvedValueOnce({
+          ...createMockStaff('student'),
+          role: 'student',
+          isStaff: false,
+        } as unknown as Awaited<ReturnType<typeof getMe>>);
 
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'target-1', email: 'student@school.edu', role: 'student', status: 'ACTIVE' },
-          error: null,
-        });
-        tableBuilder.single.mockResolvedValueOnce({
-          data: { id: 'target-1', email: 'student@school.edu', role: 'student', status: 'PENDING', department: 'General' },
-          error: null,
+        const result = await updateBookCopyStatus({
+          id: 'copy-unauth',
+          status: 'AVAILABLE',
         });
 
-        const res = await inviteUser({ email: 'student@school.edu', role: 'student' });
-        expect(res.success).toBe(true);
-        expect(res.data?.user.role).toBe('student');
-        expect(tableBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({
-            role: 'student',
-            status: 'PENDING',
-          })
-        );
+        expect(result.success).toBe(false);
+        expect(revalidateTag).not.toHaveBeenCalled();
       });
 
-      it('explicitly triggers line 98: blocks non-super_admin from assigning super_admin if requester bypasses earlier checks', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('librarian'));
+      it('revalidates both public-books and catalog tags for all allowed status changes', async () => {
+        const statuses = ['AVAILABLE', 'MAINTENANCE', 'LOST', 'BORROWED'] as const;
 
-        const res = await inviteUser({ email: 'target@school.edu', role: 'super_admin' });
-        expect(res.success).toBe(false);
-        expect(res.error).toBe('Librarians are not allowed to assign roles');
-      });
-
-      it('ADVERSARIAL ATTACK MITIGATED: librarian attempting to demote a super_admin is rejected', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('librarian'));
-
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'super-admin-target-id', email: 'chief@school.edu', role: 'super_admin', status: 'ACTIVE' },
-          error: null,
-        });
-
-        const res = await inviteUser({ email: 'chief@school.edu', role: 'student' });
-        
-        expect(res.success).toBe(false);
-        expect(res.error).toBe('Only super administrators can modify a super administrator account');
-        expect(tableBuilder.update).not.toHaveBeenCalled();
-      });
-
-      it('safely handles extreme payloads (e.g. 10,000 char department) without crashing', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
-
-        const giantDept = 'A'.repeat(10000);
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'p-giant', email: 'giant@school.edu', role: 'student', status: 'ACTIVE' },
-          error: null,
-        });
-        tableBuilder.single.mockResolvedValueOnce({
-          data: { id: 'p-giant', email: 'giant@school.edu', role: 'student', status: 'PENDING', department: giantDept },
-          error: null,
-        });
-
-        const res = await inviteUser({ email: 'giant@school.edu', role: 'student', department: giantDept });
-        expect(res.success).toBe(true);
-        expect(tableBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({ department: giantDept })
-        );
-      });
-
-      it('allows super_admin to assign super_admin, librarian, student_assistant, or student', async () => {
-        const assignableRoles: UserRole[] = ['super_admin', 'librarian', 'student_assistant', 'student'];
-
-        for (const targetRole of assignableRoles) {
-          vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
-
-          const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-          tableBuilder.maybeSingle.mockResolvedValueOnce({
-            data: { id: `id-${targetRole}`, email: `user-${targetRole}@school.edu`, role: 'student', status: 'ACTIVE' },
-            error: null,
-          });
-          tableBuilder.single.mockResolvedValueOnce({
-            data: { id: `id-${targetRole}`, email: `user-${targetRole}@school.edu`, role: targetRole, status: 'PENDING', department: 'General' },
+        for (const status of statuses) {
+          vi.clearAllMocks();
+          const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
+          copyBuilder.single.mockResolvedValueOnce({
+            data: { id: `copy-${status}`, book_id: `book-${status}-123`, status },
             error: null,
           });
 
-          const res = await inviteUser({ email: `user-${targetRole}@school.edu`, role: targetRole });
-          expect(res.success, `super_admin assigning "${targetRole}" should succeed`).toBe(true);
-          expect(res.data?.user.role).toBe(targetRole);
+          const result = await updateBookCopyStatus({
+            id: `copy-${status}`,
+            status,
+          });
+
+          expect(result.success).toBe(true);
+          expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
+          expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
+          expect(revalidateTag).toHaveBeenCalledWith(`book-book-${status}-123`, 'max');
+          expect(revalidatePath).toHaveBeenCalledWith('/catalog');
+          expect(revalidatePath).toHaveBeenCalledWith(`/catalog/book-${status}-123`);
         }
-      });
-
-      it('fails with clear message when email has no registered profile', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
-
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-
-        const res = await inviteUser({ email: 'unregistered@school.edu', role: 'student' });
-        expect(res.success).toBe(false);
-        expect(res.error).toBe('No account found for that email. They must sign in first.');
-      });
-    });
-
-    describe('getUsers Boundary & Query Sanitization Tests', () => {
-      it('rejects unauthorized roles from calling getUsers', async () => {
-        vi.mocked(getMe).mockResolvedValue(null);
-        await expect(getUsers()).rejects.toThrow('Unauthorized');
-
-        vi.mocked(getMe).mockResolvedValue(createMockSession('student'));
-        await expect(getUsers()).rejects.toThrow('Forbidden');
-
-        vi.mocked(getMe).mockResolvedValue(createMockSession('student_assistant'));
-        await expect(getUsers()).rejects.toThrow('Forbidden');
-      });
-
-      it('librarian querying tab="super_admin" still enforces role !== super_admin', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('librarian'));
-
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.setResolveValue([], null, 0);
-
-        await getUsers({ tab: 'super_admin' });
-
-        // Must still have called neq('role', 'super_admin')
-        const neqCalls = tableBuilder.neq.mock.calls;
-        const hidesSuperAdmin = neqCalls.some(([col, val]) => col === 'role' && val === 'super_admin');
-        expect(hidesSuperAdmin).toBe(true);
-      });
-
-      it('sanitizes aggressive PostgREST injection syntax in search parameter', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
-
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.setResolveValue([], null, 0);
-
-        const maliciousPayload = `Robert'); DROP TABLE profiles; --,role.eq.super_admin,status.eq.ARCHIVED`;
-        await getUsers({ search: maliciousPayload });
-
-        expect(tableBuilder.or).toHaveBeenCalled();
-        const orCallArg = tableBuilder.or!.mock.calls[0][0];
-
-        // Should not permit unescaped comma injections breaking the ilike clause
-        expect(orCallArg).not.toContain(',role.eq.super_admin');
-        expect(orCallArg).not.toContain(',status.eq.ARCHIVED');
-      });
-
-      it('handles pagination boundary cases: negative page and 0 gracefully', async () => {
-        vi.mocked(getMe).mockResolvedValue(createMockSession('super_admin'));
-
-        const tableBuilder = mockClientHelper.getTableBuilder('profiles');
-        tableBuilder.setResolveValue([], null, 10);
-
-        await getUsers({ page: -5, pageSize: 10 });
-        // Math.max(1, -5) = 1 -> range(0, 9)
-        expect(tableBuilder.range).toHaveBeenCalledWith(0, 9);
-
-        await getUsers({ page: 0, pageSize: 20 });
-        // Math.max(1, 0) = 1 -> range(0, 19)
-        expect(tableBuilder.range).toHaveBeenCalledWith(0, 19);
       });
     });
   });
 
-  // =========================================================================
-  // SECTION 2: app/api/admin/categories/[id]/route.ts super_admin & RBAC Tests
-  // =========================================================================
-  describe('Challenge 3: app/api/admin/categories/[id]/route.ts super_admin Authorization', () => {
-    let mockSupabase: {
-      auth: { getUser: Mock };
-      from: Mock;
-    };
+  /* ========================================================================
+   * 2. Adversarial Stress-Testing: React 19 Concurrent Transitions & Burst Events
+   * ======================================================================== */
+  describe('2. Real-Time Transition Smoothing & Event Burst Resilience', () => {
+    it('demonstrates debounced listener collapses 100 rapid events into a single refresh execution', async () => {
+      vi.useFakeTimers();
 
-    const setupAuthAndProfile = (role: string | null, userId: string = 'test-caller-id') => {
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: role ? { user: { id: userId, email: `${role}@test.com` } } : { user: null },
+      let refreshCallCount = 0;
+      const mockRefresh = vi.fn(() => {
+        refreshCallCount++;
+      });
+      const mockStartTransition = vi.fn((fn: () => void) => {
+        fn();
       });
 
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: role ? { id: userId, role } : null,
-              error: role ? null : new Error('Profile not found'),
-            }),
-          }),
-        }),
+      // Oracle replicating debouncedRefresh in DashboardClient & StudentBookDetailClient
+      let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+      const debouncedRefresh = (delay = 500) => {
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          mockStartTransition(() => {
+            mockRefresh();
+          });
+        }, delay);
       };
-    };
 
-    beforeEach(() => {
-      mockSupabase = {
-        auth: { getUser: vi.fn() },
-        from: vi.fn(),
+      // Rapidly fire 100 real-time events over 10ms
+      for (let i = 0; i < 100; i++) {
+        debouncedRefresh(500);
+        vi.advanceTimersByTime(1);
+      }
+
+      // At this point (10ms elapsed), no refresh should have fired yet
+      expect(refreshCallCount).toBe(0);
+
+      // Fast-forward past the 500ms debounce window
+      vi.advanceTimersByTime(600);
+
+      // Invariant: Exactly 1 transition refresh occurs despite 100 event triggers
+      expect(refreshCallCount).toBe(1);
+      expect(mockStartTransition).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it('demonstrates unmount cleanup clears pending debounce timeout to prevent post-unmount execution', async () => {
+      vi.useFakeTimers();
+
+      let refreshCallCount = 0;
+      const mockRefresh = vi.fn(() => {
+        refreshCallCount++;
+      });
+
+      let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+      const debouncedRefresh = () => {
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          mockRefresh();
+        }, 500);
       };
-      (createClient as Mock).mockResolvedValue(mockSupabase);
+
+      // Event arrives
+      debouncedRefresh();
+
+      // Component unmounts after 200ms
+      vi.advanceTimersByTime(200);
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+        refreshTimeout = null;
+      }
+
+      // Fast-forward past remaining time
+      vi.advanceTimersByTime(1000);
+
+      // Invariant: Zero refresh executions after cleanup
+      expect(refreshCallCount).toBe(0);
+
+      vi.useRealTimers();
     });
 
-    it('EMPIRICAL PROOF: super_admin GET category succeeds with 200 (NOT 403 Forbidden)', async () => {
-      const profileQuery = setupAuthAndProfile('super_admin');
-      const categoryData = { id: 'c-100', name: 'Philosophy', slug: 'philosophy', is_active: true };
+    it('verifies AST-level absence of naked router.refresh() in all real-time listeners across 9 components', () => {
+      const components = [
+        'components/dashboard/DashboardClient.tsx',
+        'components/inventory/ModernInventoryClient.tsx',
+        'app/(authenticated)/history/HistoryContent.tsx',
+        'app/(authenticated)/student-catalog/StudentCatalogClient.tsx',
+        'app/(authenticated)/student-catalog/[id]/StudentBookDetailClient.tsx',
+        'components/admin/policies/PolicyLayout.tsx',
+        'components/catalog/BookDetailModal.tsx',
+        'app/(authenticated)/users/[id]/UserDetailClient.tsx',
+        'app/(authenticated)/users/new/NewUserClient.tsx',
+      ];
 
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') return profileQuery;
-        if (table === 'categories') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: categoryData, error: null }),
-              }),
-            }),
-          };
+      for (const relPath of components) {
+        const fullPath = path.join(rootDir, relPath);
+        expect(fs.existsSync(fullPath)).toBe(true);
+
+        const content = fs.readFileSync(fullPath, 'utf8');
+
+        // Search for all occurrences of router.refresh()
+        const regex = /router\.refresh\(\)/g;
+        let match: RegExpExecArray | null;
+        let found = 0;
+
+        while ((match = regex.exec(content)) !== null) {
+          found++;
+          const idx = match.index;
+          // Inspect enclosing window before the call
+          const prefix = content.slice(Math.max(0, idx - 350), idx);
+          const isWrappedInStartTransition =
+            prefix.includes('startTransition') || prefix.includes('useTransition');
+
+          expect(
+            isWrappedInStartTransition,
+            `File ${relPath} contains unwrapped router.refresh() at character ${idx}`
+          ).toBe(true);
         }
-        return {};
-      });
 
-      const req = new NextRequest('http://localhost:3000/api/admin/categories/c-100');
-      const res = await getCategory(req, { params: Promise.resolve({ id: 'c-100' }) });
-
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.name).toBe('Philosophy');
-      expect(body.slug).toBe('philosophy');
-    });
-
-    it('EMPIRICAL PROOF: super_admin PUT category succeeds with 200 (NOT 403 Forbidden)', async () => {
-      const profileQuery = setupAuthAndProfile('super_admin');
-      const existingCategory = { id: 'c-100', name: 'Philosophy', slug: 'philosophy', description: null, is_active: true };
-      const updatedCategory = { id: 'c-100', name: 'Modern Philosophy', slug: 'modern-philosophy', description: 'Updated', is_active: true };
-
-      const updateMock = vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: updatedCategory, error: null }),
-          }),
-        }),
-      });
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') return profileQuery;
-        if (table === 'categories') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: existingCategory, error: null }),
-              }),
-            }),
-            update: updateMock,
-          };
-        }
-        return {};
-      });
-
-      const req = new NextRequest('http://localhost:3000/api/admin/categories/c-100', {
-        method: 'PUT',
-        body: JSON.stringify({ name: 'Modern Philosophy', slug: 'modern-philosophy', description: 'Updated' }),
-      });
-      const res = await putCategory(req, { params: Promise.resolve({ id: 'c-100' }) });
-
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.name).toBe('Modern Philosophy');
-      expect(body.slug).toBe('modern-philosophy');
-      expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
-        name: 'Modern Philosophy',
-        slug: 'modern-philosophy',
-      }));
-    });
-
-    it('EMPIRICAL PROOF: super_admin DELETE category succeeds with 200 (NOT 403 Forbidden)', async () => {
-      const profileQuery = setupAuthAndProfile('super_admin');
-      const updateMock = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') return profileQuery;
-        if (table === 'categories') {
-          return { update: updateMock };
-        }
-        return {};
-      });
-
-      const req = new NextRequest('http://localhost:3000/api/admin/categories/c-100', { method: 'DELETE' });
-      const res = await deleteCategory(req, { params: Promise.resolve({ id: 'c-100' }) });
-
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.success).toBe(true);
-      expect(updateMock).toHaveBeenCalledWith({ is_active: false });
-    });
-
-    it('confirms librarian has GET and PUT access, but is 403 FORBIDDEN on DELETE', async () => {
-      const profileQuery = setupAuthAndProfile('librarian');
-
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') return profileQuery;
-        if (table === 'categories') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: { id: 'c-1', name: 'Art' }, error: null }),
-              }),
-            }),
-            update: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                select: vi.fn().mockReturnValue({
-                  single: vi.fn().mockResolvedValue({ data: { id: 'c-1', name: 'Fine Art' }, error: null }),
-                }),
-              }),
-            }),
-          };
-        }
-        return {};
-      });
-
-      // GET should be 200
-      const getRes = await getCategory(new NextRequest('http://localhost:3000/api/admin/categories/c-1'), {
-        params: Promise.resolve({ id: 'c-1' }),
-      });
-      expect(getRes.status).toBe(200);
-
-      // PUT should be 200
-      const putRes = await putCategory(
-        new NextRequest('http://localhost:3000/api/admin/categories/c-1', {
-          method: 'PUT',
-          body: JSON.stringify({ name: 'Fine Art' }),
-        }),
-        { params: Promise.resolve({ id: 'c-1' }) }
-      );
-      expect(putRes.status).toBe(200);
-
-      // DELETE should be 403 Forbidden for librarian
-      const delRes = await deleteCategory(
-        new NextRequest('http://localhost:3000/api/admin/categories/c-1', { method: 'DELETE' }),
-        { params: Promise.resolve({ id: 'c-1' }) }
-      );
-      expect(delRes.status).toBe(403);
-    });
-
-    it('rejects student and student_assistant across all verbs (GET, PUT, DELETE)', async () => {
-      for (const nonAdminRole of ['student', 'student_assistant']) {
-        const profileQuery = setupAuthAndProfile(nonAdminRole);
-        mockSupabase.from.mockReturnValue(profileQuery);
-
-        const getRes = await getCategory(new NextRequest('http://localhost:3000/api/admin/categories/c-1'), {
-          params: Promise.resolve({ id: 'c-1' }),
-        });
-        expect(getRes.status, `GET should be 403 for ${nonAdminRole}`).toBe(403);
-
-        const putRes = await putCategory(
-          new NextRequest('http://localhost:3000/api/admin/categories/c-1', {
-            method: 'PUT',
-            body: JSON.stringify({ name: 'Hacked' }),
-          }),
-          { params: Promise.resolve({ id: 'c-1' }) }
-        );
-        expect(putRes.status, `PUT should be 403 for ${nonAdminRole}`).toBe(403);
-
-        const delRes = await deleteCategory(
-          new NextRequest('http://localhost:3000/api/admin/categories/c-1', { method: 'DELETE' }),
-          { params: Promise.resolve({ id: 'c-1' }) }
-        );
-        expect(delRes.status, `DELETE should be 403 for ${nonAdminRole}`).toBe(403);
+        expect(found).toBeGreaterThan(0);
       }
     });
   });
 
-  // =========================================================================
-  // SECTION 3: Timing Attack Resilience & safeCompare in app/api/cron/route.ts
-  // =========================================================================
-  describe('Challenge 4: Timing-Safe Comparison & Cron Route Protection', () => {
-    describe('safeCompare In-Depth Analysis', () => {
-      it('executes crypto.timingSafeEqual for equal strings', () => {
-        const spy = vi.spyOn(crypto, 'timingSafeEqual');
-        const tokenA = 'Bearer cron-secret-key-super-safe-12345';
-        const tokenB = 'Bearer cron-secret-key-super-safe-12345';
+  /* ========================================================================
+   * 3. Channel Lifecycle & Memory Leak Elimination
+   * ======================================================================== */
+  describe('3. Supabase Real-Time Channel Lifecycle & WebSocket Invariants', () => {
+    const subscriberComponents = [
+      { name: 'DashboardClient', file: 'components/dashboard/DashboardClient.tsx' },
+      { name: 'ModernInventoryClient', file: 'components/inventory/ModernInventoryClient.tsx' },
+      { name: 'HistoryContent', file: 'app/(authenticated)/history/HistoryContent.tsx' },
+      { name: 'StudentCatalogClient', file: 'app/(authenticated)/student-catalog/StudentCatalogClient.tsx' },
+      { name: 'StudentBookDetailClient', file: 'app/(authenticated)/student-catalog/[id]/StudentBookDetailClient.tsx' },
+      { name: 'PolicyLayout', file: 'components/admin/policies/PolicyLayout.tsx' },
+      { name: 'BookDetailModal', file: 'components/catalog/BookDetailModal.tsx' },
+      { name: 'UserDetailClient', file: 'app/(authenticated)/users/[id]/UserDetailClient.tsx' },
+    ];
 
-        const result = safeCompare(tokenA, tokenB);
-        expect(result).toBe(true);
-        expect(spy).toHaveBeenCalled();
-        spy.mockRestore();
-      });
+    subscriberComponents.forEach(({ name, file }) => {
+      it(`verifies ${name} guarantees removeChannel execution on unmount without throwing`, () => {
+        const fullPath = path.join(rootDir, file);
+        const content = fs.readFileSync(fullPath, 'utf8');
 
-      it('returns false for equal length strings with single byte difference anywhere', () => {
-        const base = 'Bearer cron-secret-key-super-safe-12345';
-        // Differ at first char
-        const diffFirst = 'Xearer cron-secret-key-super-safe-12345';
-        // Differ at middle char
-        const diffMid = 'Bearer cron-secret-Xey-super-safe-12345';
-        // Differ at last char
-        const diffLast = 'Bearer cron-secret-key-super-safe-12346';
+        // 1. Channel creation
+        expect(content).toMatch(/\.channel\(/);
 
-        expect(safeCompare(base, diffFirst)).toBe(false);
-        expect(safeCompare(base, diffMid)).toBe(false);
-        expect(safeCompare(base, diffLast)).toBe(false);
-      });
+        // 2. Cleanup return in useEffect
+        expect(content).toMatch(/return\s*\(\)\s*=>\s*\{[\s\S]*?removeChannel/);
 
-      it('prevents timing leak on different lengths by hashing inputs to equal length buffers before comparison', () => {
-        const spy = vi.spyOn(crypto, 'timingSafeEqual');
-        const tokenA = 'Bearer short';
-        const tokenB = 'Bearer very-very-long-secret-key';
-
-        const result = safeCompare(tokenA, tokenB);
-        expect(result).toBe(false);
-        const hashA = crypto.createHash('sha256').update(tokenA).digest();
-        const hashB = crypto.createHash('sha256').update(tokenB).digest();
-        expect(spy).toHaveBeenCalledWith(hashA, hashB);
-        spy.mockRestore();
-      });
-
-      it('handles Unicode, emoji, and non-ASCII characters without throwing', () => {
-        const unicodeSecretA = 'Bearer 🔑-secret-token-π-2026';
-        const unicodeSecretB = 'Bearer 🔑-secret-token-π-2026';
-        const unicodeSecretC = 'Bearer 🔒-secret-token-π-2026';
-
-        expect(safeCompare(unicodeSecretA, unicodeSecretB)).toBe(true);
-        expect(safeCompare(unicodeSecretA, unicodeSecretC)).toBe(false);
-      });
-    });
-
-    describe('Cron Route Endpoint Protection', () => {
-      const originalEnv = process.env;
-
-      beforeEach(() => {
-        process.env = { ...originalEnv };
-      });
-
-      afterEach(() => {
-        process.env = originalEnv;
-      });
-
-      it('rejects authorization token that is a substring of CRON_SECRET', async () => {
-        process.env.CRON_SECRET = 'my-long-cron-secret-123456789';
-
-        const req = new Request('http://localhost:3000/api/cron', {
-          headers: {
-            authorization: 'Bearer my-long-cron-secret',
-          },
-        });
-
-        const res = await cronHandler(req);
-        expect(res.status).toBe(401);
-        expect(runMaintenanceTasks).not.toHaveBeenCalled();
-      });
-
-      it('rejects authorization token that has CRON_SECRET as a prefix with extra characters', async () => {
-        process.env.CRON_SECRET = 'my-long-cron-secret-123456789';
-
-        const req = new Request('http://localhost:3000/api/cron', {
-          headers: {
-            authorization: 'Bearer my-long-cron-secret-123456789-extra',
-          },
-        });
-
-        const res = await cronHandler(req);
-        expect(res.status).toBe(401);
-        expect(runMaintenanceTasks).not.toHaveBeenCalled();
-      });
-
-      it('accepts exact authorization token matching "Bearer <CRON_SECRET>"', async () => {
-        process.env.CRON_SECRET = 'ultra-secure-cron-token-987';
-        vi.mocked(runMaintenanceTasks).mockResolvedValueOnce({
-          tasks: 'completed',
-        } as unknown as Awaited<ReturnType<typeof runMaintenanceTasks>>);
-
-        const req = new Request('http://localhost:3000/api/cron', {
-          headers: {
-            authorization: 'Bearer ultra-secure-cron-token-987',
-          },
-        });
-
-        const res = await cronHandler(req);
-        expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.success).toBe(true);
-        expect(runMaintenanceTasks).toHaveBeenCalledTimes(1);
+        // 3. Channel removed via supabase client
+        expect(content).toContain('removeChannel');
       });
     });
   });

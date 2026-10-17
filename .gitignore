@@ -1,6 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -10,49 +10,91 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# Next.js & Build Outputs
 /.next/
 /out/
-
-# production
 /build
+/dist
+/.turbo/
+.cache/
 
-# misc
-.DS_Store
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Testing & Coverage
+/coverage/
+/.nyc_output/
+/playwright-report/
+/test-results/
+vitest.report.json
+blob-report/
+
+# Environment Variables & Credentials
+.env
+.env*.local
+.env.production
 *.pem
-/.agents/
+*.key
+*.cert
+*.crt
 
-# debug
+# Vercel & Deployment
+.vercel
+
+# Agent, Tooling & Knowledge Graph Artifacts
+/graphify-out/
+/.graphify/
+/.agents/
+/.impeccable/
+/.impeccable-live/
+.impeccable-live.json
+/scratch/
+/.superpowers/
+/skill-observations/
+
+# Logs, Dumps & Diagnostics
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*.local
-.env
-
-# vercel
-.vercel
-
-# logs & reports
+lerna-debug.log*
 *_output.txt
 lint-report.txt
 node_procs.csv
 procs.csv
 procs.json
 dump.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
 
-# testing
-/playwright-report/
-/test-results/
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# uploads (local dev)
+# Local Uploads & Static Dev Storage
 /uploads/
+/storage/
+
+# Editor & IDE Configs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.sublime-project
+*.sublime-workspace
+
+# Operating System & Temporary Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~

@@ -254,7 +254,9 @@ export function ModernInventoryClient({
           logs: res.logs || []
         });
         toast.success(`Import complete! Created ${res.imported} books, added ${res.copiesAdded} copies.`);
-        router.refresh();
+        startTransition(() => {
+          router.refresh();
+        });
       } else {
         toast.error("Batch import failed.");
       }
@@ -436,21 +438,27 @@ export function ModernInventoryClient({
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'books' }, 
         () => {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'book_copies' },
         () => {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reservations' },
         () => {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .subscribe();
@@ -459,7 +467,7 @@ export function ModernInventoryClient({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [router, startTransition]);
 
   // Centralized navigation helper
   const updateParams = (updates: Record<string, string | number | null>) => {

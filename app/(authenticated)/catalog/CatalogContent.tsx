@@ -2,12 +2,7 @@
 
 import { use } from 'react';
 import { Book, Category } from '@/lib/types';
-import dynamic from 'next/dynamic';
-
-const ModernInventoryClient = dynamic(() => import('@/components/inventory/ModernInventoryClient').then(mod => mod.ModernInventoryClient), {
-  ssr: false,
-  loading: () => <CatalogSkeleton />,
-});
+import { ModernInventoryClient } from '@/components/inventory/ModernInventoryClient';
 
 interface CatalogContentProps {
   dataPromise: Promise<{ data: Book[]; count: number }>;

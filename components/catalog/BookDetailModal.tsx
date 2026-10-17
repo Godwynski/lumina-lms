@@ -4,15 +4,10 @@ import { useState, useEffect, useTransition, useCallback, useMemo } from 'react'
 import Image from 'next/image';
 import {
   MapPin,
-  CheckCircle2,
-  Clock,
-  Ticket,
   Tag,
   Hash,
   Layers,
-  Sparkles,
   Library,
-  XCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
@@ -26,45 +21,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { getBookAdminDetails, getBookPublicDetails } from '@/lib/actions/catalog';
 import { cn, getCategoryName } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { AdminManagementContent } from './AdminManagementContent';
-
+import type { BookDetail, AvailabilityStatus } from './types';
+import { CopyMeter } from './CopyMeter';
+import { MetaTile } from './MetaTile';
+import { StatusBanner } from './StatusBanner';
+import { CancelReservationDialog } from './CancelReservationDialog';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-interface BookDetail {
-  id: string;
-  title: string;
-  author: string;
-  isbn: string | null;
-  cover_url: string | null;
-  section: string | null;
-  location: string | null;
-  available_copies: number;
-  total_copies: number;
-  categories: { name?: string } | { name?: string }[] | null;
-  tags: string[] | null;
-  dewey_decimal: string | null;
-}
-
-interface AvailabilityStatus {
-  nextAvailableDate: string | null;
-  hasReservation: boolean;
-  isReady: boolean;
-  queuePosition: number | null;
-  holdExpiresAt: string | null;
-  reservationId: string | null;
-}
-
 type ReservationQueueEntry = Awaited<ReturnType<typeof getBookAdminDetails>>['queue'][number];
 
-interface BookDetailModalProps {
+export interface BookDetailModalProps {
   bookId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,120 +45,6 @@ interface BookDetailModalProps {
   initialData?: Partial<Book>;
   canManage?: boolean;
   onCancelSuccess?: () => void;
-}
-
-// ─── Copy Progress Bar ─────────────────────────────────────────────────────
-
-function CopyMeter({ available, total }: { available: number; total: number }) {
-  const pct = total === 0 ? 0 : Math.round((available / total) * 100);
-  const borrowed = total - available;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground">
-        <span className="uppercase tracking-widest">Copy Availability</span>
-        <span>{available}/{total} free</span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60">
-        <div
-          className="h-full rounded-full bg-emerald-500 transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex gap-3 text-[10px] font-bold">
-        <span className="flex items-center gap-1 text-emerald-600">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-          {available} on shelf
-        </span>
-        <span className="flex items-center gap-1 text-amber-600">
-          <span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />
-          {borrowed} borrowed
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Metadata Row ──────────────────────────────────────────────────────────
-
-function MetaRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/20 p-2.5 backdrop-blur-sm">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/30 text-muted-foreground/60">
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">{label}</p>
-        <p className="truncate text-xs font-bold text-foreground/90">{value || '—'}</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Status Mini Banner ────────────────────────────────────────────────────
-
-function StatusMini({ book, availability }: { book: BookDetail; availability: AvailabilityStatus }) {
-  const isAvailable = book.available_copies > 0;
-
-  if (availability.isReady) {
-    const deadline = availability.holdExpiresAt
-      ? new Date(availability.holdExpiresAt).toLocaleDateString(undefined, {
-          weekday: 'short', month: 'short', day: 'numeric',
-        })
-      : null;
-    return (
-      <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
-        <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
-        <div className="min-w-0">
-          <p className="text-xs font-black text-emerald-700 uppercase tracking-tight">Ready for Pickup</p>
-          {deadline && <p className="text-[10px] font-bold text-emerald-600/70 mt-0.5">Claim by {deadline}</p>}
-        </div>
-        <span className="ml-auto animate-pulse inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_2px_rgba(16,185,129,0.4)]" />
-      </div>
-    );
-  }
-
-  if (availability.hasReservation && availability.queuePosition) {
-    return (
-      <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
-        <Ticket className="h-4 w-4 text-primary shrink-0" />
-        <div className="min-w-0">
-          <p className="text-xs font-black text-primary uppercase tracking-tight">Queue Position #{availability.queuePosition}</p>
-          <p className="text-[10px] font-bold text-muted-foreground/70 mt-0.5">We&apos;ll notify you when assigned.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAvailable) {
-    return (
-      <div className="flex items-center gap-3 rounded-xl border border-emerald-500/10 bg-emerald-500/5 px-3 py-2.5">
-        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-        <div className="min-w-0">
-          <p className="text-xs font-black text-emerald-700 uppercase tracking-tight">
-            {book.available_copies} {book.available_copies === 1 ? 'copy' : 'copies'} on shelf
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-amber-500/10 bg-amber-500/5 px-3 py-2.5">
-      <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-      <div className="min-w-0">
-        <p className="text-xs font-black text-amber-700 uppercase tracking-tight">Currently Unavailable</p>
-      </div>
-    </div>
-  );
 }
 
 // ─── Loading Skeleton ──────────────────────────────────────────────────────
@@ -247,14 +106,16 @@ function StudentModalContent({
   };
 
   const handleReserveSuccess = () => {
-    router.refresh();
+    startTransition(() => {
+      router.refresh();
+    });
     onClose();
   };
 
   return (
     <div className="space-y-4">
-      {/* Status */}
-      <StatusMini book={book} availability={availability} />
+      {/* Real-time Status Banner */}
+      <StatusBanner book={book} availability={availability} variant="compact" />
 
       {/* Cover + Title row */}
       <div className="flex gap-4 pr-6">
@@ -314,11 +175,11 @@ function StudentModalContent({
 
       {/* Metadata Grid */}
       <div className="grid grid-cols-2 gap-2">
-        <MetaRow icon={Hash} label="ISBN" value={<span className="font-mono text-[11px]">{book.isbn || 'N/A'}</span>} />
-        <MetaRow icon={Tag} label="DDC" value={<span className="font-mono text-[11px]">{book.dewey_decimal || 'N/A'}</span>} />
-        <MetaRow icon={Layers} label="Category" value={categoryName || 'Uncategorized'} />
-        <MetaRow icon={MapPin} label="Location" value={book.section || 'General'} />
-        <MetaRow icon={Library} label="Section" value={book.location || book.section || 'Main Floor'} />
+        <MetaTile icon={Hash} label="ISBN" value={<span className="font-mono text-[11px]">{book.isbn || 'N/A'}</span>} variant="compact" />
+        <MetaTile icon={Tag} label="DDC" value={<span className="font-mono text-[11px]">{book.dewey_decimal || 'N/A'}</span>} variant="compact" />
+        <MetaTile icon={Layers} label="Category" value={categoryName || 'Uncategorized'} variant="compact" />
+        <MetaTile icon={MapPin} label="Location" value={book.section || 'General'} variant="compact" />
+        <MetaTile icon={Library} label="Section" value={book.location || book.section || 'Main Floor'} variant="compact" />
       </div>
 
       {/* Actions */}
@@ -347,29 +208,15 @@ function StudentModalContent({
         )}
       </div>
 
-
-      {/* Cancel confirmation nested */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-              <XCircle className="h-6 w-6 text-destructive" />
-            </div>
-            <DialogTitle className="text-center">Cancel Reservation?</DialogTitle>
-            <DialogDescription className="text-center">
-              You&apos;ll lose your queue position for &ldquo;{book.title}&rdquo;.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:justify-center pt-2">
-            <DialogClose asChild>
-              <Button variant="outline" className="flex-1 sm:flex-none">Keep</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleCancelReservation} disabled={isPending} className="flex-1 sm:flex-none">
-              {isPending ? 'Cancelling…' : 'Yes, Cancel'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Cancel confirmation dialog */}
+      <CancelReservationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        bookTitle={book.title}
+        isCancelling={isPending}
+        onConfirmCancel={handleCancelReservation}
+        isReady={availability.isReady}
+      />
     </div>
   );
 }

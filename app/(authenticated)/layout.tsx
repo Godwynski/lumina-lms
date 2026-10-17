@@ -1,11 +1,9 @@
-import { Suspense } from "react";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
 import { MainHeader } from "@/components/layout/MainHeader";
 import { StreamedNav } from "./_components/StreamedNav";
 import { StreamedUserNav } from "./_components/StreamedUserNav";
-import { NavSkeleton } from "./_components/Skeletons";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
@@ -62,10 +60,7 @@ export default async function ProtectedLayout({
       <SWRProvider>
         <BatchTaskProvider>
           <SidebarProvider defaultOpen={defaultOpen}>
-            {/* Nav streams in independently; skeleton perfectly mirrors real nav */}
-            <Suspense fallback={<NavSkeleton />}>
-              <StreamedNav />
-            </Suspense>
+            <StreamedNav />
 
             <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
               {/* Mobile header */}
@@ -73,9 +68,7 @@ export default async function ProtectedLayout({
                 <div className="flex flex-1 items-center gap-3 overflow-hidden">
                   <SidebarTrigger className="shrink-0" />
                   <div className="truncate text-sm font-semibold tracking-tight">
-                    <Suspense fallback={<div className="h-4 w-24 animate-pulse bg-muted/20 rounded" />}>
-                      <BreadcrumbNav />
-                    </Suspense>
+                    <BreadcrumbNav />
                   </div>
                 </div>
                 <div className="ml-2 shrink-0 flex items-center gap-2">
@@ -85,9 +78,7 @@ export default async function ProtectedLayout({
               </div>
 
               {/* Desktop header */}
-              <Suspense fallback={<div className="h-16 border-b border-border/40 bg-background/60 animate-pulse hidden md:block" />}>
-                <MainHeader />
-              </Suspense>
+              <MainHeader />
 
               {/* Page content */}
               <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">

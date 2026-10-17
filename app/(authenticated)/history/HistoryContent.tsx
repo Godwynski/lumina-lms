@@ -59,7 +59,9 @@ export default function HistoryContent({
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'borrowing_records' }, 
         () => {
-          router.refresh();
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .subscribe();
@@ -67,7 +69,7 @@ export default function HistoryContent({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [router, startTransition]);
 
   const updateFilters = (updates: Record<string, string | number>) => {
     const params = new URLSearchParams(searchParams.toString());

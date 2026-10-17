@@ -1,7 +1,5 @@
 "use client"
 
-import { Suspense } from "react"
-
 import { useSidebar } from "@/components/ui/sidebar"
 import { Logo } from "@/components/layout/Logo"
 import Link from "next/link"
@@ -44,11 +42,9 @@ export function MainHeader({ userNav }: MainHeaderProps) {
         </div>
         
         <div className="flex-1 truncate">
-          <Suspense fallback={<div className="h-4 w-32 animate-pulse bg-muted/20 rounded-full" />}>
-            <div className="text-xs font-semibold tracking-wide">
-              <BreadcrumbNav />
-            </div>
-          </Suspense>
+          <div className="text-xs font-semibold tracking-wide">
+            <BreadcrumbNav />
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

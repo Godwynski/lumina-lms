@@ -108,7 +108,7 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href="/profile" className="flex w-full cursor-pointer items-center">
+              <Link href="/profile" prefetch={true} className="flex w-full cursor-pointer items-center">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Profile Settings</span>
               </Link>

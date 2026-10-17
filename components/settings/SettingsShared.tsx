@@ -4,11 +4,12 @@ import * as React from "react";
 import { memo, useState } from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { FieldGroup } from "@/components/common/FieldGroup";
+export { FieldGroup };
 
 export const Section = memo(({ 
   title, 
@@ -40,23 +41,6 @@ export const Section = memo(({
 });
 Section.displayName = "Section";
 
-export const FieldGroup = memo(({ 
-  label, 
-  children,
-  className 
-}: { 
-  label: string; 
-  children: React.ReactNode;
-  className?: string;
-}) => {
-  return (
-    <div className={cn("space-y-2", className)}>
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-});
-FieldGroup.displayName = "FieldGroup";
 
 export function AnnualResetTool() {
   const [isResetting, setIsResetting] = useState(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { inviteUser } from "@/lib/actions/users";
@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
-import { Section, FieldGroup } from "@/components/settings/SettingsShared";
+import { Section } from "@/components/settings/SettingsShared";
+import { FieldGroup } from "@/components/common/FieldGroup";
 
 export function NewUserClient({ currentRole }: { currentRole?: string }) {
   const router = useRouter();
@@ -41,7 +42,9 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
       
       toast.success(`Access granted to ${email}`);
       router.push("/users");
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to invite user";
       toast.error(msg);

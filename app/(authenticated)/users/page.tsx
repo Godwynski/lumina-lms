@@ -47,7 +47,7 @@ function UserPageWrapper({ usersPromise }: { usersPromise: ReturnType<typeof bui
   return <UsersContent usersPromise={usersPromise} currentRole={currentRole as "super_admin" | "librarian" | "student_assistant" | "student"} />;
 }
 
-function UsersSkeleton() {
+export function UsersSkeleton() {
   return (
     <div className="w-full space-y-4 animate-pulse">
       <div className="h-10 w-64 bg-muted rounded-lg" />

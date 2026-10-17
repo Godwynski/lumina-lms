@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import React, { createContext, useContext, useState, ReactNode, useCallback, startTransition } from "react";
 import { toast } from "sonner";
 import { lookupAndImportISBN } from "@/lib/actions/catalog";
 import { useRouter } from "next/navigation";
@@ -129,7 +129,9 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
     setIsISBNProcessing(false);
     setShowCompletion(true);
     toast.success("ISBN background import sequence completed!");
-    router.refresh();
+    startTransition(() => {
+      router.refresh();
+    });
   };
 
   const isVisible = isISBNProcessing || showCompletion;
