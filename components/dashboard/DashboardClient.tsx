@@ -69,6 +69,20 @@ interface DashboardProps {
   attendanceLogs: { id: string; check_in_at: string; check_out_at: string | null }[];
 }
 
+function RecentBookCover({ src }: { src?: string | null }) {
+  const [imgSrc, setImgSrc] = useState(src || "/images/default-book-cover.png");
+  return (
+    <Image 
+      src={imgSrc} 
+      alt="" 
+      fill 
+      className="object-cover group-hover:scale-105 transition-transform duration-300" 
+      unoptimized 
+      onError={() => setImgSrc("/images/default-book-cover.png")}
+    />
+  );
+}
+
 export function DashboardClient({ 
   user, 
   role, 
@@ -530,13 +544,7 @@ export function DashboardClient({
                     className="group relative overflow-hidden border border-border/20 bg-card hover:bg-muted/[0.03] shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer flex items-center gap-3 p-3 rounded-xl"
                   >
                     <div className="relative h-12 w-9 shrink-0 rounded bg-muted/20 overflow-hidden ring-1 ring-border/10 group-hover:ring-primary/25 transition-all shadow-sm">
-                      <Image 
-                        src={book.cover_url || "/images/default-book-cover.png"} 
-                        alt="" 
-                        fill 
-                        className="object-cover group-hover:scale-105 transition-transform duration-300" 
-                        unoptimized 
-                      />
+                      <RecentBookCover src={book.cover_url} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-bold text-foreground/95 group-hover:text-primary transition-colors">

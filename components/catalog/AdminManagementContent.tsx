@@ -156,6 +156,7 @@ export function AdminManagementContent({
   });
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [coverImgSrc, setCoverImgSrc] = useState(initialBook.cover_url || "/images/default-book-cover.png");
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => { 
@@ -330,11 +331,12 @@ export function AdminManagementContent({
         <div className="flex gap-6 pr-8">
           <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-lg shadow-sm border border-border/40">
             <Image 
-              src={book.cover_url || "/images/default-book-cover.png"} 
+              src={coverImgSrc} 
               alt={book.title} 
               fill 
               className="object-cover" 
               unoptimized 
+              onError={() => setCoverImgSrc("/images/default-book-cover.png")}
             />
           </div>
           <div className="flex-1 min-w-0 flex flex-col py-1">

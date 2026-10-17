@@ -13,9 +13,9 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com;
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://*.supabase.co https://covers.openlibrary.org https://books.google.com;
+  img-src 'self' blob: data: https://*.supabase.co https://covers.openlibrary.org https://*.openlibrary.org https://openlibrary.org https://*.archive.org https://*.us.archive.org https://archive.org https://books.google.com https://*.googleusercontent.com;
   font-src 'self' data: https://fonts.gstatic.com;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://covers.openlibrary.org https://openlibrary.org https://books.google.com https://www.googleapis.com;
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://covers.openlibrary.org https://*.openlibrary.org https://openlibrary.org https://*.archive.org https://*.us.archive.org https://archive.org https://books.google.com https://*.googleusercontent.com https://www.googleapis.com;
   worker-src 'self' blob:;
   frame-ancestors 'none';
   object-src 'none';
@@ -69,7 +69,43 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '*.openlibrary.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'openlibrary.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.archive.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.us.archive.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'archive.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'books.google.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
         port: '',
         pathname: '/**',
       },

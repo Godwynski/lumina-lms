@@ -84,6 +84,7 @@ function StudentModalContent({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState(book.cover_url || "/images/default-book-cover.png");
 
   const isAvailable = book.available_copies > 0;
   const categoryName = getCategoryName(book.categories);
@@ -121,12 +122,13 @@ function StudentModalContent({
       <div className="flex gap-4 pr-6">
         <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/20 shadow-sm">
           <Image 
-            src={book.cover_url || "/images/default-book-cover.png"} 
+            src={imgSrc} 
             alt={book.title} 
             fill 
             className="object-cover" 
             sizes="96px" 
             unoptimized 
+            onError={() => setImgSrc("/images/default-book-cover.png")}
           />
           {/* Availability ribbon */}
           <div className={cn(

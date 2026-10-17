@@ -40,6 +40,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   const availability = use(availabilityPromise);
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState(book?.cover_url || "/images/default-book-cover.png");
   const [supabase] = useState(() => createClient());
 
   // Debounced router.refresh
@@ -147,12 +148,13 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
         <div className="shrink-0 mx-auto md:mx-0 space-y-4">
           <div className="relative h-[280px] w-[190px] overflow-hidden rounded-2xl border border-border/40 bg-muted/20 shadow-none backdrop-blur-sm">
             <Image
-              src={book.cover_url || "/images/default-book-cover.png"}
-              alt={book.title}
+              src={imgSrc}
+              alt={book?.title || 'Book Cover'}
               fill
               sizes="190px"
               className="object-cover transition-transform duration-500 hover:scale-105"
               unoptimized
+              onError={() => setImgSrc("/images/default-book-cover.png")}
             />
 
             {/* Availability ribbon */}

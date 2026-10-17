@@ -4,8 +4,23 @@ import { BookOpen, Bookmark, XCircle, Ticket, Clock, ArrowRight } from 'lucide-r
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
+import { useState } from 'react';
 import { BorrowingRecord } from '@/lib/actions/history';
 import { Reservation } from '@/lib/types';
+
+function ActivityItemCover({ src }: { src?: string | null }) {
+  const [imgSrc, setImgSrc] = useState(src || "/images/default-book-cover.png");
+  return (
+    <Image 
+      src={imgSrc} 
+      alt="" 
+      fill 
+      className="object-cover" 
+      unoptimized 
+      onError={() => setImgSrc("/images/default-book-cover.png")}
+    />
+  );
+}
 
 interface ActivityProps {
   activeBorrows: BorrowingRecord[];
@@ -53,13 +68,7 @@ export function ActivitySection({
                 <CardContent className="flex items-center justify-between gap-4 p-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm ring-1 ring-border/5 group-hover:ring-primary/20 transition-all">
-                      <Image 
-                        src={borrow.books?.cover_url || "/images/default-book-cover.png"} 
-                        alt="" 
-                        fill 
-                        className="object-cover" 
-                        unoptimized 
-                      />
+                      <ActivityItemCover src={borrow.books?.cover_url} />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">{borrow.books?.title || 'Unknown Book'}</p>
@@ -106,13 +115,7 @@ export function ActivitySection({
                       className="shrink-0 group cursor-pointer"
                     >
                       <div className="relative h-10 w-7 rounded bg-muted/20 overflow-hidden shadow-sm ring-1 ring-border/10 group-hover:ring-primary/30 transition-all">
-                        <Image 
-                          src={res.books?.cover_url || "/images/default-book-cover.png"} 
-                          alt="" 
-                          fill 
-                          className="object-cover" 
-                          unoptimized 
-                        />
+                        <ActivityItemCover src={res.books?.cover_url} />
                       </div>
                     </div>
                     
