@@ -84,6 +84,7 @@ export function useScanner({
     if (isInitializing || (scannerRef.current && scannerRef.current.isScanning)) return;
     
     setIsInitializing(true);
+    setCameraSupported(true);
     setCameraIssue(null);
 
     try {

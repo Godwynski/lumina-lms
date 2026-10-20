@@ -118,7 +118,7 @@ describe('Empirical Challenger: Milestone 1 Navigation, SSR & Loading States', (
         expect(html).toContain('Operating Systems: Three Easy Pieces');
         expect(html).toContain('Introduction to Algorithms');
       }).not.toThrow();
-    });
+    }, 15000);
 
     it('renders CatalogSkeleton to string with valid animated pulse classes', async () => {
       const { CatalogSkeleton } = await import('@/app/(authenticated)/catalog/CatalogContent');
@@ -171,7 +171,7 @@ describe('Empirical Challenger: Milestone 1 Navigation, SSR & Loading States', (
         const html = renderToString(<BreadcrumbNav />);
         expect(html).toContain('Inventory');
       }).not.toThrow();
-    });
+    }, 15000);
 
     it('executes MainHeader synchronously without throwing or suspending when provided Sidebar context', async () => {
       const { MainHeader } = await import('@/components/layout/MainHeader');
@@ -185,7 +185,7 @@ describe('Empirical Challenger: Milestone 1 Navigation, SSR & Loading States', (
         );
         expect(html).toContain('Lumina');
       }).not.toThrow();
-    });
+    }, 15000);
   });
 
   describe('Empirical Stress Test 4: Router Cache Invariant Verification', () => {

@@ -52,8 +52,18 @@ export async function getUsers(options: {
   }
 
   if (options.search?.trim()) {
-    const safe = sanitizeFilterInput(options.search.trim());
-    queryBuilder = queryBuilder.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
+    const raw = options.search.trim();
+    const safe = sanitizeFilterInput(raw);
+    const safeEmail = raw.replace(/["(),\\]/g, '');
+    const orConditions = [
+      `full_name.ilike.%${safe}%`,
+      `email.ilike.%${safe}%`,
+      `student_id.ilike.%${safe}%`,
+    ];
+    if (raw.includes('@')) {
+      orConditions.push(`email.eq.${safeEmail}`);
+    }
+    queryBuilder = queryBuilder.or(orConditions.join(','));
   }
 
   const from = (page - 1) * pageSize;

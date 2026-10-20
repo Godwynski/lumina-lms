@@ -41,6 +41,54 @@ export async function getBorrowingHistory(
   preFetchedSupabase?: SupabaseClient
 ) {
   const supabase = preFetchedSupabase || await createClient();
+
+  // Fast path: PostgreSQL RPC covering all fields (timeline dates, status, barcodes, books, patrons) in 1 query
+  if (typeof supabase.rpc === 'function') {
+    try {
+      const sanitized = searchQuery ? sanitizeFilterInput(searchQuery) : '';
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_borrowing_history_v2', {
+        p_user_id: userId,
+        p_page: page,
+        p_page_size: pageSize,
+        p_status: statusFilter && statusFilter !== 'all' ? statusFilter : null,
+        p_search: sanitized || null,
+      });
+
+      if (!rpcError && Array.isArray(rpcData)) {
+        const totalCount = rpcData.length > 0 ? Number(rpcData[0].total_count) : 0;
+        const enriched: BorrowingRecord[] = rpcData.map((row: any) => ({
+          id: row.id,
+          book_copy_id: row.book_copy_id,
+          user_id: row.user_id,
+          status: row.status,
+          borrowed_at: row.borrowed_at,
+          due_date: row.due_date,
+          returned_at: row.returned_at,
+          books: row.book_id ? {
+            id: row.book_id,
+            title: row.book_title,
+            author: row.book_author,
+            cover_url: row.book_cover_url,
+          } : null,
+          profiles: row.profile_id ? {
+            id: row.profile_id,
+            full_name: row.profile_name,
+            email: row.profile_email,
+            student_id: row.profile_student_id,
+          } : null,
+        }));
+
+        return {
+          records: enriched,
+          totalCount,
+        };
+      }
+    } catch (err) {
+      if (isAbortError(err)) throw err;
+      // Fallback to table builder if RPC fails or in mock test environment
+    }
+  }
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -58,7 +106,6 @@ export async function getBorrowingHistory(
       )
     `, { count: "exact" });
 
-
   if (userId) {
     query = query.eq("user_id", userId);
   }
@@ -70,7 +117,40 @@ export async function getBorrowingHistory(
 
   if (searchQuery) {
     const sanitized = sanitizeFilterInput(searchQuery);
-    query = query.or(`title.ilike.%${sanitized}%,author.ilike.%${sanitized}%`, { referencedTable: 'book_copies.books' });
+    if (!userId) {
+      const { data: matchingProfiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`full_name.ilike.%${sanitized}%,student_id.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
+      const userIds = matchingProfiles?.map((p: { id: string }) => p.id) || [];
+
+      const { data: matchingBooks } = await supabase
+        .from("books")
+        .select("id")
+        .or(`title.ilike.%${sanitized}%,author.ilike.%${sanitized}%`);
+      const bookIds = matchingBooks?.map((b: { id: string }) => b.id) || [];
+
+      let copyIds: string[] = [];
+      if (bookIds.length > 0) {
+        const { data: matchingCopies } = await supabase
+          .from("book_copies")
+          .select("id")
+          .in("book_id", bookIds);
+        copyIds = matchingCopies?.map((c: { id: string }) => c.id) || [];
+      }
+
+      if (userIds.length > 0 && copyIds.length > 0) {
+        query = query.or(`user_id.in.(${userIds.join(",")}),book_copy_id.in.(${copyIds.join(",")})`);
+      } else if (userIds.length > 0) {
+        query = query.in("user_id", userIds);
+      } else if (copyIds.length > 0) {
+        query = query.in("book_copy_id", copyIds);
+      } else {
+        query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    } else {
+      query = query.or(`title.ilike.%${sanitized}%,author.ilike.%${sanitized}%`, { referencedTable: 'book_copies.books' });
+    }
   }
 
   const { data, error, count } = await query
@@ -98,11 +178,8 @@ export async function getBorrowingHistory(
     profiles: record.profiles as BorrowingRecord["profiles"],
   }));
 
-
-
   return {
     records: enriched as BorrowingRecord[],
     totalCount: count ?? 0,
   };
 }
-

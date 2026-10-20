@@ -10,6 +10,10 @@ async function PoliciesPageContent() {
     redirect("/");
   }
 
+  if (me.role !== 'super_admin' && me.role !== 'librarian') {
+    redirect("/dashboard");
+  }
+
   const { supabase, profile } = me;
 
   // Both queries fire in parallel — authed client handles RLS for categories too
