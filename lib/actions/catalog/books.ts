@@ -42,7 +42,7 @@ export async function getBooks(
         const safeQuery = sanitizeFilterInput(cleanQuery);
         dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
       } else {
-        const terms = cleanQuery.replace(/[^\w\s-]/g, ' ').split(/\s+/).filter(Boolean);
+        const terms = cleanQuery.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
         const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
         if (terms.length > 0) {
           dbQuery = dbQuery.textSearch('search_vector', formattedQuery);

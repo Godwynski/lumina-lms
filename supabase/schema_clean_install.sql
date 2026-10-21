@@ -1567,5 +1567,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2 FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2 TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(int, int, uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(int, int, uuid, text, text) TO authenticated, service_role;

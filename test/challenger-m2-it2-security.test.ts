@@ -183,7 +183,7 @@ describe('Challenger Milestone 2 Iteration 2: Empirical Privilege & Security Cha
           id: 'target-sa-id',
           email: 'target-sa@school.edu',
           role: 'super_admin',
-          status: 'PENDING',
+          status: 'ACTIVE',
           department: 'Executive',
         },
         error: null,
@@ -200,7 +200,7 @@ describe('Challenger Milestone 2 Iteration 2: Empirical Privilege & Security Cha
       expect(tableBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           role: 'super_admin',
-          status: 'PENDING',
+          status: 'ACTIVE',
           department: 'Executive',
         })
       );

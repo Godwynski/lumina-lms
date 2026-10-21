@@ -45,7 +45,7 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
       } else {
         // For longer queries, use Full Text Search with prefix support
         // We transform "lord of" into "lord:* & of:*"
-        const terms = cleanQuery.replace(/[^\w\s-]/g, ' ').split(/\s+/).filter(Boolean);
+        const terms = cleanQuery.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
         const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
         
         // Use 'to_tsquery' style search via default type

@@ -138,7 +138,7 @@ export const inviteUser = createSafeAction(
       .from('profiles')
       .update({
         role: requestedRole,
-        status: 'PENDING',
+        status: requestedRole === 'super_admin' ? 'ACTIVE' : 'PENDING',
         department,
       })
       .eq('id', profile.id)
@@ -151,7 +151,7 @@ export const inviteUser = createSafeAction(
       { user: mapProfileToUser(updated as Record<string, unknown>) },
       {
         entityId: profile.id,
-        reason: `Invited/Upgraded user ${email} to ${requestedRole} (status set to pending)`,
+        reason: `Invited/Upgraded user ${email} to ${requestedRole} (status set to ${requestedRole === 'super_admin' ? 'active' : 'pending'})`,
         oldValue: { role: profile.role, status: profile.status, department: profile.department },
         newValue: { role: updated.role, status: updated.status, department: updated.department },
       },

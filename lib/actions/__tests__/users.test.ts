@@ -311,7 +311,7 @@ describe('Users Server Actions - Adversarial & Boundary Tests', () => {
         error: null,
       });
       tableBuilder.single.mockResolvedValueOnce({
-        data: { id: 'u-target', email: 'target@school.edu', role: 'super_admin', status: 'PENDING', department: 'AdminDept' },
+        data: { id: 'u-target', email: 'target@school.edu', role: 'super_admin', status: 'ACTIVE', department: 'AdminDept' },
         error: null,
       });
 
@@ -326,7 +326,7 @@ describe('Users Server Actions - Adversarial & Boundary Tests', () => {
       expect(tableBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           role: 'super_admin',
-          status: 'PENDING',
+          status: 'ACTIVE',
           department: 'AdminDept',
         })
       );
