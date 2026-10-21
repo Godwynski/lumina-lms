@@ -122,6 +122,20 @@ const formatValue = (v: unknown): string => {
   return String(v);
 };
 
+const parseLogDetails = (details: unknown): AuditLogDetails | null => {
+  if (!details) return null;
+  if (typeof details === 'object') return details as AuditLogDetails;
+  if (typeof details === 'string') {
+    try {
+      const parsed = JSON.parse(details);
+      return typeof parsed === 'object' && parsed !== null ? (parsed as AuditLogDetails) : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 // --- Subcomponents ---
 
 /**
@@ -480,7 +494,8 @@ export function AuditLogClient() {
                 {data.logs.map((log) => {
                   const dateString = log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "N/A";
                   const isExpanded = expandedRowId === log.id;
-                  const hasDetails = (log.details && (log.details.added?.length || log.details.removed?.length || Object.keys(log.details).filter(k => !['added', 'removed'].includes(k) && !IGNORED_KEYS.includes(k)).length > 0)) || log.old_value || log.new_value;
+                  const details = parseLogDetails(log.details);
+                  const hasDetails = (details && (details.added?.length || details.removed?.length || Object.keys(details).filter(k => !['added', 'removed'].includes(k) && !IGNORED_KEYS.includes(k)).length > 0)) || log.old_value || log.new_value;
 
                   return (
                     <React.Fragment key={log.id}>
@@ -540,16 +555,16 @@ export function AuditLogClient() {
                           <td colSpan={6} className="p-0 border-b border-border/10">
                             <div className="bg-muted/10 p-4 border-l-2 border-l-primary mx-3 my-2 rounded-r-xl shadow-inner text-xs space-y-4">
                               {/* Detailed Lists (Added/Removed) */}
-                              {log.details && (
+                              {details && (
                                 <div className="space-y-4">
-                                  {Array.isArray(log.details.added) && log.details.added.length > 0 && (
+                                  {Array.isArray(details.added) && details.added.length > 0 && (
                                     <div className="space-y-2">
                                       <span className="text-[10px] font-black uppercase tracking-[0.1em] text-green-600/80 flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                                         Added Elements
                                       </span>
                                       <div className="grid gap-2">
-                                        {log.details.added.map((item: AuditLogDetailItem, idx: number) => (
+                                        {details.added.map((item: AuditLogDetailItem, idx: number) => (
                                           <div key={idx} className="bg-background/60 p-2.5 rounded-lg border border-border/5 flex flex-col gap-1">
                                             {typeof item === 'object' && item !== null ? (
                                               Object.entries(item).map(([k, v]) => (
@@ -567,14 +582,14 @@ export function AuditLogClient() {
                                     </div>
                                   )}
 
-                                  {Array.isArray(log.details.removed) && log.details.removed.length > 0 && (
+                                  {Array.isArray(details.removed) && details.removed.length > 0 && (
                                     <div className="space-y-2">
                                       <span className="text-[10px] font-black uppercase tracking-[0.1em] text-red-600/80 flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                                         Removed Elements
                                       </span>
                                       <div className="grid gap-2 opacity-80">
-                                        {log.details.removed.map((item: AuditLogDetailItem, idx: number) => (
+                                        {details.removed.map((item: AuditLogDetailItem, idx: number) => (
                                           <div key={idx} className="bg-background/60 p-2.5 rounded-lg border border-border/5 flex flex-col gap-1 line-through decoration-red-500/30">
                                             {typeof item === 'object' && item !== null ? (
                                               Object.entries(item).map(([k, v]) => (
@@ -593,7 +608,7 @@ export function AuditLogClient() {
                                   )}
 
                                   {/* Render any other metadata in details */}
-                                  {Object.entries(log.details)
+                                  {Object.entries(details)
                                     .filter(([k]) => k !== 'added' && k !== 'removed' && !IGNORED_KEYS.includes(k))
                                     .map(([k, v]) => (
                                       <div key={k} className="flex gap-2 px-1">
