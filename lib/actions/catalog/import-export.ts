@@ -143,8 +143,21 @@ export async function batchImportBooks(books: ImportBookRow[]) {
     }
   });
 
-  // Resolve categories in batches to avoid duplicates
-  const categoryCache = new Map<string, string>(); // categoryName -> categoryId
+  // Pre-seed category cache to avoid redundant sequential queries
+  const categoryCache = new Map<string, string>(); // lowerCategoryName -> categoryId
+  const { data: existingCategories } = await supabase
+    .from('categories')
+    .select('id, name');
+  if (Array.isArray(existingCategories)) {
+    existingCategories.forEach(c => {
+      if (c && c.name) categoryCache.set(c.name.trim().toLowerCase(), c.id);
+    });
+  }
+
+  const MAX_BATCH_SIZE = 500;
+  if (books.length > MAX_BATCH_SIZE) {
+    throw new Error(`Maximum batch size is ${MAX_BATCH_SIZE} rows per import.`);
+  }
 
   for (let i = 0; i < books.length; i++) {
     const row = books[i];
@@ -209,12 +222,13 @@ export async function batchImportBooks(books: ImportBookRow[]) {
       let categoryId: string | null = null;
       const categoryName = row.category?.trim() || row.category_name?.trim();
       if (categoryName) {
-        if (categoryCache.has(categoryName)) {
-          categoryId = categoryCache.get(categoryName)!;
+        const lowerCat = categoryName.toLowerCase();
+        if (categoryCache.has(lowerCat)) {
+          categoryId = categoryCache.get(lowerCat)!;
         } else {
           categoryId = await getOrCreateCategoryByName(supabase, categoryName);
           if (categoryId) {
-            categoryCache.set(categoryName, categoryId);
+            categoryCache.set(lowerCat, categoryId);
           }
         }
       }

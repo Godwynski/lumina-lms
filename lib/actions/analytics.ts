@@ -79,7 +79,7 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
   attendanceData?.forEach(record => {
     if (record.check_in_at) {
       const date = new Date(record.check_in_at);
-      const hour = date.getHours();
+      const hour = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Manila' }).format(date), 10);
       if (hour >= 8 && hour <= 18) {
         hourCounts[hour] = (hourCounts[hour] || 0) + 1;
       }

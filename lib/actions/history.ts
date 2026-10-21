@@ -36,7 +36,7 @@ interface HistoryRpcRow {
   id: string;
   book_copy_id: string;
   user_id: string;
-  status: string;
+  status: BorrowStatus;
   borrowed_at: string;
   due_date: string;
   returned_at: string | null;
@@ -85,15 +85,15 @@ export async function getBorrowingHistory(
           returned_at: row.returned_at,
           books: row.book_id ? {
             id: row.book_id,
-            title: row.book_title,
-            author: row.book_author,
-            cover_url: row.book_cover_url,
+            title: row.book_title || 'Unknown Title',
+            author: row.book_author || 'Unknown Author',
+            cover_url: row.book_cover_url || null,
           } : null,
           profiles: row.profile_id ? {
             id: row.profile_id,
-            full_name: row.profile_name,
-            email: row.profile_email,
-            student_id: row.profile_student_id,
+            full_name: row.profile_name ?? null,
+            email: row.profile_email ?? null,
+            student_id: row.profile_student_id ?? null,
           } : null,
         }));
 

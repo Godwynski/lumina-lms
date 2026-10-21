@@ -11,6 +11,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://stilumina.vercel.app';
+
 interface SendOverdueEmailOptions {
   to: string;
   userName: string;
@@ -31,7 +33,6 @@ interface SendDueSoonEmailOptions {
  */
 function getEmailLayout(title: string, content: string, ctaText?: string, ctaUrl?: string) {
   const primaryColor = '#2563eb';
-  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://stilumina.vercel.app';
 
   return `
 <!DOCTYPE html>
@@ -145,7 +146,7 @@ export async function sendOverdueEmail({
     'Book Overdue Notification',
     content,
     'View My Account',
-    'https://winelms.vercel.app/dashboard'
+    `${appUrl}/dashboard`
   );
 
   try {
@@ -193,7 +194,7 @@ export async function sendDueSoonEmail({
     'Book Due Soon Reminder',
     content,
     'Manage Borrowings',
-    'https://winelms.vercel.app/dashboard'
+    `${appUrl}/dashboard`
   );
 
   try {
@@ -248,7 +249,7 @@ export async function sendTestEmail(to: string, userName: string) {
     'Email System Test',
     content,
     'Open Dashboard',
-    'https://winelms.vercel.app/dashboard'
+    `${appUrl}/dashboard`
   );
 
   try {

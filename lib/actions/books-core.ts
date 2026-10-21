@@ -1,5 +1,6 @@
 import { createSafeClient } from '@/lib/supabase/server';
 import { Book } from '@/lib/types';
+import { sanitizeFilterInput } from '@/lib/utils';
 
 interface BookSearchParams {
   query?: string;
@@ -39,15 +40,21 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
     if (cleanQuery) {
       if (cleanQuery.length < 3) {
         // For short queries, use a broad ILIKE search across main fields
-        dbQuery = dbQuery.or(`title.ilike.%${cleanQuery}%,author.ilike.%${cleanQuery}%,isbn.ilike.%${cleanQuery}%`);
+        const safeQuery = sanitizeFilterInput(cleanQuery);
+        dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
       } else {
         // For longer queries, use Full Text Search with prefix support
         // We transform "lord of" into "lord:* & of:*"
-        const terms = cleanQuery.split(/\s+/).filter(Boolean);
+        const terms = cleanQuery.replace(/[^\w\s-]/g, ' ').split(/\s+/).filter(Boolean);
         const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
         
         // Use 'to_tsquery' style search via default type
-        dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
+        if (terms.length > 0) {
+          dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
+        } else {
+          const safeQuery = sanitizeFilterInput(cleanQuery);
+          dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
+        }
       }
     }
   }

@@ -218,10 +218,11 @@ export async function runMaintenanceTasks() {
             .eq('id', res.copy_id);
           await supabaseAdmin.rpc('compress_reservation_queue', { p_book_id: res.book_id });
         }
+        const bookTitle = (Array.isArray(res.books) ? res.books[0]?.title : res.books?.title) || 'Book';
         await sendNotification({
           userId: res.user_id,
           title: 'Reservation Expired',
-          content: `Your reservation for "${res.books.title}" has expired as it was not picked up within 3 days.`,
+          content: `Your reservation for "${bookTitle}" has expired as it was not picked up within 3 days.`,
           type: 'RESERVATION_EXPIRED',
           priority: 'low'
         });

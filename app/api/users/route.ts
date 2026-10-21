@@ -106,7 +106,7 @@ export const POST = withAuthApi(
     if (Object.prototype.hasOwnProperty.call(profile, "role"))
       updates.role = requestedRole;
     if (Object.prototype.hasOwnProperty.call(profile, "status"))
-      updates.status = "PENDING";
+      updates.status = requestedRole === "super_admin" ? "ACTIVE" : "PENDING";
     if (Object.prototype.hasOwnProperty.call(profile, "department"))
       updates.department = department || "General";
 

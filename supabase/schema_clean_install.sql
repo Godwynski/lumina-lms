@@ -1466,6 +1466,16 @@ DECLARE
   v_offset int := (p_page - 1) * p_page_size;
   v_norm_status public."BorrowStatus" := NULL;
 BEGIN
+  -- Restrict unauthorized/patron access to their own records only
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF (SELECT auth.uid()) IS NULL THEN
+      RETURN;
+    END IF;
+    IF NOT public.is_staff() THEN
+      p_user_id := (SELECT auth.uid());
+    END IF;
+  END IF;
+
   IF p_status IS NOT NULL AND p_status != 'all' AND p_status != '' THEN
     BEGIN
       v_norm_status := UPPER(p_status)::public."BorrowStatus";
@@ -1557,4 +1567,5 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2 TO authenticated, anon, service_role;
+REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2 FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2 TO authenticated, service_role;

@@ -185,7 +185,10 @@ export async function GET(request: NextRequest) {
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map(val => {
-        const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+        let strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+        if (/^[=+\-@\t\r]/.test(strVal)) {
+          strVal = `'${strVal}`;
+        }
         if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }
