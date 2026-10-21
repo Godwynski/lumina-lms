@@ -99,11 +99,11 @@ async function ensureQrImage(opts: {
   const { qr } = fileNamesFor(opts.studentId);
 
   if (!opts.force) {
-    const { error: existingError } = await admin.storage
+    const { data: existingList } = await admin.storage
       .from(CARD_ASSET_BUCKET)
-      .download(qr);
+      .list("", { limit: 1, search: qr });
 
-    if (!existingError) {
+    if (existingList && existingList.some((item) => item.name === qr)) {
       return qr;
     }
   }
@@ -155,11 +155,31 @@ async function uploadProfilePhoto(opts: {
 }
 
 async function fetchRemoteAvatarBuffer(url: string) {
-  const response = await fetch(url);
-  if (!response.ok) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return null;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.startsWith("192.168.") ||
+      host.startsWith("10.") ||
+      host.startsWith("172.16.") ||
+      host.startsWith("169.254.") ||
+      host.endsWith(".local") ||
+      host.endsWith(".internal")
+    ) {
+      return null;
+    }
+    const response = await fetch(url);
+    if (!response.ok) return null;
 
-  const bytes = await response.arrayBuffer();
-  return Buffer.from(bytes);
+    const bytes = await response.arrayBuffer();
+    return Buffer.from(bytes);
+  } catch {
+    return null;
+  }
 }
 
 export async function ensureStaticLibraryCardAssets(opts: {

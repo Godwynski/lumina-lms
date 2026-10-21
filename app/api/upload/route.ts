@@ -45,6 +45,25 @@ export async function POST(_req: NextRequest) {
       buffer = Buffer.from(bytes);
     } else if (url && url.startsWith("http")) {
       try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== "https:") {
+          return NextResponse.json({ error: "Only HTTPS image URLs are supported." }, { status: 400 });
+        }
+        const hostname = parsedUrl.hostname.toLowerCase();
+        if (
+          hostname === "localhost" ||
+          hostname === "127.0.0.1" ||
+          hostname === "0.0.0.0" ||
+          hostname.startsWith("192.168.") ||
+          hostname.startsWith("10.") ||
+          hostname.startsWith("172.16.") ||
+          hostname.startsWith("169.254.") ||
+          hostname.endsWith(".local") ||
+          hostname.endsWith(".internal")
+        ) {
+          return NextResponse.json({ error: "Restricted remote image host." }, { status: 400 });
+        }
+
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Failed to fetch remote image: ${res.statusText}`);
         

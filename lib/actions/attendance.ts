@@ -130,7 +130,12 @@ export const toggleAttendanceByCard = createSafeAction(
           check_in_at: new Date().toISOString()
         });
 
-      if (inError) throw new Error("Failed to register Time In.");
+      if (inError) {
+        if (inError.code === '23505' || inError.message?.includes('duplicate key') || inError.message?.includes('attendance_user_active_idx')) {
+          throw new Error("An active attendance session is already in progress for this card.");
+        }
+        throw new Error("Failed to register Time In.");
+      }
 
       // Notify the user
       await sendNotification({

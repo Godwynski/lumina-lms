@@ -37,7 +37,6 @@ export function ScanStep({
         startScanner,
         stopCamera,
         isInitializing,
-        cameraSupported,
         cameraIssue,
         scannerId,
         switchCamera,

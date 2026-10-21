@@ -32,6 +32,25 @@ export type BorrowingRecord = {
   } | null;
 };
 
+interface HistoryRpcRow {
+  id: string;
+  book_copy_id: string;
+  user_id: string;
+  status: string;
+  borrowed_at: string;
+  due_date: string;
+  returned_at: string | null;
+  total_count?: number | string;
+  book_id?: string | null;
+  book_title?: string | null;
+  book_author?: string | null;
+  book_cover_url?: string | null;
+  profile_id?: string | null;
+  profile_name?: string | null;
+  profile_email?: string | null;
+  profile_student_id?: string | null;
+}
+
 export async function getBorrowingHistory(
   userId: string | null,
   page: number = 1,
@@ -56,7 +75,7 @@ export async function getBorrowingHistory(
 
       if (!rpcError && Array.isArray(rpcData)) {
         const totalCount = rpcData.length > 0 ? Number(rpcData[0].total_count) : 0;
-        const enriched: BorrowingRecord[] = rpcData.map((row: any) => ({
+        const enriched: BorrowingRecord[] = rpcData.map((row: HistoryRpcRow) => ({
           id: row.id,
           book_copy_id: row.book_copy_id,
           user_id: row.user_id,

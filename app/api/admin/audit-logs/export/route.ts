@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("audit_logs")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(5000);
 
     if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
     if (actionType) query = query.eq("action", actionType);

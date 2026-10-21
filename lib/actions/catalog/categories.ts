@@ -64,6 +64,14 @@ export async function getOrCreateCategoryByName(supabase: SupabaseClient, name: 
     .single();
 
   if (createError) {
+    // If unique constraint violated by concurrent insert, fetch existing
+    const { data: retry } = await supabase
+      .from('categories')
+      .select('id')
+      .ilike('name', cleanName)
+      .maybeSingle();
+    if (retry) return retry.id;
+
     logger.error('catalog', `Error creating category: ${cleanName}`, { error: createError.message });
     throw new Error(`Failed to create category "${cleanName}": ${createError.message}`);
   }

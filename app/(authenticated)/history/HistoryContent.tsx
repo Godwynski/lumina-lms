@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect, useTransition, useRef } from "react";
+import { useState, use, useEffect, useTransition, useCallback } from "react";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -74,7 +74,7 @@ export default function HistoryContent({
     };
   }, [router, startTransition]);
 
-  const updateFilters = (updates: Record<string, string | number>) => {
+  const updateFilters = useCallback((updates: Record<string, string | number>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, value]) => {
       if (value === "all" || value === "") {
@@ -86,7 +86,7 @@ export default function HistoryContent({
     startTransition(() => {
       router.replace(`/history?${params.toString()}`, { scroll: false });
     });
-  };
+  }, [searchParams, router, startTransition]);
 
   // Debounced auto-search on typing (300ms) with zero UI freezing
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function HistoryContent({
       updateFilters({ q: localSearch, page: 1 });
     }, 300);
     return () => clearTimeout(timer);
-  }, [localSearch, searchQuery]);
+  }, [localSearch, searchQuery, updateFilters]);
 
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr);
 

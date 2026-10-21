@@ -312,6 +312,25 @@ describe('Attendance Server Actions', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('Failed to register Time In.');
     });
+
+    it('returns friendly error when a duplicate active attendance session is detected', async () => {
+      mockClientHelper.setTableResponse('library_cards', {
+        user_id: 'user-double-tap',
+        status: 'ACTIVE',
+        profiles: { full_name: 'Bob', status: 'ACTIVE' },
+      });
+      mockClientHelper.setTableResponse('attendance', null);
+
+      const attBuilder = mockClientHelper.getTableBuilder('attendance');
+      attBuilder.insert.mockImplementationOnce(() => ({
+        error: { code: '23505', message: 'duplicate key value violates unique constraint "attendance_user_active_idx"' },
+      }));
+
+      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-DOUBLE' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('An active attendance session is already in progress for this card.');
+    });
   });
 
   describe('getAttendanceHistory', () => {

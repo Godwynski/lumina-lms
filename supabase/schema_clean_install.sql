@@ -297,7 +297,7 @@ CREATE INDEX IF NOT EXISTS borrowing_records_user_borrowed_idx ON public.borrowi
 CREATE INDEX IF NOT EXISTS borrowing_records_due_active_idx ON public.borrowing_records(due_date) WHERE status = 'ACTIVE' AND reminder_sent = false;
 CREATE INDEX IF NOT EXISTS reservations_queue_idx ON public.reservations(book_id, status, queue_position, created_at);
 CREATE INDEX IF NOT EXISTS reservations_user_book_status_idx ON public.reservations(user_id, book_id, status);
-CREATE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendance(user_id) WHERE check_out_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendance(user_id) WHERE check_out_at IS NULL;
 CREATE INDEX IF NOT EXISTS attendance_checkout_cron_idx ON public.attendance(check_in_at) WHERE check_out_at IS NULL;
 CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON public.notifications(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS notifications_unread_idx ON public.notifications(user_id) WHERE is_read = false;
@@ -464,14 +464,14 @@ CREATE OR REPLACE FUNCTION public.auto_checkout_forgotten_attendance()
 AS $$
 BEGIN
   -- Close any open attendance records from previous days
-  -- Setting checkout time to 5:00 PM (17:00:00) of that check-in day
+  -- Setting checkout time to 5:00 PM (17:00:00) Asia/Manila time of that check-in day
   UPDATE public.attendance
   SET 
-    check_out_at = (check_in_at::date + time '17:00:00')::timestamptz,
+    check_out_at = ((check_in_at AT TIME ZONE 'Asia/Manila')::date + time '17:00:00') AT TIME ZONE 'Asia/Manila',
     notes = 'System auto-checkout: forgotten checkout'
   WHERE 
     check_out_at IS NULL 
-    AND check_in_at < CURRENT_DATE;
+    AND (check_in_at AT TIME ZONE 'Asia/Manila')::date < (NOW() AT TIME ZONE 'Asia/Manila')::date;
 END;
 $$;
 

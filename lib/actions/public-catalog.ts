@@ -66,6 +66,6 @@ export async function getPublicBookById(id: string) {
 export const getCategoriesCached = unstable_cache(
   getCategories,
   ['public-categories'],
-  { revalidate: 3600, tags: ['public-books'] }
+  { revalidate: 3600, tags: ['public-books', 'categories'] }
 );
 

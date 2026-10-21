@@ -4,7 +4,7 @@ import { logger } from './logger';
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: true, // true for 465, false for other ports
+  secure: parseInt(process.env.SMTP_PORT || '465', 10) === 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -31,7 +31,7 @@ interface SendDueSoonEmailOptions {
  */
 function getEmailLayout(title: string, content: string, ctaText?: string, ctaUrl?: string) {
   const primaryColor = '#2563eb';
-  const appUrl = 'https://winelms.vercel.app';
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://stilumina.vercel.app';
 
   return `
 <!DOCTYPE html>
