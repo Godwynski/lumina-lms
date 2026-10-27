@@ -17,8 +17,9 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
   const router = useRouter();
 
   const handleMicrosoftLogin = async () => {
-    const supabase = createClient();
+    if (isLoading) return;
     setIsLoading(true);
+    const supabase = createClient();
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "azure",

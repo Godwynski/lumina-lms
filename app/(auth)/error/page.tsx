@@ -75,6 +75,42 @@ async function ErrorContent({
     );
   }
 
+  const isPkceOrSessionError = params?.error && (
+    params.error.includes("PKCE") ||
+    params.error.includes("code verifier") ||
+    params.error.includes("refresh_token")
+  );
+
+  if (isPkceOrSessionError) {
+    return (
+      <div className="space-y-6">
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex gap-3 items-start shadow-inner">
+           <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5 opacity-90" />
+           <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed font-medium">
+             Your login session timed out or the verification state was interrupted.
+           </p>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
+            Why this happens
+          </h4>
+          <div className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-2 text-xs text-muted-foreground leading-relaxed">
+            <p>
+              • The authentication flow took too long to complete, or the verification cookie was blocked.
+            </p>
+            <p>
+              • Signing in was started in one tab or app window and completed in another.
+            </p>
+            <p className="pt-1 font-medium text-foreground">
+              Please click below to return to the sign-in page and try again.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-6 gap-4 text-center">
       <div className="p-4 rounded-2xl bg-muted/50 border border-border/50">
