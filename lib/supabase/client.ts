@@ -6,6 +6,11 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YW1wbGUiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNDQ3MDAxOCwiZXhwIjoxOTI5ODM0MDE4fQ.D6Q2n2yR",
     {
       isSingleton: true,
+      cookieOptions: {
+        secure: typeof window !== "undefined" ? window.location.protocol === "https:" : process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      },
     }
   );
 }

@@ -3,11 +3,17 @@ import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets.server"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   // if "next" is in param, use it as the redirection URL
   const next = searchParams.get("next") ?? "/dashboard";
+
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const isLocalEnv = process.env.NODE_ENV === "development";
+  const host = isLocalEnv ? origin : forwardedHost ? `https://${forwardedHost}` : origin;
 
   const providerError = searchParams.get("error_description") || searchParams.get("error");
 
@@ -46,7 +52,7 @@ export async function GET(request: Request) {
 
           if (!isFaculty && !isStudent && !isTest) {
             await supabase.auth.signOut();
-            return NextResponse.redirect(`${origin}/error?error=restricted_access`);
+            return NextResponse.redirect(`${host}/error?error=restricted_access`);
           }
 
           // Create initial profile using Admin Client to bypass RLS
@@ -64,7 +70,7 @@ export async function GET(request: Request) {
 
           if (createError) {
             console.error("Failed to create profile:", createError);
-            return NextResponse.redirect(`${origin}/error?error=${encodeURIComponent("Failed to create user profile")}`);
+            return NextResponse.redirect(`${host}/error?error=${encodeURIComponent("Failed to create user profile")}`);
           }
         }
 
@@ -82,14 +88,15 @@ export async function GET(request: Request) {
         }
       }
 
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${host}${next}`);
     }
 
     if (error) {
-      return NextResponse.redirect(`${origin}/error?error=${encodeURIComponent(error.message)}`);
+      console.error("[AUTH CALLBACK] Code exchange error:", error);
+      return NextResponse.redirect(`${host}/error?error=${encodeURIComponent(error.message)}`);
     }
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/error?error=${encodeURIComponent(providerError || "No code provided")}`);
+  return NextResponse.redirect(`${host}/error?error=${encodeURIComponent(providerError || "No code provided")}`);
 }

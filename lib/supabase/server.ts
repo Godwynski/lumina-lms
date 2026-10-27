@@ -1,8 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
-import { cache } from "react";
 
-
-export const createClient = cache(async () => {
+export async function createClient() {
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
 
@@ -10,6 +8,11 @@ export const createClient = cache(async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL || "http://localhost:54321",
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "dummy",
     {
+      cookieOptions: {
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -25,7 +28,7 @@ export const createClient = cache(async () => {
       },
     },
   );
-});
+}
 
 export const createSafeClient = () => {
   return createServerClient(
