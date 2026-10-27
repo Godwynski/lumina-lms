@@ -322,8 +322,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.is_staff() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.is_staff() TO authenticated, anon;
+REVOKE EXECUTE ON FUNCTION public.is_staff() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_staff() TO authenticated, service_role;
 
 -- Atomic transaction-safe ownership transfer function
 CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
@@ -1084,9 +1084,13 @@ CREATE POLICY "Staff can insert books" ON public.books
   FOR INSERT TO authenticated
   WITH CHECK (public.is_staff());
 
-CREATE POLICY "Books are viewable by everyone" ON public.books
+CREATE POLICY "Active books are viewable by everyone" ON public.books
   FOR SELECT TO public
-  USING (is_active = true OR public.is_staff());
+  USING (is_active = true);
+
+CREATE POLICY "Staff can view all books" ON public.books
+  FOR SELECT TO authenticated
+  USING (public.is_staff());
 
 CREATE POLICY "Staff can update books" ON public.books
   FOR UPDATE TO authenticated
@@ -1279,8 +1283,8 @@ REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authentic
 REVOKE EXECUTE ON FUNCTION public.fn_guard_profile_updates() FROM PUBLIC, anon, authenticated;
 
 -- Administrative RPCs revoked from public/anon
-REVOKE EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) TO service_role;
 
 -- Reservation RPC revoked from public/anon, granted to authenticated
 REVOKE EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) FROM PUBLIC, anon;
@@ -1567,5 +1571,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(int, int, uuid, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(int, int, uuid, text, text) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text) TO authenticated, service_role;

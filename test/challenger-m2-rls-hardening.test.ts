@@ -53,8 +53,8 @@ describe('Milestone 2 Challenger: Row-Level Security (RLS) & Multi-Role Isolatio
         /CREATE OR REPLACE FUNCTION public\.is_staff\(\)[\s\S]*?RETURNS boolean[\s\S]*?LANGUAGE plpgsql[\s\S]*?STABLE[\s\S]*?SECURITY DEFINER[\s\S]*?SET search_path = public, pg_temp/
       );
       expect(schemaSql).toMatch(/status = 'ACTIVE'/);
-      expect(schemaSql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.is_staff\(\) FROM PUBLIC;/);
-      expect(schemaSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.is_staff\(\) TO authenticated, anon;/);
+      expect(schemaSql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.is_staff\(\) FROM PUBLIC, anon;/);
+      expect(schemaSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.is_staff\(\) TO authenticated, service_role;/);
     });
 
     it('verifies transfer_super_admin_ownership enforces caller authentication and service_role compatibility', () => {
@@ -62,8 +62,8 @@ describe('Milestone 2 Challenger: Row-Level Security (RLS) & Multi-Role Isolatio
         /CREATE OR REPLACE FUNCTION public\.transfer_super_admin_ownership\(p_current_admin_id uuid, p_new_admin_id uuid\)[\s\S]*?SET search_path = public, pg_temp/
       );
       expect(schemaSql).toMatch(/\(SELECT auth\.uid\(\)\) IS NULL OR \(SELECT auth\.uid\(\)\) <> p_current_admin_id/);
-      expect(schemaSql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.transfer_super_admin_ownership\(uuid, uuid\) FROM PUBLIC, anon;/);
-      expect(schemaSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.transfer_super_admin_ownership\(uuid, uuid\) TO authenticated, service_role;/);
+      expect(schemaSql).toMatch(/REVOKE EXECUTE ON FUNCTION public\.transfer_super_admin_ownership\(uuid, uuid\) FROM PUBLIC, anon, authenticated;/);
+      expect(schemaSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.transfer_super_admin_ownership\(uuid, uuid\) TO service_role;/);
     });
 
     it('verifies create_reservation_atomic rejects unauthenticated callers and verifies proxy reservation role', () => {
