@@ -126,11 +126,9 @@ describe('Analytics Server Actions', () => {
 
   describe('Metric Aggregations', () => {
     it('aggregates peak visiting hours between 8 AM and 6 PM and ignores hours outside range', async () => {
-      const now = new Date();
       const createTime = (hour: number) => {
-        const d = new Date(now);
-        d.setHours(hour, 15, 0, 0);
-        return d.toISOString();
+        const padded = String(hour).padStart(2, '0');
+        return `2026-10-27T${padded}:15:00+08:00`;
       };
 
       const mockAttendance = [
