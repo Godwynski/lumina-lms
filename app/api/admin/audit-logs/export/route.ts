@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("audit_logs")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(5000);
 
     if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
     if (actionType) query = query.eq("action", actionType);
@@ -184,7 +185,10 @@ export async function GET(request: NextRequest) {
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map(val => {
-        const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+        let strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+        if (/^[=+\-@\t\r]/.test(strVal)) {
+          strVal = `'${strVal}`;
+        }
         if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
           return `"${strVal.replace(/"/g, '""')}"`;
         }

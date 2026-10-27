@@ -297,7 +297,7 @@ CREATE INDEX IF NOT EXISTS borrowing_records_user_borrowed_idx ON public.borrowi
 CREATE INDEX IF NOT EXISTS borrowing_records_due_active_idx ON public.borrowing_records(due_date) WHERE status = 'ACTIVE' AND reminder_sent = false;
 CREATE INDEX IF NOT EXISTS reservations_queue_idx ON public.reservations(book_id, status, queue_position, created_at);
 CREATE INDEX IF NOT EXISTS reservations_user_book_status_idx ON public.reservations(user_id, book_id, status);
-CREATE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendance(user_id) WHERE check_out_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendance(user_id) WHERE check_out_at IS NULL;
 CREATE INDEX IF NOT EXISTS attendance_checkout_cron_idx ON public.attendance(check_in_at) WHERE check_out_at IS NULL;
 CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON public.notifications(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS notifications_unread_idx ON public.notifications(user_id) WHERE is_read = false;
@@ -322,8 +322,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.is_staff() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.is_staff() TO authenticated, anon;
+REVOKE EXECUTE ON FUNCTION public.is_staff() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_staff() TO authenticated, service_role;
 
 -- Atomic transaction-safe ownership transfer function
 CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
@@ -464,14 +464,14 @@ CREATE OR REPLACE FUNCTION public.auto_checkout_forgotten_attendance()
 AS $$
 BEGIN
   -- Close any open attendance records from previous days
-  -- Setting checkout time to 5:00 PM (17:00:00) of that check-in day
+  -- Setting checkout time to 5:00 PM (17:00:00) Asia/Manila time of that check-in day
   UPDATE public.attendance
   SET 
-    check_out_at = (check_in_at::date + time '17:00:00')::timestamptz,
+    check_out_at = ((check_in_at AT TIME ZONE 'Asia/Manila')::date + time '17:00:00') AT TIME ZONE 'Asia/Manila',
     notes = 'System auto-checkout: forgotten checkout'
   WHERE 
     check_out_at IS NULL 
-    AND check_in_at < CURRENT_DATE;
+    AND (check_in_at AT TIME ZONE 'Asia/Manila')::date < (NOW() AT TIME ZONE 'Asia/Manila')::date;
 END;
 $$;
 
@@ -1084,9 +1084,13 @@ CREATE POLICY "Staff can insert books" ON public.books
   FOR INSERT TO authenticated
   WITH CHECK (public.is_staff());
 
-CREATE POLICY "Books are viewable by everyone" ON public.books
+CREATE POLICY "Active books are viewable by everyone" ON public.books
   FOR SELECT TO public
-  USING (is_active = true OR public.is_staff());
+  USING (is_active = true);
+
+CREATE POLICY "Staff can view all books" ON public.books
+  FOR SELECT TO authenticated
+  USING (public.is_staff());
 
 CREATE POLICY "Staff can update books" ON public.books
   FOR UPDATE TO authenticated
@@ -1279,8 +1283,8 @@ REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authentic
 REVOKE EXECUTE ON FUNCTION public.fn_guard_profile_updates() FROM PUBLIC, anon, authenticated;
 
 -- Administrative RPCs revoked from public/anon
-REVOKE EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) TO service_role;
 
 -- Reservation RPC revoked from public/anon, granted to authenticated
 REVOKE EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) FROM PUBLIC, anon;
@@ -1427,3 +1431,145 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.announcements;
 
+
+
+-- 6. RPC: High-Performance Unified Borrowing History & Timeline Search
+CREATE OR REPLACE FUNCTION public.get_borrowing_history_v2(
+  p_user_id uuid DEFAULT NULL,
+  p_page int DEFAULT 1,
+  p_page_size int DEFAULT 10,
+  p_status text DEFAULT NULL,
+  p_search text DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  book_copy_id uuid,
+  user_id uuid,
+  status public."BorrowStatus",
+  borrowed_at timestamptz,
+  due_date timestamptz,
+  returned_at timestamptz,
+  book_id uuid,
+  book_title text,
+  book_author text,
+  book_cover_url text,
+  book_isbn text,
+  copy_qr text,
+  copy_accession text,
+  profile_id uuid,
+  profile_name text,
+  profile_email text,
+  profile_student_id text,
+  total_count bigint
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_offset int := (p_page - 1) * p_page_size;
+  v_norm_status public."BorrowStatus" := NULL;
+BEGIN
+  -- Restrict unauthorized/patron access to their own records only
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF (SELECT auth.uid()) IS NULL THEN
+      RETURN;
+    END IF;
+    IF NOT public.is_staff() THEN
+      p_user_id := (SELECT auth.uid());
+    END IF;
+  END IF;
+
+  IF p_status IS NOT NULL AND p_status != 'all' AND p_status != '' THEN
+    BEGIN
+      v_norm_status := UPPER(p_status)::public."BorrowStatus";
+    EXCEPTION WHEN OTHERS THEN
+      v_norm_status := NULL;
+    END;
+  END IF;
+
+  RETURN QUERY
+  WITH filtered AS (
+    SELECT 
+      br.id,
+      br.book_copy_id,
+      br.user_id,
+      br.status,
+      br.borrowed_at,
+      br.due_date,
+      br.returned_at,
+      b.id AS book_id,
+      b.title AS book_title,
+      b.author AS book_author,
+      b.cover_url AS book_cover_url,
+      b.isbn AS book_isbn,
+      bc.qr_string AS copy_qr,
+      bc.accession_number AS copy_accession,
+      p.id AS profile_id,
+      p.full_name AS profile_name,
+      p.email AS profile_email,
+      p.student_id AS profile_student_id
+    FROM borrowing_records br
+    JOIN book_copies bc ON br.book_copy_id = bc.id
+    JOIN books b ON bc.book_id = b.id
+    LEFT JOIN profiles p ON br.user_id = p.id
+    WHERE (p_user_id IS NULL OR br.user_id = p_user_id)
+      AND (v_norm_status IS NULL OR br.status = v_norm_status)
+      AND (
+        p_search IS NULL OR p_search = '' OR (
+          -- Borrower
+          p.full_name ILIKE '%' || p_search || '%'
+          OR p.student_id ILIKE '%' || p_search || '%'
+          OR p.email ILIKE '%' || p_search || '%'
+          -- Book
+          OR b.title ILIKE '%' || p_search || '%'
+          OR b.author ILIKE '%' || p_search || '%'
+          OR b.isbn ILIKE '%' || p_search || '%'
+          -- Copy / Barcode
+          OR bc.qr_string ILIKE '%' || p_search || '%'
+          OR bc.accession_number ILIKE '%' || p_search || '%'
+          -- Status
+          OR br.status::text ILIKE '%' || p_search || '%'
+          -- Timeline: Borrowed (Local & UTC, full month & short month)
+          OR to_char(br.borrowed_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD FMMonth FMDD, YYYY FMMon FMDD, YYYY FMDD Dy') ILIKE '%' || p_search || '%'
+          OR to_char(br.borrowed_at, 'YYYY-MM-DD FMMonth FMDD, YYYY FMMon FMDD, YYYY FMDD Dy') ILIKE '%' || p_search || '%'
+          -- Timeline: Due Date (Local & UTC)
+          OR to_char(br.due_date AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD FMMonth FMDD, YYYY FMMon FMDD, YYYY FMDD Dy') ILIKE '%' || p_search || '%'
+          OR to_char(br.due_date, 'YYYY-MM-DD FMMonth FMDD, YYYY FMMon FMDD, YYYY FMDD Dy') ILIKE '%' || p_search || '%'
+          -- Timeline: Returned Date (Local & UTC)
+          OR (br.returned_at IS NOT NULL AND (
+            to_char(br.returned_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD FMMonth FMDD, YYYY FMMon FMDD, YYYY FMDD Dy') ILIKE '%' || p_search || '%'
+            OR to_char(br.returned_at, 'YYYY-MM-DD FMMonth FMDD, YYYY FMMon FMDD, YYYY FMDD Dy') ILIKE '%' || p_search || '%'
+          ))
+        )
+      )
+  )
+  SELECT 
+    f.id,
+    f.book_copy_id,
+    f.user_id,
+    f.status,
+    f.borrowed_at,
+    f.due_date,
+    f.returned_at,
+    f.book_id,
+    f.book_title,
+    f.book_author,
+    f.book_cover_url,
+    f.book_isbn,
+    f.copy_qr,
+    f.copy_accession,
+    f.profile_id,
+    f.profile_name,
+    f.profile_email,
+    f.profile_student_id,
+    COUNT(*) OVER() AS total_count
+  FROM filtered f
+  ORDER BY f.borrowed_at DESC
+  LIMIT p_page_size
+  OFFSET v_offset;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text) TO authenticated, service_role;

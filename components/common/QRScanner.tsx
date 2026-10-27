@@ -101,6 +101,7 @@ export function QRScanner({
     if (!isMountedRef.current || isStartingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
     
     isStartingRef.current = true;
+    setError(null);
     try {
       // Ensure any existing instance is cleaned up first
       if (scannerRef.current) {
@@ -246,16 +247,24 @@ export function QRScanner({
       )}
 
       {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-background/95 backdrop-blur-sm">
-          <p className="text-sm font-bold text-destructive mb-4">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => void startScanner()} className="h-8">
-            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-background/95 backdrop-blur-sm z-30">
+          <p className="text-xs font-medium text-destructive mb-3 max-w-xs">{error}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setError(null);
+              void startScanner();
+            }} 
+            className="h-8 rounded-lg text-xs font-medium gap-1.5 border-border/40 hover:bg-muted/30"
+          >
+            <RefreshCw className="h-3 w-3" />
             Retry
           </Button>
         </div>
       )}
 
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4">
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4 z-20">
         {isScannerActive ? (
           <Button 
             variant="destructive" 
@@ -264,9 +273,9 @@ export function QRScanner({
               void stopScanner();
               onClose?.();
             }} 
-            className="h-8 bg-red-600/20 hover:bg-red-600/40 text-red-500 border-red-500/20 backdrop-blur-md"
+            className="h-8 bg-red-600/20 hover:bg-red-600/40 text-red-500 border-red-500/20 backdrop-blur-md rounded-xl text-xs font-semibold"
           >
-            <StopCircle className="mr-2 h-3.5 w-3.5" />
+            <StopCircle className="mr-1.5 h-3.5 w-3.5" />
             Stop Scanner
           </Button>
         ) : (
@@ -275,9 +284,9 @@ export function QRScanner({
               variant="secondary" 
               size="sm" 
               onClick={() => void startScanner()} 
-              className="h-8 bg-white/10 hover:bg-white/20 text-white border-white/10 backdrop-blur-md"
+              className="h-8 bg-white/10 hover:bg-white/20 text-white border-white/10 backdrop-blur-md rounded-xl text-xs font-semibold"
             >
-              <Camera className="mr-2 h-3.5 w-3.5" />
+              <Camera className="mr-1.5 h-3.5 w-3.5" />
               Open Camera
             </Button>
           )

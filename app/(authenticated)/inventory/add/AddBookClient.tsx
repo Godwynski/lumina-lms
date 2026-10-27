@@ -42,7 +42,7 @@ export function AddBookClient() {
     setIsbnLoading(true);
     
     try {
-      const cleanIsbn = sourceIsbn.replace(/[- ]/g, '');
+      const cleanIsbn = sourceIsbn.replace(/[- ]/g, '').toUpperCase();
       let bookFound = false;
 
       // 1. Try Google Books API First

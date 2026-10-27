@@ -75,6 +75,18 @@ describe('books-core server actions', () => {
       expect(booksBuilder.or).not.toHaveBeenCalled();
     });
 
+    it('safely handles queries containing dashes and punctuation without producing invalid tsquery tokens', async () => {
+      mockClientHelper.setTableResponse('books', [], null, 0);
+
+      await fetchBooksCore({ query: 'Harry Potter - Chamber' });
+
+      const booksBuilder = mockClientHelper.getTableBuilder('books');
+      expect(booksBuilder.textSearch).toHaveBeenCalledWith(
+        'search_vector',
+        'Harry:* & Potter:* & Chamber:*'
+      );
+    });
+
     it('ignores whitespace-only query', async () => {
       mockClientHelper.setTableResponse('books', [], null, 0);
 

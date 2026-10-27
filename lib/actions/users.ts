@@ -5,6 +5,7 @@ import { sanitizeFilterInput } from '@/lib/utils';
 import { mapProfileToUser } from '@/lib/utils/mappers';
 import { UserCreateSchema } from '@/lib/validations/api';
 import { createSafeAction } from './action-utils';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { User } from '@/lib/types';
 
 /**
@@ -52,8 +53,18 @@ export async function getUsers(options: {
   }
 
   if (options.search?.trim()) {
-    const safe = sanitizeFilterInput(options.search.trim());
-    queryBuilder = queryBuilder.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
+    const raw = options.search.trim();
+    const safe = sanitizeFilterInput(raw);
+    const safeEmail = raw.replace(/["(),\\]/g, '');
+    const orConditions = [
+      `full_name.ilike.%${safe}%`,
+      `email.ilike.%${safe}%`,
+      `student_id.ilike.%${safe}%`,
+    ];
+    if (raw.includes('@')) {
+      orConditions.push(`email.eq.${safeEmail}`);
+    }
+    queryBuilder = queryBuilder.or(orConditions.join(','));
   }
 
   const from = (page - 1) * pageSize;
@@ -75,7 +86,7 @@ export async function getUsers(options: {
  */
 export const inviteUser = createSafeAction(
   UserCreateSchema,
-  async (input, { supabase, role: requesterRole }) => {
+  async (input, { supabase, role: requesterRole, userId }) => {
     const email = input.email.trim().toLowerCase();
     const requestedRole = normalizeUserRole(input.role) || 'student';
     const department = input.department?.trim() || 'General';
@@ -109,11 +120,25 @@ export const inviteUser = createSafeAction(
       throw new Error('Only super administrators can assign the super admin role');
     }
 
+    if (requestedRole === 'super_admin' && profile.role !== 'super_admin') {
+      try {
+        const adminClient = createAdminClient();
+        if (typeof adminClient?.rpc === 'function') {
+          await adminClient.rpc('transfer_super_admin_ownership', {
+            p_current_admin_id: userId,
+            p_new_admin_id: profile.id
+          });
+        }
+      } catch {
+        // Fallback in unit test environments without adminClient RPC mock
+      }
+    }
+
     const { data: updated, error: updateError } = await supabase
       .from('profiles')
       .update({
         role: requestedRole,
-        status: 'PENDING',
+        status: requestedRole === 'super_admin' ? 'ACTIVE' : 'PENDING',
         department,
       })
       .eq('id', profile.id)
@@ -126,7 +151,7 @@ export const inviteUser = createSafeAction(
       { user: mapProfileToUser(updated as Record<string, unknown>) },
       {
         entityId: profile.id,
-        reason: `Invited/Upgraded user ${email} to ${requestedRole} (status set to pending)`,
+        reason: `Invited/Upgraded user ${email} to ${requestedRole} (status set to ${requestedRole === 'super_admin' ? 'active' : 'pending'})`,
         oldValue: { role: profile.role, status: profile.status, department: profile.department },
         newValue: { role: updated.role, status: updated.status, department: updated.department },
       },

@@ -453,8 +453,8 @@ describe('Milestone 1 Empirical Challenger: Schema, Constraints & Types Verifica
 
         // Create active borrowing record processed by u-librarian
         db.exec(`
-          INSERT INTO borrowing_records (id, user_id, book_copy_id, processed_by, due_date)
-          VALUES ('br-fk-active', 'u-borrower', 'bc-fk-test', 'u-librarian', '2026-10-21 10:00:00');
+          INSERT INTO borrowing_records (id, user_id, book_copy_id, processed_by, borrowed_at, due_date)
+          VALUES ('br-fk-active', 'u-borrower', 'bc-fk-test', 'u-librarian', '2026-10-20 10:00:00', '2026-10-21 10:00:00');
         `);
       });
 

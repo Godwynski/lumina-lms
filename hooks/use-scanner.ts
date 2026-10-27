@@ -84,6 +84,7 @@ export function useScanner({
     if (isInitializing || (scannerRef.current && scannerRef.current.isScanning)) return;
     
     setIsInitializing(true);
+    setCameraSupported(true);
     setCameraIssue(null);
 
     try {
@@ -143,32 +144,43 @@ export function useScanner({
       setCameraPermission('granted');
       setCameraIssue(null);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      const isPermissionError = errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError');
-      const isHardwareBusy = errorMessage.includes('NotReadableError') || 
-                             errorMessage.includes('Could not start video source') ||
-                             errorMessage.includes('Starting video source failed');
-      const isNotFound = errorMessage.includes('NotFoundError') || errorMessage.includes('Devices not found');
+      const errStr = String(err);
+      const errMessage = (err && typeof err === 'object' && 'message' in err) ? String((err as Record<string, unknown>).message) : '';
+      const errName = (err && typeof err === 'object' && 'name' in err) ? String((err as Record<string, unknown>).name) : '';
+      const fullErrorText = `${errStr} ${errMessage} ${errName}`.toLowerCase();
+
+      const isPermissionError = fullErrorText.includes('permission') || 
+                                fullErrorText.includes('notallowederror') || 
+                                fullErrorText.includes('denied');
+      const isHardwareBusy = fullErrorText.includes('notreadableerror') || 
+                             fullErrorText.includes('readable') ||
+                             fullErrorText.includes('could not start video source') ||
+                             fullErrorText.includes('starting video source failed') ||
+                             fullErrorText.includes('concurrent');
+      const isNotFound = fullErrorText.includes('notfounderror') || 
+                         fullErrorText.includes('devicesnotfound') || 
+                         fullErrorText.includes('devices not found') ||
+                         fullErrorText.includes('no camera') ||
+                         fullErrorText.includes('not found') ||
+                         fullErrorText.includes('requested device not found');
       const isKnownError = isPermissionError || isHardwareBusy || isNotFound;
 
       if (isKnownError) {
-        console.warn('[Scanner] Camera start failed (handled):', errorMessage);
+        console.warn('[Scanner] Camera start failed (handled):', errMessage || errStr);
       } else {
         console.error('Scanner start error:', err);
       }
       
       if (isPermissionError) {
         setCameraPermission('denied');
-        setCameraIssue('Camera access denied. Please check browser permissions.');
-      } else if (isHardwareBusy) {
-        // NotReadableError often means the camera is busy, but if the user has no camera,
-        // it means the browser is trying to open a "ghost" or virtual device driver.
-        setCameraIssue('Camera is busy or failed to start. If you don\'t have a camera, your browser may be detecting a virtual device driver.');
+        setCameraIssue('Camera access denied. Please check browser permissions or use Direct Entry.');
       } else if (isNotFound) {
         setCameraSupported(false);
-        setCameraIssue('No camera hardware detected on this device.');
+        setCameraIssue('No camera hardware detected. Please use Direct Entry.');
+      } else if (isHardwareBusy) {
+        setCameraIssue('Camera is busy or inaccessible. Please check permissions or use Direct Entry.');
       } else {
-        setCameraIssue(errorMessage || 'Failed to start camera.');
+        setCameraIssue(errMessage || errStr || 'Failed to start camera. Please use Direct Entry.');
       }
       
       void stopCamera();

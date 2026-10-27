@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle, Loader2 } from 'lucide-react';
+import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
@@ -37,7 +37,6 @@ export function ScanStep({
         startScanner,
         stopCamera,
         isInitializing,
-        cameraSupported,
         cameraIssue,
         scannerId,
         switchCamera,
@@ -119,23 +118,33 @@ export function ScanStep({
                             <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-9 rounded-xl border-primary/20 text-primary hover:bg-primary/5 font-bold text-[10px] uppercase tracking-wider"
+                                className="h-9 rounded-xl border-border/40 font-semibold text-xs tracking-wide"
                                 onClick={() => startScanner()}
-                                disabled={!cameraSupported}
+                                disabled={isInitializing}
                             >
-                                <Camera className="mr-2 h-3.5 w-3.5" />
-                                Launch Scanner
+                                {cameraIssue ? (
+                                    <>
+                                        <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                                        Retry Camera
+                                    </>
+                                ) : (
+                                    <>
+                                        <Camera className="mr-2 h-3.5 w-3.5" />
+                                        Launch Scanner
+                                    </>
+                                )}
                             </Button>
                         </div>
                     )}
 
                     {cameraOpen && (
-                         <div className="absolute bottom-4 inset-x-4 flex justify-between items-center">
+                         <div className="absolute bottom-4 inset-x-4 flex justify-between items-center z-20">
                             <Button 
                                 variant="secondary" 
                                 size="icon" 
                                 className={`h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10 ${!hasMultipleCameras ? 'invisible' : ''}`}
                                 onClick={switchCamera}
+                                title="Switch Camera"
                             >
                                 <RefreshCcw className="h-4 w-4" />
                             </Button>
@@ -151,8 +160,8 @@ export function ScanStep({
                     )}
                     
                     {cameraIssue && !cameraOpen && !isInitializing && (
-                         <div className="absolute top-4 inset-x-4">
-                            <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium">
+                         <div className="absolute top-4 inset-x-4 z-20">
+                            <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium text-center shadow-sm">
                                 {cameraIssue}
                             </div>
                         </div>

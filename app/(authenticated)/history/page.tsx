@@ -33,27 +33,6 @@ export async function generateMetadata({
   };
 }
 
-// getMe() is cache()-memoized — reuses the auth resolved by the layout.
-// The .then() chain fires immediately without blocking the page shell.
-function buildHistoryPromise(page: number, status: string, q: string, view: string) {
-  return getMe().then(async (me) => {
-    if (!me) redirect("/");
-    
-    const isStaff = me.role === "super_admin" || me.role === "librarian";
-    const hasCirculationPerm = me.role === "student_assistant" && 
-                               !!me.profile?.permissions?.manage_circulation && 
-                               me.profile?.status?.toUpperCase() === 'ACTIVE';
-
-    const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
-    
-    const userId = showAllLogs ? null : me.user.id;
-    
-    return getBorrowingHistory(userId, page, 10, status, q);
-  }) as Promise<BorrowingHistoryResult>;
-}
-
-// Synchronous page shell — no await here.
-// searchParams is a Promise in Next.js 15; we use() it inside the client.
 export default function HistoryPage({
   searchParams,
 }: {
@@ -68,8 +47,6 @@ export default function HistoryPage({
   );
 }
 
-// This async server component only awaits searchParams (URL params, no DB hit).
-// The actual data query is kicked off as a non-blocking promise.
 async function HistoryPageContent({
   searchParams,
 }: {
@@ -84,8 +61,15 @@ async function HistoryPageContent({
   const me = await getMe();
   if (!me) redirect("/");
 
-  // Fire the DB promise immediately — no await, passed straight to HistoryContent
-  const historyPromise = buildHistoryPromise(page, status, q, view);
+  const isStaff = me.role === "super_admin" || me.role === "librarian";
+  const hasCirculationPerm = me.role === "student_assistant" && 
+                             !!me.profile?.permissions?.manage_circulation && 
+                             me.profile?.status?.toUpperCase() === 'ACTIVE';
+
+  const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
+  const userId = showAllLogs ? null : me.user.id;
+
+  const historyPromise = getBorrowingHistory(userId, page, 10, status, q);
 
   return (
     <HistoryContent
@@ -94,6 +78,7 @@ async function HistoryPageContent({
       statusFilter={status}
       searchQuery={q}
       userRole={me.role}
+      userId={userId}
     />
   );
 }

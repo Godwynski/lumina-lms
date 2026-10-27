@@ -114,7 +114,10 @@ export async function getDashboardStats({
         supabase
           .from('attendance')
           .select('id', { count: 'exact', head: true })
-          .gte('check_in_at', `${new Date().toISOString().split('T')[0]}T00:00:00`)
+          .gte('check_in_at', (() => {
+            const manilaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+            return `${manilaStr}T00:00:00+08:00`;
+          })())
           .then(res => ({ count: res.count ?? 0 }))
       ),
       { count: 0 }

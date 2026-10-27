@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { toSlug } from "@/lib/utils";
 import { CategoryUpdateSchema } from "@/lib/validations/api";
+import { logAuditActivity } from "@/lib/audit";
 
 export async function GET(
   request: NextRequest,
@@ -126,6 +127,17 @@ export async function PUT(
 
     if (error) throw error;
 
+    await logAuditActivity(
+      user.user.id,
+      "category",
+      id,
+      "category_updated",
+      `Updated book category: ${data.name}`,
+      { updates: body },
+      existing,
+      data
+    );
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error updating category:", error);
@@ -167,6 +179,17 @@ export async function DELETE(
       .eq("id", id);
 
     if (error) throw error;
+
+    await logAuditActivity(
+      user.user.id,
+      "category",
+      id,
+      "category_archived",
+      `Archived book category ID: ${id}`,
+      null,
+      { is_active: true },
+      { is_active: false }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

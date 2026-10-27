@@ -74,7 +74,10 @@ export async function runMaintenanceTasks() {
     if (dueSoonError) throw dueSoonError;
 
     const records = (dueSoon as unknown as BorrowingRecordWithDetails[]) || [];
-    await Promise.all(records.map(async (record) => {
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(async (record) => {
       const book = record.book_copy?.book;
       const dueDate = new Date(record.due_date);
       const { success } = await sendNotification({
@@ -110,6 +113,7 @@ export async function runMaintenanceTasks() {
         results.remindersSent++;
       }
     }));
+    }
   } catch (err: unknown) {
     results.errors.push(`Reminders error: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -131,7 +135,10 @@ export async function runMaintenanceTasks() {
     if (overdueError) throw overdueError;
 
     const records = (overdue as unknown as BorrowingRecordWithDetails[]) || [];
-    await Promise.all(records.map(async (record) => {
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(async (record) => {
       const book = record.book_copy?.book;
       const dueDate = new Date(record.due_date);
       const overdueDays = Math.floor((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
@@ -180,6 +187,7 @@ export async function runMaintenanceTasks() {
         }
       }
     }));
+    }
   } catch (err: unknown) {
     results.errors.push(`Overdue check error: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -203,10 +211,18 @@ export async function runMaintenanceTasks() {
         .eq('id', res.id);
 
       if (!updateError) {
+        if (res.copy_id) {
+          await supabaseAdmin
+            .from('book_copies')
+            .update({ status: 'AVAILABLE', updated_at: now.toISOString() })
+            .eq('id', res.copy_id);
+          await supabaseAdmin.rpc('compress_reservation_queue', { p_book_id: res.book_id });
+        }
+        const bookTitle = (Array.isArray(res.books) ? res.books[0]?.title : res.books?.title) || 'Book';
         await sendNotification({
           userId: res.user_id,
           title: 'Reservation Expired',
-          content: `Your reservation for "${res.books.title}" has expired as it was not picked up within 3 days.`,
+          content: `Your reservation for "${bookTitle}" has expired as it was not picked up within 3 days.`,
           type: 'RESERVATION_EXPIRED',
           priority: 'low'
         });
@@ -215,6 +231,14 @@ export async function runMaintenanceTasks() {
     }));
   } catch (err: unknown) {
     results.errors.push(`Reservation expiry error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // 4. Attendance Auto-Checkout (Forgotten checkout from previous days)
+  try {
+    await supabaseAdmin.rpc('auto_checkout_forgotten_attendance');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    results.errors.push(`Attendance auto-checkout error: ${msg}`);
   }
 
   return results;

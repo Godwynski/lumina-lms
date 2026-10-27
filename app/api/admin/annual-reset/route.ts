@@ -41,13 +41,17 @@ export async function POST() {
 
   if (!studentsError && students && students.length > 0) {
     const studentIds = students.map(s => s.id);
-    const { error: cardError } = await supabase
-      .from("library_cards")
-      .update({ status: "SUSPENDED" })
-      .in("user_id", studentIds);
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < studentIds.length; i += CHUNK_SIZE) {
+      const chunk = studentIds.slice(i, i + CHUNK_SIZE);
+      const { error: cardError } = await supabase
+        .from("library_cards")
+        .update({ status: "SUSPENDED" })
+        .in("user_id", chunk);
 
-    if (cardError) {
-      console.error("Failed to update student library cards:", cardError);
+      if (cardError) {
+        console.error("Failed to update student library cards chunk:", cardError);
+      }
     }
   }
 

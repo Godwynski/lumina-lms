@@ -226,6 +226,40 @@ describe('Notifications Service & Maintenance Tasks', () => {
           priority: 'low',
         })
       );
+      expect(mockAdminHelper.rpc).toHaveBeenCalledWith('auto_checkout_forgotten_attendance');
+    });
+
+    it('releases reserved copy back to available and compresses queue on reservation expiry', async () => {
+      mockAdminHelper.setTableResponse('system_settings', []);
+      mockAdminHelper.setTableResponse('borrowing_records', []);
+
+      const expiredReservation = {
+        id: 'res-101',
+        user_id: 'user-patron-10',
+        book_id: 'book-target-1',
+        copy_id: 'copy-target-1',
+        status: 'READY',
+        updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        books: {
+          title: 'Pragmatic Programmer',
+        },
+      };
+
+      mockAdminHelper.setTableResponse('reservations', [expiredReservation]);
+
+      const copyBuilder = mockAdminHelper.getTableBuilder('book_copies');
+      copyBuilder.update.mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      });
+
+      await runMaintenanceTasks();
+
+      expect(copyBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'AVAILABLE' })
+      );
+      expect(mockAdminHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
+        p_book_id: 'book-target-1',
+      });
     });
 
     it('captures errors per maintenance section without aborting subsequent tasks', async () => {

@@ -6,8 +6,8 @@ export const BookSchema = z.object({
   isbn: z.string()
     .optional()
     .nullable()
-    .refine((val) => !val || /^\d+$/.test(val), {
-      message: "ISBN must contain only numbers",
+    .refine((val) => !val || /^[\d-]+X?$/i.test(val.trim()), {
+      message: "ISBN must contain only numbers, hyphens, or a trailing X",
     }),
   category_id: z.string().uuid("Invalid category ID").optional().nullable(),
   description: z.string().optional().nullable(),

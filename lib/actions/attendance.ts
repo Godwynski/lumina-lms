@@ -130,7 +130,12 @@ export const toggleAttendanceByCard = createSafeAction(
           check_in_at: new Date().toISOString()
         });
 
-      if (inError) throw new Error("Failed to register Time In.");
+      if (inError) {
+        if (inError.code === '23505' || inError.message?.includes('duplicate key') || inError.message?.includes('attendance_user_active_idx')) {
+          throw new Error("An active attendance session is already in progress for this card.");
+        }
+        throw new Error("Failed to register Time In.");
+      }
 
       // Notify the user
       await sendNotification({
@@ -174,13 +179,13 @@ export async function getAttendanceHistory(userId?: string) {
 
   // If no userId provided and is staff, show all of today's records
   if (!userId && isStaff) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const manilaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+
 
     const { data, error } = await supabase
       .from("attendance")
       .select("id, check_in_at, check_out_at, user_id, profiles(full_name)")
-      .gte("check_in_at", today.toISOString())
+      .gte("check_in_at", `${manilaStr}T00:00:00+08:00`)
       .order("check_in_at", { ascending: false });
 
     if (error) throw error;

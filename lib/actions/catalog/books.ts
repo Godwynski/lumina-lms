@@ -6,6 +6,7 @@ import { revalidateTag } from 'next/cache';
 import { BookSchema } from '@/lib/validations/catalog';
 import { logger } from '@/lib/logger';
 import { assertStaffCatalogAccess } from './auth';
+import { sanitizeFilterInput } from '@/lib/utils';
 
 /**
  * Retrieves a paginated list of books with optional filtering and search.
@@ -38,11 +39,17 @@ export async function getBooks(
     const cleanQuery = query.trim();
     if (cleanQuery) {
       if (cleanQuery.length < 3) {
-        dbQuery = dbQuery.or(`title.ilike.%${cleanQuery}%,author.ilike.%${cleanQuery}%,isbn.ilike.%${cleanQuery}%`);
+        const safeQuery = sanitizeFilterInput(cleanQuery);
+        dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
       } else {
-        const terms = cleanQuery.split(/\s+/).filter(Boolean);
+        const terms = cleanQuery.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
         const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
-        dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
+        if (terms.length > 0) {
+          dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
+        } else {
+          const safeQuery = sanitizeFilterInput(cleanQuery);
+          dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
+        }
       }
     }
   }
@@ -199,6 +206,19 @@ export const softDeleteBook = createSafeAction(
     
     if (count && count > 0) {
       throw new Error('Cannot delete book: There are active borrowed copies.');
+    }
+
+    // Check for active or ready reservations
+    const { count: resCount, error: resError } = await supabase
+      .from('reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('book_id', id)
+      .in('status', ['ACTIVE', 'READY']);
+
+    if (resError) throw new Error(resError.message);
+
+    if (resCount && resCount > 0) {
+      throw new Error('Cannot delete book: There are active or ready reservations waiting.');
     }
 
     const { data, error } = await supabase

@@ -3,6 +3,7 @@ import { getDashboardStats } from "@/lib/actions/dashboard";
 import { getMe } from "@/lib/auth-helpers";
 import { AnalyticsClient } from "./AnalyticsClient";
 import { Loader2 } from "lucide-react";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Analytics | Lumina LMS",
@@ -15,7 +16,7 @@ export default async function AnalyticsPage() {
   const { role } = me;
 
   if (role !== 'super_admin' && role !== 'librarian') {
-    return <div className="p-8 text-center text-muted-foreground">Unauthorized access</div>;
+    redirect('/dashboard');
   }
 
   const statsPromise = getDashboardStats({ role });
