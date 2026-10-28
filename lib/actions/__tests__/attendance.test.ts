@@ -371,6 +371,26 @@ describe('Attendance Server Actions', () => {
       ]);
     });
 
+    it('retrieves all historical records when range is set to all', async () => {
+      const allRecords = [
+        {
+          id: 'att-1',
+          check_in_at: '2026-10-01T09:00:00Z',
+          check_out_at: '2026-10-01T11:00:00Z',
+          user_id: 'u-1',
+          profiles: { full_name: 'Alice' },
+        },
+      ];
+      mockClientHelper.setTableResponse('attendance', allRecords);
+
+      const result = await getAttendanceHistory(undefined, { range: 'all' });
+
+      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
+      expect(attendanceBuilder.gte).not.toHaveBeenCalled();
+      expect(attendanceBuilder.order).toHaveBeenCalledWith('check_in_at', { ascending: false });
+      expect(result).toEqual(allRecords);
+    });
+
     it('retrieves targeted user attendance history for staff caller', async () => {
       const userRecords = [
         {

@@ -25,13 +25,15 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   const isStaff = me.role === 'super_admin' || me.role === 'librarian';
   const showSystemLogs = hasAttendancePerm && (viewParam === 'logs' || isStaff);
 
-  const systemTodayPromise = showSystemLogs ? getAttendanceHistory(undefined) : undefined;
+  const systemTodayPromise = showSystemLogs ? getAttendanceHistory(undefined, { range: 'today' }) : undefined;
+  const systemAllPromise = showSystemLogs ? getAttendanceHistory(undefined, { range: 'all', limit: 300 }) : undefined;
   const personalHistoryPromise = getAttendanceHistory(me.user.id);
 
   return (
     <Suspense fallback={<AttendanceSkeleton />}>
       <AttendanceClient 
         systemTodayPromise={systemTodayPromise}
+        systemAllPromise={systemAllPromise}
         personalHistoryPromise={personalHistoryPromise}
         isStaff={showSystemLogs}
         userId={me.user.id}
