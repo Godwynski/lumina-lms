@@ -1,98 +1,154 @@
 "use client";
 
-import { use, useTransition, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
+import { use, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
 import { toggleAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Clock, Calendar as CalendarIcon, ScanLine, LogIn, LogOut, Camera, Loader2 } from "lucide-react";
+import { 
+  Clock, 
+  Calendar as CalendarIcon, 
+  ScanLine, 
+  LogIn, 
+  LogOut, 
+  Camera, 
+  Loader2, 
+  RefreshCcw, 
+  RefreshCw,
+  QrCode,
+  Search, 
+  Sparkles,
+  Users
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { QRScanner } from "@/components/common/QRScanner";
 import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
+import { useScanner } from "@/hooks/use-scanner";
+import { useScanFeedback } from "@/hooks/use-scan-feedback";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from "@/components/ui/dialog";
 import type { AttendanceRecord } from "@/lib/actions/attendance";
 
 export function AttendanceClient({ 
   systemTodayPromise,
+  systemAllPromise,
   personalHistoryPromise,
   isStaff = false,
   userId
 }: { 
   systemTodayPromise?: Promise<AttendanceRecord[]>,
+  systemAllPromise?: Promise<AttendanceRecord[]>,
   personalHistoryPromise: Promise<AttendanceRecord[]>,
   isStaff?: boolean,
   userId: string
 }) {
   const initialSystemToday = systemTodayPromise ? use(systemTodayPromise) : [];
+  const initialSystemAll = systemAllPromise ? use(systemAllPromise) : [];
   const initialPersonal = use(personalHistoryPromise);
 
-  const [systemRecords, setSystemRecords] = useState(initialSystemToday);
+  const [systemTodayRecords, setSystemTodayRecords] = useState(initialSystemToday);
+  const [systemAllRecords, setSystemAllRecords] = useState(initialSystemAll);
   const [personalRecords, setPersonalRecords] = useState(initialPersonal);
-  const [isPending, startTransition] = useTransition();
+
+  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  const [searchQuery, setSearchQuery] = useState("");
   const [cardNumber, setCardNumber] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastScannedValRef = useRef<string | null>(null);
+  const lastScanTimeRef = useRef(0);
 
+  const { playScanCue } = useScanFeedback();
+
+  // Pagination states
+  const [staffPage, setStaffPage] = useState(1);
   const [personalPage, setPersonalPage] = useState(1);
-  const PERSONAL_PAGE_SIZE = 10;
+  const PAGE_SIZE = 10;
 
-  const totalPersonalItems = personalRecords.length;
-  const totalPages = Math.max(1, Math.ceil(totalPersonalItems / PERSONAL_PAGE_SIZE));
-  const activePersonalPage = Math.min(personalPage, totalPages);
+  // Process a card scan (manual entry or camera detection)
+  const processScan = useCallback(async (scannedValue: string, isManual = false) => {
+    const clean = scannedValue.trim();
+    if (!clean || isProcessing) return;
 
-  const paginatedPersonalRecords = useMemo(() => {
-    const start = (activePersonalPage - 1) * PERSONAL_PAGE_SIZE;
-    return personalRecords.slice(start, start + PERSONAL_PAGE_SIZE);
-  }, [personalRecords, activePersonalPage]);
+    const now = Date.now();
+    if (!isManual && lastScannedValRef.current === clean && now - lastScanTimeRef.current < 2500) {
+      return;
+    }
+    lastScannedValRef.current = clean;
+    lastScanTimeRef.current = now;
 
-
-  const handleScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cardNumber.trim()) return;
-
-    startTransition(async () => {
+    setIsProcessing(true);
+    try {
       const result = await toggleAttendanceByCard({ 
-        cardNumber: cardNumber.trim(),
-        isManual: true 
+        cardNumber: clean,
+        isManual 
       });
+
       if (result.success) {
+        playScanCue('success');
         toast.success("Transaction recorded", {
           id: "attendance-toast",
           description: result.data.message,
           icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
         });
-        setCardNumber("");
+        if (isManual) setCardNumber("");
+
+        // Instantly refresh records so local state updates immediately without waiting for websocket
+        const [freshToday, freshAll] = await Promise.all([
+          getAttendanceHistory(undefined, { range: 'today' }),
+          getAttendanceHistory(undefined, { range: 'all', limit: 300 })
+        ]);
+        setSystemTodayRecords(freshToday);
+        setSystemAllRecords(freshAll);
       } else {
+        playScanCue('error');
         toast.error(result.error, { id: "attendance-toast-error" });
-        setCardNumber("");
       }
-    });
+    } catch {
+      playScanCue('error');
+      toast.error("Failed to process attendance transaction.", { id: "attendance-toast-err" });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, playScanCue]);
+
+  // Unified camera scanner using useScanner
+  const {
+    cameraOpen,
+    startScanner,
+    stopCamera,
+    isInitializing,
+    cameraIssue,
+    switchCamera,
+    hasMultipleCameras,
+    scannerId,
+  } = useScanner({
+    onScan: async (val) => {
+      await processScan(val, false);
+    },
+    isProcessing,
+    scannerId: 'attendance-kiosk-scanner'
+  });
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cardNumber.trim()) return;
+    void processScan(cardNumber.trim(), true);
   };
 
-
-  const [showScanner, setShowScanner] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // --- Synchronous lock: prevents race conditions between state updates ---
-  const isProcessingRef = useRef(false);
-  const lastScannedRef = useRef<string | null>(null);
-  const lastScanTimeRef = useRef(0);
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Minimum interval between ANY two scans (ms)
-  const SCAN_INTERVAL_MS = 3000;
-
-  useEffect(() => {
-    if (isStaff && !showScanner) {
-      inputRef.current?.focus();
-    }
-  }, [isStaff, showScanner]);
-
-  // Realtime subscription to refresh attendance logs automatically
+  // Realtime subscription to refresh attendance logs across tabs automatically
   useEffect(() => {
     const supabase = createClient();
     
@@ -105,11 +161,13 @@ export function AttendanceClient({
       }, async () => {
         try {
           if (isStaff) {
-            const [freshSystem, freshPersonal] = await Promise.all([
-              getAttendanceHistory(undefined),
+            const [freshToday, freshAll, freshPersonal] = await Promise.all([
+              getAttendanceHistory(undefined, { range: 'today' }),
+              getAttendanceHistory(undefined, { range: 'all', limit: 300 }),
               getAttendanceHistory(userId)
             ]);
-            setSystemRecords(freshSystem);
+            setSystemTodayRecords(freshToday);
+            setSystemAllRecords(freshAll);
             setPersonalRecords(freshPersonal);
           } else {
             const freshPersonal = await getAttendanceHistory(userId);
@@ -123,142 +181,319 @@ export function AttendanceClient({
 
     return () => {
       supabase.removeChannel(channel);
-      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
   }, [isStaff, userId]);
 
-  const handleQRScan = useCallback((data: string) => {
-    if (isProcessingRef.current) return;
+  // Reset staff page when switching tabs or typing search
+  useEffect(() => {
+    setStaffPage(1);
+  }, [activeTab, searchQuery]);
 
-    const cleanData = data.trim();
-    if (!cleanData) return;
-
-    const now = Date.now();
-
-    if (lastScannedRef.current === cleanData && now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
-      return;
+  // Auto-start scanner when modal opens; teardown camera when modal closes
+  useEffect(() => {
+    if (isScannerOpen) {
+      const timer = setTimeout(() => {
+        void startScanner();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      void stopCamera();
     }
+  }, [isScannerOpen, startScanner, stopCamera]);
 
-    if (now - lastScanTimeRef.current < SCAN_INTERVAL_MS) {
-      return;
+  // Focus manual input when not using scanner
+  useEffect(() => {
+    if (isStaff && !isScannerOpen) {
+      inputRef.current?.focus();
     }
+  }, [isStaff, isScannerOpen]);
 
-    isProcessingRef.current = true;
-    lastScannedRef.current = cleanData;
-    lastScanTimeRef.current = now;
-    setIsProcessing(true);
+  // Compute active & completed stats for today
+  const activeCount = useMemo(() => 
+    systemTodayRecords.filter(r => !r.check_out_at).length, 
+    [systemTodayRecords]
+  );
+  const completedTodayCount = useMemo(() => 
+    systemTodayRecords.filter(r => !!r.check_out_at).length, 
+    [systemTodayRecords]
+  );
 
-    startTransition(async () => {
-      try {
-        const result = await toggleAttendanceByCard({ 
-          cardNumber: cleanData,
-          isManual: false 
-        });
-        if (result.success) {
-          toast.success("Transaction recorded", {
-            id: "attendance-qr-toast",
-            description: result.data.message,
-            icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
-          });
-
-          setShowScanner(false);
-
-          if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-          scanTimeoutRef.current = setTimeout(() => {
-            lastScannedRef.current = null;
-          }, 5000);
-
-        } else {
-          toast.error(result.error, { id: "attendance-qr-toast-error" });
-          lastScannedRef.current = null; 
-        }
-      } finally {
-        setIsProcessing(false);
-        setTimeout(() => {
-          isProcessingRef.current = false;
-        }, 500);
-      }
+  // Filter staff records by tab & search query
+  const filteredStaffRecords = useMemo(() => {
+    const base = activeTab === 'today' ? systemTodayRecords : systemAllRecords;
+    if (!searchQuery.trim()) return base;
+    const q = searchQuery.toLowerCase().trim();
+    return base.filter(r => {
+      const name = r.profiles?.full_name?.toLowerCase() || '';
+      const sid = r.profiles?.student_id?.toLowerCase() || '';
+      const notes = r.notes?.toLowerCase() || '';
+      return name.includes(q) || sid.includes(q) || notes.includes(q);
     });
-  }, []);
+  }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery]);
+
+  // Paginated staff records
+  const totalStaffItems = filteredStaffRecords.length;
+  const totalStaffPages = Math.max(1, Math.ceil(totalStaffItems / PAGE_SIZE));
+  const activeStaffPage = Math.min(staffPage, totalStaffPages);
+  const paginatedStaffRecords = useMemo(() => {
+    const start = (activeStaffPage - 1) * PAGE_SIZE;
+    return filteredStaffRecords.slice(start, start + PAGE_SIZE);
+  }, [filteredStaffRecords, activeStaffPage]);
+
+  // Paginated personal records (for student view)
+  const totalPersonalItems = personalRecords.length;
+  const totalPersonalPages = Math.max(1, Math.ceil(totalPersonalItems / PAGE_SIZE));
+  const activePersonalPage = Math.min(personalPage, totalPersonalPages);
+  const paginatedPersonalRecords = useMemo(() => {
+    const start = (activePersonalPage - 1) * PAGE_SIZE;
+    return personalRecords.slice(start, start + PAGE_SIZE);
+  }, [personalRecords, activePersonalPage]);
 
   const scannerControls = (
-    <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-3 w-full">
-      <form onSubmit={handleScan} className="flex flex-1 items-center gap-3">
-        <div className="relative flex-1">
-          <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={cardNumber}
-            onChange={(e) => setCardNumber(e.target.value)}
-            placeholder="Library Card ID..."
-            className="h-9 pl-9 pr-3 bg-background/50"
-            disabled={isPending}
-            autoComplete="off"
-          />
+    <div className="flex flex-col gap-3 w-full">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full">
+        {/* Left: View Tabs + Search Box */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/15">
+            <button
+              type="button"
+              onClick={() => setActiveTab('today')}
+              className={cn(
+                "h-7 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                activeTab === 'today' 
+                  ? "bg-background text-foreground shadow-sm font-bold" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span>Today</span>
+              <span className={cn(
+                "px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none",
+                activeTab === 'today' ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              )}>
+                {systemTodayRecords.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={cn(
+                "h-7 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                activeTab === 'all' 
+                  ? "bg-background text-foreground shadow-sm font-bold" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span>All History</span>
+              <span className={cn(
+                "px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none",
+                activeTab === 'all' ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              )}>
+                {systemAllRecords.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Quick stats pill */}
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/10 text-[10px] font-medium text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <strong className="text-foreground">{activeCount}</strong> active
+            </span>
+            <span className="text-border/60">•</span>
+            <span><strong className="text-foreground">{completedTodayCount}</strong> completed</span>
+          </div>
+
+          {/* Search box */}
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search patron or ID..."
+              className="h-8 pl-8 pr-2.5 text-xs bg-background/50 rounded-lg border-border/20"
+            />
+          </div>
         </div>
-        <Button 
-          type="submit" 
-          size="sm"
-          disabled={isPending || isProcessing || !cardNumber.trim()}
-          className="h-9 px-4 font-bold shrink-0"
-        >
-          {isPending || isProcessing ? "..." : "Process"}
-        </Button>
-      </form>
-      <div className="hidden md:block w-px h-6 bg-border/40 mx-1" />
-      <div className="flex items-center gap-2">
-        <Button
-          variant={showScanner ? "secondary" : "outline"}
-          size="sm"
-          onClick={() => setShowScanner(!showScanner)}
-          className="h-9 px-4 flex-1 md:flex-none justify-center shrink-0"
-          disabled={isPending}
-        >
-          <Camera className={cn("w-4 h-4 mr-2", showScanner && "animate-pulse")} />
-          {showScanner ? "Close Camera" : "Scan Library Card"}
-        </Button>
+
+        {/* Right: Manual Input Form + Scanner Button */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <form onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
+            <div className="relative flex-1 sm:w-44">
+              <ScanLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                ref={inputRef}
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                placeholder="Card ID or Student No..."
+                className="h-8 pl-8 pr-2 text-xs bg-background/50 rounded-lg border-border/20"
+                disabled={isProcessing}
+                autoComplete="off"
+              />
+            </div>
+            <Button 
+              type="submit" 
+              size="sm"
+              disabled={isProcessing || !cardNumber.trim()}
+              className="h-8 px-3 font-semibold text-xs rounded-lg shrink-0"
+            >
+              {isProcessing ? "..." : "Log"}
+            </Button>
+          </form>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsScannerOpen(true)}
+            className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/30 hover:bg-muted/40"
+            disabled={isProcessing}
+          >
+            <Camera className="w-3.5 h-3.5 text-primary" />
+            <span>Launch Scanner</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
 
   if (isStaff) {
     return (
-      <div className="w-full space-y-6">
-
-
+      <div className="w-full space-y-4">
         <AdminTableShell
           controls={scannerControls}
+          pagination={
+            totalStaffItems > 0 ? (
+              <CompactPagination
+                page={activeStaffPage}
+                totalItems={totalStaffItems}
+                pageSize={PAGE_SIZE}
+                onPageChange={setStaffPage}
+                variant="ghost"
+              />
+            ) : null
+          }
           className="max-w-none animate-in fade-in-50 duration-300"
         >
-          {showScanner && (
-            <div className="p-4 border-b border-border/10 bg-muted/5 relative overflow-hidden">
-              {isProcessing && (
-                <div className="absolute inset-0 z-10 bg-background/20 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
-                  <div className="bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50 shadow-xl flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Processing...</span>
+          <Dialog 
+            open={isScannerOpen} 
+            onOpenChange={(open) => {
+              setIsScannerOpen(open);
+              if (!open) void stopCamera();
+            }}
+          >
+            <DialogContent className="sm:max-w-md p-6 rounded-3xl border border-border/20 bg-background/95 backdrop-blur-xl shadow-2xl flex flex-col items-center">
+              <DialogHeader className="text-center w-full pb-1">
+                <DialogTitle className="text-base font-bold flex items-center justify-center gap-2">
+                  <ScanLine className="w-4 h-4 text-primary" />
+                  Gate Attendance Scanner
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Scan student library card or digital QR code to log attendance.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/15 bg-muted/20 shadow-inner my-2">
+                <div 
+                  id={scannerId} 
+                  className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
+                />
+                
+                {/* Minimalist reticle overlay */}
+                <div className="absolute inset-0 pointer-events-none border-[12px] border-background/20 rounded-2xl" />
+
+                {/* Loading or Processing Overlay */}
+                {(isProcessing || isInitializing) && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
+                    {isInitializing && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+                        Initializing...
+                      </span>
+                    )}
+                    {isProcessing && !isInitializing && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+                        Recording...
+                      </span>
+                    )}
                   </div>
-                </div>
-              )}
-              <QRScanner 
-                onScan={handleQRScan}
-                onClose={() => setShowScanner(false)}
-                stopOnScan={false}
-                className="w-full max-w-md mx-auto aspect-square shadow-2xl border border-border/20"
-              />
-            </div>
-          )}
+                )}
+
+                {/* Inactive State: Launch Scanner or Retry Camera */}
+                {!cameraOpen && !isInitializing && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200">
+                    <QrCode className="h-10 w-10 text-muted-foreground/40 mb-4" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-9 rounded-xl border-border/40 font-semibold text-xs tracking-wide"
+                      onClick={() => startScanner()}
+                      disabled={isInitializing}
+                    >
+                      {cameraIssue ? (
+                        <>
+                          <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                          Retry Camera
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="mr-2 h-3.5 w-3.5" />
+                          Launch Scanner
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Active State: Camera Controls Overlay */}
+                {cameraOpen && (
+                  <div className="absolute bottom-4 inset-x-4 flex justify-between items-center z-20">
+                    <Button 
+                      variant="secondary" 
+                      size="icon" 
+                      className={cn(
+                        "h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10",
+                        !hasMultipleCameras && "invisible"
+                      )}
+                      onClick={switchCamera}
+                      title="Switch Camera"
+                    >
+                      <RefreshCcw className="h-4 w-4" />
+                    </Button>
+
+                    <Button 
+                      variant="destructive" 
+                      className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
+                      onClick={() => stopCamera()}
+                    >
+                      Stop
+                    </Button>
+                  </div>
+                )}
+
+                {/* Camera Issue Warning Banner */}
+                {cameraIssue && !cameraOpen && !isInitializing && (
+                  <div className="absolute top-4 inset-x-4 z-20">
+                    <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium text-center shadow-sm">
+                      {cameraIssue}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground font-medium text-center mt-2">
+                Keep code centered. Camera stays active for continuous scanning.
+              </p>
+            </DialogContent>
+          </Dialog>
 
           <Suspense fallback={<TableLoadingSkeleton />}>
-            <AttendanceTable history={systemRecords} isPersonal={false} />
+            <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
           </Suspense>
         </AdminTableShell>
       </div>
     );
   }
 
+  // Personal View (Student)
   return (
     <div className="w-full">
       <AdminTableShell
@@ -273,7 +508,7 @@ export function AttendanceClient({
             <CompactPagination
               page={activePersonalPage}
               totalItems={totalPersonalItems}
-              pageSize={PERSONAL_PAGE_SIZE}
+              pageSize={PAGE_SIZE}
               onPageChange={setPersonalPage}
               variant="ghost"
             />
@@ -314,61 +549,73 @@ function AttendanceTable({
         cell: (record) => (
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+              <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">
                 {(record.profiles?.full_name || "Student").charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate font-medium text-foreground">{record.profiles?.full_name || "Student"}</p>
+              <p className="truncate font-semibold text-foreground text-xs">{record.profiles?.full_name || "Student"}</p>
               <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                {format(new Date(record.check_in_at), "MMM dd, yyyy")}
+                {record.profiles?.student_id ? record.profiles.student_id : format(new Date(record.check_in_at), "MMM dd, yyyy")}
               </p>
             </div>
           </div>
         )
       });
-    } else {
-      cols.push({
-        header: "Date",
-        cell: (record) => (
-          <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-            <CalendarIcon className="w-3.5 h-3.5 text-primary" />
-            {format(new Date(record.check_in_at), "MMMM dd, yyyy")}
-          </div>
-        )
-      });
     }
+
+    cols.push({
+      header: "Date",
+      className: "w-[130px]",
+      cell: (record) => (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+          <span>{format(new Date(record.check_in_at), "MMM dd, yyyy")}</span>
+        </div>
+      )
+    });
 
     cols.push(
       {
         header: "Check In",
+        className: "w-[120px]",
         cell: (record) => (
           <div className="flex items-center gap-1.5 text-xs font-medium">
-            <LogIn className="w-3.5 h-3.5 text-muted-foreground/50" />
-            {format(new Date(record.check_in_at), "hh:mm a")}
+            <LogIn className="w-3.5 h-3.5 text-emerald-500/80 shrink-0" />
+            <span>{format(new Date(record.check_in_at), "hh:mm a")}</span>
           </div>
         )
       },
       {
         header: "Check Out",
+        className: "w-[140px]",
         cell: (record) => (
           <div className="flex items-center gap-1.5 text-xs font-medium">
             {record.check_out_at ? (
               <>
-                <LogOut className="w-3.5 h-3.5 text-muted-foreground/50" />
-                {format(new Date(record.check_out_at), "hh:mm a")}
+                <LogOut className="w-3.5 h-3.5 text-orange-500/80 shrink-0" />
+                <span>{format(new Date(record.check_out_at), "hh:mm a")}</span>
               </>
             ) : (
-              <span className="text-green-600 font-bold uppercase tracking-widest text-[9px] animate-pulse">
-                Active Session
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold uppercase tracking-wider text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active Inside
               </span>
             )}
           </div>
         )
       },
       {
+        header: "Purpose / Note",
+        cell: (record) => (
+          <span className="text-xs text-muted-foreground/80 truncate block max-w-xs">
+            {record.notes || "—"}
+          </span>
+        )
+      },
+      {
         header: "Status",
-        className: "w-[120px]",
+        className: "w-[100px]",
         cell: (record) => (
           <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
         )
@@ -386,7 +633,7 @@ function AttendanceTable({
       noBorder
       emptyState={{
         title: "No logs found",
-        description: "There are no attendance records to display.",
+        description: "There are no attendance records matching this view.",
         icon: Clock
       }}
       renderMobileRow={(record) => (
@@ -395,7 +642,7 @@ function AttendanceTable({
             {!isPersonal ? (
               <>
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-muted text-muted-foreground">
+                  <AvatarFallback className="bg-muted text-muted-foreground font-bold">
                     {(record.profiles?.full_name || "S").charAt(0)}
                   </AvatarFallback>
                 </Avatar>
@@ -403,11 +650,11 @@ function AttendanceTable({
                   <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-muted-foreground font-bold uppercase">
-                      {format(new Date(record.check_in_at), "MMM dd")}
+                      {record.profiles?.student_id || format(new Date(record.check_in_at), "MMM dd")}
                     </span>
                     <span className="opacity-20 text-[10px]">•</span>
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <LogIn className="w-2.5 h-2.5" />
+                      <LogIn className="w-2.5 h-2.5 text-emerald-500" />
                       {format(new Date(record.check_in_at), "hh:mm a")}
                     </div>
                   </div>
@@ -420,7 +667,7 @@ function AttendanceTable({
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
-                    <LogIn className="w-2.5 h-2.5 text-green-500" />
+                    <LogIn className="w-2.5 h-2.5 text-emerald-500" />
                     In: {format(new Date(record.check_in_at), "hh:mm a")}
                   </div>
                 </div>

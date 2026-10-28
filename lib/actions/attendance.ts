@@ -12,8 +12,10 @@ export interface AttendanceRecord {
   check_in_at: string;
   check_out_at: string | null;
   user_id: string;
+  notes?: string | null;
   profiles?: {
     full_name: string | null;
+    student_id?: string | null;
   };
 }
 
@@ -165,7 +167,10 @@ export const toggleAttendanceByCard = createSafeAction(
 
 
 
-export async function getAttendanceHistory(userId?: string) {
+export async function getAttendanceHistory(
+  userId?: string, 
+  options?: { range?: 'today' | 'all'; limit?: number }
+) {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
 
@@ -177,16 +182,25 @@ export async function getAttendanceHistory(userId?: string) {
                    me.profile?.status?.toUpperCase() === 'ACTIVE' &&
                    me.profile.permissions?.manage_attendance);
 
-  // If no userId provided and is staff, show all of today's records
+  // If no userId provided and is staff, show system records (today or all)
   if (!userId && isStaff) {
-    const manilaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
-
-
-    const { data, error } = await supabase
+    const range = options?.range || 'today';
+    let query = supabase
       .from("attendance")
-      .select("id, check_in_at, check_out_at, user_id, profiles(full_name)")
-      .gte("check_in_at", `${manilaStr}T00:00:00+08:00`)
-      .order("check_in_at", { ascending: false });
+      .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)");
+
+    if (range === 'today') {
+      const manilaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+      query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
+    }
+
+    query = query.order("check_in_at", { ascending: false });
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data || []).map(record => ({
@@ -202,11 +216,17 @@ export async function getAttendanceHistory(userId?: string) {
     throw new Error("Forbidden");
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("attendance")
-    .select("id, check_in_at, check_out_at, user_id, profiles(full_name)")
+    .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)")
     .eq("user_id", targetId)
     .order("check_in_at", { ascending: false });
+
+  if (options?.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return (data || []).map(record => ({

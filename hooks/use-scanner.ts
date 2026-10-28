@@ -26,7 +26,7 @@ export function useScanner({
   const [cameraIssue, setCameraIssue] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [devices] = useState<{ id: string; label: string }[]>([]);
+  const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef<{ value: string; time: number } | null>(null);
@@ -105,6 +105,26 @@ export function useScanner({
       });
       scannerRef.current = html5QrCode;
 
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          setDevices(cameras.map(c => ({ id: c.id, label: c.label })));
+        } else {
+          setCameraSupported(false);
+          setCameraIssue('No camera hardware detected. Please use Direct Entry.');
+          setIsInitializing(false);
+          return;
+        }
+      } catch (camErr: unknown) {
+        const camErrStr = String(camErr).toLowerCase();
+        if (camErrStr.includes('notfound') || camErrStr.includes('no camera') || camErrStr.includes('not found') || camErrStr.includes('device')) {
+          setCameraSupported(false);
+          setCameraIssue('No camera hardware detected. Please use Direct Entry.');
+          setIsInitializing(false);
+          return;
+        }
+      }
+
       const config = {
         fps: 15,
         qrbox: (viewWidth: number, viewHeight: number) => {
@@ -115,30 +135,48 @@ export function useScanner({
         aspectRatio: 1.0,
       };
 
-      await html5QrCode.start(
-        { facingMode: facingMode },
-        config,
-        async (decodedText: string) => {
-          const now = Date.now();
-          console.info(`[Scanner] Detected: ${decodedText}`);
+      const handleScanSuccess = async (decodedText: string) => {
+        const now = Date.now();
+        console.info(`[Scanner] Detected: ${decodedText}`);
 
-          if (isProcessingRef.current) {
-            console.warn('[Scanner] Scan ignored: System is currently processing.');
-            return;
-          }
+        if (isProcessingRef.current) {
+          console.warn('[Scanner] Scan ignored: System is currently processing.');
+          return;
+        }
 
-          if (lastScanRef.current?.value === decodedText && now - (lastScanRef.current?.time ?? 0) < 2000) {
-            console.debug('[Scanner] Scan ignored: Debounce (duplicate).');
-            return;
-          }
+        if (lastScanRef.current?.value === decodedText && now - (lastScanRef.current?.time ?? 0) < 2000) {
+          console.debug('[Scanner] Scan ignored: Debounce (duplicate).');
+          return;
+        }
 
-          lastScanRef.current = { value: decodedText, time: now };
-          console.info('[Scanner] Triggering onScan callback...');
-          await onScanRef.current(decodedText);
-          console.info('[Scanner] onScan callback completed.');
-        },
-        () => {}
-      );
+        lastScanRef.current = { value: decodedText, time: now };
+        console.info('[Scanner] Triggering onScan callback...');
+        await onScanRef.current(decodedText);
+        console.info('[Scanner] onScan callback completed.');
+      };
+
+      try {
+        await html5QrCode.start(
+          { facingMode: facingMode },
+          config,
+          handleScanSuccess,
+          () => {}
+        );
+      } catch (startErr: unknown) {
+        const errText = String(startErr).toLowerCase();
+        if (facingMode === 'environment' && (errText.includes('overconstrained') || errText.includes('notfound') || errText.includes('not found') || errText.includes('constraint'))) {
+          console.warn('[Scanner] Environment camera unavailable, falling back to user camera...');
+          setFacingMode('user');
+          await html5QrCode.start(
+            { facingMode: 'user' },
+            config,
+            handleScanSuccess,
+            () => {}
+          );
+        } else {
+          throw startErr;
+        }
+      }
 
       setCameraOpen(true);
       setCameraPermission('granted');
@@ -234,7 +272,7 @@ export function useScanner({
     clearLastScan,
     switchCamera,
     facingMode,
-    hasMultipleCameras: devices.length > 1,
+    hasMultipleCameras: devices.length > 1 || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0),
     scannerId,
   };
 }
