@@ -109,8 +109,21 @@ export function useScanner({
         const cameras = await Html5Qrcode.getCameras();
         if (cameras && cameras.length > 0) {
           setDevices(cameras.map(c => ({ id: c.id, label: c.label })));
+        } else {
+          setCameraSupported(false);
+          setCameraIssue('No camera hardware detected. Please use Direct Entry.');
+          setIsInitializing(false);
+          return;
         }
-      } catch {}
+      } catch (camErr: unknown) {
+        const camErrStr = String(camErr).toLowerCase();
+        if (camErrStr.includes('notfound') || camErrStr.includes('no camera') || camErrStr.includes('not found') || camErrStr.includes('device')) {
+          setCameraSupported(false);
+          setCameraIssue('No camera hardware detected. Please use Direct Entry.');
+          setIsInitializing(false);
+          return;
+        }
+      }
 
       const config = {
         fps: 15,
