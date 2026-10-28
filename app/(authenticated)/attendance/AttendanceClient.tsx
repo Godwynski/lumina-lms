@@ -30,6 +30,13 @@ import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { useScanner } from "@/hooks/use-scanner";
 import { useScanFeedback } from "@/hooks/use-scan-feedback";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from "@/components/ui/dialog";
 import type { AttendanceRecord } from "@/lib/actions/attendance";
 
 export function AttendanceClient({ 
@@ -57,7 +64,7 @@ export function AttendanceClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const lastScannedValRef = useRef<string | null>(null);
@@ -182,12 +189,24 @@ export function AttendanceClient({
     setStaffPage(1);
   }, [activeTab, searchQuery]);
 
+  // Auto-start scanner when modal opens; teardown camera when modal closes
+  useEffect(() => {
+    if (isScannerOpen) {
+      const timer = setTimeout(() => {
+        void startScanner();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      void stopCamera();
+    }
+  }, [isScannerOpen, startScanner, stopCamera]);
+
   // Focus manual input when not using scanner
   useEffect(() => {
-    if (isStaff && !showScanner) {
+    if (isStaff && !isScannerOpen) {
       inputRef.current?.focus();
     }
-  }, [isStaff, showScanner]);
+  }, [isStaff, isScannerOpen]);
 
   // Compute active & completed stats for today
   const activeCount = useMemo(() => 
@@ -322,29 +341,14 @@ export function AttendanceClient({
           </form>
 
           <Button
-            variant={showScanner ? "secondary" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={() => {
-              if (showScanner) {
-                stopCamera();
-                setShowScanner(false);
-              } else {
-                setShowScanner(true);
-                void startScanner();
-              }
-            }}
-            className={cn(
-              "h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors",
-              showScanner && "border-primary/40 bg-primary/10 text-primary"
-            )}
-            disabled={isInitializing}
+            onClick={() => setIsScannerOpen(true)}
+            className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/30 hover:bg-muted/40"
+            disabled={isProcessing}
           >
-            {isInitializing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Camera className="w-3.5 h-3.5" />
-            )}
-            <span>{showScanner ? "Close Scanner" : "Scan Card"}</span>
+            <Camera className="w-3.5 h-3.5 text-primary" />
+            <span>Launch Scanner</span>
           </Button>
         </div>
       </div>
@@ -369,99 +373,117 @@ export function AttendanceClient({
           }
           className="max-w-none animate-in fade-in-50 duration-300"
         >
-          <div className={cn("p-6 border-b border-border/10 bg-muted/5 flex-col items-center justify-center animate-in fade-in duration-200", showScanner ? "flex" : "hidden")}>
-            <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/15 bg-muted/20 shadow-2xl">
-              <div 
-                id={scannerId} 
-                className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
-              />
-              
-              {/* Minimalist reticle overlay */}
-              <div className="absolute inset-0 pointer-events-none border-[12px] border-background/20 rounded-2xl" />
+          <Dialog 
+            open={isScannerOpen} 
+            onOpenChange={(open) => {
+              setIsScannerOpen(open);
+              if (!open) void stopCamera();
+            }}
+          >
+            <DialogContent className="sm:max-w-md p-6 rounded-3xl border border-border/20 bg-background/95 backdrop-blur-xl shadow-2xl flex flex-col items-center">
+              <DialogHeader className="text-center w-full pb-1">
+                <DialogTitle className="text-base font-bold flex items-center justify-center gap-2">
+                  <ScanLine className="w-4 h-4 text-primary" />
+                  Gate Attendance Scanner
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Scan student library card or digital QR code to log attendance.
+                </DialogDescription>
+              </DialogHeader>
 
-              {/* Loading or Processing Overlay */}
-              {(isProcessing || isInitializing) && (
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
-                  <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-                  {isInitializing && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
-                      Initializing...
-                    </span>
-                  )}
-                  {isProcessing && !isInitializing && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
-                      Recording...
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/15 bg-muted/20 shadow-inner my-2">
+                <div 
+                  id={scannerId} 
+                  className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" 
+                />
+                
+                {/* Minimalist reticle overlay */}
+                <div className="absolute inset-0 pointer-events-none border-[12px] border-background/20 rounded-2xl" />
 
-              {/* Inactive State: Launch Scanner or Retry Camera */}
-              {!cameraOpen && !isInitializing && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200">
-                  <QrCode className="h-10 w-10 text-muted-foreground/40 mb-4" />
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-9 rounded-xl border-border/40 font-semibold text-xs tracking-wide"
-                    onClick={() => startScanner()}
-                    disabled={isInitializing}
-                  >
-                    {cameraIssue ? (
-                      <>
-                        <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                        Retry Camera
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="mr-2 h-3.5 w-3.5" />
-                        Launch Scanner
-                      </>
+                {/* Loading or Processing Overlay */}
+                {(isProcessing || isInitializing) && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
+                    {isInitializing && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+                        Initializing...
+                      </span>
                     )}
-                  </Button>
-                </div>
-              )}
-
-              {/* Active State: Camera Controls Overlay */}
-              {cameraOpen && (
-                <div className="absolute bottom-4 inset-x-4 flex justify-between items-center z-20">
-                  <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className={cn(
-                      "h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10",
-                      !hasMultipleCameras && "invisible"
+                    {isProcessing && !isInitializing && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+                        Recording...
+                      </span>
                     )}
-                    onClick={switchCamera}
-                    title="Switch Camera"
-                  >
-                    <RefreshCcw className="h-4 w-4" />
-                  </Button>
-
-                  <Button 
-                    variant="destructive" 
-                    className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
-                    onClick={() => stopCamera()}
-                  >
-                    Stop
-                  </Button>
-                </div>
-              )}
-
-              {/* Camera Issue Warning Banner */}
-              {cameraIssue && !cameraOpen && !isInitializing && (
-                <div className="absolute top-4 inset-x-4 z-20">
-                  <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium text-center shadow-sm">
-                    {cameraIssue}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            <p className="text-[11px] text-muted-foreground font-medium mt-3">
-              Keep card inside frame. Scanner stays active for continuous patron logging.
-            </p>
-          </div>
+                {/* Inactive State: Launch Scanner or Retry Camera */}
+                {!cameraOpen && !isInitializing && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200">
+                    <QrCode className="h-10 w-10 text-muted-foreground/40 mb-4" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-9 rounded-xl border-border/40 font-semibold text-xs tracking-wide"
+                      onClick={() => startScanner()}
+                      disabled={isInitializing}
+                    >
+                      {cameraIssue ? (
+                        <>
+                          <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                          Retry Camera
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="mr-2 h-3.5 w-3.5" />
+                          Launch Scanner
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Active State: Camera Controls Overlay */}
+                {cameraOpen && (
+                  <div className="absolute bottom-4 inset-x-4 flex justify-between items-center z-20">
+                    <Button 
+                      variant="secondary" 
+                      size="icon" 
+                      className={cn(
+                        "h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10",
+                        !hasMultipleCameras && "invisible"
+                      )}
+                      onClick={switchCamera}
+                      title="Switch Camera"
+                    >
+                      <RefreshCcw className="h-4 w-4" />
+                    </Button>
+
+                    <Button 
+                      variant="destructive" 
+                      className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
+                      onClick={() => stopCamera()}
+                    >
+                      Stop
+                    </Button>
+                  </div>
+                )}
+
+                {/* Camera Issue Warning Banner */}
+                {cameraIssue && !cameraOpen && !isInitializing && (
+                  <div className="absolute top-4 inset-x-4 z-20">
+                    <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium text-center shadow-sm">
+                      {cameraIssue}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground font-medium text-center mt-2">
+                Keep code centered. Camera stays active for continuous scanning.
+              </p>
+            </DialogContent>
+          </Dialog>
 
           <Suspense fallback={<TableLoadingSkeleton />}>
             <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
