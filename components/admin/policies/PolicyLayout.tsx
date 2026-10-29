@@ -57,9 +57,27 @@ export function PolicyLayout({
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
 
+  const [announcementDraft, setAnnouncementDraft] = useState<{
+    title: string;
+    content: string;
+    target: "all" | "students";
+  }>({
+    title: "",
+    content: "",
+    target: "students",
+  });
+
+  const isAnnouncementDirty =
+    announcementDraft.title.trim().length > 0 ||
+    announcementDraft.content.trim().length > 0;
+
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === activeCategory) return;
-    if (changedKeys.length > 0) {
+    const hasUnsavedChanges =
+      (activeCategory === "broadcasts" && isAnnouncementDirty) ||
+      changedKeys.length > 0;
+
+    if (hasUnsavedChanges) {
       setPendingCategory(categoryId);
     } else {
       setActiveCategory(categoryId);
@@ -122,14 +140,14 @@ export function PolicyLayout({
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (changedKeys.length > 0) {
+      if (changedKeys.length > 0 || isAnnouncementDirty) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [changedKeys]);
+  }, [changedKeys, isAnnouncementDirty]);
 
   // Defined the full set of categories in order
   const sidebarItems = useMemo(() => {
@@ -265,17 +283,31 @@ export function PolicyLayout({
               {activeCategory === "broadcasts" ? (
                 <div className="space-y-12">
                   <section className="space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                        <Megaphone className="h-4 w-4 text-primary" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                          <Megaphone className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground">Global Announcement</h4>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground">Global Announcement</h4>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
-                      </div>
+                      {isAnnouncementDirty && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 animate-in zoom-in-95 duration-200">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Unsaved Draft</span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-6 rounded-xl border border-border/60 bg-card shadow-xs">
-                      <SystemAnnouncement />
+                      <SystemAnnouncement
+                        draft={announcementDraft}
+                        onDraftChange={setAnnouncementDraft}
+                        onClearDraft={() =>
+                          setAnnouncementDraft({ title: "", content: "", target: "students" })
+                        }
+                      />
                     </div>
                   </section>
 
@@ -405,9 +437,15 @@ export function PolicyLayout({
               </div>
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold tracking-tight text-foreground">Unsaved Policy Changes</h3>
+              <h3 className="text-lg font-bold tracking-tight text-foreground">
+                {activeCategory === "broadcasts" && isAnnouncementDirty
+                  ? "Unsaved Announcement Draft"
+                  : "Unsaved Policy Changes"}
+              </h3>
               <p className="text-xs text-muted-foreground/75 leading-relaxed font-medium">
-                You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?
+                {activeCategory === "broadcasts" && isAnnouncementDirty
+                  ? "You have unsent announcement text in the broadcast fields. Moving to another section will discard your draft. Do you want to proceed?"
+                  : "You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?"}
               </p>
             </div>
           </div>
@@ -424,6 +462,9 @@ export function PolicyLayout({
               variant="destructive"
               onClick={() => {
                 if (pendingCategory) {
+                  if (activeCategory === "broadcasts") {
+                    setAnnouncementDraft({ title: "", content: "", target: "students" });
+                  }
                   setFormData(initialValues);
                   setActiveCategory(pendingCategory);
                   setPendingCategory(null);

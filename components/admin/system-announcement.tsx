@@ -14,15 +14,69 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
+export interface AnnouncementDraft {
+  title: string
+  content: string
+  target: 'all' | 'students'
+}
+
+interface SystemAnnouncementProps {
+  draft?: AnnouncementDraft
+  onDraftChange?: (draft: AnnouncementDraft) => void
+  onClearDraft?: () => void
+}
+
 /**
  * Minimalist component for broadcasting system-wide announcements to users.
  */
-export function SystemAnnouncement() {
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [target, setTarget] = useState<'all' | 'students'>('students')
+export function SystemAnnouncement({
+  draft,
+  onDraftChange,
+  onClearDraft,
+}: SystemAnnouncementProps = {}) {
+  const [localTitle, setLocalTitle] = useState('')
+  const [localContent, setLocalContent] = useState('')
+  const [localTarget, setLocalTarget] = useState<'all' | 'students'>('students')
   const [loading, setLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const title = draft ? draft.title : localTitle
+  const content = draft ? draft.content : localContent
+  const target = draft ? draft.target : localTarget
+
+  const setTitle = (val: string) => {
+    if (draft && onDraftChange) {
+      onDraftChange({ ...draft, title: val })
+    } else {
+      setLocalTitle(val)
+    }
+  }
+
+  const setContent = (val: string) => {
+    if (draft && onDraftChange) {
+      onDraftChange({ ...draft, content: val })
+    } else {
+      setLocalContent(val)
+    }
+  }
+
+  const setTarget = (val: 'all' | 'students') => {
+    if (draft && onDraftChange) {
+      onDraftChange({ ...draft, target: val })
+    } else {
+      setLocalTarget(val)
+    }
+  }
+
+  const handleReset = () => {
+    if (onClearDraft) {
+      onClearDraft()
+    } else {
+      setLocalTitle('')
+      setLocalContent('')
+      setLocalTarget('students')
+    }
+  }
 
   /**
    * Dispatches the announcement to the selected audience.
@@ -53,8 +107,7 @@ export function SystemAnnouncement() {
       }
 
       toast.success(`Announcement sent to ${data.count ?? 'all'} users`)
-      setTitle('')
-      setContent('')
+      handleReset()
       setConfirmOpen(false)
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred'
@@ -64,6 +117,7 @@ export function SystemAnnouncement() {
     }
   }
 
+  const isDirty = title.trim().length > 0 || content.trim().length > 0
   const isFormValid = title.trim().length > 0 && content.trim().length > 0
 
   return (
@@ -127,7 +181,20 @@ export function SystemAnnouncement() {
         />
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex items-center justify-between pt-1">
+        {isDirty ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleReset}
+            disabled={loading}
+            className="h-9 px-3 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
+          >
+            Discard Draft
+          </Button>
+        ) : (
+          <div />
+        )}
         <Button
           type="button"
           onClick={() => setConfirmOpen(true)}
