@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { memo, useState } from "react";
-import { LucideIcon, Loader2 } from "lucide-react";
+import { LucideIcon, Loader2, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FieldGroup } from "@/components/common/FieldGroup";
 export { FieldGroup };
 
@@ -64,23 +65,44 @@ export function AnnualResetTool() {
   };
 
   return (
-    <div className="space-y-4 py-2">
-      <div className="space-y-1">
-        <h4 className="text-sm font-medium">Batch Account Reset</h4>
-        <p className="text-xs text-muted-foreground">
-          Suspends all student accounts for the new academic year.
-        </p>
+    <TooltipProvider>
+      <div className="space-y-4 py-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-sm font-medium">Batch Account Reset</h4>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Batch reset info">
+                  <HelpCircle className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs max-w-xs">
+                Temporarily freezes student accounts at the end of the academic year until their enrollment is renewed for the next school term.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Suspends all student accounts for the new academic year.
+          </p>
+        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              onClick={handleReset} 
+              disabled={isResetting}
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-lg text-xs font-medium"
+            >
+              {isResetting ? "Resetting..." : "Execute Reset"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Start the end-of-year student account freeze.
+          </TooltipContent>
+        </Tooltip>
       </div>
-      <Button 
-        onClick={handleReset} 
-        disabled={isResetting}
-        variant="outline"
-        size="sm"
-        className="h-8 rounded-lg text-xs font-medium"
-      >
-        {isResetting ? "Resetting..." : "Execute Reset"}
-      </Button>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -102,23 +124,44 @@ export function RunMaintenanceTool() {
   };
 
   return (
-    <div className="space-y-4 py-2">
-      <div className="space-y-1">
-        <h4 className="text-sm font-medium text-foreground">Email Dispatch</h4>
-        <p className="text-xs text-muted-foreground">
-          Triggers overdue checks and sends notification emails.
-        </p>
+    <TooltipProvider>
+      <div className="space-y-4 py-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-sm font-medium text-foreground">Email Dispatch</h4>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Email dispatch info">
+                  <HelpCircle className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs max-w-xs">
+                Immediately triggers the automated background check for due-soon and overdue books, sending email notifications to affected students.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Triggers overdue checks and sends notification emails.
+          </p>
+        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              onClick={handleRun} 
+              disabled={isProcessing}
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-lg text-xs font-medium"
+            >
+              {isProcessing ? "Processing..." : "Run Task"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Scan borrowing records and send pending overdue notifications.
+          </TooltipContent>
+        </Tooltip>
       </div>
-      <Button 
-        onClick={handleRun} 
-        disabled={isProcessing}
-        variant="outline"
-        size="sm"
-        className="h-8 rounded-lg text-xs font-medium"
-      >
-        {isProcessing ? "Processing..." : "Run Task"}
-      </Button>
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -153,46 +196,67 @@ export function TestEmailTool() {
   };
 
   return (
-    <div className="space-y-4 py-2">
-      <div className="space-y-1">
-        <h4 className="text-sm font-semibold text-foreground">Email Configuration Test</h4>
-        <p className="text-xs text-muted-foreground">
-          Send a diagnostic email to verify SMTP connectivity, credentials, and message delivery.
-        </p>
+    <TooltipProvider>
+      <div className="space-y-4 py-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-sm font-semibold text-foreground">Email Configuration Test</h4>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Email test info">
+                  <HelpCircle className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs max-w-xs">
+                Send a real test email to verify your SMTP mail server settings and layout formatting.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Send a diagnostic email to verify SMTP connectivity, credentials, and message delivery.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <Input 
+            type="email"
+            placeholder="Recipient email address" 
+            value={targetEmail}
+            onChange={(e) => setTargetEmail(e.target.value)}
+            className="h-9 text-xs sm:max-w-[250px] rounded-xl"
+          />
+          <Select value={emailType} onValueChange={setEmailType}>
+            <SelectTrigger className="h-9 w-full sm:w-[190px] text-xs rounded-xl">
+              <SelectValue placeholder="Email Type" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="test" className="text-xs">Diagnostic System Test</SelectItem>
+              <SelectItem value="overdue" className="text-xs">Overdue Notice Template</SelectItem>
+              <SelectItem value="due_soon" className="text-xs">Due Soon Notice Template</SelectItem>
+            </SelectContent>
+          </Select>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={handleTest} 
+                disabled={isSending || !targetEmail.trim()}
+                variant="secondary"
+                size="sm"
+                className="h-9 rounded-xl text-xs font-semibold shrink-0"
+              >
+                {isSending ? (
+                  <div className="flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Sending...</span>
+                  </div>
+                ) : "Send Test Email"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Dispatch the selected template to the recipient email.
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <Input 
-          type="email"
-          placeholder="Recipient email address" 
-          value={targetEmail}
-          onChange={(e) => setTargetEmail(e.target.value)}
-          className="h-9 text-xs sm:max-w-[250px] rounded-xl"
-        />
-        <Select value={emailType} onValueChange={setEmailType}>
-          <SelectTrigger className="h-9 w-full sm:w-[190px] text-xs rounded-xl">
-            <SelectValue placeholder="Email Type" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl">
-            <SelectItem value="test" className="text-xs">Diagnostic System Test</SelectItem>
-            <SelectItem value="overdue" className="text-xs">Overdue Notice Template</SelectItem>
-            <SelectItem value="due_soon" className="text-xs">Due Soon Notice Template</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button 
-          onClick={handleTest} 
-          disabled={isSending || !targetEmail.trim()}
-          variant="secondary"
-          size="sm"
-          className="h-9 rounded-xl text-xs font-semibold shrink-0"
-        >
-          {isSending ? (
-            <div className="flex items-center gap-1.5">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>Sending...</span>
-            </div>
-          ) : "Send Test Email"}
-        </Button>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }

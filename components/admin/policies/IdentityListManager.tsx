@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface IdentityListManagerProps {
   value: string;
@@ -208,25 +209,42 @@ export function IdentityListManager({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={startBulkEdit}
-                disabled={disabled}
-                className="h-9 px-4 rounded-xl text-xs font-semibold border-border hover:bg-muted/50 transition-all"
-              >
-                <Edit3 className="h-3.5 w-3.5 mr-1.5" />
-                Bulk Management
-              </Button>
-              <Button
-                type="button"
-                onClick={openAddDialog}
-                disabled={disabled}
-                className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Program
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={startBulkEdit}
+                      disabled={disabled}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold border-border hover:bg-muted/50 transition-all"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 mr-1.5" />
+                      Bulk Management
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Quickly edit or paste multiple academic courses in a spreadsheet-style list.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={openAddDialog}
+                      disabled={disabled}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Add Program
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Add a new course or degree program to the student registration list.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </div>
@@ -325,28 +343,45 @@ export function IdentityListManager({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(index)}
-                        disabled={disabled}
-                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                        title="Edit program name"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItem(index)}
-                        disabled={disabled}
-                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                        title="Remove program"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(index)}
+                              disabled={disabled}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                              aria-label="Edit program name"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Rename this academic program across the system.
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeItem(index)}
+                              disabled={disabled}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                              aria-label="Remove program"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Remove this course option from new student registrations.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
                 );

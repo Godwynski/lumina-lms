@@ -9,6 +9,7 @@ import { CategoryDialog } from "./categories/CategoryDialog";
 import { toast } from "sonner";
 import { Category } from "@/types/admin";
 import { toSlug } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Main management interface for system categories.
@@ -237,41 +238,75 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                   {changedIds.length} Pending Mods
                 </div>
               )}
-              <Button
-                variant="ghost"
-                onClick={resetBulkEdit}
-                disabled={loading}
-                className="h-9 px-4 rounded-xl text-xs font-semibold text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Discard
-              </Button>
-              <Button
-                onClick={handleBulkSave}
-                disabled={loading || changedIds.length === 0}
-                className="h-9 px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Save Changes
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={resetBulkEdit}
+                      disabled={loading}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Discard
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Discard all bulk edits and keep existing category information.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleBulkSave}
+                      disabled={loading || changedIds.length === 0}
+                      className="h-9 px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Save Changes
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Save all modified category rows to the database.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsBulkEditing(true)}
-                className="h-9 px-4 rounded-xl text-xs font-semibold border-border/20 bg-muted/5 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
-              >
-                <Edit3 className="h-4 w-4 mr-2" />
-                Bulk Management
-              </Button>
-              <Button
-                onClick={() => openDialog()}
-                className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
-              >
-                <Plus className="h-4 w-4" />
-                Add Category
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsBulkEditing(true)}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold border-border/20 bg-muted/5 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Bulk Management
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Edit category titles and descriptions all at once in a table instead of opening each one individually.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => openDialog()}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Category
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Create a new subject classification to organize catalog books.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </div>

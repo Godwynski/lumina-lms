@@ -12,8 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Layers, Type, Hash, AlignLeft, Check } from "lucide-react";
+import { Loader2, Layers, Type, Hash, AlignLeft, Check, HelpCircle } from "lucide-react";
 import { cn, toSlug } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CategoryFormData {
   name: string;
@@ -79,10 +80,24 @@ export function CategoryDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center px-0.5">
-                <Label htmlFor="name" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Type className="h-3.5 w-3.5 text-muted-foreground" />
-                  Category Name
-                </Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="name" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Type className="h-3.5 w-3.5 text-muted-foreground" />
+                    Category Name
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Category Name info">
+                          <HelpCircle className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px] text-xs font-normal">
+                        The public name for this book category or genre.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <span className={cn(
                   "text-[10px] font-medium tabular-nums",
                   formData.name.length > 50 ? "text-rose-500 font-bold" : "text-muted-foreground/60"
@@ -114,10 +129,24 @@ export function CategoryDialog({
 
             <div className="space-y-2">
               <div className="flex justify-between items-center px-0.5">
-                <Label htmlFor="slug" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                  Slug (URL Identifier)
-                </Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="slug" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                    Slug (URL Identifier)
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Slug info">
+                          <HelpCircle className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px] text-xs font-normal">
+                        The web address text for this category (e.g. theoretical-physics). Automatically generated from the category name.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <span className={cn(
                   "text-[10px] font-medium tabular-nums",
                   formData.slug.length > 60 ? "text-rose-500 font-bold" : "text-muted-foreground/60"
@@ -142,10 +171,24 @@ export function CategoryDialog({
 
             <div className="space-y-2">
               <div className="flex justify-between items-center px-0.5">
-                <Label htmlFor="description" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <AlignLeft className="h-3.5 w-3.5 text-muted-foreground" />
-                  Description
-                </Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="description" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <AlignLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                    Description
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Description info">
+                          <HelpCircle className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px] text-xs font-normal">
+                        Optional summary explaining what kinds of books or materials belong in this category.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <span className={cn(
                   "text-[10px] font-medium tabular-nums",
                   formData.description.length > 200 ? "text-rose-500 font-bold" : "text-muted-foreground/60"

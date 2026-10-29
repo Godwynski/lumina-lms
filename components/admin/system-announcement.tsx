@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Megaphone, Loader2, Users, Send, Target, AlertTriangle } from 'lucide-react'
+import { Megaphone, Loader2, Users, Send, Target, AlertTriangle, HelpCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export interface AnnouncementDraft {
   title: string
@@ -121,94 +122,145 @@ export function SystemAnnouncement({
   const isFormValid = title.trim().length > 0 && content.trim().length > 0
 
   return (
-    <div className="w-full space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Target className="h-3.5 w-3.5 text-muted-foreground" />
-            Target Audience
-          </label>
-          <Select value={target} onValueChange={(v: 'all' | 'students') => setTarget(v)}>
-            <SelectTrigger className="h-10 rounded-xl border-border bg-background text-xs font-medium focus:ring-2 focus:ring-primary/20 transition-all">
-              <SelectValue placeholder="Select target" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-border shadow-xl">
-              <SelectItem value="students" className="py-2.5 px-3 text-xs font-medium">
-                <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Students Only</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="all" className="py-2.5 px-3 text-xs font-medium">
-                <div className="flex items-center gap-2">
-                  <Megaphone className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>All Registered Users (Students, Staff, Faculty)</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+    <TooltipProvider>
+      <div className="w-full space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                Target Audience
+              </label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Target audience info">
+                    <HelpCircle className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs max-w-xs">
+                  Choose who receives this notification: students only, or all accounts including staff and librarians.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Select value={target} onValueChange={(v: 'all' | 'students') => setTarget(v)}>
+              <SelectTrigger className="h-10 rounded-xl border-border bg-background text-xs font-medium focus:ring-2 focus:ring-primary/20 transition-all">
+                <SelectValue placeholder="Select target" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border shadow-xl">
+                <SelectItem value="students" className="py-2.5 px-3 text-xs font-medium">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>Students Only</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="all" className="py-2.5 px-3 text-xs font-medium">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>All Registered Users (Students, Staff, Faculty)</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Subject
+              </label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Subject info">
+                    <HelpCircle className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs max-w-xs">
+                  A concise headline that will appear at the top of the patron&apos;s notification.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Input
+              placeholder="e.g. Scheduled Library Maintenance This Weekend"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={100}
+              className="h-10 rounded-xl border-border bg-background text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/40"
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground">
-            Subject
-          </label>
-          <Input
-            placeholder="e.g. Scheduled Library Maintenance This Weekend"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={100}
-            className="h-10 rounded-xl border-border bg-background text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/40"
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Announcement Message
+              </label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Message info">
+                    <HelpCircle className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs max-w-xs">
+                  The full message content that will be posted directly to user dashboards.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {content.length}/500
+            </span>
+          </div>
+          <Textarea
+            placeholder="Write the announcement message here. It will be pushed directly to active student and staff dashboards..."
+            maxLength={500}
+            className="min-h-[120px] rounded-xl border-border bg-background text-sm font-medium p-3.5 focus:ring-2 focus:ring-primary/20 resize-none transition-all placeholder:text-muted-foreground/40 shadow-xs"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
           />
         </div>
-      </div>
 
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center">
-          <label className="text-xs font-semibold text-foreground">
-            Announcement Message
-          </label>
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {content.length}/500
-          </span>
-        </div>
-        <Textarea
-          placeholder="Write the announcement message here. It will be pushed directly to active student and staff dashboards..."
-          maxLength={500}
-          className="min-h-[120px] rounded-xl border-border bg-background text-sm font-medium p-3.5 focus:ring-2 focus:ring-primary/20 resize-none transition-all placeholder:text-muted-foreground/40 shadow-xs"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
-      </div>
-
-      <div className="flex items-center justify-between pt-1">
-        {isDirty ? (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleReset}
-            disabled={loading}
-            className="h-9 px-3 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
-          >
-            Discard Draft
-          </Button>
-        ) : (
-          <div />
-        )}
-        <Button
-          type="button"
-          onClick={() => setConfirmOpen(true)}
-          disabled={loading || !isFormValid}
-          className="h-10 px-6 rounded-xl text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
-        >
-          {loading ? (
-            <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+        <div className="flex items-center justify-between pt-1">
+          {isDirty ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleReset}
+                  disabled={loading}
+                  className="h-9 px-3 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
+                >
+                  Discard Draft
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Clear all text fields and cancel this announcement draft.
+              </TooltipContent>
+            </Tooltip>
           ) : (
-            <Send className="w-3.5 h-3.5 mr-2" />
+            <div />
           )}
-          Send Announcement
-        </Button>
-      </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={() => setConfirmOpen(true)}
+                disabled={loading || !isFormValid}
+                className="h-10 px-6 rounded-xl text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
+              >
+                {loading ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5 mr-2" />
+                )}
+                Send Announcement
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Review and broadcast this notification across the system.
+            </TooltipContent>
+          </Tooltip>
+        </div>
 
       {/* Confirmation Modal */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -268,5 +320,6 @@ export function SystemAnnouncement({
         </DialogContent>
       </Dialog>
     </div>
+  </TooltipProvider>
   )
 }

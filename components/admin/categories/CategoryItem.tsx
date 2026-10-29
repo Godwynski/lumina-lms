@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Edit2, Archive, Check, RotateCcw, Hash, Type, AlignLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category } from "@/types/admin";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CategoryItemProps {
   category: Category;
@@ -108,41 +109,63 @@ export function CategoryItem({
 
       <div className="flex items-center gap-1.5 ml-4 shrink-0">
         {!isBulkEditing && onEdit && onArchive && (
-          <>
-            <Button
-              type="button"
-              onClick={() => onEdit(category)}
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-              title="Edit category"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-            </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  onClick={() => onEdit(category)}
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  aria-label="Edit category"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Change this category&apos;s name, web link, or summary.
+              </TooltipContent>
+            </Tooltip>
+
             {category.is_active ? (
-              <Button
-                type="button"
-                onClick={() => onArchive(category.id)}
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                title="Archive category"
-              >
-                <Archive className="h-3.5 w-3.5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    onClick={() => onArchive(category.id)}
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                    aria-label="Archive category"
+                  >
+                    <Archive className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Hide this category from the public book catalog without deleting past records.
+                </TooltipContent>
+              </Tooltip>
             ) : (
-              <Button
-                type="button"
-                onClick={() => onRestore && onRestore(category.id)}
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
-                title="Restore category"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    onClick={() => onRestore && onRestore(category.id)}
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                    aria-label="Restore category"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Reactivate this category so students and staff can browse it again.
+                </TooltipContent>
+              </Tooltip>
             )}
-          </>
+          </TooltipProvider>
         )}
         {isBulkEditing && isChanged && (
           <div className="h-8 flex items-center justify-center px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-wider">

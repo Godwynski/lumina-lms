@@ -19,8 +19,8 @@ export interface PolicyConfig {
 export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   loan_period_days: { 
     value: "14", 
-    label: "Borrowing Period",
-    description: "Standard duration for book borrows.",
+    label: "Borrowing Duration",
+    description: "The number of days a student is allowed to keep a borrowed book before it is marked overdue.",
     example: "Example: 14 days.",
     category: "circulation",
     icon: "Calendar",
@@ -28,8 +28,8 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   },
   max_borrow_limit: { 
     value: "5", 
-    label: "Max Borrows",
-    description: "Maximum books a student can borrow at once.",
+    label: "Maximum Books Allowed",
+    description: "The maximum number of physical books a student can have borrowed at the same time.",
     example: "Example: 5 books.",
     category: "circulation",
     icon: "BookCopy",
@@ -37,8 +37,8 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   },
   hold_expiry_days: { 
     value: "7", 
-    label: "Hold Shelf Life",
-    description: "Days a reserved book stays on hold.",
+    label: "Pickup Hold Window",
+    description: "How many days a reserved book stays on the pickup shelf before the reservation is automatically cancelled and offered to the next student.",
     example: "Example: 7 days.",
     category: "reservations",
     icon: "Clock",
@@ -46,8 +46,8 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   },
   max_reservations_per_student: { 
     value: "3", 
-    label: "Max Reservations",
-    description: "Maximum concurrent book reservations.",
+    label: "Maximum Active Holds",
+    description: "The maximum number of book hold requests a student can place at the same time.",
     example: "Example: 3 books.",
     category: "reservations",
     icon: "Ticket",
@@ -60,8 +60,8 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
       { question: "Can I use the card on my phone only?", answer: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed." },
       { question: "Where can I see my current borrows?", answer: "Use My Borrowing from the dashboard quick actions to review active and past borrowing records." }
     ]),
-    label: "FAQ Management",
-    description: "Questions shown on the student dashboard.",
+    label: "Student Help Center (FAQ)",
+    description: "Helpful questions and answers shown in the student dashboard to guide them on borrowing, returns, and library cards.",
     example: "",
     category: "support",
     icon: "HelpCircle",
@@ -69,8 +69,8 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   },
   academic_programs: { 
     value: JSON.stringify(["BS Information Technology", "BS Computer Science", "BS Information Systems", "Associate in Computer Technology", "BS Business Administration", "BS Hospitality Management"]), 
-    label: "Academic Programs",
-    description: "List of programs for student registration.",
+    label: "Degree Programs & Courses",
+    description: "The official college degree programs and courses available for students to select during enrollment and profile setup.",
     example: "Example: BS Information Technology.",
     category: "identity",
     icon: "User",
@@ -78,9 +78,9 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   },
   due_soon_reminder_days: {
     value: "1",
-    label: "Reminder Offset",
-    description: "Days before due date to send reminder.",
-    example: "Example: 1 day.",
+    label: "Due Date Reminder Timing",
+    description: "How many days before the due date the system will email a friendly reminder to the student.",
+    example: "Example: 1 day before.",
     category: "broadcasts",
     icon: "Megaphone",
     validation: { min: 1, max: 7, type: "number" }
