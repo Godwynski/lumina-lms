@@ -4,35 +4,60 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, ListRestart, Hash } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  GraduationCap,
+  Plus,
+  Edit3,
+  Edit2,
+  Trash2,
+  X,
+  Check,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface IdentityListManagerProps {
+  value: string;
+  initialValue: string;
+  onChange: (val: string) => void;
+  disabled: boolean;
+}
+
+const MAX_ITEM_LENGTH = 60;
 
 /**
- * Manages collections of identity-based strings (e.g. Student IDs, Emails).
- * Refined with a high-fidelity, premium administrative aesthetic.
+ * Minimalist management interface for academic programs under System Data > Identity.
+ * Provides visual parity with Categories: itemized list, inline edit dialog, and bulk management.
  */
-export function IdentityListManager({ 
-  value, 
+export function IdentityListManager({
+  value,
   initialValue,
-  onChange, 
-  disabled 
-}: { 
-  value: string; 
-  initialValue: string;
-  onChange: (val: string) => void; 
-  disabled: boolean; 
-}) {
-  const [newItem, setNewItem] = useState("");
-  
+  onChange,
+  disabled,
+}: IdentityListManagerProps) {
+  const [isBulkEditing, setIsBulkEditing] = useState(false);
+  const [draftItems, setDraftItems] = useState<string[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [formName, setFormName] = useState("");
+
   const currentItems = useMemo(() => {
     try {
       if (value.startsWith("[") && value.endsWith("]")) {
         const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed.filter(i => typeof i === "string") : [];
+        return Array.isArray(parsed) ? parsed.filter((i) => typeof i === "string") : [];
       }
-      return value.split(",").map(i => i.trim()).filter(Boolean);
+      return value.split(",").map((i) => i.trim()).filter(Boolean);
     } catch {
-      return value.split(",").map(i => i.trim()).filter(Boolean);
+      return value.split(",").map((i) => i.trim()).filter(Boolean);
     }
   }, [value]);
 
@@ -40,131 +65,415 @@ export function IdentityListManager({
     try {
       if (initialValue.startsWith("[") && initialValue.endsWith("]")) {
         const parsed = JSON.parse(initialValue);
-        return Array.isArray(parsed) ? parsed.filter(i => typeof i === "string") : [];
+        return Array.isArray(parsed) ? parsed.filter((i) => typeof i === "string") : [];
       }
-      return initialValue.split(",").map(i => i.trim()).filter(Boolean);
+      return initialValue.split(",").map((i) => i.trim()).filter(Boolean);
     } catch {
-      return initialValue.split(",").map(i => i.trim()).filter(Boolean);
+      return initialValue.split(",").map((i) => i.trim()).filter(Boolean);
     }
   }, [initialValue]);
 
-  const removedItems = useMemo(() => {
-    return initialItems.filter(init => !currentItems.includes(init));
-  }, [currentItems, initialItems]);
-
-  const MAX_ITEM_LENGTH = 50;
-
-  const addItem = () => {
-    if (!newItem.trim() || currentItems.includes(newItem.trim())) return;
-    if (newItem.length > MAX_ITEM_LENGTH) return;
-    const updated = [...currentItems, newItem.trim()];
-    onChange(JSON.stringify(updated));
-    setNewItem("");
+  // Bulk edit handling
+  const startBulkEdit = () => {
+    setDraftItems([...currentItems]);
+    setIsBulkEditing(true);
   };
 
-  const removeItem = (item: string) => {
-    const updated = currentItems.filter(i => i !== item);
-    onChange(JSON.stringify(updated));
+  const cancelBulkEdit = () => {
+    setIsBulkEditing(false);
+    setDraftItems([]);
   };
 
-  const restoreItem = (item: string) => {
-    const updated = [...currentItems, item];
-    onChange(JSON.stringify(updated));
+  const handleDraftChange = (index: number, val: string) => {
+    setDraftItems((prev) => {
+      const next = [...prev];
+      next[index] = val;
+      return next;
+    });
   };
+
+  const removeDraftItem = (index: number) => {
+    setDraftItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addDraftRow = () => {
+    setDraftItems((prev) => [...prev, ""]);
+  };
+
+  const saveBulkEdit = () => {
+    const cleaned = draftItems.map((i) => i.trim()).filter(Boolean);
+    const unique = Array.from(new Set(cleaned));
+    onChange(JSON.stringify(unique));
+    setIsBulkEditing(false);
+    toast.success(`Updated ${unique.length} academic programs`);
+  };
+
+  // Single item edit/add dialog
+  const openAddDialog = () => {
+    setEditingIndex(null);
+    setFormName("");
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (index: number) => {
+    setEditingIndex(index);
+    setFormName(currentItems[index] || "");
+    setDialogOpen(true);
+  };
+
+  const handleSaveDialog = () => {
+    const trimmed = formName.trim();
+    if (!trimmed) {
+      toast.error("Program name cannot be empty");
+      return;
+    }
+    if (trimmed.length > MAX_ITEM_LENGTH) {
+      toast.error(`Program name cannot exceed ${MAX_ITEM_LENGTH} characters`);
+      return;
+    }
+
+    if (editingIndex !== null) {
+      // If nothing was modified, simply close without dirtying state or showing false toast
+      if (currentItems[editingIndex] === trimmed) {
+        setDialogOpen(false);
+        return;
+      }
+      const updated = [...currentItems];
+      updated[editingIndex] = trimmed;
+      onChange(JSON.stringify(updated));
+      toast.success("Program updated");
+    } else {
+      if (currentItems.includes(trimmed)) {
+        toast.error("Program already exists in the list");
+        return;
+      }
+      const updated = [...currentItems, trimmed];
+      onChange(JSON.stringify(updated));
+      toast.success("Program added");
+    }
+
+    setDialogOpen(false);
+    setFormName("");
+    setEditingIndex(null);
+  };
+
+  const removeItem = (index: number) => {
+    const updated = currentItems.filter((_, i) => i !== index);
+    onChange(JSON.stringify(updated));
+    toast.success("Program removed");
+  };
+
+  const isNameChanged = editingIndex === null ? true : formName.trim() !== (currentItems[editingIndex] || "");
+  const isFormValid = formName.trim().length > 0 && formName.length <= MAX_ITEM_LENGTH && isNameChanged;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-top-1 duration-500">
-      <div className="flex flex-wrap gap-2.5 min-h-[44px] p-4 rounded-[1.5rem] bg-muted/[0.02] border border-border/5 shadow-inner">
-        {currentItems.map((item, i) => {
-          const isAdded = !initialItems.includes(item);
-          return (
-            <Badge 
-              key={`${item}-${i}`} 
-              variant="secondary" 
-              className={cn(
-                "group/badge h-8 pl-3 pr-1 py-0 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border shadow-sm",
-                isAdded 
-                  ? "bg-primary/10 text-primary border-primary/20" 
-                  : "bg-background text-muted-foreground border-border/20 hover:border-border/40"
-              )}
-            >
-              <Hash className="h-2.5 w-2.5 mr-2 opacity-30 group-hover/badge:opacity-60 transition-opacity" />
-              {item}
-              <button
-                onClick={() => removeItem(item)}
-                disabled={disabled}
-                className="ml-2.5 h-6 w-6 rounded-xl flex items-center justify-center hover:bg-rose-500/10 hover:text-rose-500 transition-all disabled:opacity-50"
-              >
-                <X size={12} />
-              </button>
-            </Badge>
-          );
-        })}
-        
-        {removedItems.map((item, i) => (
-          <Badge 
-            key={`rem-${item}-${i}`} 
-            variant="outline" 
-            className="h-8 pl-3 pr-1 py-0 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-muted/[0.05] text-muted-foreground/50 border-border/20 line-through transition-all opacity-80 hover:opacity-100"
-          >
-            {item}
-            <button
-              onClick={() => restoreItem(item)}
-              disabled={disabled}
-              className="ml-2 h-5 w-5 rounded-md flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all text-muted-foreground/40"
-            >
-              <ListRestart size={10} />
-            </button>
-          </Badge>
-        ))}
-
-        {currentItems.length === 0 && removedItems.length === 0 && (
-          <div className="flex items-center gap-2 py-1">
-            <p className="text-[9px] font-bold text-muted-foreground/20 uppercase tracking-widest">No identifiers found</p>
+    <div className="w-full space-y-6">
+      {/* Header Overview & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+            <GraduationCap className="h-5 w-5" />
           </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex justify-between items-center px-1">
-          <p className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-widest">
-            {currentItems.length} Items
-          </p>
-          {newItem.length > 0 && (
-            <p className={cn(
-              "text-[8px] font-bold tracking-widest",
-              newItem.length > MAX_ITEM_LENGTH ? "text-rose-500" : "text-muted-foreground/20"
-            )}>
-              {newItem.length} / {MAX_ITEM_LENGTH} Chars
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Overview
             </p>
+            <h4 className="text-sm font-bold text-foreground tracking-tight">
+              {currentItems.length} Registered {currentItems.length === 1 ? "Program" : "Programs"}
+            </h4>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {isBulkEditing ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={cancelBulkEdit}
+                disabled={disabled}
+                className="h-9 px-4 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+              >
+                <X className="h-3.5 w-3.5 mr-1.5" />
+                Discard
+              </Button>
+              <Button
+                type="button"
+                onClick={saveBulkEdit}
+                disabled={disabled}
+                className="h-9 px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
+              >
+                <Check className="h-3.5 w-3.5 mr-1.5" />
+                Save Changes
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={startBulkEdit}
+                      disabled={disabled}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold border-border hover:bg-muted/50 transition-all"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 mr-1.5" />
+                      Bulk Management
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Quickly edit or paste multiple academic courses in a spreadsheet-style list.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      onClick={openAddDialog}
+                      disabled={disabled}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Add Program
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Add a new course or degree program to the student registration list.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           )}
         </div>
-        <div className="flex gap-3">
-          <div className="relative flex-1 group/input">
-            <Input
-              placeholder="Add identifier..."
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem())}
-              disabled={disabled}
-              className={cn(
-                "h-10 rounded-lg border-border/10 bg-muted/5 text-[10px] font-bold uppercase tracking-widest focus:ring-0 transition-all px-4 placeholder:text-muted-foreground/20",
-                newItem.length > MAX_ITEM_LENGTH && "border-rose-500/40 bg-rose-500/5"
-              )}
-            />
-          </div>
-          <Button
-            type="button"
-            onClick={addItem}
-            disabled={disabled || !newItem.trim() || newItem.length > MAX_ITEM_LENGTH}
-            className="h-10 px-6 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98] shrink-0"
-          >
-            <Plus className="h-3 w-3 mr-2" />
-            Add
-          </Button>
-        </div>
       </div>
+
+      {/* Main Content Area */}
+      {isBulkEditing ? (
+        /* Bulk Edit Mode */
+        <div className="space-y-3">
+          <div className="p-3 bg-muted/40 rounded-xl border border-border/50 text-xs text-muted-foreground flex items-center justify-between">
+            <span>Edit course and program names directly in the fields below.</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addDraftRow}
+              className="h-7 text-xs rounded-lg"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add Row
+            </Button>
+          </div>
+
+          <div className="grid gap-2.5">
+            {draftItems.map((item, index) => (
+              <div
+                key={`bulk-${index}`}
+                className="flex items-center gap-3 p-2.5 rounded-xl border border-border/60 bg-card hover:border-primary/30 transition-all shadow-xs"
+              >
+                <span className="text-[11px] font-mono font-bold text-muted-foreground/60 w-6 text-center shrink-0">
+                  {index + 1}
+                </span>
+                <Input
+                  value={item}
+                  onChange={(e) => handleDraftChange(index, e.target.value)}
+                  placeholder="e.g. BS Information Technology"
+                  disabled={disabled}
+                  maxLength={MAX_ITEM_LENGTH}
+                  className="h-9 rounded-lg bg-background text-xs font-medium border-border"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeDraftItem(index)}
+                  disabled={disabled}
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* Standard Itemized List View (Clean text rows matching Categories) */
+        <div className="space-y-3">
+          {currentItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/60 bg-muted/5 p-12 text-center">
+              <h4 className="text-sm font-semibold text-foreground mb-1">No Academic Programs</h4>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-4">
+                No programs have been registered. Add your first program for student registration.
+              </p>
+              <Button
+                type="button"
+                onClick={openAddDialog}
+                disabled={disabled}
+                size="sm"
+                className="rounded-xl text-xs"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Add Program
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-2.5">
+              {currentItems.map((item, index) => {
+                const isNew = !initialItems.includes(item);
+                return (
+                  <div
+                    key={`${item}-${index}`}
+                    className="group flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/40 hover:bg-muted/10 transition-all shadow-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className="text-sm font-semibold text-foreground tracking-tight group-hover:text-primary transition-colors truncate">
+                        {item}
+                      </span>
+                      {isNew && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[9px] uppercase font-bold tracking-wider py-0 px-2"
+                        >
+                          New
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(index)}
+                              disabled={disabled}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                              aria-label="Edit program name"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Rename this academic program across the system.
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeItem(index)}
+                              disabled={disabled}
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                              aria-label="Remove program"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Remove this course option from new student registrations.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit / Add Modal */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="rounded-2xl border-border bg-background p-0 shadow-xl sm:max-w-md overflow-hidden">
+          <div className="p-6 space-y-5">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div className="px-2.5 py-0.5 rounded-full bg-muted border border-border/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  System Data
+                </div>
+              </div>
+              <div className="space-y-1">
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                  {editingIndex !== null ? "Edit Program" : "Add Academic Program"}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground font-medium">
+                  {editingIndex !== null
+                    ? "Update the academic program title."
+                    : "Add a new degree program for student onboarding and filtering."}
+                </DialogDescription>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-0.5">
+                <label className="text-xs font-semibold text-foreground">
+                  Program Name
+                </label>
+                <span
+                  className={cn(
+                    "text-[10px] font-medium tabular-nums",
+                    formName.length > MAX_ITEM_LENGTH
+                      ? "text-rose-500 font-bold"
+                      : "text-muted-foreground/60"
+                  )}
+                >
+                  {formName.length}/{MAX_ITEM_LENGTH}
+                </span>
+              </div>
+              <Input
+                placeholder="e.g. BS Information Technology"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (isFormValid) handleSaveDialog();
+                  }
+                }}
+                disabled={disabled}
+                autoFocus
+                className={cn(
+                  "h-10 rounded-xl bg-background border-border text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/40",
+                  formName.length > MAX_ITEM_LENGTH && "border-rose-500 focus:ring-rose-500/20"
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="p-6 pt-0 flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={disabled}
+              className="flex-1 h-10 rounded-xl text-xs font-semibold uppercase tracking-wider border-border hover:bg-muted/50 transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveDialog}
+              disabled={disabled || !isFormValid}
+              className="flex-[1.5] h-10 rounded-xl text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
+            >
+              <Check className="h-3.5 w-3.5 mr-1.5" />
+              {editingIndex !== null ? "Save Changes" : "Add Program"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

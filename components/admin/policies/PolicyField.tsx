@@ -89,6 +89,19 @@ export function PolicyField({
     }
   };
 
+  if (isIdentityList) {
+    return (
+      <div className="py-1 animate-in fade-in slide-in-from-top-1 duration-500">
+        <IdentityListManager
+          value={value || ""}
+          initialValue={initialValue || ""}
+          onChange={(val) => onChange(val)}
+          disabled={loading || disabled}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="py-8 first:pt-0 border-b border-border/5 last:border-0 group animate-in fade-in slide-in-from-top-1 duration-500">
       <div className={cn(

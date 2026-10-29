@@ -9,6 +9,7 @@ import { CategoryDialog } from "./categories/CategoryDialog";
 import { toast } from "sonner";
 import { Category } from "@/types/admin";
 import { toSlug } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Main management interface for system categories.
@@ -28,6 +29,13 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     slug: "",
     description: "",
   });
+
+  const editingCategory = editingId ? categories.find((c) => c.id === editingId) : null;
+  const isChanged = !editingId || (editingCategory ? (
+    formData.name.trim() !== editingCategory.name.trim() ||
+    formData.slug.trim() !== (editingCategory.slug || "").trim() ||
+    formData.description.trim() !== (editingCategory.description || "").trim()
+  ) : true);
 
   const resetForm = () => {
     setFormData({ name: "", slug: "", description: "" });
@@ -57,8 +65,14 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
   const handleSave = async () => {
     const normalizedSlug = toSlug(formData.slug || formData.name);
-    if (!formData.name || !normalizedSlug) {
+    if (!formData.name.trim() || !normalizedSlug) {
       toast.error("Label and identifier are required");
+      return;
+    }
+
+    if (editingId && !isChanged) {
+      setDialogOpen(false);
+      resetForm();
       return;
     }
 
@@ -75,7 +89,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           }),
         });
 
-        if (!response.ok) throw new Error("Failed to update category protocol");
+        if (!response.ok) throw new Error("Failed to update category");
 
         const updated = await response.json();
         setCategories((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
@@ -88,12 +102,12 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           body: JSON.stringify({ ...formData, slug: normalizedSlug }),
         });
 
-        if (!response.ok) throw new Error("Failed to initialize new category");
+        if (!response.ok) throw new Error("Failed to create category");
 
         const newCategory = await response.json();
         setCategories((prev) => [...prev, newCategory]);
         setDraftCategories((prev) => [...prev, newCategory]);
-        toast.success("New category registered");
+        toast.success("Category added successfully");
       }
       setDialogOpen(false);
       resetForm();
@@ -141,7 +155,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
       const updated = await response.json();
       setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
       setDraftCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
-      toast.success("Category restored to active state");
+      toast.success("Category restored");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Restore failed");
     } finally {
@@ -185,7 +199,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
       setCategories(draftCategories);
       setIsBulkEditing(false);
-      toast.success(`Successfully committed ${changedIds.length} modifications`);
+      toast.success(`Successfully updated ${changedIds.length} categories`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Bulk commit failed");
     } finally {
@@ -203,14 +217,14 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     <div className="w-full space-y-8 p-1">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/[0.03] flex items-center justify-center text-primary/40 border border-primary/10">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none mb-1">
-              Registry Overview
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Overview
             </p>
-            <h2 className="text-sm font-black text-foreground tracking-tight">
+            <h2 className="text-sm font-bold text-foreground tracking-tight">
               {categories.length} Registered {categories.length === 1 ? 'Category' : 'Categories'}
             </h2>
           </div>
@@ -220,45 +234,79 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           {isBulkEditing ? (
             <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
               {changedIds.length > 0 && (
-                <div className="px-4 py-1.5 rounded-full bg-primary/[0.03] border border-primary/10 text-[9px] font-black uppercase tracking-[0.2em] text-primary shadow-xs">
+                <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold uppercase tracking-wider text-primary">
                   {changedIds.length} Pending Mods
                 </div>
               )}
-              <Button
-                variant="ghost"
-                onClick={resetBulkEdit}
-                disabled={loading}
-                className="h-11 rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Discard
-              </Button>
-              <Button
-                onClick={handleBulkSave}
-                disabled={loading || changedIds.length === 0}
-                className="h-11 rounded-2xl px-8 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Commit Changes
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={resetBulkEdit}
+                      disabled={loading}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Discard
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Discard all bulk edits and keep existing category information.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleBulkSave}
+                      disabled={loading || changedIds.length === 0}
+                      className="h-9 px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Save Changes
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Save all modified category rows to the database.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setIsBulkEditing(true)}
-                className="h-11 rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.2em] border-border/20 bg-muted/5 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
-              >
-                <Edit3 className="h-4 w-4 mr-2" />
-                Bulk Management
-              </Button>
-              <Button
-                onClick={() => openDialog()}
-                className="h-11 rounded-2xl gap-2.5 px-8 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/10 hover:shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
-              >
-                <Plus className="h-4 w-4" />
-                Add Category
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsBulkEditing(true)}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold border-border/20 bg-muted/5 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Bulk Management
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Edit category titles and descriptions all at once in a table instead of opening each one individually.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => openDialog()}
+                      className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Category
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Create a new subject classification to organize catalog books.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </div>
@@ -301,6 +349,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         onSave={handleSave}
         loading={loading}
         error={error}
+        isChanged={isChanged}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Manages the FAQ / Knowledge Base items for policy support.
@@ -118,15 +119,24 @@ export function SupportFAQManager({
           </p>
         </div>
         {!disabled && (
-          <Button 
-            onClick={startAdd}
-            variant="ghost"
-            size="sm"
-            className="h-9 rounded-xl gap-2 text-primary hover:bg-primary/5 text-[10px] font-bold uppercase tracking-widest transition-all"
-          >
-            <Plus className="h-3 w-3" />
-            Add Entry
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={startAdd}
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 rounded-xl gap-2 text-primary hover:bg-primary/5 text-[10px] font-bold uppercase tracking-widest transition-all"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Entry
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Add a new frequently asked question and answer for student help.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
@@ -176,12 +186,41 @@ export function SupportFAQManager({
                   </div>
                   {!disabled && (
                     <div className="flex gap-2 opacity-0 group-hover/faq:opacity-100 transition-all duration-300 translate-x-2 group-hover/faq:translate-x-0">
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-background shadow-inner border border-transparent hover:border-border/10 transition-all" onClick={() => startEdit(i)}>
-                        <Edit3 size={15} className="text-muted-foreground/60 group-hover/faq:text-primary transition-colors" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-muted-foreground/20 hover:text-rose-500/60 hover:bg-rose-500/[0.02] transition-all" onClick={() => removeFAQ(i)}>
-                        <Trash2 size={15} />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-2xl hover:bg-background shadow-inner border border-transparent hover:border-border/10 transition-all"
+                              onClick={() => startEdit(i)}
+                              aria-label="Edit FAQ"
+                            >
+                              <Edit3 size={15} className="text-muted-foreground/60 group-hover/faq:text-primary transition-colors" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Edit this question and answer.
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-2xl text-muted-foreground/20 hover:text-rose-500/60 hover:bg-rose-500/[0.02] transition-all"
+                              onClick={() => removeFAQ(i)}
+                              aria-label="Remove FAQ"
+                            >
+                              <Trash2 size={15} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Remove this question from the student help center.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   )}
                 </div>
@@ -205,14 +244,24 @@ export function SupportFAQManager({
                          <p className="text-[10px] text-muted-foreground/60 leading-relaxed line-through italic font-medium">A: {faq.answer}</p>
                        </div>
                        {!disabled && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-10 w-10 rounded-2xl text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all shrink-0" 
-                            onClick={() => restoreFAQ(faq)}
-                          >
-                            <Plus size={16} />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-10 w-10 rounded-2xl text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all shrink-0" 
+                                  onClick={() => restoreFAQ(faq)}
+                                  aria-label="Restore FAQ"
+                                >
+                                  <Plus size={16} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                Restore this question back to the student help center.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                        )}
                      </div>
                    </div>

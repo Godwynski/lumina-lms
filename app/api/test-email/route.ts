@@ -75,9 +75,18 @@ export async function POST(request: Request) {
     if (result.success) {
       return NextResponse.json({ success: true, message: `Test email sent to ${to}`, messageId: result.messageId });
     } else {
-      const errorMessage = result.error instanceof Error
+      let errorMessage = result.error instanceof Error
         ? result.error.message
         : (typeof result.error === 'string' ? result.error : 'Failed to send test email');
+
+      if (errorMessage.includes('535') || errorMessage.includes('BadCredentials') || errorMessage.includes('Username and Password not accepted')) {
+        errorMessage = 'Gmail SMTP Authentication Failed (535): Google requires a 16-character App Password. Generate one at myaccount.google.com/apppasswords and update SMTP_PASS in your environment.';
+      } else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('ESOCKETTIMEDOUT')) {
+        errorMessage = 'SMTP Connection timed out. Please check your SMTP_HOST and SMTP_PORT.';
+      } else if (errorMessage.includes('ECONNREFUSED')) {
+        errorMessage = 'SMTP Connection refused. Please verify your SMTP_HOST and SMTP_PORT.';
+      }
+
       return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
     }
   } catch (error: unknown) {
