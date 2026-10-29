@@ -107,7 +107,6 @@ export function PolicyLayout({
 
   const [formData, setFormData] = useState<Record<string, string>>(initialValues);
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -161,7 +160,6 @@ export function PolicyLayout({
 
   const handleChange = (key: string, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
     setError(null);
   };
 
@@ -191,8 +189,7 @@ export function PolicyLayout({
       startTransition(() => {
         router.refresh();
       });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success("Changes synchronized");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -204,15 +201,6 @@ export function PolicyLayout({
 
   return (
     <div className="w-full pb-12">
-      <div className="mb-4 space-y-2">
-
-        {saved && (
-          <div className="flex items-center gap-3 rounded-lg border border-primary/10 bg-primary/5 px-4 py-2 text-[10px] font-bold text-primary/80">
-            <ShieldCheck size={14} />
-            Changes synchronized
-          </div>
-        )}
-      </div>
 
       <div className="grid gap-8 lg:grid-cols-[220px_1fr] items-start">
         {/* Mobile Category Navigation */}
