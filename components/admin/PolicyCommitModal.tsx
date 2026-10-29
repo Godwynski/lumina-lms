@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, ArrowRight, Info, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 
@@ -29,6 +29,25 @@ export function PolicyCommitModal({
   loading
 }: CommitModalProps) {
   const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) {
+      setReason("");
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setReason("");
+    onClose();
+  };
+
+  const handleConfirm = () => {
+    const currentReason = reason.trim();
+    if (currentReason.length >= 10) {
+      onConfirm(currentReason);
+      setReason("");
+    }
+  };
 
   const formatKey = (key: string) => 
     key.split('_')
@@ -98,7 +117,7 @@ export function PolicyCommitModal({
   const isFormValid = reason.trim().length >= 10;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="sm:max-w-[480px] max-h-[90vh] md:max-h-[85vh] flex flex-col border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
         <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
           <DialogHeader className="space-y-4">
@@ -169,14 +188,14 @@ export function PolicyCommitModal({
         <div className="p-6 pt-0 flex gap-3 shrink-0">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
             className="flex-1 h-11 rounded-lg text-xs font-semibold uppercase tracking-wider border-border/60 hover:bg-muted/40 transition-all"
           >
             Cancel
           </Button>
           <Button
-            onClick={() => onConfirm(reason)}
+            onClick={handleConfirm}
             disabled={loading || !isFormValid}
             className="flex-[1.5] h-11 rounded-lg text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
           >
