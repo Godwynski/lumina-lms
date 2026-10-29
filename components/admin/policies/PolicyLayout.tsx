@@ -274,7 +274,7 @@ export function PolicyLayout({
                         <p className="text-[11px] text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
                       </div>
                     </div>
-                    <div className="p-6 rounded-2xl border border-border/40 bg-muted/5 shadow-sm">
+                    <div className="p-6 rounded-xl border border-border/60 bg-card shadow-xs">
                       <SystemAnnouncement />
                     </div>
                   </section>

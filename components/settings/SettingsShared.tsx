@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { memo, useState } from "react";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ export function RunMaintenanceTool() {
 export function TestEmailTool() {
   const [isSending, setIsSending] = useState(false);
   const [targetEmail, setTargetEmail] = useState("");
-  const [emailType, setEmailType] = useState("overdue");
+  const [emailType, setEmailType] = useState("test");
 
   const handleTest = async () => {
     if (!targetEmail.trim()) {
@@ -143,9 +143,10 @@ export function TestEmailTool() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(data.message || "Test email sent! Check your inbox.");
-      // Intentionally not clearing targetEmail so the user can test multiple times easily.
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Test failed");
+      toast.error(err instanceof Error ? err.message : "Test failed", {
+        duration: 8000,
+      });
     } finally {
       setIsSending(false);
     }
@@ -154,26 +155,27 @@ export function TestEmailTool() {
   return (
     <div className="space-y-4 py-2">
       <div className="space-y-1">
-        <h4 className="text-sm font-medium text-foreground">Configuration Test</h4>
+        <h4 className="text-sm font-semibold text-foreground">Email Configuration Test</h4>
         <p className="text-xs text-muted-foreground">
-          Sends a test email to verify your email configuration.
+          Send a diagnostic email to verify SMTP connectivity, credentials, and message delivery.
         </p>
       </div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <Input 
           type="email"
-          placeholder="Test email address" 
+          placeholder="Recipient email address" 
           value={targetEmail}
           onChange={(e) => setTargetEmail(e.target.value)}
-          className="h-8 text-xs sm:max-w-[250px]"
+          className="h-9 text-xs sm:max-w-[250px] rounded-xl"
         />
         <Select value={emailType} onValueChange={setEmailType}>
-          <SelectTrigger className="h-8 w-full sm:w-[150px] text-xs">
+          <SelectTrigger className="h-9 w-full sm:w-[190px] text-xs rounded-xl">
             <SelectValue placeholder="Email Type" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="overdue" className="text-xs">Overdue Notice</SelectItem>
-            <SelectItem value="due_soon" className="text-xs">Due Soon Notice</SelectItem>
+          <SelectContent className="rounded-xl">
+            <SelectItem value="test" className="text-xs">Diagnostic System Test</SelectItem>
+            <SelectItem value="overdue" className="text-xs">Overdue Notice Template</SelectItem>
+            <SelectItem value="due_soon" className="text-xs">Due Soon Notice Template</SelectItem>
           </SelectContent>
         </Select>
         <Button 
@@ -181,9 +183,14 @@ export function TestEmailTool() {
           disabled={isSending || !targetEmail.trim()}
           variant="secondary"
           size="sm"
-          className="h-8 rounded-lg text-xs font-medium shrink-0"
+          className="h-9 rounded-xl text-xs font-semibold shrink-0"
         >
-          {isSending ? "Sending..." : "Send Test Email"}
+          {isSending ? (
+            <div className="flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>Sending...</span>
+            </div>
+          ) : "Send Test Email"}
         </Button>
       </div>
     </div>
