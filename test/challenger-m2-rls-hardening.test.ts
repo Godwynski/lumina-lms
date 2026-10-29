@@ -4,7 +4,7 @@ import * as path from 'path';
 
 describe('Milestone 2 Challenger: Row-Level Security (RLS) & Multi-Role Isolation Hardening Verification', () => {
   const schemaPath = path.resolve(process.cwd(), 'supabase/schema_clean_install.sql');
-  const auditPath = path.resolve(process.cwd(), 'DATABASE_AUDIT.md');
+  const auditPath = fs.existsSync(path.resolve(process.cwd(), 'docs/DATABASE_AUDIT.md')) ? path.resolve(process.cwd(), 'docs/DATABASE_AUDIT.md') : path.resolve(process.cwd(), 'DATABASE_AUDIT.md');
   let schemaSql: string;
   let auditMd: string;
 
