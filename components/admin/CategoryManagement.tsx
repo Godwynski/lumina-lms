@@ -29,6 +29,13 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
     description: "",
   });
 
+  const editingCategory = editingId ? categories.find((c) => c.id === editingId) : null;
+  const isChanged = !editingId || (editingCategory ? (
+    formData.name.trim() !== editingCategory.name.trim() ||
+    formData.slug.trim() !== (editingCategory.slug || "").trim() ||
+    formData.description.trim() !== (editingCategory.description || "").trim()
+  ) : true);
+
   const resetForm = () => {
     setFormData({ name: "", slug: "", description: "" });
     setEditingId(null);
@@ -57,8 +64,14 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
   const handleSave = async () => {
     const normalizedSlug = toSlug(formData.slug || formData.name);
-    if (!formData.name || !normalizedSlug) {
+    if (!formData.name.trim() || !normalizedSlug) {
       toast.error("Label and identifier are required");
+      return;
+    }
+
+    if (editingId && !isChanged) {
+      setDialogOpen(false);
+      resetForm();
       return;
     }
 
@@ -301,6 +314,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         onSave={handleSave}
         loading={loading}
         error={error}
+        isChanged={isChanged}
       />
     </div>
   );

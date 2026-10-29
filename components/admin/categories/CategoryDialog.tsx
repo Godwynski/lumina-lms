@@ -30,6 +30,7 @@ interface CategoryDialogProps {
   onSave: () => void;
   loading: boolean;
   error: string | null;
+  isChanged?: boolean;
 }
 
 /**
@@ -44,6 +45,7 @@ export function CategoryDialog({
   onSave,
   loading,
   error,
+  isChanged = true,
 }: CategoryDialogProps) {
   useEffect(() => {
     if (error) {
@@ -184,7 +186,8 @@ export function CategoryDialog({
               formData.name.length > 50 || 
               formData.slug.length > 60 || 
               formData.description.length > 200 ||
-              !formData.name.trim()
+              !formData.name.trim() ||
+              (editingId !== null && !isChanged)
             }
             className="flex-[1.5] h-10 rounded-xl text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
           >
