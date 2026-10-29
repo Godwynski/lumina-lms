@@ -16,9 +16,7 @@ import {
   RefreshCcw, 
   RefreshCw,
   QrCode,
-  Search, 
-  Sparkles,
-  Users
+  Search
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";

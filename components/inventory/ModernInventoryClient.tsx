@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition, useState, useEffect } from "react";
+import { useTransition, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus, 
@@ -470,7 +470,7 @@ export function ModernInventoryClient({
   }, [router, startTransition]);
 
   // Centralized navigation helper
-  const updateParams = (updates: Record<string, string | number | null>) => {
+  const updateParams = useCallback((updates: Record<string, string | number | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     
     Object.entries(updates).forEach(([key, value]) => {
@@ -489,7 +489,7 @@ export function ModernInventoryClient({
     startTransition(() => {
       router.replace(`?${params.toString()}`, { scroll: false });
     });
-  };
+  }, [router, searchParams, startTransition]);
 
   const selectedCategoryIds = categoryId === "all" ? [] : categoryId.split(",").filter(Boolean);
   const handleCategoryToggle = (id: string) => {
@@ -522,7 +522,7 @@ export function ModernInventoryClient({
       updateParams({ q: searchQuery.trim() || null });
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, urlQuery]);
+  }, [searchQuery, urlQuery, updateParams]);
 
 
   const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (sortBy !== "newest" ? 1 : 0);
