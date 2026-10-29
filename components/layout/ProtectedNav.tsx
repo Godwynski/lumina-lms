@@ -317,7 +317,7 @@ export function ProtectedNav({
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 flex">
+      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 hidden md:flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
