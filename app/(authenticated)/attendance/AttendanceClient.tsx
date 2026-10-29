@@ -226,8 +226,7 @@ export function AttendanceClient({
     return base.filter(r => {
       const name = r.profiles?.full_name?.toLowerCase() || '';
       const sid = r.profiles?.student_id?.toLowerCase() || '';
-      const notes = r.notes?.toLowerCase() || '';
-      return name.includes(q) || sid.includes(q) || notes.includes(q);
+      return name.includes(q) || sid.includes(q);
     });
   }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery]);
 
@@ -605,14 +604,7 @@ function AttendanceTable({
           </div>
         )
       },
-      {
-        header: "Purpose / Note",
-        cell: (record) => (
-          <span className="text-xs text-muted-foreground/80 truncate block max-w-xs">
-            {record.notes || "—"}
-          </span>
-        )
-      },
+
       {
         header: "Status",
         className: "w-[100px]",
