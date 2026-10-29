@@ -34,7 +34,7 @@ const MAX_ITEM_LENGTH = 60;
 
 /**
  * Minimalist management interface for academic programs under System Data > Identity.
- * Provides full parity with Categories: itemized list, inline edit dialog, and bulk management.
+ * Provides visual parity with Categories: itemized list, inline edit dialog, and bulk management.
  */
 export function IdentityListManager({
   value,
@@ -132,6 +132,11 @@ export function IdentityListManager({
     }
 
     if (editingIndex !== null) {
+      // If nothing was modified, simply close without dirtying state or showing false toast
+      if (currentItems[editingIndex] === trimmed) {
+        setDialogOpen(false);
+        return;
+      }
       const updated = [...currentItems];
       updated[editingIndex] = trimmed;
       onChange(JSON.stringify(updated));
@@ -157,12 +162,13 @@ export function IdentityListManager({
     toast.success("Program removed");
   };
 
-  const isFormValid = formName.trim().length > 0 && formName.length <= MAX_ITEM_LENGTH;
+  const isNameChanged = editingIndex === null ? true : formName.trim() !== (currentItems[editingIndex] || "");
+  const isFormValid = formName.trim().length > 0 && formName.length <= MAX_ITEM_LENGTH && isNameChanged;
 
   return (
     <div className="w-full space-y-6">
       {/* Header Overview & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
             <GraduationCap className="h-5 w-5" />
@@ -276,13 +282,10 @@ export function IdentityListManager({
           </div>
         </div>
       ) : (
-        /* Standard Itemized List View */
+        /* Standard Itemized List View (Clean text rows matching Categories) */
         <div className="space-y-3">
           {currentItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/60 bg-muted/5 p-12 text-center">
-              <div className="h-12 w-12 rounded-xl bg-muted/20 flex items-center justify-center text-muted-foreground mx-auto mb-3">
-                <GraduationCap className="h-6 w-6" />
-              </div>
               <h4 className="text-sm font-semibold text-foreground mb-1">No Academic Programs</h4>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-4">
                 No programs have been registered. Add your first program for student registration.
@@ -307,23 +310,18 @@ export function IdentityListManager({
                     key={`${item}-${index}`}
                     className="group flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-card hover:border-primary/40 hover:bg-muted/10 transition-all shadow-xs"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary/70 border border-primary/10 shrink-0 group-hover:bg-primary/10 transition-colors">
-                        <GraduationCap className="h-4 w-4" />
-                      </div>
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="text-sm font-semibold text-foreground truncate">
-                          {item}
-                        </span>
-                        {isNew && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-primary/10 text-primary border-primary/20 text-[9px] uppercase font-bold tracking-wider py-0 px-2"
-                          >
-                            New
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className="text-sm font-semibold text-foreground tracking-tight group-hover:text-primary transition-colors truncate">
+                        {item}
+                      </span>
+                      {isNew && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[9px] uppercase font-bold tracking-wider py-0 px-2"
+                        >
+                          New
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
