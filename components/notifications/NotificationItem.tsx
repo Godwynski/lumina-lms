@@ -1,25 +1,19 @@
 'use client'
 
 import React, { memo } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Check, 
   AlertTriangle, 
   Clock, 
   Bookmark, 
   CalendarOff, 
-  Info,
-  MoreVertical 
+  Info
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Notification } from '@/hooks/use-notifications'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 interface NotificationItemProps {
   notification: Notification
@@ -55,22 +49,58 @@ const typeConfig = {
   }
 }
 
+const getTargetUrl = (type: string) => {
+  switch (type) {
+    case 'OVERDUE':
+    case 'DUE_SOON':
+    case 'CIRCULATION':
+      return '/history'
+    case 'RESERVATION':
+    case 'RESERVATION_EXPIRED':
+      return '/student-catalog'
+    default:
+      return null
+  }
+}
+
 export const NotificationItem = memo(({ 
   notification, 
   onMarkRead, 
   variant = 'full'
 }: NotificationItemProps) => {
+  const router = useRouter()
   const config = typeConfig[notification.type as keyof typeof typeConfig] || typeConfig.SYSTEM
   const Icon = config.icon
+  const targetUrl = getTargetUrl(notification.type)
+
+  const handleClick = () => {
+    if (!notification.is_read) {
+      onMarkRead(notification.id)
+    }
+    if (targetUrl) {
+      router.push(targetUrl)
+    }
+  }
 
   return (
-    <div className={cn(
-      "group relative flex items-start gap-3 transition-all duration-200 border-b border-border/40 last:border-0",
-      notification.is_read 
-        ? "bg-transparent" 
-        : "bg-primary/[0.03]",
-      variant === 'compact' ? "p-3 px-4" : "p-4 px-5"
-    )}>
+    <div 
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleClick()
+        }
+      }}
+      className={cn(
+        "group relative flex items-start gap-3 transition-all duration-200 border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:bg-muted/30",
+        notification.is_read 
+          ? "bg-transparent" 
+          : "bg-primary/[0.03]",
+        variant === 'compact' ? "p-3 px-4" : "p-4 px-5"
+      )}
+    >
       {/* Subtle Status Indicator */}
       <div className={cn(
         "mt-1.5 h-2 w-2 shrink-0 rounded-full transition-all duration-300",
@@ -101,48 +131,26 @@ export const NotificationItem = memo(({
         )}>
           {notification.content}
         </p>
-
-        {/* Inline Actions (Desktop Only) */}
-        {!notification.is_read && (
-          <div className="hidden sm:flex items-center gap-4 mt-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-            <button 
-              onClick={() => onMarkRead(notification.id)}
-              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5"
-              aria-label={`Mark "${notification.title}" as read`}
-            >
-              <Check className="w-3 h-3" />
-              Mark as read
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Compact Actions (Dropdown) - Subtle Trigger */}
-      <div className="flex items-center self-start pt-0.5">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 rounded-md opacity-100 sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary transition-opacity text-muted-foreground hover:text-foreground"
-              aria-label={`Actions for ${notification.title}`}
-            >
-              <MoreVertical className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            {!notification.is_read && (
-              <DropdownMenuItem 
-                onClick={() => onMarkRead(notification.id)}
-                className="gap-2"
-              >
-                <Check className="h-4 w-4" />
-                Mark read
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* Single direct action: Mark as read (Unread items only) */}
+      {!notification.is_read && (
+        <div className="flex items-center self-start pt-0.5">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => {
+              e.stopPropagation()
+              onMarkRead(notification.id)
+            }}
+            className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-80 group-hover:opacity-100"
+            title="Mark as read"
+            aria-label={`Mark "${notification.title}" as read`}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 })

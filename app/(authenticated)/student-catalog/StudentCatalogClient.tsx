@@ -143,22 +143,14 @@ export function StudentCatalogClient({
     });
   }, []);
 
+  const urlQuery = searchParams.get('q') || '';
   const [localQuery, setLocalQuery] = useState(initialFilters.q);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialFilters.q);
   const [page, setPage] = useState(initialFilters.page);
   const pageSize = 16;
 
   const [selectedCategory, setSelectedCategory] = useState(initialFilters.categoryId);
   const [availableOnly, setAvailableOnly] = useState(initialFilters.availableOnly);
   const [sortBy, setSortBy] = useState(initialFilters.sortBy);
-
-  // Debounce the query update
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(localQuery);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [localQuery]);
 
 
   const books = initialData.books || [];
@@ -186,21 +178,21 @@ export function StudentCatalogClient({
 
   // Synchronize local states when search params change (e.g. back button)
   useEffect(() => {
-    setLocalQuery(searchParams.get('q') || '');
+    setLocalQuery(urlQuery);
     setPage(parseInt(searchParams.get('page') || '1', 10));
     setSelectedCategory(searchParams.get('category') || '');
     setAvailableOnly(searchParams.get('available') === 'true');
     setSortBy((searchParams.get('sort') as 'title' | 'author' | 'availability' | 'newest') || 'title');
-  }, [searchParams]);
+  }, [searchParams, urlQuery]);
 
+  // Debounce search input for realtime as-you-type search
   useEffect(() => {
+    if (localQuery.trim() === urlQuery.trim()) return;
     const timer = setTimeout(() => {
-      if (debouncedQuery !== localQuery) {
-        updateParams({ q: localQuery, page: 1 });
-      }
-    }, 400);
+      updateParams({ q: localQuery.trim() || null, page: 1 });
+    }, 300);
     return () => clearTimeout(timer);
-  }, [localQuery, debouncedQuery, updateParams]);
+  }, [localQuery, urlQuery, updateParams]);
 
   const selectedIds = selectedCategory ? selectedCategory.split(',').filter(Boolean) : [];
 
@@ -238,6 +230,12 @@ export function StudentCatalogClient({
               placeholder="Search by title, author, or ISBN..."
               value={localQuery}
               onChange={(e) => setLocalQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  updateParams({ q: localQuery.trim() || null, page: 1 });
+                }
+              }}
               className="h-10 pl-9 pr-10 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20"
             />
             {localQuery && (

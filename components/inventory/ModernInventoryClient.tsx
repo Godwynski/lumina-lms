@@ -508,12 +508,21 @@ export function ModernInventoryClient({
   const setPage = (p: number) => updateParams({ page: p });
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
-    updateParams({ q: searchQuery || null });
+    updateParams({ q: searchQuery.trim() || null });
   };
   const clearSearch = () => {
     setSearchQuery("");
     updateParams({ q: null });
   };
+
+  // Debounce search input for realtime as-you-type search
+  useEffect(() => {
+    if (searchQuery.trim() === urlQuery.trim()) return;
+    const timer = setTimeout(() => {
+      updateParams({ q: searchQuery.trim() || null });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, urlQuery]);
 
 
   const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (sortBy !== "newest" ? 1 : 0);
