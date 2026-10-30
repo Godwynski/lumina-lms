@@ -91,7 +91,6 @@ export async function POST(request: NextRequest) {
       "borrowing_record",
       "category",
       "policy",
-      "fine",
       "settings",
       "system",
     ];

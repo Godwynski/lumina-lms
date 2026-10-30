@@ -7,17 +7,29 @@ import { Button } from "@/components/ui/button";
 import { 
   Select, 
   SelectContent, 
+  SelectGroup,
   SelectItem, 
+  SelectLabel,
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { 
   Search, 
   Download, 
   Filter, 
-  RefreshCw,
+  RotateCcw,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Calendar,
+  X
 } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -60,18 +72,158 @@ interface AuditLog {
   } | null;
 }
 
-const ENTITY_TYPES = [
-  "all",
-  "book",
-  "book_copy",
-  "profile",
-  "borrowing_record",
-  "category",
-  "policy",
-  "fine",
-  "settings",
-  "system",
-] as const;
+export interface EntityOption {
+  value: string;
+  label: string;
+  description: string;
+  tooltip: string;
+}
+
+export interface EntityGroup {
+  name: string;
+  items: EntityOption[];
+}
+
+export const ENTITY_GROUPS: EntityGroup[] = [
+  {
+    name: "General",
+    items: [
+      {
+        value: "all",
+        label: "All Entities",
+        description: "View logs across all system modules",
+        tooltip: "Active: Display audit events from all modules across the database."
+      }
+    ]
+  },
+  {
+    name: "Catalog & Inventory",
+    items: [
+      {
+        value: "book",
+        label: "Books",
+        description: "Titles, authors, ISBNs, and catalog data",
+        tooltip: "Active: Acquisitions, metadata edits, and book archiving."
+      },
+      {
+        value: "book_copy",
+        label: "Book Copies",
+        description: "Physical barcodes and copy accessions",
+        tooltip: "Active: Individual inventory copies, barcodes, and condition updates."
+      },
+      {
+        value: "category",
+        label: "Categories",
+        description: "Dewey Decimal classifications and genres",
+        tooltip: "Active: Academic subjects, genre taxonomy, and category management."
+      }
+    ]
+  },
+  {
+    name: "Circulation & Patrons",
+    items: [
+      {
+        value: "borrowing_record",
+        label: "Borrowing Records",
+        description: "Front-desk checkouts and return logs",
+        tooltip: "Active: Circulation desk checkouts, returns, and loan tracking."
+      },
+      {
+        value: "reservation",
+        label: "Reservations",
+        description: "Hold requests, queue positions, and expirations",
+        tooltip: "Active: Book reservations, waiting queues, and hold pickups."
+      },
+      {
+        value: "library_card",
+        label: "Library Cards",
+        description: "Digital patron cards and status updates",
+        tooltip: "Active: Issuing, activating, and renewing digital student library cards."
+      },
+      {
+        value: "profile",
+        label: "User Profiles",
+        description: "Patron & staff accounts, roles, and status",
+        tooltip: "Active: Account creation, role assignments, and onboarding."
+      }
+    ]
+  },
+  {
+    name: "Administration & System",
+    items: [
+      {
+        value: "policy",
+        label: "System Policies",
+        description: "Circulation limits and loan duration rules",
+        tooltip: "Active: System settings, borrow limits, and grace period policies."
+      },
+      {
+        value: "system",
+        label: "System Operations",
+        description: "Annual resets, maintenance & transfers",
+        tooltip: "Active: Academic year transitions, ownership transfers, and system jobs."
+      }
+    ]
+  }
+];
+
+export interface ActionOption {
+  value: string;
+  label: string;
+  description: string;
+  tooltip: string;
+}
+
+export const ACTION_OPTIONS: ActionOption[] = [
+  {
+    value: "all",
+    label: "All Actions",
+    description: "View all recorded activity types",
+    tooltip: "Active: Show every mutation, circulation, and administrative event."
+  },
+  {
+    value: "create",
+    label: "Create / Acquisition",
+    description: "New books, copies, or categories added",
+    tooltip: "Active: New acquisitions, catalog additions, and created records."
+  },
+  {
+    value: "update",
+    label: "Update / Edit",
+    description: "Modifications to records or policies",
+    tooltip: "Active: Configuration updates, profile changes, and metadata edits."
+  },
+  {
+    value: "archive",
+    label: "Archive / Deactivate",
+    description: "Soft deletes, archives, or deactivations",
+    tooltip: "Active: Deactivated accounts, archived categories, and soft removals."
+  },
+  {
+    value: "checkout",
+    label: "Circulation Checkout",
+    description: "Front-desk book checkouts to patrons",
+    tooltip: "Active: Desk checkouts and barcode scans for patrons."
+  },
+  {
+    value: "return",
+    label: "Book Return",
+    description: "Books returned and reshelved",
+    tooltip: "Active: Books checked in and returned to library inventory."
+  },
+  {
+    value: "issuance",
+    label: "Card Issuance",
+    description: "Digital library cards generated or activated",
+    tooltip: "Active: Activation and issuance of patron library cards."
+  },
+  {
+    value: "login",
+    label: "Auth & Identity",
+    description: "Sign-ins, onboarding, and role updates",
+    tooltip: "Active: Account logins, onboarding completions, and role transfers."
+  }
+];
 
 const IGNORED_KEYS = ['id', 'created_at', 'updated_at', 'deleted_at', 'metadata'];
 
@@ -240,9 +392,33 @@ export function AuditLogClient() {
     setPage(1);
   };
 
-  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+    const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  const handleClearAllFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setEntityType("all");
+    setActionType("all");
+    setStartDate("");
+    setEndDate("");
+    setPage(1);
+    toast.success("All filters cleared");
+    void mutate();
+  };
+
+  const activeAdvancedFilterCount = useMemo(() => {
+    let count = 0;
+    if (actionType !== "all") count++;
+    if (startDate) count++;
+    if (endDate) count++;
+    return count;
+  }, [actionType, startDate, endDate]);
+
+  const hasAnyFilterActive = useMemo(() => {
+    return !!(search || entityType !== "all" || actionType !== "all" || startDate || endDate);
+  }, [search, entityType, actionType, startDate, endDate]);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
 
   const pageSize = 20; // Increased page size for dense table
@@ -294,87 +470,95 @@ export function AuditLogClient() {
         <div className="flex flex-col gap-3 w-full p-1">
           {/* Top Control Bar */}
           <div className="flex flex-col xl:flex-row gap-3 items-start xl:items-center w-full">
-            <div className="flex items-center gap-2 w-full xl:max-w-md">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
-                <Input 
-                  placeholder="Search name, action, or reason..." 
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
-                />
-              </div>
-              <Button
-                variant={showAdvancedFilters ? "secondary" : "outline"}
-                size="icon"
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className={cn(
-                  "h-10 w-10 shrink-0 rounded-2xl border border-border/20 transition-all xl:hidden",
-                  showAdvancedFilters ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/5 hover:bg-muted/10"
-                )}
-                title="Toggle Advanced Filters"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-              </Button>
+            <div className="relative flex-1 w-full xl:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+              <Input 
+                placeholder="Search name, action, or reason..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-8 h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors p-0.5"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
             
-            <div className="flex flex-row items-center gap-2 w-full xl:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger className="flex-1 xl:w-[140px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-3 w-3 text-muted-foreground/40" />
-                    <SelectValue placeholder="Entity" />
+                <SelectTrigger className="flex-1 sm:flex-initial xl:w-[170px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
+                  <div className="flex items-center gap-2 truncate">
+                    <Filter className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                    <SelectValue placeholder="All Entities" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-border/40">
-                  {ENTITY_TYPES.map(t => (
-                    <SelectItem key={t} value={t} className="capitalize text-xs py-2">
-                      {t === "all" ? "All Entities" : t.replace(/_/g, " ")}
-                    </SelectItem>
+                <SelectContent className="rounded-2xl border-border/40 max-h-[360px]">
+                  {ENTITY_GROUPS.map((group) => (
+                    <SelectGroup key={group.name}>
+                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 py-1.5">
+                        {group.name}
+                      </SelectLabel>
+                      {group.items.map((item) => (
+                        <SelectItem 
+                          key={item.value} 
+                          value={item.value} 
+                          title={item.tooltip}
+                          className="py-2 px-3 cursor-pointer hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex flex-col text-left">
+                            <span className="font-semibold text-xs text-foreground">{item.label}</span>
+                            <span className="text-[10px] text-muted-foreground truncate">{item.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
 
-              <Select value={actionType} onValueChange={(v) => { setActionType(v); setPage(1); }}>
-                <SelectTrigger className="flex-1 xl:w-[140px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-3 w-3 text-muted-foreground/40" />
-                    <SelectValue placeholder="Action" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-border/40">
-                  <SelectItem value="all" className="text-xs py-2">All Actions</SelectItem>
-                  <SelectItem value="create" className="text-xs py-2">Create</SelectItem>
-                  <SelectItem value="update" className="text-xs py-2">Update</SelectItem>
-                  <SelectItem value="archive" className="text-xs py-2">Archive</SelectItem>
-                  <SelectItem value="login" className="text-xs py-2">Login</SelectItem>
-                </SelectContent>
-              </Select>
-
+              {/* Advanced Filters Trigger Button (Opens Modal) */}
               <Button
-                variant={showAdvancedFilters ? "secondary" : "outline"}
-                size="icon"
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                variant={activeAdvancedFilterCount > 0 ? "secondary" : "outline"}
+                onClick={() => setShowAdvancedFilters(true)}
                 className={cn(
-                  "hidden xl:flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/20 transition-all",
-                  showAdvancedFilters ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/5 hover:bg-muted/10"
+                  "h-10 rounded-2xl border border-border/20 px-3.5 text-xs font-medium flex items-center gap-2 transition-all",
+                  activeAdvancedFilterCount > 0 
+                    ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15" 
+                    : "bg-muted/5 hover:bg-muted/10 text-muted-foreground hover:text-foreground"
                 )}
-                title="Toggle Advanced Filters"
+                title="Open Advanced Filters Modal"
               >
-                <SlidersHorizontal className="h-4 w-4" />
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Filters</span>
+                {activeAdvancedFilterCount > 0 && (
+                  <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                    {activeAdvancedFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              {/* Clear Filters (replaces old Refresh button) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearAllFilters}
+                className={cn(
+                  "h-10 rounded-2xl bg-background text-[10px] font-bold uppercase tracking-wider px-3.5 border border-border/20 hover:bg-muted transition-all flex items-center gap-1.5",
+                  !hasAnyFilterActive && "text-muted-foreground"
+                )}
+                title="Clear all filters, dates, actions, and search keywords"
+              >
+                <RotateCcw className={cn("h-3.5 w-3.5", isValidating && "animate-spin")} />
+                <span>Clear Filters</span>
               </Button>
 
               <div className="hidden xl:flex items-center gap-2 border-l border-border/10 pl-2 ml-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => mutate()}
-                  disabled={isValidating}
-                  className="h-10 rounded-2xl bg-background text-[10px] font-bold uppercase tracking-wider px-4 border border-border/20 hover:bg-muted transition-all"
-                >
-                  <RefreshCw className={cn("h-3.5 w-3.5 xl:mr-2", isValidating && "animate-spin")} />
-                  <span className="hidden xl:inline">Refresh</span>
-                </Button>
                 <Button
                   variant="default"
                   size="sm"
@@ -389,58 +573,17 @@ export function AuditLogClient() {
 
             {/* Mobile Actions (Visible below xl) */}
             <div className="flex xl:hidden items-center gap-2 w-full pt-1">
-               <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => mutate()}
-                  disabled={isValidating}
-                  className="h-10 flex-1 rounded-2xl bg-background text-[10px] font-bold uppercase tracking-wider px-4 border border-border/20 hover:bg-muted"
-                >
-                  <RefreshCw className={cn("h-3.5 w-3.5 mr-2", isValidating && "animate-spin")} />
-                  Refresh
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setIsExportImportOpen(true)}
-                  className="h-10 flex-1 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <Download className="h-3.5 w-3.5 mr-2" />
-                  Export / Import
-                </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsExportImportOpen(true)}
+                className="h-10 flex-1 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Download className="h-3.5 w-3.5 mr-2" />
+                Export / Import
+              </Button>
             </div>
           </div>
-
-          {/* Collapsible Advanced Filters */}
-          {showAdvancedFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 p-4 mt-2 bg-muted/5 rounded-3xl border border-border/5 animate-in slide-in-from-top-2 fade-in-50 duration-200">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-wider">Start Date</span>
-                <Input 
-                  type="date" 
-                  value={startDate}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="h-9 border-none shadow-none bg-muted/10 rounded-xl text-xs"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-wider">End Date</span>
-                <Input 
-                  type="date" 
-                  value={endDate}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                  className="h-9 border-none shadow-none bg-muted/10 rounded-xl text-xs"
-                />
-              </div>
-              <div className="flex items-end justify-start xl:justify-end">
-                <div className="h-9 flex items-center px-4 text-[10px] text-muted-foreground/50 font-bold uppercase tracking-wider bg-background rounded-xl border border-border/10">
-                  {data ? `${data.total.toLocaleString()} Records Found` : "..."}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       }
       pagination={
@@ -640,7 +783,156 @@ export function AuditLogClient() {
         )}
       </div>
     </AdminTableShell>
-    <AuditLogExportImportModal
+    <Dialog open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
+        <DialogContent className="max-w-lg rounded-3xl p-6 sm:p-7 border border-border/40 shadow-2xl">
+          <DialogHeader className="space-y-1.5 pb-2 border-b border-border/10">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+              <DialogTitle className="text-base font-bold text-foreground">Advanced Audit Filters</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Narrow down system activity logs by action category, entity type, and date timeframe.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            {/* Action Type Filter */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                Action Type
+              </label>
+              <Select value={actionType} onValueChange={(v) => { setActionType(v); setPage(1); }}>
+                <SelectTrigger className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
+                  <div className="flex items-center gap-2 truncate">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    <SelectValue placeholder="All Actions" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-border/40 max-h-[300px]">
+                  {ACTION_OPTIONS.map((action) => (
+                    <SelectItem 
+                      key={action.value} 
+                      value={action.value} 
+                      title={action.tooltip}
+                      className="py-2.5 px-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col text-left">
+                        <span className="font-semibold text-xs text-foreground">{action.label}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">{action.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                  Start Date
+                </label>
+                <Input 
+                  type="date" 
+                  value={startDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                  End Date
+                </label>
+                <Input 
+                  type="date" 
+                  value={endDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  className="h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Entity Quick Select inside Modal as well */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+                Entity Type
+              </label>
+              <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
+                <SelectTrigger className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
+                  <div className="flex items-center gap-2 truncate">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    <SelectValue placeholder="All Entities" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-border/40 max-h-[300px]">
+                  {ENTITY_GROUPS.map((group) => (
+                    <SelectGroup key={group.name}>
+                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 py-1.5">
+                        {group.name}
+                      </SelectLabel>
+                      {group.items.map((item) => (
+                        <SelectItem 
+                          key={item.value} 
+                          value={item.value} 
+                          title={item.tooltip}
+                          className="py-2 px-3 cursor-pointer hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex flex-col text-left">
+                            <span className="font-semibold text-xs text-foreground">{item.label}</span>
+                            <span className="text-[10px] text-muted-foreground truncate">{item.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Results summary indicator */}
+            <div className="p-3 rounded-2xl bg-muted/20 border border-border/20 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground font-medium">Matching records found:</span>
+              <span className="font-bold text-foreground">
+                {data ? `${data.total.toLocaleString()} records` : "Loading..."}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-border/10">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setActionType("all");
+                setStartDate("");
+                setEndDate("");
+                setEntityType("all");
+                setPage(1);
+              }}
+              className="w-full sm:w-auto h-10 rounded-xl text-xs text-muted-foreground hover:text-foreground"
+            >
+              Reset Filters
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => setShowAdvancedFilters(false)}
+              className="w-full sm:w-auto h-10 rounded-xl text-xs font-semibold px-5"
+            >
+              Apply & Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <AuditLogExportImportModal
       isOpen={isExportImportOpen}
       onClose={() => setIsExportImportOpen(false)}
       onImportSuccess={() => mutate()}
