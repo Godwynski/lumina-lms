@@ -70,8 +70,9 @@ export function StudentCatalogClient({
   // Real-time synchronization
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `catalog-realtime-${Math.random().toString(36).slice(2, 7)}`;
     const channel = supabase
-      .channel('catalog-realtime')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
         startTransition(() => {
           router.refresh();
@@ -82,7 +83,17 @@ export function StudentCatalogClient({
           router.refresh();
         });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
+        startTransition(() => {
+          router.refresh();
+        });
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
+        startTransition(() => {
+          router.refresh();
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
         startTransition(() => {
           router.refresh();
         });

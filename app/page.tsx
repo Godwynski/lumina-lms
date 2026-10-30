@@ -6,6 +6,7 @@ import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getMe } from "@/lib/auth-helpers";
+import { isAccessBlocked as checkAccessBlocked, type Profile } from "@/lib/auth/permissions";
 import { redirect } from "next/navigation";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +24,11 @@ async function AuthRedirect() {
   const me = await getMe();
 
   if (me?.user) {
+    const isPrivileged = me.role === "super_admin" || me.role === "librarian";
+    const isBlocked = checkAccessBlocked(me.profile as Profile);
+    if (isBlocked && !isPrivileged && me.role !== "student_assistant") {
+      return null;
+    }
     return redirect("/dashboard");
   }
   return null;

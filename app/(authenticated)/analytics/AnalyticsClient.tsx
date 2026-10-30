@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState, useEffect, useTransition, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, BookOpen, Library, UserCircle2 } from 'lucide-react';
 import { TrendChart, CategoryPieChart, PeakHoursBarChart, ChartSkeleton } from './AnalyticsCharts';
@@ -32,6 +33,7 @@ const RANGES: { label: string; value: AnalyticsRange }[] = [
 ];
 
 export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
+  const router = useRouter();
   const stats = use(statsPromise);
   const [range, setRange] = useState<AnalyticsRange>('30d');
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -57,21 +59,27 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   // Real-time Subscriptions
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `analytics-live-${Math.random().toString(36).slice(2, 7)}`;
     
+    const refreshAll = () => {
+      loadSummary();
+      startTransition(() => {
+        router.refresh();
+      });
+    };
+
     const channel = supabase
-      .channel('analytics-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
-        loadSummary();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
-        loadSummary();
-      })
+      .channel(channelName)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, refreshAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, refreshAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, refreshAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, refreshAll)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [loadSummary]);
+  }, [loadSummary, router, startTransition]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">

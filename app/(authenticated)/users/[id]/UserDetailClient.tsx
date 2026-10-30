@@ -47,27 +47,60 @@ export function UserDetailClient({
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "profiles",
           filter: `id=eq.${initialUser.id}`,
         },
         (payload) => {
-          const updatedRow = payload.new as Record<string, unknown>;
-          const mapped = mapProfileToUser(updatedRow);
-          setUser(prev => ({
-            ...prev,
-            name: mapped.name,
-            avatarUrl: mapped.avatarUrl,
-            role: mapped.role,
-            status: mapped.status,
-            department: mapped.department,
-            student_id: mapped.student_id,
-            address: mapped.address,
-            phone: mapped.phone,
-            updatedAt: mapped.updatedAt,
-            permissions: mapped.permissions,
-          }));
+          if (payload.eventType === "UPDATE") {
+            const updatedRow = payload.new as Record<string, unknown>;
+            const mapped = mapProfileToUser(updatedRow);
+            setUser(prev => ({
+              ...prev,
+              name: mapped.name,
+              avatarUrl: mapped.avatarUrl,
+              role: mapped.role,
+              status: mapped.status,
+              department: mapped.department,
+              student_id: mapped.student_id,
+              address: mapped.address,
+              phone: mapped.phone,
+              updatedAt: mapped.updatedAt,
+              permissions: mapped.permissions,
+            }));
+          }
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "borrowing_records",
+          filter: `user_id=eq.${initialUser.id}`,
+        },
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "library_cards",
+          filter: `user_id=eq.${initialUser.id}`,
+        },
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
         }
       )
       .subscribe();
@@ -75,7 +108,7 @@ export function UserDetailClient({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [initialUser.id, supabase]);
+  }, [initialUser.id, supabase, router, startTransition]);
 
   // Modals
   const [permissionsOpen, setPermissionsOpen] = useState(false);

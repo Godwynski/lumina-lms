@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLogout } from "@/hooks/use-logout";
+import Link from "next/link";
+import { Home } from "lucide-react";
 import { OnboardingForm } from "./OnboardingForm";
 
 
@@ -141,6 +143,17 @@ export function AccountPendingScreen({
             </Button>
           </div>
           
+          <Button 
+            asChild
+            variant="ghost" 
+            className="w-full text-muted-foreground hover:text-foreground h-10 rounded-lg font-medium transition-colors"
+          >
+            <Link href="/">
+              <Home className="mr-2 w-4 h-4" />
+              Return to Landing Page
+            </Link>
+          </Button>
+
           <Button 
             variant="ghost" 
             className="w-full text-muted-foreground hover:text-destructive h-10 rounded-lg font-medium transition-colors"

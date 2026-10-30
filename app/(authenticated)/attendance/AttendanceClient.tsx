@@ -149,36 +149,44 @@ export function AttendanceClient({
   // Realtime subscription to refresh attendance logs across tabs automatically
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `attendance-updates-${Math.random().toString(36).slice(2, 7)}`;
     
+    const refreshLogs = async () => {
+      try {
+        if (isStaff) {
+          const [freshToday, freshAll, freshPersonal] = await Promise.all([
+            getAttendanceHistory(undefined, { range: 'today' }),
+            getAttendanceHistory(undefined, { range: 'all', limit: 300 }),
+            getAttendanceHistory(userId)
+          ]);
+          setSystemTodayRecords(freshToday);
+          setSystemAllRecords(freshAll);
+          setPersonalRecords(freshPersonal);
+        } else {
+          const freshPersonal = await getAttendanceHistory(userId);
+          setPersonalRecords(freshPersonal);
+        }
+      } catch (error) {
+        console.error("Failed to refresh attendance logs:", error);
+      }
+    };
+
     const channel = supabase
-      .channel('attendance-updates')
+      .channel(channelName)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'attendance' 
-      }, async () => {
-        try {
-          if (isStaff) {
-            const [freshToday, freshAll, freshPersonal] = await Promise.all([
-              getAttendanceHistory(undefined, { range: 'today' }),
-              getAttendanceHistory(undefined, { range: 'all', limit: 300 }),
-              getAttendanceHistory(userId)
-            ]);
-            setSystemTodayRecords(freshToday);
-            setSystemAllRecords(freshAll);
-            setPersonalRecords(freshPersonal);
-          } else {
-            const freshPersonal = await getAttendanceHistory(userId);
-            setPersonalRecords(freshPersonal);
-          }
-        } catch (error) {
-          console.error("Failed to refresh attendance logs:", error);
-        }
-      })
+      }, refreshLogs)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles' 
+      }, refreshLogs)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [isStaff, userId]);
 
