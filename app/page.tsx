@@ -36,7 +36,7 @@ async function AuthRedirect() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background selection:bg-muted/40 overflow-x-hidden">
+    <main className="min-h-screen bg-background selection:bg-muted/40 overflow-x-clip">
       <Suspense fallback={null}>
         <AuthRedirect />
       </Suspense>
@@ -44,7 +44,7 @@ export default function Home() {
       <div className="fixed inset-0 z-0 bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] opacity-30 [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
       
       <div className="relative z-10 flex min-h-screen w-full flex-col">
-        <header className="sticky top-0 z-50 flex h-20 w-full justify-center border-b border-border/40 bg-background/60 backdrop-blur-xl transition-all duration-300">
+        <header className="sticky top-0 z-50 flex h-16 w-full justify-center border-b border-border/40 bg-background/60 backdrop-blur-xl transition-all duration-300">
           <div className="flex w-full max-w-7xl items-center justify-between px-6 md:px-10">
             <div className="flex items-center gap-4 text-xl font-black tracking-tighter">
               <Logo size={22} className="rotate-3" />

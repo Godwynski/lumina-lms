@@ -32,13 +32,13 @@ export function CirculationWizard() {
   } = useCirculationWizard();
 
   return (
-    <div className="w-full space-y-8 pb-12">
+    <div className="w-full space-y-6 pb-12">
       {/* Centered Compact Stepper */}
-      <div className="bg-card/30 border border-border/10 rounded-2xl p-6 pb-10 backdrop-blur-sm">
+      <div className="bg-card/30 border border-border/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
         <CirculationStepper steps={steps} currentStep={currentStep} />
       </div>
 
-      <main className="bg-card/50 border border-border/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-200">
+      <main className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
         {/* Header Action Bar */}
         <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/20">
           <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/10">

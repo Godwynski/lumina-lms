@@ -427,13 +427,13 @@ export function DashboardClient({
         </section>
 
         {/* ==================== SYSTEM METRICS GRID ==================== */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           <Card 
             role="button"
             onClick={() => router.push('/attendance')}
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 Today&apos;s Visitors
               </div>
@@ -441,7 +441,7 @@ export function DashboardClient({
                 <UserCheck size={16} />
               </div>
             </div>
-            <div className="text-3xl font-black text-foreground tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.attendanceToday}
             </div>
           </Card>
@@ -449,9 +449,9 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/history?view=logs&status=ACTIVE')}
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 Active Borrows
               </div>
@@ -459,7 +459,7 @@ export function DashboardClient({
                 <RefreshCw size={16} />
               </div>
             </div>
-            <div className="text-3xl font-black text-foreground tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.activeBorrows}
             </div>
           </Card>
@@ -467,9 +467,9 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/inventory')}
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 Book Catalog
               </div>
@@ -477,7 +477,7 @@ export function DashboardClient({
                 <BookMarked size={16} />
               </div>
             </div>
-            <div className="text-3xl font-black text-foreground tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.totalBooks}
             </div>
           </Card>
@@ -485,9 +485,9 @@ export function DashboardClient({
           <Card 
             role="button"
             onClick={() => router.push('/users')}
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
                 User Profiles
               </div>
@@ -495,20 +495,20 @@ export function DashboardClient({
                 <Users size={16} />
               </div>
             </div>
-            <div className="text-3xl font-black text-foreground tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.totalUsers}
             </div>
           </Card>
         </section>
 
         {/* ==================== SYSTEM SHORTCUTS GRID ==================== */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
           {quickShortcuts.map((shortcut) => (
             <Card 
               key={shortcut.path}
               role="button"
               onClick={() => router.push(shortcut.path)}
-              className={`group border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer p-4 flex items-center gap-4 rounded-xl ${shortcut.color}`}
+              className={`group border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer p-3.5 sm:p-4 flex items-center gap-3.5 rounded-xl ${shortcut.color}`}
             >
               <div className={`p-2.5 rounded-lg transition-all duration-300 shrink-0 ${shortcut.iconBg}`}>
                 <shortcut.icon size={18} />
@@ -531,7 +531,7 @@ export function DashboardClient({
             {stats.recentBooks.length === 0 ? (
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {stats.recentBooks.map((book) => (
                   <Card 
                     key={book.id}
@@ -579,7 +579,7 @@ export function DashboardClient({
   const hasAttendancePerm = !!profileData?.permissions?.manage_attendance;
 
   return (
-    <div className="space-y-6 pb-14 overflow-x-hidden relative">
+    <div className="space-y-6 pb-14 overflow-x-clip relative">
       <LiveActivityTicker />
 
       {/* ==================== LIBRARY CARD CONTAINER ==================== */}
