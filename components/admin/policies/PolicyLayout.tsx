@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState, Suspense, useEffect, startTransition } from "react";
+import { use, useMemo, useState, useRef, Suspense, useEffect, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -217,12 +217,47 @@ export function PolicyLayout({
 
   const activeKeys = Object.keys(DEFAULT_POLICIES).filter(k => DEFAULT_POLICIES[k as keyof typeof DEFAULT_POLICIES].category === activeCategory);
 
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragScrollLeft, setDragScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!navScrollRef.current) return;
+    setIsDragging(true);
+    setDragStartX(e.pageX - navScrollRef.current.offsetLeft);
+    setDragScrollLeft(navScrollRef.current.scrollLeft);
+  };
+  const handleMouseLeaveOrUp = () => setIsDragging(false);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !navScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - navScrollRef.current.offsetLeft;
+    const walk = (x - dragStartX) * 1.5;
+    navScrollRef.current.scrollLeft = dragScrollLeft - walk;
+  };
+
   return (
     <div className="w-full pb-12">
 
       <div className="grid gap-8 lg:grid-cols-[220px_1fr] items-start">
         {/* Mobile Category Navigation */}
-        <div className="lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar pb-2">
+        <div 
+          ref={navScrollRef}
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseLeaveOrUp}
+          onMouseLeave={handleMouseLeaveOrUp}
+          onMouseMove={handleMouseMove}
+          className={cn(
+            "lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar pb-2",
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          )}
+        >
           <div className="flex gap-2 min-w-max">
             {sidebarItems.map(item => (
               <button
@@ -243,7 +278,7 @@ export function PolicyLayout({
         </div>
 
         {/* Desktop Sidebar Navigation */}
-        <aside className="hidden lg:block space-y-8 sticky top-12">
+        <aside className="hidden lg:block space-y-8 sticky top-12 max-h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar pr-2">
           {Object.entries(groupedSidebar).map(([group, items]) => (
             <div key={group} className="space-y-2">
               <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em]">

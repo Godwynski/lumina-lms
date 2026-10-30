@@ -127,15 +127,15 @@ export function DashboardClient({
 
   useEffect(() => {
     // Unique channel name to avoid collisions
+    const isStaff = role === 'super_admin' || role === 'librarian' || role === 'student_assistant';
     const channelName = `dashboard-${user.id}-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
-      // Student-specific data with filters for efficiency
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'borrowing_records',
-        filter: `user_id=eq.${user.id}`
+        ...(isStaff ? {} : { filter: `user_id=eq.${user.id}` })
       }, () => {
         debouncedRefresh();
       })
@@ -143,7 +143,7 @@ export function DashboardClient({
         event: '*', 
         schema: 'public', 
         table: 'reservations',
-        filter: `user_id=eq.${user.id}`
+        ...(isStaff ? {} : { filter: `user_id=eq.${user.id}` })
       }, () => {
         debouncedRefresh();
       })
@@ -154,6 +154,9 @@ export function DashboardClient({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
         debouncedRefresh();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'book_copies' }, () => {
+        debouncedRefresh();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
         debouncedRefresh();
       })
@@ -161,7 +164,7 @@ export function DashboardClient({
         event: '*', 
         schema: 'public', 
         table: 'attendance',
-        filter: `user_id=eq.${user.id}`
+        ...(isStaff ? {} : { filter: `user_id=eq.${user.id}` })
       }, () => {
         debouncedRefresh();
       })
@@ -174,7 +177,7 @@ export function DashboardClient({
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [supabase, debouncedRefresh, user.id]);
+  }, [supabase, debouncedRefresh, user.id, role]);
 
   useEffect(() => {
     setMounted(true);

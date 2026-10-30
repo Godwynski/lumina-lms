@@ -432,8 +432,9 @@ export function ModernInventoryClient({
   // Realtime subscription to refresh data
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `inventory-realtime-${Math.random().toString(36).slice(2, 7)}`;
     const channel = supabase
-      .channel('inventory-realtime')
+      .channel(channelName)
       .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'books' }, 
@@ -454,6 +455,15 @@ export function ModernInventoryClient({
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'borrowing_records' },
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'reservations' },
         () => {
           startTransition(() => {
@@ -461,8 +471,16 @@ export function ModernInventoryClient({
           });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
       .subscribe();
-
 
     return () => {
       void supabase.removeChannel(channel);

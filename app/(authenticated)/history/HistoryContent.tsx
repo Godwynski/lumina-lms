@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use, useEffect, useTransition, useCallback } from "react";
+import Image from "next/image";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +21,31 @@ interface HistoryContentProps {
   searchQuery: string;
   userRole: UserRole;
   userId?: string | null;
+}
+
+function HistoryBookCover({ coverUrl, title }: { coverUrl?: string | null; title?: string }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (!coverUrl || imgError) {
+    return (
+      <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover:bg-background transition-colors">
+        {title?.charAt(0) || "?"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex h-10 w-8 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/30 shadow-xs">
+      <Image
+        src={coverUrl}
+        alt={title || "Book cover"}
+        fill
+        className="object-cover"
+        unoptimized
+        onError={() => setImgError(true)}
+      />
+    </div>
+  );
 }
 
 export function HistorySkeleton() {
@@ -56,11 +82,30 @@ export default function HistoryContent({
   // Realtime refresh with startTransition wrapping router.refresh()
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `history-realtime-${Math.random().toString(36).slice(2, 7)}`;
     const channel = supabase
-      .channel('history-realtime')
+      .channel(channelName)
       .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'borrowing_records' }, 
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'book_copies' }, 
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'books' }, 
         () => {
           startTransition(() => {
             router.refresh();
@@ -137,9 +182,7 @@ export default function HistoryContent({
       header: "Resource",
       accessor: (record) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-[10px] font-black text-muted-foreground uppercase tracking-widest group-hover:bg-background transition-colors">
-            {record.books?.title?.charAt(0) || "?"}
-          </div>
+          <HistoryBookCover coverUrl={record.books?.cover_url} title={record.books?.title} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-sm font-bold text-foreground">

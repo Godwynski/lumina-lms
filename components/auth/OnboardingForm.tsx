@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { 
   MapPin, 
   Phone, 
@@ -179,6 +180,14 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
                 </>
               )}
             </Button>
+          </div>
+          <div className="text-center pt-2">
+            <Link 
+              href="/" 
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
+            >
+              Return to Landing Page
+            </Link>
           </div>
         </form>
       </CardContent>
