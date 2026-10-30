@@ -50,11 +50,30 @@
   * {
     border-color: hsl(var(--border));
   }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scrollbar-gutter: stable;
+  }
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     background-image: linear-gradient(to bottom, hsl(210 20% 99%), hsl(210 20% 98%));
+  }
+}
+
+/* Responsive Base Density for Laptops & Compact Displays (e.g. MacBook 13"-15") */
+@media screen and (min-width: 769px) and (max-width: 1280px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media screen and (min-width: 1281px) and (max-width: 1440px) {
+  html {
+    font-size: 14.5px;
   }
 }
 

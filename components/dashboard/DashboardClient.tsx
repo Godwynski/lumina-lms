@@ -427,7 +427,7 @@ export function DashboardClient({
         </section>
 
         {/* ==================== SYSTEM METRICS GRID ==================== */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card 
             role="button"
             onClick={() => router.push('/attendance')}
@@ -502,7 +502,7 @@ export function DashboardClient({
         </section>
 
         {/* ==================== SYSTEM SHORTCUTS GRID ==================== */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {quickShortcuts.map((shortcut) => (
             <Card 
               key={shortcut.path}
@@ -531,7 +531,7 @@ export function DashboardClient({
             {stats.recentBooks.length === 0 ? (
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
                 {stats.recentBooks.map((book) => (
                   <Card 
                     key={book.id}
