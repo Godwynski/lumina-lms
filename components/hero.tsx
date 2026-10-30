@@ -79,18 +79,18 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-12 md:py-24"
+      className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-8 sm:py-12 md:py-16"
     >
 
-      <m.div variants={itemVariants} className="space-y-6 mb-10 w-full">
-        <h1 className="text-balance text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
+      <m.div variants={itemVariants} className="space-y-4 sm:space-y-6 mb-8 sm:mb-10 w-full">
+        <h1 className="text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           {user ? (
             <>Welcome back, <br className="hidden sm:block"/><span className="text-muted-foreground">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
           ) : (
             <>Intelligent Library Operations for the <span className="text-muted-foreground">Modern Era.</span></>
           )}
         </h1>
-        <p className="text-balance text-lg text-muted-foreground sm:text-xl md:max-w-2xl mx-auto">
+        <p className="text-balance text-base text-muted-foreground sm:text-lg md:max-w-2xl mx-auto">
           {user ? (
             `You are signed in with the ${role} role and have access to your workspace.`
           ) : (
@@ -152,7 +152,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                         key={roleItem.email}
                         type="button"
                         variant="outline"
-                        className={`h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-300 flex items-center justify-start px-4 gap-2.5 ${roleItem.color}`}
+                        className={`group h-11 sm:h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-200 flex items-center justify-start px-3.5 sm:px-4 gap-2.5 active:scale-[0.98] ${roleItem.color}`}
                         onClick={() => signInWithCredentials(roleItem.email)}
                         disabled={isLoading}
                       >
@@ -161,7 +161,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                         ) : (
                           <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110" />
                         )}
-                        <span>{isThisLoading ? "Signing in..." : roleItem.label}</span>
+                        <span className="truncate">{isThisLoading ? "Signing in..." : roleItem.label}</span>
                       </Button>
                     );
                   })}

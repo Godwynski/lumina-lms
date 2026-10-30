@@ -43,7 +43,7 @@ export function AdminTableShell({
   const isGhost = variant === 'ghost';
 
   return (
-    <div className={cn("mx-auto flex w-full max-w-[1450px] flex-col gap-4 p-4 md:p-6", className)}>
+    <div className={cn("flex w-full flex-col gap-4", className)}>
       {(title || headerActions) && (
         <div className={cn(
           "flex flex-col gap-4 pb-2 sm:flex-row sm:items-end sm:justify-between",

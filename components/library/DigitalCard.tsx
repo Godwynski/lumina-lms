@@ -104,28 +104,42 @@ function CardFront({
         )}
         style={exportMode ? { width: 560, height: 353 } : undefined}
       >
-        <div className="grid grid-cols-[64px_1fr_auto] items-stretch border-b border-foreground bg-[#0068b3] sm:grid-cols-[96px_1fr_auto]">
-          <div className="flex items-center justify-center border-r border-foreground bg-[#ffdb00] p-1 sm:p-2">
+        <div className={cn(
+          "grid items-stretch border-b border-foreground bg-[#0068b3]",
+          exportMode ? "grid-cols-[96px_1fr_auto]" : "grid-cols-[64px_1fr_auto] sm:grid-cols-[96px_1fr_auto]"
+        )}>
+          <div className={cn(
+            "flex items-center justify-center border-r border-foreground bg-[#ffdb00]",
+            exportMode ? "p-2" : "p-1 sm:p-2"
+          )}>
             <div className="text-center leading-none text-[#005aa9]">
-              <p className="text-lg font-black sm:text-3xl">STI</p>
-              <p className="mt-0.5 text-[7px] font-bold tracking-[0.12em] sm:text-[10px]">ALABANG</p>
+              <p className={cn("font-black", exportMode ? "text-3xl" : "text-lg sm:text-3xl")}>STI</p>
+              <p className={cn("mt-0.5 font-bold tracking-[0.12em]", exportMode ? "text-[10px]" : "text-[7px] sm:text-[10px]")}>ALABANG</p>
             </div>
           </div>
-          <div className="flex items-center justify-center px-2 py-2 sm:py-3">
-            <h2 className="text-center font-sans font-bold text-[clamp(20px,5vw,40px)] tracking-tight text-white">LIBRARY CARD</h2>
+          <div className={cn("flex items-center justify-center px-2", exportMode ? "py-3" : "py-2 sm:py-3")}>
+            <h2 className={cn("text-center font-sans font-bold tracking-tight text-white", exportMode ? "text-[26px]" : "text-[clamp(18px,3.5vw,30px)]")}>LIBRARY CARD</h2>
           </div>
-          <div className="flex items-start justify-end p-1.5 sm:p-2">
+          <div className={cn("flex items-start justify-end", exportMode ? "p-2" : "p-1.5 sm:p-2")}>
             {status !== "active" && (
-              <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase sm:text-[10px]", statusConfig[status])}>
+              <span className={cn("inline-flex rounded border font-semibold uppercase", exportMode ? "px-1.5 py-0.5 text-[10px]" : "px-1.5 py-0.5 text-[9px] sm:text-[10px]", statusConfig[status])}>
                 {status}
               </span>
             )}
           </div>
         </div>
 
-        <div className="grid h-[calc(100%-52px)] grid-cols-[80px_1fr_68px] gap-2 p-2 sm:h-[calc(100%-72px)] sm:grid-cols-[150px_1fr_102px] sm:gap-4 sm:p-4">
+        <div className={cn(
+          "grid gap-2 p-2",
+          exportMode 
+            ? "h-[calc(100%-72px)] grid-cols-[150px_1fr_102px] gap-4 p-4" 
+            : "h-[calc(100%-52px)] grid-cols-[80px_1fr_68px] sm:h-[calc(100%-72px)] sm:grid-cols-[150px_1fr_102px] sm:gap-4 sm:p-4"
+        )}>
           <div className="flex flex-col justify-start">
-            <div className="h-[110px] w-full overflow-hidden border border-foreground bg-card sm:h-[172px]">
+            <div className={cn(
+              "w-full overflow-hidden border border-foreground bg-card",
+              exportMode ? "h-[172px]" : "h-[110px] sm:h-[172px]"
+            )}>
               {avatarUrl ? (
                 <Image
                   src={avatarUrl}
@@ -137,17 +151,20 @@ function CardFront({
                   unoptimized
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground sm:text-base">
+                <div className={cn(
+                  "flex h-full w-full items-center justify-center font-semibold text-muted-foreground",
+                  exportMode ? "text-base" : "text-xs sm:text-base"
+                )}>
                   PHOTO
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col justify-center gap-3 sm:gap-5">
-            <FieldLine label="Name" value={fullName} />
-            <FieldLine label="Program" value={department} />
-            <FieldLine label="Academic Year" value={academicYear || (() => {
+          <div className={cn("flex min-w-0 flex-col justify-center", exportMode ? "gap-5" : "gap-3 sm:gap-5")}>
+            <FieldLine label="Name" value={fullName} exportMode={exportMode} />
+            <FieldLine label="Program" value={department} exportMode={exportMode} />
+            <FieldLine label="Academic Year" exportMode={exportMode} value={academicYear || (() => {
               const now = new Date();
               const currentYear = now.getUTCFullYear();
               // Standard AY: Usually starts around May/June.
@@ -157,7 +174,7 @@ function CardFront({
             })()} />
           </div>
 
-          <div className="flex flex-col items-center justify-start gap-1.5 sm:gap-2">
+          <div className={cn("flex flex-col items-center justify-start", exportMode ? "gap-2" : "gap-1.5 sm:gap-2")}>
             <button
               type="button"
               onClick={onQrClick}
@@ -178,14 +195,14 @@ function CardFront({
                   unoptimized
                 />
               ) : (
-                <div className="flex h-[60px] w-full items-center justify-center sm:h-[92px]">
+                <div className={cn("flex w-full items-center justify-center", exportMode ? "h-[92px]" : "h-[60px] sm:h-[92px]")}>
                   <QrCode className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
             </button>
             <div className="flex flex-col items-center leading-none">
-              <p className="font-mono text-[11px] font-black tracking-tighter text-foreground sm:text-[14px] break-all text-center">{cardNumber}</p>
-              <p className="mt-0.5 text-center text-[6px] font-bold uppercase tracking-tight text-muted-foreground/80 sm:text-[8px]">Scan</p>
+              <p className={cn("font-mono font-black tracking-tighter text-foreground break-all text-center", exportMode ? "text-[14px]" : "text-[11px] sm:text-[14px]")}>{cardNumber}</p>
+              <p className={cn("mt-0.5 text-center font-bold uppercase tracking-tight text-muted-foreground/80", exportMode ? "text-[8px]" : "text-[6px] sm:text-[8px]")}>Scan</p>
             </div>
           </div>
         </div>
@@ -194,13 +211,19 @@ function CardFront({
   );
 }
 
-function FieldLine({ label, value }: { label: string; value: string }) {
+function FieldLine({ label, value, exportMode }: { label: string; value: string; exportMode?: boolean }) {
   return (
     <div className="flex flex-col items-center">
       <div className="w-full border-b border-foreground/40 pb-0.5 text-center">
-        <p className="font-sans text-[12px] font-bold leading-tight text-foreground sm:text-[20px] whitespace-normal break-words line-clamp-2">{value}</p>
+        <p className={cn(
+          "font-sans font-bold leading-tight text-foreground whitespace-normal break-words line-clamp-2",
+          exportMode ? "text-[18px]" : "text-[12px] sm:text-[16px] md:text-[18px]"
+        )}>{value}</p>
       </div>
-      <p className="pt-0.5 text-center font-sans text-[9px] font-bold uppercase tracking-widest text-muted-foreground/80 sm:text-[11px]">{label}</p>
+      <p className={cn(
+        "pt-0.5 text-center font-sans font-bold uppercase tracking-widest text-muted-foreground/80",
+        exportMode ? "text-[11px]" : "text-[9px] sm:text-[11px]"
+      )}>{label}</p>
     </div>
   );
 }
@@ -225,37 +248,48 @@ function CardBack({
         )}
         style={exportMode ? { width: 560, height: 353 } : undefined}
       >
-        <div className="grid grid-cols-[64px_1fr] items-stretch border-b border-foreground bg-[#0068b3] sm:grid-cols-[96px_1fr]">
-          <div className="flex items-center justify-center border-r border-foreground bg-[#ffdb00] p-1 sm:p-2">
+        <div className={cn(
+          "grid items-stretch border-b border-foreground bg-[#0068b3]",
+          exportMode ? "grid-cols-[96px_1fr]" : "grid-cols-[64px_1fr] sm:grid-cols-[96px_1fr]"
+        )}>
+          <div className={cn(
+            "flex items-center justify-center border-r border-foreground bg-[#ffdb00]",
+            exportMode ? "p-2" : "p-1 sm:p-2"
+          )}>
             <div className="text-center leading-none text-[#005aa9]">
-              <p className="text-lg font-black sm:text-3xl">STI</p>
-              <p className="mt-0.5 text-[7px] font-bold tracking-[0.12em] sm:text-[10px]">ALABANG</p>
+              <p className={cn("font-black", exportMode ? "text-3xl" : "text-lg sm:text-3xl")}>STI</p>
+              <p className={cn("mt-0.5 font-bold tracking-[0.12em]", exportMode ? "text-[10px]" : "text-[7px] sm:text-[10px]")}>ALABANG</p>
             </div>
           </div>
-          <div className="flex items-center justify-center px-2 py-2 sm:py-3">
-            <h3 className="text-center font-sans font-bold text-[clamp(16px,4vw,32px)] tracking-tight text-white">LIBRARY CARD</h3>
+          <div className={cn("flex items-center justify-center px-2", exportMode ? "py-3" : "py-2 sm:py-3")}>
+            <h3 className={cn("text-center font-sans font-bold tracking-tight text-white", exportMode ? "text-[26px]" : "text-[clamp(16px,4vw,32px)]")}>LIBRARY CARD</h3>
           </div>
         </div>
 
-        <div className="grid h-[calc(100%-52px)] grid-rows-[auto_1fr_auto] gap-2 p-2 sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4">
+        <div className={cn(
+          "grid grid-rows-[auto_1fr_auto] gap-2 p-2",
+          exportMode 
+            ? "h-[calc(100%-72px)] gap-3 p-4" 
+            : "h-[calc(100%-52px)] sm:h-[calc(100%-72px)] sm:gap-3 sm:p-4"
+        )}>
           <div className="grid gap-1.5">
             <div>
-              <p className="text-[11px] font-medium text-foreground sm:text-xs">Address:</p>
-              <div className="mt-1 flex min-h-[1.5rem] items-center border border-foreground bg-card px-2 py-0.5 text-[10px] sm:min-h-[1.75rem] sm:text-xs">
+              <p className={cn("font-medium text-foreground", exportMode ? "text-xs" : "text-[11px] sm:text-xs")}>Address:</p>
+              <div className={cn("mt-1 flex items-center border border-foreground bg-card px-2 py-0.5", exportMode ? "min-h-[1.75rem] text-xs" : "min-h-[1.5rem] text-[10px] sm:min-h-[1.75rem] sm:text-xs")}>
                 {address || "N/A"}
               </div>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-foreground sm:text-xs">Contact No:</p>
-              <div className="mt-1 flex min-h-[1.5rem] items-center border border-foreground bg-card px-2 py-0.5 text-[10px] sm:min-h-[1.75rem] sm:text-xs">
+              <p className={cn("font-medium text-foreground", exportMode ? "text-xs" : "text-[11px] sm:text-xs")}>Contact No:</p>
+              <div className={cn("mt-1 flex items-center border border-foreground bg-card px-2 py-0.5", exportMode ? "min-h-[1.75rem] text-xs" : "min-h-[1.5rem] text-[10px] sm:min-h-[1.75rem] sm:text-xs")}>
                 {phone || "N/A"}
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
-            <h4 className="text-center font-sans text-[clamp(14px,3vw,20px)] font-bold text-foreground">Important Reminders</h4>
-            <ol className="list-decimal space-y-0.5 pl-5 font-sans text-[9px] leading-tight text-foreground sm:pl-6 sm:text-[11px]">
+            <h4 className={cn("text-center font-sans font-bold text-foreground", exportMode ? "text-[18px]" : "text-[clamp(14px,3vw,20px)]")}>Important Reminders</h4>
+            <ol className={cn("list-decimal space-y-0.5 pl-5 font-sans leading-tight text-foreground", exportMode ? "pl-6 text-[11px]" : "sm:pl-6 text-[9px] sm:text-[11px]")}>
               <li>This card is non-transferable.</li>
               <li>Present this card every time you borrow books and other library materials.</li>
               <li>Surrender this card at the end of the semester for clearance.</li>
@@ -264,8 +298,8 @@ function CardBack({
 
           <div className="flex items-end justify-end">
             <div className="flex flex-col items-end pb-1">
-              <div className="min-w-[100px] border-b border-foreground text-center sm:min-w-[140px]">
-                <p className="font-sans text-[11px] font-bold text-foreground sm:text-sm">{roleLabel || "Librarian"}</p>
+              <div className={cn("border-b border-foreground text-center", exportMode ? "min-w-[140px]" : "min-w-[100px] sm:min-w-[140px]")}>
+                <p className={cn("font-sans font-bold text-foreground", exportMode ? "text-sm" : "text-[11px] sm:text-sm")}>{roleLabel || "Librarian"}</p>
               </div>
               <p className="mt-0.5 text-[8px] uppercase tracking-widest text-muted-foreground/60">Signature</p>
             </div>

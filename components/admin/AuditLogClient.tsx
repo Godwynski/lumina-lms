@@ -469,8 +469,8 @@ export function AuditLogClient() {
       controls={
         <div className="flex flex-col gap-3 w-full p-1">
           {/* Top Control Bar */}
-          <div className="flex flex-col xl:flex-row gap-3 items-start xl:items-center w-full">
-            <div className="relative flex-1 w-full xl:max-w-md">
+          <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:items-center justify-between w-full">
+            <div className="relative flex-1 w-full lg:max-w-xs xl:max-w-sm 2xl:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
               <Input 
                 placeholder="Search name, action, or reason..." 
@@ -490,9 +490,9 @@ export function AuditLogClient() {
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger className="flex-1 sm:flex-initial xl:w-[170px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
+                <SelectTrigger className="flex-1 sm:flex-initial sm:w-[160px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
                   <div className="flex items-center gap-2 truncate">
                     <Filter className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                     <SelectValue placeholder="All Entities" />
@@ -555,32 +555,17 @@ export function AuditLogClient() {
                 title="Clear all filters, dates, actions, and search keywords"
               >
                 <RotateCcw className={cn("h-3.5 w-3.5", isValidating && "animate-spin")} />
-                <span>Clear Filters</span>
+                <span>Clear</span>
               </Button>
 
-              <div className="hidden xl:flex items-center gap-2 border-l border-border/10 pl-2 ml-1">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setIsExportImportOpen(true)}
-                  className="h-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <Download className="h-3.5 w-3.5 xl:mr-2" />
-                  <span className="hidden xl:inline">Export / Import</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Mobile Actions (Visible below xl) */}
-            <div className="flex xl:hidden items-center gap-2 w-full pt-1">
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => setIsExportImportOpen(true)}
-                className="h-10 flex-1 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-4 transition-all hover:scale-[1.02] active:scale-95"
+                className="h-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
               >
-                <Download className="h-3.5 w-3.5 mr-2" />
-                Export / Import
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                <span>Export / Import</span>
               </Button>
             </div>
           </div>
@@ -597,7 +582,7 @@ export function AuditLogClient() {
         ) : null
       }
     >
-      <div className="py-6 px-2">
+      <div className="p-2 sm:p-4">
 
 
         {data?.logs?.length === 0 && (
@@ -621,8 +606,7 @@ export function AuditLogClient() {
         )}
 
         {data?.logs && data.logs.length > 0 && (
-          <div className="w-full overflow-x-auto pb-8">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-border/20 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
                   <th className="p-3 font-bold w-48">Timestamp (UTC)</th>
@@ -779,7 +763,6 @@ export function AuditLogClient() {
                 })}
               </tbody>
             </table>
-          </div>
         )}
       </div>
     </AdminTableShell>
