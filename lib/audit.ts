@@ -11,7 +11,6 @@ export type AuditEntityType =
   | "system"
   | "category"
   | "policy"
-  | "fine"
   | "settings";
 
 /**

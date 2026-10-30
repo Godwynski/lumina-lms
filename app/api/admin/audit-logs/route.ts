@@ -42,8 +42,39 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (entityType) query = query.eq("entity_type", entityType);
-    if (actionType) query = query.eq("action", actionType);
+    if (entityType && entityType !== "all") {
+      if (entityType === "book") {
+        query = query.in("entity_type", ["book", "books"]);
+      } else if (entityType === "borrowing_record") {
+        query = query.in("entity_type", ["borrowing_record", "borrowing_records"]);
+      } else if (entityType === "library_card") {
+        query = query.in("entity_type", ["library_card", "library_cards"]);
+      } else if (entityType === "policy" || entityType === "settings") {
+        query = query.in("entity_type", ["policy", "settings", "system_settings"]);
+      } else {
+        query = query.eq("entity_type", entityType);
+      }
+    }
+
+    if (actionType && actionType !== "all") {
+      if (actionType === "create") {
+        query = query.or("action.ilike.create%,action.ilike.insert%,action.ilike.%created");
+      } else if (actionType === "update") {
+        query = query.or("action.ilike.update%,action.ilike.%updated");
+      } else if (actionType === "archive") {
+        query = query.or("action.ilike.archive%,action.ilike.%archived,action.ilike.delete%");
+      } else if (actionType === "checkout") {
+        query = query.ilike("action", "%checkout%");
+      } else if (actionType === "return") {
+        query = query.ilike("action", "%return%");
+      } else if (actionType === "issuance") {
+        query = query.ilike("action", "%issuan%");
+      } else if (actionType === "login") {
+        query = query.or("action.ilike.login%,action.ilike.%onboarding%,action.ilike.%role%");
+      } else {
+        query = query.ilike("action", `%${actionType}%`);
+      }
+    }
     if (startDate) query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
     if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
     if (userId) query = query.eq("admin_id", userId);

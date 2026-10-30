@@ -58,6 +58,18 @@
   }
 }
 
+/* Compact Sonner Toasts */
+[data-sonner-toaster] {
+  --width: fit-content !important;
+}
+
+[data-sonner-toast] {
+  width: fit-content !important;
+  max-width: min(90vw, 360px) !important;
+  min-width: 0 !important;
+  padding: 10px 14px !important;
+}
+
 @layer utilities {
   .status-success {
     border-color: hsl(var(--status-success) / 0.35);

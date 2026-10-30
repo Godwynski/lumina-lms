@@ -343,44 +343,40 @@ export function DashboardClient({
 
         {/* ==================== ACTION CENTER ==================== */}
         <section className="space-y-3">
-          <div className="border border-border/20 bg-card/30 backdrop-blur-sm rounded-xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-border/10 pb-3">
+          <div className="border border-border/40 bg-card rounded-xl p-4 shadow-none space-y-3">
+            <div className="flex items-center justify-between border-b border-border/30 pb-2.5">
               <div className="flex items-center gap-2">
-                <div className={`h-2 w-2 rounded-full ${hasActions ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`} />
-                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Action Center</span>
+                <div className={`h-1.5 w-1.5 rounded-full ${hasActions ? 'bg-foreground' : 'bg-muted-foreground/30'}`} />
+                <span className="text-xs font-semibold text-foreground">Action Center</span>
               </div>
-              <span className="text-[10px] text-muted-foreground/60 font-medium">Pending Administrative Tasks</span>
+              <span className="text-[11px] text-muted-foreground font-normal">Pending Tasks</span>
             </div>
 
             {!hasActions ? (
-              <div className="flex items-center gap-3 p-4 bg-primary/[0.03] rounded-xl border border-border/20">
-                <div className="p-1.5 rounded-full bg-green-500/10 text-green-600 shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                </div>
-                <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground/80">
-                  All caught up. No pending administrative actions.
-                </div>
+              <div className="flex items-center gap-2.5 p-3 rounded-lg border border-border/40 bg-muted/20 text-xs text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/60"><path d="M20 6 9 17l-5-5"/></svg>
+                <span>All caught up. No pending administrative actions.</span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {isPendingApprovals && (
                   <Card 
                     role="button"
                     onClick={() => router.push('/users')}
-                    className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
+                    className="group border border-border/40 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer p-3.5 flex items-center justify-between rounded-lg shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
-                        <Users size={16} />
+                      <div className="p-2 rounded-md bg-muted text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
+                        <Users size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate">Card Applications</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
-                          <span className="font-bold text-foreground">{stats.pendingApprovals}</span> pending review
+                        <p className="text-xs font-medium text-foreground truncate">Card Applications</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                          <span className="font-semibold text-foreground">{stats.pendingApprovals}</span> pending review
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
                   </Card>
                 )}
 
@@ -388,20 +384,20 @@ export function DashboardClient({
                   <Card 
                     role="button"
                     onClick={() => router.push('/history?view=logs&status=OVERDUE')}
-                    className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
+                    className="group border border-border/40 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer p-3.5 flex items-center justify-between rounded-lg shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
-                        <AlertTriangle size={16} />
+                      <div className="p-2 rounded-md bg-muted text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
+                        <AlertTriangle size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate">Overdue Borrows</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
-                          <span className="font-bold text-foreground">{stats.overdueBorrows}</span> books outstanding
+                        <p className="text-xs font-medium text-foreground truncate">Overdue Borrows</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                          <span className="font-semibold text-foreground">{stats.overdueBorrows}</span> books outstanding
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
                   </Card>
                 )}
 
@@ -409,20 +405,20 @@ export function DashboardClient({
                   <Card 
                     role="button"
                     onClick={() => router.push('/circulation')}
-                    className="group border border-border/20 bg-card/40 hover:bg-card/60 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center justify-between rounded-xl shadow-none"
+                    className="group border border-border/40 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer p-3.5 flex items-center justify-between rounded-lg shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
-                        <BookMarked size={16} />
+                      <div className="p-2 rounded-md bg-muted text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
+                        <BookMarked size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate">Holds Ready</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
-                          <span className="font-bold text-foreground">{stats.readyHolds}</span> waiting for pickup
+                        <p className="text-xs font-medium text-foreground truncate">Holds Ready</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                          <span className="font-semibold text-foreground">{stats.readyHolds}</span> waiting for pickup
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
                   </Card>
                 )}
               </div>
