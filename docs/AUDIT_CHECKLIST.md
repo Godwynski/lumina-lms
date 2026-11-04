@@ -114,12 +114,12 @@ _Every change here goes in a migration file plus `schema_clean_install.sql`. Bot
 ### B2.1 · RLS, roles and sign-up · Effort: `high`
 _Why high: these are the actual security boundary. A policy that "looks right" can still leak data or lock real users out._
 
-- [ ] 🔴 **C1** A librarian can make themselves super admin ✅ `[P1#2]` — `fn_guard_profile_updates`: only `super_admin` / service role may change `role` or `permissions`, or edit a `super_admin` row.
-- [ ] 🔴 **C2** Every logged-in user can read every profile ✅ `[P1#3]` — profiles SELECT: `USING (id = auth.uid() OR public.is_staff())`. Find the student screens that show other people's names first (grep `profiles(` and `full_name`), and give them a view with only names. This also stops the Realtime leak.
-- [ ] 🔴 **C3** Anyone can sign up, and outsiders can steal student IDs ✅ `[P1#4]` — reject non-allowed domains in `handle_new_user`; in `auto_set_student_id`, take digits only from `sti.edu.ph` emails; block self-set `student_id` in the guard trigger; delete the dead branch in `callback/route.ts`.
-- [ ] 🟠 **M13** Students can fake attendance ✅ `[P1#20]` — drop the policies "Users can self check-in" and "Users can self check-out".
-- [ ] 🟠 **M14** Student-assistant permissions not enforced ✅ `[P1#21]` — limit UPDATE/INSERT on `book_copies`, `borrowing_records` and `reservations` to `super_admin` and `librarian`. Make `lib/actions/catalog/auth.ts` allow only those two roles.
-- [ ] 🟠 **M17** The super admin can remove the last super admin ✅ `[P1#25]` — in `app/api/users/route.ts` PATCH, refuse self role or status changes for `super_admin`. Add the same rule to the guard trigger.
+- [x] 🔴 **C1** A librarian can make themselves super admin ✅ `[P1#2]` — `fn_guard_profile_updates`: only `super_admin` / service role may change `role` or `permissions`, or edit a `super_admin` row.
+- [x] 🔴 **C2** Every logged-in user can read every profile ✅ `[P1#3]` — profiles SELECT: `USING (id = auth.uid() OR public.is_staff())`. Find the student screens that show other people's names first (grep `profiles(` and `full_name`), and give them a view with only names. This also stops the Realtime leak. _Done: no student screen reads other people's profiles (the ticker shows book titles only), so no view was needed._
+- [x] 🔴 **C3** Anyone can sign up, and outsiders can steal student IDs ✅ `[P1#4]` — reject non-allowed domains in `handle_new_user`; in `auto_set_student_id`, take digits only from `sti.edu.ph` emails; block self-set `student_id` in the guard trigger; delete the dead branch in `callback/route.ts`. _Done; the callback now maps the trigger's rejection to `restricted_access`, and onboarding no longer writes `student_id`._
+- [x] 🟠 **M13** Students can fake attendance ✅ `[P1#20]` — drop the policies "Users can self check-in" and "Users can self check-out".
+- [x] 🟠 **M14** Student-assistant permissions not enforced ✅ `[P1#21]` — limit UPDATE/INSERT on `book_copies`, `borrowing_records` and `reservations` to `super_admin` and `librarian`. Make `lib/actions/catalog/auth.ts` allow only those two roles. _Done via new `is_manager()`. Import/export/ISBN import are librarian-only; `getBooks` and `getBookAdminDetails` still allow assistants, because `/inventory` (read-only) is open to them._
+- [x] 🟠 **M17** The super admin can remove the last super admin ✅ `[P1#25]` — in `app/api/users/route.ts` PATCH, refuse self role or status changes for `super_admin`. Add the same rule to the guard trigger.
 
 ### B2.2 · Circulation SQL functions · Effort: `high`
 _Why high: these functions run every checkout and reservation, and locking or limit mistakes only show up under real use._

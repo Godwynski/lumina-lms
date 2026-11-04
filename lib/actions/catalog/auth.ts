@@ -1,15 +1,16 @@
 import { getMe } from '@/lib/auth-helpers';
 
 /**
- * Validates that the current user has staff access to manage the catalog inventory.
- * Allowed roles: super_admin, librarian, student_assistant.
+ * Validates that the current user may use catalog inventory actions.
+ * Default: super_admin and librarian only (writes, bulk import, export).
+ * Pass `allowAssistants` for the read-only inventory views student assistants also see.
  * Returns the authenticated Supabase client on success.
  */
-export async function assertStaffCatalogAccess() {
+export async function assertStaffCatalogAccess(allowAssistants = false) {
   const me = await getMe();
   if (!me || !me.isStaff) throw new Error('Unauthorized');
-  
-  if (me.role !== 'super_admin' && me.role !== 'librarian' && me.role !== 'student_assistant') {
+
+  if (!allowAssistants && me.role !== 'super_admin' && me.role !== 'librarian') {
     throw new Error('Access denied: Inventory management is restricted to authorized staff roles.');
   }
 

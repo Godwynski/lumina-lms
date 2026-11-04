@@ -7,6 +7,7 @@ import {
   addBookCopies,
   updateBookCopyStatus,
   getBooks,
+  getBooksForExport,
 } from '../catalog';
 import { getMe } from '@/lib/auth-helpers';
 import { logAuditActivity } from '@/lib/audit';
@@ -518,6 +519,16 @@ describe('Catalog Server Actions', () => {
       } as unknown as Awaited<ReturnType<typeof getMe>>);
 
       await expect(getBooks()).rejects.toThrow('Unauthorized');
+    });
+
+    it('lets a student assistant browse the inventory but not export it', async () => {
+      vi.mocked(getMe).mockResolvedValue(
+        mockStaffUser('student_assistant', 'sa-1') as unknown as Awaited<ReturnType<typeof getMe>>
+      );
+      mockClientHelper.setTableResponse('books', [], null, 0);
+
+      await expect(getBooks()).resolves.toEqual({ data: [], count: 0 });
+      await expect(getBooksForExport()).rejects.toThrow('Access denied');
     });
 
     it('queries books with pagination and active status filter', async () => {

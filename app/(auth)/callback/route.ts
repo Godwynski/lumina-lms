@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { ensureStaticLibraryCardAssets } from "@/lib/library-card-assets.server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/utils";
 
@@ -27,54 +26,8 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
-        // 1. Check if user already exists in profiles
-        const { data: profile, error: profileCheckError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-          console.error("Profile check error:", profileCheckError);
-        }
-
-        // 2. If no profile exists, validate and create one
-        if (!profile) {
-          const email = user.email?.toLowerCase() || "";
-          
-          // Domain Validation
-          const isStiDomain = email.endsWith("@alabang.sti.edu.ph");
-          const localPart = email.split("@")[0] || "";
-          
-          const isStudent = isStiDomain && /(\d{6,})/.test(localPart);
-          const isFaculty = isStiDomain && !/(\d{6,})/.test(localPart);
-          const isTest = email.endsWith("@lumina.test");
-
-          if (!isFaculty && !isStudent && !isTest) {
-            await supabase.auth.signOut();
-            return NextResponse.redirect(`${host}/error?error=restricted_access`);
-          }
-
-          // Create initial profile using Admin Client to bypass RLS
-          const admin = createAdminClient();
-          const { error: createError } = await admin
-            .from("profiles")
-            .insert({
-              id: user.id,
-              email: email,
-              full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-              avatar_url: user.user_metadata?.avatar_url || null,
-              role: 'student', // Default role
-              status: 'PENDING' // Require admin approval
-            });
-
-          if (createError) {
-            console.error("Failed to create profile:", createError);
-            return NextResponse.redirect(`${host}/error?error=${encodeURIComponent("Failed to create user profile")}`);
-          }
-        }
-
-        // 3. Provision assets (QR code, etc)
+        // The profile already exists: the handle_new_user trigger creates it at sign-up
+        // and rejects non-school email domains there.
         try {
           await ensureStaticLibraryCardAssets({
             userId: user.id,
@@ -95,6 +48,11 @@ export async function GET(request: Request) {
       console.error("[AUTH CALLBACK] Code exchange error:", error);
       return NextResponse.redirect(`${host}/error?error=${encodeURIComponent(error.message)}`);
     }
+  }
+
+  // Supabase reports the sign-up trigger's domain rejection as this generic error.
+  if (providerError?.includes("Database error saving new user")) {
+    return NextResponse.redirect(`${host}/error?error=restricted_access`);
   }
 
   // return the user to an error page with instructions

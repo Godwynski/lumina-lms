@@ -19,7 +19,7 @@ export async function getBooks(
   sort: string = 'title_asc',
   status: 'ACTIVE' | 'ARCHIVED' | 'ALL' = 'ACTIVE'
 ) {
-  const supabase = await assertStaffCatalogAccess();
+  const supabase = await assertStaffCatalogAccess(true);
   
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
