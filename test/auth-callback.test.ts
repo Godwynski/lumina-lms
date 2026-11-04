@@ -1,14 +1,9 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { GET, dynamic } from '@/app/(auth)/callback/route';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
-}));
-
-vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: vi.fn(),
 }));
 
 vi.mock('@/lib/library-card-assets.server', () => ({
@@ -25,10 +20,6 @@ describe('Auth Callback Route Handler (GET /callback)', () => {
     from: Mock;
   };
 
-  let mockAdmin: {
-    from: Mock;
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -41,11 +32,6 @@ describe('Auth Callback Route Handler (GET /callback)', () => {
       from: vi.fn(),
     };
     (createClient as Mock).mockResolvedValue(mockSupabase);
-
-    mockAdmin = {
-      from: vi.fn(),
-    };
-    (createAdminClient as Mock).mockReturnValue(mockAdmin);
   });
 
   it('exports dynamic set to force-dynamic to guarantee fresh cookie evaluation', () => {
@@ -149,82 +135,13 @@ describe('Auth Callback Route Handler (GET /callback)', () => {
     }
   });
 
-  it('rejects unapproved email domain, signs out, and redirects to restricted_access', async () => {
-    mockSupabase.auth.exchangeCodeForSession.mockResolvedValue({ error: null });
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: {
-        user: {
-          id: 'intruder-123',
-          email: 'stranger@gmail.com',
-        },
-      },
-    });
-
-    mockSupabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: null,
-            error: null,
-          }),
-        }),
-      }),
-    });
-
-    const req = new Request('http://localhost:3000/callback?code=valid-code');
+  // The domain check lives in the handle_new_user trigger (see test/db-real.test.ts);
+  // Supabase reports its rejection with this generic message.
+  it('sends a sign-up rejected by the database to restricted_access', async () => {
+    const req = new Request('http://localhost:3000/callback?error=server_error&error_description=Database+error+saving+new+user');
     const res = await GET(req);
 
-    expect(mockSupabase.auth.signOut).toHaveBeenCalled();
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toContain('/error?error=restricted_access');
-  });
-
-  it('provisions new profile for valid STI student email when profile is absent', async () => {
-    mockSupabase.auth.exchangeCodeForSession.mockResolvedValue({ error: null });
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: {
-        user: {
-          id: 'new-student-456',
-          email: 'delacruz.123456@alabang.sti.edu.ph',
-          user_metadata: {
-            full_name: 'Juan Dela Cruz',
-            avatar_url: 'https://example.com/avatar.png',
-          },
-        },
-      },
-    });
-
-    mockSupabase.from.mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: null,
-            error: null,
-          }),
-        }),
-      }),
-    });
-
-    const insertMock = vi.fn().mockResolvedValue({ error: null });
-    mockAdmin.from.mockReturnValue({
-      insert: insertMock,
-    });
-
-    const req = new Request('http://localhost:3000/callback?code=valid-code');
-    const res = await GET(req);
-
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'new-student-456',
-        email: 'delacruz.123456@alabang.sti.edu.ph',
-        full_name: 'Juan Dela Cruz',
-        avatar_url: 'https://example.com/avatar.png',
-        role: 'student',
-        status: 'PENDING',
-      })
-    );
-
-    expect(res.status).toBe(307);
-    expect(res.headers.get('location')).toBe('http://localhost:3000/dashboard');
   });
 });

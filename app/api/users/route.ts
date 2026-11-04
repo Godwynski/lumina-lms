@@ -183,7 +183,16 @@ export const PATCH = withAuthApi(
         return apiError("Librarians cannot modify fellow librarian accounts", "FORBIDDEN", 403);
       }
     }
-    
+
+    // There is only one super admin: changing their own role or status would leave none.
+    if (requesterRole === "super_admin" && user.id === id) {
+      const roleChange = typeof body.role === "string" && normalizeUserRole(body.role) !== profile.role;
+      const statusChange = typeof body.status === "string" && body.status.trim().toUpperCase() !== profile.status;
+      if (roleChange || statusChange) {
+        return apiError("You cannot change your own role or status. Transfer super admin ownership instead.", "FORBIDDEN", 403);
+      }
+    }
+
     // Check permissions: Manager roles can edit others, users can edit themselves
     if (requesterRole !== "super_admin" && requesterRole !== "librarian" && user.id !== id) {
       return apiError("Forbidden: Insufficient permissions", "FORBIDDEN", 403);

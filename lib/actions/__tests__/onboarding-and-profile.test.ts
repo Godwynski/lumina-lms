@@ -110,7 +110,7 @@ describe('Onboarding & Profile Server Actions', () => {
       await expect(submitOnboarding(validFormData)).rejects.toThrow('Unauthorized');
     });
 
-    it('derives student ID from STI student email and completes onboarding', async () => {
+    it('completes onboarding without setting student_id (the database assigns it)', async () => {
       const mockUser = {
         id: 'user-stu-1',
         email: 'juan.delacruz.202401@alabang.sti.edu.ph',
@@ -138,10 +138,10 @@ describe('Onboarding & Profile Server Actions', () => {
           department: 'College of Information Technology',
           onboarding_completed: true,
           status: 'PENDING',
-          student_id: 'STU-202401',
           updated_at: expect.any(String),
         })
       );
+      expect(profilesBuilder.update.mock.calls[0][0]).not.toHaveProperty('student_id');
       expect(logAuditActivity).toHaveBeenCalledWith(
         'user-stu-1',
         'profile',
@@ -150,61 +150,9 @@ describe('Onboarding & Profile Server Actions', () => {
         'Completed onboarding and profile setup.',
         expect.objectContaining({
           address: '123 Academic Way',
-          student_id_assigned: 'STU-202401',
         })
       );
       expect(revalidatePath).toHaveBeenCalledWith('/');
-    });
-
-    it('does not overwrite existing student_id when already present in profile', async () => {
-      const mockUser = {
-        id: 'user-stu-existing',
-        email: 'maria.santos@gmail.com',
-      };
-      mockSupabaseHelper.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      // Profile already has assigned student_id
-      mockSupabaseHelper.setTableResponse('profiles', {
-        student_id: 'STU-2023-999',
-        role: 'student',
-        email: mockUser.email,
-      });
-
-      const result = await submitOnboarding(validFormData);
-
-      expect(result).toEqual({ success: true });
-      const profilesBuilder = mockSupabaseHelper.getTableBuilder('profiles');
-      const updateCallArg = profilesBuilder.update.mock.calls[0][0] as Record<string, unknown>;
-      // student_id should NOT be modified in update payload
-      expect(updateCallArg.student_id).toBeUndefined();
-      expect(updateCallArg.onboarding_completed).toBe(true);
-    });
-
-    it('derives unique faculty ID for faculty email when no student ID is set', async () => {
-      const mockUser = {
-        id: 'user-fac-1',
-        email: 'prof.smith@alabang.sti.edu.ph',
-      };
-      mockSupabaseHelper.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      mockSupabaseHelper.setTableResponse('profiles', {
-        student_id: null,
-        role: 'librarian',
-        email: mockUser.email,
-      });
-
-      const result = await submitOnboarding(validFormData);
-
-      expect(result).toEqual({ success: true });
-      const profilesBuilder = mockSupabaseHelper.getTableBuilder('profiles');
-      const updateCallArg = profilesBuilder.update.mock.calls[0][0] as Record<string, unknown>;
-      expect(updateCallArg.student_id).toMatch(/^FAC-/);
     });
 
     it('throws error when database update fails', async () => {

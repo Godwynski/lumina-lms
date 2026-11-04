@@ -212,7 +212,7 @@ describe('real DB: behavior that is already correct', () => {
 describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)', () => {
   // --- B2.1: RLS, roles and sign-up ---
   // A unique index allows one super_admin, so the attack demotes the admin first.
-  it.fails('C1 a librarian cannot promote themselves to super_admin', async () => {
+  it('C1 a librarian cannot promote themselves to super_admin', async () => {
     await as(u.lib, async () => {
       await tryq(`UPDATE public.profiles SET role = 'student' WHERE id = $1`, [u.admin]);
       await tryq(`UPDATE public.profiles SET role = 'super_admin' WHERE id = $1`, [u.lib]);
@@ -220,63 +220,63 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     expect(await roleOf(u.lib)).toBe('librarian');
   });
 
-  it.fails('C1 a librarian cannot demote the super admin', async () => {
+  it('C1 a librarian cannot demote the super admin', async () => {
     await as(u.lib, () => tryq(`UPDATE public.profiles SET role = 'student' WHERE id = $1`, [u.admin]));
     expect(await roleOf(u.admin)).toBe('super_admin');
   });
 
-  it.fails('C2 a student can read only their own profile', async () => {
+  it('C2 a student can read only their own profile', async () => {
     const r = await as(u.stu, () => tryq(`SELECT count(*)::int n FROM public.profiles`));
     expect(r.ok && r.rows[0].n).toBe(1);
   });
 
-  it.fails("C2 a pending user cannot read another student's phone and address", async () => {
+  it("C2 a pending user cannot read another student's phone and address", async () => {
     const r = await as(u.pending, () => tryq(`SELECT phone, address FROM public.profiles WHERE id = $1`, [u.stu]));
     expect(r.ok && r.rows.length).toBe(0);
   });
 
-  it.fails('C3 sign-up from a non-school email domain is rejected', async () => {
+  it('C3 sign-up from a non-school email domain is rejected', async () => {
     expect((await tryq(`INSERT INTO auth.users(email) VALUES ('random.person@gmail.com')`)).ok).toBe(false);
   });
 
-  it.fails("C3 an outsider cannot take a real student's number before they sign up", async () => {
+  it("C3 an outsider cannot take a real student's number before they sign up", async () => {
     await tryq(`INSERT INTO auth.users(email) VALUES ('fake.555555@gmail.com')`);
     expect((await tryq(`INSERT INTO auth.users(email) VALUES ('real.555555@alabang.sti.edu.ph')`)).ok).toBe(true);
   });
 
-  it.fails('C3 a user without a student ID cannot set one themselves', async () => {
+  it('C3 a user without a student ID cannot set one themselves', async () => {
     await q(`UPDATE public.profiles SET student_id = NULL WHERE id = $1`, [u.stu]);
     await as(u.stu, () => tryq(`UPDATE public.profiles SET student_id = 'STU-999999' WHERE id = $1`, [u.stu]));
     expect((await q(`SELECT student_id FROM public.profiles WHERE id = $1`, [u.stu]))[0].student_id).toBeNull();
   });
 
-  it.fails('M13 a student cannot insert their own attendance', async () => {
+  it('M13 a student cannot insert their own attendance', async () => {
     const r = await as(u.stu, () =>
       tryq(`INSERT INTO public.attendance(user_id, check_in_at, check_out_at) VALUES ($1, now() - interval '30 days', now() - interval '30 days' + interval '6 hours')`, [u.stu]),
     );
     expect(r.ok).toBe(false);
   });
 
-  it.fails('M13 a student cannot check themselves out', async () => {
+  it('M13 a student cannot check themselves out', async () => {
     await q(`INSERT INTO public.attendance(user_id) VALUES ($1)`, [u.stu]);
     await as(u.stu, () => tryq(`UPDATE public.attendance SET check_out_at = now() + interval '5 hours' WHERE user_id = $1`, [u.stu]));
     expect((await q(`SELECT check_out_at FROM public.attendance WHERE user_id = $1`, [u.stu]))[0].check_out_at).toBeNull();
   });
 
-  it.fails('M14 a student assistant cannot close a loan directly', async () => {
+  it('M14 a student assistant cannot close a loan directly', async () => {
     const { qrs } = await newBook(1);
     await checkout(stuCard, qrs[0]);
     await as(u.sa, () => tryq(`UPDATE public.borrowing_records SET status = 'RETURNED', returned_at = now() WHERE user_id = $1`, [u.stu]));
     expect((await q(`SELECT status FROM public.borrowing_records WHERE user_id = $1`, [u.stu]))[0].status).toBe('ACTIVE');
   });
 
-  it.fails("M14 a student assistant cannot change a copy's status directly", async () => {
+  it("M14 a student assistant cannot change a copy's status directly", async () => {
     const { qrs } = await newBook(1);
     await as(u.sa, () => tryq(`UPDATE public.book_copies SET status = 'LOST' WHERE qr_string = $1`, [qrs[0]]));
     expect((await q(`SELECT status FROM public.book_copies WHERE qr_string = $1`, [qrs[0]]))[0].status).toBe('AVAILABLE');
   });
 
-  it.fails('M17 the last super admin cannot demote themselves', async () => {
+  it('M17 the last super admin cannot demote themselves', async () => {
     await as(u.admin, () => tryq(`UPDATE public.profiles SET role = 'librarian' WHERE id = $1`, [u.admin]));
     expect((await q(`SELECT count(*)::int n FROM public.profiles WHERE role = 'super_admin'`))[0].n).toBe(1);
   });

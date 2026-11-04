@@ -325,6 +325,27 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.is_staff() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_staff() TO authenticated, service_role;
 
+-- Active super_admin or librarian (is_staff() also includes student assistants).
+CREATE OR REPLACE FUNCTION public.is_manager()
+ RETURNS boolean
+ LANGUAGE plpgsql
+ STABLE
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = (SELECT auth.uid())
+    AND status = 'ACTIVE'
+    AND role IN ('super_admin', 'librarian')
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.is_manager() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_manager() TO authenticated, service_role;
+
 -- Atomic transaction-safe ownership transfer function
 CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
  RETURNS void
@@ -389,8 +410,8 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- STI Alabang domain: alabang.sti.edu.ph
-  IF v_domain ILIKE '%sti.edu.ph%' THEN
+  -- Only school emails get an ID; anything else stays NULL (staff can set it manually).
+  IF v_domain = 'sti.edu.ph' OR v_domain LIKE '%.sti.edu.ph' THEN
     -- Try to extract 6+ digit sequence (student number)
     v_digit_match := (regexp_match(v_local_part, '(\d{6,})'))[1];
 
@@ -401,13 +422,6 @@ BEGIN
       -- Faculty/staff: no digit sequence → FAC-localpart
       v_student_id := 'FAC-' || v_local_part;
     END IF;
-  ELSE
-    -- Non-STI domain: try digits anyway (e.g. external students)
-    v_digit_match := (regexp_match(v_local_part, '(\d{6,})'))[1];
-    IF v_digit_match IS NOT NULL THEN
-      v_student_id := 'STU-' || v_digit_match;
-    END IF;
-    -- Otherwise leave student_id NULL (admin/librarian can set manually)
   END IF;
 
   -- Sanitize and assign
@@ -486,6 +500,11 @@ AS $$
 DECLARE
   card_number_val TEXT;
 BEGIN
+  -- Only school accounts may sign up (@lumina.test is for the demo accounts)
+  IF lower(COALESCE(new.email, '')) !~ '^[^@]+@(alabang\.sti\.edu\.ph|lumina\.test)$' THEN
+    RAISE EXCEPTION 'Sign-up is limited to @alabang.sti.edu.ph accounts';
+  END IF;
+
   -- Insert profile
   INSERT INTO public.profiles (id, full_name, avatar_url, email, status, role)
   VALUES (
@@ -517,35 +536,52 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+DECLARE
+  v_actor_role public.user_role;
 BEGIN
-  -- Service role and administrative users can update all fields
+  -- The service role (server code, transfer_super_admin_ownership) can update all fields
   IF COALESCE((auth.jwt() ->> 'role'), '') = 'service_role' OR current_user = 'service_role' THEN
     RETURN NEW;
   END IF;
 
-  IF EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = (SELECT auth.uid())
-    AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
-  ) THEN
+  SELECT role INTO v_actor_role FROM public.profiles
+  WHERE id = (SELECT auth.uid()) AND status = 'ACTIVE';
+
+  -- There is only one super admin, so they must use the transfer flow instead
+  IF OLD.id = (SELECT auth.uid()) AND OLD.role = 'super_admin'::public.user_role
+     AND (NEW.role IS DISTINCT FROM OLD.role OR NEW.status IS DISTINCT FROM OLD.status) THEN
+    RAISE EXCEPTION 'The super admin cannot change their own role or status; transfer ownership instead';
+  END IF;
+
+  IF v_actor_role = 'super_admin'::public.user_role THEN
     RETURN NEW;
   END IF;
 
-  -- Non-administrative users updating their own profile cannot change role, status, student_id, or permissions
+  -- Only the super admin may change roles or permissions, or edit the super admin's row
+  IF OLD.role = 'super_admin'::public.user_role THEN
+    RAISE EXCEPTION 'Only the super admin can edit a super admin profile';
+  END IF;
+
   IF NEW.role IS DISTINCT FROM OLD.role THEN
-    RAISE EXCEPTION 'Cannot modify role: unauthorized self-promotion';
+    RAISE EXCEPTION 'Cannot modify role: only the super admin can change roles';
+  END IF;
+
+  IF NEW.permissions IS DISTINCT FROM OLD.permissions THEN
+    RAISE EXCEPTION 'Cannot modify permissions: only the super admin can change permissions';
+  END IF;
+
+  -- Librarians may also change status and student_id (approvals, corrections)
+  IF v_actor_role = 'librarian'::public.user_role THEN
+    RETURN NEW;
   END IF;
 
   IF NEW.status IS DISTINCT FROM OLD.status THEN
     RAISE EXCEPTION 'Cannot modify status: unauthorized status escalation';
   END IF;
 
-  IF NEW.student_id IS DISTINCT FROM OLD.student_id AND OLD.student_id IS NOT NULL THEN
-    RAISE EXCEPTION 'Cannot modify student_id: identifier is immutable once set';
-  END IF;
-
-  IF NEW.permissions IS DISTINCT FROM OLD.permissions THEN
-    RAISE EXCEPTION 'Cannot modify permissions: unauthorized permission escalation';
+  -- Users cannot set or change their own student_id (it is set from the school email)
+  IF NEW.student_id IS DISTINCT FROM OLD.student_id THEN
+    RAISE EXCEPTION 'Cannot modify student_id: it is assigned by the system or staff';
   END IF;
 
   RETURN NEW;
@@ -1025,11 +1061,7 @@ CREATE POLICY "Announcements are viewable by everyone" ON public.announcements
   FOR SELECT TO public
   USING (is_active = true AND (expires_at IS NULL OR expires_at > now()) AND (starts_at IS NULL OR starts_at <= now()));
 
--- attendance Policies
-CREATE POLICY "Users can self check-in" ON public.attendance
-  FOR INSERT TO authenticated
-  WITH CHECK ((SELECT auth.uid()) = user_id);
-
+-- attendance Policies (recorded by staff only; no self check-in/out)
 CREATE POLICY "Staff can insert attendance" ON public.attendance
   FOR INSERT TO authenticated
   WITH CHECK (public.is_staff());
@@ -1047,11 +1079,6 @@ CREATE POLICY "Staff can update attendance" ON public.attendance
   USING (public.is_staff())
   WITH CHECK (public.is_staff());
 
-CREATE POLICY "Users can self check-out" ON public.attendance
-  FOR UPDATE TO authenticated
-  USING ((SELECT auth.uid()) = user_id)
-  WITH CHECK ((SELECT auth.uid()) = user_id);
-
 -- audit_logs Policies
 CREATE POLICY "Staff can view all audit logs" ON public.audit_logs
   FOR SELECT TO authenticated
@@ -1062,18 +1089,19 @@ CREATE POLICY "Librarians can delete book_copies" ON public.book_copies
   FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
-CREATE POLICY "Staff can insert book_copies" ON public.book_copies
+-- Writes are librarian/super_admin only; student assistants go through the circulation RPCs
+CREATE POLICY "Librarians can insert book_copies" ON public.book_copies
   FOR INSERT TO authenticated
-  WITH CHECK (public.is_staff());
+  WITH CHECK (public.is_manager());
 
 CREATE POLICY "Book copies are viewable by everyone" ON public.book_copies
   FOR SELECT TO public
   USING (true);
 
-CREATE POLICY "Staff can update book_copies" ON public.book_copies
+CREATE POLICY "Librarians can update book_copies" ON public.book_copies
   FOR UPDATE TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
+  USING (public.is_manager())
+  WITH CHECK (public.is_manager());
 
 -- books Policies
 CREATE POLICY "Librarians can delete books" ON public.books
@@ -1098,9 +1126,9 @@ CREATE POLICY "Staff can update books" ON public.books
   WITH CHECK (public.is_staff());
 
 -- borrowing_records Policies
-CREATE POLICY "Staff can insert borrowing records" ON public.borrowing_records
+CREATE POLICY "Librarians can insert borrowing records" ON public.borrowing_records
   FOR INSERT TO authenticated
-  WITH CHECK (public.is_staff());
+  WITH CHECK (public.is_manager());
 
 CREATE POLICY "Staff can view all borrowing records" ON public.borrowing_records
   FOR SELECT TO authenticated
@@ -1110,10 +1138,10 @@ CREATE POLICY "Users can view own borrowing records" ON public.borrowing_records
   FOR SELECT TO authenticated
   USING ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Staff can update borrowing records" ON public.borrowing_records
+CREATE POLICY "Librarians can update borrowing records" ON public.borrowing_records
   FOR UPDATE TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
+  USING (public.is_manager())
+  WITH CHECK (public.is_manager());
 
 -- categories Policies
 CREATE POLICY "Librarians can delete categories" ON public.categories
@@ -1164,9 +1192,9 @@ CREATE POLICY "Users can update own notifications" ON public.notifications
   WITH CHECK ((SELECT auth.uid()) = user_id);
 
 -- profiles Policies
-CREATE POLICY "Authenticated users can view profiles" ON public.profiles
+CREATE POLICY "Users can view own profile, staff can view all" ON public.profiles
   FOR SELECT TO authenticated
-  USING (true);
+  USING ((SELECT auth.uid()) = id OR public.is_staff());
 
 CREATE POLICY "Users can update own profile" ON public.profiles
   FOR UPDATE TO authenticated
@@ -1219,10 +1247,14 @@ CREATE POLICY "Users can view own reservations" ON public.reservations
   FOR SELECT TO authenticated
   USING ((SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Staff can manage reservations" ON public.reservations
+CREATE POLICY "Staff can view all reservations" ON public.reservations
+  FOR SELECT TO authenticated
+  USING (public.is_staff());
+
+CREATE POLICY "Librarians can manage reservations" ON public.reservations
   FOR ALL TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
+  USING (public.is_manager())
+  WITH CHECK (public.is_manager());
 
 -- return_idempotency Policies
 CREATE POLICY "Staff can manage return idempotency" ON public.return_idempotency

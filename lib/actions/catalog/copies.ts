@@ -144,7 +144,7 @@ export async function getBookPublicDetails(bookId: string) {
  * Combines book copies (with active reservations) and the full reservation queue.
  */
 export async function getBookAdminDetails(bookId: string) {
-  const supabase = await assertStaffCatalogAccess();
+  const supabase = await assertStaffCatalogAccess(true);
 
   const [bookResponse, copiesResponse, queueResponse] = await Promise.all([
     supabase
