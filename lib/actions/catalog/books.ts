@@ -6,7 +6,7 @@ import { revalidateTag } from 'next/cache';
 import { BookSchema } from '@/lib/validations/catalog';
 import { logger } from '@/lib/logger';
 import { assertStaffCatalogAccess } from './auth';
-import { sanitizeFilterInput } from '@/lib/utils';
+import { fetchBooksCore } from '@/lib/actions/books-core';
 
 /**
  * Retrieves a paginated list of books with optional filtering and search.
@@ -20,71 +20,19 @@ export async function getBooks(
   status: 'ACTIVE' | 'ARCHIVED' | 'ALL' = 'ACTIVE'
 ) {
   const supabase = await assertStaffCatalogAccess(true);
-  
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const [sortBy, sortOrder] = ({
+    newest: ['created_at', 'desc'],
+    title_desc: ['title', 'desc'],
+    availability_desc: ['availability', 'desc'],
+    availability_asc: ['availability', 'asc'],
+  } as const)[sort as 'newest'] ?? (['title', 'asc'] as const);
 
-  let dbQuery = supabase
-    .from('books')
-    .select(`*, categories!left(name)`, { count: 'exact' });
-
-  // Apply status filter
-  if (status === 'ACTIVE') {
-    dbQuery = dbQuery.eq('is_active', true);
-  } else if (status === 'ARCHIVED') {
-    dbQuery = dbQuery.eq('is_active', false);
-  }
-  
-  if (query) {
-    const cleanQuery = query.trim();
-    if (cleanQuery) {
-      if (cleanQuery.length < 3) {
-        const safeQuery = sanitizeFilterInput(cleanQuery);
-        dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
-      } else {
-        const terms = cleanQuery.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
-        const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
-        if (terms.length > 0) {
-          dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
-        } else {
-          const safeQuery = sanitizeFilterInput(cleanQuery);
-          dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
-        }
-      }
-    }
-  }
-  
-  if (categoryId && categoryId !== 'all') {
-    const categoryIds = categoryId.split(',').filter(Boolean);
-    if (categoryIds.length > 0) {
-      dbQuery = dbQuery.in('category_id', categoryIds);
-    }
-  }
-  
-  // Apply server-side sorting
-  switch (sort) {
-    case 'newest':
-      dbQuery = dbQuery.order('created_at', { ascending: false });
-      break;
-    case 'title_desc':
-      dbQuery = dbQuery.order('title', { ascending: false });
-      break;
-    case 'availability_desc':
-      dbQuery = dbQuery.order('available_copies', { ascending: false });
-      break;
-    case 'availability_asc':
-      dbQuery = dbQuery.order('available_copies', { ascending: true });
-      break;
-    case 'title_asc':
-    default:
-      dbQuery = dbQuery.order('title', { ascending: true });
-      break;
-  }
-
-  const { data, error, count } = await dbQuery.range(from, to);
-
-  if (error) throw new Error(error.message);
-  return { data, count: count || 0 };
+  const { books, total } = await fetchBooksCore(
+    { query, categoryId, page, pageSize, sortBy, sortOrder, status },
+    '*, categories!left(name)',
+    supabase
+  );
+  return { data: books, count: total };
 }
 
 const CreateBookSchema = z.object({

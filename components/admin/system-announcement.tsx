@@ -133,7 +133,7 @@ export function SystemAnnouncement({
               </label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Target audience info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Target audience info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -170,7 +170,7 @@ export function SystemAnnouncement({
               </label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Subject info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Subject info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -197,7 +197,7 @@ export function SystemAnnouncement({
               </label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Message info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Message info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -206,7 +206,7 @@ export function SystemAnnouncement({
                 </TooltipContent>
               </Tooltip>
             </div>
-            <span className="text-[10px] text-muted-foreground tabular-nums">
+            <span className="text-[11px] text-muted-foreground tabular-nums">
               {content.length}/500
             </span>
           </div>
@@ -287,7 +287,7 @@ export function SystemAnnouncement({
               <p className="font-semibold text-foreground">
                 Audience: <span className="font-normal text-muted-foreground">{target === 'all' ? 'All Users (Everyone)' : 'Students Only'}</span>
               </p>
-              <p className="text-muted-foreground/80 line-clamp-3 italic pt-1 border-t border-border/30">
+              <p className="text-muted-foreground line-clamp-3 italic pt-1 border-t border-border/30">
                 &ldquo;{content}&rdquo;
               </p>
             </div>

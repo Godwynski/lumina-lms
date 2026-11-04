@@ -28,7 +28,7 @@ export function CopyMeter({ available, total, className }: CopyMeterProps) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex gap-3 text-[10px] font-bold">
+      <div className="flex gap-3 text-[11px] font-bold">
         <span className="flex items-center gap-1 text-emerald-600">
           <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
           {available} on shelf

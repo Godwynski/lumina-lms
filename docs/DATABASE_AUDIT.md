@@ -7,6 +7,8 @@
 **Evaluator**: Worker M1 & Explorer M1-3 (Database Assurance Team)  
 **Date**: 2026-10-07  
 
+> **Read this first (2026-11-04):** apart from Section 4, this report is a snapshot from 2026-10-07. Since then, six tables (`announcements`, `reports`, `deleted_profile_info`, `rate_limit_log`, `checklist_items`, `checklist_dropdown_options`) were dropped (migration `20261104180000_drop_unused_tables.sql`), leaving 14 tables, and the RLS rules changed. **Section 4 is current**; for anything else, `supabase/schema_clean_install.sql` is the source of truth.
+
 ---
 
 ## Executive Summary & Audit Scorecard
@@ -20,7 +22,7 @@ The audit evaluated 1,228 lines of schema DDL in `supabase/schema_clean_install.
 | Assessment Domain | Baseline Score | Severity Level | Target Milestone | Primary Identified Risk |
 |---|---|---|---|---|
 | **Schema Integrity & Constraints** | 45% (Deficient) | 🔴 CRITICAL | M1 | 65% of foreign keys (13/20) lack explicit `ON DELETE` rules; missing NOT NULL and copy domain CHECK constraints allow negative inventory. |
-| **Row-Level Security (RLS) Isolation** | 100% (Hardened) | 🟢 RESOLVED | M2 | Fixed fatal enum cast (`'staff'` -> `public.is_staff()`); secured `transfer_super_admin_ownership` & `create_reservation_atomic`; hardened `profiles` RLS with `WITH CHECK`, `fn_guard_profile_updates` trigger & admin UPDATE; protected patron PII; isolated 5 roles; locked sandbox tables; 100% `(SELECT auth.uid())` wrapped. |
+| **Row-Level Security (RLS) Isolation** | See Section 4 (current) | 🟢 RESOLVED | M2 | Fixed fatal enum cast (`'staff'` -> `public.is_staff()`); secured `transfer_super_admin_ownership` & `create_reservation_atomic`; hardened `profiles` RLS with `WITH CHECK`, `fn_guard_profile_updates` trigger & admin UPDATE; protected patron PII; isolated 5 roles; locked sandbox tables; 100% `(SELECT auth.uid())` wrapped. |
 | **Indexing & Query Performance** | 20% (Severe Scans) | 🟠 HIGH | M3 | 16 of 20 foreign key columns are completely unindexed; duplicate indexes waste I/O; missing composite/partial indexes cause full sequential table scans. |
 | **Seed & Migration Synchronization** | 50% (Fragile) | 🟡 MEDIUM | M4 | Sample SQL script fails on re-run due to missing idempotency; category slug mismatch (`fiction` vs `literature-fiction`); CLI `config.toml` path divergence. |
 | **TypeScript & Domain Model Alignment** | 70% (Divergent) | 🟡 MEDIUM | M1 | TypeScript status divergence (`"LOST"` in `BorrowingRecord` vs Postgres `"BorrowStatus"`); unconstrained `Reservation.status: string`; unexported types. |
@@ -127,88 +129,71 @@ The following invariant `CHECK` constraints are required to guarantee database s
 
 ---
 
-## Section 4: Row-Level Security (RLS) & Multi-Role Isolation Architecture
+## Section 4: Row-Level Security (RLS) & Role Isolation
 
-Row-Level Security is enabled across all 20 public tables (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`) and storage objects (`storage.objects`). Under Milestone 2, all identified vulnerabilities, fatal syntax errors, privilege escalation vectors, and query planner bottlenecks have been fully remediated and hardened in `supabase/schema_clean_install.sql`.
+_Rewritten 2026-11-04 to match `supabase/schema_clean_install.sql` after audit phases 2–5. If this section and the SQL disagree, the SQL is right._
 
-### 4.1 Remediated RLS Defects & Verification Catalog
+RLS is enabled on all 14 public tables. Two helper functions carry most policies:
 
-#### 1. Fatal Enum Cast Syntax Bug (`'staff'::public.user_role`) — [RESOLVED]
-- **Previous Location**: `supabase/schema_clean_install.sql` (in `attendance` lines and `library_cards`).
-- **Defect**: Policies tested `profiles.role = ANY (ARRAY['super_admin'::public.user_role, 'librarian'::public.user_role, 'staff'::public.user_role, 'student_assistant'::public.user_role])`. Because `'staff'` is not a value in `public.user_role`, any evaluation crashed with `ERROR: 22P02: invalid input value for enum public.user_role: "staff"`.
-- **Applied Remediation**: Replaced all occurrences with `public.is_staff()`, evaluating whether the authenticated caller has active membership in `('super_admin', 'librarian', 'student_assistant')`.
+- `public.is_staff()`: the caller is an ACTIVE `super_admin`, `librarian` or `student_assistant`.
+- `public.is_manager()`: the caller is an ACTIVE `super_admin` or `librarian`.
 
-#### 2. Unauthenticated Super Admin Takeover (`transfer_super_admin_ownership`) — [RESOLVED]
-- **Defect**: The function was declared `SECURITY DEFINER` and demoted the current super admin and promoted the target user without checking caller identity (`auth.uid() = p_current_admin_id`). Because default `PUBLIC` execution permissions were unrevoked, any anonymous visitor could seize super administrator control via PostgREST RPC.
-- **Applied Remediation**:
-  1. Enforced authentication check: Allows `service_role` or verifies `(SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = p_current_admin_id`.
-  2. Standardized `SET search_path = public, pg_temp`.
-  3. Revoked execution from `PUBLIC, anon` via `REVOKE EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) FROM PUBLIC, anon;`.
+The server also uses the service-role key (which bypasses RLS) for a few admin jobs: invites, cron maintenance, `release_copy`, the QR checkout/return functions and annual reset. Those paths check the caller's role in the app first (`withAuthApi({ allowedRoles })` or the server action's own check), so their safety depends on that code, not on RLS.
 
-#### 3. Profile Privilege Escalation & Arbitrary Attribute Mutation — [RESOLVED]
-- **Defect**: `Users can update own profile` specified `USING ((SELECT auth.uid()) = id)` but lacked `WITH CHECK`. Authenticated patrons could patch their profile with `role = 'librarian'`, `status = 'ACTIVE'`, and `permissions = {"all": true}`.
-- **Applied Remediation**:
-  1. Added strict `WITH CHECK` to `Users can update own profile` locking `role`, `status`, and `permissions` to their existing snapshot values.
-  2. Implemented `trg_guard_profile_updates` BEFORE UPDATE trigger executing `fn_guard_profile_updates()`, blocking any unauthorized mutation of `role`, `status`, `student_id`, or `permissions` by non-administrators.
+### 4.1 Policies by table
 
-#### 4. Developer Sandbox Tables Public Wildcard Access — [RESOLVED]
-- **Defect**: `checklist_dropdown_options` and `checklist_items` had permissive `WITH CHECK (true)` and `USING (true)` policies for INSERT, UPDATE, DELETE to `public`.
-- **Applied Remediation**: Removed public wildcard write access. Configured `Allow authenticated read` (`FOR SELECT TO authenticated USING (true)`) and restricted mutations strictly to authorized staff (`FOR ALL TO authenticated USING (public.is_staff()) WITH CHECK (public.is_staff())`).
+| Table | Read | Write |
+|---|---|---|
+| `profiles` | Own row, or any staff | Own row, but `role`/`status`/`permissions` can't change (policy `WITH CHECK` plus trigger `fn_guard_profile_updates`); super admin and librarian can update others, within the trigger's limits (below) |
+| `books` | Everyone sees active books; staff see all | Staff insert/update; super admin and librarian delete |
+| `categories` | Everyone | Staff insert/update; super admin and librarian delete |
+| `book_copies` | Everyone | Managers only (`is_manager()`) |
+| `borrowing_records` | Own rows; staff see all | Managers only. Assistants lend and return through `process_qr_checkout` / `process_qr_return`, run by the server after a role check |
+| `reservations` | Own rows; staff see all | Managers directly; students through `create_reservation_atomic` |
+| `attendance` | Own rows; staff see all | Staff insert/update (no self check-in) |
+| `library_cards` | Own card; staff see all | No client policy (server only) |
+| `notifications` | Own | Own (mark read); created by server/functions |
+| `audit_logs` | Staff | No client policy, so nobody can edit or delete through the API; rows are written by the server |
+| `system_settings` | Everyone | Super admin and librarian |
+| `ui_preferences` | Own | Own |
+| `checkout_idempotency`, `return_idempotency` | Staff | Staff |
 
-#### 5. Unauthenticated Execution in `create_reservation_atomic` — [RESOLVED]
-- **Defect**: Function checked `IF auth.uid() IS NOT NULL AND p_actor_id <> auth.uid() THEN ...`. When called by anonymous clients, `auth.uid()` evaluated to `NULL`, bypassing the authorization check.
-- **Applied Remediation**:
-  1. Enforced strict authentication: Rejects calls where `(SELECT auth.uid()) IS NULL`, and verifies `p_actor_id = (SELECT auth.uid())`.
-  2. Enforced staff authorization for proxy reservations (`v_target_id <> p_actor_id` requires active staff profile).
-  3. Standardized `SET search_path = public, pg_temp`.
-  4. Revoked execution from `PUBLIC, anon` via `REVOKE EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) FROM PUBLIC, anon;`.
+**Profile guard trigger (`fn_guard_profile_updates`)**: requests with no API JWT and service-role requests skip it. Otherwise:
+- only the super admin can change `role` or `permissions`, or edit the super admin's row;
+- the super admin can't change their own role or status;
+- librarians may change `status` and `student_id` only;
+- everyone else may change none of these fields.
 
-#### 6. Missing Admin UPDATE Policy on `profiles` — [RESOLVED]
-- **Defect**: `profiles` only had self-update. When administrators attempted to invite or update users via `lib/actions/users.ts` (`inviteUser`), PostgreSQL rejected the update for another user under client JWT sessions, causing `.single()` to fail with `PGRST116`.
-- **Applied Remediation**: Added explicit `"Admins can update profiles"` UPDATE policy allowing `super_admin` and `librarian` roles to update profiles with matching `WITH CHECK`.
+**Sign-up (`handle_new_user`)**: only `@alabang.sti.edu.ph` and `@lumina.test` emails get a profile; `auto_set_student_id` assigns IDs for STI-domain accounts only.
 
-#### 7. Student PII Leakage via Public Profile SELECT — [RESOLVED]
-- **Defect**: `"Public profiles are viewable by everyone"` granted `SELECT USING (true)` to `public`, allowing unauthenticated scraping of student phone numbers, physical addresses, emails, and student IDs.
-- **Applied Remediation**: Replaced with `"Authenticated users can view profiles"` (`FOR SELECT TO authenticated USING (true)`), closing unauthenticated PII scraping.
+### 4.2 Functions
 
-#### 8. Performance Optimization: Unwrapped `auth.uid()` — [RESOLVED]
-- **Defect**: 17 policies called `auth.uid()` nakedly, forcing per-row re-evaluation and disabling statement-level query plan caching.
-- **Applied Remediation**: Wrapped 100% of policy references as `(SELECT auth.uid())` per Supabase performance specifications (`security-rls-performance.md`), enabling single-evaluation statement caching across candidate rows.
+All 19 functions in the install file set `search_path = public, pg_temp`.
 
-### 4.2 Multi-Role Boundary Isolation Matrix
+| Who can execute | Functions |
+|---|---|
+| Nobody through the API (triggers/internal) | `handle_new_user`, `auto_set_student_id`, `fn_guard_profile_updates`, `fn_sync_book_counts` |
+| Service role only | `process_qr_checkout`, `process_qr_return`, `compress_reservation_queue`, `auto_checkout_forgotten_attendance`, `release_copy`, `transfer_super_admin_ownership` |
+| Signed-in users (each function checks the caller's role inside) | `is_staff`, `is_manager`, `create_reservation_atomic`, `get_next_due_date`, `get_borrowing_history_v2`, `get_analytics_summary`, `annual_student_reset`, `send_bulk_notifications_by_target`, `reactivate_users_bulk` |
 
-The library system enforces strict separation of duties across 5 distinct logical roles:
+Circulation rules enforced inside the functions:
+- Checkout takes a per-borrower lock, so two desks can't push a student past the loan limit. Overdue loans count toward the limit.
+- Reservations need an ACTIVE account and respect `max_reservations_per_student`.
+- `release_copy` hands a returned or freed copy to the next person in the reservation queue.
 
-| Table / Feature | `super_admin` | `librarian` | `student_assistant` (Active) | `student` (Patron) | Anonymous (`anon`) |
-|---|---|---|---|---|---|
-| **Book & Copy Catalog Deletions** | ✅ Allowed | ✅ Allowed | ❌ Denied (`Librarians only`) | ❌ Denied | ❌ Denied |
-| **Book & Copy Catalog Writes** | ✅ Allowed | ✅ Allowed | ✅ Allowed (`is_staff()`) | ❌ Denied | ❌ Denied |
-| **Catalog Browsing (`books`)** | ✅ All Books | ✅ All Books | ✅ All Books | ✅ Active Only | ✅ Active Only |
-| **Circulation Transactions** | ✅ Allowed | ✅ Allowed | ✅ Allowed (`is_staff()`) | ❌ Denied | ❌ Denied |
-| **Personal Borrowing & Cards** | ✅ Self + All | ✅ Self + All | ✅ Self + All | ✅ Own Record Only | ❌ Denied |
-| **System Settings Mutation** | ✅ Allowed | ✅ Allowed | ❌ Denied (`Librarians only`) | ❌ Denied | ❌ Denied |
-| **Ownership Transfer RPC** | ✅ Active Super Admin | ❌ Denied | ❌ Denied | ❌ Denied | ❌ Denied |
-| **Profile Promotion / Role Edit** | ✅ Allowed | ❌ Denied (Self/Staff) | ❌ Denied | ❌ Denied | ❌ Denied |
-| **Dev Checklist Tables Writes** | ✅ Allowed | ✅ Allowed | ✅ Allowed (`is_staff()`) | ❌ Denied | ❌ Denied |
-| **Storage: Book Covers Edit** | ✅ Allowed | ✅ Allowed | ✅ Allowed (`is_staff()`) | ❌ Denied | ❌ Denied |
-| **Storage: Library Cards Read** | ✅ Allowed | ✅ Allowed | ✅ Allowed (`is_staff()`) | ✅ Card Owner Only | ❌ Denied |
+### 4.3 Storage
 
-### 4.3 Function Security & Execution Privilege Architecture
+| Bucket | Public? | Read | Write |
+|---|---|---|---|
+| `avatars` | Yes | Anyone with the URL | Owner only, in their own `<userId>/` folder (card photos live at `<userId>/card.webp`) |
+| `book-covers` | Yes | Anyone with the URL | Staff |
+| `library-cards` | No | Staff, or the card owner; the app hands out short-lived signed URLs | Staff |
 
-All 11 functions in `supabase/schema_clean_install.sql` adhere strictly to least-privilege execution standards:
-1. **Volatility & Caching**: `public.is_staff()` is marked `STABLE`, allowing PostgreSQL query optimizer to cache evaluation results per statement.
-2. **Search Path Hardening**: Standardized `SET search_path = public, pg_temp` across 100% of functions (`is_staff`, `transfer_super_admin_ownership`, `auto_set_student_id`, `fn_sync_book_counts`, `auto_checkout_forgotten_attendance`, `handle_new_user`, `fn_guard_profile_updates`, `compress_reservation_queue`, `create_reservation_atomic`, `process_qr_checkout`, `process_qr_return`), neutralizing temporary-table Trojan search path attacks.
-3. **Execution Privilege Revocations**:
-   - Internal trigger functions (`auto_set_student_id`, `fn_sync_book_counts`, `handle_new_user`, `fn_guard_profile_updates`) revoked from `PUBLIC, anon, authenticated`.
-   - Internal maintenance RPCs (`process_qr_checkout`, `process_qr_return`, `compress_reservation_queue`, `auto_checkout_forgotten_attendance`) revoked from `PUBLIC, anon, authenticated`.
-   - Administrative RPC `transfer_super_admin_ownership` revoked from `PUBLIC, anon`.
-   - Client RPC `create_reservation_atomic` revoked from `PUBLIC, anon` and granted strictly to `authenticated, service_role`.
+Bucket size and type limits are set in migration `20261104150000_storage_limits_and_card_numbers.sql`. Server-side image fetching (`lib/fetch-image.ts`) allows HTTPS only, blocks private IPs, refuses redirects and SVG, and caps downloads at 5 MB.
 
-### 4.4 Storage Bucket Privacy & Object RLS (`storage.objects`)
+### 4.4 What is not covered here
 
-1. **Avatar Objects**: Wrapped with `(SELECT auth.uid())` subqueries in folder validation predicates.
-2. **Book Covers**: Restricted mutations (insert, update, delete) to authenticated library staff (`bucket_id = 'book-covers'::text AND public.is_staff()`).
-3. **Library Cards Privacy**: Excluded from `"Public Read"` bucket policy. Access restricted to authenticated staff or the student cardholder matching the student identifier.
+Supabase's hosted Auth, Realtime and Storage servers, and rate limiting (there is none in the app), were not audited. Earlier versions of this section listed fixes that were later replaced. Use `git log -- docs/DATABASE_AUDIT.md` to see them.
 
 ---
 

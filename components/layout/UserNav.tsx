@@ -95,7 +95,7 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium leading-none">{name}</p>
                 {role && (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                     {role}
                   </span>
                 )}

@@ -36,11 +36,11 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-background/95 backdrop-blur-md border border-border/50 p-3 shadow-2xl rounded-lg">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: payload[0].stroke }} />
           <p className="text-sm font-black tracking-tight text-foreground">
-            {payload[0].value} <span className="text-[10px] font-bold text-muted-foreground">units</span>
+            {payload[0].value} <span className="text-[11px] font-bold text-muted-foreground">units</span>
           </p>
         </div>
       </div>
@@ -77,11 +77,11 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
       
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">{title}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
         {href && (
-          <span className="text-[9px] font-black text-primary/40 group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
+          <span className="text-[11px] font-black text-primary/40 group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
             View Details →
           </span>
         )}
@@ -171,7 +171,7 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
       
       <div className="flex items-center justify-between mb-2 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">{title}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 transition-all duration-500" />
         </div>
       </div>
@@ -207,7 +207,7 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
         
         {/* Center Label */}
         <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] flex flex-col items-center pointer-events-none mt-2">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
             {hasData ? 'Total' : 'No Data'}
           </span>
           <span className={cn("text-lg font-black text-foreground transition-all duration-700", !hasData && "opacity-40 scale-90")}>
@@ -220,16 +220,16 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
         {hasData ? data.slice(0, 6).map((entry, index) => (
           <div key={entry.name} className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/90 truncate max-w-[80px]">{entry.name}</span>
-            <span className="text-[9px] font-black text-foreground/60">{entry.value}</span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[80px]">{entry.name}</span>
+            <span className="text-[11px] font-black text-foreground/60">{entry.value}</span>
           </div>
         )) : (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 italic">Waiting for activity...</span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground italic">Waiting for activity...</span>
           </div>
         )}
         {hasData && data.length > 6 && (
-          <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest self-center">
+          <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest self-center">
             +{data.length - 6} more
           </span>
         )}
@@ -254,11 +254,11 @@ const CustomBarTooltip = ({ active, payload, label }: CustomBarTooltipProps) => 
   if (active && payload && payload.length) {
     return (
       <div className="bg-background/95 backdrop-blur-md border border-border/50 p-3 shadow-2xl rounded-lg">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-primary" />
           <p className="text-sm font-black tracking-tight text-foreground">
-            {payload[0].value} <span className="text-[10px] font-bold text-muted-foreground">visits</span>
+            {payload[0].value} <span className="text-[11px] font-bold text-muted-foreground">visits</span>
           </p>
         </div>
       </div>
@@ -280,7 +280,7 @@ export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps
     <div className="w-full h-[280px] flex flex-col group/chart border border-border/40 rounded-2xl p-4 bg-muted/[0.02] relative overflow-hidden transition-all duration-300">
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/90">{title}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
       </div>
@@ -331,7 +331,7 @@ export function ChartSkeleton({ title }: { title: string }) {
     <div className="w-full h-[280px] flex flex-col animate-pulse">
       <div className="flex items-center justify-between mb-6 px-1">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">{title}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-muted/20" />
         </div>
       </div>

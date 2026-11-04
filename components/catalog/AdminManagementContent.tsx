@@ -343,7 +343,7 @@ export function AdminManagementContent({
           <div className="flex-1 min-w-0 flex flex-col py-1">
             <div className="flex items-center gap-2 mb-2">
                <span className={cn(
-                 "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium tracking-tight",
+                 "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium tracking-tight",
                  !book.is_active
                    ? "bg-amber-500/10 text-amber-600"
                    : isAvailable
@@ -355,17 +355,17 @@ export function AdminManagementContent({
                </span>
             </div>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground leading-none mb-1 line-clamp-1">{book.title}</h2>
-            <p className="text-base text-muted-foreground/80 mb-4">{book.author}</p>
+            <p className="text-base text-muted-foreground mb-4">{book.author}</p>
             
             <div className="flex flex-wrap gap-1.5">
-               <Badge variant="secondary" className="text-[10px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
+               <Badge variant="secondary" className="text-[11px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
                  {categoryName || 'General'}
                </Badge>
-               <Badge variant="secondary" className="text-[10px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
+               <Badge variant="secondary" className="text-[11px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
                  DDC {book.dewey_decimal || 'N/A'}
                </Badge>
                {book.isbn && (
-                 <Badge variant="secondary" className="text-[10px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
+                 <Badge variant="secondary" className="text-[11px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
                    {book.isbn}
                  </Badge>
                )}
@@ -394,7 +394,7 @@ export function AdminManagementContent({
               <div className="h-6 w-1 bg-primary rounded-full" />
               <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">Edit Library Asset Metadata</h3>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-7 px-2.5 text-[10px] font-bold uppercase rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-7 px-2.5 text-[11px] font-bold uppercase rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">Cancel</Button>
           </div>
           
           <div className="space-y-6">
@@ -402,7 +402,7 @@ export function AdminManagementContent({
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-b border-border/10 pb-2">
                 <BookOpen size={13} className="text-primary/70" />
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Basic Information & Cataloging</h4>
+                <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Basic Information & Cataloging</h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
                 <FieldGroup label="Title" className="sm:col-span-2 md:col-span-6">
@@ -454,7 +454,7 @@ export function AdminManagementContent({
                   <Input 
                     value={editForm.isbn} 
                     disabled
-                    className="h-9 rounded-xl text-xs bg-muted/40 border border-border/40 text-muted-foreground/70 cursor-not-allowed select-all" 
+                    className="h-9 rounded-xl text-xs bg-muted/40 border border-border/40 text-muted-foreground cursor-not-allowed select-all" 
                   />
                 </FieldGroup>
                 <FieldGroup label="Dewey Decimal (DDC)" className="sm:col-span-1 md:col-span-3">
@@ -471,7 +471,7 @@ export function AdminManagementContent({
             <div className="space-y-4 pt-2">
               <div className="flex items-center gap-2 border-b border-border/10 pb-2">
                 <MapPin size={13} className="text-primary/70" />
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Physical Placement & Description</h4>
+                <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Physical Placement & Description</h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FieldGroup label="Location">
@@ -506,14 +506,14 @@ export function AdminManagementContent({
              {book.is_active ? (
                showDeleteConfirm ? (
                  <div className="flex items-center gap-2">
-                   <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Archive this asset?</span>
-                   <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[10px] font-black uppercase rounded-lg">
+                   <span className="text-[11px] font-black text-rose-600 uppercase tracking-widest">Archive this asset?</span>
+                   <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[11px] font-black uppercase rounded-lg">
                      Confirm
                    </Button>
-                   <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[10px] font-bold uppercase rounded-lg">No</Button>
+                   <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[11px] font-bold uppercase rounded-lg">No</Button>
                  </div>
                ) : (
-                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[10px] font-black uppercase transition-colors">
+                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[11px] font-black uppercase transition-colors">
                    <Archive size={12} className="mr-1.5" /> Archive Asset
                  </Button>
                )
@@ -523,17 +523,17 @@ export function AdminManagementContent({
                  size="sm" 
                  onClick={handleRestoreBook} 
                  disabled={restoreLoading}
-                 className="h-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-[10px] font-black uppercase transition-colors"
+                 className="h-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-[11px] font-black uppercase transition-colors"
                >
                  {restoreLoading ? <Loader2 size={12} className="mr-1.5 animate-spin" /> : <RotateCw size={12} className="mr-1.5" />}
                  Restore Asset
                </Button>
              )}
              <div className="flex items-center gap-2">
-               <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider">
+               <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="h-8 rounded-lg px-3 text-[11px] font-bold uppercase tracking-wider">
                  Cancel
                </Button>
-               <Button onClick={handleUpdateBook} disabled={updateLoading} size="sm" className="h-8 rounded-lg px-4 text-[10px] font-black uppercase tracking-widest">
+               <Button onClick={handleUpdateBook} disabled={updateLoading} size="sm" className="h-8 rounded-lg px-4 text-[11px] font-black uppercase tracking-widest">
                  {updateLoading ? <Loader2 className="animate-spin h-3 w-3 mr-1.5" /> : <Save size={12} className="mr-1.5" />}
                  Save Changes
                </Button>
@@ -546,19 +546,19 @@ export function AdminManagementContent({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
          <div className="rounded-xl border border-border/20 bg-muted/5 p-4 flex items-center justify-between px-6">
             <div className="text-center">
-              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-1">Total</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total</p>
               <p className="text-xl font-semibold text-foreground leading-none">{book.total_copies ?? 0}</p>
             </div>
             <div className="w-px h-8 bg-border/20" />
             <div className="text-center">
-              <p className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest mb-1">Available</p>
+              <p className="text-[11px] font-bold text-emerald-500/60 uppercase tracking-widest mb-1">Available</p>
               <p className="text-xl font-semibold text-emerald-500 leading-none">{book.available_copies ?? 0}</p>
             </div>
             {reservationQueue.length > 0 && (
               <>
                 <div className="w-px h-8 bg-border/20" />
                 <div className="text-center">
-                  <p className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-widest mb-1">Queue</p>
+                  <p className="text-[11px] font-bold text-indigo-500/60 uppercase tracking-widest mb-1">Queue</p>
                   <p className="text-xl font-semibold text-indigo-500 leading-none">{reservationQueue.length}</p>
                 </div>
               </>
@@ -577,7 +577,7 @@ export function AdminManagementContent({
           <div className="flex items-center gap-4">
             {canManage && (
               !showAddCopies ? (
-                <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[10px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
+                <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Copies
                 </Button>
               ) : (
@@ -595,10 +595,10 @@ export function AdminManagementContent({
                     onChange={e => setCopiesToAdd(parseInt(e.target.value) || 1)} 
                     className="h-8 w-14 text-center text-xs px-1 rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-8 px-3 text-[10px] font-medium">
+                  <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-8 px-3 text-[11px] font-medium">
                     {addCopiesLoading ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : 'Confirm'}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(false)} className="h-8 px-2 text-[10px] font-medium text-muted-foreground">
+                  <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(false)} className="h-8 px-2 text-[11px] font-medium text-muted-foreground">
                     Cancel
                   </Button>
                 </div>
@@ -608,13 +608,13 @@ export function AdminManagementContent({
             <Select value={copyFilter} onValueChange={(v) => {
               if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
             }}>
-              <SelectTrigger className="h-8 w-[110px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[10px] font-medium text-muted-foreground shadow-none focus:ring-0 transition-colors">
+              <SelectTrigger className="h-8 w-[110px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-medium text-muted-foreground shadow-none focus:ring-0 transition-colors">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-border/40 shadow-xl">
-                <SelectItem value="ALL" className="text-[10px] font-medium">All Statuses</SelectItem>
+                <SelectItem value="ALL" className="text-[11px] font-medium">All Statuses</SelectItem>
                 {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key} className="text-[10px] font-medium">{cfg.label}</SelectItem>
+                  <SelectItem key={key} value={key} className="text-[11px] font-medium">{cfg.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -631,7 +631,7 @@ export function AdminManagementContent({
           ) : filteredCopies.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border/20 bg-muted/5">
               <SearchX size={24} className="text-muted-foreground/20 mb-3" />
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">No matching assets found</p>
+              <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">No matching assets found</p>
             </div>
           ) : (
             paginatedCopies.map((copy) => {
@@ -652,9 +652,9 @@ export function AdminManagementContent({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="font-mono text-[12px] font-semibold text-foreground/90 truncate">{copy.qr_string}</p>
-                          <span className="text-[9px] font-medium text-muted-foreground px-1.5 py-0.5 border border-border/40 rounded bg-muted/40 uppercase tracking-tighter">{copy.accession_number}</span>
+                          <span className="text-[11px] font-medium text-muted-foreground px-1.5 py-0.5 border border-border/40 rounded bg-muted/40 uppercase tracking-tighter">{copy.accession_number}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                           <span className={cn("font-medium", statusCfg.color)}>{statusCfg.label}</span>
                           <span className="opacity-20">•</span>
                           <span className="font-mono opacity-60">ID: {copy.id.split('-')[0]}</span>
@@ -667,19 +667,19 @@ export function AdminManagementContent({
                         <Select value={copy.status} onValueChange={(v) => {
                           if (isEditableStatus(v)) handleStatusChange(copy.id, v);
                         }}>
-                          <SelectTrigger className="h-8 w-[100px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[10px] font-semibold uppercase shadow-none focus:ring-0 transition-colors">
+                          <SelectTrigger className="h-8 w-[100px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-semibold uppercase shadow-none focus:ring-0 transition-colors">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="border-border/40 shadow-xl">
                             {EDITABLE_STATUSES.map((key) => (
-                              <SelectItem key={key} value={key} className="text-[10px] font-semibold uppercase">
+                              <SelectItem key={key} value={key} className="text-[11px] font-semibold uppercase">
                                 {STATUS_CONFIG[key].label}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className="h-8 px-2.5 text-[10px] font-semibold uppercase border-border/40">
+                        <Badge variant="outline" className="h-8 px-2.5 text-[11px] font-semibold uppercase border-border/40">
                           {statusCfg.label}
                         </Badge>
                       )}
@@ -702,11 +702,11 @@ export function AdminManagementContent({
                          )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tight truncate">
+                        <p className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tight truncate">
                           Reserved by {r.full_name ?? 'Unknown User'}
                         </p>
                         {res?.hold_expires_at && (
-                          <p className="text-[9px] font-medium text-amber-500/80">
+                          <p className="text-[11px] font-medium text-amber-500/80">
                             Expires {formatRelativeTime(res.hold_expires_at, mounted)}
                           </p>
                         )}

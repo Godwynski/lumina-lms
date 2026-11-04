@@ -64,6 +64,17 @@ export function LuminaTable<T extends { id: string | number }>({
 }: LuminaTableProps<T>) {
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
+  const rowKeyboardProps = (item: T) => onRowClick ? {
+    tabIndex: 0,
+    role: "button",
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onRowClick(item);
+      }
+    },
+  } : {};
+
   const renderCell = (item: T, col: LuminaColumn<T>) => {
     if (col.cell) return col.cell(item);
     if (typeof col.accessor === "function") return col.accessor(item);
@@ -78,7 +89,7 @@ export function LuminaTable<T extends { id: string | number }>({
         <div className="font-bold">{renderCell(item, mainCol)}</div>
         <div className="grid grid-cols-2 gap-2 mt-2">
           {columns.filter(c => c !== mainCol).map((c, i) => (
-            <div key={i} className="text-[10px]">
+            <div key={i} className="text-[11px]">
               <span className="text-muted-foreground uppercase block mb-0.5">{c.header}</span>
               <div className="font-medium">{renderCell(item, c)}</div>
             </div>
@@ -110,10 +121,11 @@ export function LuminaTable<T extends { id: string | number }>({
                 key={`mobile-${item.id}`}
                 className={cn(
                   "p-4 transition-colors hover:bg-muted/40",
-                  onRowClick && "cursor-pointer",
+                  onRowClick && "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                   rowClassName
                 )}
                 onClick={() => onRowClick?.(item)}
+                {...rowKeyboardProps(item)}
               >
                 {mobileRenderer(item)}
               </div>
@@ -159,7 +171,7 @@ export function LuminaTable<T extends { id: string | number }>({
                 <td colSpan={columns.length} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">Refreshing...</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Refreshing...</span>
                   </div>
                 </td>
               </tr>
@@ -169,10 +181,11 @@ export function LuminaTable<T extends { id: string | number }>({
                   key={`desktop-${item.id}`}
                   className={cn(
                     "transition-colors hover:bg-muted/40 group",
-                    onRowClick && "cursor-pointer",
+                    onRowClick && "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                     rowClassName
                   )}
                   onClick={() => onRowClick?.(item)}
+                  {...rowKeyboardProps(item)}
                 >
                   {columns.map((col, idx) => (
                     <td

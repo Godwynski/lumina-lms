@@ -41,7 +41,7 @@ export function CompactPagination({
       variant === "ghost" && "px-1"
     )}>
       <div className="flex items-center gap-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+        <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
           Showing <span className="text-foreground/80">{start}-{end}</span> of <span className="text-foreground/80">{totalItems}</span>
         </span>
       </div>
@@ -49,9 +49,9 @@ export function CompactPagination({
       <div className="flex items-center gap-4">
         {pageSizeOptions && onPageSizeChange ? (
           <div className="flex items-center gap-2 pr-2 border-r border-border/10">
-            <span className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/40">Per Page</span>
+            <span className="text-[11px] font-bold uppercase tracking-tighter text-muted-foreground">Per Page</span>
             <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-              <SelectTrigger className="h-7 w-14 rounded-lg border-none bg-muted/20 hover:bg-muted/30 transition-colors text-[10px] font-bold shadow-none focus:ring-0">
+              <SelectTrigger className="h-7 w-14 rounded-lg border-none bg-muted/20 hover:bg-muted/30 transition-colors text-[11px] font-bold shadow-none focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="min-w-[5rem] rounded-xl border-border/10 shadow-xl">
@@ -78,8 +78,8 @@ export function CompactPagination({
           
           <div className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-muted/10 border border-border/5">
             <span className="text-[11px] font-black text-foreground">{page}</span>
-            <span className="text-[10px] font-bold text-muted-foreground/40">/</span>
-            <span className="text-[10px] font-bold text-muted-foreground/60">{totalPages}</span>
+            <span className="text-[11px] font-bold text-muted-foreground">/</span>
+            <span className="text-[11px] font-bold text-muted-foreground">{totalPages}</span>
           </div>
 
           <Button

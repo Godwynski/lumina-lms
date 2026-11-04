@@ -24,12 +24,12 @@ export function SecuritySection({ role }: SecuritySectionProps) {
               <div className="flex-1 space-y-4">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.1em] text-foreground/70">
+                    <Label className="text-[11px] font-black uppercase tracking-[0.1em] text-foreground/70">
                       Identity &amp; Access
                     </Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Security info">
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Security info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>
@@ -38,7 +38,7 @@ export function SecuritySection({ role }: SecuritySectionProps) {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/80 max-w-lg">
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground max-w-lg">
                     {role === "student"
                       ? "Your account credentials are managed by the school system. Contact the administrator for security concerns."
                       : "Your account credentials and access permissions are managed by the system. Contact an administrator if you need changes."}

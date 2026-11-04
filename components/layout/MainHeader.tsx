@@ -35,7 +35,7 @@ export function MainHeader({ userNav }: MainHeaderProps) {
             </div>
             <div className="flex flex-col whitespace-nowrap">
               <span className="leading-none text-[15px] font-black tracking-tight text-foreground/90">Lumina</span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">LMS Platform</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">LMS Platform</span>
             </div>
           </Link>
           <div className="h-5 w-[1px] bg-border/20 mx-1" />

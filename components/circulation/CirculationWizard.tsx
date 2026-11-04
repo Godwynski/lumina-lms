@@ -44,14 +44,14 @@ export function CirculationWizard() {
           <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/10">
             <Button
               variant={mode === 'checkout' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider"
+              className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
               onClick={() => switchMode('checkout')}
             >
               Checkout
             </Button>
             <Button
               variant={mode === 'return' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[9px] font-bold uppercase tracking-wider"
+              className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
               onClick={() => switchMode('return')}
             >
               Return
@@ -65,7 +65,7 @@ export function CirculationWizard() {
             onClick={handleReset}
           >
             <RefreshCcw className="h-3.5 w-3.5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Reset</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Reset</span>
           </Button>
         </div>
 

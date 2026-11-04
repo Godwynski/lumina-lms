@@ -45,7 +45,7 @@ export function CategoryItem({
         {isBulkEditing && draftCategory && onDraftChange ? (
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
+              <label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Type className="h-3 w-3" />
                 Category Name
               </label>
@@ -57,7 +57,7 @@ export function CategoryItem({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
+              <label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Hash className="h-3 w-3" />
                 Slug (URL Identifier)
               </label>
@@ -69,7 +69,7 @@ export function CategoryItem({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
+              <label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
                 <AlignLeft className="h-3 w-3" />
                 Description
               </label>
@@ -88,13 +88,13 @@ export function CategoryItem({
                 {category.name}
               </h3>
               {!category.is_active && (
-                <span className="px-2 py-0.5 rounded-full bg-muted border border-border/50 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="px-2 py-0.5 rounded-full bg-muted border border-border/50 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Archived
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="font-mono text-[10px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+              <span className="font-mono text-[11px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
                 {category.slug}
               </span>
               {category.description && (
@@ -168,7 +168,7 @@ export function CategoryItem({
           </TooltipProvider>
         )}
         {isBulkEditing && isChanged && (
-          <div className="h-8 flex items-center justify-center px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold uppercase tracking-wider">
+          <div className="h-8 flex items-center justify-center px-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold uppercase tracking-wider">
             <Check className="h-3 w-3 mr-1" />
             Modified
           </div>

@@ -69,7 +69,7 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
                     className="h-10 rounded-lg pl-9 text-sm"
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   The user must have already signed up to the system via SSO or Email initially.
                 </p>
               </FieldGroup>

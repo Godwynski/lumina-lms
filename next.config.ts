@@ -143,6 +143,11 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: '/catalog/:path*',
+        destination: '/inventory',
+        permanent: true,
+      },
+      {
         source: '/protected',
         destination: '/dashboard',
         permanent: true,

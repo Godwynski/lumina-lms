@@ -229,27 +229,27 @@ _Why medium: copying an existing debounce pattern, plus one simple RPC and butto
 ### B5.1 · Delete what isn't used · Effort: `medium`
 _Why medium: deleting code is easy, but M26 drops tables through a migration, so check the references first._
 
-- [ ] 🟠 **M26** Six unused tables ✅ `[P2#47]` — drop `announcements`, `reports`, `deleted_profile_info`, `rate_limit_log`, `checklist_items` and `checklist_dropdown_options`, along with their policies, publication entries, seed/clean lines and `types/database.ts` entries (migration + clean install).
-- [ ] 🟡 **m17** Dead code and tests that test the mocks `[P1#34]` — delete `QRScanner.tsx`, `scripts/seed-attendance-today.mjs`, `test/mocks/stress.test.ts`, `test/mocks/query-chaining.test.ts` and any leftover dead branches.
-- [ ] 🟡 **m18** Duplicate book query `[P1#35]` — make `getBooks` call `fetchBooksCore` (add an `includeInactive` flag).
-- [ ] 🟡 **m19** Listeners that never fire `[P2#50]` — delete the `ui_preferences` channel and the notifications DELETE listener.
-- [ ] 🟡 **m20** The card component written eight times `[P2#52]` — `MyCardContainer.tsx`: build one shared `cardProps`.
-- [ ] 🟡 **m21** Dead `/catalog` route `[P2#53]` — delete both files, and add a redirect in `next.config.ts`.
+- [x] 🟠 **M26** Six unused tables ✅ `[P2#47]` — drop `announcements`, `reports`, `deleted_profile_info`, `rate_limit_log`, `checklist_items` and `checklist_dropdown_options`, along with their policies, publication entries, seed/clean lines and `types/database.ts` entries (migration + clean install).
+- [x] 🟡 **m17** Dead code and tests that test the mocks `[P1#34]` — delete `QRScanner.tsx`, `scripts/seed-attendance-today.mjs`, `test/mocks/stress.test.ts`, `test/mocks/query-chaining.test.ts` and any leftover dead branches.
+- [x] 🟡 **m18** Duplicate book query `[P1#35]` — make `getBooks` call `fetchBooksCore` (add an `includeInactive` flag).
+- [x] 🟡 **m19** Listeners that never fire `[P2#50]` — delete the `ui_preferences` channel and the notifications DELETE listener.
+- [x] 🟡 **m20** The card component written eight times `[P2#52]` — `MyCardContainer.tsx`: build one shared `cardProps`.
+- [x] 🟡 **m21** Dead `/catalog` route `[P2#53]` — delete both files, and add a redirect in `next.config.ts`.
 
 ### B5.2 · Accessibility · Effort: `low`
 _Why low: m12 is a careful find-and-replace, and m13 copies a pattern that already exists._
 
-- [ ] 🟡 **m12** Faint text below the contrast minimum `[P3#55]` — for text, change `text-muted-foreground/40–80` to `text-muted-foreground`, keeping the faded forms for icons and lines. Raise `text-[8px]` / `[9px]` / `[10px]` to `text-[11px]`. Check the analytics, dashboard and catalog pages visually afterward.
-- [ ] 🟡 **m13** The Users list can't be opened with a keyboard `[P3#56]` — in `LuminaTable.tsx`, when `onRowClick` is set, add `tabIndex={0}`, `role="button"` and an Enter/Space `onKeyDown` (copy from `StudentBookCard`).
+- [x] 🟡 **m12** Faint text below the contrast minimum `[P3#55]` — for text, change `text-muted-foreground/40–80` to `text-muted-foreground`, keeping the faded forms for icons and lines. Raise `text-[8px]` / `[9px]` / `[10px]` to `text-[11px]`. Check the analytics, dashboard and catalog pages visually afterward.
+- [x] 🟡 **m13** The Users list can't be opened with a keyboard `[P3#56]` — in `LuminaTable.tsx`, when `onRowClick` is set, add `tabIndex={0}`, `role="button"` and an Enter/Space `onKeyDown` (copy from `StudentBookCard`).
 
 ### B5.3 · Make the docs true · Effort: `medium`
 _Why medium: writing, but every claim has to be checked against the fixed code._
 
-- [ ] 🟠 **M25** The docs claim protections that don't exist `[P2#49]` — rewrite the security sections of `README.md` and `docs/DATABASE_AUDIT.md` to match the code; remove checklist sections for features that don't exist (`ENTERPRISE_SAAS_QA_CHECKLIST.md`); make sure no test checks doc text.
+- [x] 🟠 **M25** The docs claim protections that don't exist `[P2#49]` — rewrite the security sections of `README.md` and `docs/DATABASE_AUDIT.md` to match the code; remove checklist sections for features that don't exist (`ENTERPRISE_SAAS_QA_CHECKLIST.md`); make sure no test checks doc text.
 
 > ### 🚧 GATE 5 (final)
-> - [ ] No `it.fails` left in `test/db-real.test.ts`.
-> - [ ] `npm test && npm run typecheck && npm run lint && npm run build` green; `npx knip` reports nothing unused; `npm audit --omit=dev` clean or accepted.
+> - [x] No `it.fails` left in `test/db-real.test.ts`.
+> - [x] `npm test && npm run typecheck && npm run lint && npm run build` green; `npx knip` reports nothing unused; `npm audit --omit=dev` clean or accepted.
 > - [ ] Every box in this file is ticked.
 > - [ ] Optional: run `/ponytail-audit` once more as a final check.
 

@@ -279,7 +279,7 @@ describe('Empirical Challenger M1: Adversarial Stress Test Suite', () => {
   describe('5. Structural Decoupling & Anti-Waterfall Invariants', () => {
     it('verifies CatalogContent does not use dynamic import with ssr: false', () => {
       const catalogContentCode = fs.readFileSync(
-        path.join(process.cwd(), 'app/(authenticated)/catalog/CatalogContent.tsx'),
+        path.join(process.cwd(), 'app/(authenticated)/inventory/CatalogContent.tsx'),
         'utf8'
       );
 

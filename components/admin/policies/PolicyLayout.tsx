@@ -262,7 +262,7 @@ export function PolicyLayout({
                 key={item.id}
                 onClick={() => handleCategoryClick(item.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
+                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
                   activeCategory === item.id 
                     ? "bg-primary text-primary-foreground border-primary shadow-sm" 
                     : "bg-card/50 text-muted-foreground border-border/40 hover:border-primary/20"
@@ -279,7 +279,7 @@ export function PolicyLayout({
         <aside className="hidden lg:block space-y-8 sticky top-12 max-h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar pr-2">
           {Object.entries(groupedSidebar).map(([group, items]) => (
             <div key={group} className="space-y-2">
-              <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-[0.2em]">
+              <p className="px-4 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                 {group}
               </p>
               <div className="space-y-0.5">
@@ -299,9 +299,9 @@ export function PolicyLayout({
                     )}
                     <item.icon size={16} className={cn(
                       "shrink-0 transition-colors",
-                      activeCategory === item.id ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"
+                      activeCategory === item.id ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground"
                     )} />
-                    <span className="flex-1 text-left font-bold uppercase tracking-widest text-[10px]">{item.label}</span>
+                    <span className="flex-1 text-left font-bold uppercase tracking-widest text-[11px]">{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -329,7 +329,7 @@ export function PolicyLayout({
                       {isAnnouncementDirty && (
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 animate-in zoom-in-95 duration-200">
                           <AlertTriangle className="h-3 w-3" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider">Unsaved Draft</span>
+                          <span className="text-[11px] font-bold uppercase tracking-wider">Unsaved Draft</span>
                         </div>
                       )}
                     </div>
@@ -424,7 +424,7 @@ export function PolicyLayout({
           <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/10 bg-background/90 p-2 pl-5 shadow-2xl backdrop-blur-xl">
              <div className="flex items-center gap-2.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-foreground/70">
                   {changedKeys.length} unsaved changes
                 </span>
              </div>
@@ -435,13 +435,13 @@ export function PolicyLayout({
                     setFormData(initialValues);
                     toast.success("All unsaved changes discarded");
                   }}
-                  className="h-9 rounded-xl px-4 text-[10px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
+                  className="h-9 rounded-xl px-4 text-[11px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
                >
                   Discard
                </Button>
                <Button
                   onClick={() => setIsCommitModalOpen(true)}
-                  className="h-9 rounded-xl px-5 text-[10px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
+                  className="h-9 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
                >
                   Review Changes
                </Button>
@@ -466,7 +466,7 @@ export function PolicyLayout({
               <div className="h-11 w-11 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/10">
                 <AlertTriangle className="h-5 w-5" />
               </div>
-              <div className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-[9px] font-bold uppercase tracking-wider text-destructive border border-destructive/10">
+              <div className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-[11px] font-bold uppercase tracking-wider text-destructive border border-destructive/10">
                 Unsaved Changes
               </div>
             </div>
@@ -476,7 +476,7 @@ export function PolicyLayout({
                   ? "Unsaved Announcement Draft"
                   : "Unsaved Policy Changes"}
               </h3>
-              <p className="text-xs text-muted-foreground/75 leading-relaxed font-medium">
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
                 {activeCategory === "broadcasts" && isAnnouncementDirty
                   ? "You have unsent announcement text in the broadcast fields. Moving to another section will discard your draft. Do you want to proceed?"
                   : "You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?"}

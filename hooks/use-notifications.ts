@@ -109,19 +109,6 @@ export function useNotifications() {
             setNotifications(prev => prev.map(n => n.id === updated.id ? updated : n))
           }
         )
-        .on(
-            'postgres_changes',
-            {
-              event: 'DELETE',
-              schema: 'public',
-              table: 'notifications',
-              filter: `user_id=eq.${user.id}`,
-            },
-            (payload) => {
-              if (!active) return
-              setNotifications(prev => prev.filter(n => n.id !== payload.old.id))
-            }
-          )
         .subscribe()
     }
 

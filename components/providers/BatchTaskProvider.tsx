@@ -230,9 +230,9 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
                   <span>{isbnLogs.length} Events</span>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar font-mono text-[10px]">
+                <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar font-mono text-[11px]">
                   {isbnLogs.length === 0 ? (
-                    <div className="text-center text-muted-foreground/50 py-4 italic">No logs generated yet...</div>
+                    <div className="text-center text-muted-foreground py-4 italic">No logs generated yet...</div>
                   ) : (
                     isbnLogs.map((log, idx) => (
                       <div 

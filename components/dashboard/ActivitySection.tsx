@@ -46,7 +46,7 @@ export function ActivitySection({
       {/* My Active Borrows */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             <BookOpen className="h-3 w-3 text-primary" />
             Current Borrows
           </h2>
@@ -54,7 +54,7 @@ export function ActivitySection({
         {activeBorrows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
              <BookOpen size={24} className="mb-2" />
-             <p className="text-[10px] font-bold uppercase tracking-widest">No active borrows</p>
+             <p className="text-[11px] font-bold uppercase tracking-widest">No active borrows</p>
           </div>
         ) : (
           <div className="grid gap-2">
@@ -72,12 +72,12 @@ export function ActivitySection({
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">{borrow.books?.title || 'Unknown Book'}</p>
-                      <p className="text-[10px] font-bold text-muted-foreground tracking-tight" suppressHydrationWarning>
+                      <p className="text-[11px] font-bold text-muted-foreground tracking-tight" suppressHydrationWarning>
                         Due {mounted ? new Date(borrow.due_date).toLocaleDateString() : '...'}
                       </p>
                     </div>
                   </div>
-                  <Badge variant={borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[9px] px-1.5 py-0">
+                  <Badge variant={borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[11px] px-1.5 py-0">
                     {borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'Overdue' : 'Active'}
                   </Badge>
                 </CardContent>
@@ -90,7 +90,7 @@ export function ActivitySection({
       {/* My Reservations & Holds */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
+          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
             <Ticket className="h-3 w-3" />
             Reservations
           </h2>
@@ -99,7 +99,7 @@ export function ActivitySection({
         {reservations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
             <Bookmark className="h-5 w-5 text-muted-foreground/20 mb-2" />
-            <p className="text-[10px] font-bold uppercase tracking-widest">No active reservations</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest">No active reservations</p>
           </div>
         ) : (
           <div className="grid gap-2">
@@ -123,13 +123,13 @@ export function ActivitySection({
                       <p className="truncate text-xs font-black text-foreground/90 leading-tight">
                         {res.books?.title || 'Unknown Book'}
                       </p>
-                      <p className={`text-[9px] font-bold uppercase ${isReady ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                      <p className={`text-[11px] font-bold uppercase ${isReady ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                         {isReady ? 'Ready for Pickup' : `Queue Position #${res.queue_position}`}
                       </p>
                     </div>
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <button onClick={() => onCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="text-[9px] font-bold text-muted-foreground/50 hover:text-destructive flex items-center gap-1 disabled:opacity-30">
+                      <button onClick={() => onCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="text-[11px] font-bold text-muted-foreground hover:text-destructive flex items-center gap-1 disabled:opacity-30">
                         <XCircle size={12} /> Cancel
                       </button>
                     </div>
@@ -144,11 +144,11 @@ export function ActivitySection({
       {/* Recent Attendance */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             <Clock className="h-3 w-3 text-primary" />
             Recent Attendance
           </h2>
-          <a href="/attendance" className="text-[9px] font-bold text-primary hover:underline flex items-center gap-1">
+          <a href="/attendance" className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
             View All <ArrowRight size={10} />
           </a>
         </div>
@@ -156,7 +156,7 @@ export function ActivitySection({
         {attendanceLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
             <Clock className="h-5 w-5 text-muted-foreground/20 mb-2" />
-            <p className="text-[10px] font-bold uppercase tracking-widest">No logs yet</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest">No logs yet</p>
           </div>
         ) : (
           <div className="grid gap-2">
@@ -164,27 +164,27 @@ export function ActivitySection({
               <Card key={log.id} className="border-border/10 bg-card/5 shadow-none backdrop-blur-sm">
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-muted-foreground">
+                    <p className="text-[11px] font-bold text-muted-foreground">
                       {mounted ? new Date(log.check_in_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '...'}
                     </p>
                     <div className="flex items-center gap-2">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-foreground/90">
+                        <span className="text-[11px] font-black text-foreground/90">
                           {mounted ? new Date(log.check_in_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '--:--'}
                         </span>
-                        <span className="text-[8px] font-bold text-green-600/70 uppercase">In</span>
+                        <span className="text-[11px] font-bold text-green-600/70 uppercase">In</span>
                       </div>
                       <div className="h-4 w-px bg-border/40" />
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-foreground/90">
+                        <span className="text-[11px] font-black text-foreground/90">
                           {log.check_out_at ? (mounted ? new Date(log.check_out_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '--:--') : 'Active'}
                         </span>
-                        <span className="text-[8px] font-bold text-orange-600/70 uppercase">Out</span>
+                        <span className="text-[11px] font-bold text-orange-600/70 uppercase">Out</span>
                       </div>
                     </div>
                   </div>
                   {log.check_out_at ? (
-                    <Badge variant="outline" className="text-[8px] h-5 bg-muted/20 border-none font-bold">
+                    <Badge variant="outline" className="text-[11px] h-5 bg-muted/20 border-none font-bold">
                       {(() => {
                         const start = new Date(log.check_in_at);
                         const end = new Date(log.check_out_at);
@@ -195,7 +195,7 @@ export function ActivitySection({
                       })()}
                     </Badge>
                   ) : (
-                    <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-none text-[8px] h-5 font-bold animate-pulse">
+                    <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-none text-[11px] h-5 font-bold animate-pulse">
                       Live
                     </Badge>
                   )}

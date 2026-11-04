@@ -26,11 +26,9 @@ export type ProfileStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'G
 export type LibraryCardStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'EXPIRED' | 'ARCHIVED';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 export type NotificationType = 'SYSTEM' | 'CIRCULATION' | 'RESERVATION' | 'OVERDUE' | 'ACCOUNT' | 'DUE_SOON' | 'RESERVATION_EXPIRED' | 'GENERAL';
-export type AnnouncementPriority = 'low' | 'medium' | 'high' | 'critical';
-export type ReportStatus = 'pending' | 'resolved' | 'dismissed';
 
 /* -------------------------------------------------------------------------- */
-/* Table Row Types (All 20 Public Tables)                                     */
+/* Table Row Types (All 14 Public Tables)                                     */
 /* -------------------------------------------------------------------------- */
 
 export interface CategoriesRow {
@@ -200,63 +198,6 @@ export interface UiPreferencesRow {
   updated_at: string;
 }
 
-export interface AnnouncementsRow {
-  id: string;
-  title: string;
-  content: string;
-  priority: AnnouncementPriority;
-  is_active: boolean;
-  target_role: UserRole | null;
-  starts_at: string;
-  expires_at: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
-}
-
-export interface ReportsRow {
-  id: string;
-  book_id: string | null;
-  user_id: string | null;
-  notes: string | null;
-  status: ReportStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DeletedProfileInfoRow {
-  id: string;
-  original_profile_id: string | null;
-  anonymized_at: string;
-  deletion_reason: string | null;
-  retained_borrow_count: number;
-}
-
-export interface RateLimitLogRow {
-  id: string;
-  user_id: string;
-  action_key: string;
-  created_at: string;
-}
-
-export interface ChecklistDropdownOptionsRow {
-  id: string;
-  type: string;
-  value: string;
-  created_at: string;
-}
-
-export interface ChecklistItemsRow {
-  id: string;
-  problem: string;
-  explanation: string | null;
-  user_role: string | null;
-  module: string | null;
-  is_completed: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Complete Database Client Interface                                         */
 /* -------------------------------------------------------------------------- */
@@ -278,12 +219,6 @@ export interface Database {
       notifications: { Row: NotificationsRow; Insert: Partial<NotificationsRow>; Update: Partial<NotificationsRow> };
       attendance: { Row: AttendanceRow; Insert: Partial<AttendanceRow>; Update: Partial<AttendanceRow> };
       ui_preferences: { Row: UiPreferencesRow; Insert: Partial<UiPreferencesRow>; Update: Partial<UiPreferencesRow> };
-      announcements: { Row: AnnouncementsRow; Insert: Partial<AnnouncementsRow>; Update: Partial<AnnouncementsRow> };
-      reports: { Row: ReportsRow; Insert: Partial<ReportsRow>; Update: Partial<ReportsRow> };
-      deleted_profile_info: { Row: DeletedProfileInfoRow; Insert: Partial<DeletedProfileInfoRow>; Update: Partial<DeletedProfileInfoRow> };
-      rate_limit_log: { Row: RateLimitLogRow; Insert: Partial<RateLimitLogRow>; Update: Partial<RateLimitLogRow> };
-      checklist_dropdown_options: { Row: ChecklistDropdownOptionsRow; Insert: Partial<ChecklistDropdownOptionsRow>; Update: Partial<ChecklistDropdownOptionsRow> };
-      checklist_items: { Row: ChecklistItemsRow; Insert: Partial<ChecklistItemsRow>; Update: Partial<ChecklistItemsRow> };
     };
     Views: Record<string, never>;
     Functions: {

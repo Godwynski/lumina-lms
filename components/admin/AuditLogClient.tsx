@@ -305,7 +305,7 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 p-4 bg-primary/[0.03] rounded-2xl border border-primary/10">
         {fields.map(([k, v]) => (
           <div key={k} className="flex flex-col gap-1 min-w-0">
-            <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">{k.replace(/_/g, ' ')}</span>
+            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{k.replace(/_/g, ' ')}</span>
             <span className="text-xs font-bold text-primary truncate">{formatValue(v)}</span>
           </div>
         ))}
@@ -322,7 +322,7 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 p-4 bg-muted/20 rounded-2xl border border-border/5 opacity-60">
         {fields.map(([k, v]) => (
           <div key={k} className="flex flex-col gap-1 min-w-0 line-through decoration-muted-foreground/30">
-            <span className="text-[9px] font-black text-muted-foreground/30 uppercase tracking-widest">{k.replace(/_/g, ' ')}</span>
+            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{k.replace(/_/g, ' ')}</span>
             <span className="text-xs font-medium text-muted-foreground truncate">{formatValue(v)}</span>
           </div>
         ))}
@@ -345,7 +345,7 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
     <div className="space-y-1 bg-muted/10 rounded-lg p-3 border border-border/10 overflow-x-auto">
       {changes.map(k => (
         <div key={k} className="flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] py-1 border-b border-border/5 last:border-0 font-mono">
-          <span className="font-bold text-muted-foreground/70 w-32 shrink-0 truncate">
+          <span className="font-bold text-muted-foreground w-32 shrink-0 truncate">
             {k}
           </span>
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -482,7 +482,7 @@ export function AuditLogClient() {
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors p-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5"
                   title="Clear search"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -501,7 +501,7 @@ export function AuditLogClient() {
                 <SelectContent className="rounded-2xl border-border/40 max-h-[360px]">
                   {ENTITY_GROUPS.map((group) => (
                     <SelectGroup key={group.name}>
-                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 py-1.5">
+                      <SelectLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 py-1.5">
                         {group.name}
                       </SelectLabel>
                       {group.items.map((item) => (
@@ -513,7 +513,7 @@ export function AuditLogClient() {
                         >
                           <div className="flex flex-col text-left">
                             <span className="font-semibold text-xs text-foreground">{item.label}</span>
-                            <span className="text-[10px] text-muted-foreground truncate">{item.description}</span>
+                            <span className="text-[11px] text-muted-foreground truncate">{item.description}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -537,7 +537,7 @@ export function AuditLogClient() {
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 <span>Filters</span>
                 {activeAdvancedFilterCount > 0 && (
-                  <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                  <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center">
                     {activeAdvancedFilterCount}
                   </span>
                 )}
@@ -549,7 +549,7 @@ export function AuditLogClient() {
                 size="sm"
                 onClick={handleClearAllFilters}
                 className={cn(
-                  "h-10 rounded-2xl bg-background text-[10px] font-bold uppercase tracking-wider px-3.5 border border-border/20 hover:bg-muted transition-all flex items-center gap-1.5",
+                  "h-10 rounded-2xl bg-background text-[11px] font-bold uppercase tracking-wider px-3.5 border border-border/20 hover:bg-muted transition-all flex items-center gap-1.5",
                   !hasAnyFilterActive && "text-muted-foreground"
                 )}
                 title="Clear all filters, dates, actions, and search keywords"
@@ -562,7 +562,7 @@ export function AuditLogClient() {
                 variant="default"
                 size="sm"
                 onClick={() => setIsExportImportOpen(true)}
-                className="h-10 rounded-2xl text-[10px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
+                className="h-10 rounded-2xl text-[11px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 <span>Export / Import</span>
@@ -608,7 +608,7 @@ export function AuditLogClient() {
         {data?.logs && data.logs.length > 0 && (
           <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="border-b border-border/20 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                <tr className="border-b border-border/20 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
                   <th className="p-3 font-bold w-48">Timestamp (UTC)</th>
                   <th className="p-3 font-bold w-48">Admin</th>
                   <th className="p-3 font-bold">Action</th>
@@ -645,7 +645,7 @@ export function AuditLogClient() {
                         </td>
                         <td className="p-3">
                           <Badge variant="outline" className={cn(
-                            "font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded shadow-xs border-transparent",
+                            "font-bold text-[11px] uppercase tracking-wider px-2 py-0.5 rounded shadow-xs border-transparent",
                             log.action === "create" ? "bg-green-500/10 text-green-600" :
                             log.action === "archive" ? "bg-amber-500/10 text-amber-600" :
                             log.action === "delete" ? "bg-red-500/10 text-red-600" :
@@ -667,13 +667,13 @@ export function AuditLogClient() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider hover:bg-background border border-border/10"
+                              className="h-7 px-2 text-[11px] font-bold uppercase tracking-wider hover:bg-background border border-border/10"
                               onClick={(e) => { e.stopPropagation(); setExpandedRowId(isExpanded ? null : log.id); }}
                             >
                               {isExpanded ? "Hide" : "View"}
                             </Button>
                           ) : (
-                            <span className="text-[10px] text-muted-foreground/40 italic">None</span>
+                            <span className="text-[11px] text-muted-foreground italic">None</span>
                           )}
                         </td>
                       </tr>
@@ -686,7 +686,7 @@ export function AuditLogClient() {
                                 <div className="space-y-4">
                                   {Array.isArray(details.added) && details.added.length > 0 && (
                                     <div className="space-y-2">
-                                      <span className="text-[10px] font-black uppercase tracking-[0.1em] text-green-600/80 flex items-center gap-2">
+                                      <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-600/80 flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                                         Added Elements
                                       </span>
@@ -696,7 +696,7 @@ export function AuditLogClient() {
                                             {typeof item === 'object' && item !== null ? (
                                               Object.entries(item).map(([k, v]) => (
                                                 <div key={k} className="flex gap-2">
-                                                  <span className="font-bold text-[10px] uppercase text-muted-foreground/50 w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
+                                                  <span className="font-bold text-[11px] uppercase text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
                                                   <span className="font-mono text-[11px] truncate">{formatValue(v)}</span>
                                                 </div>
                                               ))
@@ -711,7 +711,7 @@ export function AuditLogClient() {
 
                                   {Array.isArray(details.removed) && details.removed.length > 0 && (
                                     <div className="space-y-2">
-                                      <span className="text-[10px] font-black uppercase tracking-[0.1em] text-red-600/80 flex items-center gap-2">
+                                      <span className="text-[11px] font-black uppercase tracking-[0.1em] text-red-600/80 flex items-center gap-2">
                                         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                                         Removed Elements
                                       </span>
@@ -721,7 +721,7 @@ export function AuditLogClient() {
                                             {typeof item === 'object' && item !== null ? (
                                               Object.entries(item).map(([k, v]) => (
                                                 <div key={k} className="flex gap-2">
-                                                  <span className="font-bold text-[10px] uppercase text-muted-foreground/50 w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
+                                                  <span className="font-bold text-[11px] uppercase text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
                                                   <span className="font-mono text-[11px] truncate">{formatValue(v)}</span>
                                                 </div>
                                               ))
@@ -739,7 +739,7 @@ export function AuditLogClient() {
                                     .filter(([k]) => k !== 'added' && k !== 'removed' && !IGNORED_KEYS.includes(k))
                                     .map(([k, v]) => (
                                       <div key={k} className="flex gap-2 px-1">
-                                        <span className="font-bold text-[10px] uppercase text-muted-foreground/50 w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
+                                        <span className="font-bold text-[11px] uppercase text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
                                         <span className="font-mono text-[11px]">{formatValue(v)}</span>
                                       </div>
                                     ))
@@ -750,7 +750,7 @@ export function AuditLogClient() {
                               {/* Display Data Diff instead of Raw JSON */}
                               {(log.old_value || log.new_value) && (
                                 <div>
-                                  <span className="text-[10px] font-black uppercase tracking-[0.1em] text-primary/80 mb-2 block">Value Changes</span>
+                                  <span className="text-[11px] font-black uppercase tracking-[0.1em] text-primary/80 mb-2 block">Value Changes</span>
                                   <DataDiff oldVal={log.old_value} newVal={log.new_value} />
                                 </div>
                               )}
@@ -781,7 +781,7 @@ export function AuditLogClient() {
           <div className="space-y-4 py-3">
             {/* Action Type Filter */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Action Type
               </label>
               <Select value={actionType} onValueChange={(v) => { setActionType(v); setPage(1); }}>
@@ -801,7 +801,7 @@ export function AuditLogClient() {
                     >
                       <div className="flex flex-col text-left">
                         <span className="font-semibold text-xs text-foreground">{action.label}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">{action.description}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">{action.description}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -812,7 +812,7 @@ export function AuditLogClient() {
             {/* Date Range Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Calendar className="h-3 w-3 text-muted-foreground/60" />
                   Start Date
                 </label>
@@ -826,7 +826,7 @@ export function AuditLogClient() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Calendar className="h-3 w-3 text-muted-foreground/60" />
                   End Date
                 </label>
@@ -842,7 +842,7 @@ export function AuditLogClient() {
 
             {/* Entity Quick Select inside Modal as well */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Entity Type
               </label>
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
@@ -855,7 +855,7 @@ export function AuditLogClient() {
                 <SelectContent className="rounded-2xl border-border/40 max-h-[300px]">
                   {ENTITY_GROUPS.map((group) => (
                     <SelectGroup key={group.name}>
-                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 py-1.5">
+                      <SelectLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 py-1.5">
                         {group.name}
                       </SelectLabel>
                       {group.items.map((item) => (
@@ -867,7 +867,7 @@ export function AuditLogClient() {
                         >
                           <div className="flex flex-col text-left">
                             <span className="font-semibold text-xs text-foreground">{item.label}</span>
-                            <span className="text-[10px] text-muted-foreground truncate">{item.description}</span>
+                            <span className="text-[11px] text-muted-foreground truncate">{item.description}</span>
                           </div>
                         </SelectItem>
                       ))}

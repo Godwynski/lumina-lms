@@ -272,7 +272,7 @@ export function AttendanceClient({
             >
               <span>Today</span>
               <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none",
+                "px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none",
                 activeTab === 'today' ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}>
                 {systemTodayRecords.length}
@@ -290,7 +290,7 @@ export function AttendanceClient({
             >
               <span>All History</span>
               <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none",
+                "px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none",
                 activeTab === 'all' ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}>
                 {systemAllRecords.length}
@@ -299,7 +299,7 @@ export function AttendanceClient({
           </div>
 
           {/* Quick stats pill */}
-          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/10 text-[10px] font-medium text-muted-foreground">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/10 text-[11px] font-medium text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <strong className="text-foreground">{activeCount}</strong> active
@@ -410,12 +410,12 @@ export function AttendanceClient({
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
                     <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
                     {isInitializing && (
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-primary animate-pulse">
                         Initializing...
                       </span>
                     )}
                     {isProcessing && !isInitializing && (
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-primary animate-pulse">
                         Recording...
                       </span>
                     )}
@@ -466,7 +466,7 @@ export function AttendanceClient({
 
                     <Button 
                       variant="destructive" 
-                      className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
+                      className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[11px] font-bold uppercase tracking-wider"
                       onClick={() => stopCamera()}
                     >
                       Stop
@@ -477,7 +477,7 @@ export function AttendanceClient({
                 {/* Camera Issue Warning Banner */}
                 {cameraIssue && !cameraOpen && !isInitializing && (
                   <div className="absolute top-4 inset-x-4 z-20">
-                    <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium text-center shadow-sm">
+                    <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[11px] text-destructive font-medium text-center shadow-sm">
                       {cameraIssue}
                     </div>
                   </div>
@@ -554,13 +554,13 @@ function AttendanceTable({
         cell: (record) => (
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-muted text-muted-foreground text-[10px] font-bold">
+              <AvatarFallback className="bg-muted text-muted-foreground text-[11px] font-bold">
                 {(record.profiles?.full_name || "Student").charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <p className="truncate font-semibold text-foreground text-xs">{record.profiles?.full_name || "Student"}</p>
-              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
                 {record.profiles?.student_id ? record.profiles.student_id : format(new Date(record.check_in_at), "MMM dd, yyyy")}
               </p>
             </div>
@@ -602,7 +602,7 @@ function AttendanceTable({
                 <span>{format(new Date(record.check_out_at), "hh:mm a")}</span>
               </>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold uppercase tracking-wider text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold uppercase tracking-wider text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Active Inside
               </span>
@@ -647,11 +647,11 @@ function AttendanceTable({
                 <div className="min-w-0">
                   <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">
+                    <span className="text-[11px] text-muted-foreground font-bold uppercase">
                       {record.profiles?.student_id || format(new Date(record.check_in_at), "MMM dd")}
                     </span>
-                    <span className="opacity-20 text-[10px]">•</span>
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="opacity-20 text-[11px]">•</span>
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       <LogIn className="w-2.5 h-2.5 text-emerald-500" />
                       {format(new Date(record.check_in_at), "hh:mm a")}
                     </div>
@@ -664,7 +664,7 @@ function AttendanceTable({
                   {format(new Date(record.check_in_at), "MMMM dd, yyyy")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold">
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-bold">
                     <LogIn className="w-2.5 h-2.5 text-emerald-500" />
                     In: {format(new Date(record.check_in_at), "hh:mm a")}
                   </div>
@@ -675,7 +675,7 @@ function AttendanceTable({
           <div className="flex flex-col items-end gap-1.5">
             <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
             {record.check_out_at && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                 <LogOut className="w-2.5 h-2.5 text-orange-500" />
                 Out: {format(new Date(record.check_out_at), "hh:mm a")}
               </div>

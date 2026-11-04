@@ -52,24 +52,24 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
                 <h3 className="line-clamp-2 text-sm font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
                   {book.title}
                 </h3>
-                <p className="mt-1 truncate text-xs font-semibold text-muted-foreground/80">by {book.author}</p>
+                <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">by {book.author}</p>
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-muted/20 p-1.5 rounded-lg">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/20 p-1.5 rounded-lg">
                   <MapPin size={11} className="text-primary/70" />
-                  <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">Location:</span>
+                  <span className="font-bold uppercase tracking-widest text-[11px] opacity-70">Location:</span>
                   <span className="truncate text-foreground/90 font-medium">{book.location || "Central Shelf"}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground px-1.5">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-1.5">
                   <Layers size={11} className="text-primary/70" />
-                  <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">ISBN:</span>
+                  <span className="font-bold uppercase tracking-widest text-[11px] opacity-70">ISBN:</span>
                   <span className="truncate font-mono text-foreground/80">{book.isbn || "INTERNAL-STOCK"}</span>
                 </div>
                 {book.dewey_decimal && (
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground px-1.5">
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-1.5">
                     <Tag size={11} className="text-primary/70" />
-                    <span className="font-bold uppercase tracking-widest text-[8px] opacity-70">DDC:</span>
+                    <span className="font-bold uppercase tracking-widest text-[11px] opacity-70">DDC:</span>
                     <span className="truncate font-mono text-foreground/80">{book.dewey_decimal}</span>
                   </div>
                 )}
@@ -89,7 +89,7 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
               />
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
-                   <span className="text-[8px] font-black uppercase tracking-tighter text-destructive rotate-[-15deg] border-2 border-destructive px-1 py-0.5 rounded-sm">OUT</span>
+                   <span className="text-[11px] font-black uppercase tracking-tighter text-destructive rotate-[-15deg] border-2 border-destructive px-1 py-0.5 rounded-sm">OUT</span>
                 </div>
               )}
             </div>
@@ -98,14 +98,14 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/10">
             <div className="flex items-center gap-1.5">
               {!book.is_active ? (
-                <Badge variant="outline" className="rounded-lg px-2 py-0 h-5 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border-amber-200">
+                <Badge variant="outline" className="rounded-lg px-2 py-0 h-5 text-[11px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border-amber-200">
                   Archived
                 </Badge>
               ) : (
                 <Badge 
                   variant={isOutOfStock ? "destructive" : "secondary"} 
                   className={cn(
-                    "rounded-lg px-2 py-0 h-5 text-[9px] font-black uppercase tracking-widest transition-all duration-300",
+                    "rounded-lg px-2 py-0 h-5 text-[11px] font-black uppercase tracking-widest transition-all duration-300",
                     !isOutOfStock && "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
                   )}
                 >
@@ -113,7 +113,7 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
                 </Badge>
               )}
             </div>
-            <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground/40 transition-colors group-hover:text-primary/40">
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground transition-colors group-hover:text-primary/40">
               {book.section || "General"}
             </span>
           </div>
