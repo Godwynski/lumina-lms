@@ -52,7 +52,7 @@ const STATUS_CONFIG = {
   RESERVED:    { label: 'Reserved',    icon: Clock,        color: 'text-indigo-500',   bg: 'bg-indigo-500/5', border: 'border-indigo-500/10' },
 } as const;
 
-const EDITABLE_STATUSES = ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'LOST'] as const;
+const EDITABLE_STATUSES = ['AVAILABLE', 'MAINTENANCE', 'LOST'] as const;
 type EditableStatus = typeof EDITABLE_STATUSES[number];
 
 function isEditableStatus(v: string): v is EditableStatus {
@@ -286,8 +286,9 @@ export function AdminManagementContent({
       if (!result.success) throw new Error(result.error);
       await fetchData();
       toast.success('Status updated');
-    } catch {
-      toast.error('Status update failed');
+    } catch (err) {
+      // The server explains refusals (e.g. "This copy is on loan. Use Return first.").
+      toast.error(err instanceof Error && err.message ? err.message : 'Status update failed');
     }
   };
 
@@ -662,7 +663,7 @@ export function AdminManagementContent({
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {canManage ? (
+                      {canManage && isEditableStatus(copy.status) ? (
                         <Select value={copy.status} onValueChange={(v) => {
                           if (isEditableStatus(v)) handleStatusChange(copy.id, v);
                         }}>

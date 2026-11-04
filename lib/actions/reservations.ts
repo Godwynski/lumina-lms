@@ -4,58 +4,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createSafeAction } from './action-utils';
 import { z } from 'zod';
 
-/**
- * Assigns a specific book copy to the next person in the reservation queue.
- * If no one is waiting, marks the copy as AVAILABLE.
- */
-async function reassignCopy(bookId: string, copyId: string) {
-  const adminClient = createAdminClient();
-
-  // 1. Find next in line
-  const { data: nextInQueue } = await adminClient
-    .from('reservations')
-    .select('id')
-    .eq('book_id', bookId)
-    .eq('status', 'ACTIVE')
-    .order('queue_position', { ascending: true })
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (nextInQueue) {
-    // 2. Promote next person
-    const { data: holdData } = await adminClient
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'hold_expiry_days')
-      .single();
-
-    const holdDays = parseInt(holdData?.value ?? '3', 10);
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + holdDays);
-
-    await adminClient
-      .from('reservations')
-      .update({
-        status: 'READY',
-        copy_id: copyId,
-        hold_expires_at: expiryDate.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', nextInQueue.id);
-  } else {
-    // 3. No one waiting - return copy to shelf
-    await adminClient
-      .from('book_copies')
-      .update({ status: 'AVAILABLE', updated_at: new Date().toISOString() })
-      .eq('id', copyId);
-  }
-
-  // Final maintenance: reorder any remaining queue
-  await adminClient.rpc('compress_reservation_queue', { p_book_id: bookId });
-}
-
-
 export async function getBookAvailabilityStatus(bookId: string) {
   const supabase = await createClient();
   
@@ -131,7 +79,9 @@ export const cancelReservation = createSafeAction(
     if (error) throw new Error(error.message);
 
     if (reservation.status?.toUpperCase() === 'READY' && reservation.copy_id) {
-      await reassignCopy(reservation.book_id, reservation.copy_id);
+      // Gives the held copy to the next in line (or back to the shelf) and compacts the queue.
+      const { error: releaseError } = await adminClient.rpc('release_copy', { p_copy_id: reservation.copy_id });
+      if (releaseError) throw new Error(releaseError.message);
     } else {
       await adminClient.rpc('compress_reservation_queue', { p_book_id: reservation.book_id });
     }

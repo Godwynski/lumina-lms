@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { getBookAvailabilityStatus } from '@/lib/actions/reservations';
 import { assertStaffCatalogAccess } from './auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export interface RawCopy {
   id: string;
@@ -83,32 +84,58 @@ export const addBookCopies = createSafeAction(
 export const updateBookCopyStatus = createSafeAction(
   z.object({ 
     id: z.string(), 
-    status: z.enum(['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'LOST']) 
+    // BORROWED is not settable here: only a checkout creates the loan that goes with it.
+    status: z.enum(['AVAILABLE', 'MAINTENANCE', 'LOST'])
   }),
   async ({ id, status }, { supabase }) => {
-    const { data, error } = await supabase
+    const { data: current, error: currentError } = await supabase
       .from('book_copies')
-      .update({ status })
+      .select('status')
       .eq('id', id)
-      .select()
       .single();
-      
-    if (error) throw new Error(error.message);
+    if (currentError || !current) throw new Error(currentError?.message || 'Copy not found');
 
-    // If a copy is manually marked as AVAILABLE, MAINTENANCE, or LOST, 
-    // we must close any lingering ACTIVE/OVERDUE borrowing records to prevent DB inconsistency.
-    if (['AVAILABLE', 'MAINTENANCE', 'LOST'].includes(status)) {
-      await supabase
+    // Loans and holds own these copies; changing them here would leave the loan or hold wrong.
+    if (current.status === 'RESERVED') {
+      throw new Error('This copy is on hold for a student. Cancel the hold or check it out first.');
+    }
+    if (current.status === 'BORROWED' && status !== 'LOST') {
+      throw new Error('This copy is on loan. Use Return first.');
+    }
+
+    if (status === 'AVAILABLE' && current.status !== 'AVAILABLE') {
+      // Gives the copy to the next student in the queue, or puts it back on the shelf.
+      const { error: releaseError } = await createAdminClient().rpc('release_copy', { p_copy_id: id });
+      if (releaseError) throw new Error(releaseError.message);
+    } else {
+      // Only if the status is still what we checked, so a checkout in between isn't overwritten.
+      const { data: updated, error } = await supabase
+        .from('book_copies')
+        .update({ status })
+        .eq('id', id)
+        .eq('status', current.status)
+        .select('id');
+      if (error) throw new Error(error.message);
+      if (!updated?.length) throw new Error('The copy changed while you were editing. Refresh and try again.');
+    }
+
+    // A lost book stays on record as LOST (not RETURNED), with no return date.
+    if (status === 'LOST' && current.status === 'BORROWED') {
+      const { error: loanError } = await supabase
         .from('borrowing_records')
-        .update({ 
-          status: 'RETURNED', 
-          returned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: 'LOST', updated_at: new Date().toISOString() })
         .eq('book_copy_id', id)
         .in('status', ['ACTIVE', 'OVERDUE']);
+      if (loanError) throw new Error(loanError.message);
     }
-    
+
+    const { data, error } = await supabase
+      .from('book_copies')
+      .select()
+      .eq('id', id)
+      .single();
+    if (error) throw new Error(error.message);
+
     revalidateTag('catalog', 'max');
     revalidateTag('public-books', 'max');
     revalidateTag(`book-${data.book_id}`, 'max');

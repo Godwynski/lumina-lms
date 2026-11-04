@@ -157,81 +157,21 @@ describe('Reservations Server Actions', () => {
       expect(revalidatePath).toHaveBeenCalledWith('/student-catalog', 'page');
     });
 
-    it('cancels a READY reservation and reassigns copy to next patron in queue', async () => {
+    // M1: the held copy goes through the one SQL queue function (tested on real SQL in db-real.test.ts).
+    it('cancels a READY reservation and releases its copy to the queue', async () => {
       const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      // 1. Initial reservation lookup
       resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-patron-1',
-          book_id: 'book-cs-50',
-          status: 'READY',
-          copy_id: 'copy-cs-50-1',
-        },
+        data: { user_id: 'user-patron-1', book_id: 'book-cs-50', status: 'READY', copy_id: 'copy-cs-50-1' },
         error: null,
-      });
-
-      // 2. Next in queue lookup in reassignCopy
-      resBuilder.maybeSingle.mockResolvedValueOnce({
-        data: { id: 'next-res-uuid-2' },
-        error: null,
-      });
-
-      // 3. System settings hold_expiry_days
-      mockAdminClientHelper.setTableResponse('system_settings', {
-        value: '5',
       });
 
       const result = await cancelReservation('res-ready-1');
 
       expect(result.success).toBe(true);
-      // Promotes next patron in queue
-      expect(resBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'READY',
-          copy_id: 'copy-cs-50-1',
-          hold_expires_at: expect.any(String),
-        })
-      );
-      // Compresses reservation queue
-      expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-        p_book_id: 'book-cs-50',
-      });
-      // Book copy was NOT reverted to AVAILABLE because it was handed over to next waiter
+      expect(resBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'CANCELLED' }));
+      expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-cs-50-1' });
+      // No hand-written queue logic left in TypeScript.
       expect(mockAdminClientHelper.from).not.toHaveBeenCalledWith('book_copies');
-    });
-
-    it('cancels a READY reservation with empty queue and returns copy to shelf (AVAILABLE)', async () => {
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      const copyBuilder = mockAdminClientHelper.getTableBuilder('book_copies');
-
-      // 1. Initial reservation lookup
-      resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-patron-1',
-          book_id: 'book-phy-1',
-          status: 'READY',
-          copy_id: 'copy-phy-100',
-        },
-        error: null,
-      });
-
-      // 2. Next in queue lookup returns null (queue empty)
-      resBuilder.maybeSingle.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
-
-      const result = await cancelReservation('res-ready-empty-queue');
-
-      expect(result.success).toBe(true);
-      // Reverts book copy to AVAILABLE
-      expect(copyBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'AVAILABLE' })
-      );
-      // Compresses reservation queue
-      expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-        p_book_id: 'book-phy-1',
-      });
     });
 
     it('throws error when database update fails on cancellation', async () => {
@@ -288,94 +228,6 @@ describe('Reservations Server Actions', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toMatch(/validation/i);
-      }
-    });
-
-    it('accurately calculates hold expiry timestamp when promoting to next in queue', async () => {
-      vi.useFakeTimers();
-      const fixedNow = new Date('2026-10-06T10:00:00.000Z');
-      vi.setSystemTime(fixedNow);
-
-      try {
-        const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-        resBuilder.single.mockResolvedValueOnce({
-          data: {
-            user_id: 'user-patron-1',
-            book_id: 'book-cs-50',
-            status: 'READY',
-            copy_id: 'copy-cs-50-1',
-          },
-          error: null,
-        });
-
-        resBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'next-res-uuid-2' },
-          error: null,
-        });
-
-        mockAdminClientHelper.setTableResponse('system_settings', {
-          value: '4', // 4 days
-        });
-
-        const result = await cancelReservation('res-ready-1');
-
-        expect(result.success).toBe(true);
-        // Expiry must be exactly 4 days from fixedNow: 2026-10-10T10:00:00.000Z
-        expect(resBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({
-            status: 'READY',
-            copy_id: 'copy-cs-50-1',
-            hold_expires_at: '2026-10-10T10:00:00.000Z',
-          })
-        );
-        expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-          p_book_id: 'book-cs-50',
-        });
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it('falls back to default 3-day hold expiry when system_settings value is missing or null', async () => {
-      vi.useFakeTimers();
-      const fixedNow = new Date('2026-10-06T10:00:00.000Z');
-      vi.setSystemTime(fixedNow);
-
-      try {
-        const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-        resBuilder.single.mockResolvedValueOnce({
-          data: {
-            user_id: 'user-patron-1',
-            book_id: 'book-bio-1',
-            status: 'READY',
-            copy_id: 'copy-bio-1',
-          },
-          error: null,
-        });
-
-        resBuilder.maybeSingle.mockResolvedValueOnce({
-          data: { id: 'next-res-uuid-3' },
-          error: null,
-        });
-
-        mockAdminClientHelper.setTableResponse('system_settings', null);
-
-        const result = await cancelReservation('res-ready-fallback');
-
-        expect(result.success).toBe(true);
-        // Expiry must fall back to 3 days from fixedNow: 2026-10-09T10:00:00.000Z
-        expect(resBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({
-            status: 'READY',
-            copy_id: 'copy-bio-1',
-            hold_expires_at: '2026-10-09T10:00:00.000Z',
-          })
-        );
-        expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-          p_book_id: 'book-bio-1',
-        });
-      } finally {
-        vi.useRealTimers();
       }
     });
 

@@ -18,6 +18,10 @@ vi.mock('@/lib/auth-helpers', () => ({
   getMe: vi.fn(),
 }));
 
+vi.mock('@/lib/audit', () => ({
+  logAuditActivity: vi.fn(),
+}));
+
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
@@ -161,7 +165,7 @@ describe('Catalog Extended Server Actions', () => {
   });
 
   describe('batchImportBooks', () => {
-    it('handles duplicate by matching ISBN and adds copies to existing book', async () => {
+    it('skips duplicate by matching ISBN by default and adds copies when addCopiesToDuplicates is true', async () => {
       const existingBooks = [
         { id: 'existing-book-1', isbn: '9780131103627', title: 'The C Programming Language', author: 'Dennis Ritchie' },
       ];
@@ -176,12 +180,20 @@ describe('Catalog Extended Server Actions', () => {
         },
       ];
 
-      const result = await batchImportBooks(rows);
+      // Default: skip duplicates (0 copies added)
+      const defaultResult = await batchImportBooks(rows);
+      expect(defaultResult.success).toBe(true);
+      expect(defaultResult.duplicates).toBe(1);
+      expect(defaultResult.copiesAdded).toBe(0);
+      expect(defaultResult.imported).toBe(0);
 
-      expect(result.success).toBe(true);
-      expect(result.duplicates).toBe(1);
-      expect(result.copiesAdded).toBe(2);
-      expect(result.imported).toBe(0);
+      // Opt-in: add copies to existing book
+      const optInResult = await batchImportBooks(rows, { addCopiesToDuplicates: true });
+
+      expect(optInResult.success).toBe(true);
+      expect(optInResult.duplicates).toBe(1);
+      expect(optInResult.copiesAdded).toBe(2);
+      expect(optInResult.imported).toBe(0);
 
       const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
       expect(copyBuilder.insert).toHaveBeenCalledWith([
@@ -190,7 +202,7 @@ describe('Catalog Extended Server Actions', () => {
       ]);
     });
 
-    it('handles duplicate by matching Title and Author case-insensitively', async () => {
+    it('handles duplicate by matching Title and Author case-insensitively (default skip vs opt-in copies)', async () => {
       const existingBooks = [
         { id: 'existing-book-2', isbn: null, title: 'Clean Architecture', author: 'Robert Martin' },
       ];
@@ -204,21 +216,75 @@ describe('Catalog Extended Server Actions', () => {
         },
       ];
 
-      const result = await batchImportBooks(rows);
+      const skipped = await batchImportBooks(rows);
+      expect(skipped.duplicates).toBe(1);
+      expect(skipped.copiesAdded).toBe(0);
+      expect(skipped.imported).toBe(0);
 
-      expect(result.duplicates).toBe(1);
-      expect(result.copiesAdded).toBe(3);
-      expect(result.imported).toBe(0);
+      const added = await batchImportBooks(rows, { addCopiesToDuplicates: true });
+      expect(added.duplicates).toBe(1);
+      expect(added.copiesAdded).toBe(3);
+      expect(added.imported).toBe(0);
+    });
+
+    it('imports 500 rows in under 10 seconds in bulk, and importing again adds 0 copies (M3 Gate 4)', async () => {
+      const rows: ImportBookRow[] = Array.from({ length: 500 }, (_, i) => ({
+        title: `Bulk Title ${i + 1}`,
+        author: `Bulk Author ${i + 1}`,
+        isbn: `978000000${String(i + 1).padStart(4, '0')}`,
+        stock: 2,
+      }));
+
+      // First run: no existing books; insert returns 500 book rows
+      const insertedBooks = rows.map((r, i) => ({
+        id: `bulk-book-${i + 1}`,
+        title: r.title,
+        author: r.author,
+        isbn: String(r.isbn),
+      }));
+
+      mockClientHelper.setTableResponse('books', []);
+      const booksBuilder = mockClientHelper.getTableBuilder('books');
+      booksBuilder.insert.mockReturnValueOnce({
+        select: vi.fn().mockResolvedValueOnce({ data: insertedBooks, error: null }),
+      } as unknown as ReturnType<typeof booksBuilder.insert>);
+
+      const start = performance.now();
+      const firstResult = await batchImportBooks(rows);
+      const elapsedMs = performance.now() - start;
+
+      expect(elapsedMs).toBeLessThan(10000);
+      expect(firstResult.success).toBe(true);
+      expect(firstResult.imported).toBe(500);
+      expect(firstResult.copiesAdded).toBe(1000);
+      expect(firstResult.duplicates).toBe(0);
+
+      // Verify bulk insert was called once for books and once for book_copies
+      expect(booksBuilder.insert).toHaveBeenCalledTimes(1);
+      const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
+      expect(copyBuilder.insert).toHaveBeenCalledTimes(1);
+
+      // Second run: all 500 books already exist in DB
+      vi.clearAllMocks();
+      mockClientHelper.setTableResponse('books', insertedBooks);
+      const secondResult = await batchImportBooks(rows);
+      expect(secondResult.success).toBe(true);
+      expect(secondResult.imported).toBe(0);
+      expect(secondResult.copiesAdded).toBe(0);
+      expect(secondResult.duplicates).toBe(500);
+      expect(copyBuilder.insert).not.toHaveBeenCalled();
     });
 
     it('imports new book records and resolves existing categories', async () => {
       mockClientHelper.setTableResponse('books', []); // No existing books initially
       mockClientHelper.setTableResponse('categories', { id: 'cat-db-id' }); // Category found
 
-      const insertedBook = { id: 'new-book-1', title: 'Refactoring' };
+      const insertedBook = { id: 'new-book-1', title: 'Refactoring', author: 'Martin Fowler' };
       const booksBuilder = mockClientHelper.getTableBuilder('books');
-      // First select is for duplicate check, then insert().select().single()
-      booksBuilder.single.mockResolvedValueOnce({ data: insertedBook, error: null });
+      // Bulk insert: insert([...]).select() returns the new rows
+      booksBuilder.insert.mockReturnValueOnce({
+        select: vi.fn().mockResolvedValueOnce({ data: [insertedBook], error: null }),
+      } as unknown as ReturnType<typeof booksBuilder.insert>);
 
       const rows: ImportBookRow[] = [
         {
@@ -250,7 +316,9 @@ describe('Catalog Extended Server Actions', () => {
       catBuilder.single.mockResolvedValueOnce({ data: { id: 'new-cat-id' }, error: null });
 
       const booksBuilder = mockClientHelper.getTableBuilder('books');
-      booksBuilder.single.mockResolvedValueOnce({ data: { id: 'book-new' }, error: null });
+      booksBuilder.insert.mockReturnValueOnce({
+        select: vi.fn().mockResolvedValueOnce({ data: [{ id: 'book-new', title: 'Deep Learning', author: 'Ian Goodfellow' }], error: null }),
+      } as unknown as ReturnType<typeof booksBuilder.insert>);
 
       const rows: ImportBookRow[] = [
         {
@@ -271,6 +339,24 @@ describe('Catalog Extended Server Actions', () => {
           is_active: true,
         }),
       ]);
+    });
+
+    it('caps stock at 50 and treats a repeated row in the same file as a duplicate', async () => {
+      mockClientHelper.setTableResponse('books', []);
+      const booksBuilder = mockClientHelper.getTableBuilder('books');
+      booksBuilder.insert.mockReturnValueOnce({
+        select: vi.fn().mockResolvedValueOnce({ data: [{ id: 'b-1', title: 'SICP', author: 'Abelson' }], error: null }),
+      } as unknown as ReturnType<typeof booksBuilder.insert>);
+
+      const result = await batchImportBooks([
+        { title: 'SICP', author: 'Abelson', stock: 80 },
+        { title: 'sicp', author: 'ABELSON', stock: 5 },
+      ]);
+
+      expect(result.imported).toBe(1);
+      expect(result.duplicates).toBe(1);
+      expect(result.copiesAdded).toBe(50);
+      expect(booksBuilder.insert.mock.calls[0][0]).toHaveLength(1);
     });
 
     it('skips rows with missing title or author', async () => {

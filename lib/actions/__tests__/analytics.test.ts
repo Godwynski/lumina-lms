@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getAnalyticsSummary, type AnalyticsRange } from '../analytics';
 import { getMe } from '@/lib/auth-helpers';
-import { createMockQueryBuilder, createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/mocks/supabase';
+import { createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/mocks/supabase';
 import type { ProfileData, UserRole } from '@/lib/types';
 
 vi.mock('@/lib/auth-helpers', () => ({
@@ -80,167 +80,40 @@ describe('Analytics Server Actions', () => {
     });
   });
 
-  describe('Date Range Windows', () => {
-    it('calculates 7-day interval data points for range="7d"', async () => {
-      mockClientHelper.setTableResponse('attendance', []);
-      mockClientHelper.setTableResponse('borrowing_records', []);
-
-      const result = await getAnalyticsSummary('7d');
-
-      // 7 days interval (6 days ago through today inclusive)
-      expect(result.attendanceTrends).toHaveLength(7);
-      expect(result.borrowingTrends).toHaveLength(7);
-      expect(result.attendanceTrends[0].count).toBe(0);
+  // Counting and grouping happen in SQL (get_analytics_summary); db-real.test.ts checks them on real
+  // Postgres, past the 1,000-row API limit. These tests cover the call and the result handling.
+  describe('get_analytics_summary RPC', () => {
+    it.each(['7d', '30d', '1y'] as AnalyticsRange[])('passes range %s to the SQL function', async (range) => {
+      await getAnalyticsSummary(range);
+      expect(mockClientHelper.rpc).toHaveBeenCalledWith('get_analytics_summary', { p_range: range });
     });
 
-    it('calculates 30-day interval data points for range="30d"', async () => {
-      mockClientHelper.setTableResponse('attendance', []);
-      mockClientHelper.setTableResponse('borrowing_records', []);
-
-      const result = await getAnalyticsSummary('30d');
-
-      expect(result.attendanceTrends).toHaveLength(30);
-      expect(result.borrowingTrends).toHaveLength(30);
-    });
-
-    it('calculates monthly interval data points for range="1y"', async () => {
-      mockClientHelper.setTableResponse('attendance', []);
-      mockClientHelper.setTableResponse('borrowing_records', []);
-
-      const result = await getAnalyticsSummary('1y');
-
-      // 12-13 months interval depending on current date
-      expect(result.attendanceTrends.length).toBeGreaterThanOrEqual(12);
-      expect(result.attendanceTrends[0].label).toMatch(/[A-Za-z]{3}\s\d{4}/);
-    });
-
-    it('defaults to 30 days when range is unknown or unsupported', async () => {
-      mockClientHelper.setTableResponse('attendance', []);
-      mockClientHelper.setTableResponse('borrowing_records', []);
-
-      const result = await getAnalyticsSummary('invalid-range' as AnalyticsRange);
-
-      expect(result.attendanceTrends).toHaveLength(30);
-    });
-  });
-
-  describe('Metric Aggregations', () => {
-    it('aggregates peak visiting hours between 8 AM and 6 PM and ignores hours outside range', async () => {
-      const createTime = (hour: number) => {
-        const padded = String(hour).padStart(2, '0');
-        return `2026-10-27T${padded}:15:00+08:00`;
+    it('returns the SQL summary as is', async () => {
+      const summary = {
+        attendanceTrends: [{ label: 'Nov 04', count: 1500 }],
+        borrowingTrends: [{ label: 'Nov 04', count: 1200 }],
+        categoryDistribution: [{ name: 'Science', value: 900 }],
+        peakHours: [{ hour: '9 AM', count: 300 }],
+        popularBooks: [{ id: 'b-1', title: 'SICP', count: 42 }],
       };
-
-      const mockAttendance = [
-        { check_in_at: createTime(9) },  // 9 AM
-        { check_in_at: createTime(9) },  // 9 AM
-        { check_in_at: createTime(14) }, // 2 PM
-        { check_in_at: createTime(6) },  // 6 AM (outside range 8..18 -> ignored)
-        { check_in_at: createTime(20) }, // 8 PM (outside range 8..18 -> ignored)
-      ];
-
-      mockClientHelper.setTableResponse('attendance', mockAttendance);
-      mockClientHelper.setTableResponse('borrowing_records', []);
-
-      const result = await getAnalyticsSummary('7d');
-
-      // Hours 8 to 18 = 11 hourly slots
-      expect(result.peakHours).toHaveLength(11);
-
-      const hour9 = result.peakHours.find((h) => h.hour === '9 AM');
-      expect(hour9?.count).toBe(2);
-
-      const hour2PM = result.peakHours.find((h) => h.hour === '2 PM');
-      expect(hour2PM?.count).toBe(1);
-
-      const hour10AM = result.peakHours.find((h) => h.hour === '10 AM');
-      expect(hour10AM?.count).toBe(0);
+      mockClientHelper.setRpcResponse(summary, null, 'get_analytics_summary');
+      await expect(getAnalyticsSummary('30d')).resolves.toEqual(summary);
     });
 
-    it('aggregates category distribution and sorts by popularity descending', async () => {
-      mockClientHelper.setTableResponse('attendance', []);
-
-      const mockBorrowing = [
-        {
-          borrowed_at: new Date().toISOString(),
-          status: 'ACTIVE',
-          book_copies: { books: { categories: { name: 'Fiction' } } },
-        },
-        {
-          borrowed_at: new Date().toISOString(),
-          status: 'RETURNED',
-          book_copies: { books: { categories: { name: 'Science' } } },
-        },
-        {
-          borrowed_at: new Date().toISOString(),
-          status: 'RETURNED',
-          book_copies: { books: { categories: { name: 'Science' } } },
-        },
-        {
-          borrowed_at: new Date().toISOString(),
-          status: 'ACTIVE',
-          book_copies: { books: { categories: null } }, // Should default to 'General'
-        },
-      ];
-
-      mockClientHelper.setTableResponse('borrowing_records', mockBorrowing);
-
-      const result = await getAnalyticsSummary('7d');
-
-      expect(result.categoryDistribution).toEqual([
-        { name: 'Science', value: 2 },
-        { name: 'Fiction', value: 1 },
-        { name: 'General', value: 1 },
-      ]);
-    });
-
-    it('aggregates popular books by id, limits to top 5, and sorts descending by count', async () => {
-      mockClientHelper.setTableResponse('attendance', []);
-
-      const mockPopularRecords = [
-        { book_copies: { books: { id: 'book-A', title: 'Algorithms' } } },
-        { book_copies: { books: { id: 'book-A', title: 'Algorithms' } } },
-        { book_copies: { books: { id: 'book-A', title: 'Algorithms' } } },
-        { book_copies: { books: { id: 'book-B', title: 'Clean Code' } } },
-        { book_copies: { books: { id: 'book-B', title: 'Clean Code' } } },
-        { book_copies: { books: { id: 'book-C', title: 'Design Patterns' } } },
-        { book_copies: { books: { id: 'book-D', title: 'Operating Systems' } } },
-        { book_copies: { books: { id: 'book-E', title: 'Networks' } } },
-        { book_copies: { books: { id: 'book-F', title: 'Compilers' } } },
-      ];
-
-      let borrowingQueryCount = 0;
-      const bBuilder1 = createMockQueryBuilder([]);
-      const bBuilder2 = createMockQueryBuilder(mockPopularRecords);
-
-      mockClientHelper.from.mockImplementation((table: string) => {
-        if (table === 'borrowing_records') {
-          borrowingQueryCount++;
-          return borrowingQueryCount === 1 ? bBuilder1 : bBuilder2;
-        }
-        return mockClientHelper.getTableBuilder(table);
+    it('returns empty lists when the function returns nothing', async () => {
+      mockClientHelper.setRpcResponse(null, null, 'get_analytics_summary');
+      await expect(getAnalyticsSummary('7d')).resolves.toEqual({
+        attendanceTrends: [],
+        borrowingTrends: [],
+        categoryDistribution: [],
+        peakHours: [],
+        popularBooks: [],
       });
-
-      const result = await getAnalyticsSummary('7d');
-
-      expect(result.popularBooks).toHaveLength(5);
-      expect(result.popularBooks[0]).toEqual({ id: 'book-A', title: 'Algorithms', count: 3 });
-      expect(result.popularBooks[1]).toEqual({ id: 'book-B', title: 'Clean Code', count: 2 });
-      expect(result.popularBooks[2]).toEqual({ id: 'book-C', title: 'Design Patterns', count: 1 });
     });
 
-    it('handles empty database results gracefully without runtime errors', async () => {
-      mockClientHelper.setTableResponse('attendance', null);
-      mockClientHelper.setTableResponse('borrowing_records', null);
-
-      const result = await getAnalyticsSummary('7d');
-
-      expect(result.attendanceTrends).toHaveLength(7);
-      expect(result.borrowingTrends).toHaveLength(7);
-      expect(result.categoryDistribution).toEqual([]);
-      expect(result.popularBooks).toEqual([]);
-      expect(result.peakHours).toHaveLength(11);
-      expect(result.peakHours.every((h) => h.count === 0)).toBe(true);
+    it('throws when the SQL function fails', async () => {
+      mockClientHelper.setRpcResponse(null, { message: 'boom' }, 'get_analytics_summary');
+      await expect(getAnalyticsSummary('7d')).rejects.toThrow('boom');
     });
   });
 });

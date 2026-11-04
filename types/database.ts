@@ -18,7 +18,7 @@ export type Json =
 /* -------------------------------------------------------------------------- */
 
 export type UserRole = 'super_admin' | 'librarian' | 'student' | 'student_assistant';
-export type BorrowStatus = 'ACTIVE' | 'RETURNED' | 'OVERDUE';
+export type BorrowStatus = 'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'LOST';
 export type ReservationStatus = 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
 
 export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
@@ -113,6 +113,7 @@ export interface BorrowingRecordsRow {
   status: BorrowStatus;
   returned_by: string | null;
   reminder_sent: boolean;
+  overdue_notified: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -332,6 +333,39 @@ export interface Database {
       };
       auto_checkout_forgotten_attendance: {
         Args: Record<string, never>;
+        Returns: number;
+      };
+      release_copy: {
+        Args: {
+          p_copy_id: string;
+        };
+        Returns: Json;
+      };
+      annual_student_reset: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      get_analytics_summary: {
+        Args: {
+          p_range?: string;
+        };
+        Returns: Json;
+      };
+      send_bulk_notifications_by_target: {
+        Args: {
+          p_target: string;
+          p_title: string;
+          p_content: string;
+          p_type?: string;
+          p_priority?: string;
+          p_metadata?: Json;
+        };
+        Returns: number;
+      };
+      reactivate_users_bulk: {
+        Args: {
+          p_user_ids: string[];
+        };
         Returns: number;
       };
     };

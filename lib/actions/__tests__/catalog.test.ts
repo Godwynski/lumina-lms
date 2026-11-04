@@ -19,6 +19,9 @@ vi.mock('@/lib/auth-helpers', () => ({
   getMe: vi.fn(),
 }));
 
+const adminRpc = vi.fn().mockResolvedValue({ data: { ok: true }, error: null });
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ rpc: adminRpc }) }));
+
 vi.mock('@/lib/audit', () => ({
   logAuditActivity: vi.fn(),
 }));
@@ -259,93 +262,62 @@ describe('Catalog Server Actions', () => {
       }
     });
 
-    it('updates copy to MAINTENANCE and closes lingering active or overdue borrows', async () => {
-      const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-      const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
+    // M2: loans and holds own BORROWED/RESERVED copies; LOST is its own loan status; AVAILABLE releases.
+    const currentStatus = (status: string) =>
+      mockClientHelper.getTableBuilder('book_copies').single
+        .mockResolvedValueOnce({ data: { status }, error: null })
+        .mockResolvedValueOnce({ data: { id: 'copy-1', book_id: 'book-100', status: 'X' }, error: null });
 
-      copyBuilder.single.mockResolvedValueOnce({
-        data: { id: 'copy-m-1', book_id: 'book-100', status: 'MAINTENANCE' },
-        error: null,
-      });
-
-      const result = await updateBookCopyStatus({
-        id: 'copy-m-1',
-        status: 'MAINTENANCE',
-      });
+    it('sets MAINTENANCE only if the status is unchanged, and leaves loans alone', async () => {
+      currentStatus('AVAILABLE');
+      mockClientHelper.setTableResponse('book_copies', [{ id: 'copy-1' }]);
+      const result = await updateBookCopyStatus({ id: 'copy-1', status: 'MAINTENANCE' });
 
       expect(result.success).toBe(true);
-      expect(copyBuilder.update).toHaveBeenCalledWith({ status: 'MAINTENANCE' });
-
-      // Closes active/overdue borrows
-      expect(borrowBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'RETURNED' })
-      );
-      expect(borrowBuilder.eq).toHaveBeenCalledWith('book_copy_id', 'copy-m-1');
-      expect(borrowBuilder.in).toHaveBeenCalledWith('status', ['ACTIVE', 'OVERDUE']);
-
-      // Revalidates paths
-      expect(revalidatePath).toHaveBeenCalledWith('/catalog');
+      const copies = mockClientHelper.getTableBuilder('book_copies');
+      expect(copies.update).toHaveBeenCalledWith({ status: 'MAINTENANCE' });
+      expect(copies.eq).toHaveBeenCalledWith('status', 'AVAILABLE');
+      expect(mockClientHelper.getTableBuilder('borrowing_records').update).not.toHaveBeenCalled();
       expect(revalidatePath).toHaveBeenCalledWith('/catalog/book-100');
     });
 
-    it('updates copy to LOST and closes lingering borrows', async () => {
-      const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-      const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
-
-      copyBuilder.single.mockResolvedValueOnce({
-        data: { id: 'copy-l-1', book_id: 'book-200', status: 'LOST' },
-        error: null,
-      });
-
-      const result = await updateBookCopyStatus({
-        id: 'copy-l-1',
-        status: 'LOST',
-      });
+    it('marks the open loan LOST (not RETURNED, no return date) when a borrowed copy is lost', async () => {
+      currentStatus('BORROWED');
+      mockClientHelper.setTableResponse('book_copies', [{ id: 'copy-1' }]);
+      const result = await updateBookCopyStatus({ id: 'copy-1', status: 'LOST' });
 
       expect(result.success).toBe(true);
-      expect(borrowBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'RETURNED' })
-      );
+      const loans = mockClientHelper.getTableBuilder('borrowing_records');
+      expect(loans.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'LOST' }));
+      expect(loans.update.mock.calls[0][0]).not.toHaveProperty('returned_at');
+      expect(loans.in).toHaveBeenCalledWith('status', ['ACTIVE', 'OVERDUE']);
     });
 
-    it('updates copy to AVAILABLE and closes lingering borrows', async () => {
-      const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-      const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
-
-      copyBuilder.single.mockResolvedValueOnce({
-        data: { id: 'copy-a-1', book_id: 'book-300', status: 'AVAILABLE' },
-        error: null,
-      });
-
-      const result = await updateBookCopyStatus({
-        id: 'copy-a-1',
-        status: 'AVAILABLE',
-      });
+    it('releases the copy to the queue when it becomes AVAILABLE', async () => {
+      currentStatus('MAINTENANCE');
+      const result = await updateBookCopyStatus({ id: 'copy-1', status: 'AVAILABLE' });
 
       expect(result.success).toBe(true);
-      expect(borrowBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'RETURNED' })
-      );
+      expect(adminRpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-1' });
+      expect(mockClientHelper.getTableBuilder('book_copies').update).not.toHaveBeenCalled();
     });
 
-    it('updates copy to BORROWED without updating borrowing records', async () => {
-      const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-      const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
+    it.each([
+      ['RESERVED', 'AVAILABLE', /on hold/],
+      ['BORROWED', 'MAINTENANCE', /Use Return first/],
+    ] as const)('refuses changing a %s copy to %s', async (from, to, message) => {
+      currentStatus(from);
+      const result = await updateBookCopyStatus({ id: 'copy-1', status: to });
 
-      copyBuilder.single.mockResolvedValueOnce({
-        data: { id: 'copy-b-1', book_id: 'book-400', status: 'BORROWED' },
-        error: null,
-      });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(message);
+      expect(mockClientHelper.getTableBuilder('book_copies').update).not.toHaveBeenCalled();
+    });
 
-      const result = await updateBookCopyStatus({
-        id: 'copy-b-1',
-        status: 'BORROWED',
-      });
-
-      expect(result.success).toBe(true);
-      expect(copyBuilder.update).toHaveBeenCalledWith({ status: 'BORROWED' });
-      // Borrowing records should NOT be updated
-      expect(borrowBuilder.update).not.toHaveBeenCalled();
+    it('no longer accepts BORROWED (only a checkout creates a loan)', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await updateBookCopyStatus({ id: 'copy-1', status: 'BORROWED' as any });
+      expect(result.success).toBe(false);
     });
 
     it('rejects status transitions with other invalid states such as RESERVED, PENDING, DELETED, or lowercase available', async () => {

@@ -4,6 +4,7 @@ import { getMe, normalizeUserRole } from '@/lib/auth-helpers';
 import { sanitizeFilterInput } from '@/lib/utils';
 import { mapProfileToUser } from '@/lib/utils/mappers';
 import { UserCreateSchema } from '@/lib/validations/api';
+import { z } from 'zod';
 import { createSafeAction } from './action-utils';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { User } from '@/lib/types';
@@ -158,6 +159,41 @@ export const inviteUser = createSafeAction(
   {
     allowedRoles: ['super_admin', 'librarian'],
     auditAction: 'role_updated',
+    auditEntity: 'profile',
+  }
+);
+
+
+/**
+ * Bulk re-activate selected user profiles and their library cards (M23).
+ */
+export const reactivateUsersBulk = createSafeAction(
+  z.object({
+    userIds: z.array(z.string().uuid()).min(1).max(500),
+  }),
+  async ({ userIds }, { supabase }) => {
+    const { data: count, error } = await supabase.rpc('reactivate_users_bulk', {
+      p_user_ids: userIds,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const reactivatedCount = typeof count === 'number' ? count : 0;
+
+    return [
+      { reactivatedCount },
+      {
+        reason: `Bulk re-activated ${reactivatedCount} user account(s) and their library cards`,
+        newValue: { status: 'ACTIVE', count: reactivatedCount },
+        details: { userIds, reactivatedCount },
+      },
+    ];
+  },
+  {
+    allowedRoles: ['super_admin', 'librarian'],
+    auditAction: 'bulk_reactivate',
     auditEntity: 'profile',
   }
 );

@@ -23,19 +23,26 @@ export const POST = withAuthApi(async (request, { supabase }) => {
 
     const { userIds, target, title, content, type, priority, metadata } = parseResult.data
 
-    let resolvedUserIds = userIds || []
+    // A whole audience is one INSERT … SELECT in SQL: reading the ids into the app stopped at 1,000 (M8).
     if (target) {
-      let query = supabase.from('profiles').select('id')
-      if (target === 'students') {
-        query = query.eq('role', 'student')
+      const { data: count, error: rpcError } = await supabase.rpc('send_bulk_notifications_by_target', {
+        p_target: target,
+        p_title: title,
+        p_content: content,
+        p_type: type || 'SYSTEM',
+        p_priority: priority || 'high',
+        p_metadata: metadata || {},
+      })
+      if (rpcError) {
+        return NextResponse.json({ error: rpcError.message }, { status: 500 })
       }
-      const { data: targetUsers, error: targetError } = await query
-      if (targetError) {
-        return NextResponse.json({ error: targetError.message }, { status: 400 })
+      if (!count) {
+        return NextResponse.json({ error: 'No recipients found for notification' }, { status: 400 })
       }
-      resolvedUserIds = (targetUsers || []).map((u) => u.id)
+      return NextResponse.json({ success: true, count })
     }
 
+    const resolvedUserIds = userIds || []
     if (resolvedUserIds.length === 0) {
       return NextResponse.json({ error: 'No recipients found for notification' }, { status: 400 })
     }

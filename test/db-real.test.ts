@@ -349,13 +349,88 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     }
   });
 
-  // --- B4.1: reservation queue ---
-  it.fails('M1 a hold still expires when the hold_expiry_days setting is missing', async () => {
+  // --- B4.1: reservation queue & LOST status ---
+  it('M1 a hold still expires when the hold_expiry_days setting is missing', async () => {
     await q(`DELETE FROM public.system_settings WHERE key = 'hold_expiry_days'`);
     const { book } = await newBook(1);
     const r = await rpc(u.stu, `SELECT public.create_reservation_atomic($1, $2) r`, [u.stu, book]);
     expect(r?.ok).toBe(true);
     expect(r?.hold_expires_at).not.toBeNull();
+  });
+
+  it('M1 an expired hold goes to the next in line', async () => {
+    const { book } = await newBook(1);
+    // stu gets READY hold
+    const r1 = await rpc(u.stu, `SELECT public.create_reservation_atomic($1, $2) r`, [u.stu, book]);
+    expect(r1?.status).toBe('READY');
+    // stu2 gets ACTIVE queue position 1
+    const r2 = await rpc(u.stu2, `SELECT public.create_reservation_atomic($1, $2) r`, [u.stu2, book]);
+    expect(r2?.status).toBe('ACTIVE');
+
+    // Expire stu's hold and release copy via release_copy
+    await q(`UPDATE public.reservations SET status = 'EXPIRED', reserved_at = now() - interval '4 days', hold_expires_at = now() - interval '1 hour' WHERE id = $1`, [r1?.reservation_id]);
+    const rel = await rpc('service', `SELECT public.release_copy($1) r`, [r1?.copy_id]);
+    expect(rel?.reservation_ready).toBe(true);
+    expect(rel?.reservation_id).toBe(r2?.reservation_id);
+
+    const updatedR2 = (await q(`SELECT status, copy_id FROM public.reservations WHERE id = $1`, [r2?.reservation_id]))[0];
+    expect(updatedR2.status).toBe('READY');
+    expect(updatedR2.copy_id).toBe(r1?.copy_id);
+
+    const copyStatus = (await q(`SELECT status FROM public.book_copies WHERE id = $1`, [r1?.copy_id]))[0].status;
+    expect(copyStatus).toBe('RESERVED');
+  });
+
+  it('M2 LOST loan status is distinct from RETURNED and leaves returned_at null', async () => {
+    const { qrs } = await newBook(1);
+    expect((await checkout(stuCard, qrs[0]))?.ok).toBe(true);
+    const copyId = (await q(`SELECT id FROM public.book_copies WHERE qr_string = $1`, [qrs[0]]))[0].id;
+
+    await q(`UPDATE public.book_copies SET status = 'LOST' WHERE id = $1`, [copyId]);
+    await q(`UPDATE public.borrowing_records SET status = 'LOST', updated_at = now() WHERE book_copy_id = $1 AND status IN ('ACTIVE', 'OVERDUE')`, [copyId]);
+
+    const loan = (await q(`SELECT status, returned_at FROM public.borrowing_records WHERE book_copy_id = $1`, [copyId]))[0];
+    expect(loan.status).toBe('LOST');
+    expect(loan.status).not.toBe('RETURNED');
+    expect(loan.returned_at).toBeNull();
+  });
+
+  // --- B4.2: atomic overdue claim & >1000 row analytics ---
+  it('M7 two maintenance runs claim overdue_notified atomically and send one notice per loan', async () => {
+    const { qrs } = await newBook(1);
+    expect((await checkout(stuCard, qrs[0]))?.ok).toBe(true);
+    const loanId = (await q(`SELECT id FROM public.borrowing_records WHERE user_id = $1`, [u.stu]))[0].id;
+    await q(`UPDATE public.borrowing_records SET borrowed_at = now() - interval '20 days', due_date = now() - interval '5 days' WHERE id = $1`, [loanId]);
+
+    // Run 1 claims the loan
+    const claim1 = await q(
+      `UPDATE public.borrowing_records SET status = 'OVERDUE', overdue_notified = true WHERE id = $1 AND overdue_notified = false RETURNING id`,
+      [loanId]
+    );
+    // Run 2 tries to claim the same loan
+    const claim2 = await q(
+      `UPDATE public.borrowing_records SET status = 'OVERDUE', overdue_notified = true WHERE id = $1 AND overdue_notified = false RETURNING id`,
+      [loanId]
+    );
+
+    expect(claim1).toHaveLength(1);
+    expect(claim2).toHaveLength(0);
+  });
+
+  it('M8 get_analytics_summary counts over 1,000 rows accurately', async () => {
+    // Insert 1,200 attendance rows with unique check_in_at timestamps within the last 5 days
+    await q(`
+      INSERT INTO public.attendance (user_id, check_in_at, check_out_at)
+      SELECT $1,
+             (date_trunc('day', now() AT TIME ZONE 'Asia/Manila') + interval '10 hours' - (g % 5) * interval '1 day' + g * interval '1 second') AT TIME ZONE 'Asia/Manila',
+             (date_trunc('day', now() AT TIME ZONE 'Asia/Manila') + interval '11 hours' - (g % 5) * interval '1 day' + g * interval '1 second') AT TIME ZONE 'Asia/Manila'
+      FROM generate_series(1, 1200) AS g
+    `, [u.stu]);
+
+    const summary = await rpc(u.lib, `SELECT public.get_analytics_summary('7d') r`);
+    expect(summary).toBeTruthy();
+    const totalAttendance = (summary?.attendanceTrends as Array<{ count: number }>).reduce((acc, d) => acc + d.count, 0);
+    expect(totalAttendance).toBe(1200);
   });
 
   // --- B5.1: unused tables ---

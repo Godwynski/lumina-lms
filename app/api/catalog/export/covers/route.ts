@@ -25,7 +25,7 @@ export const GET = withAuthApi(async (_req, { supabase }) => {
     const folder = zip.folder("book-covers");
 
     // Download images and add to zip
-    const downloadPromises = booksWithCovers.map(async (book, index) => {
+    const addCover = async (book: (typeof booksWithCovers)[number], index: number) => {
       try {
         const { buffer, contentType } = await fetchImage(book.cover_url!);
 
@@ -43,13 +43,23 @@ export const GET = withAuthApi(async (_req, { supabase }) => {
         if (contentType.includes("png")) ext = "png";
         else if (contentType.includes("jpeg") || contentType.includes("jpg")) ext = "jpg";
         
-        folder?.file(`${safeName}.${ext}`, buffer);
+        // The index keeps names unique (two editions can share a title, a bad import can share an ISBN).
+        folder?.file(`${safeName}-${index + 1}.${ext}`, buffer);
       } catch (err) {
         console.error(`Failed to download cover for book "${book.title}":`, err);
       }
-    });
+    };
 
-    await Promise.all(downloadPromises);
+    // At most 10 downloads at a time, so a big catalog doesn't open hundreds of connections at once.
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(10, booksWithCovers.length) }, async () => {
+        while (next < booksWithCovers.length) {
+          const index = next++;
+          await addCover(booksWithCovers[index], index);
+        }
+      })
+    );
 
     const zipBuffer = await zip.generateAsync({ type: "uint8array" });
 

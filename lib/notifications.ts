@@ -118,7 +118,7 @@ export async function runMaintenanceTasks() {
     results.errors.push(`Reminders error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // 2. Overdue Check (Actually overdue, status still ACTIVE or already OVERDUE but notify again if needed)
+  // 2. Overdue Check (Atomically claim unnotified overdue loans via overdue_notified)
   try {
     const { data: overdue, error: overdueError } = await supabaseAdmin
       .from('borrowing_records')
@@ -130,49 +130,65 @@ export async function runMaintenanceTasks() {
         )
       `)
       .in('status', ['ACTIVE', 'OVERDUE'])
+      .eq('overdue_notified', false)
       .lt('due_date', now.toISOString());
 
     if (overdueError) throw overdueError;
 
-    const records = (overdue as unknown as BorrowingRecordWithDetails[]) || [];
+    const records = (overdue as unknown as (BorrowingRecordWithDetails & { overdue_notified?: boolean })[]) || [];
     const CHUNK_SIZE = 5;
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
       const chunk = records.slice(i, i + CHUNK_SIZE);
       await Promise.all(chunk.map(async (record) => {
-      const book = record.book_copy?.book;
-      const dueDate = new Date(record.due_date);
-      const overdueDays = Math.floor((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
-      
-      const isInitialOverdue = record.status !== 'OVERDUE';
+        if (record.overdue_notified === true || (record.overdue_notified === undefined && record.status === 'OVERDUE')) {
+          return;
+        }
 
-      // Update status to OVERDUE if it isn't already
-      if (isInitialOverdue) {
-        await supabaseAdmin
+        // Atomically claim the overdue row before sending notifications/emails
+        const { data: claimed, error: claimError } = await supabaseAdmin
           .from('borrowing_records')
-          .update({ status: 'OVERDUE', updated_at: now.toISOString() })
-          .eq('id', record.id);
-      }
+          .update({
+            status: 'OVERDUE',
+            overdue_notified: true,
+            updated_at: now.toISOString(),
+          })
+          .eq('id', record.id)
+          .eq('overdue_notified', false)
+          .select('id')
+          .maybeSingle();
 
-      // Only notify if it just became overdue, or if it's a recurring check (e.g. every 7 days)
-      // For now, let's stick to a strong notification when it first becomes overdue.
-      if (isInitialOverdue) {
-        const { success } = await sendNotification({
-          userId: record.user_id,
-          title: 'URGENT: Book Overdue',
-          content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} was due on ${dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' })} and is now ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue. Please return it immediately to the Main Library circulation desk.`,
-          type: 'OVERDUE',
-          priority: 'high',
-          metadata: {
-            bookId: record.book_copy?.book_id,
-            bookTitle: book?.title,
-            coverUrl: book?.cover_url,
-            dueDate: record.due_date,
-            overdueDays
+        if (claimError || !claimed) {
+          return;
+        }
+
+        const book = record.book_copy?.book;
+        const dueDate = new Date(record.due_date);
+        const overdueDays = Math.floor((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
+
+        try {
+          const { success } = await sendNotification({
+            userId: record.user_id,
+            title: 'URGENT: Book Overdue',
+            content: `Your borrowed book "${book?.title}"${book?.author ? ` by ${book.author}` : ''} was due on ${dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' })} and is now ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue. Please return it immediately to the Main Library circulation desk.`,
+            type: 'OVERDUE',
+            priority: 'high',
+            metadata: {
+              bookId: record.book_copy?.book_id,
+              bookTitle: book?.title,
+              coverUrl: book?.cover_url,
+              dueDate: record.due_date,
+              overdueDays
+            }
+          });
+
+          if (!success) {
+            await supabaseAdmin
+              .from('borrowing_records')
+              .update({ overdue_notified: false, updated_at: new Date().toISOString() })
+              .eq('id', record.id);
+            return;
           }
-        });
 
-        if (success) {
-          // Send Email Notification if email exists
           if (record.profiles?.email) {
             await sendOverdueEmail({
               to: record.profiles.email,
@@ -184,45 +200,44 @@ export async function runMaintenanceTasks() {
           }
 
           results.overdueTagged++;
+        } catch (sendErr) {
+          await supabaseAdmin
+            .from('borrowing_records')
+            .update({ overdue_notified: false, updated_at: new Date().toISOString() })
+            .eq('id', record.id);
+          throw sendErr;
         }
-      }
-    }));
+      }));
     }
   } catch (err: unknown) {
     results.errors.push(`Overdue check error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // 3. Reservation Expiry (Ready for > 3 days)
+  // 3. Reservation Expiry (READY holds past hold_expires_at)
   try {
-    const threeDaysAgo = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000));
     const { data: expired, error: expiredError } = await supabaseAdmin
       .from('reservations')
       .select('*, books:book_id(title)')
       .eq('status', 'READY')
-      .lt('updated_at', threeDaysAgo.toISOString());
+      .lt('hold_expires_at', now.toISOString());
 
     if (expiredError) throw expiredError;
 
     await Promise.all((expired || []).map(async (res) => {
-      // Mark as cancelled/expired
       const { error: updateError } = await supabaseAdmin
         .from('reservations')
-        .update({ status: 'CANCELLED' })
+        .update({ status: 'EXPIRED', updated_at: now.toISOString() })
         .eq('id', res.id);
 
       if (!updateError) {
         if (res.copy_id) {
-          await supabaseAdmin
-            .from('book_copies')
-            .update({ status: 'AVAILABLE', updated_at: now.toISOString() })
-            .eq('id', res.copy_id);
-          await supabaseAdmin.rpc('compress_reservation_queue', { p_book_id: res.book_id });
+          await supabaseAdmin.rpc('release_copy', { p_copy_id: res.copy_id });
         }
         const bookTitle = (Array.isArray(res.books) ? res.books[0]?.title : res.books?.title) || 'Book';
         await sendNotification({
           userId: res.user_id,
           title: 'Reservation Expired',
-          content: `Your reservation for "${bookTitle}" has expired as it was not picked up within 3 days.`,
+          content: `Your reservation for "${bookTitle}" has expired as it was not picked up before the hold deadline.`,
           type: 'RESERVATION_EXPIRED',
           priority: 'low'
         });

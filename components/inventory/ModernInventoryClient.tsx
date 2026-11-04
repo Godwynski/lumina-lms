@@ -138,6 +138,7 @@ export function ModernInventoryClient({
   const [parsedBooks, setParsedBooks] = useState<ParsedBook[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [addCopiesToDuplicates, setAddCopiesToDuplicates] = useState(false);
   const [importResults, setImportResults] = useState<{
     imported: number;
     copiesAdded: number;
@@ -213,7 +214,7 @@ export function ModernInventoryClient({
             category: String(cleanRow.category || cleanRow.category_name || cleanRow.genre || ""),
             published_year: String(cleanRow.published_year || cleanRow.year || cleanRow.pub_year || ""),
             description: String(cleanRow.description || cleanRow.desc || cleanRow.summary || ""),
-            stock: Number(cleanRow.stock || cleanRow.copies || cleanRow.quantity || cleanRow.copies_count || 1),
+            stock: Math.min(50, Math.max(0, Number(cleanRow.stock || cleanRow.copies || cleanRow.quantity || cleanRow.copies_count || 1))),
             location: String(cleanRow.location || cleanRow.shelving || cleanRow.shelf || ""),
             section: String(cleanRow.section || ""),
             dewey_decimal: String(cleanRow.dewey || cleanRow.dewey_decimal || cleanRow.call_number || ""),
@@ -245,7 +246,7 @@ export function ModernInventoryClient({
     if (parsedBooks.length === 0) return;
     setIsImporting(true);
     try {
-      const res = await batchImportBooks(parsedBooks);
+      const res = await batchImportBooks(parsedBooks, { addCopiesToDuplicates });
       if (res.success) {
         setImportResults({
           imported: res.imported,
@@ -822,6 +823,16 @@ export function ModernInventoryClient({
                             )}
                           </div>
                           
+                          <label className="flex items-center gap-2.5 text-xs text-muted-foreground cursor-pointer select-none pt-1">
+                            <input
+                              type="checkbox"
+                              checked={addCopiesToDuplicates}
+                              onChange={(e) => setAddCopiesToDuplicates(e.target.checked)}
+                              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/40"
+                            />
+                            <span>Add copies to existing books when duplicates are found</span>
+                          </label>
+
                           <Button
                             onClick={handleStartImport}
                             disabled={isImporting}

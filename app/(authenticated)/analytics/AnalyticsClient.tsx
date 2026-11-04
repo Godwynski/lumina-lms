@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useTransition, useCallback } from 'react';
+import { use, useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, BookOpen, Library, UserCircle2 } from 'lucide-react';
@@ -56,30 +56,35 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
     });
   }, [loadSummary]);
 
-  // Real-time Subscriptions
-  useEffect(() => {
-    const supabase = createClient();
-    const channelName = `analytics-live-${Math.random().toString(36).slice(2, 7)}`;
-    
-    const refreshAll = () => {
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
       loadSummary();
       startTransition(() => {
         router.refresh();
       });
-    };
+    }, 500);
+  }, [loadSummary, router, startTransition]);
+
+  // Real-time Subscriptions
+  useEffect(() => {
+    const supabase = createClient();
+    const channelName = `analytics-live-${Math.random().toString(36).slice(2, 7)}`;
 
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, refreshAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, refreshAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, refreshAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, refreshAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, debouncedRefresh)
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [loadSummary, router, startTransition]);
+  }, [debouncedRefresh]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
