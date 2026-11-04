@@ -2,6 +2,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { fetchImage } from '@/lib/fetch-image';
 import { revalidateTag } from 'next/cache';
 import { assertStaffCatalogAccess } from './auth';
 import { getOrCreateCategoryByName } from './categories';
@@ -37,13 +38,9 @@ export interface GoogleOrOpenLibraryBookDetails {
  * Downloads a remote book cover image, converts it to WebP format, and uploads to Supabase storage.
  */
 async function uploadCoverFromUrl(supabase: SupabaseClient, url: string): Promise<string | null> {
-  if (!url || !url.startsWith("http")) return null;
+  if (!url) return null;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    
-    const bytes = await res.arrayBuffer();
-    let buffer: Buffer = Buffer.from(bytes);
+    let { buffer } = await fetchImage(url);
 
     // Convert to WebP using Sharp (dynamically imported to prevent serverless module resolution issues)
     try {

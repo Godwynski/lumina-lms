@@ -1,14 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { isAbortError } from "@/lib/error-utils";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { assertRole } from "@/lib/auth-helpers";
+import { withAuthApi } from "@/lib/api-utils";
 import { logAuditActivity } from "@/lib/audit";
 import { toSlug } from "@/lib/utils";
 import { CategoryCreateSchema } from "@/lib/validations/api";
 
-export async function GET() {
+const MANAGERS = { allowedRoles: ["super_admin" as const, "librarian" as const] };
+
+export const GET = withAuthApi(async (_req, { supabase }) => {
   try {
-    const { supabase } = await assertRole(["super_admin", "librarian"]);
     const { data, error } = await supabase
       .from("categories")
       .select("*")
@@ -27,12 +28,10 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+}, MANAGERS);
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthApi(async (request, { user, supabase }) => {
   try {
-    const { user, supabase } = await assertRole(["super_admin", "librarian"]);
-
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -84,4 +83,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, MANAGERS);

@@ -55,9 +55,9 @@ export function useNotifications() {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function setupNotifications() {
-      // Use getSession() instead of getUser() — reads the JWT locally without a
-      // network round-trip. The middleware already refreshes the session before
-      // server components render, so the token is guaranteed to be valid.
+      // getSession() reads the session locally (no network round-trip). It is only used for
+      // the user id; it is not a security check, since RLS verifies the token on every query.
+      // proxy.ts and the browser client keep the token refreshed.
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user || !active) {
         if (active) setLoading(false)

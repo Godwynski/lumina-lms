@@ -71,7 +71,7 @@ describe('Admin Categories [id] API Route - Adversarial Verification', () => {
 
       expect(res.status).toBe(403);
       const data = await res.json();
-      expect(data.error).toBe('Forbidden');
+      expect(data.error).toMatch(/^Forbidden/);
     });
 
     it('returns 403 Forbidden for student_assistant role', async () => {
@@ -83,7 +83,7 @@ describe('Admin Categories [id] API Route - Adversarial Verification', () => {
 
       expect(res.status).toBe(403);
       const data = await res.json();
-      expect(data.error).toBe('Forbidden');
+      expect(data.error).toMatch(/^Forbidden/);
     });
 
     it('CRITICAL: allows super_admin and returns 200 with category data (does NOT throw 403)', async () => {
@@ -416,7 +416,7 @@ describe('Admin Categories [id] API Route - Adversarial Verification', () => {
 
       expect(res.status).toBe(403);
       const data = await res.json();
-      expect(data.error).toBe('Forbidden');
+      expect(data.error).toMatch(/^Forbidden/);
     });
 
     it('CRITICAL: allows super_admin to soft delete category (does NOT return 403 Forbidden)', async () => {

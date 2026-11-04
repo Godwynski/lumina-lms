@@ -5,10 +5,8 @@ import {
   parseStudentIdFromEmail,
   resolveStudentId,
   fileNamesFor,
-  publicObjectUrl,
+  cardPhotoPath,
   isDeterministicProfileUrl,
-  getDeterministicQrUrl,
-  getDeterministicProfileUrl,
   CARD_ASSET_BUCKET,
 } from '../library-card-assets';
 
@@ -161,44 +159,20 @@ describe('resolveStudentId', () => {
 });
 
 describe('Asset URLs and filenames', () => {
-  it('generates normalized filenames for QR and profile image', () => {
-    const fileNames = fileNamesFor('stu 123');
-    expect(fileNames).toEqual({
-      qr: 'qr_STU_123.png',
-      profile: 'profile_STU_123.webp',
-    });
+  it('names the QR image after the normalized card number', () => {
+    expect(fileNamesFor('lib-2026 ab12')).toEqual({ qr: 'qr_LIB-2026_AB12.png' });
   });
 
-  it('constructs public storage URL for asset files', () => {
-    const url = publicObjectUrl('qr_STU-123.png');
-    expect(url).toContain(`/storage/v1/object/public/${CARD_ASSET_BUCKET}/qr_STU-123.png`);
+  it('puts the card photo in the user folder of the avatars bucket', () => {
+    expect(cardPhotoPath('user-1')).toBe('user-1/card.webp');
   });
 
-  it('throws an error if NEXT_PUBLIC_SUPABASE_URL is missing', () => {
-    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    try {
-      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-      expect(() => publicObjectUrl('test.png')).toThrow('Missing NEXT_PUBLIC_SUPABASE_URL');
-    } finally {
-      process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
-    }
-  });
-
-  it('verifies deterministic profile URL detection', () => {
-    expect(
-      isDeterministicProfileUrl(
-        `https://example.com/storage/v1/object/public/${CARD_ASSET_BUCKET}/profile_STU-123.webp`
-      )
-    ).toBe(true);
-    expect(isDeterministicProfileUrl('https://example.com/custom-avatar.png')).toBe(false);
+  it('detects the processed card photo, but not legacy library-cards photos or uploads', () => {
+    const base = 'https://example.com/storage/v1/object/public';
+    expect(isDeterministicProfileUrl(`${base}/avatars/user-1/card.webp?v=123`)).toBe(true);
+    expect(isDeterministicProfileUrl(`${base}/avatars/user-1/1700000000.jpg`)).toBe(false);
+    // Legacy photos in the now-private bucket must not count, so they get moved.
+    expect(isDeterministicProfileUrl(`${base}/${CARD_ASSET_BUCKET}/profile_STU-123.webp`)).toBe(false);
     expect(isDeterministicProfileUrl(null)).toBe(false);
-  });
-
-  it('returns deterministic QR and Profile public URLs', () => {
-    const qrUrl = getDeterministicQrUrl('12345');
-    const profileUrl = getDeterministicProfileUrl('12345');
-
-    expect(qrUrl).toContain('qr_12345.png');
-    expect(profileUrl).toContain('profile_12345.webp');
   });
 });

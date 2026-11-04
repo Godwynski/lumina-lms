@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { connection } from "next/server";
+import { withAuthApi } from "@/lib/api-utils";
 
 function parseAnyDate(val: unknown): Date | null {
   if (val === null || val === undefined || val === "") return null;
@@ -43,27 +43,9 @@ function parseAnyDate(val: unknown): Date | null {
   return null;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuthApi(async (request, { user, profile }) => {
   await connection();
   try {
-    const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
-
-    if (!user?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin role
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, email, full_name")
-      .eq("id", user.user.id)
-      .single();
-
-    if (profile?.role !== "super_admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     let body: { logs?: unknown };
     try {
       body = await request.json();
@@ -84,16 +66,6 @@ export async function POST(request: NextRequest) {
 
     // Validate and clean up records
     const cleanedLogs: Record<string, unknown>[] = [];
-    const entityTypes = [
-      "book",
-      "book_copy",
-      "profile",
-      "borrowing_record",
-      "category",
-      "policy",
-      "settings",
-      "system",
-    ];
 
     for (const log of logs as Record<string, unknown>[]) {
       // Basic validations
@@ -104,23 +76,23 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check format of entity_type
       const cleanEntityType = String(log.entity_type).toLowerCase().trim();
-      if (!entityTypes.includes(cleanEntityType) && cleanEntityType !== "all") {
-        // We can allow other strings if they are custom, but let's keep it safe. Let's allow it or fallback to 'system'
-      }
+      const details =
+        log.details && typeof log.details === "object" && !Array.isArray(log.details)
+          ? (log.details as Record<string, unknown>)
+          : {};
 
-      // Build inserting object
+      // Imported rows are attributed to the importer and marked, so a file can't forge who did what.
       const parsedDate = parseAnyDate(log.created_at);
       cleanedLogs.push({
-        admin_id: log.admin_id || user.user.id,
+        admin_id: user.id,
         entity_type: cleanEntityType,
         entity_id: log.entity_id || null,
         action: String(log.action).toLowerCase().trim(),
         old_value: log.old_value || null,
         new_value: log.new_value || null,
         reason: log.reason || null,
-        details: log.details || {},
+        details: { ...details, imported: true, original_admin_id: log.admin_id ?? null },
         created_at: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
       });
     }
@@ -149,13 +121,13 @@ export async function POST(request: NextRequest) {
 
     // Log the import/restore event itself in the audit log
     await adminSupabase.from("audit_logs").insert({
-      admin_id: user.user.id,
+      admin_id: user.id,
       entity_type: "system",
       action: "update",
       reason: `Imported and restored ${insertedCount} audit log records.`,
       details: {
         imported_records_count: insertedCount,
-        imported_by: profile.email || user.user.email || "super_admin",
+        imported_by: profile.email || user.email || "super_admin",
         timestamp: new Date().toISOString(),
       },
     });
@@ -172,4 +144,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, { allowedRoles: ["super_admin"] });

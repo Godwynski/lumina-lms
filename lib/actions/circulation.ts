@@ -60,9 +60,7 @@ export const resolveScan = createSafeAction(
 
     // 1. Try resolving as Library Card (Student)
     if (expectedType !== 'book') {
-      let { data: card, error: cardError } = await supabase
-        .from('library_cards')
-        .select(`
+      const cardSelect = `
           card_number,
           status,
           user_id,
@@ -71,30 +69,34 @@ export const resolveScan = createSafeAction(
             student_id,
             status
           )
-        `)
+        `;
+      let { data: card, error: cardError } = await supabase
+        .from('library_cards')
+        .select(cardSelect)
         .eq('card_number', value)
         .maybeSingle();
 
       if (cardError) throw new Error(cardError.message);
 
-      // Fallback: Try resolving as Student ID from profiles
+      // Fallback: a typed student ID. Use that student's real card, since checkout looks up the
+      // card number and card numbers are random LIB-… values, not student IDs.
       if (!card) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, full_name, student_id, status')
+          .select('id')
           .eq('student_id', value)
           .maybeSingle();
-        
+
         if (profileError) throw new Error(profileError.message);
 
         if (profile) {
-          // Construct a mock card object for consistent downstream logic
-          card = {
-            card_number: profile.student_id,
-            status: 'ACTIVE',
-            user_id: profile.id,
-            profiles: profile
-          } as NonNullable<typeof card>;
+          const { data: ownCard, error: ownCardError } = await supabase
+            .from('library_cards')
+            .select(cardSelect)
+            .eq('user_id', profile.id)
+            .maybeSingle();
+          if (ownCardError) throw new Error(ownCardError.message);
+          card = ownCard;
         }
       }
 

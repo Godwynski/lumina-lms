@@ -22,7 +22,8 @@ export function apiError(
   status = 500,
   details?: unknown
 ) {
-  return NextResponse.json({ ok: false, message, code, details }, { status });
+  // `error` repeats `message` for clients written against the older `{ error }` responses.
+  return NextResponse.json({ ok: false, message, error: message, code, details }, { status });
 }
 
 interface AuthOptions {
@@ -51,11 +52,16 @@ export function withAuthApi(
       };
       role: UserRole;
       supabase: SupabaseClient;
+      params: Promise<Record<string, string>>;
     }
-  ) => Promise<NextResponse>,
+  ) => Promise<Response>,
   options: AuthOptions = {}
 ) {
-  return async (req: Request, context: { params: Promise<Record<string, string>> } & Record<string, unknown>) => {
+  // Next.js always passes the context; the default lets static routes be called directly (tests).
+  return async (
+    req: Request,
+    context: { params: Promise<Record<string, string>> } & Record<string, unknown> = { params: Promise.resolve({}) }
+  ) => {
     try {
       const me = await getMe();
 

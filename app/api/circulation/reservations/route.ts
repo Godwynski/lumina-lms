@@ -1,20 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { logAuditActivity } from "@/lib/audit";
 import { ReservationCreateSchema } from "@/lib/validations/api";
 import { isStaff, type Role } from "@/lib/auth/permissions";
+import { withAuthApi } from "@/lib/api-utils";
 
-export async function POST(request: NextRequest) {
+// Any signed-in user; staff may also act on behalf of others (checked below).
+export const POST = withAuthApi(async (request, { supabase, user, profile }) => {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -40,14 +32,7 @@ export async function POST(request: NextRequest) {
     const { bookId, userId } = parseResult.data;
 
     if (userId && userId !== user.id) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, status")
-        .eq("id", user.id)
-        .single();
-
-      const isStaffUser = Boolean(profile && isStaff(profile.role as Role, profile));
-      if (!isStaffUser) {
+      if (!isStaff(profile.role as Role, profile)) {
         return NextResponse.json(
           { ok: false, message: "Only staff members can reserve books on behalf of other users", code: "FORBIDDEN" },
           { status: 403 }
@@ -124,29 +109,14 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // GET: Get reservations for a book or user
-export async function GET(request: NextRequest) {
+export const GET = withAuthApi(async (request, { supabase, user, profile }) => {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const isStaffUser = isStaff(profile.role as Role, profile);
 
-    if (!user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, status")
-      .eq("id", user.id)
-      .single();
-
-    const isStaffUser = Boolean(profile && isStaff(profile.role as Role, profile));
-
-    const searchParams = request.nextUrl.searchParams;
+    const searchParams = new URL(request.url).searchParams;
     const bookId = searchParams.get("bookId");
     const userId = searchParams.get("userId");
 
@@ -176,4 +146,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

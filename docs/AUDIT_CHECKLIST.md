@@ -148,29 +148,29 @@ _Run B3.1 first, because the Next.js upgrade can change the `proxy.ts` API._
 ### B3.1 · Dependency upgrades · Effort: `medium`
 _Why medium: mostly version bumps, then fixing whatever the build and tests report._
 
-- [ ] 🔴 **C10** Known-vulnerable dependencies `[P1#16]` — `npm audit fix`; bump `next` past the critical advisory and `sharp` to 0.35.x; replace `xlsx` with the SheetJS CDN build (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`) or `exceljs`, in `ModernInventoryClient.tsx`, `AuditLogExportImportModal.tsx` and `audit-logs/export/route.ts`.
+- [x] 🔴 **C10** Known-vulnerable dependencies `[P1#16]` — `npm audit fix`; bump `next` past the critical advisory and `sharp` to 0.35.x; replace `xlsx` with the SheetJS CDN build (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`) or `exceljs`, in `ModernInventoryClient.tsx`, `AuditLogExportImportModal.tsx` and `audit-logs/export/route.ts`. _Done: next 16.4.5, sharp 0.35.5, nodemailer 10.3.1, xlsx from the SheetJS CDN (0.20.3, installed with `--allow-remote=root`), plus `npm audit fix`; `npm audit --omit=dev` shows 0._
 
 ### B3.2 · Session refresh + dangerous route removal · Effort: `high`
 _Why high: getting cookie and session handling wrong logs everyone out or leaves sessions stale._
 
-- [ ] 🔴 **C9** Users get logged out at random `[P2#40]` — add root `proxy.ts` with the `@supabase/ssr` `updateSession` pattern, and a matcher that skips static assets. Fix the stale comment in `hooks/use-notifications.ts:L49-51`.
-- [ ] 🔴 **C8** A librarian can demote the admin via `/api/users` POST `[P1#17]` — delete GET and POST in `app/api/users/route.ts`, plus their tests. Keep PATCH.
+- [x] 🔴 **C9** Users get logged out at random `[P2#40]` — add root `proxy.ts` with the `@supabase/ssr` `updateSession` pattern, and a matcher that skips static assets. Fix the stale comment in `hooks/use-notifications.ts:L49-51`.
+- [x] 🔴 **C8** A librarian can demote the admin via `/api/users` POST `[P1#17]` — delete GET and POST in `app/api/users/route.ts`, plus their tests. Keep PATCH. _Also fixed a B2.1 regression: `inviteUser` now finishes a super-admin handover with the service role (after the transfer the requester is a librarian, and the DB guard blocks them)._
 
 ### B3.3 · One permission check everywhere · Effort: `medium`
 _Why medium: repetitive edits that follow one pattern, but each route's allowed roles must be kept._
 
-- [ ] 🟠 **M15** Permission checks are hand-written and disagree `[P1#22]` — wrap `upload`, `test-email`, `annual-reset`, `audit-logs` (list, export, import), `notifications/bulk`, `notifications/maintenance`, `catalog/export/covers`, `circulation/reservations` and `admin/categories` with `withAuthApi({ allowedRoles })`, and delete the copied checks.
-- [ ] 🟠 **M16** Super admins can forge audit history `[P1#23]` — `audit-logs/import/route.ts`: force `admin_id` to the importer, set `details.imported = true`, and delete the empty `if`.
+- [x] 🟠 **M15** Permission checks are hand-written and disagree `[P1#22]` — wrap `upload`, `test-email`, `annual-reset`, `audit-logs` (list, export, import), `notifications/bulk`, `notifications/maintenance`, `catalog/export/covers`, `circulation/reservations` and `admin/categories` with `withAuthApi({ allowedRoles })`, and delete the copied checks. _Done. `apiError` now also sends `error` (same text as `message`) so clients reading `data.error` keep working. `admin/categories` GET/POST used to answer 500 on a denied role; now 401/403._
+- [x] 🟠 **M16** Super admins can forge audit history `[P1#23]` — `audit-logs/import/route.ts`: force `admin_id` to the importer, set `details.imported = true`, and delete the empty `if`. _Done; the file's original `admin_id` is kept as `details.original_admin_id`._
 
 ### B3.4 · URL fetching + library cards · Effort: `high`
 _Why high: stopping server-side URL fetching takes care, and the card change touches storage, existing card numbers and the scan flow together._
 
-- [ ] 🔴 **C6** The server downloads any URL `[P1#6]` `[P2 addition]` — write one `fetchImage(url)` in `lib/` (`redirect:'error'`, 5 MB cap while streaming, `image/*` only) and use it in `library-card-assets.server.ts`, `api/upload`, `catalog/export/covers` and `uploadCoverFromUrl`. In `updateAvatarUrl`, allow only your own storage domain. Set `file_size_limit` and `allowed_mime_types` on the `avatars` and `book-covers` buckets.
-- [ ] 🔴 **C5** Library cards can be forged `[P1#7]` — stop overwriting `card_number` with the student ID; give existing cards new random `LIB-…` numbers in a migration; make the `library-cards` bucket private and serve images with `createSignedUrl`.
-- [ ] 🟠 **M5** Checkout with a student ID fails `[P1#10]` — this shows up once C5 is done. In `resolveScan`'s fallback, return the real `card_number` looked up by `user_id`.
+- [x] 🔴 **C6** The server downloads any URL `[P1#6]` `[P2 addition]` — write one `fetchImage(url)` in `lib/` (`redirect:'error'`, 5 MB cap while streaming, `image/*` only) and use it in `library-card-assets.server.ts`, `api/upload`, `catalog/export/covers` and `uploadCoverFromUrl`. In `updateAvatarUrl`, allow only your own storage domain. Set `file_size_limit` and `allowed_mime_types` on the `avatars` and `book-covers` buckets. _Done: `lib/fetch-image.ts` also blocks private/internal IPs after DNS lookup and rejects SVG; known limit (DNS rebinding) is a `shortcut:` comment._
+- [x] 🔴 **C5** Library cards can be forged `[P1#7]` — stop overwriting `card_number` with the student ID; give existing cards new random `LIB-…` numbers in a migration; make the `library-cards` bucket private and serve images with `createSignedUrl`. _Done; card photos moved to the public `avatars` bucket (`<user>/card.webp`), legacy ones are copied over on next card load. Migration `20261104150000` is **not yet applied to live**: apply it together with the deploy of this code, or the old code will undo it._
+- [x] 🟠 **M5** Checkout with a student ID fails `[P1#10]` — this shows up once C5 is done. In `resolveScan`'s fallback, return the real `card_number` looked up by `user_id`.
 
 > ### 🚧 GATE 3
-> - [ ] Full suite plus build green; `npm audit --omit=dev` shows no critical or high (or each remaining one is written down as accepted).
+> - [x] Full suite plus build green; `npm audit --omit=dev` shows no critical or high (or each remaining one is written down as accepted).
 > - [ ] Manual checks:
 >   - Set the Supabase JWT expiry to 5 minutes on staging, wait 6, and click around: you stay logged in.
 >   - `POST /api/users` returns 405.

@@ -1,19 +1,19 @@
 import sharp from "sharp";
 import QRCode from "qrcode";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { 
-  sanitizeStudentId, 
-  fileNamesFor, 
-  CARD_ASSET_BUCKET, 
-  getDeterministicQrUrl, 
-  getDeterministicProfileUrl,
-  publicObjectUrl,
+import { fetchImage } from "@/lib/fetch-image";
+import {
+  fileNamesFor,
+  CARD_ASSET_BUCKET,
+  AVATAR_BUCKET,
+  cardPhotoPath,
   isDeterministicProfileUrl,
-  resolveStudentId
+  resolveStudentId,
 } from "./library-card-assets";
 
 const PROFILE_SIZE = 300;
 const PROFILE_QUALITY = 82;
+const QR_URL_TTL_SECONDS = 60 * 60;
 
 type ProfileRow = {
   id: string;
@@ -28,36 +28,11 @@ type LibraryCardRow = {
   card_number: string;
 };
 
-async function checkStaticLibraryCardAssets(opts: {
-  studentId: string;
-}) {
-  const admin = createAdminClient();
-  const { qr, profile } = fileNamesFor(opts.studentId);
-
-  const [qrList, profileList] = await Promise.all([
-    admin.storage.from(CARD_ASSET_BUCKET).list("", { limit: 1, search: qr }),
-    admin.storage.from(CARD_ASSET_BUCKET).list("", { limit: 1, search: profile }),
-  ]);
-
-  const qrExists = Boolean(qrList.data?.some((item) => item.name === qr));
-  const profileExists = Boolean(
-    profileList.data?.some((item) => item.name === profile)
-  );
-
-  return {
-    studentId: sanitizeStudentId(opts.studentId),
-    qrExists,
-    profileExists,
-    qrUrl: getDeterministicQrUrl(opts.studentId),
-    profileUrl: getDeterministicProfileUrl(opts.studentId),
-  };
-}
-
 let bucketExistsChecked = false;
 
 async function ensureBucketExists() {
   if (bucketExistsChecked) return;
-  
+
   const admin = createAdminClient();
   const { error } = await admin.storage.getBucket(CARD_ASSET_BUCKET);
 
@@ -74,10 +49,11 @@ async function ensureBucketExists() {
     throw error;
   }
 
+  // Private: a QR image is the library card, so it is only served through signed URLs.
   const { error: createError } = await admin.storage.createBucket(
     CARD_ASSET_BUCKET,
     {
-      public: true,
+      public: false,
       fileSizeLimit: "10MB",
       allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
     }
@@ -86,17 +62,17 @@ async function ensureBucketExists() {
   if (createError && !/already exists/i.test(createError.message)) {
     throw createError;
   }
-  
+
   bucketExistsChecked = true;
 }
 
 async function ensureQrImage(opts: {
-  studentId: string;
-  qrPayload: string;
+  cardNumber: string;
   force: boolean;
 }) {
   const admin = createAdminClient();
-  const { qr } = fileNamesFor(opts.studentId);
+  // Named after the card number, so a new number always gets a new image.
+  const { qr } = fileNamesFor(opts.cardNumber);
 
   if (!opts.force) {
     const { data: existingList } = await admin.storage
@@ -108,7 +84,7 @@ async function ensureQrImage(opts: {
     }
   }
 
-  const qrBuffer = await QRCode.toBuffer(opts.qrPayload, {
+  const qrBuffer = await QRCode.toBuffer(opts.cardNumber, {
     type: "png",
     width: PROFILE_SIZE,
     margin: 1,
@@ -129,11 +105,11 @@ async function ensureQrImage(opts: {
 }
 
 async function uploadProfilePhoto(opts: {
-  studentId: string;
+  userId: string;
   sourceBuffer: Buffer;
 }) {
   const admin = createAdminClient();
-  const { profile } = fileNamesFor(opts.studentId);
+  const path = cardPhotoPath(opts.userId);
 
   const outputBuffer = await sharp(opts.sourceBuffer)
     .resize(PROFILE_SIZE, PROFILE_SIZE, { fit: "cover", position: "centre" })
@@ -141,45 +117,40 @@ async function uploadProfilePhoto(opts: {
     .toBuffer();
 
   const { error: uploadError } = await admin.storage
-    .from(CARD_ASSET_BUCKET)
-    .upload(profile, outputBuffer, {
+    .from(AVATAR_BUCKET)
+    .upload(path, outputBuffer, {
       contentType: "image/webp",
       upsert: true,
-      cacheControl: "31536000",
+      cacheControl: "3600",
     });
 
   if (uploadError) throw uploadError;
 
-  const { data } = admin.storage.from(CARD_ASSET_BUCKET).getPublicUrl(profile);
-  return data.publicUrl || publicObjectUrl(profile);
+  // The path never changes, so bust caches when the photo is replaced.
+  const { data } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
-async function fetchRemoteAvatarBuffer(url: string) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return null;
-    const host = parsed.hostname.toLowerCase();
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "0.0.0.0" ||
-      host.startsWith("192.168.") ||
-      host.startsWith("10.") ||
-      host.startsWith("172.16.") ||
-      host.startsWith("169.254.") ||
-      host.endsWith(".local") ||
-      host.endsWith(".internal")
-    ) {
-      return null;
-    }
-    const response = await fetch(url);
-    if (!response.ok) return null;
+async function fetchAvatarBuffer(url: string) {
+  // shortcut: card photos used to live in the (now private) library-cards bucket. Read those
+  // with the service role so they move to the avatars bucket; remove once none are left.
+  const legacyMarker = `/storage/v1/object/public/${CARD_ASSET_BUCKET}/`;
+  if (url.includes(legacyMarker)) {
+    const path = url.split(legacyMarker)[1].split("?")[0];
+    const { data } = await createAdminClient().storage.from(CARD_ASSET_BUCKET).download(path);
+    return data ? Buffer.from(await data.arrayBuffer()) : null;
+  }
 
-    const bytes = await response.arrayBuffer();
-    return Buffer.from(bytes);
+  try {
+    return (await fetchImage(url)).buffer;
   } catch {
     return null;
   }
+}
+
+function newCardNumber() {
+  // Same format as the handle_new_user trigger.
+  return `LIB-${new Date().getFullYear()}-${crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 }
 
 export async function ensureStaticLibraryCardAssets(opts: {
@@ -224,51 +195,44 @@ export async function ensureStaticLibraryCardAssets(opts: {
       .eq("id", opts.userId);
   }
 
+  // The card number is a random LIB-… value, never the student ID: the QR encodes it, so it must
+  // not be guessable from a student number (C5).
   const { data: rawLibraryCard } = await admin
     .from("library_cards")
     .select("card_number")
     .eq("user_id", opts.userId)
     .maybeSingle();
 
-  const libraryCard = rawLibraryCard as LibraryCardRow | null;
-  const expectedCardNumber = studentId;
-
-  // Ensure database card_number matches the prefixed studentId
-  if (!libraryCard || libraryCard.card_number !== expectedCardNumber) {
-    if (!libraryCard) {
-      await admin.from("library_cards").insert({
-        user_id: opts.userId,
-        card_number: expectedCardNumber,
-        status: profile.status || "ACTIVE",
-      });
-    } else {
-      await admin
-        .from("library_cards")
-        .update({ card_number: expectedCardNumber })
-        .eq("user_id", opts.userId);
-    }
+  let cardNumber = (rawLibraryCard as LibraryCardRow | null)?.card_number ?? null;
+  if (!cardNumber) {
+    cardNumber = newCardNumber();
+    const { error: cardError } = await admin.from("library_cards").insert({
+      user_id: opts.userId,
+      card_number: cardNumber,
+      status: profile.status || "PENDING",
+      expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    if (cardError) throw cardError;
   }
 
-  await ensureQrImage({
-    studentId,
-    qrPayload: expectedCardNumber,
-    force: Boolean(opts.forceQrRegeneration) || (libraryCard?.card_number !== expectedCardNumber),
+  const qrFile = await ensureQrImage({
+    cardNumber,
+    force: Boolean(opts.forceQrRegeneration),
   });
 
   let profileUrlToSave: string | null = null;
-  const deterministicExists = isDeterministicProfileUrl(profile.avatar_url);
   const candidateAvatarUrl = profile.avatar_url || opts.fallbackAvatarUrl || null;
 
   if (opts.uploadedProfileBuffer) {
     profileUrlToSave = await uploadProfilePhoto({
-      studentId,
+      userId: opts.userId,
       sourceBuffer: opts.uploadedProfileBuffer,
     });
-  } else if (!deterministicExists && candidateAvatarUrl) {
-    const remoteBuffer = await fetchRemoteAvatarBuffer(candidateAvatarUrl);
+  } else if (!isDeterministicProfileUrl(profile.avatar_url) && candidateAvatarUrl) {
+    const remoteBuffer = await fetchAvatarBuffer(candidateAvatarUrl);
     if (remoteBuffer) {
       profileUrlToSave = await uploadProfilePhoto({
-        studentId,
+        userId: opts.userId,
         sourceBuffer: remoteBuffer,
       });
     }
@@ -284,16 +248,17 @@ export async function ensureStaticLibraryCardAssets(opts: {
       .eq("id", opts.userId);
   }
 
-  const { qr } = fileNamesFor(studentId);
-  const { data: qrData } = admin.storage.from(CARD_ASSET_BUCKET).getPublicUrl(qr);
-
-  const { qrExists, profileExists } = await checkStaticLibraryCardAssets({ studentId });
+  const profileUrl = profileUrlToSave || profile.avatar_url;
+  const { data: signed, error: signError } = await admin.storage
+    .from(CARD_ASSET_BUCKET)
+    .createSignedUrl(qrFile, QR_URL_TTL_SECONDS);
+  if (signError) throw signError;
 
   return {
     studentId,
-    qrUrl: qrData.publicUrl || publicObjectUrl(qr),
-    profileUrl: profileUrlToSave || profile.avatar_url,
-    qrExists,
-    profileExists,
+    qrUrl: signed.signedUrl,
+    profileUrl,
+    qrExists: true,
+    profileExists: isDeterministicProfileUrl(profileUrl),
   };
 }

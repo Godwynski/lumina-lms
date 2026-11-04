@@ -80,26 +80,22 @@ function normalizeIdByRole(id: string | null, role?: string | null): string | nu
   return upper;
 }
 
-export function fileNamesFor(studentId: string) {
-  const normalized = sanitizeStudentId(studentId);
-  return {
-    qr: `qr_${normalized}.png`,
-    profile: `profile_${normalized}.webp`,
-  };
+export const AVATAR_BUCKET = "avatars";
+
+/** QR image file name for a library card number (the private library-cards bucket). */
+export function fileNamesFor(cardNumber: string) {
+  return { qr: `qr_${sanitizeStudentId(cardNumber)}.png` };
 }
 
-export function publicObjectUrl(fileName: string) {
-  const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!projectUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
-  }
-
-  return `${projectUrl}/storage/v1/object/public/${CARD_ASSET_BUCKET}/${fileName}`;
+/** Where the processed card photo lives in the public avatars bucket. */
+export function cardPhotoPath(userId: string) {
+  return `${userId}/card.webp`;
 }
 
+/** True when the avatar is already the processed card photo (so it isn't downloaded again). */
 export function isDeterministicProfileUrl(url: string | null) {
   if (!url) return false;
-  return url.includes(`/storage/v1/object/public/${CARD_ASSET_BUCKET}/profile_`);
+  return /\/storage\/v1\/object\/public\/avatars\/[^/]+\/card\.webp(\?|$)/.test(url);
 }
 
 export function resolveStudentId(opts: {
@@ -128,14 +124,4 @@ export function resolveStudentId(opts: {
   }
 
   return result;
-}
-
-export function getDeterministicQrUrl(studentId: string) {
-  const { qr } = fileNamesFor(studentId);
-  return publicObjectUrl(qr);
-}
-
-export function getDeterministicProfileUrl(studentId: string) {
-  const { profile } = fileNamesFor(studentId);
-  return publicObjectUrl(profile);
 }

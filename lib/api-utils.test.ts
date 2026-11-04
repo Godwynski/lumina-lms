@@ -74,6 +74,7 @@ describe('apiError helper', () => {
         body: {
           ok: false,
           message: 'Database connection failed',
+          error: 'Database connection failed',
           code: 'ERROR',
           details: undefined,
         },
@@ -89,6 +90,7 @@ describe('apiError helper', () => {
         body: {
           ok: false,
           message: 'Validation failed',
+          error: 'Validation failed',
           code: 'VALIDATION_ERROR',
           details: { field: 'isbn' },
         },
@@ -119,7 +121,7 @@ describe('withAuthApi authorization wrapper', () => {
       expect(response).toEqual(
         expect.objectContaining({
           status: 401,
-          body: { ok: false, message: 'Unauthorized', code: 'UNAUTHORIZED', details: undefined },
+          body: { ok: false, message: 'Unauthorized', error: 'Unauthorized', code: 'UNAUTHORIZED', details: undefined },
         })
       );
       expect(mockHandler).not.toHaveBeenCalled();

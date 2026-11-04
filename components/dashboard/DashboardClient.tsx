@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 
-import { resolveStudentId, getDeterministicQrUrl } from "@/lib/library-card-assets";
+import { resolveStudentId } from "@/lib/library-card-assets";
 import { DEFAULT_STUDENT_FAQS } from "@/lib/actions/policy-constants";
 import { createClient } from '@/lib/supabase/client';
 import { Reservation, ProfileData, Book, Category } from '@/lib/types';
@@ -214,7 +214,7 @@ export function DashboardClient({
         expiryDate: expiresAt,
         academicYear: ayString,
         avatarUrl: profileData.avatar_url,
-        qrUrl: resolvedStudentId ? getDeterministicQrUrl(resolvedStudentId) : null,
+        qrUrl: null, // signed URL is loaded by MyCardContainer (the library-cards bucket is private)
         address: profileData.address || undefined,
         phone: profileData.phone || undefined,
         roleLabel: role ? role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Student",

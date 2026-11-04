@@ -1371,9 +1371,10 @@ ON CONFLICT (key) DO NOTHING;
 -- Setup default storage buckets
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES 
-  ('avatars', 'avatars', true, null, null),
-  ('library-cards', 'library-cards', true, 10000000, ARRAY['image/png', 'image/jpeg', 'image/webp']),
-  ('book-covers', 'book-covers', true, null, null)
+  ('avatars', 'avatars', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp']),
+  -- Private: the QR images are the library cards; the app serves them with signed URLs.
+  ('library-cards', 'library-cards', false, 10000000, ARRAY['image/png', 'image/jpeg', 'image/webp']),
+  ('book-covers', 'book-covers', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Enable RLS on storage.objects

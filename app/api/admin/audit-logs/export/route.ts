@@ -1,34 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
 import { sanitizeFilterInput } from "@/lib/utils";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { format } from "date-fns";
 import { isAbortError } from "@/lib/error-utils";
 import { connection } from "next/server";
 import * as XLSX from "xlsx";
+import { withAuthApi } from "@/lib/api-utils";
 
-
-export async function GET(request: NextRequest) {
+export const GET = withAuthApi(async (request, { supabase }) => {
   await connection();
   try {
-    const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
-
-    if (!user?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin role
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.user.id)
-      .single();
-
-    if (profile?.role !== "super_admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const searchParams = request.nextUrl.searchParams;
+    const searchParams = new URL(request.url).searchParams;
     const entityType = searchParams.get("entityType");
     const queryParam = searchParams.get("query");
     const actionType = searchParams.get("actionType");
@@ -212,4 +193,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, { allowedRoles: ["super_admin"] });

@@ -184,6 +184,8 @@ describe('Onboarding & Profile Server Actions', () => {
   });
 
   describe('updateAvatarUrl', () => {
+    const ownAvatar = (userId: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${userId}/1.jpg`;
+
     it('throws Unauthorized error when user is not authenticated', async () => {
       mockSupabaseHelper.auth.getUser.mockResolvedValue({
         data: { user: null },
@@ -193,6 +195,16 @@ describe('Onboarding & Profile Server Actions', () => {
       await expect(updateAvatarUrl('https://example.com/new-avatar.png')).rejects.toThrow(
         'Unauthorized'
       );
+    });
+
+    // C6: the avatar URL is downloaded server-side later, so only the user's own bucket folder is allowed.
+    it.each([
+      'https://example.com/a.png',
+      'https://placeholder.supabase.co/storage/v1/object/public/avatars/someone-else/1.jpg',
+      'https://placeholder.supabase.co/storage/v1/object/public/avatars/user-1/../x/1.jpg',
+    ])('rejects avatar URL %s', async (url) => {
+      mockSupabaseHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+      await expect(updateAvatarUrl(url)).rejects.toThrow('Invalid avatar URL.');
     });
 
     it('updates avatar URL, logs audit, and triggers static library card asset sync', async () => {
@@ -210,7 +222,7 @@ describe('Onboarding & Profile Server Actions', () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
-      const newAvatarUrl = 'https://example.com/custom-avatar.webp';
+      const newAvatarUrl = ownAvatar('user-avatar-1');
       const result = await updateAvatarUrl(newAvatarUrl);
 
       expect(result).toEqual({ success: true });
@@ -251,7 +263,7 @@ describe('Onboarding & Profile Server Actions', () => {
         eq: vi.fn().mockResolvedValue({ error: { message: 'Storage connection failure' } }),
       });
 
-      await expect(updateAvatarUrl('https://example.com/avatar.png')).rejects.toThrow(
+      await expect(updateAvatarUrl(ownAvatar('user-avatar-err'))).rejects.toThrow(
         'Failed to update profile picture.'
       );
     });
@@ -275,7 +287,7 @@ describe('Onboarding & Profile Server Actions', () => {
         new Error('Sharp processing failed')
       );
 
-      const result = await updateAvatarUrl('https://example.com/avatar.png');
+      const result = await updateAvatarUrl(ownAvatar('user-avatar-sync-fail'));
 
       expect(result).toEqual({ success: true });
       expect(logAuditActivity).toHaveBeenCalled();
