@@ -5,8 +5,12 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import { resolveScan, checkoutBook, returnBook } from '@/lib/actions/circulation';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { useScanFeedback } from './use-scan-feedback';
 import type { ActiveStudent } from '@/components/circulation/MemberPreview';
+
+// The RPCs return ISO timestamps; the review step shows them as-is.
+const formatDate = (iso?: string) => (iso ? format(new Date(iso), 'MMM dd, yyyy') : undefined);
 
 export type FlowMode = 'checkout' | 'return';
 
@@ -118,7 +122,7 @@ export function useCirculationWizard() {
             setPendingCheckout({
               bookQr: value,
               bookTitle: result.data.book_title!,
-              dueDate: result.data.due_date!,
+              dueDate: formatDate(result.data.due_date) ?? 'N/A',
               idempotencyKey: crypto.randomUUID(),
             });
             playScanCue('success');
@@ -137,8 +141,8 @@ export function useCirculationWizard() {
              bookQr: value,
              bookTitle: result.data.book_title!,
              studentName: result.data.student_name!,
-             dueDate: result.data.due_date,
-             borrowedAt: result.data.borrowed_at,
+             dueDate: formatDate(result.data.due_date),
+             borrowedAt: formatDate(result.data.borrowed_at),
              idempotencyKey: crypto.randomUUID(),
           });
           playScanCue('success');

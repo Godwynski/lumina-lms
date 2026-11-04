@@ -175,6 +175,22 @@ describe('real DB: behavior that is already correct', () => {
     expect((await tryq(`DELETE FROM public.profiles WHERE id = $1`, [u.stu])).ok).toBe(false);
   });
 
+  it('lets a direct database session with no API JWT (SQL editor) change roles', async () => {
+    await db.exec(`SELECT set_config('request.jwt.claims', '', false)`);
+    try {
+      await q(`UPDATE public.profiles SET role = 'librarian' WHERE id = $1`, [u.admin]);
+    } finally {
+      await serviceClaims();
+    }
+    expect(await roleOf(u.admin)).toBe('librarian');
+  });
+
+  // The blocked-update tests below would also pass if every update errored, so prove allowed ones work.
+  it('lets a librarian approve a pending user and a student edit their own address', async () => {
+    expect(await as(u.lib, () => tryq(`UPDATE public.profiles SET status = 'ACTIVE' WHERE id = $1`, [u.pending]))).toMatchObject({ ok: true, affected: 1 });
+    expect(await as(u.stu, () => tryq(`UPDATE public.profiles SET address = 'New St' WHERE id = $1`, [u.stu]))).toMatchObject({ ok: true, affected: 1 });
+  });
+
   it('stops a student from changing their own role', async () => {
     await as(u.stu, () => tryq(`UPDATE public.profiles SET role = 'librarian' WHERE id = $1`, [u.stu]));
     expect(await roleOf(u.stu)).toBe('student');
@@ -282,12 +298,12 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
   });
 
   // --- B2.2: circulation SQL functions ---
-  it.fails('C4 a PENDING account cannot reserve books', async () => {
+  it('C4 a PENDING account cannot reserve books', async () => {
     const { book } = await newBook(1);
     expect((await rpc(u.pending, `SELECT public.create_reservation_atomic($1, $2) r`, [u.pending, book]))?.ok).toBe(false);
   });
 
-  it.fails('C4 max_reservations_per_student is enforced', async () => {
+  it('C4 max_reservations_per_student is enforced', async () => {
     await q(`INSERT INTO public.system_settings(key, value, description, data_type) VALUES ('max_reservations_per_student', '1', 'x', 'number')
              ON CONFLICT (key) DO UPDATE SET value = '1'`);
     const a = await newBook(1);
@@ -297,7 +313,7 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
   });
 
   // Only the counting half of M10; the race needs two connections, which PGlite doesn't have.
-  it.fails('M10 an OVERDUE loan counts toward the borrow limit', async () => {
+  it('M10 an OVERDUE loan counts toward the borrow limit', async () => {
     await q(`UPDATE public.system_settings SET value = '1' WHERE key = 'max_borrow_limit'`);
     const { qrs } = await newBook(2);
     expect((await checkout(stuCard, qrs[0]))?.ok).toBe(true);
@@ -305,7 +321,7 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     expect((await checkout(stuCard, qrs[1]))?.code).toBe('LIMIT_EXCEEDED');
   });
 
-  it.fails('M12 the return preview includes borrowed_at and due_date', async () => {
+  it('M12 the return preview includes borrowed_at and due_date', async () => {
     const { qrs } = await newBook(1);
     await checkout(stuCard, qrs[0]);
     const pv = await rpc('service', `SELECT public.process_qr_return($1, $2, NULL, true) r`, [u.lib, qrs[0]]);
@@ -313,7 +329,7 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     expect(pv?.due_date).toBeTruthy();
   });
 
-  it.fails('m2 a student can see when a borrowed book is due back', async () => {
+  it('m2 a student can see when a borrowed book is due back', async () => {
     const { book, qrs } = await newBook(1);
     await checkout(stu2Card, qrs[0]);
     const due = (await q(`SELECT due_date::date::text d FROM public.borrowing_records WHERE user_id = $1`, [u.stu2]))[0].d;

@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         DUPLICATE: 409,
         DUPLICATE_ACTIVE_RESERVATION: 409,
         RESERVATION_LIMIT: 409,
-        SUSPENDED: 403,
+        ACCOUNT_INACTIVE: 403,
       };
 
       return NextResponse.json(

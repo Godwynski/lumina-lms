@@ -120,8 +120,10 @@ AS $$
 DECLARE
   v_actor_role public.user_role;
 BEGIN
-  -- The service role (server code, transfer_super_admin_ownership) can update all fields
-  IF COALESCE((auth.jwt() ->> 'role'), '') = 'service_role' OR current_user = 'service_role' THEN
+  -- The service role (server code, transfer_super_admin_ownership) and direct database sessions
+  -- with no API JWT (SQL editor, cron) can update all fields. Checking current_user would not
+  -- work here: in a SECURITY DEFINER trigger it is always the function owner.
+  IF COALESCE((auth.jwt() ->> 'role'), '') NOT IN ('anon', 'authenticated') THEN
     RETURN NEW;
   END IF;
 
@@ -178,6 +180,18 @@ CREATE POLICY "Users can view own profile, staff can view all" ON public.profile
 -- M13: attendance is recorded by staff only.
 DROP POLICY IF EXISTS "Users can self check-in" ON public.attendance;
 DROP POLICY IF EXISTS "Users can self check-out" ON public.attendance;
+-- The live database has combined "staff OR self" policies instead; replace them with staff-only ones.
+DROP POLICY IF EXISTS "Attendance insert policy" ON public.attendance;
+DROP POLICY IF EXISTS "Attendance update policy" ON public.attendance;
+DROP POLICY IF EXISTS "Staff can insert attendance" ON public.attendance;
+DROP POLICY IF EXISTS "Staff can update attendance" ON public.attendance;
+CREATE POLICY "Staff can insert attendance" ON public.attendance
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_staff());
+CREATE POLICY "Staff can update attendance" ON public.attendance
+  FOR UPDATE TO authenticated
+  USING (public.is_staff())
+  WITH CHECK (public.is_staff());
 
 -- M14: student assistants can read circulation data but not write it directly.
 DROP POLICY IF EXISTS "Staff can insert book_copies" ON public.book_copies;
@@ -201,6 +215,10 @@ CREATE POLICY "Librarians can update borrowing records" ON public.borrowing_reco
   WITH CHECK (public.is_manager());
 
 DROP POLICY IF EXISTS "Staff can manage reservations" ON public.reservations;
+-- The live database splits staff writes into three policies instead.
+DROP POLICY IF EXISTS "Staff can insert reservations" ON public.reservations;
+DROP POLICY IF EXISTS "Staff can update reservations" ON public.reservations;
+DROP POLICY IF EXISTS "Staff can delete reservations" ON public.reservations;
 CREATE POLICY "Staff can view all reservations" ON public.reservations
   FOR SELECT TO authenticated
   USING (public.is_staff());

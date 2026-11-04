@@ -539,8 +539,10 @@ AS $$
 DECLARE
   v_actor_role public.user_role;
 BEGIN
-  -- The service role (server code, transfer_super_admin_ownership) can update all fields
-  IF COALESCE((auth.jwt() ->> 'role'), '') = 'service_role' OR current_user = 'service_role' THEN
+  -- The service role (server code, transfer_super_admin_ownership) and direct database sessions
+  -- with no API JWT (SQL editor, cron) can update all fields. Checking current_user would not
+  -- work here: in a SECURITY DEFINER trigger it is always the function owner.
+  IF COALESCE((auth.jwt() ->> 'role'), '') NOT IN ('anon', 'authenticated') THEN
     RETURN NEW;
   END IF;
 
@@ -643,6 +645,7 @@ DECLARE
     v_hold_days      INTEGER;
     v_expiry         TIMESTAMPTZ;
     v_actor_role     user_role;
+    v_max_res        INTEGER;
 BEGIN
     -- Authorization Enforcements:
     -- 1. Require authentication: anonymous callers are prohibited unless executed via service_role.
@@ -665,10 +668,12 @@ BEGIN
     END IF;
 
     SELECT status INTO v_profile_status FROM public.profiles WHERE id = v_target_id;
-    IF v_profile_status = 'SUSPENDED' THEN
-        RETURN jsonb_build_object('ok', false, 'code', 'SUSPENDED', 'message', 'User account is suspended.');
+    IF UPPER(COALESCE(v_profile_status, '')) <> 'ACTIVE' THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'ACCOUNT_INACTIVE', 'message', 'Only active accounts can reserve books.');
     END IF;
 
+    -- Lock the user, then the book, so the per-user hold count below can't race
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_target_id::text, 0));
     PERFORM pg_advisory_xact_lock(hashtextextended(p_book_id::text, 0));
 
     -- Expire old READY reservations
@@ -689,6 +694,14 @@ BEGIN
         WHERE user_id = v_target_id AND book_id = p_book_id AND status IN ('ACTIVE', 'READY')
     ) THEN
         RETURN jsonb_build_object('ok', false, 'code', 'DUPLICATE', 'message', 'You already have an active reservation for this book.');
+    END IF;
+
+    SELECT COALESCE(NULLIF(value, '')::INTEGER, 3) INTO v_max_res
+    FROM public.system_settings WHERE key = 'max_reservations_per_student';
+
+    IF (SELECT COUNT(*) FROM public.reservations
+        WHERE user_id = v_target_id AND status IN ('ACTIVE', 'READY')) >= COALESCE(v_max_res, 3) THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'RESERVATION_LIMIT', 'message', 'Reservation limit reached.');
     END IF;
 
     SELECT id INTO v_copy_id
@@ -722,6 +735,21 @@ BEGIN
         RETURN jsonb_build_object('ok', true, 'reservation_id', v_res_id, 'status', 'ACTIVE', 'queue_position', v_queue_pos);
     END IF;
 END;
+$$;
+
+-- Earliest due date among a book's current loans. Returns only the date, so students
+-- can see when a copy comes back without reading other people's loan rows.
+CREATE OR REPLACE FUNCTION public.get_next_due_date(p_book_id uuid)
+ RETURNS timestamptz
+ LANGUAGE sql
+ STABLE
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+  SELECT MIN(br.due_date)
+  FROM public.borrowing_records br
+  JOIN public.book_copies bc ON bc.id = br.book_copy_id
+  WHERE bc.book_id = p_book_id AND br.status IN ('ACTIVE', 'OVERDUE');
 $$;
 
 -- Atomic transaction-safe QR checkout procedure
@@ -783,10 +811,13 @@ BEGIN
   FROM public.system_settings
   WHERE key IN ('max_borrow_limit', 'loan_period_days');
 
-  -- Check active borrow count
+  -- Serialize checkouts per student so two desks can't both pass the limit check
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_card.user_id::text, 0));
+
+  -- Check current loan count (overdue loans still count)
   SELECT COUNT(*) INTO v_active_borrows
   FROM public.borrowing_records
-  WHERE user_id = v_card.user_id AND status = 'ACTIVE';
+  WHERE user_id = v_card.user_id AND status IN ('ACTIVE', 'OVERDUE');
 
   IF v_active_borrows >= v_max_borrow_limit THEN
     RETURN jsonb_build_object('ok', false, 'code', 'LIMIT_EXCEEDED', 'message', 'Borrow limit reached.');
@@ -945,7 +976,9 @@ BEGIN
       RETURN jsonb_build_object(
         'ok', true, 'preview', true,
         'book_title',   v_copy.title,
-        'student_name', COALESCE(v_borrow.full_name, 'Student')
+        'student_name', COALESCE(v_borrow.full_name, 'Student'),
+        'borrowed_at',  v_borrow.borrowed_at,
+        'due_date',     v_borrow.due_date
       );
     END IF;
 
@@ -1194,7 +1227,8 @@ CREATE POLICY "Users can update own notifications" ON public.notifications
 -- profiles Policies
 CREATE POLICY "Users can view own profile, staff can view all" ON public.profiles
   FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = id OR public.is_staff());
+  -- No sub-select here: the update policies below query profiles, which would make it policy recursion
+  USING (id = auth.uid() OR public.is_staff());
 
 CREATE POLICY "Users can update own profile" ON public.profiles
   FOR UPDATE TO authenticated
@@ -1321,6 +1355,9 @@ GRANT EXECUTE ON FUNCTION public.transfer_super_admin_ownership(uuid, uuid) TO s
 -- Reservation RPC revoked from public/anon, granted to authenticated
 REVOKE EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.get_next_due_date(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_next_due_date(uuid) TO authenticated, service_role;
 
 -- 12. DEFAULT SYSTEM SETTINGS SEED VALUES
 INSERT INTO public.system_settings (key, value, description, data_type) VALUES

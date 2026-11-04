@@ -65,19 +65,9 @@ export async function getBookAvailabilityStatus(bookId: string) {
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
 
-  // 1. Get earliest due date for this book
-  const { data: borrows, error } = await supabase
-    .from('borrowing_records')
-    .select('due_date, book_copies!inner(book_id)')
-    .eq('book_copies.book_id', bookId)
-    .eq('status', 'ACTIVE')
-    .order('due_date', { ascending: true })
-    .limit(1);
-
-  let nextAvailableDate: string | null = null;
-  if (!error && borrows && borrows.length > 0) {
-    nextAvailableDate = borrows[0].due_date;
-  }
+  // 1. Earliest due date for this book (an RPC, since RLS hides other students' loans)
+  const { data: nextDue, error } = await supabase.rpc('get_next_due_date', { p_book_id: bookId });
+  let nextAvailableDate: string | null = !error && nextDue ? (nextDue as string) : null;
 
   // 2. Check if current user has an active/ready reservation
   let hasReservation = false;

@@ -124,20 +124,20 @@ _Why high: these are the actual security boundary. A policy that "looks right" c
 ### B2.2 · Circulation SQL functions · Effort: `high`
 _Why high: these functions run every checkout and reservation, and locking or limit mistakes only show up under real use._
 
-- [ ] 🔴 **C4** One account can reserve every copy ✅ `[P1#9]` — `create_reservation_atomic`: require `status = 'ACTIVE'`, enforce `max_reservations_per_student`, and return `RESERVATION_LIMIT`.
-- [ ] 🟠 **M10** Borrow-limit race; overdue loans not counted ✅ `[P1#29]` — `process_qr_checkout`: add `pg_advisory_xact_lock(hashtext(v_card.user_id::text))` and count `IN ('ACTIVE','OVERDUE')`.
-- [ ] 🟠 **M12** The return screen never shows the due date ✅ `[P2#44]` — add `borrowed_at` and `due_date` to the `process_qr_return` preview JSON. Format the dates in `use-circulation-wizard.ts`, for checkout too.
-- [ ] 🟡 **m2** Students never see when a book comes back ✅ `[P1#28]` — add a SECURITY DEFINER `get_next_due_date(book_id)` that returns only the date, and use it in `getBookAvailabilityStatus`.
+- [x] 🔴 **C4** One account can reserve every copy ✅ `[P1#9]` — `create_reservation_atomic`: require `status = 'ACTIVE'`, enforce `max_reservations_per_student`, and return `RESERVATION_LIMIT`.
+- [x] 🟠 **M10** Borrow-limit race; overdue loans not counted ✅ `[P1#29]` — `process_qr_checkout`: add `pg_advisory_xact_lock(hashtext(v_card.user_id::text))` and count `IN ('ACTIVE','OVERDUE')`.
+- [x] 🟠 **M12** The return screen never shows the due date ✅ `[P2#44]` — add `borrowed_at` and `due_date` to the `process_qr_return` preview JSON. Format the dates in `use-circulation-wizard.ts`, for checkout too.
+- [x] 🟡 **m2** Students never see when a book comes back ✅ `[P1#28]` — add a SECURITY DEFINER `get_next_due_date(book_id)` that returns only the date, and use it in `getBookAvailabilityStatus`.
 
 > ### 🚧 GATE 2
-> - [ ] The `it.fails` tests for C1, C2, C3, C4, M10, M12, M13, M14, M17 and m2 are flipped to `it` and pass.
-> - [ ] Full suite plus build green.
+> - [x] The `it.fails` tests for C1, C2, C3, C4, M10, M12, M13, M14, M17 and m2 are flipped to `it` and pass.
+> - [x] Full suite plus build green.
 > - [ ] Manual smoke test on a staging or local project:
 >   - A student dashboard and the catalog still render (names still show where they should).
 >   - A librarian can approve a PENDING user.
 >   - Checkout and return work.
 >   - A Gmail sign-in is rejected.
-> - [ ] The migration has been applied to the live database (Supabase SQL editor), with a backup taken first.
+> - [x] The migration has been applied to the live database (Supabase SQL editor), with a backup taken first. _Applied 2026-11-04 to `system-sg` (3 migrations incl. the recursion hotfix); undo script in `supabase/rollback/`._
 
 ---
 
