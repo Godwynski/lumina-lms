@@ -22,10 +22,10 @@ export function PolicySimulationPanel({ formData }: SimulationProps) {
           </div>
           <div className="space-y-1 pt-0.5">
             <div className="flex items-center gap-1.5">
-              <h4 className="text-[9px] font-bold uppercase tracking-widest text-primary/60">Hold Period</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-primary/60">Hold Period</h4>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Hold Period info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Hold Period info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -37,7 +37,7 @@ export function PolicySimulationPanel({ formData }: SimulationProps) {
             <p className="text-xs font-bold text-foreground/80">
               {holdExpiry} Day Reservation
             </p>
-            <p className="text-[10px] text-muted-foreground/50 font-medium leading-relaxed">
+            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
               Items are held for {holdExpiry} days before expiration.
             </p>
           </div>

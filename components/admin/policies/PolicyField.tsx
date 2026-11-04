@@ -110,7 +110,7 @@ export function PolicyField({
       )}>
         <div className="space-y-3 flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-muted/15 flex items-center justify-center text-muted-foreground/60 group-hover:text-primary group-hover:bg-primary/15 transition-all duration-300 border border-border/5 group-hover:border-primary/20 shadow-sm">
+            <div className="h-10 w-10 rounded-xl bg-muted/15 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/15 transition-all duration-300 border border-border/5 group-hover:border-primary/20 shadow-sm">
               <Icon size={18} />
             </div>
             <div className="space-y-1">
@@ -118,37 +118,37 @@ export function PolicyField({
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground leading-none">{labelText}</h3>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <button type="button" className="text-muted-foreground/40 hover:text-primary transition-colors focus:outline-none cursor-help mb-0.5">
+                    <button type="button" className="text-muted-foreground hover:text-primary transition-colors focus:outline-none cursor-help mb-0.5">
                       <HelpCircle size={12} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[280px] p-0 overflow-hidden rounded-2xl border-border/20 shadow-2xl backdrop-blur-xl bg-background/95">
                     <div className="p-4 space-y-3">
                       <div className="flex items-center gap-2 pb-2 border-b border-border/10">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/60">Information</span>
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Information</span>
                       </div>
                       <p className="text-[11px] font-medium text-foreground/80 leading-relaxed">{config.description}</p>
                       {validation?.type === "number" && (
-                        <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">
+                        <p className="text-[11px] font-bold text-primary/60 uppercase tracking-widest">
                           Limit: {validation.min ?? 0} - {validation.max ?? '∞'}
                         </p>
                       )}
                       {config.example && (
                         <div className="bg-muted/10 p-3 rounded-lg border border-border/10">
-                          <p className="text-[9px] text-muted-foreground/60 leading-relaxed italic font-medium">&ldquo;{config.example}&rdquo;</p>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed italic font-medium">&ldquo;{config.example}&rdquo;</p>
                         </div>
                       )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] truncate">{policyKey}</p>
+              <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] truncate">{policyKey}</p>
             </div>
 
             {value !== initialValue && (
               <div className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-500">
                 <Zap className="h-2.5 w-2.5 text-primary" />
-                <span className="text-[8px] font-bold uppercase text-primary tracking-widest">Modified</span>
+                <span className="text-[11px] font-bold uppercase text-primary tracking-widest">Modified</span>
               </div>
             )}
           </div>
@@ -210,7 +210,7 @@ export function PolicyField({
                 className="h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-12 transition-all shadow-sm"
               />
               {isDays && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[7px] font-bold text-muted-foreground/20 pointer-events-none uppercase tracking-widest border-l border-border/5 pl-2.5">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[7px] font-bold text-muted-foreground pointer-events-none uppercase tracking-widest border-l border-border/5 pl-2.5">
                   Days
                 </span>
               )}

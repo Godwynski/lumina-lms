@@ -102,7 +102,7 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
       <div className="relative">
         <Avatar className="h-32 w-32 rounded-3xl border-4 border-background shadow-xl transition-transform duration-500 group-hover/avatar:scale-[1.02]">
           <AvatarImage src={avatarUrl || undefined} alt={fullName || "Profile"} className="object-cover" />
-          <AvatarFallback className="rounded-3xl bg-muted text-2xl font-black text-muted-foreground/50">
+          <AvatarFallback className="rounded-3xl bg-muted text-2xl font-black text-muted-foreground">
             {(fullName || "U").charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -121,7 +121,7 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
           ) : (
             <>
               <Camera className="h-8 w-8 text-white mb-1" />
-              <span className="text-[10px] font-black uppercase tracking-tighter text-white">Change Photo</span>
+              <span className="text-[11px] font-black uppercase tracking-tighter text-white">Change Photo</span>
             </>
           )}
         </button>
@@ -132,7 +132,7 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
         <button 
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="text-[10px] text-primary font-bold hover:underline disabled:opacity-50"
+          className="text-[11px] text-primary font-bold hover:underline disabled:opacity-50"
         >
           {isUploading ? "Processing..." : "Click to update photo"}
         </button>

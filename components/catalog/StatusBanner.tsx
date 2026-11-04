@@ -41,7 +41,7 @@ export function StatusBanner({
           <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-black text-emerald-700 uppercase tracking-tight">Ready for Pickup</p>
-            {deadline && <p className="text-[10px] font-bold text-emerald-600/70 mt-0.5">Claim by {deadline}</p>}
+            {deadline && <p className="text-[11px] font-bold text-emerald-600/70 mt-0.5">Claim by {deadline}</p>}
           </div>
           <span className="ml-auto animate-pulse inline-flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_2px_rgba(16,185,129,0.4)]" />
         </div>
@@ -76,7 +76,7 @@ export function StatusBanner({
           <Ticket className="h-4 w-4 text-primary shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-black text-primary uppercase tracking-tight">Queue Position #{availability.queuePosition}</p>
-            <p className="text-[10px] font-bold text-muted-foreground/70 mt-0.5">We&apos;ll notify you when assigned.</p>
+            <p className="text-[11px] font-bold text-muted-foreground mt-0.5">We&apos;ll notify you when assigned.</p>
           </div>
         </div>
       );
@@ -91,7 +91,7 @@ export function StatusBanner({
           <p className="text-sm font-black text-primary uppercase tracking-tight leading-tight">
             Queue Position #{availability.queuePosition}
           </p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground/70">
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
             We&apos;ll notify you when a copy is assigned to you.
           </p>
         </div>
@@ -123,7 +123,7 @@ export function StatusBanner({
           <p className="text-sm font-black text-emerald-700 uppercase tracking-tight leading-tight">
             {book.available_copies} {book.available_copies === 1 ? 'copy' : 'copies'} on shelf
           </p>
-          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground/70">
+          <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
             Reserve to secure this title for your next visit.
           </p>
         </div>

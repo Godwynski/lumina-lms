@@ -53,7 +53,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground">Current Membership</p>
-                  <p className="text-[11px] text-muted-foreground/80 font-black uppercase tracking-widest">
+                  <p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">
                     {role.replace('_', ' ')}
                   </p>
                 </div>
@@ -67,7 +67,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground">Security Status</p>
-                  <p className="text-[11px] text-muted-foreground/80 font-black uppercase tracking-widest">Verified</p>
+                  <p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">Verified</p>
                 </div>
               </div>
             </div>

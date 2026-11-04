@@ -69,7 +69,7 @@ export function PolicyCommitModal({
           const removed = oldArr.filter(oldItem => !newArr.some(newItem => JSON.stringify(newItem) === JSON.stringify(oldItem)));
           
           if (added.length === 0 && removed.length === 0) {
-             return <span className="text-[10px] text-muted-foreground/50 italic font-medium">Reordered collection items</span>;
+             return <span className="text-[11px] text-muted-foreground italic font-medium">Reordered collection items</span>;
           }
 
           const getLabel = (item: unknown) => {
@@ -83,13 +83,13 @@ export function PolicyCommitModal({
           return (
             <div className="mt-3 space-y-2 border-t border-border/5 pt-3">
               {added.map((item: unknown, i: number) => (
-                <div key={`add-${i}`} className="flex items-start gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold leading-tight">
+                <div key={`add-${i}`} className="flex items-start gap-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold leading-tight">
                   <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] shrink-0" />
                   <span className="line-clamp-2">Added: {getLabel(item)}</span>
                 </div>
               ))}
               {removed.map((item: unknown, i: number) => (
-                <div key={`rem-${i}`} className="flex items-start gap-2 text-[10px] text-rose-600/70 dark:text-rose-400/70 font-medium leading-tight italic">
+                <div key={`rem-${i}`} className="flex items-start gap-2 text-[11px] text-rose-600/70 dark:text-rose-400/70 font-medium leading-tight italic">
                   <div className="mt-1 h-1.5 w-1.5 rounded-full bg-rose-500/50 shrink-0" />
                   <span className="line-through decoration-rose-500/30 line-clamp-2">Removed: {getLabel(item)}</span>
                 </div>
@@ -105,7 +105,7 @@ export function PolicyCommitModal({
     // Default string diff
     return (
       <div className="mt-2 flex items-center gap-3 text-[11px] font-bold">
-        <span className="text-muted-foreground/30 line-through truncate max-w-[140px] font-medium">{oldVal || "Empty"}</span>
+        <span className="text-muted-foreground line-through truncate max-w-[140px] font-medium">{oldVal || "Empty"}</span>
         <ArrowRight className="h-3 w-3 text-primary/30 shrink-0" />
         <span className="text-primary truncate max-w-[180px] bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
           {newVal || "Empty"}
@@ -125,7 +125,7 @@ export function PolicyCommitModal({
               <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
                 <Check className="h-5 w-5" />
               </div>
-              <div className="px-2.5 py-0.5 rounded-full bg-primary/10 text-[9px] font-bold uppercase tracking-wider text-primary border border-primary/10">
+              <div className="px-2.5 py-0.5 rounded-full bg-primary/10 text-[11px] font-bold uppercase tracking-wider text-primary border border-primary/10">
                 Draft Changes
               </div>
             </div>
@@ -145,7 +145,7 @@ export function PolicyCommitModal({
               {changedKeys.map(key => (
                 <div key={key} className="group relative p-4 rounded-xl bg-card border border-border/60 hover:border-primary/30 transition-all duration-300 shadow-xs flex items-center justify-between gap-4">
                   <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 group-hover:text-primary transition-colors">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">
                       {DEFAULT_POLICIES[key]?.label ?? formatKey(key)}
                     </span>
                     {renderDiffDetails(key, initialValues[key], formData[key])}
@@ -159,11 +159,11 @@ export function PolicyCommitModal({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/75">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Audit Protocol Reason
                 </label>
                 <span className={cn(
-                  "text-[9px] font-semibold uppercase transition-colors",
+                  "text-[11px] font-semibold uppercase transition-colors",
                   isFormValid ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
                 )}>
                   {reason.length < 10 ? `${10 - reason.length} chars min` : 'Validated'}
@@ -176,7 +176,7 @@ export function PolicyCommitModal({
                   placeholder="Provide a detailed reason for these changes for the audit log..."
                   className="min-h-[100px] rounded-xl border border-input/60 bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/60 transition-all p-4 resize-none placeholder:text-muted-foreground/40"
                 />
-                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/5 text-[9px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider border border-amber-500/10 backdrop-blur-xs">
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/5 text-[11px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider border border-amber-500/10 backdrop-blur-xs">
                   <Info className="h-2.5 w-2.5" />
                   <span>Permanent Log</span>
                 </div>

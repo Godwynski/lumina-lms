@@ -262,7 +262,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                   <Filter size={14} />
                   <span className="hidden sm:inline">Filter</span>
                   {activeTab !== "all" && (
-                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[11px] min-w-5 justify-center">
                       {roleFilterLabels[activeTab]}
                     </Badge>
                   )}

@@ -25,7 +25,7 @@ function InfoLabel({ children, tooltip }: { children: React.ReactNode; tooltip?:
       {tooltip && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label={`${children} info`}>
+            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label={`${children} info`}>
               <HelpCircle className="h-3 w-3" />
             </button>
           </TooltipTrigger>
@@ -105,7 +105,7 @@ export function PersonalInfoForm({
           <div className="space-y-2">
             <InfoLabel tooltip="The college degree program or course currently recorded on your student profile.">Academic Program</InfoLabel>
             <div className="h-11 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-bold text-foreground/80 shadow-sm overflow-hidden">
-              <span className="truncate w-full">{departmentValue || <span className="text-muted-foreground/50 font-medium">Not Assigned</span>}</span>
+              <span className="truncate w-full">{departmentValue || <span className="text-muted-foreground font-medium">Not Assigned</span>}</span>
             </div>
           </div>
         )}

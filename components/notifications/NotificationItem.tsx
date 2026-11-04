@@ -126,7 +126,7 @@ export const NotificationItem = memo(({
         
         <p className={cn(
           "text-xs leading-relaxed font-medium transition-colors",
-          notification.is_read ? "text-muted-foreground/60" : "text-muted-foreground",
+          notification.is_read ? "text-muted-foreground" : "text-muted-foreground",
           variant === 'compact' ? "line-clamp-1" : "line-clamp-2"
         )}>
           {notification.content}

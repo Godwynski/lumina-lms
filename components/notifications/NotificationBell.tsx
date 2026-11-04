@@ -37,7 +37,7 @@ export function NotificationBell() {
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-0.5 -right-0.5 h-5 min-w-5 flex items-center justify-center p-1 text-[10px] font-black rounded-lg border-2 border-background animate-in zoom-in-50 duration-300"
+              className="absolute -top-0.5 -right-0.5 h-5 min-w-5 flex items-center justify-center p-1 text-[11px] font-black rounded-lg border-2 border-background animate-in zoom-in-50 duration-300"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -54,12 +54,12 @@ export function NotificationBell() {
           <div className="flex flex-col gap-0.5">
             <span className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground/80">Notifications</span>
             {unreadCount > 0 && (
-              <span className="text-[9px] font-bold text-primary/60 tracking-wider italic">{unreadCount} new events</span>
+              <span className="text-[11px] font-bold text-primary/60 tracking-wider italic">{unreadCount} new events</span>
             )}
           </div>
           {unreadCount > 0 && (
             <button 
-              className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/70 transition-all"
+              className="text-[11px] font-black uppercase tracking-widest text-primary hover:text-primary/70 transition-all"
               onClick={markAllAsRead}
             >
               Mark all read
@@ -83,7 +83,7 @@ export function NotificationBell() {
         <div className="p-3 bg-muted/5">
           <Link 
             href="/notifications" 
-            className="block w-full py-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-primary transition-all text-center"
+            className="block w-full py-2 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all text-center"
           >
             Expand Activity Log
           </Link>

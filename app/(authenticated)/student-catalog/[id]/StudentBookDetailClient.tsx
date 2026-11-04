@@ -158,7 +158,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
             />
 
             {/* Availability ribbon */}
-            <div className={`absolute bottom-0 left-0 right-0 px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm ${
+            <div className={`absolute bottom-0 left-0 right-0 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm ${
               availability.isReady
                 ? 'bg-emerald-500/90 text-white'
                 : availability.hasReservation
@@ -181,13 +181,13 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
           {book.tags && book.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 w-[190px]">
               {book.tags.slice(0, 4).map((tag, i) => (
-                <Badge key={i} variant="secondary" className="text-[9px] px-1.5 py-0.5 font-bold">
+                <Badge key={i} variant="secondary" className="text-[11px] px-1.5 py-0.5 font-bold">
                   <Tag className="mr-1 h-2.5 w-2.5" />
                   {tag}
                 </Badge>
               ))}
               {book.tags.length > 4 && (
-                <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 font-bold text-muted-foreground">
+                <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 font-bold text-muted-foreground">
                   +{book.tags.length - 4}
                 </Badge>
               )}
@@ -201,7 +201,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
           {/* Title & Author */}
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground leading-tight">{book.title}</h1>
-            <p className="mt-1 text-sm font-bold text-muted-foreground/70">{book.author}</p>
+            <p className="mt-1 text-sm font-bold text-muted-foreground">{book.author}</p>
           </div>
 
           {/* Copy Meter */}
@@ -250,7 +250,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
                     day: 'numeric',
                   })}
                 </p>
-                <p className="mt-0.5 text-[10px] text-emerald-600/70">
+                <p className="mt-0.5 text-[11px] text-emerald-600/70">
                   After this date, your hold will expire and the next person in queue will be notified.
                 </p>
               </div>
@@ -313,7 +313,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
           {/* Help hints */}
           <div className="grid gap-2 sm:grid-cols-2 pt-1">
             <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
-              <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
+              <p className="mb-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <AlertTriangle className="h-3 w-3" />
                 Can&apos;t find the book?
               </p>
@@ -322,7 +322,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               </p>
             </div>
             <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
-              <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
+              <p className="mb-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <CalendarDays className="h-3 w-3" />
                 Borrow Policy
               </p>

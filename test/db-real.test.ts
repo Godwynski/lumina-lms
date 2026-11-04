@@ -434,7 +434,7 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
   });
 
   // --- B5.1: unused tables ---
-  it.fails('M26 the six unused tables are dropped', async () => {
+  it('M26 the six unused tables are dropped', async () => {
     const tables = ['announcements', 'reports', 'deleted_profile_info', 'rate_limit_log', 'checklist_items', 'checklist_dropdown_options'];
     const left = await q(`SELECT t FROM unnest($1::text[]) t WHERE to_regclass('public.' || t) IS NOT NULL`, [tables]);
     expect(left).toEqual([]);

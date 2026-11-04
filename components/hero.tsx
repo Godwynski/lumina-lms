@@ -134,8 +134,8 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-border" />
                   </div>
-                  <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
-                    <span className="bg-background px-4 text-muted-foreground/60">Quick Demo Access</span>
+                  <div className="relative flex justify-center text-[11px] font-bold uppercase tracking-widest">
+                    <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 w-full">

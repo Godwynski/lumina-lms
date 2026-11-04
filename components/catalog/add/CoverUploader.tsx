@@ -60,7 +60,7 @@ export function CoverUploader({ coverPreviewUrl, coverUrl, onCoverSelected }: Co
           >
             Upload File
           </Button>
-          <p className="text-[10px] text-muted-foreground/60 text-center font-medium">Supported: JPG, PNG, WEBP (Max 2MB)</p>
+          <p className="text-[11px] text-muted-foreground text-center font-medium">Supported: JPG, PNG, WEBP (Max 2MB)</p>
         </div>
       </div>
     </div>

@@ -111,10 +111,10 @@ export function SupportFAQManager({
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between px-2">
         <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 flex items-center gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             Knowledge Base
           </p>
-          <p className="text-[9px] font-medium text-muted-foreground/30 uppercase tracking-widest">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
             {currentFaqs.length} entries registered
           </p>
         </div>
@@ -126,7 +126,7 @@ export function SupportFAQManager({
                   onClick={startAdd}
                   variant="ghost"
                   size="sm"
-                  className="h-9 rounded-xl gap-2 text-primary hover:bg-primary/5 text-[10px] font-bold uppercase tracking-widest transition-all"
+                  className="h-9 rounded-xl gap-2 text-primary hover:bg-primary/5 text-[11px] font-bold uppercase tracking-widest transition-all"
                 >
                   <Plus className="h-3 w-3" />
                   Add Entry
@@ -146,7 +146,7 @@ export function SupportFAQManager({
              <div className="h-12 w-12 rounded-2xl bg-muted/5 flex items-center justify-center mb-3">
                <HelpCircle className="h-6 w-6 text-muted-foreground/10" />
              </div>
-             <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">No entries found</p>
+             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">No entries found</p>
           </div>
         )}
 
@@ -167,21 +167,21 @@ export function SupportFAQManager({
                         <div className={cn(
                           "h-8 w-8 rounded-xl flex items-center justify-center shrink-0",
                           added || modified ? "bg-primary/10 text-primary" :
-                          "bg-muted/20 text-muted-foreground/60"
+                          "bg-muted/20 text-muted-foreground"
                         )}>
                           <MessageSquare className="h-3.5 w-3.5" />
                         </div>
                         <p className="text-sm font-bold text-foreground tracking-tight line-clamp-1">{faq.question}</p>
                         {added && (
-                          <span className="text-[8px] text-primary font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">New</span>
+                          <span className="text-[11px] text-primary font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">New</span>
                         )}
                         {modified && (
-                          <span className="text-[8px] text-primary/80 font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10">Edited</span>
+                          <span className="text-[11px] text-primary/80 font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10">Edited</span>
                         )}
                       </div>
                     <div className="flex gap-4 items-start pl-11">
                       <ArrowRight className="h-3 w-3 text-muted-foreground/20 mt-1 shrink-0" />
-                      <p className="text-xs text-muted-foreground/60 leading-relaxed font-medium line-clamp-2">{faq.answer}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed font-medium line-clamp-2">{faq.answer}</p>
                     </div>
                   </div>
                   {!disabled && (
@@ -209,7 +209,7 @@ export function SupportFAQManager({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-10 w-10 rounded-2xl text-muted-foreground/20 hover:text-rose-500/60 hover:bg-rose-500/[0.02] transition-all"
+                              className="h-10 w-10 rounded-2xl text-muted-foreground hover:text-rose-500/60 hover:bg-rose-500/[0.02] transition-all"
                               onClick={() => removeFAQ(i)}
                               aria-label="Remove FAQ"
                             >
@@ -233,7 +233,7 @@ export function SupportFAQManager({
           <div className="mt-8 space-y-4 pt-10 border-t border-border/10">
              <div className="flex items-center gap-3 px-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/20" />
-                <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">Pending Removal</p>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Pending Removal</p>
              </div>
              <div className="grid gap-3">
                 {removedFaqs.map((faq, i) => (
@@ -241,7 +241,7 @@ export function SupportFAQManager({
                      <div className="flex justify-between gap-6">
                        <div className="min-w-0 flex-1">
                          <p className="text-xs font-bold text-muted-foreground line-through tracking-tight mb-1">Q: {faq.question}</p>
-                         <p className="text-[10px] text-muted-foreground/60 leading-relaxed line-through italic font-medium">A: {faq.answer}</p>
+                         <p className="text-[11px] text-muted-foreground leading-relaxed line-through italic font-medium">A: {faq.answer}</p>
                        </div>
                        {!disabled && (
                           <TooltipProvider>
@@ -285,7 +285,7 @@ export function SupportFAQManager({
                   {editingIndex !== null ? "Edit FAQ" : "Add FAQ"}
                 </DialogTitle>
                 <div className="flex items-center gap-2">
-                  <p className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest">
+                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">
                     Knowledge Base Entry
                   </p>
                 </div>
@@ -296,12 +296,12 @@ export function SupportFAQManager({
           <div className="p-8 pt-2 space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
-                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Question
                 </Label>
                 <span className={cn(
-                  "text-[8px] font-bold tracking-widest",
-                  newQ.length > MAX_Q_LENGTH ? "text-rose-500" : "text-muted-foreground/20"
+                  "text-[11px] font-bold tracking-widest",
+                  newQ.length > MAX_Q_LENGTH ? "text-rose-500" : "text-muted-foreground"
                 )}>
                   {newQ.length}/{MAX_Q_LENGTH}
                 </span>
@@ -319,12 +319,12 @@ export function SupportFAQManager({
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
-                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Answer
                 </Label>
                 <span className={cn(
-                  "text-[8px] font-bold tracking-widest",
-                  newA.length > MAX_A_LENGTH ? "text-rose-500" : "text-muted-foreground/20"
+                  "text-[11px] font-bold tracking-widest",
+                  newA.length > MAX_A_LENGTH ? "text-rose-500" : "text-muted-foreground"
                 )}>
                   {newA.length}/{MAX_A_LENGTH}
                 </span>
@@ -346,14 +346,14 @@ export function SupportFAQManager({
              <Button 
                 variant="ghost" 
                 onClick={() => setIsModalOpen(false)}
-                className="flex-1 h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 transition-all"
+                className="flex-1 h-12 rounded-xl text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all"
               >
                 Cancel
               </Button>
               <Button
                 onClick={addOrUpdateFAQ}
                 disabled={disabled || !newQ.trim() || !newA.trim() || newQ.length > MAX_Q_LENGTH || newA.length > MAX_A_LENGTH}
-                className="flex-[2] h-12 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]"
+                className="flex-[2] h-12 rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all active:scale-[0.98]"
               >
                 {editingIndex !== null ? "Save Changes" : "Add Entry"}
               </Button>

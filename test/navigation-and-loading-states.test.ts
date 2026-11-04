@@ -91,15 +91,10 @@ describe('Milestone 1 Verification: Route Transitions, Router Cache & Loading St
       expect(content).not.toMatch(/import\s*{\s*Suspense\s*}\s*from\s*["']react["']/);
     });
 
-    it('verifies circulation/layout.tsx and catalog/layout.tsx do not wrap guards in Suspense', () => {
+    it('verifies circulation/layout.tsx does not wrap guards in Suspense', () => {
       const circLayout = fs.readFileSync(path.join(rootDir, 'app/(authenticated)/circulation/layout.tsx'), 'utf8');
       expect(circLayout).not.toMatch(/<Suspense[^>]*>\s*<CirculationGuard/);
-      expect(circLayout).not.toMatch(/import\s*{\s*Suspense\s*}\s*from\s*["']react["']/);
-
-      const catLayout = fs.readFileSync(path.join(rootDir, 'app/(authenticated)/catalog/layout.tsx'), 'utf8');
-      expect(catLayout).not.toMatch(/<Suspense[^>]*>\s*<CatalogGuard/);
-      expect(catLayout).not.toMatch(/import\s*{\s*Suspense\s*}\s*from\s*["']react["']/);
-    });
+      expect(circLayout).not.toMatch(/import\s*{\s*Suspense\s*}\s*from\s*["']react["']/);    });
 
     it('verifies circulation/page.tsx does not wrap CirculationWizard in Suspense', () => {
       const circPage = fs.readFileSync(path.join(rootDir, 'app/(authenticated)/circulation/page.tsx'), 'utf8');
@@ -108,7 +103,7 @@ describe('Milestone 1 Verification: Route Transitions, Router Cache & Loading St
     });
 
     it('verifies CatalogContent.tsx imports ModernInventoryClient directly without ssr: false', () => {
-      const catalogContent = fs.readFileSync(path.join(rootDir, 'app/(authenticated)/catalog/CatalogContent.tsx'), 'utf8');
+      const catalogContent = fs.readFileSync(path.join(rootDir, 'app/(authenticated)/inventory/CatalogContent.tsx'), 'utf8');
       expect(catalogContent).not.toMatch(/ssr:\s*false/);
       expect(catalogContent).toMatch(/import\s+{\s*ModernInventoryClient\s*}\s+from\s+['"]@\/components\/inventory\/ModernInventoryClient['"]/);
     });

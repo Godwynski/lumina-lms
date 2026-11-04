@@ -4,7 +4,7 @@ import { getMe } from '@/lib/auth-helpers';
 import { isStaff } from '@/lib/auth/permissions';
 import { redirect } from 'next/navigation';
 import { LiveActivityTicker } from '@/components/dashboard/LiveActivityTicker';
-import { CatalogContent, CatalogSkeleton } from '../catalog/CatalogContent';
+import { CatalogContent, CatalogSkeleton } from './CatalogContent';
 
 export const metadata = {
   title: 'Inventory | Lumina LMS',

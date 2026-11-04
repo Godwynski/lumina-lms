@@ -11,12 +11,17 @@ interface BookSearchParams {
   pageSize?: number;
   sortBy?: 'title' | 'author' | 'availability' | 'created_at';
   sortOrder?: 'asc' | 'desc';
+  status?: 'ACTIVE' | 'ARCHIVED' | 'ALL';
 }
 
 /**
  * Common book search query builder logic used by both staff and students.
  */
-export async function fetchBooksCore(params: BookSearchParams, columns: string = '*') {
+export async function fetchBooksCore(
+  params: BookSearchParams,
+  columns: string = '*',
+  supabase: ReturnType<typeof createSafeClient> = createSafeClient()
+) {
   const {
     query = '',
     categoryId,
@@ -25,15 +30,15 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
     page = 1,
     pageSize = 20,
     sortBy = 'title',
-    sortOrder = 'asc'
+    sortOrder = 'asc',
+    status = 'ACTIVE'
   } = params;
-  
-  const supabase = createSafeClient();
-  
+
   let dbQuery = supabase
     .from('books')
-    .select(columns, { count: 'exact' })
-    .eq('is_active', true);
+    .select(columns, { count: 'exact' });
+
+  if (status !== 'ALL') dbQuery = dbQuery.eq('is_active', status === 'ACTIVE');
   
   if (query) {
     const cleanQuery = query.trim();

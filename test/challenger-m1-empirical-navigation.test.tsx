@@ -121,7 +121,7 @@ describe('Empirical Challenger: Milestone 1 Navigation, SSR & Loading States', (
     }, 15000);
 
     it('renders CatalogSkeleton to string with valid animated pulse classes', async () => {
-      const { CatalogSkeleton } = await import('@/app/(authenticated)/catalog/CatalogContent');
+      const { CatalogSkeleton } = await import('@/app/(authenticated)/inventory/CatalogContent');
 
       const html = renderToString(<CatalogSkeleton />);
       expect(html).toContain('animate-pulse');

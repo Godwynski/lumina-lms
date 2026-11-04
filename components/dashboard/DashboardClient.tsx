@@ -354,7 +354,7 @@ export function DashboardClient({
 
             {!hasActions ? (
               <div className="flex items-center gap-2.5 p-3 rounded-lg border border-border/40 bg-muted/20 text-xs text-muted-foreground">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/60"><path d="M20 6 9 17l-5-5"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M20 6 9 17l-5-5"/></svg>
                 <span>All caught up. No pending administrative actions.</span>
               </div>
             ) : (
@@ -434,7 +434,7 @@ export function DashboardClient({
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
+              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
                 Today&apos;s Visitors
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
@@ -452,7 +452,7 @@ export function DashboardClient({
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
+              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
                 Active Borrows
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
@@ -470,7 +470,7 @@ export function DashboardClient({
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
+              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
                 Book Catalog
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
@@ -488,7 +488,7 @@ export function DashboardClient({
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 group-hover:text-foreground transition-colors">
+              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
                 User Profiles
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
@@ -515,7 +515,7 @@ export function DashboardClient({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-foreground/90 truncate">{shortcut.title}</p>
-                <p className="text-[10px] text-muted-foreground/80 truncate mt-0.5">{shortcut.desc}</p>
+                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{shortcut.desc}</p>
               </div>
             </Card>
           ))}
@@ -526,10 +526,10 @@ export function DashboardClient({
           <div className="border border-border/20 bg-card/30 backdrop-blur-sm rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-1.5 border-b border-border/10 pb-3 mb-4">
               <BookOpen size={12} className="text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Recently Cataloged Books</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Recently Cataloged Books</span>
             </div>
             {stats.recentBooks.length === 0 ? (
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {stats.recentBooks.map((book) => (
@@ -549,7 +549,7 @@ export function DashboardClient({
                       <p className="truncate text-[13px] font-bold text-foreground/95 group-hover:text-primary transition-colors">
                         {book.title}
                       </p>
-                      <p className="truncate text-[10px] text-muted-foreground/80 mt-0.5">
+                      <p className="truncate text-[11px] text-muted-foreground mt-0.5">
                         {book.author}
                       </p>
                     </div>
@@ -592,9 +592,9 @@ export function DashboardClient({
                 <div className="flex items-center justify-between px-3 py-2.5 bg-green-500/[0.03] rounded-xl border border-green-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-green-700 uppercase tracking-widest">Currently Timed In</span>
+                    <span className="text-[11px] font-bold text-green-700 uppercase tracking-widest">Currently Timed In</span>
                   </div>
-                  <span className="text-[10px] font-bold text-green-600/80">
+                  <span className="text-[11px] font-bold text-green-600/80">
                     Since {new Date(activeAttendance.check_in_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                   </span>
                 </div>
@@ -603,8 +603,8 @@ export function DashboardClient({
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Library size={42} className="text-muted-foreground/20 mb-3" />
-              <h2 className="text-lg font-bold text-muted-foreground/40">No Digital Card Available</h2>
-              <p className="text-xs text-muted-foreground/40 mt-1">Please contact the librarian if you believe this is an error.</p>
+              <h2 className="text-lg font-bold text-muted-foreground">No Digital Card Available</h2>
+              <p className="text-xs text-muted-foreground mt-1">Please contact the librarian if you believe this is an error.</p>
             </div>
           )}
         </Card>
@@ -616,7 +616,7 @@ export function DashboardClient({
           <div className="border border-border/20 bg-card/30 backdrop-blur-sm rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex items-center gap-2 border-b border-border/10 pb-2">
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Assistant Desk Shortcuts</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Assistant Desk Shortcuts</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {hasCirculationPerm && (
@@ -630,7 +630,7 @@ export function DashboardClient({
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-foreground/90 truncate">Circulation Desk</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">Checkout & return books</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Checkout & return books</p>
                   </div>
                 </Card>
               )}
@@ -646,7 +646,7 @@ export function DashboardClient({
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-foreground/90 truncate">Attendance Logs</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">Scanner & visitor logs</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Scanner & visitor logs</p>
                   </div>
                 </Card>
               )}
@@ -661,7 +661,7 @@ export function DashboardClient({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground/90 truncate">Book Catalog</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 truncate">Search & explore books</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Search & explore books</p>
                 </div>
               </Card>
             </div>

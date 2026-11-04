@@ -23,7 +23,7 @@ async function ErrorContent({
         </div>
 
         <div className="space-y-3">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-1">
             What this means
           </h4>
           <div className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-3">
@@ -31,7 +31,7 @@ async function ErrorContent({
               Archived accounts cannot access system resources or borrow books. Your data is preserved for records but active access is disabled.
             </p>
             <div className="pt-2 border-t border-border/50">
-               <p className="text-[10px] font-bold text-foreground mb-1 uppercase tracking-tight">Need assistance?</p>
+               <p className="text-[11px] font-bold text-foreground mb-1 uppercase tracking-tight">Need assistance?</p>
                <p className="text-[11px] text-muted-foreground">
                  If you believe this is a mistake, please visit the <strong>School Library Administration</strong> to request account reactivation.
                </p>
@@ -54,7 +54,7 @@ async function ErrorContent({
         </div>
 
         <div className="space-y-3">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-1">
             Required Email Formats
           </h4>
           <div className="space-y-2">
@@ -92,7 +92,7 @@ async function ErrorContent({
         </div>
 
         <div className="space-y-3">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
+          <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-1">
             Why this happens
           </h4>
           <div className="p-4 rounded-xl bg-muted/40 border border-border/50 space-y-2 text-xs text-muted-foreground leading-relaxed">
@@ -171,7 +171,7 @@ export default function Page({
           </CardFooter>
         </Card>
         
-        <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest font-bold opacity-50">
+        <p className="text-center text-[11px] text-muted-foreground uppercase tracking-widest font-bold opacity-50">
           Lumina LMS Security Protocol
         </p>
       </div>

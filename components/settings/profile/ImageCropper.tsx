@@ -77,8 +77,8 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
         <div className="p-6 space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Zoom Level</span>
-              <span className="text-[10px] font-bold text-primary">{Math.round(zoom * 100)}%</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Zoom Level</span>
+              <span className="text-[11px] font-bold text-primary">{Math.round(zoom * 100)}%</span>
             </div>
             <Slider
               value={[zoom]}
@@ -94,14 +94,14 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
             <Button 
               variant="outline" 
               onClick={onCancel}
-              className="flex-1 rounded-2xl font-bold uppercase tracking-widest text-[10px] border-border/40"
+              className="flex-1 rounded-2xl font-bold uppercase tracking-widest text-[11px] border-border/40"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSave}
               disabled={isProcessing}
-              className="flex-1 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"
+              className="flex-1 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20"
             >
               {isProcessing ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

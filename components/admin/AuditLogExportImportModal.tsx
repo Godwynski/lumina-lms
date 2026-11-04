@@ -426,7 +426,7 @@ export function AuditLogExportImportModal({
                 "flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 px-3 rounded-xl transition-all",
                 activeTab === "export"
                   ? "bg-background text-primary shadow-sm"
-                  : "text-muted-foreground/75 hover:bg-muted/30 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
               )}
             >
               <Download className="h-3.5 w-3.5" />
@@ -438,7 +438,7 @@ export function AuditLogExportImportModal({
                 "flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 px-3 rounded-xl transition-all",
                 activeTab === "import"
                   ? "bg-background text-primary shadow-sm"
-                  : "text-muted-foreground/75 hover:bg-muted/30 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
               )}
             >
               <Upload className="h-3.5 w-3.5" />
@@ -454,7 +454,7 @@ export function AuditLogExportImportModal({
               
               {/* Format selection */}
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   File Output Format
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -471,7 +471,7 @@ export function AuditLogExportImportModal({
                     <FileSpreadsheet className="h-5 w-5 shrink-0" />
                     <div>
                       <div className="text-xs font-bold">Spreadsheet CSV</div>
-                      <div className="text-[10px] opacity-70 mt-0.5">Compatible with Excel, Numbers</div>
+                      <div className="text-[11px] opacity-70 mt-0.5">Compatible with Excel, Numbers</div>
                     </div>
                   </button>
 
@@ -488,7 +488,7 @@ export function AuditLogExportImportModal({
                     <FileCode className="h-5 w-5 shrink-0" />
                     <div>
                       <div className="text-xs font-bold">Developer JSON</div>
-                      <div className="text-[10px] opacity-70 mt-0.5">Structured database format</div>
+                      <div className="text-[11px] opacity-70 mt-0.5">Structured database format</div>
                     </div>
                   </button>
 
@@ -505,7 +505,7 @@ export function AuditLogExportImportModal({
                     <FileSpreadsheet className="h-5 w-5 shrink-0" />
                     <div>
                       <div className="text-xs font-bold">Excel XLSX</div>
-                      <div className="text-[10px] opacity-70 mt-0.5">Native MS Excel format</div>
+                      <div className="text-[11px] opacity-70 mt-0.5">Native MS Excel format</div>
                     </div>
                   </button>
                 </div>
@@ -514,7 +514,7 @@ export function AuditLogExportImportModal({
               {/* Columns Selector Checklist */}
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                     <Settings className="h-3.5 w-3.5" />
                     Customize Columns ({selectedColumns.length} / {AVAILABLE_COLUMNS.length})
                   </label>
@@ -522,15 +522,15 @@ export function AuditLogExportImportModal({
                     <button
                       type="button"
                       onClick={handleSelectAllColumns}
-                      className="text-[10px] font-bold text-primary hover:underline bg-transparent border-0 p-0"
+                      className="text-[11px] font-bold text-primary hover:underline bg-transparent border-0 p-0"
                     >
                       Select All
                     </button>
-                    <span className="text-[10px] text-muted-foreground/30">|</span>
+                    <span className="text-[11px] text-muted-foreground">|</span>
                     <button
                       type="button"
                       onClick={handleClearAllColumns}
-                      className="text-[10px] font-bold text-muted-foreground/60 hover:text-foreground hover:underline bg-transparent border-0 p-0"
+                      className="text-[11px] font-bold text-muted-foreground hover:text-foreground hover:underline bg-transparent border-0 p-0"
                     >
                       Clear
                     </button>
@@ -557,7 +557,7 @@ export function AuditLogExportImportModal({
                         />
                         <div className="min-w-0">
                           <span className="text-xs font-bold block">{col.label}</span>
-                          <span className="text-[9px] text-muted-foreground leading-tight block truncate">
+                          <span className="text-[11px] text-muted-foreground leading-tight block truncate">
                             {col.desc}
                           </span>
                         </div>
@@ -568,8 +568,8 @@ export function AuditLogExportImportModal({
               </div>
 
               {/* Active Filter Indicators */}
-              <div className="p-3.5 rounded-2xl bg-muted/15 border border-border/5 text-[11px] text-muted-foreground/80 flex flex-wrap gap-x-4 gap-y-1.5 items-center">
-                <span className="font-bold text-[9px] uppercase tracking-wider text-muted-foreground/50">Active Filters:</span>
+              <div className="p-3.5 rounded-2xl bg-muted/15 border border-border/5 text-[11px] text-muted-foreground flex flex-wrap gap-x-4 gap-y-1.5 items-center">
+                <span className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground">Active Filters:</span>
                 {currentFilters.query ? (
                   <span className="flex items-center gap-1">Search: &quot;{currentFilters.query}&quot;</span>
                 ) : null}
@@ -586,7 +586,7 @@ export function AuditLogExportImportModal({
                   </span>
                 ) : null}
                 {!currentFilters.query && (!currentFilters.entityType || currentFilters.entityType === "all") && (!currentFilters.actionType || currentFilters.actionType === "all") && !currentFilters.startDate && !currentFilters.endDate ? (
-                  <span className="italic text-muted-foreground/45">No active filters (downloading entire logs history)</span>
+                  <span className="italic text-muted-foreground">No active filters (downloading entire logs history)</span>
                 ) : null}
               </div>
 
@@ -624,7 +624,7 @@ export function AuditLogExportImportModal({
                     <Upload className="h-5 w-5 text-muted-foreground/60 group-hover:text-primary transition-colors" />
                   </div>
                   <div className="mt-3 text-xs font-bold">Drag & Drop Log Backup</div>
-                  <div className="text-[10px] text-muted-foreground/70 mt-1 max-w-[280px]">
+                  <div className="text-[11px] text-muted-foreground mt-1 max-w-[280px]">
                     Supports JSON (native exports), CSV, or Excel XLSX files containing audit logs.
                   </div>
                   <Button variant="link" size="sm" className="mt-3 h-8 text-[11px] font-bold text-primary">
@@ -651,7 +651,7 @@ export function AuditLogExportImportModal({
                       </div>
                       <div>
                         <div className="text-xs font-bold">{importFile?.name}</div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
                           Time range: {parsedMeta.dateRange}
                         </div>
                       </div>
@@ -670,13 +670,13 @@ export function AuditLogExportImportModal({
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-muted/5 border border-border/5 rounded-2xl p-3 text-center">
                       <div className="text-xs font-black text-foreground">{parsedMeta.total}</div>
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 mt-0.5">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
                         Total Rows
                       </div>
                     </div>
                     <div className="bg-emerald-500/[0.02] border border-emerald-500/10 rounded-2xl p-3 text-center">
                       <div className="text-xs font-black text-emerald-600">{parsedMeta.validCount}</div>
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-500/60 mt-0.5">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-500/60 mt-0.5">
                         Valid Records
                       </div>
                     </div>
@@ -689,7 +689,7 @@ export function AuditLogExportImportModal({
                       <div className={cn("text-xs font-black", parsedMeta.invalidCount > 0 ? "text-amber-600" : "text-muted-foreground")}>
                         {parsedMeta.invalidCount}
                       </div>
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 mt-0.5">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
                         Skipped Rows
                       </div>
                     </div>
@@ -697,13 +697,13 @@ export function AuditLogExportImportModal({
 
                   {/* MINI Data Preview Table */}
                   <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       First Records Preview
                     </span>
                     <div className="border border-border/10 rounded-2xl overflow-hidden text-xs max-h-[140px] overflow-y-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-muted/20 border-b border-border/10 text-[10px] text-muted-foreground font-black uppercase tracking-wider">
+                          <tr className="bg-muted/20 border-b border-border/10 text-[11px] text-muted-foreground font-black uppercase tracking-wider">
                             <th className="p-2 pl-3">Action</th>
                             <th className="p-2">Entity</th>
                             <th className="p-2">Reason</th>
@@ -716,7 +716,7 @@ export function AuditLogExportImportModal({
                               <td className="p-2 pl-3 font-semibold text-primary capitalize">{log.action || "-"}</td>
                               <td className="p-2 capitalize">{log.entity_type || "-"}</td>
                               <td className="p-2 text-muted-foreground truncate max-w-[150px]">{log.reason || <span className="opacity-30">None</span>}</td>
-                              <td className="p-2 pr-3 text-muted-foreground/60 text-[10px]">
+                              <td className="p-2 pr-3 text-muted-foreground text-[11px]">
                                 {log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm") : "-"}
                               </td>
                             </tr>

@@ -281,7 +281,7 @@ export function ProtectedNav({
           <Logo size={20} className="scale-90 shrink-0" />
           <div className="flex flex-col whitespace-nowrap">
             <span className="leading-none text-base font-bold tracking-tight text-sidebar-foreground">Lumina</span>
-            <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/70">LMS Platform</span>
+            <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/70">LMS Platform</span>
           </div>
         </Link>
       </SidebarHeader>

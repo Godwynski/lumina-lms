@@ -17,7 +17,7 @@ export function SupportSection({ faqs }: SupportSectionProps) {
   return (
     <section className="pt-2">
       <div className="bg-card/10 border border-border/20 rounded-xl overflow-hidden shadow-none backdrop-blur-sm">
-        <div className="flex items-center gap-2 p-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 border-b border-border/20">
+        <div className="flex items-center gap-2 p-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border/20">
           <HelpCircle size={14} className="text-primary" /> Support & FAQs
         </div>
         <div className="p-3 grid gap-4 md:grid-cols-2">

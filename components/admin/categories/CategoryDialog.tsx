@@ -63,7 +63,7 @@ export function CategoryDialog({
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                 <Layers className="h-5 w-5" />
               </div>
-              <div className="px-2.5 py-0.5 rounded-full bg-muted border border-border/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="px-2.5 py-0.5 rounded-full bg-muted border border-border/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Book Categories
               </div>
             </div>
@@ -88,7 +88,7 @@ export function CategoryDialog({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Category Name info">
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Category Name info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>
@@ -99,8 +99,8 @@ export function CategoryDialog({
                   </TooltipProvider>
                 </div>
                 <span className={cn(
-                  "text-[10px] font-medium tabular-nums",
-                  formData.name.length > 50 ? "text-rose-500 font-bold" : "text-muted-foreground/60"
+                  "text-[11px] font-medium tabular-nums",
+                  formData.name.length > 50 ? "text-rose-500 font-bold" : "text-muted-foreground"
                 )}>
                   {formData.name.length}/50
                 </span>
@@ -137,7 +137,7 @@ export function CategoryDialog({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Slug info">
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Slug info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>
@@ -148,8 +148,8 @@ export function CategoryDialog({
                   </TooltipProvider>
                 </div>
                 <span className={cn(
-                  "text-[10px] font-medium tabular-nums",
-                  formData.slug.length > 60 ? "text-rose-500 font-bold" : "text-muted-foreground/60"
+                  "text-[11px] font-medium tabular-nums",
+                  formData.slug.length > 60 ? "text-rose-500 font-bold" : "text-muted-foreground"
                 )}>
                   {formData.slug.length}/60
                 </span>
@@ -179,7 +179,7 @@ export function CategoryDialog({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Description info">
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Description info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>
@@ -190,8 +190,8 @@ export function CategoryDialog({
                   </TooltipProvider>
                 </div>
                 <span className={cn(
-                  "text-[10px] font-medium tabular-nums",
-                  formData.description.length > 200 ? "text-rose-500 font-bold" : "text-muted-foreground/60"
+                  "text-[11px] font-medium tabular-nums",
+                  formData.description.length > 200 ? "text-rose-500 font-bold" : "text-muted-foreground"
                 )}>
                   {formData.description.length}/200
                 </span>

@@ -84,8 +84,8 @@ export function ScanStep({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[200px] p-4 bg-card border border-border/10">
-                            <h4 className="text-[10px] font-bold uppercase tracking-widest mb-2">Scanning Tips</h4>
-                            <ul className="text-[10px] space-y-1.5 text-muted-foreground list-disc pl-3">
+                            <h4 className="text-[11px] font-bold uppercase tracking-widest mb-2">Scanning Tips</h4>
+                            <ul className="text-[11px] space-y-1.5 text-muted-foreground list-disc pl-3">
                                 <li>Ensure good lighting.</li>
                                 <li>Keep the code steady.</li>
                                 <li>Toggle camera if focus fails.</li>
@@ -108,7 +108,7 @@ export function ScanStep({
                     {(isProcessing || isInitializing) && (
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
                             <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
-                            {isInitializing && <span className="text-[10px] font-bold uppercase tracking-widest text-primary animate-pulse">Initializing...</span>}
+                            {isInitializing && <span className="text-[11px] font-bold uppercase tracking-widest text-primary animate-pulse">Initializing...</span>}
                         </div>
                     )}
                     
@@ -151,7 +151,7 @@ export function ScanStep({
 
                             <Button 
                                 variant="destructive" 
-                                className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[10px] font-bold uppercase tracking-wider"
+                                className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[11px] font-bold uppercase tracking-wider"
                                 onClick={() => stopCamera()}
                             >
                                 Stop
@@ -161,7 +161,7 @@ export function ScanStep({
                     
                     {cameraIssue && !cameraOpen && !isInitializing && (
                          <div className="absolute top-4 inset-x-4 z-20">
-                            <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[10px] text-destructive font-medium text-center shadow-sm">
+                            <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[11px] text-destructive font-medium text-center shadow-sm">
                                 {cameraIssue}
                             </div>
                         </div>
@@ -170,7 +170,7 @@ export function ScanStep({
 
                 <div className="flex flex-col gap-4">
                     <div className="space-y-2">
-                        <label className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
+                        <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
                             Direct Entry
                         </label>
                         <div className="flex gap-2">
@@ -185,12 +185,12 @@ export function ScanStep({
                             <Button 
                                 onClick={handleManualSubmit}
                                 disabled={isProcessing || !manualValue.trim()}
-                                className="h-11 rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest"
+                                className="h-11 rounded-xl px-6 font-bold text-[11px] uppercase tracking-widest"
                             >
                                 {isProcessing ? '...' : actionLabel}
                             </Button>
                         </div>
-                        <p className="text-[10px] text-muted-foreground ml-1 font-medium opacity-60">
+                        <p className="text-[11px] text-muted-foreground ml-1 font-medium opacity-60">
                             Enter the identifier manually if scan fails.
                         </p>
                     </div>

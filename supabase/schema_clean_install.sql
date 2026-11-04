@@ -220,50 +220,6 @@ CREATE TABLE IF NOT EXISTS public.ui_preferences (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Announcements Table
-CREATE TABLE IF NOT EXISTS public.announcements (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    priority TEXT DEFAULT 'medium'::text CHECK (priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'critical'::text])),
-    is_active BOOLEAN DEFAULT TRUE,
-    target_role public.user_role,
-    starts_at TIMESTAMPTZ DEFAULT NOW(),
-    expires_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    created_by UUID CONSTRAINT announcements_created_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
-    CONSTRAINT announcements_dates_check CHECK (expires_at IS NULL OR expires_at >= starts_at)
-);
-
-
--- Reports Table
-CREATE TABLE IF NOT EXISTS public.reports (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    book_id UUID CONSTRAINT reports_book_id_fkey REFERENCES public.books(id) ON DELETE CASCADE,
-    user_id UUID CONSTRAINT reports_user_id_fkey REFERENCES auth.users(id) ON DELETE SET NULL,
-    notes TEXT,
-    status TEXT DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'resolved'::text, 'dismissed'::text])),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Deleted Profiles Archive Table
-CREATE TABLE IF NOT EXISTS public.deleted_profile_info (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    original_profile_id UUID UNIQUE CONSTRAINT deleted_profile_info_original_profile_id_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
-    anonymized_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    deletion_reason TEXT,
-    retained_borrow_count INTEGER DEFAULT 0 NOT NULL CHECK (retained_borrow_count >= 0)
-);
-
--- Rate Limit Log Table
-CREATE TABLE IF NOT EXISTS public.rate_limit_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL CONSTRAINT rate_limit_log_user_id_fkey REFERENCES auth.users(id) ON DELETE CASCADE,
-    action_key TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
 
 
 -- 5. INDEXES & VECTOR OPTIMIZATIONS
@@ -286,10 +242,6 @@ CREATE INDEX IF NOT EXISTS reservations_copy_id_idx ON public.reservations(copy_
 CREATE INDEX IF NOT EXISTS system_settings_updated_by_idx ON public.system_settings(updated_by);
 CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS attendance_user_id_idx ON public.attendance(user_id);
-CREATE INDEX IF NOT EXISTS announcements_created_by_idx ON public.announcements(created_by);
-CREATE INDEX IF NOT EXISTS reports_book_id_idx ON public.reports(book_id);
-CREATE INDEX IF NOT EXISTS reports_user_id_idx ON public.reports(user_id);
-CREATE INDEX IF NOT EXISTS rate_limit_log_user_id_idx ON public.rate_limit_log(user_id);
 CREATE INDEX IF NOT EXISTS audit_logs_admin_id_idx ON public.audit_logs(admin_id);
 
 -- High-Frequency Composite & Partial Indexes
@@ -1383,7 +1335,6 @@ END;
 $$;
 
 -- 9. ROW LEVEL SECURITY (RLS) ACTIVATION
-ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.book_copies ENABLE ROW LEVEL SECURITY;
@@ -1391,28 +1342,15 @@ ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.borrowing_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checkout_idempotency ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.deleted_profile_info ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.library_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.rate_limit_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.return_idempotency ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ui_preferences ENABLE ROW LEVEL SECURITY;
 
 -- 10. CONSOLIDATED RLS POLICIES
-
--- announcements Policies
-CREATE POLICY "Admins can manage announcements" ON public.announcements
-  FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
-
-CREATE POLICY "Announcements are viewable by everyone" ON public.announcements
-  FOR SELECT TO public
-  USING (is_active = true AND (expires_at IS NULL OR expires_at > now()) AND (starts_at IS NULL OR starts_at <= now()));
 
 -- attendance Policies (recorded by staff only; no self check-in/out)
 CREATE POLICY "Staff can insert attendance" ON public.attendance
@@ -1520,11 +1458,6 @@ CREATE POLICY "Staff can manage checkout idempotency" ON public.checkout_idempot
   USING (public.is_staff())
   WITH CHECK (public.is_staff());
 
--- deleted_profile_info Policies
-CREATE POLICY "Librarians can view deleted profile info" ON public.deleted_profile_info
-  FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
-
 -- library_cards Policies
 CREATE POLICY "Users can view own library card" ON public.library_cards
   FOR SELECT TO authenticated
@@ -1576,25 +1509,6 @@ CREATE POLICY "Admins can update profiles" ON public.profiles
       AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
     )
   );
-
--- rate_limit_log Policies
-CREATE POLICY "Staff can view rate limit logs" ON public.rate_limit_log
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
-
--- reports Policies
-CREATE POLICY "Users can insert own reports" ON public.reports
-  FOR INSERT TO authenticated
-  WITH CHECK ((SELECT auth.uid()) = user_id);
-
-CREATE POLICY "Users can view own reports" ON public.reports
-  FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
-
-CREATE POLICY "Staff can manage reports" ON public.reports
-  FOR ALL TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
 
 -- reservations Policies
 CREATE POLICY "Users can view own reservations" ON public.reservations
@@ -1775,57 +1689,7 @@ CREATE POLICY "Staff manage library card assets" ON storage.objects
   WITH CHECK (bucket_id = 'library-cards'::text AND public.is_staff());
 
 
--- =========================================================================
--- CHECKLIST & OPTIMIZED NOTES FOR DEV SANDBOX
--- =========================================================================
-
--- 1. Create table for dropdown options
-CREATE TABLE IF NOT EXISTS public.checklist_dropdown_options (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type TEXT NOT NULL CHECK (type IN ('user_role', 'module')),
-    value TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE (type, value)
-);
-
--- 2. Create table for checklist items
-CREATE TABLE IF NOT EXISTS public.checklist_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    problem TEXT NOT NULL,
-    explanation TEXT,
-    user_role TEXT,
-    module TEXT,
-    is_completed BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 3. Enable RLS
-ALTER TABLE public.checklist_dropdown_options ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.checklist_items ENABLE ROW LEVEL SECURITY;
-
--- 4. Authenticated read and staff-only management policies
-CREATE POLICY "Allow authenticated read checklist dropdowns" ON public.checklist_dropdown_options
-  FOR SELECT TO authenticated
-  USING (true);
-
-CREATE POLICY "Staff manage checklist dropdown options" ON public.checklist_dropdown_options
-  FOR ALL TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
-
-CREATE POLICY "Allow authenticated read checklist items" ON public.checklist_items
-  FOR SELECT TO authenticated
-  USING (true);
-
-CREATE POLICY "Staff manage checklist items" ON public.checklist_items
-  FOR ALL TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
-
 -- 5. Enable Supabase Realtime Replication
-ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_dropdown_options;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.checklist_items;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.books;
@@ -1835,7 +1699,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.reservations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.system_settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.announcements;
 
 
 

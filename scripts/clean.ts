@@ -39,8 +39,8 @@ async function clean() {
   
   try {
     for (const table of [
-      'rate_limit_log', 'deleted_profile_info', 'ui_preferences', 'checklist_items', 'checklist_dropdown_options',
-      'audit_logs', 'reports', 'announcements', 'notifications', 'attendance', 'reservations', 'borrowing_records',
+      'ui_preferences',
+      'audit_logs', 'notifications', 'attendance', 'reservations', 'borrowing_records',
       'checkout_idempotency', 'return_idempotency',
     ]) {
       await clearTable(supabase, table);

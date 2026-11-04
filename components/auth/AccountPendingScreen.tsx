@@ -76,7 +76,7 @@ export function AccountPendingScreen({
         
         <CardContent className="space-y-6 pt-4">
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 text-center px-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground text-center px-4">
               Verification Protocol
             </h4>
             

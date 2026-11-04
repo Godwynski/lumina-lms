@@ -40,7 +40,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
         <SectionHeader icon={BookText} title="Basic Information" />
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Book Title *</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Book Title *</Label>
             <Input
               type="text" 
               required
@@ -52,7 +52,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
           </div>
 
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Author *</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Author *</Label>
             <Input
               type="text" 
               required
@@ -70,7 +70,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
         <SectionHeader icon={Layers} title="Cataloging & Classification" />
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Category</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Category</Label>
             <Select value={formData.categoryId || 'none'} onValueChange={(value) => onUpdate({ categoryId: value === 'none' ? '' : value })}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm focus:bg-background focus:ring-2 focus:ring-primary/20">
                 <SelectValue placeholder="Uncategorized" />
@@ -85,7 +85,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
           </div>
 
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Dewey Decimal (DDC)</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Dewey Decimal (DDC)</Label>
             <Input
               type="text" 
               value={formData.dewey_decimal}
@@ -96,7 +96,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
           </div>
 
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">ISBN Reference</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">ISBN Reference</Label>
             <Input
               type="text" 
               value={formData.isbn}
@@ -108,7 +108,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
         </div>
 
         <div className="space-y-2 text-left pt-2">
-          <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Subject Tags (Comma Separated)</Label>
+          <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Subject Tags (Comma Separated)</Label>
           <div className="relative group">
             <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input
@@ -127,7 +127,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
         <SectionHeader icon={MapPin} title="Inventory & Placement" />
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Physical Section</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Physical Section</Label>
             <Input
               type="text" 
               value={formData.section}
@@ -138,7 +138,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
           </div>
           
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80">Exact Location</Label>
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Exact Location</Label>
             <Input
               type="text" 
               value={formData.location}
@@ -149,7 +149,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
           </div>
 
           <div className="space-y-2 text-left">
-            <Label className="ml-1 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/80 flex items-center gap-1.5">
+            <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
               Initial Copies
               <PlusCircle size={10} className="text-primary" />
             </Label>

@@ -299,13 +299,13 @@ export function UserDetailClient({
                 <div className="w-full space-y-3">
                   <div className="text-center px-1">
                     <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
-                    <p className="text-[10px] text-muted-foreground break-all mt-1">
+                    <p className="text-[11px] text-muted-foreground break-all mt-1">
                       {form.email}
                     </p>
                   </div>
 
                   <div className="space-y-1.5 pt-1">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold text-center">Institutional ID</p>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold text-center">Institutional ID</p>
                     <div className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border px-3 py-2 shadow-sm">
                       <Hash className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                       <span className="font-mono text-xs font-bold text-foreground">
@@ -314,7 +314,7 @@ export function UserDetailClient({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center gap-2 pt-1 text-[10px] text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     <span>Since {user.joined || "N/A"}</span>
                   </div>
@@ -489,7 +489,7 @@ export function UserDetailClient({
               </div>
               <div className="space-y-0.5">
                 <p className="text-xs font-bold text-foreground">Pending Changes</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   Update role to <span className="text-foreground font-medium">{form.role}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
                 </p>
               </div>
@@ -544,7 +544,7 @@ export function UserDetailClient({
               >
                 <div className="space-y-1 pr-2">
                   <p className="text-xs font-bold text-foreground">{p.label}</p>
-                  <p className="text-[10px] text-muted-foreground leading-normal">{p.desc}</p>
+                  <p className="text-[11px] text-muted-foreground leading-normal">{p.desc}</p>
                 </div>
                 <Switch
                   checked={form.permissions?.[p.key] ?? false}
@@ -563,7 +563,7 @@ export function UserDetailClient({
             {/* Unsaved Changes Alert Box */}
             <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 animate-in fade-in duration-300">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-[10px] leading-normal font-medium text-amber-800">
+              <p className="text-[11px] leading-normal font-medium text-amber-800">
                 <strong>Attention:</strong> These toggles adjust permissions locally. You must click <strong>&quot;Save Changes&quot;</strong> at the bottom of the main profile page to persist them to the database.
               </p>
             </div>
@@ -594,21 +594,21 @@ export function UserDetailClient({
           <div className="space-y-4">
             {/* Identity Comparison Preview */}
             <div className="space-y-2">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Identity Preview</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-1">Identity Preview</h4>
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Full Name</p>
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Full Name</p>
                     <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Student ID</p>
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Student ID</p>
                     <p className="text-sm font-mono font-bold text-foreground">{initialUser.student_id}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-1 border-t border-border/40 pt-3">
-                  <p className="text-[10px] text-muted-foreground uppercase font-semibold">Program / Department</p>
+                  <p className="text-[11px] text-muted-foreground uppercase font-semibold">Program / Department</p>
                   <div className="flex items-center gap-2">
                     <Building className="h-3.5 w-3.5 text-muted-foreground/60" />
                     <p className="text-sm font-medium">{form.department || "General"}</p>
@@ -617,14 +617,14 @@ export function UserDetailClient({
 
                 <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-3">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Phone</p>
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Phone</p>
                     <div className="flex items-center gap-2">
                       <Phone className="h-3 w-3 text-muted-foreground/60" />
                       <p className="text-xs font-medium">{form.phone || "—"}</p>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Address</p>
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Address</p>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3 w-3 text-muted-foreground/60" />
                       <p className="text-xs font-medium truncate">{form.address || "—"}</p>
@@ -667,7 +667,7 @@ export function UserDetailClient({
           <div className="space-y-4">
             {/* Library Card Section */}
             <div className="space-y-2">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Library Identity</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Library Identity</h4>
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Card Number</span>
@@ -690,11 +690,11 @@ export function UserDetailClient({
 
             {/* System Status Section */}
             <div className="space-y-2">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">System Metadata</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">System Metadata</h4>
               <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Onboarding Status</span>
-                  <Badge variant={user.onboarding_completed ? "default" : "secondary"} className="h-5 text-[9px] uppercase font-bold">
+                  <Badge variant={user.onboarding_completed ? "default" : "secondary"} className="h-5 text-[11px] uppercase font-bold">
                     {user.onboarding_completed ? "Completed" : "Pending"}
                   </Badge>
                 </div>

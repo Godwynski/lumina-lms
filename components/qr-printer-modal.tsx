@@ -63,7 +63,7 @@ export function QRPrinterModal({ qrString, bookTitle }: QRPrinterModalProps) {
               <img src={qrDataUrl} alt={`QR Code for ${bookTitle}`} className="w-24 h-24 mb-2" />
             )}
             <p className="text-xs text-center font-bold break-words w-full px-2 line-clamp-2">{bookTitle}</p>
-            <p className="text-[10px] text-gray-500">{qrString}</p>
+            <p className="text-[11px] text-gray-500">{qrString}</p>
           </div>
 
           <p className="text-sm text-muted-foreground text-center">

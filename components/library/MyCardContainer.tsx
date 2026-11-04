@@ -314,6 +314,20 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
     }
   };
 
+  const cardProps = {
+    fullName: data.fullName,
+    studentId: data.studentId,
+    cardNumber: data.cardNumber,
+    department: data.department,
+    status: data.status,
+    expiryDate: data.expiryDate,
+    avatarUrl: bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at),
+    qrUrl: data.qrUrl,
+    address: data.address,
+    phone: data.phone,
+    academicYear: data.academicYear,
+  };
+
   if (variant === "dashboard") {
     return (
       <div className="w-full relative group/dashboard">
@@ -322,7 +336,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         
         <div className="relative mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Badge className="mb-1 bg-primary/20 text-primary border-none text-[10px] font-bold uppercase tracking-widest px-2.5 h-6">Official Library ID</Badge>
+            <Badge className="mb-1 bg-primary/20 text-primary border-none text-[11px] font-bold uppercase tracking-widest px-2.5 h-6">Official Library ID</Badge>
             <h1 className="text-xl font-black tracking-tight text-foreground/90 uppercase">{data.fullName}</h1>
           </div>
 
@@ -332,7 +346,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               onClick={() => setShowBack((prev) => !prev)}
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 text-[10px] font-bold"
+              className="h-8 gap-1.5 text-[11px] font-bold"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               {showBack ? "Front" : "Back"}
@@ -343,7 +357,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               onClick={exportCardAsImage}
               disabled={isExporting}
               size="sm"
-              className="h-8 gap-1.5 text-[10px] font-bold"
+              className="h-8 gap-1.5 text-[11px] font-bold"
             >
               <Download className="h-3.5 w-3.5" />
               {isExporting ? "..." : "Export"}
@@ -359,18 +373,8 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         >
           <div id="library-card-front" className={cn("transition-all duration-300", showBack ? "opacity-0 invisible absolute inset-0" : "opacity-100 visible relative")}>
             <DigitalCard
-              fullName={data.fullName}
-              studentId={data.studentId}
-              cardNumber={data.cardNumber}
-              department={data.department}
-              status={data.status}
-              expiryDate={data.expiryDate}
-              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-              qrUrl={data.qrUrl}
-              address={data.address}
-              phone={data.phone}
+              {...cardProps}
               side="front"
-              academicYear={data.academicYear}
               roleLabel={data.roleLabel}
               onQrClick={() => setIsQrOpen(true)}
             />
@@ -378,18 +382,8 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
           <div id="library-card-back" className={cn("transition-all duration-300", !showBack ? "opacity-0 invisible absolute inset-0" : "opacity-100 visible relative")}>
             <DigitalCard
-              fullName={data.fullName}
-              studentId={data.studentId}
-              cardNumber={data.cardNumber}
-              department={data.department}
-              status={data.status}
-              expiryDate={data.expiryDate}
-              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-              qrUrl={data.qrUrl}
-              address={data.address}
-              phone={data.phone}
+              {...cardProps}
               side="back"
-              academicYear={data.academicYear}
               roleLabel={data.roleLabel}
             />
           </div>
@@ -398,39 +392,19 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
           <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
              <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
               <DigitalCard
-                fullName={data.fullName}
-                studentId={data.studentId}
-                cardNumber={data.cardNumber}
-                department={data.department}
-                status={data.status}
-                expiryDate={data.expiryDate}
-                avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-                qrUrl={data.qrUrl}
-                address={data.address}
-                phone={data.phone}
+                {...cardProps}
                 side="front"
                 exportMode
                 cardId="library-card-front-export-card"
-                academicYear={data.academicYear}
                 roleLabel={data.roleLabel}
               />
             </div>
             <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
               <DigitalCard
-                fullName={data.fullName}
-                studentId={data.studentId}
-                cardNumber={data.cardNumber}
-                department={data.department}
-                status={data.status}
-                expiryDate={data.expiryDate}
-                avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-                qrUrl={data.qrUrl}
-                address={data.address}
-                phone={data.phone}
+                {...cardProps}
                 side="back"
                 exportMode
                 cardId="library-card-back-export-card"
-                academicYear={data.academicYear}
                 roleLabel={data.roleLabel}
               />
             </div>
@@ -467,7 +441,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               <p className="font-mono text-base sm:text-lg font-black tracking-tighter text-foreground">
                 {data.cardNumber}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                 Card Number
               </p>
             </div>
@@ -536,7 +510,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             )}
           </div>
 
-          <div className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
+          <div className="hidden text-[11px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
             Verified • {mounted ? new Date().toLocaleDateString("en-US") : "..."}
           </div>
         </div>
@@ -558,74 +532,34 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         )}
         <div id="library-card-front" className={showBack ? "hidden" : "block"}>
           <DigitalCard
-            fullName={data.fullName}
-            studentId={data.studentId}
-            cardNumber={data.cardNumber}
-            department={data.department}
-            status={data.status}
-            expiryDate={data.expiryDate}
-            avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-            qrUrl={data.qrUrl}
-            address={data.address}
-            phone={data.phone}
+            {...cardProps}
             side="front"
-            academicYear={data.academicYear}
             onQrClick={() => setIsQrOpen(true)}
           />
         </div>
 
         <div id="library-card-back" className={showBack ? "block" : "hidden"}>
           <DigitalCard
-            fullName={data.fullName}
-            studentId={data.studentId}
-            cardNumber={data.cardNumber}
-            department={data.department}
-            status={data.status}
-            expiryDate={data.expiryDate}
-            avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-            qrUrl={data.qrUrl}
-            address={data.address}
-            phone={data.phone}
+            {...cardProps}
             side="back"
-            academicYear={data.academicYear}
           />
         </div>
 
         <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
           <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
             <DigitalCard
-              fullName={data.fullName}
-              studentId={data.studentId}
-              cardNumber={data.cardNumber}
-              department={data.department}
-              status={data.status}
-              expiryDate={data.expiryDate}
-              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-              qrUrl={data.qrUrl}
-              address={data.address}
-              phone={data.phone}
+              {...cardProps}
               side="front"
               exportMode
               cardId="library-card-front-export-card"
-              academicYear={data.academicYear}
             />
           </div>
           <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
             <DigitalCard
-              fullName={data.fullName}
-              studentId={data.studentId}
-              cardNumber={data.cardNumber}
-              department={data.department}
-              status={data.status}
-              expiryDate={data.expiryDate}
-              avatarUrl={bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at)}
-              qrUrl={data.qrUrl}
-              address={data.address}
-              phone={data.phone}
+              {...cardProps}
               side="back"
               exportMode
               cardId="library-card-back-export-card"
-              academicYear={data.academicYear}
             />
           </div>
         </div>
@@ -641,15 +575,15 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         <h3 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4">Quick Guide</h3>
         <ul className="space-y-3 text-sm text-muted-foreground">
           <li className="flex gap-3">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[10px] font-bold text-foreground">1</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">1</span>
             Present this QR code to the librarian during checkout.
           </li>
           <li className="flex gap-3">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[10px] font-bold text-foreground">2</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">2</span>
             Back side now focuses on essential borrowing, returning, and support information.
           </li>
           <li className="flex gap-3">
-            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[10px] font-bold text-foreground">3</span>
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">3</span>
             Export options include front+back composite and wallet-size preset (1012x638 px).
           </li>
 
@@ -685,7 +619,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             <p className="font-mono text-base sm:text-lg font-black tracking-tighter text-foreground">
               {data.cardNumber}
             </p>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
               Card Number
             </p>
           </div>

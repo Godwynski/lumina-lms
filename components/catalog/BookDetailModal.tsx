@@ -132,7 +132,7 @@ function StudentModalContent({
           />
           {/* Availability ribbon */}
           <div className={cn(
-            "absolute bottom-0 left-0 right-0 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm",
+            "absolute bottom-0 left-0 right-0 px-2 py-1 text-[11px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm",
             availability.isReady ? 'bg-emerald-500/90 text-white'
               : availability.hasReservation ? 'bg-primary/90 text-primary-foreground'
               : isAvailable ? 'bg-emerald-500/85 text-white'
@@ -148,20 +148,20 @@ function StudentModalContent({
         <div className="flex-1 min-w-0 space-y-2">
           <div>
             <h2 className="text-lg font-black tracking-tight text-foreground leading-tight line-clamp-2">{book.title}</h2>
-            <p className="mt-0.5 text-sm font-bold text-muted-foreground/70">{book.author}</p>
+            <p className="mt-0.5 text-sm font-bold text-muted-foreground">{book.author}</p>
           </div>
 
           {/* Tags */}
           {book.tags && book.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {book.tags.slice(0, 3).map((tag, i) => (
-                <Badge key={i} variant="secondary" className="text-[8px] px-1.5 py-0 font-bold">
+                <Badge key={i} variant="secondary" className="text-[11px] px-1.5 py-0 font-bold">
                   <Tag className="mr-0.5 h-2 w-2" />
                   {tag}
                 </Badge>
               ))}
               {book.tags.length > 3 && (
-                <Badge variant="outline" className="text-[8px] px-1.5 py-0 font-bold text-muted-foreground">
+                <Badge variant="outline" className="text-[11px] px-1.5 py-0 font-bold text-muted-foreground">
                   +{book.tags.length - 3}
                 </Badge>
               )}

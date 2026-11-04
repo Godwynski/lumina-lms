@@ -46,7 +46,7 @@ function ToastItem({ event, onDismiss }: ToastItemProps) {
          event.type === 'return' ? <History size={14} /> : <Zap size={14} />}
       </div>
       <div className="flex-1 min-w-0 pr-1">
-         <p className="text-[10px] font-black uppercase tracking-widest opacity-50">
+         <p className="text-[11px] font-black uppercase tracking-widest opacity-50">
             {event.type === 'borrow' ? 'Borrow Processed' : 
              event.type === 'return' ? 'Return Confirmed' : 'New Arrival'}
          </p>
@@ -54,7 +54,7 @@ function ToastItem({ event, onDismiss }: ToastItemProps) {
       </div>
       <button
         onClick={() => onDismiss(event.id)}
-        className="p-1 rounded-lg hover:bg-muted text-muted-foreground/60 hover:text-foreground transition-colors shrink-0"
+        className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
         aria-label="Close notification"
       >
         <X size={14} />

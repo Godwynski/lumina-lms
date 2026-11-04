@@ -131,26 +131,8 @@ export function PreferencesProvider({
       )
       .subscribe();
 
-    const prefsChannel = supabase
-      .channel(`app-prefs-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ui_preferences",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const nextPrefs = (payload.new as { preferences?: Record<string, unknown> })?.preferences || {};
-          setPreferences(nextPrefs);
-        }
-      )
-      .subscribe();
-
     return () => {
       void supabase.removeChannel(profileChannel);
-      void supabase.removeChannel(prefsChannel);
     };
   }, [user?.id, supabase]);
 

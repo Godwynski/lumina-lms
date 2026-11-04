@@ -59,16 +59,16 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
                 <h3 className="line-clamp-2 text-sm font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
                   {book.title}
                 </h3>
-                <p className="mt-1 truncate text-xs font-semibold text-muted-foreground/80">by {book.author}</p>
+                <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">by {book.author}</p>
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">{book.section || "General"}</span>
+                 <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{book.section || "General"}</span>
                  {reservedInfo && (
                     <Badge
                       variant={isReady ? "default" : "outline"}
                       className={cn(
-                        "shrink-0 text-[9px] px-1.5 py-0 h-[18px] gap-1 font-black",
+                        "shrink-0 text-[11px] px-1.5 py-0 h-[18px] gap-1 font-black",
                         isReady
                           ? "bg-emerald-500 hover:bg-emerald-500 text-white border-transparent"
                           : "border-primary/30 text-primary bg-primary/5"
@@ -96,7 +96,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
           </div>
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/30">
-            <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[10px] font-black tracking-tight">
+            <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[11px] font-black tracking-tight">
               {book.available_copies} / {book.total_copies}
             </Badge>
             
@@ -110,7 +110,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
                 holdExpiresAt={reservedInfo?.holdExpiresAt}
                 variant="outline"
                 size="sm"
-                className="h-7 text-[10px] px-2 rounded-lg"
+                className="h-7 text-[11px] px-2 rounded-lg"
                 onReserveSuccess={onReserveSuccess}
               />
             </div>

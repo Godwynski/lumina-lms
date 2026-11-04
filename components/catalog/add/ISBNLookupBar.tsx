@@ -44,7 +44,7 @@ export function ISBNLookupBar({
         </Button>
       </div>
 
-      <p className="text-[10px] text-muted-foreground/70 font-medium">Retrieves title, author, and cover from external APIs (Google Books, Open Library).</p>
+      <p className="text-[11px] text-muted-foreground font-medium">Retrieves title, author, and cover from external APIs (Google Books, Open Library).</p>
     </div>
   );
 }

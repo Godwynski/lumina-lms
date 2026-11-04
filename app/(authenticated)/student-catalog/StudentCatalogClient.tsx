@@ -242,7 +242,7 @@ export function StudentCatalogClient({
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/40 hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={() => { setLocalQuery(''); updateParams({ q: null }); }}
               >
                 <X className="h-3.5 w-3.5" />
@@ -367,7 +367,7 @@ export function StudentCatalogClient({
               <Search className="h-10 w-10" />
             </div>
             <h3 className="text-xl font-bold tracking-tight text-foreground">No matching books found</h3>
-            <p className="mt-2 max-w-[320px] text-sm text-muted-foreground/70 leading-relaxed">
+            <p className="mt-2 max-w-[320px] text-sm text-muted-foreground leading-relaxed">
               We couldn&apos;t find any titles matching your current search criteria. Try broadening your terms or clear all filters.
             </p>
             <Button variant="outline" onClick={clearFilters} className="mt-8 rounded-xl font-bold px-6 border-primary/20 text-primary hover:bg-primary/5">

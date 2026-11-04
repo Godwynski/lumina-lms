@@ -72,7 +72,7 @@ export function AnnualResetTool() {
             <h4 className="text-sm font-medium">Batch Account Reset</h4>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Batch reset info">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Batch reset info">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
@@ -131,7 +131,7 @@ export function RunMaintenanceTool() {
             <h4 className="text-sm font-medium text-foreground">Email Dispatch</h4>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Email dispatch info">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Email dispatch info">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
@@ -203,7 +203,7 @@ export function TestEmailTool() {
             <h4 className="text-sm font-semibold text-foreground">Email Configuration Test</h4>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground/40 hover:text-foreground transition-colors p-0.5" aria-label="Email test info">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Email test info">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>

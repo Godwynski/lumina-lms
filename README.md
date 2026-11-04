@@ -8,7 +8,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%2016-emerald?style=for-the-badge&logo=supabase)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Vitest-1%2C060%2B_Tests_Passing-729B1B?style=for-the-badge&logo=vitest)](https://vitest.dev/)
-[![Security](https://img.shields.io/badge/Security-RLS_100%25_Hardened-green?style=for-the-badge&logo=shield)](https://owasp.org/)
+[![Security](https://img.shields.io/badge/Security-RLS_on_all_tables-green?style=for-the-badge&logo=shield)](https://owasp.org/)
 
 ---
 
@@ -47,13 +47,13 @@
 
 **Lumina LMS** is an enterprise-grade, cloud-native Library Management System engineered specifically to address the operational and logistical requirements of **STI College Alabang**. 
 
-Developed as a capstone thesis project, Lumina modernizes traditional library infrastructure through a unified digital platform. It combines sub-second **QR-based scanning** for patron circulation and attendance gatekeeping, real-time book reservation queues, automated bibliographic metadata retrieval via ISBN APIs, granular copy-level inventory tracking, and tamper-evident administrative auditing backed by PostgreSQL Row-Level Security (RLS).
+Developed as a capstone thesis project, Lumina modernizes traditional library infrastructure through a unified digital platform. It combines sub-second **QR-based scanning** for patron circulation and attendance gatekeeping, real-time book reservation queues, automated bibliographic metadata retrieval via ISBN APIs, granular copy-level inventory tracking, and administrative audit logging backed by PostgreSQL Row-Level Security (RLS).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                              Lumina LMS                                │
 │   ┌──────────────────┐  ┌──────────────────┐  ┌────────────────────┐   │
-│   │ QR Circulation   │  │ 20 PostgreSQL    │  │ 4 Institutional    │   │
+│   │ QR Circulation   │  │ 14 PostgreSQL    │  │ 4 Institutional    │   │
 │   │ Sub-second scans │  │ Tables + RLS     │  │ Role Personas      │   │
 │   └──────────────────┘  └──────────────────┘  └────────────────────┘   │
 │   ┌──────────────────┐  ┌──────────────────┐  ┌────────────────────┐   │
@@ -87,8 +87,8 @@ Traditional academic libraries often struggle with operational bottlenecks, resu
 ### 3.1. High-Speed QR Circulation Desk
 - **Hardware & Web Camera Compatibility:** Operates seamlessly using integrated device webcams or dedicated handheld optical USB barcode scanners via `html5-qrcode`.
 - **Sub-Second Processing:** Automatically associates borrower profiles with physical copy records upon scanning, validating loan eligibility and limits in real time.
-- **Anti-Replay Idempotency:** Implements cryptographic transaction token tables (`checkout_idempotency`, `return_idempotency`) to prevent duplicate transactions during network instability or rapid re-scans.
-- **Atomic Database RPCs:** Leverages stored procedures (`atomic_checkout`, `atomic_return`) guaranteeing ACID compliance during high-concurrency circulation desks.
+- **Duplicate-Scan Protection:** Idempotency-key tables (`checkout_idempotency`, `return_idempotency`) make a retried or double-scanned request return the first result instead of creating a second loan or return.
+- **Atomic Database RPCs:** Checkout and return run inside single database functions (`process_qr_checkout`, `process_qr_return`) that lock the copy and the borrower, so two desks can't lend the same copy or push a student past the loan limit.
 
 ### 3.2. Dynamic Digital Library Cards
 - **3D Interactive Card Flip:** Interactive patron card component with smooth 3D CSS and Framer Motion transitions between front credentials and reverse barcode/QR sides.
@@ -115,9 +115,9 @@ Traditional academic libraries often struggle with operational bottlenecks, resu
   - *Demand Leaderboard:* Ranked leaderboards highlighting top-circulated books and patron reading trends.
 
 ### 3.6. Administrative Governance, Policies & Audit Trails
-- **Immutable Audit Logging:** Captures all administrative state mutations, role changes, and catalog updates with field-level JSON diffs (`before` vs. `after`).
+- **Audit Logging:** Records administrative actions (role and status changes, catalog edits, policy changes) with JSON details. App users cannot edit or delete log rows (there are no UPDATE/DELETE policies); only the service role can. Imported logs are marked `imported` and attributed to the importer.
 - **Policy Control Panel:** Real-time configuration of maximum loan durations, reservation pickup windows, loan limits, fine structures, and academic program registries.
-- **Campus Bulletin & Announcements:** Campus-wide announcement broadcasting banner system with urgency levels (`low`, `medium`, `high`, `critical`).
+- **System Announcements:** Super admins and librarians can broadcast a notification to everyone or to one role, with a priority level (`low`, `medium`, `high`, `critical`).
 - **User Directory & Onboarding:** Comprehensive patron lifecycle management, approving pending student accounts and provisioning staff privileges.
 
 ### 3.7. Automated Alerts & Background Maintenance
@@ -135,7 +135,7 @@ Lumina enforces strict role boundary segregation across four distinct user tiers
 | :--- | :---: | :---: | :---: | :---: |
 | **System Settings & Policies** | ✅ Full Access | ✅ Limits & Announcements | ❌ No Access | ❌ No Access |
 | **Database Resets & Testing Tools** | ✅ Full Access | ❌ No Access | ❌ No Access | ❌ No Access |
-| **Immutable Audit Logs & Diffs** | ✅ Full Access | ❌ Restricted | ❌ No Access | ❌ No Access |
+| **Audit Logs (view & export)** | ✅ Full Access | ✅ View & Export | ❌ No Access | ❌ No Access |
 | **User Directory & Account Roles** | ✅ Full Management | ✅ Student Statuses | ❌ No Access | ❌ No Access |
 | **Analytics & Trend Reports** | ✅ Full Access | ✅ Full Access | ❌ No Access | ❌ No Access |
 | **Catalog Batch Operations (Import/Export)**| ✅ Full Access | ✅ Full Access | ❌ No Access | ❌ No Access |
@@ -159,7 +159,7 @@ flowchart TD
     end
 
     subgraph AppServer ["Next.js App Router (Server Infrastructure)"]
-        Middleware["Auth & RBAC Middleware\n(Session Validation, Role Hierarchy)"]
+        Middleware["proxy.ts\n(Session refresh; role checks run in each route/action)"]
         ServerActions["Server Actions & API Routes\n(lib/actions, app/api)"]
         ZodValidator["Runtime Zod Validation\n(Type-safe payload sanitization)"]
         CronService["Automated Cron Services\n(Overdue detection, Cleanup)"]
@@ -172,9 +172,9 @@ flowchart TD
     end
 
     subgraph SupabasePlatform ["Supabase Hosted Backend (PostgreSQL 16)"]
-        RLS["Row-Level Security (RLS)\n100% Policy Isolation"]
-        DB_Tables[("20 Relational Tables\n(profiles, books, copies, logs...)")]
-        AtomicRPC["Stored Procedures & Functions\n(atomic_checkout, atomic_return)"]
+        RLS["Row-Level Security (RLS)\nEnabled on every table"]
+        DB_Tables[("14 Relational Tables\n(profiles, books, copies, logs...)")]
+        AtomicRPC["Stored Procedures & Functions\n(process_qr_checkout, process_qr_return)"]
         StorageBucket["Supabase Storage\n(Patron Avatar & Card Assets)"]
     end
 
@@ -199,7 +199,7 @@ flowchart TD
 
 ## 6. Database Architecture & Relational Schema
 
-The PostgreSQL database contains **20 public tables** designed with strict referential integrity, foreign key cascading controls, domain check constraints, and 100% Row-Level Security policy coverage:
+The PostgreSQL database contains **14 public tables** with foreign keys, check constraints, and Row-Level Security enabled on every table:
 
 ```
                           ┌───────────────────────────┐
@@ -243,18 +243,12 @@ The PostgreSQL database contains **20 public tables** designed with strict refer
 | 6 | `borrowing_records`| `profiles`, `book_copies` | `UUID` | Complete circulation loan lifecycle, due dates, renewal counts, and return stamps. |
 | 7 | `reservations` | `profiles`, `books`, `book_copies` | `UUID` | Hold queue items with prioritized positioning and fulfillment statuses. |
 | 8 | `attendance` | `profiles` | `UUID` | Campus/library entrance and exit records with calculated dwell durations. |
-| 9 | `audit_logs` | None (`admin_id` logical) | `UUID` | Tamper-evident administrative action log capturing detailed JSON before/after diffs. |
+| 9 | `audit_logs` | None (`admin_id` logical) | `UUID` | Administrative action log with JSON details; no edit/delete policies for app users. |
 | 10 | `system_settings` | `profiles` | `UUID` | Dynamic operational configurations (loan duration, reservation expiration, limits). |
-| 11 | `announcements` | `profiles` | `UUID` | Campus-wide broadcast bulletins and announcements with priority tagging. |
-| 12 | `notifications` | `profiles` | `UUID` | Patron notification records with read/unread statuses and direct link targets. |
-| 13 | `reports` | `books`, `profiles` | `UUID` | Patron-submitted asset issue and missing book verification reports. |
-| 14 | `ui_preferences` | `profiles` | `UUID` | User interface preference toggles (theme, density, audio alerts). |
-| 15 | `checkout_idempotency` | None | `UUID` | Cryptographic anti-replay cache preventing double-checkout transactions. |
-| 16 | `return_idempotency` | None | `UUID` | Anti-replay token cache safeguarding atomic book returns. |
-| 17 | `checklist_items` | None | `UUID` | Enterprise QA and verification state tracking items. |
-| 18 | `checklist_dropdown_options` | None | `UUID` | Dynamic configuration options for institutional verification items. |
-| 19 | `maintenance_tasks` | None | `UUID` | Operational maintenance task execution logs and health checks. |
-| 20 | `user_roles` | `profiles` | `UUID` | Explicit RBAC privilege mapping and permission assignment. |
+| 11 | `notifications` | `profiles` | `UUID` | Patron notification records with read/unread statuses and direct link targets. |
+| 12 | `ui_preferences` | `profiles` | `UUID` | User interface preference toggles (theme, density, audio alerts). |
+| 13 | `checkout_idempotency` | None | `UUID` | Idempotency keys so a retried checkout returns the first result. |
+| 14 | `return_idempotency` | None | `UUID` | Anti-replay token cache safeguarding atomic book returns. |
 
 ---
 
@@ -297,7 +291,7 @@ thesis/
 │   ├── (authenticated)/                # Protected enterprise application workspace
 │   │   ├── analytics/                  # Executive analytical reporting & Recharts
 │   │   ├── attendance/                 # Contactless gate check-in & check-out scanner
-│   │   ├── audit/                      # Immutable administrative audit logs & diff viewer
+│   │   ├── audit/                      # Administrative audit logs viewer
 │   │   ├── borrow/                     # Patron borrowing records & active loans
 │   │   ├── catalog/                    # Master book catalog with reservation holds
 │   │   ├── circulation/                # Front-desk QR checkout & return desk
@@ -386,8 +380,8 @@ thesis/
 
 If setting up a fresh database on Supabase:
 1. Navigate to the **SQL Editor** in your Supabase Dashboard (or use `supabase db push` if using the CLI).
-2. Execute the entire contents of [`supabase/schema_clean_install.sql`](file:///c:/Users/Godwyn/Documents/Projects/thesis/supabase/schema_clean_install.sql).
-3. This creates all **20 relational tables**, custom enums, stored procedures (`atomic_checkout`, `atomic_return`), full-text search indexes, and hardened Row-Level Security policies.
+2. Execute the entire contents of [`supabase/schema_clean_install.sql`](supabase/schema_clean_install.sql).
+3. This creates all **14 tables**, custom enums, stored procedures (`process_qr_checkout`, `process_qr_return`, …), full-text search indexes, and Row-Level Security policies.
 
 ### Seeding Data
 
