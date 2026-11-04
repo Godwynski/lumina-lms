@@ -17,6 +17,11 @@ vi.mock('@/lib/auth-helpers', () => ({
   },
 }));
 
+const adminRpc = vi.fn().mockResolvedValue({ data: null, error: null });
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => ({ rpc: adminRpc }),
+}));
+
 vi.mock('@/lib/audit', () => ({
   logAuditActivity: vi.fn(),
 }));
@@ -340,6 +345,21 @@ describe('Users Server Actions - Adversarial & Boundary Tests', () => {
         expect.any(Object),
         expect.any(Object)
       );
+    });
+
+    it('stops the invite when the super-admin transfer fails', async () => {
+      vi.mocked(getMe).mockResolvedValue(mockUserSession('super_admin'));
+      const tableBuilder = mockClientHelper.getTableBuilder('profiles');
+      tableBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: 'u-target', email: 'target@school.edu', role: 'student', status: 'ACTIVE' },
+        error: null,
+      });
+      adminRpc.mockResolvedValueOnce({ data: null, error: { message: 'transfer failed' } });
+
+      const result = await inviteUser({ email: 'target@school.edu', role: 'super_admin' });
+
+      expect(result.success).toBe(false);
+      expect(tableBuilder.update).not.toHaveBeenCalled();
     });
 
     it('allows super_admin to invite user with librarian role', async () => {

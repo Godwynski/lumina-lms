@@ -121,17 +121,11 @@ export const inviteUser = createSafeAction(
     }
 
     if (requestedRole === 'super_admin' && profile.role !== 'super_admin') {
-      try {
-        const adminClient = createAdminClient();
-        if (typeof adminClient?.rpc === 'function') {
-          await adminClient.rpc('transfer_super_admin_ownership', {
-            p_current_admin_id: userId,
-            p_new_admin_id: profile.id
-          });
-        }
-      } catch {
-        // Fallback in unit test environments without adminClient RPC mock
-      }
+      const { error: transferError } = await createAdminClient().rpc('transfer_super_admin_ownership', {
+        p_current_admin_id: userId,
+        p_new_admin_id: profile.id
+      });
+      if (transferError) throw transferError;
     }
 
     const { data: updated, error: updateError } = await supabase

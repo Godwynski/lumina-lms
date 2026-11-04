@@ -15,8 +15,8 @@ The codebase utilizes a dual-tier testing organization powered by [Vitest](https
 
 2. **Integration & Adversarial Suites (`test/`):**
    - **Circulation & Concurrency:** [`actions-circulation-adversarial.test.ts`](./actions-circulation-adversarial.test.ts), [`circulation-reservations-adversarial.test.ts`](./circulation-reservations-adversarial.test.ts)
-   - **Security & RLS Hardening:** [`challenger-m2-rls-hardening.test.ts`](./challenger-m2-rls-hardening.test.ts), [`challenger-m2-it2-security.test.ts`](./challenger-m2-it2-security.test.ts)
-   - **Relational Integrity & Triggers:** [`challenger-m1-constraints.test.ts`](./challenger-m1-constraints.test.ts), [`challenger-m1-2-seed-triggers.test.ts`](./challenger-m1-2-seed-triggers.test.ts)
+   - **Real database (RLS, triggers, SQL functions):** [`db-real.test.ts`](./db-real.test.ts) runs `supabase/schema_clean_install.sql` in real Postgres (PGlite, no Docker). Known bugs are `it.fails` until fixed.
+   - **Security:** [`challenger-m2-it2-security.test.ts`](./challenger-m2-it2-security.test.ts)
    - **Navigation & Loading States:** [`navigation-and-loading-states.test.ts`](./navigation-and-loading-states.test.ts)
    - **Realtime & Freshness:** [`realtime-invariants-and-freshness.test.ts`](./realtime-invariants-and-freshness.test.ts)
    - **Role-Based Access Control:** [`role-by-role-execution.test.ts`](./role-by-role-execution.test.ts), [`with-auth-api-adversarial.test.ts`](./with-auth-api-adversarial.test.ts)

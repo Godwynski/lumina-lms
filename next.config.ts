@@ -11,7 +11,7 @@ if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
 
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com;
+  script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== 'production' ? " 'unsafe-eval'" : ''} https://va.vercel-scripts.com;
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https://*.supabase.co https://covers.openlibrary.org https://*.openlibrary.org https://openlibrary.org https://*.archive.org https://*.us.archive.org https://archive.org https://books.google.com https://*.googleusercontent.com;
   font-src 'self' data: https://fonts.gstatic.com;

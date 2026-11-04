@@ -88,3 +88,33 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
 };
 
 export const DEFAULT_STUDENT_FAQS = JSON.parse(DEFAULT_POLICIES.student_faq_list.value) as { question: string; answer: string }[];
+
+// Used by the policy-settings route. Exported so test/db-real.test.ts can check
+// that every accepted value still works in the real checkout SQL.
+export function isValidPolicyValue(key: string, value: string) {
+  const config = DEFAULT_POLICIES[key];
+  if (!config) return false;
+
+  const { validation } = config;
+  if (!validation) return value.trim().length > 0;
+
+  if (validation.type === "number") {
+    // The SQL casts these with ::INTEGER, so "1.5" would break checkout.
+    if (!/^\d+$/.test(value.trim())) return false;
+    const parsed = Number(value);
+    if (validation.min !== undefined && parsed < validation.min) return false;
+    if (validation.max !== undefined && parsed > validation.max) return false;
+    return true;
+  }
+
+  if (validation.type === "json") {
+    try {
+      JSON.parse(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return value.trim().length > 0;
+}

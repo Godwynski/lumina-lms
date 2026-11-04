@@ -108,7 +108,7 @@ export function UserDetailClient({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [initialUser.id, supabase, router, startTransition]);
+  }, [initialUser.id, supabase, router]);
 
   // Modals
   const [permissionsOpen, setPermissionsOpen] = useState(false);

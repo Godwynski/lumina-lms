@@ -3,6 +3,7 @@ import { GET, PUT, DELETE } from '@/app/api/admin/categories/[id]/route';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
 }));

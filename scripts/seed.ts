@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
+import { assertSafeTarget, clearTable } from './db-guard.ts';
 
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
@@ -12,6 +13,7 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.error('Missing Supabase environment variables');
   process.exit(1);
 }
+assertSafeTarget(supabaseUrl);
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
@@ -38,24 +40,13 @@ async function seed() {
   // --- Clean-up Phase ---
   console.info('🧹 Cleaning up database tables in dependency order...');
   
-  await supabase.from('rate_limit_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('deleted_profile_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('ui_preferences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('checklist_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('checklist_dropdown_options').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('announcements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('attendance').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('reservations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('borrowing_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('checkout_idempotency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('return_idempotency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('library_cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('book_copies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('books').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('categories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  for (const table of [
+    'rate_limit_log', 'deleted_profile_info', 'ui_preferences', 'checklist_items', 'checklist_dropdown_options',
+    'audit_logs', 'reports', 'announcements', 'notifications', 'attendance', 'reservations', 'borrowing_records',
+    'checkout_idempotency', 'return_idempotency', 'library_cards', 'book_copies', 'books', 'categories',
+  ]) {
+    await clearTable(supabase, table);
+  }
 
   console.info('🧹 Clean-up completed.');
 
@@ -91,19 +82,19 @@ async function seed() {
   // 2. Sanitize & Verify User Profiles
   console.info('👤 Verifying and organizing user profiles...');
   const userProfileUpdates = [
-    { id: profileIds.godwynStudent, full_name: 'Neri, Godwyn', department: 'BS Information Technology', phone: '+63 917 845 2911', address: 'Alabang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.calinogStudent, full_name: 'Calinog, Josh Raizen', department: 'BS Information Technology', phone: '+63 921 542 1982', address: 'Putatan, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.kayleStudent, full_name: 'Floriano, Kayle Andrew', department: 'BS Computer Science', phone: '+63 961 509 1963', address: 'San Pedro, Laguna', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.kaylePersonal, full_name: 'Floriano, Kayle (Personal)', department: 'BS Computer Science', phone: '+63 961 509 1963', address: 'San Pedro, Laguna', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.jericoSA, full_name: 'Dadea, Jerico', department: 'BS Information Technology', phone: '+63 985 403 6633', address: 'Bagumbayan, Taguig City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.kennethStudent, full_name: 'Tolentino, Kenneth James', department: 'BS Information Technology', phone: '+63 969 166 0480', address: 'Cupang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.rhedStudent, full_name: 'Resurreccion, Rhed', department: 'BS Information Technology', phone: '+63 945 972 7869', address: 'Poblacion, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.baybayLibrarian, full_name: 'Baybay, John Renaund', department: 'College of Information Technology', phone: '+63 918 334 1109', address: 'Alabang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.luminaSuperAdmin, full_name: 'Lumina Super Admin', department: 'Administration', phone: '+63 917 100 0008', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true, role: 'librarian' },
-    { id: profileIds.luminaAdmin, full_name: 'Lumina System Admin', department: 'IT Administration', phone: '+63 917 100 0001', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true, role: 'super_admin' },
-    { id: profileIds.luminaLibrarian, full_name: 'Lumina Head Librarian', department: 'Library Services', phone: '+63 917 100 0002', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.luminaSA, full_name: 'Lumina Desk Assistant', department: 'Library Services', phone: '+63 917 100 0005', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.demoStudent, full_name: 'Demo Student Patron', department: 'BS Computer Science', phone: '+63 917 100 0006', address: 'STI College Alabang', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.godwynStudent, full_name: 'Neri, Godwyn', department: 'BS Information Technology', phone: '+63 900 000 0001', address: 'Alabang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.calinogStudent, full_name: 'Calinog, Josh Raizen', department: 'BS Information Technology', phone: '+63 900 000 0002', address: 'Putatan, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.kayleStudent, full_name: 'Floriano, Kayle Andrew', department: 'BS Computer Science', phone: '+63 900 000 0003', address: 'San Pedro, Laguna', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.kaylePersonal, full_name: 'Floriano, Kayle (Personal)', department: 'BS Computer Science', phone: '+63 900 000 0004', address: 'San Pedro, Laguna', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.jericoSA, full_name: 'Dadea, Jerico', department: 'BS Information Technology', phone: '+63 900 000 0005', address: 'Bagumbayan, Taguig City', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.kennethStudent, full_name: 'Tolentino, Kenneth James', department: 'BS Information Technology', phone: '+63 900 000 0006', address: 'Cupang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.rhedStudent, full_name: 'Resurreccion, Rhed', department: 'BS Information Technology', phone: '+63 900 000 0007', address: 'Poblacion, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.baybayLibrarian, full_name: 'Baybay, John Renaund', department: 'College of Information Technology', phone: '+63 900 000 0008', address: 'Alabang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.luminaSuperAdmin, full_name: 'Lumina Super Admin', department: 'Administration', phone: '+63 900 000 0009', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true, role: 'librarian' },
+    { id: profileIds.luminaAdmin, full_name: 'Lumina System Admin', department: 'IT Administration', phone: '+63 900 000 0010', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true, role: 'super_admin' },
+    { id: profileIds.luminaLibrarian, full_name: 'Lumina Head Librarian', department: 'Library Services', phone: '+63 900 000 0011', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.luminaSA, full_name: 'Lumina Desk Assistant', department: 'Library Services', phone: '+63 900 000 0012', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true },
+    { id: profileIds.demoStudent, full_name: 'Demo Student Patron', department: 'BS Computer Science', phone: '+63 900 000 0013', address: 'STI College Alabang', status: 'ACTIVE', onboarding_completed: true },
   ];
 
   for (const prof of userProfileUpdates) {

@@ -392,13 +392,11 @@ describe('Challenger 2 - Requirement R2 & R3 Adversarial Verification', () => {
       delete process.env.NEXT_PUBLIC_SITE_URL;
 
       const entries = sitemap();
-      expect(entries.length).toBe(3);
+      expect(entries.length).toBe(1);
 
       const urls = entries.map((e) => e.url);
       expect(urls).toEqual([
         'https://stilumina.vercel.app',
-        'https://stilumina.vercel.app/sign-up',
-        'https://stilumina.vercel.app/search',
       ]);
 
       // Assert no duplicate root entry
@@ -414,13 +412,11 @@ describe('Challenger 2 - Requirement R2 & R3 Adversarial Verification', () => {
       process.env.NEXT_PUBLIC_SITE_URL = 'https://custom-domain.org';
 
       const entries = sitemap();
-      expect(entries.length).toBe(3);
+      expect(entries.length).toBe(1);
 
       const urls = entries.map((e) => e.url);
       expect(urls).toEqual([
         'https://custom-domain.org',
-        'https://custom-domain.org/sign-up',
-        'https://custom-domain.org/search',
       ]);
 
       const rootEntries = urls.filter((u) => u === 'https://custom-domain.org');

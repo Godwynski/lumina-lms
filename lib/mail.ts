@@ -3,13 +3,29 @@ import { logger } from './logger';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '465'),
+  port: parseInt(process.env.SMTP_PORT || '465', 10),
   secure: parseInt(process.env.SMTP_PORT || '465', 10) === 465,
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    pass: (process.env.SMTP_PASS || '').replace(/\s+/g, ''),
   },
 });
+
+function getFromAddress(): string {
+  const customFrom = process.env.SMTP_FROM?.trim();
+  if (!customFrom) {
+    return `"Lumina LMS" <${process.env.SMTP_USER || 'noreply@lumina-lms.com'}>`;
+  }
+  if (customFrom.includes('<') && customFrom.includes('>')) {
+    return customFrom;
+  }
+  return `"${customFrom}" <${process.env.SMTP_USER || 'noreply@lumina-lms.com'}>`;
+}
+
+// User-controlled values (names, titles) go into email HTML; escape them.
+function escapeHtml(value: string): string {
+  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://stilumina.vercel.app';
 
@@ -87,7 +103,7 @@ function getEmailLayout(title: string, content: string, ctaText?: string, ctaUrl
           <tr>
             <td align="center" style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #f3f4f6;">
               <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">
-                &copy; ${new Date().getFullYear()} Lumina Library Management System
+                &copy; ${new Date().getFullYear()} Lumina LMS
               </p>
               <p style="margin: 0 0 16px; font-size: 13px; color: #9ca3af; line-height: 1.5;">
                 This is an automated notification. Please do not reply to this email.
@@ -131,9 +147,9 @@ export async function sendOverdueEmail({
   
   const content = `
     <h2 style="margin: 0 0 20px; font-size: 22px; font-weight: 700; color: #111827;">Action Required: Overdue Item</h2>
-    <p style="margin: 0 0 16px; font-size: 16px; color: #4b5563;">Hello <strong style="color: #111827;">${userName}</strong>,</p>
+    <p style="margin: 0 0 16px; font-size: 16px; color: #4b5563;">Hello <strong style="color: #111827;">${escapeHtml(userName)}</strong>,</p>
     <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #4b5563;">
-      Our records show that your borrowed book <span style="color: #111827; font-weight: 600;">"${bookTitle}"</span> was due on <strong style="color: #111827;">${dueDate}</strong>. It is currently <span style="color: #dc2626; font-weight: 700;">${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue</span>.
+      Our records show that your borrowed book <span style="color: #111827; font-weight: 600;">"${escapeHtml(bookTitle)}"</span> was due on <strong style="color: #111827;">${escapeHtml(dueDate)}</strong>. It is currently <span style="color: #dc2626; font-weight: 700;">${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue</span>.
     </p>
     <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
       <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #991b1b;">
@@ -151,7 +167,7 @@ export async function sendOverdueEmail({
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Lumina Library" <noreply@lumina-lms.com>',
+      from: getFromAddress(),
       to,
       subject,
       text: `Hi ${userName}, your borrowed book "${bookTitle}" is ${overdueDays} day(s) overdue. Please return it immediately.`,
@@ -179,9 +195,9 @@ export async function sendDueSoonEmail({
   
   const content = `
     <h2 style="margin: 0 0 20px; font-size: 22px; font-weight: 700; color: #111827;">Friendly Reminder</h2>
-    <p style="margin: 0 0 16px; font-size: 16px; color: #4b5563;">Hello <strong style="color: #111827;">${userName}</strong>,</p>
+    <p style="margin: 0 0 16px; font-size: 16px; color: #4b5563;">Hello <strong style="color: #111827;">${escapeHtml(userName)}</strong>,</p>
     <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #4b5563;">
-      This is a quick reminder that your borrowed book <span style="color: #111827; font-weight: 600;">"${bookTitle}"</span> is due for return on <strong style="color: #111827;">${dueDate}</strong>.
+      This is a quick reminder that your borrowed book <span style="color: #111827; font-weight: 600;">"${escapeHtml(bookTitle)}"</span> is due for return on <strong style="color: #111827;">${escapeHtml(dueDate)}</strong>.
     </p>
     <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
       <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #1e3a8a;">
@@ -199,7 +215,7 @@ export async function sendDueSoonEmail({
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Lumina Library" <noreply@lumina-lms.com>',
+      from: getFromAddress(),
       to,
       subject,
       text: `Hi ${userName}, your borrowed book "${bookTitle}" is due on ${dueDate}.`,
@@ -222,9 +238,9 @@ export async function sendTestEmail(to: string, userName: string) {
   
   const content = `
     <h2 style="margin: 0 0 20px; font-size: 22px; font-weight: 700; color: #111827;">System Configuration Test</h2>
-    <p style="margin: 0 0 16px; font-size: 16px; color: #4b5563;">Hello <strong style="color: #111827;">${userName}</strong>,</p>
+    <p style="margin: 0 0 16px; font-size: 16px; color: #4b5563;">Hello <strong style="color: #111827;">${escapeHtml(userName)}</strong>,</p>
     <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #4b5563;">
-      This is a test email sent from the Lumina Library Management System to verify that your email configuration is working correctly.
+      This is a test email sent from the Lumina LMS to verify that your email configuration is working correctly.
     </p>
     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
       <h3 style="margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Diagnostic Details</h3>
@@ -254,7 +270,7 @@ export async function sendTestEmail(to: string, userName: string) {
 
   try {
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || '"Lumina Library" <noreply@lumina-lms.com>',
+      from: getFromAddress(),
       to,
       subject,
       text: `Lumina LMS: This is a test email to verify your SMTP configuration.`,

@@ -45,7 +45,7 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
       } else {
         // For longer queries, use Full Text Search with prefix support
         // We transform "lord of" into "lord:* & of:*"
-        const terms = cleanQuery.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+        const terms = cleanQuery.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
         const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
         
         // Use 'to_tsquery' style search via default type
@@ -80,7 +80,7 @@ export async function fetchBooksCore(params: BookSearchParams, columns: string =
   if (sortBy === 'author') {
     dbQuery = dbQuery.order('author', { ascending: sortOrder === 'asc' });
   } else if (sortBy === 'availability') {
-    dbQuery = dbQuery.order('available_copies', { ascending: sortOrder === 'desc' });
+    dbQuery = dbQuery.order('available_copies', { ascending: sortOrder === 'asc' });
   } else if (sortBy === 'created_at') {
     dbQuery = dbQuery.order('created_at', { ascending: sortOrder === 'asc' });
   } else {

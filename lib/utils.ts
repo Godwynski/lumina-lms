@@ -80,3 +80,8 @@ export function getCategoryName(categories: unknown): string {
   return "Uncategorized";
 }
 
+
+// Only same-site paths. "//x", "/\x" and "/@x" can send the browser to another host.
+export function safeNextPath(next: string | null): string {
+  return next && next.startsWith("/") && !/^\/[/\\@]/.test(next) ? next : "/dashboard";
+}

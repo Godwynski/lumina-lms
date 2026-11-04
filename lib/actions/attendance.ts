@@ -96,6 +96,16 @@ export const toggleAttendanceByCard = createSafeAction(
       throw new Error("Database error while checking active sessions.");
     }
 
+    // The gate camera reads the same card several times in a row; don't time out a fresh check-in.
+    if (activeRecord && Date.now() - new Date(activeRecord.check_in_at).getTime() < 60_000) {
+      return {
+        status: "IN",
+        message: `Already timed in, ${fullName}.`,
+        description: "Already timed in.",
+        userName: fullName
+      };
+    }
+
     if (activeRecord) {
       // LOG OUT
       const { error: outError } = await supabase
