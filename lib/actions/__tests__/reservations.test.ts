@@ -407,10 +407,8 @@ describe('Reservations Server Actions', () => {
 
   describe('getBookAvailabilityStatus', () => {
     it('returns earliest due date from active borrowing records', async () => {
-      // 1. Active borrow record exists
-      mockUserClientHelper.setTableResponse('borrowing_records', [
-        { due_date: '2026-11-15T00:00:00.000Z' },
-      ]);
+      // 1. A copy is out on loan
+      mockUserClientHelper.setRpcResponse('2026-11-15T00:00:00.000Z', null, 'get_next_due_date');
       // 2. User has no reservation
       mockUserClientHelper.setTableResponse('reservations', null);
 
@@ -424,7 +422,7 @@ describe('Reservations Server Actions', () => {
     });
 
     it('resolves READY reservation with pickup deadline for authenticated user', async () => {
-      mockUserClientHelper.setTableResponse('borrowing_records', []);
+      mockUserClientHelper.setRpcResponse(null, null, 'get_next_due_date');
       mockUserClientHelper.setTableResponse('reservations', {
         id: 'res-ready-uuid',
         status: 'READY',
@@ -446,9 +444,7 @@ describe('Reservations Server Actions', () => {
     });
 
     it('resolves ACTIVE reservation with queue position for authenticated user', async () => {
-      mockUserClientHelper.setTableResponse('borrowing_records', [
-        { due_date: '2026-10-20T00:00:00.000Z' },
-      ]);
+      mockUserClientHelper.setRpcResponse('2026-10-20T00:00:00.000Z', null, 'get_next_due_date');
       mockUserClientHelper.setTableResponse('reservations', {
         id: 'res-active-uuid',
         status: 'ACTIVE',
@@ -470,9 +466,7 @@ describe('Reservations Server Actions', () => {
     });
 
     it('handles unauthenticated visitors returning availability without personal reservation state', async () => {
-      mockUserClientHelper.setTableResponse('borrowing_records', [
-        { due_date: '2026-12-01T00:00:00.000Z' },
-      ]);
+      mockUserClientHelper.setRpcResponse('2026-12-01T00:00:00.000Z', null, 'get_next_due_date');
       mockUserClientHelper.auth.getUser.mockResolvedValue({
         data: { user: null },
         error: null,
