@@ -1,34 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { toSlug } from "@/lib/utils";
 import { CategoryUpdateSchema } from "@/lib/validations/api";
 import { logAuditActivity } from "@/lib/audit";
+import { withAuthApi } from "@/lib/api-utils";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuthApi(async (_request, { supabase, params }) => {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || !["super_admin", "librarian"].includes(String(profile.role))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
 
     const { data, error } = await supabase
@@ -50,31 +28,10 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+}, { allowedRoles: ["super_admin", "librarian"] });
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuthApi(async (request, { supabase, user, params }) => {
   try {
-    const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
-
-    if (!user?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin/librarian role
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.user.id)
-      .single();
-
-    if (!["super_admin", "librarian"].includes(profile?.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -129,7 +86,7 @@ export async function PUT(
     if (error) throw error;
 
     await logAuditActivity(
-      user.user.id,
+      user.id,
       "category",
       id,
       "category_updated",
@@ -149,31 +106,10 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+}, { allowedRoles: ["super_admin", "librarian"] });
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuthApi(async (_request, { supabase, user, params }) => {
   try {
-    const supabase = await createClient();
-    const { data: user } = await supabase.auth.getUser();
-
-    if (!user?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin role
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.user.id)
-      .single();
-
-    if (profile?.role !== "super_admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
 
     const { error } = await supabase
@@ -184,7 +120,7 @@ export async function DELETE(
     if (error) throw error;
 
     await logAuditActivity(
-      user.user.id,
+      user.id,
       "category",
       id,
       "category_archived",
@@ -204,4 +140,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+}, { allowedRoles: ["super_admin"] });

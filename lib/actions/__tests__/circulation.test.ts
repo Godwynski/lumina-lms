@@ -121,26 +121,34 @@ describe('Circulation Server Actions', () => {
       }
     });
 
-    it('falls back to resolving student by student_id in profiles when card is not found', async () => {
-      mockUserClientHelper.setTableResponse('library_cards', null);
-      mockUserClientHelper.setTableResponse('profiles', {
-        id: 'student-uuid-2',
-        full_name: 'Bob Smith',
-        student_id: 'STU-2026-002',
-        status: 'ACTIVE',
-      });
+    // M5: checkout looks up the card number, so a typed student ID must resolve to the real LIB-… card.
+    it('falls back to the real card of the student whose student_id was typed', async () => {
+      const cards = mockUserClientHelper.getTableBuilder('library_cards');
+      cards.maybeSingle
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({
+          data: {
+            card_number: 'LIB-2026-AB12CD34',
+            status: 'ACTIVE',
+            user_id: 'student-uuid-2',
+            profiles: { full_name: 'Bob Smith', student_id: 'STU-2026-002', status: 'ACTIVE' },
+          },
+          error: null,
+        });
+      mockUserClientHelper.setTableResponse('profiles', { id: 'student-uuid-2' });
 
       const result = await resolveScan({
         scanValue: 'STU-2026-002',
         expectedType: 'auto',
       });
 
+      expect(cards.eq).toHaveBeenCalledWith('user_id', 'student-uuid-2');
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data).toEqual({
           type: 'student',
           data: {
-            cardNumber: 'STU-2026-002',
+            cardNumber: 'LIB-2026-AB12CD34',
             status: 'ACTIVE',
             userId: 'student-uuid-2',
             fullName: 'Bob Smith',

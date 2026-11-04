@@ -133,21 +133,19 @@ export function PolicyLayout({
     }
   }, [error]);
 
-  const changedKeys = useMemo(
-    () => Object.keys(DEFAULT_POLICIES).filter((key) => (formData[key] ?? "") !== (initialValues[key] ?? "")),
-    [formData, initialValues],
-  );
+  const changedKeys = Object.keys(DEFAULT_POLICIES).filter((key) => (formData[key] ?? "") !== (initialValues[key] ?? ""));
+  const isDirty = changedKeys.length > 0 || isAnnouncementDirty;
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (changedKeys.length > 0 || isAnnouncementDirty) {
+      if (isDirty) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [changedKeys, isAnnouncementDirty]);
+  }, [isDirty]);
 
   // Defined the full set of categories in order
   const sidebarItems = useMemo(() => {

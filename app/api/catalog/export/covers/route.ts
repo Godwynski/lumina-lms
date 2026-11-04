@@ -1,28 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 import JSZip from "jszip";
+import { withAuthApi } from "@/lib/api-utils";
+import { fetchImage } from "@/lib/fetch-image";
 
-export async function GET(_req: NextRequest) {
+export const GET = withAuthApi(async (_req, { supabase }) => {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || !["super_admin", "librarian", "student_assistant"].includes(profile.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Fetch all books that have cover URLs
     const { data: books, error } = await supabase
       .from("books")
@@ -45,11 +27,8 @@ export async function GET(_req: NextRequest) {
     // Download images and add to zip
     const downloadPromises = booksWithCovers.map(async (book, index) => {
       try {
-        const res = await fetch(book.cover_url!);
-        if (!res.ok) return;
+        const { buffer, contentType } = await fetchImage(book.cover_url!);
 
-        const buffer = await res.arrayBuffer();
-        
         // Build a safe filename using ISBN or title
         let safeName = book.isbn 
           ? book.isbn.trim() 
@@ -59,8 +38,7 @@ export async function GET(_req: NextRequest) {
           safeName = `cover-${index + 1}`;
         }
 
-        // Get extension from cover_url or content-type
-        const contentType = res.headers.get("content-type") || "";
+        // Get extension from the content type
         let ext = "webp";
         if (contentType.includes("png")) ext = "png";
         else if (contentType.includes("jpeg") || contentType.includes("jpg")) ext = "jpg";
@@ -87,4 +65,4 @@ export async function GET(_req: NextRequest) {
     const errMsg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: `Server error: ${errMsg}` }, { status: 500 });
   }
-}
+}, { allowedRoles: ["super_admin", "librarian", "student_assistant"] });

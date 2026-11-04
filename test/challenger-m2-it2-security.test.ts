@@ -256,13 +256,17 @@ describe('Challenger Milestone 2 Iteration 2: Empirical Privilege & Security Cha
       return q;
     };
 
-    beforeEach(() => {
+    beforeEach(async () => {
       mockSupabase = {
         auth: { getUser: vi.fn() },
         from: vi.fn(),
         rpc: vi.fn(),
       };
       (createClient as Mock).mockResolvedValue(mockSupabase);
+      // The route now gets the caller's profile from withAuthApi -> getMe, so use the real getMe
+      // (reading through the mocked client) and let each test's profiles row decide the status.
+      const actual = await vi.importActual<typeof import('@/lib/auth-helpers')>('@/lib/auth-helpers');
+      vi.mocked(getMe).mockImplementation(actual.getMe);
     });
 
     it('EMPIRICALLY VERIFIES: deactivated student assistant (INACTIVE) receives 403 Forbidden viewing other patrons reservations', async () => {

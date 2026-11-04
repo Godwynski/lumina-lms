@@ -656,6 +656,7 @@ describe('Adversarial Challenge Suite: withAuthApi Security Boundaries', () => {
           body: {
             ok: false,
             message: 'Unauthorized',
+            error: 'Unauthorized',
             code: 'UNAUTHORIZED',
             details: undefined,
           },
@@ -727,6 +728,7 @@ describe('Adversarial Challenge Suite: withAuthApi Security Boundaries', () => {
             body: {
               ok: false,
               message: 'An internal server error occurred',
+              error: 'An internal server error occurred',
               code: 'INTERNAL_SERVER_ERROR',
               details: undefined,
             },

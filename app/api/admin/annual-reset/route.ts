@@ -1,27 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { logAuditActivity } from "@/lib/audit";
+import { withAuthApi } from "@/lib/api-utils";
 
-export async function POST() {
-  const supabase = await createClient();
-  
-  // Verify admin authorization
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData?.user;
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "super_admin") {
-    return NextResponse.json({ error: "Forbidden: Admin access only" }, { status: 403 });
-  }
-
+export const POST = withAuthApi(async (_req, { supabase, user }) => {
   // Perform massive update: Reset all student accounts to SUSPENDED
   // This effectively deactivates them for the new school year until manually re-approved
   const { error: profileError } = await supabase
@@ -73,6 +54,6 @@ export async function POST() {
 
   return NextResponse.json({ 
     success: true, 
-    message: "Annual reset complete. All student accounts have been suspended." 
+    message: "Annual reset complete. All student accounts have been suspended."
   });
-}
+}, { allowedRoles: ["super_admin"] });

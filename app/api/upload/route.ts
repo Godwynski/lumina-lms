@@ -1,33 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient } from "@/lib/supabase/server";
 import sharp from "sharp";
+import { withAuthApi } from "@/lib/api-utils";
+import { fetchImage, ImageFetchError } from "@/lib/fetch-image";
 
 // Allowed MIME types
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"];
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 
-export async function POST(_req: NextRequest) {
+export const POST = withAuthApi(async (_req, { supabase }) => {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || !["super_admin", "librarian", "student_assistant"].includes(profile.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const data = await _req.formData();
     const file: File | null = data.get("file") as unknown as File;
     const url: string | null = data.get("url") as string | null;
@@ -43,45 +25,17 @@ export async function POST(_req: NextRequest) {
       }
       const bytes = await file.arrayBuffer();
       buffer = Buffer.from(bytes);
-    } else if (url && url.startsWith("http")) {
+    } else if (url) {
       try {
-        const parsedUrl = new URL(url);
-        if (parsedUrl.protocol !== "https:") {
-          return NextResponse.json({ error: "Only HTTPS image URLs are supported." }, { status: 400 });
-        }
-        const hostname = parsedUrl.hostname.toLowerCase();
-        if (
-          hostname === "localhost" ||
-          hostname === "127.0.0.1" ||
-          hostname === "0.0.0.0" ||
-          hostname.startsWith("192.168.") ||
-          hostname.startsWith("10.") ||
-          hostname.startsWith("172.16.") ||
-          hostname.startsWith("169.254.") ||
-          hostname.endsWith(".local") ||
-          hostname.endsWith(".internal")
-        ) {
-          return NextResponse.json({ error: "Restricted remote image host." }, { status: 400 });
-        }
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to fetch remote image: ${res.statusText}`);
-        
-        const contentType = res.headers.get("content-type") || "image/jpeg";
-        const cleanType = contentType.split(';')[0].trim();
-        if (!ALLOWED_MIME_TYPES.includes(cleanType)) {
+        const remote = await fetchImage(url);
+        if (!ALLOWED_MIME_TYPES.includes(remote.contentType)) {
           return NextResponse.json({ error: "Remote image is in an invalid format." }, { status: 400 });
         }
-        
-        const bytes = await res.arrayBuffer();
-        console.warn(`Fetched remote image: ${url}, size: ${bytes.byteLength}, type: ${contentType}`);
-        
-        if (bytes.byteLength > MAX_UPLOAD_SIZE_BYTES) {
-          return NextResponse.json({ error: "Remote image is too large." }, { status: 400 });
-        }
-        
-        buffer = Buffer.from(bytes);
+        buffer = remote.buffer;
       } catch (e) {
+        if (e instanceof ImageFetchError) {
+          return NextResponse.json({ error: e.message }, { status: 400 });
+        }
         console.error("Failed to fetch remote image:", e);
         return NextResponse.json({ error: "Failed to fetch remote image" }, { status: 500 });
       }
@@ -132,4 +86,4 @@ export async function POST(_req: NextRequest) {
     console.error("Error uploading file:", error);
     return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
   }
-}
+}, { allowedRoles: ["super_admin", "librarian", "student_assistant"] });

@@ -7,7 +7,6 @@ import {
   DELETE as deleteCategoryById,
 } from '../categories/[id]/route';
 import { createClient } from '@/lib/supabase/server';
-import { assertRole } from '@/lib/auth-helpers';
 import { logAuditActivity } from '@/lib/audit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { isAbortError } from '@/lib/error-utils';
@@ -15,10 +14,6 @@ import { createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),
-}));
-
-vi.mock('@/lib/auth-helpers', () => ({
-  assertRole: vi.fn(),
 }));
 
 vi.mock('@/lib/audit', () => ({
@@ -47,6 +42,12 @@ describe('Admin Categories API Routes (/api/admin/categories & /api/admin/catego
     vi.mocked(isAbortError).mockReturnValue(false);
   });
 
+  // withAuthApi reads the caller through the (mocked) Supabase client: auth user + profiles row.
+  const signInAs = (id: string, role: string) => {
+    mockSupabaseHelper.auth.getUser.mockResolvedValue({ data: { user: { id } }, error: null });
+    mockSupabaseHelper.setTableResponse('profiles', { id, role, status: 'ACTIVE' });
+  };
+
   const createJsonRequest = (url: string, method: string, body?: unknown): NextRequest => {
     return new Request(url, {
       method,
@@ -61,11 +62,7 @@ describe('Admin Categories API Routes (/api/admin/categories & /api/admin/catego
 
   describe('GET /api/admin/categories', () => {
     it('returns 200 with categories list when accessed by super_admin', async () => {
-      vi.mocked(assertRole).mockResolvedValue({
-        user: { id: 'admin-1' },
-        role: 'super_admin',
-        supabase: mockSupabaseHelper.client,
-      } as unknown as Awaited<ReturnType<typeof assertRole>>);
+      signInAs('admin-1', 'super_admin');
 
       const sampleCategories = [
         { id: 'cat-1', name: 'Computer Science', slug: 'computer-science', is_active: true },
@@ -75,58 +72,46 @@ describe('Admin Categories API Routes (/api/admin/categories & /api/admin/catego
       const catBuilder = mockSupabaseHelper.getTableBuilder('categories');
       catBuilder.order.mockResolvedValue({ data: sampleCategories, error: null });
 
-      const res = await getCategories();
+      const res = await getCategories(new Request('http://localhost/api/admin/categories'));
       const data = await res.json();
 
       expect(res.status).toBe(200);
       expect(data).toEqual(sampleCategories);
-      expect(assertRole).toHaveBeenCalledWith(['super_admin', 'librarian']);
       expect(catBuilder.order).toHaveBeenCalledWith('name');
     });
 
     it('returns 200 with categories list when accessed by librarian', async () => {
-      vi.mocked(assertRole).mockResolvedValue({
-        user: { id: 'lib-1' },
-        role: 'librarian',
-        supabase: mockSupabaseHelper.client,
-      } as unknown as Awaited<ReturnType<typeof assertRole>>);
+      signInAs('lib-1', 'librarian');
 
       const catBuilder = mockSupabaseHelper.getTableBuilder('categories');
       catBuilder.order.mockResolvedValue({ data: [], error: null });
 
-      const res = await getCategories();
+      const res = await getCategories(new Request('http://localhost/api/admin/categories'));
       expect(res.status).toBe(200);
     });
 
-    it('returns 500 when assertRole rejects unauthorized patron', async () => {
-      vi.mocked(assertRole).mockRejectedValue(new Error('Forbidden'));
+    // Used to be a 500: assertRole threw and the route's catch turned it into "Failed to fetch".
+    it('returns 403 for a student', async () => {
+      signInAs('student-1', 'student');
 
-      const res = await getCategories();
-      const data = await res.json();
-
-      expect(res.status).toBe(500);
-      expect(data.error).toBe('Failed to fetch categories');
+      const res = await getCategories(new Request('http://localhost/api/admin/categories'));
+      expect(res.status).toBe(403);
     });
 
     it('returns 499 status when an abort error is encountered', async () => {
-      vi.mocked(assertRole).mockImplementation(() => {
-        const abortErr = new Error('Client aborted');
-        vi.mocked(isAbortError).mockReturnValue(true);
-        throw abortErr;
-      });
+      signInAs('admin-1', 'super_admin');
+      const catBuilder = mockSupabaseHelper.getTableBuilder('categories');
+      catBuilder.order.mockRejectedValue(new Error('Client aborted'));
+      vi.mocked(isAbortError).mockReturnValue(true);
 
-      const res = await getCategories();
+      const res = await getCategories(new Request('http://localhost/api/admin/categories'));
       expect(res.status).toBe(499);
     });
   });
 
   describe('POST /api/admin/categories', () => {
     beforeEach(() => {
-      vi.mocked(assertRole).mockResolvedValue({
-        user: { id: 'admin-1' },
-        role: 'super_admin',
-        supabase: mockSupabaseHelper.client,
-      } as unknown as Awaited<ReturnType<typeof assertRole>>);
+      signInAs('admin-1', 'super_admin');
     });
 
     it('rejects malformed non-JSON requests with 400', async () => {
@@ -232,7 +217,7 @@ describe('Admin Categories API Routes (/api/admin/categories & /api/admin/catego
       const data = await res.json();
 
       expect(res.status).toBe(403);
-      expect(data.error).toBe('Forbidden');
+      expect(data.error).toMatch(/^Forbidden/);
     });
 
     it('returns 200 and category details for super_admin (verifying role fix)', async () => {
@@ -485,7 +470,7 @@ describe('Admin Categories API Routes (/api/admin/categories & /api/admin/catego
       const data = await res.json();
 
       expect(res.status).toBe(403);
-      expect(data.error).toBe('Forbidden');
+      expect(data.error).toMatch(/^Forbidden/);
     });
 
     it('blocks student from deleting category with 403 Forbidden', async () => {

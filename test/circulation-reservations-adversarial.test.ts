@@ -298,6 +298,7 @@ describe('Adversarial & Boundary Verification: /api/circulation/reservations', (
 
     it('returns 400 when body is invalid JSON', async () => {
       setupMockUser('user-123');
+      mockSupabase.from.mockReturnValue(setupMockProfile('student'));
 
       const request = new NextRequest('http://localhost:3000/api/circulation/reservations', {
         method: 'POST',

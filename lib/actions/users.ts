@@ -120,7 +120,8 @@ export const inviteUser = createSafeAction(
       throw new Error('Only super administrators can assign the super admin role');
     }
 
-    if (requestedRole === 'super_admin' && profile.role !== 'super_admin') {
+    const isTransfer = requestedRole === 'super_admin' && profile.role !== 'super_admin';
+    if (isTransfer) {
       const { error: transferError } = await createAdminClient().rpc('transfer_super_admin_ownership', {
         p_current_admin_id: userId,
         p_new_admin_id: profile.id
@@ -128,7 +129,10 @@ export const inviteUser = createSafeAction(
       if (transferError) throw transferError;
     }
 
-    const { data: updated, error: updateError } = await supabase
+    // After a transfer the requester is a librarian, and the profile guard trigger only lets the
+    // super admin edit the super admin's row, so finish that case with the service role.
+    const writer = isTransfer ? createAdminClient() : supabase;
+    const { data: updated, error: updateError } = await writer
       .from('profiles')
       .update({
         role: requestedRole,

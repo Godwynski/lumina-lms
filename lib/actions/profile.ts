@@ -15,6 +15,13 @@ export async function updateAvatarUrl(url: string) {
     throw new Error("Unauthorized");
   }
 
+  // Only the user's own folder in this project's avatars bucket (what AvatarManager uploads to);
+  // the URL is later downloaded server-side for the library card.
+  const ownAvatarPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${user.id}/`;
+  if (!url.startsWith(ownAvatarPrefix) || url.includes("..")) {
+    throw new Error("Invalid avatar URL.");
+  }
+
   const { error } = await supabase
     .from('profiles')
     .update({ 

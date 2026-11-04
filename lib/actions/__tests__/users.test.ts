@@ -18,8 +18,13 @@ vi.mock('@/lib/auth-helpers', () => ({
 }));
 
 const adminRpc = vi.fn().mockResolvedValue({ data: null, error: null });
+const adminSingle = vi.fn().mockResolvedValue({
+  data: { id: 'u-target', email: 'target@school.edu', role: 'super_admin', status: 'ACTIVE', department: 'AdminDept' },
+  error: null,
+});
+const adminUpdate = vi.fn(() => ({ eq: () => ({ select: () => ({ single: adminSingle }) }) }));
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: () => ({ rpc: adminRpc }),
+  createAdminClient: () => ({ rpc: adminRpc, from: () => ({ update: adminUpdate }) }),
 }));
 
 vi.mock('@/lib/audit', () => ({
@@ -315,11 +320,6 @@ describe('Users Server Actions - Adversarial & Boundary Tests', () => {
         data: { id: 'u-target', email: 'target@school.edu', role: 'student', status: 'ACTIVE', department: 'Science' },
         error: null,
       });
-      tableBuilder.single.mockResolvedValueOnce({
-        data: { id: 'u-target', email: 'target@school.edu', role: 'super_admin', status: 'ACTIVE', department: 'AdminDept' },
-        error: null,
-      });
-
       const result = await inviteUser({
         email: 'TARGET@SCHOOL.EDU ',
         role: 'super_admin',
@@ -328,7 +328,9 @@ describe('Users Server Actions - Adversarial & Boundary Tests', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.user.role).toBe('super_admin');
-      expect(tableBuilder.update).toHaveBeenCalledWith(
+      // After the transfer the requester is only a librarian, so the DB guard would reject their own client.
+      expect(tableBuilder.update).not.toHaveBeenCalled();
+      expect(adminUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           role: 'super_admin',
           status: 'ACTIVE',
