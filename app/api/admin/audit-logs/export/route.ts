@@ -17,30 +17,19 @@ export const GET = withAuthApi(async (request, { supabase }) => {
     const endDate = searchParams.get("endDate");
     const userId = searchParams.get("userId");
 
-    let query = supabase
-      .from("audit_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(5000);
-
-    if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
-    if (actionType) query = query.eq("action", actionType);
-    if (startDate) query = query.gte("created_at", `${startDate}T00:00:00.000Z`);
-    if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999Z`);
-    if (userId) query = query.eq("admin_id", userId);
-    
+    let searchFilter: string | null = null;
     if (queryParam) {
       const safe = sanitizeFilterInput(queryParam);
-      
+
       // Lookup profiles that match the search query by name or email
       const { data: matchingProfiles } = await supabase
         .from("profiles")
         .select("id")
         .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
-      
+
       const profileIds = matchingProfiles?.map(p => p.id) || [];
-      
-      let orConditions = [
+
+      const orConditions = [
         `entity_type.ilike.%${safe}%`,
         `action.ilike.%${safe}%`,
         `reason.ilike.%${safe}%`
@@ -50,13 +39,35 @@ export const GET = withAuthApi(async (request, { supabase }) => {
       if (profileIds.length > 0) {
         orConditions.push(`admin_id.in.(${profileIds.join(',')})`);
       }
-      
-      query = query.or(orConditions.join(','));
+
+      searchFilter = orConditions.join(',');
     }
 
-    const { data: logs, error } = await query;
+    // The API returns at most 1,000 rows per request, so page through everything that matches (M8).
+    // Dates are whole days in Manila time, like the audit log screen (M9).
+    const PAGE_SIZE = 1000;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped Supabase rows, as before
+    const logs: any[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let query = supabase
+        .from("audit_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (error) throw error;
+      if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
+      if (actionType) query = query.eq("action", actionType);
+      if (startDate) query = query.gte("created_at", `${startDate}T00:00:00+08:00`);
+      if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999+08:00`);
+      if (userId) query = query.eq("admin_id", userId);
+      if (searchFilter) query = query.or(searchFilter);
+
+      const { data: page, error } = await query;
+      if (error) throw error;
+      logs.push(...(page || []));
+      if (!page || page.length < PAGE_SIZE) break;
+    }
 
     // Manual join since audit_logs has no FK to profiles
     const adminIds = [...new Set((logs || []).map(l => l.admin_id).filter(Boolean))];
@@ -129,7 +140,8 @@ export const GET = withAuthApi(async (request, { supabase }) => {
       return selectedCols.map((col) => {
         let val: unknown = "";
         if (col === "created_at") {
-          val = log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "";
+          // Manila wall-clock time ("sv-SE" gives yyyy-MM-dd HH:mm:ss); the server runs in UTC (M9).
+          val = log.created_at ? new Date(log.created_at).toLocaleString("sv-SE", { timeZone: "Asia/Manila" }) : "";
         } else if (col === "full_name") {
           val = log.profiles?.full_name || "Unknown";
         } else if (col === "email") {

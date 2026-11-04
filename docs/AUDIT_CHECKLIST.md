@@ -185,41 +185,41 @@ _Why high: stopping server-side URL fetching takes care, and the card change tou
 ### B4.1 · Unify the reservation queue · Effort: `xhigh`
 _Why xhigh: one change across 4 call sites (SQL return, TypeScript cancel, cron expiry, copy-status change), with locking and queue order. The biggest risk of quietly wrong data in the plan._
 
-- [ ] 🟠 **M1** Expired holds skip the line; the queue logic exists four times ✅ `[P1#8]` — write one SQL `release_copy(copy_id)` (with a per-book advisory lock) that gives the copy to the next ACTIVE reservation or marks it AVAILABLE, with one hold default `COALESCE(…, 3)`. Call it from `process_qr_return`, `cancelReservation`, cron expiry (`hold_expires_at < now()`, status `EXPIRED`) and copy-status changes. Delete `reassignCopy`.
-- [ ] 🟠 **M2** Changing a copy's status rewrites loans and holds `[P1#14]` — `updateBookCopyStatus`: refuse BORROWED/RESERVED copies, give LOST its own loan status (not RETURNED), drop BORROWED from the choices, and call `release_copy` after AVAILABLE.
+- [x] 🟠 **M1** Expired holds skip the line; the queue logic exists four times ✅ `[P1#8]` — write one SQL `release_copy(copy_id)` (with a per-book advisory lock) that gives the copy to the next ACTIVE reservation or marks it AVAILABLE, with one hold default `COALESCE(…, 3)`. Call it from `process_qr_return`, `cancelReservation`, cron expiry (`hold_expires_at < now()`, status `EXPIRED`) and copy-status changes. Delete `reassignCopy`.
+- [x] 🟠 **M2** Changing a copy's status rewrites loans and holds `[P1#14]` — `updateBookCopyStatus`: refuse BORROWED/RESERVED copies, give LOST its own loan status (not RETURNED), drop BORROWED from the choices, and call `release_copy` after AVAILABLE.
 
 ### B4.2 · Cron, big lists, time zones · Effort: `high`
 _Why high: claiming rows so two runs can't send twice, plus moving counts into SQL. Easy to get subtly wrong._
 
-- [ ] 🟠 **M7** Overdue emails lost or sent twice `[P1#12]` — add an `overdue_notified` column; claim each row with `update … where id = ? and overdue_notified = false returning id` before sending; clear the flag if the send fails.
-- [ ] 🟠 **M8** Lists stop at 1,000 rows `[P1#18]`:
+- [x] 🟠 **M7** Overdue emails lost or sent twice `[P1#12]` — add an `overdue_notified` column; claim each row with `update … where id = ? and overdue_notified = false returning id` before sending; clear the flag if the send fails.
+- [x] 🟠 **M8** Lists stop at 1,000 rows `[P1#18]`: _Done. Import duplicate check pages through all books with `.range()` instead of `.in('isbn', …)`, because `.in` can't match title + author case-insensitively._
   - annual reset: one RPC;
   - analytics: SQL `date_trunc` / `group by` RPC;
   - import duplicate check: `.in('isbn', …)`;
   - bulk notify: `insert … select` RPC;
   - audit export and attendance "all": `.range()` paging.
-- [ ] 🟠 **M9** UTC instead of Manila time `[P1#19]` — use `+08:00` in the audit filters; format and group with `Asia/Manila`. If the analytics RPC from M8 is written with `AT TIME ZONE 'Asia/Manila'`, this is done there.
+- [x] 🟠 **M9** UTC instead of Manila time `[P1#19]` — use `+08:00` in the audit filters; format and group with `Asia/Manila`. If the analytics RPC from M8 is written with `AT TIME ZONE 'Asia/Manila'`, this is done there.
 
 ### B4.3 · Import and export at real size · Effort: `high`
 _Why high: a bulk-write rewrite where re-running must never duplicate data._
 
-- [ ] 🟠 **M3** Batch import times out and doubles copies `[P2#41]` — insert books in bulk, then copies in bulk; skip duplicates by default ("add copies to existing books" is an opt-in checkbox); cap stock at 50; write one audit entry.
-- [ ] 🟠 **M22** Cover export times out `[P1#26]` — at most 10 downloads at a time; unique file names with `-${index}`.
+- [x] 🟠 **M3** Batch import times out and doubles copies `[P2#41]` — insert books in bulk, then copies in bulk; skip duplicates by default ("add copies to existing books" is an opt-in checkbox); cap stock at 50; write one audit entry.
+- [x] 🟠 **M22** Cover export times out `[P1#26]` — at most 10 downloads at a time; unique file names with `-${index}`.
 
 ### B4.4 · Realtime load + bulk re-activation · Effort: `medium`
 _Why medium: copying an existing debounce pattern, plus one simple RPC and button._
 
-- [ ] 🟠 **M21** Realtime refresh storms `[P2#42]` — copy `DashboardClient`'s 500 ms `debouncedRefresh` into `StudentCatalogClient`, `AnalyticsClient`, `BookDetailModal` and `UserDetailClient`; drop the `book_copies` / `borrowing_records` listeners on the student catalog.
-- [ ] 🟠 **M23** Re-activating students after the reset is manual `[P2#48]` — add a bulk "Re-activate selected" action on Users (one RPC that updates profiles and cards).
+- [x] 🟠 **M21** Realtime refresh storms `[P2#42]` — copy `DashboardClient`'s 500 ms `debouncedRefresh` into `StudentCatalogClient`, `AnalyticsClient`, `BookDetailModal` and `UserDetailClient`; drop the `book_copies` / `borrowing_records` listeners on the student catalog.
+- [x] 🟠 **M23** Re-activating students after the reset is manual `[P2#48]` — add a bulk "Re-activate selected" action on Users (one RPC that updates profiles and cards).
 
 > ### 🚧 GATE 4
-> - [ ] DB tests pass for:
+> - [x] DB tests pass for:
 >   - an expired hold goes to the next in line;
 >   - LOST ≠ RETURNED;
 >   - two maintenance runs send one email per loan;
 >   - analytics counts over 1,000 rows correctly.
-> - [ ] A 500-row import fixture finishes in under 10 seconds, and importing it again adds 0 copies.
-> - [ ] Full suite plus build green.
+> - [x] A 500-row import fixture finishes in under 10 seconds, and importing it again adds 0 copies.
+> - [x] Full suite plus build green.
 > - [ ] Manual: two browser tabs on the student catalog, one checkout means one refresh per tab, not a burst.
 
 ---

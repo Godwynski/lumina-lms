@@ -192,28 +192,57 @@ export async function getAttendanceHistory(
                    me.profile?.status?.toUpperCase() === 'ACTIVE' &&
                    me.profile.permissions?.manage_attendance);
 
+  const PAGE_SIZE = 1000;
+  const MAX_ROWS = 10000;
+
   // If no userId provided and is staff, show system records (today or all)
   if (!userId && isStaff) {
     const range = options?.range || 'today';
-    let query = supabase
-      .from("attendance")
-      .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)");
-
-    if (range === 'today') {
-      const manilaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
-      query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
-    }
-
-    query = query.order("check_in_at", { ascending: false });
+    const manilaStr = range === 'today'
+      ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+      : null;
 
     if (options?.limit) {
-      query = query.limit(options.limit);
+      let query = supabase
+        .from("attendance")
+        .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)");
+
+      if (manilaStr) {
+        query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
+      }
+
+      const { data, error } = await query
+        .order("check_in_at", { ascending: false })
+        .limit(options.limit);
+
+      if (error) throw error;
+      return (data || []).map(record => ({
+        ...record,
+        profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
+      })) as unknown as AttendanceRecord[];
     }
 
-    const { data, error } = await query;
+    const allData: Record<string, unknown>[] = [];
+    for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+      let query = supabase
+        .from("attendance")
+        .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)");
 
-    if (error) throw error;
-    return (data || []).map(record => ({
+      if (manilaStr) {
+        query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
+      }
+
+      const { data: pageData, error } = await query
+        .order("check_in_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) throw error;
+      const batch = (pageData || []) as Record<string, unknown>[];
+      allData.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+    }
+
+    return allData.map(record => ({
       ...record,
       profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
     })) as unknown as AttendanceRecord[];
@@ -226,20 +255,37 @@ export async function getAttendanceHistory(
     throw new Error("Forbidden");
   }
 
-  let query = supabase
-    .from("attendance")
-    .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)")
-    .eq("user_id", targetId)
-    .order("check_in_at", { ascending: false });
-
   if (options?.limit) {
-    query = query.limit(options.limit);
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)")
+      .eq("user_id", targetId)
+      .order("check_in_at", { ascending: false })
+      .limit(options.limit);
+
+    if (error) throw error;
+    return (data || []).map(record => ({
+      ...record,
+      profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
+    })) as unknown as AttendanceRecord[];
   }
 
-  const { data, error } = await query;
+  const allUserRecords: Record<string, unknown>[] = [];
+  for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+    const { data: pageData, error } = await supabase
+      .from("attendance")
+      .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)")
+      .eq("user_id", targetId)
+      .order("check_in_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
 
-  if (error) throw error;
-  return (data || []).map(record => ({
+    if (error) throw error;
+    const batch = (pageData || []) as Record<string, unknown>[];
+    allUserRecords.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+  }
+
+  return allUserRecords.map(record => ({
     ...record,
     profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
   })) as unknown as AttendanceRecord[];

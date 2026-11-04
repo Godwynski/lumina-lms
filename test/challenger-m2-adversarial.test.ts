@@ -12,6 +12,8 @@ vi.mock('@/lib/auth-helpers', () => ({
   getMe: vi.fn(),
 }));
 
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ rpc: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }) }) }));
+
 vi.mock('@/lib/audit', () => ({
   logAuditActivity: vi.fn(),
 }));
@@ -224,15 +226,19 @@ describe('Empirical Challenger M2: Adversarial Stress Test Suite', () => {
       });
 
       it('revalidates both public-books and catalog tags for all allowed status changes', async () => {
-        const statuses = ['AVAILABLE', 'MAINTENANCE', 'LOST', 'BORROWED'] as const;
+        const statuses = ['AVAILABLE', 'MAINTENANCE', 'LOST'] as const;
 
         for (const status of statuses) {
           vi.clearAllMocks();
           const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-          copyBuilder.single.mockResolvedValueOnce({
-            data: { id: `copy-${status}`, book_id: `book-${status}-123`, status },
-            error: null,
-          });
+          // First read: current status (AVAILABLE goes through release_copy); last read: the updated row.
+          copyBuilder.single
+            .mockResolvedValueOnce({ data: { status: status === 'AVAILABLE' ? 'MAINTENANCE' : 'AVAILABLE' }, error: null })
+            .mockResolvedValueOnce({
+              data: { id: `copy-${status}`, book_id: `book-${status}-123`, status },
+              error: null,
+            });
+          mockClientHelper.setTableResponse('book_copies', [{ id: `copy-${status}` }]);
 
           const result = await updateBookCopyStatus({
             id: `copy-${status}`,

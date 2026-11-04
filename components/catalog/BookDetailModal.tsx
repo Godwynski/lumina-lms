@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback, useMemo } from 'react';
+import { useState, useEffect, useTransition, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import {
   MapPin,
@@ -272,6 +272,14 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
     }
   }, [error]);
 
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      void fetchData();
+    }, 500);
+  }, [fetchData]);
+
   // Real-time synchronization for the modal content
   useEffect(() => {
     if (!open || !bookId) return;
@@ -282,24 +290,25 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'books', filter: `id=eq.${bookId}` },
-        fetchData
+        debouncedRefresh
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'book_copies', filter: `book_id=eq.${bookId}` },
-        fetchData
+        debouncedRefresh
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'reservations', filter: `book_id=eq.${bookId}` },
-        fetchData
+        debouncedRefresh
       )
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [open, bookId, fetchData]);
+  }, [open, bookId, debouncedRefresh]);
 
   const placeholderStudentData = useMemo(() => {
     if (initialData && variant === 'student') {

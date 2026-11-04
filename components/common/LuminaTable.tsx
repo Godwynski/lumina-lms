@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 
 export interface LuminaColumn<T> {
-  header: string;
+  header: React.ReactNode;
   accessor?: keyof T | ((item: T) => React.ReactNode);
   cell?: (item: T) => React.ReactNode;
   className?: string;

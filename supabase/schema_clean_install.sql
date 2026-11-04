@@ -13,7 +13,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-    CREATE TYPE public."BorrowStatus" AS ENUM ('ACTIVE', 'RETURNED', 'OVERDUE');
+    CREATE TYPE public."BorrowStatus" AS ENUM ('ACTIVE', 'RETURNED', 'OVERDUE', 'LOST');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS public.borrowing_records (
     status public."BorrowStatus" DEFAULT 'ACTIVE'::public."BorrowStatus",
     returned_by UUID CONSTRAINT borrowing_records_returned_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
     reminder_sent BOOLEAN DEFAULT FALSE,
+    overdue_notified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT borrowing_records_due_date_check CHECK (due_date >= borrowed_at),
@@ -295,6 +296,7 @@ CREATE INDEX IF NOT EXISTS audit_logs_admin_id_idx ON public.audit_logs(admin_id
 CREATE INDEX IF NOT EXISTS borrowing_records_user_status_idx ON public.borrowing_records(user_id, status);
 CREATE INDEX IF NOT EXISTS borrowing_records_user_borrowed_idx ON public.borrowing_records(user_id, borrowed_at DESC);
 CREATE INDEX IF NOT EXISTS borrowing_records_due_active_idx ON public.borrowing_records(due_date) WHERE status = 'ACTIVE' AND reminder_sent = false;
+CREATE INDEX IF NOT EXISTS borrowing_records_overdue_unnotified_idx ON public.borrowing_records(due_date) WHERE status IN ('ACTIVE', 'OVERDUE') AND overdue_notified = false;
 CREATE INDEX IF NOT EXISTS reservations_queue_idx ON public.reservations(book_id, status, queue_position, created_at);
 CREATE INDEX IF NOT EXISTS reservations_user_book_status_idx ON public.reservations(user_id, book_id, status);
 CREATE UNIQUE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendance(user_id) WHERE check_out_at IS NULL;
@@ -629,6 +631,96 @@ BEGIN
 END;
 $$;
 
+-- Atomic transaction-safe release_copy procedure (M1)
+CREATE OR REPLACE FUNCTION public.release_copy(p_copy_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_book_id          UUID;
+  v_now              TIMESTAMPTZ := NOW();
+  v_next_reservation RECORD;
+  v_hold_days        INTEGER;
+  v_hold_expires_at  TIMESTAMPTZ;
+  v_student_name     TEXT;
+BEGIN
+  -- Lock the copy and read its book_id
+  SELECT bc.book_id
+  INTO v_book_id
+  FROM public.book_copies bc
+  WHERE bc.id = p_copy_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'COPY_NOT_FOUND', 'reservation_ready', false);
+  END IF;
+
+  -- Serialize queue changes per book
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_book_id::text, 0));
+
+  -- Find the next ACTIVE reservation in line
+  SELECT r.id, r.user_id
+  INTO v_next_reservation
+  FROM public.reservations r
+  WHERE r.book_id = v_book_id
+    AND r.status  = 'ACTIVE'
+  ORDER BY r.queue_position ASC, r.created_at ASC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF FOUND THEN
+    SELECT COALESCE(MAX(NULLIF(value, '')::INTEGER), 3)
+    INTO v_hold_days
+    FROM public.system_settings
+    WHERE key = 'hold_expiry_days';
+
+    v_hold_days := GREATEST(COALESCE(v_hold_days, 3), 1);
+    v_hold_expires_at := v_now + make_interval(days => v_hold_days);
+
+    UPDATE public.reservations
+    SET
+      status          = 'READY',
+      copy_id         = p_copy_id,
+      fulfilled_at    = v_now,
+      hold_expires_at = v_hold_expires_at,
+      updated_at      = v_now
+    WHERE id = v_next_reservation.id;
+
+    UPDATE public.book_copies
+    SET status = 'RESERVED', updated_at = v_now
+    WHERE id = p_copy_id;
+
+    PERFORM public.compress_reservation_queue(v_book_id);
+
+    SELECT full_name INTO v_student_name
+    FROM public.profiles
+    WHERE id = v_next_reservation.user_id;
+
+    RETURN jsonb_build_object(
+      'ok',                true,
+      'reservation_ready', true,
+      'reservation_id',    v_next_reservation.id,
+      'user_id',           v_next_reservation.user_id,
+      'reserved_for',      COALESCE(v_student_name, 'Reserved Student'),
+      'hold_expires_at',   v_hold_expires_at
+    );
+  ELSE
+    UPDATE public.book_copies
+    SET status = 'AVAILABLE', updated_at = v_now
+    WHERE id = p_copy_id;
+
+    PERFORM public.compress_reservation_queue(v_book_id);
+
+    RETURN jsonb_build_object(
+      'ok',                true,
+      'reservation_ready', false
+    );
+  END IF;
+END;
+$$;
+
 -- Atomic transaction-safe reservation procedure
 CREATE OR REPLACE FUNCTION public.create_reservation_atomic(p_actor_id uuid, p_book_id uuid, p_target_user_id uuid DEFAULT NULL::uuid)
  RETURNS jsonb
@@ -642,6 +734,7 @@ DECLARE
     v_res_id         UUID;
     v_profile_status TEXT;
     v_copy_id        UUID;
+    v_exp_copy_id    UUID;
     v_hold_days      INTEGER;
     v_expiry         TIMESTAMPTZ;
     v_actor_role     user_role;
@@ -676,18 +769,19 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended(v_target_id::text, 0));
     PERFORM pg_advisory_xact_lock(hashtextextended(p_book_id::text, 0));
 
-    -- Expire old READY reservations
-    WITH expired_holds AS (
+    -- Expire old READY reservations and hand their copies to the next person in line (or AVAILABLE)
+    FOR v_exp_copy_id IN
         UPDATE public.reservations
         SET status = 'EXPIRED', updated_at = NOW()
-        WHERE book_id = p_book_id 
-          AND status = 'READY' 
+        WHERE book_id = p_book_id
+          AND status = 'READY'
           AND hold_expires_at < NOW()
         RETURNING copy_id
-    )
-    UPDATE public.book_copies
-    SET status = 'AVAILABLE', updated_at = NOW()
-    WHERE id IN (SELECT copy_id FROM expired_holds);
+    LOOP
+        IF v_exp_copy_id IS NOT NULL THEN
+            PERFORM public.release_copy(v_exp_copy_id);
+        END IF;
+    END LOOP;
 
     IF EXISTS (
         SELECT 1 FROM public.reservations
@@ -696,7 +790,7 @@ BEGIN
         RETURN jsonb_build_object('ok', false, 'code', 'DUPLICATE', 'message', 'You already have an active reservation for this book.');
     END IF;
 
-    SELECT COALESCE(NULLIF(value, '')::INTEGER, 3) INTO v_max_res
+    SELECT COALESCE(MAX(NULLIF(value, '')::INTEGER), 3) INTO v_max_res
     FROM public.system_settings WHERE key = 'max_reservations_per_student';
 
     IF (SELECT COUNT(*) FROM public.reservations
@@ -712,26 +806,27 @@ BEGIN
     FOR UPDATE SKIP LOCKED;
 
     IF v_copy_id IS NOT NULL THEN
-        SELECT COALESCE(value::INTEGER, 3) INTO v_hold_days
+        SELECT COALESCE(MAX(NULLIF(value, '')::INTEGER), 3) INTO v_hold_days
         FROM public.system_settings WHERE key = 'hold_expiry_days';
-        
-        v_expiry := NOW() + (v_hold_days || ' days')::interval;
-        
+
+        v_hold_days := GREATEST(COALESCE(v_hold_days, 3), 1);
+        v_expiry := NOW() + make_interval(days => v_hold_days);
+
         UPDATE public.book_copies SET status = 'RESERVED', updated_at = NOW() WHERE id = v_copy_id;
-        
+
         INSERT INTO public.reservations (user_id, book_id, copy_id, queue_position, status, hold_expires_at)
         VALUES (v_target_id, p_book_id, v_copy_id, 1, 'READY', v_expiry)
         RETURNING id INTO v_res_id;
-        
+
         RETURN jsonb_build_object('ok', true, 'reservation_id', v_res_id, 'status', 'READY', 'copy_id', v_copy_id, 'hold_expires_at', v_expiry);
     ELSE
         SELECT COALESCE(MAX(queue_position), 0) + 1 INTO v_queue_pos
         FROM public.reservations WHERE book_id = p_book_id AND status = 'ACTIVE';
-        
+
         INSERT INTO public.reservations (user_id, book_id, queue_position, status)
         VALUES (v_target_id, p_book_id, v_queue_pos, 'ACTIVE')
         RETURNING id INTO v_res_id;
-        
+
         RETURN jsonb_build_object('ok', true, 'reservation_id', v_res_id, 'status', 'ACTIVE', 'queue_position', v_queue_pos);
     END IF;
 END;
@@ -912,12 +1007,9 @@ DECLARE
   v_copy              RECORD;
   v_borrow            RECORD;
   v_existing          JSONB;
+  v_release           JSONB;
   v_result            JSONB;
   v_now               TIMESTAMPTZ := NOW();
-  v_next_reservation  RECORD;
-  v_hold_expiry_days  INTEGER := 7;
-  v_hold_expires_at   TIMESTAMPTZ;
-  v_student_name      TEXT;
 BEGIN
   -- Idempotency check
   IF NOT p_preview_only AND p_idempotency_key IS NOT NULL THEN
@@ -942,7 +1034,6 @@ BEGIN
   END IF;
 
   -- Find the active borrowing record
-  -- Fix: Specify "FOR UPDATE OF br" to avoid locking the nullable side of the LEFT JOIN
   SELECT br.id, br.user_id, br.borrowed_at, br.due_date, p.full_name
   INTO v_borrow
   FROM public.borrowing_records br
@@ -962,7 +1053,6 @@ BEGIN
           'student_name', 'System Recovery (No Record)'
         );
       END IF;
-      -- No record to update, skip updating borrowing_records
     ELSE
       IF v_copy.status = 'AVAILABLE' THEN
         RETURN jsonb_build_object('ok', false, 'code', 'NOT_BORROWED', 'message', 'This book copy is already Available.');
@@ -988,64 +1078,24 @@ BEGIN
     WHERE id = v_borrow.id;
   END IF;
 
-  -- Atomically check for next queued reservation for this book
-  SELECT r.id, r.user_id
-  INTO v_next_reservation
-  FROM public.reservations r
-  WHERE r.book_id = v_copy.book_id
-    AND r.status  = 'ACTIVE'
-  ORDER BY r.queue_position ASC, r.created_at ASC
-  LIMIT 1
-  FOR UPDATE;
+  -- Release copy to the next queued reservation or mark AVAILABLE
+  v_release := public.release_copy(v_copy.id);
 
-  IF FOUND THEN
-    -- Promote the next reservation to READY and assign this copy
-    SELECT COALESCE(NULLIF(value, '')::INTEGER, 7)
-    INTO v_hold_expiry_days
-    FROM public.system_settings
-    WHERE key = 'hold_expiry_days'
-    LIMIT 1;
-
-    v_hold_expires_at := v_now + make_interval(days => GREATEST(v_hold_expiry_days, 1));
-
-    UPDATE public.reservations
-    SET
-      status         = 'READY',
-      copy_id        = v_copy.id,
-      fulfilled_at   = v_now,
-      hold_expires_at = v_hold_expires_at,
-      updated_at     = v_now
-    WHERE id = v_next_reservation.id;
-
-    -- Mark copy as RESERVED for the next student
-    UPDATE public.book_copies
-    SET status = 'RESERVED', updated_at = v_now
-    WHERE id = v_copy.id;
-
-    -- Fetch name for the librarian notification
-    SELECT full_name INTO v_student_name
-    FROM public.profiles
-    WHERE id = v_next_reservation.user_id;
-
+  IF COALESCE((v_release ->> 'reservation_ready')::boolean, false) THEN
     v_result := jsonb_build_object(
       'ok',                true,
       'book_title',        v_copy.title,
       'returned_at',       v_now,
       'student_name',      COALESCE(v_borrow.full_name, 'Student'),
       'reservation_ready', true,
-      'reserved_for',      COALESCE(v_student_name, 'Reserved Student')
+      'reserved_for',      COALESCE(v_release ->> 'reserved_for', 'Reserved Student')
     );
   ELSE
-    -- No one waiting — release copy to AVAILABLE
-    UPDATE public.book_copies
-    SET status = 'AVAILABLE', updated_at = v_now
-    WHERE id = v_copy.id;
-
     v_result := jsonb_build_object(
-      'ok',           true,
-      'book_title',   v_copy.title,
-      'returned_at',  v_now,
-      'student_name', COALESCE(v_borrow.full_name, 'Student'),
+      'ok',                true,
+      'book_title',        v_copy.title,
+      'returned_at',       v_now,
+      'student_name',      COALESCE(v_borrow.full_name, 'Student'),
       'reservation_ready', false
     );
   END IF;
@@ -1059,6 +1109,276 @@ BEGIN
   END IF;
 
   RETURN v_result;
+END;
+$$;
+
+-- M8: Annual student reset in one atomic statement (no 1,000-row cap)
+CREATE OR REPLACE FUNCTION public.annual_student_reset()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_count integer;
+BEGIN
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid()) AND status = 'ACTIVE' AND role = 'super_admin'
+    ) THEN
+      RAISE EXCEPTION 'Unauthorized: Only super_admin can run annual reset';
+    END IF;
+  END IF;
+
+  WITH updated_profiles AS (
+    UPDATE public.profiles
+    SET status = 'SUSPENDED', updated_at = NOW()
+    WHERE role = 'student'
+    RETURNING id
+  )
+  SELECT count(*)::integer INTO v_count FROM updated_profiles;
+
+  UPDATE public.library_cards lc
+  SET status = 'SUSPENDED', updated_at = NOW()
+  FROM public.profiles p
+  WHERE lc.user_id = p.id
+    AND p.role = 'student';
+
+  RETURN v_count;
+END;
+$$;
+
+-- M8 & M9: Analytics summary aggregated in SQL in Asia/Manila time (no 1,000-row cap)
+CREATE OR REPLACE FUNCTION public.get_analytics_summary(p_range text DEFAULT '30d')
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_now_local         timestamp := NOW() AT TIME ZONE 'Asia/Manila';
+  v_group             text;
+  v_start_local       timestamp;
+  v_end_local         timestamp;
+  v_step              interval;
+  v_fmt               text;
+  v_start_timestamptz timestamptz;
+  v_attendance_trends jsonb;
+  v_borrowing_trends  jsonb;
+  v_peak_hours        jsonb;
+  v_category_dist     jsonb;
+  v_popular_books     jsonb;
+BEGIN
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF NOT public.is_manager() THEN
+      RAISE EXCEPTION 'Forbidden';
+    END IF;
+  END IF;
+
+  IF p_range = '7d' THEN
+    v_group       := 'day';
+    v_start_local := date_trunc('day', v_now_local) - interval '6 days';
+    v_end_local   := date_trunc('day', v_now_local);
+    v_step        := interval '1 day';
+    v_fmt         := 'Mon DD';
+  ELSIF p_range = '1y' THEN
+    v_group       := 'month';
+    v_start_local := date_trunc('month', v_now_local - interval '364 days');
+    v_end_local   := date_trunc('month', v_now_local);
+    v_step        := interval '1 month';
+    v_fmt         := 'Mon YYYY';
+  ELSE
+    v_group       := 'day';
+    v_start_local := date_trunc('day', v_now_local) - interval '29 days';
+    v_end_local   := date_trunc('day', v_now_local);
+    v_step        := interval '1 day';
+    v_fmt         := 'Mon DD';
+  END IF;
+
+  v_start_timestamptz := v_start_local AT TIME ZONE 'Asia/Manila';
+
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'label', to_char(s.bucket, v_fmt),
+      'count', COALESCE(c.cnt, 0)
+    ) ORDER BY s.bucket
+  ), '[]'::jsonb)
+  INTO v_attendance_trends
+  FROM generate_series(v_start_local, v_end_local, v_step) AS s(bucket)
+  LEFT JOIN (
+    SELECT date_trunc(v_group, check_in_at AT TIME ZONE 'Asia/Manila') AS bucket,
+           count(*)::int AS cnt
+    FROM public.attendance
+    WHERE check_in_at >= v_start_timestamptz
+    GROUP BY 1
+  ) c ON c.bucket = s.bucket;
+
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'label', to_char(s.bucket, v_fmt),
+      'count', COALESCE(c.cnt, 0)
+    ) ORDER BY s.bucket
+  ), '[]'::jsonb)
+  INTO v_borrowing_trends
+  FROM generate_series(v_start_local, v_end_local, v_step) AS s(bucket)
+  LEFT JOIN (
+    SELECT date_trunc(v_group, borrowed_at AT TIME ZONE 'Asia/Manila') AS bucket,
+           count(*)::int AS cnt
+    FROM public.borrowing_records
+    WHERE borrowed_at >= v_start_timestamptz
+    GROUP BY 1
+  ) c ON c.bucket = s.bucket;
+
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'hour', CASE
+        WHEN h.hr = 12 THEN '12 PM'
+        WHEN h.hr > 12 THEN (h.hr - 12)::text || ' PM'
+        ELSE h.hr::text || ' AM'
+      END,
+      'count', COALESCE(c.cnt, 0)
+    ) ORDER BY h.hr
+  ), '[]'::jsonb)
+  INTO v_peak_hours
+  FROM generate_series(8, 18) AS h(hr)
+  LEFT JOIN (
+    SELECT EXTRACT(HOUR FROM (check_in_at AT TIME ZONE 'Asia/Manila'))::int AS hr,
+           count(*)::int AS cnt
+    FROM public.attendance
+    WHERE check_in_at >= v_start_timestamptz
+      AND EXTRACT(HOUR FROM (check_in_at AT TIME ZONE 'Asia/Manila'))::int BETWEEN 8 AND 18
+    GROUP BY 1
+  ) c ON c.hr = h.hr;
+
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object('name', cat_name, 'value', cnt)
+    ORDER BY cnt DESC, cat_name ASC
+  ), '[]'::jsonb)
+  INTO v_category_dist
+  FROM (
+    SELECT COALESCE(cat.name, 'General') AS cat_name,
+           count(*)::int AS cnt
+    FROM public.borrowing_records br
+    LEFT JOIN public.book_copies bc ON bc.id = br.book_copy_id
+    LEFT JOIN public.books b ON b.id = bc.book_id
+    LEFT JOIN public.categories cat ON cat.id = b.category_id
+    WHERE br.borrowed_at >= v_start_timestamptz
+    GROUP BY 1
+  ) t;
+
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object('id', book_id, 'title', title, 'count', cnt)
+    ORDER BY cnt DESC, title ASC
+  ), '[]'::jsonb)
+  INTO v_popular_books
+  FROM (
+    SELECT b.id AS book_id,
+           b.title,
+           count(*)::int AS cnt
+    FROM public.borrowing_records br
+    JOIN public.book_copies bc ON bc.id = br.book_copy_id
+    JOIN public.books b ON b.id = bc.book_id
+    WHERE br.borrowed_at >= v_start_timestamptz
+    GROUP BY b.id, b.title
+    ORDER BY cnt DESC, b.title ASC
+    LIMIT 5
+  ) t;
+
+  RETURN jsonb_build_object(
+    'attendanceTrends', v_attendance_trends,
+    'borrowingTrends', v_borrowing_trends,
+    'categoryDistribution', v_category_dist,
+    'peakHours', v_peak_hours,
+    'popularBooks', v_popular_books
+  );
+END;
+$$;
+
+-- M8: Bulk notifications via INSERT ... SELECT (no 1,000-row cap)
+CREATE OR REPLACE FUNCTION public.send_bulk_notifications_by_target(
+  p_target text,
+  p_title text,
+  p_content text,
+  p_type text DEFAULT 'SYSTEM',
+  p_priority text DEFAULT 'high',
+  p_metadata jsonb DEFAULT '{}'::jsonb
+)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_count integer;
+BEGIN
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF NOT public.is_manager() THEN
+      RAISE EXCEPTION 'Unauthorized';
+    END IF;
+  END IF;
+
+  WITH inserted AS (
+    INSERT INTO public.notifications (user_id, title, content, type, priority, metadata)
+    SELECT
+      p.id,
+      p_title,
+      p_content,
+      COALESCE(p_type, 'SYSTEM'),
+      COALESCE(p_priority, 'high'),
+      COALESCE(p_metadata, '{}'::jsonb)
+    FROM public.profiles p
+    WHERE p_target = 'all'
+       OR (p_target = 'students' AND p.role = 'student')
+    RETURNING id
+  )
+  SELECT count(*)::integer INTO v_count FROM inserted;
+
+  RETURN v_count;
+END;
+$$;
+
+-- M23: Bulk re-activate selected users and their library cards
+CREATE OR REPLACE FUNCTION public.reactivate_users_bulk(p_user_ids uuid[])
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_caller_role public.user_role;
+  v_count       integer;
+BEGIN
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF NOT public.is_manager() THEN
+      RAISE EXCEPTION 'Unauthorized: Only super_admin or librarian can reactivate users';
+    END IF;
+    SELECT role INTO v_caller_role FROM public.profiles WHERE id = (SELECT auth.uid());
+  ELSE
+    v_caller_role := 'super_admin'::public.user_role;
+  END IF;
+
+  IF p_user_ids IS NULL OR coalesce(array_length(p_user_ids, 1), 0) = 0 THEN
+    RETURN 0;
+  END IF;
+
+  -- Cards follow only the profiles this call re-activated (librarians: students only).
+  WITH updated AS (
+    UPDATE public.profiles
+    SET status = 'ACTIVE', updated_at = NOW()
+    WHERE id = ANY(p_user_ids)
+      AND (v_caller_role = 'super_admin'::public.user_role OR role = 'student'::public.user_role)
+    RETURNING id
+  ), cards AS (
+    UPDATE public.library_cards
+    SET status = 'ACTIVE', updated_at = NOW()
+    WHERE user_id IN (SELECT id FROM updated)
+    RETURNING 1
+  )
+  SELECT count(*)::integer INTO v_count FROM updated;
+
+  RETURN v_count;
 END;
 $$;
 
@@ -1358,6 +1678,22 @@ GRANT EXECUTE ON FUNCTION public.create_reservation_atomic(uuid, uuid, uuid) TO 
 
 REVOKE EXECUTE ON FUNCTION public.get_next_due_date(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_next_due_date(uuid) TO authenticated, service_role;
+
+-- No role check inside: only the server (service role) and other SECURITY DEFINER functions call it.
+REVOKE EXECUTE ON FUNCTION public.release_copy(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.release_copy(uuid) TO service_role;
+
+REVOKE EXECUTE ON FUNCTION public.annual_student_reset() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.annual_student_reset() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.get_analytics_summary(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_analytics_summary(text) TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.send_bulk_notifications_by_target(text, text, text, text, text, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.send_bulk_notifications_by_target(text, text, text, text, text, jsonb) TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.reactivate_users_bulk(uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reactivate_users_bulk(uuid[]) TO authenticated, service_role;
 
 -- 12. DEFAULT SYSTEM SETTINGS SEED VALUES
 INSERT INTO public.system_settings (key, value, description, data_type) VALUES

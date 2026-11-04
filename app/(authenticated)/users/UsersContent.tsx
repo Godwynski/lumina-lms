@@ -24,7 +24,8 @@ import { RoleBadge } from "@/components/common/RoleBadge";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { UserRole } from "@/lib/auth-helpers";
 import type { User } from "@/lib/types";
-import { getUsers } from "@/lib/actions/users";
+import { getUsers, reactivateUsersBulk } from "@/lib/actions/users";
+import { toast } from "sonner";
 export type { User };
 
 
@@ -49,6 +50,34 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const pageSize = 12;
 
   const isLibrarian = currentRole === "librarian";
+  const canReactivate = currentRole === "super_admin" || isLibrarian;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isReactivating, setIsReactivating] = useState(false);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // M23: bring students back after the annual reset in one step instead of one by one.
+  const handleReactivate = async () => {
+    setIsReactivating(true);
+    try {
+      const result = await reactivateUsersBulk({ userIds: [...selectedIds] });
+      if (!result.success) throw new Error(result.error);
+      toast.success(`Re-activated ${result.data.reactivatedCount} account(s).`);
+      setSelectedIds(new Set());
+      void loadUsersRef.current();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Re-activation failed");
+    } finally {
+      setIsReactivating(false);
+    }
+  };
 
   const roleFilterLabels: Record<string, string> = {
     all: "All",
@@ -76,6 +105,11 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, activeTab]);
+
+  // Only act on rows the user can see.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [currentPage, debouncedSearch, activeTab]);
 
   const isInitialMount = React.useRef(true);
 
@@ -139,7 +173,32 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     router.push(`/users/${u.id}`);
   }, [router]);
 
-  const columns = useMemo<LuminaColumn<User>[]>(() => [
+  const allOnPageSelected = users.length > 0 && users.every((u) => selectedIds.has(u.id));
+  const selectColumn: LuminaColumn<User> = {
+    header: (
+      <input
+        type="checkbox"
+        aria-label="Select all users on this page"
+        className="h-4 w-4 accent-primary"
+        checked={allOnPageSelected}
+        onChange={() => setSelectedIds(allOnPageSelected ? new Set() : new Set(users.map((u) => u.id)))}
+      />
+    ),
+    className: "w-[40px]",
+    cell: (user) => (
+      <input
+        type="checkbox"
+        aria-label={`Select ${user.name}`}
+        className="h-4 w-4 accent-primary"
+        checked={selectedIds.has(user.id)}
+        // The row itself opens the user; ticking the box must not.
+        onClick={(e) => e.stopPropagation()}
+        onChange={() => toggleSelected(user.id)}
+      />
+    ),
+  };
+
+  const baseColumns = useMemo<LuminaColumn<User>[]>(() => [
     {
       header: "User",
       cell: (user) => (
@@ -176,6 +235,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
       )
     }
   ], []);
+  const columns = canReactivate ? [selectColumn, ...baseColumns] : baseColumns;
 
   return (
     <>
@@ -230,6 +290,11 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               </DialogContent>
             </Dialog>
             <div className="flex-1" />
+            {canReactivate && selectedIds.size > 0 && (
+              <Button className="h-9 px-3" onClick={handleReactivate} disabled={isReactivating}>
+                {isReactivating ? "Re-activating..." : `Re-activate selected (${selectedIds.size})`}
+              </Button>
+            )}
           </>
         )}
         pagination={

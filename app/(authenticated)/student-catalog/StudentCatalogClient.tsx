@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use, useEffect, useTransition, useCallback } from 'react';
+import { useState, use, useEffect, useTransition, useCallback, useRef } from 'react';
 import {
   Search,
   X,
@@ -67,43 +67,32 @@ export function StudentCatalogClient({
   const reservations = use(reservationsPromise);
 
 
-  // Real-time synchronization
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      startTransition(() => {
+        router.refresh();
+      });
+    }, 500);
+  }, [router, startTransition]);
+
+  // Real-time synchronization (debounced; book_copies & borrowing_records propagate via books trigger)
   useEffect(() => {
     const supabase = createClient();
     const channelName = `catalog-realtime-${Math.random().toString(36).slice(2, 7)}`;
     const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-        startTransition(() => {
-          router.refresh();
-        });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'book_copies' }, () => {
-        startTransition(() => {
-          router.refresh();
-        });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'borrowing_records' }, () => {
-        startTransition(() => {
-          router.refresh();
-        });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
-        startTransition(() => {
-          router.refresh();
-        });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
-        startTransition(() => {
-          router.refresh();
-        });
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, debouncedRefresh)
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [router, startTransition]);
+  }, [debouncedRefresh]);
 
 
   // Build the initial map from server data

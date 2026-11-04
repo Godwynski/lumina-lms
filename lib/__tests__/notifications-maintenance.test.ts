@@ -217,7 +217,7 @@ describe('Notifications Service & Maintenance Tasks', () => {
       const results = await runMaintenanceTasks();
 
       expect(results.reservationsExpired).toBe(1);
-      expect(resBuilder.update).toHaveBeenCalledWith({ status: 'CANCELLED' });
+      expect(resBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'EXPIRED' }));
       expect(notifBuilder.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           user_id: 'user-patron-9',
@@ -229,7 +229,7 @@ describe('Notifications Service & Maintenance Tasks', () => {
       expect(mockAdminHelper.rpc).toHaveBeenCalledWith('auto_checkout_forgotten_attendance');
     });
 
-    it('releases reserved copy back to available and compresses queue on reservation expiry', async () => {
+    it('releases reserved copy via release_copy RPC on reservation expiry', async () => {
       mockAdminHelper.setTableResponse('system_settings', []);
       mockAdminHelper.setTableResponse('borrowing_records', []);
 
@@ -239,7 +239,7 @@ describe('Notifications Service & Maintenance Tasks', () => {
         book_id: 'book-target-1',
         copy_id: 'copy-target-1',
         status: 'READY',
-        updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        hold_expires_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         books: {
           title: 'Pragmatic Programmer',
         },
@@ -247,18 +247,10 @@ describe('Notifications Service & Maintenance Tasks', () => {
 
       mockAdminHelper.setTableResponse('reservations', [expiredReservation]);
 
-      const copyBuilder = mockAdminHelper.getTableBuilder('book_copies');
-      copyBuilder.update.mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
       await runMaintenanceTasks();
 
-      expect(copyBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'AVAILABLE' })
-      );
-      expect(mockAdminHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-        p_book_id: 'book-target-1',
+      expect(mockAdminHelper.rpc).toHaveBeenCalledWith('release_copy', {
+        p_copy_id: 'copy-target-1',
       });
     });
 

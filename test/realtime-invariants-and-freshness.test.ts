@@ -12,6 +12,8 @@ vi.mock('@/lib/auth-helpers', () => ({
   getMe: vi.fn(),
 }));
 
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ rpc: vi.fn().mockResolvedValue({ data: { ok: true }, error: null }) }) }));
+
 vi.mock('@/lib/audit', () => ({
   logAuditActivity: vi.fn(),
 }));
@@ -150,80 +152,41 @@ describe('Milestone 2: Real-Time Invariants, Data Freshness & Regression Shield'
     });
 
     describe('updateBookCopyStatus', () => {
-      it('calls revalidateTag for catalog, public-books, and book-${book_id} on status update', async () => {
-        const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-        const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
-
-        copyBuilder.single.mockResolvedValueOnce({
-          data: { id: 'copy-inv-1', book_id: 'book-inv-999', status: 'AVAILABLE' },
-          error: null,
-        });
-
-        const result = await updateBookCopyStatus({
-          id: 'copy-inv-1',
-          status: 'AVAILABLE',
-        });
-
-        expect(result.success).toBe(true);
-        expect(copyBuilder.update).toHaveBeenCalledWith({ status: 'AVAILABLE' });
-        expect(borrowBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({ status: 'RETURNED' })
-        );
-
-        // Invariant: must invalidate both public-books and catalog tags
+      // Copy rules (M2) are tested in lib/actions/__tests__/catalog.test.ts; this checks cache invalidation.
+      const setupCopy = (from: string, bookId: string) => {
+        mockClientHelper.getTableBuilder('book_copies').single
+          .mockResolvedValueOnce({ data: { status: from }, error: null })
+          .mockResolvedValueOnce({ data: { id: 'copy-1', book_id: bookId }, error: null });
+        mockClientHelper.setTableResponse('book_copies', [{ id: 'copy-1' }]);
+      };
+      const expectInvalidated = (bookId: string) => {
         expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
         expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
-        expect(revalidateTag).toHaveBeenCalledWith('book-book-inv-999', 'max');
+        expect(revalidateTag).toHaveBeenCalledWith('book-' + bookId, 'max');
         expect(revalidatePath).toHaveBeenCalledWith('/catalog');
-        expect(revalidatePath).toHaveBeenCalledWith('/catalog/book-inv-999');
+        expect(revalidatePath).toHaveBeenCalledWith('/catalog/' + bookId);
+      };
+
+      it('invalidates catalog, public-books and the book when a copy goes back on the shelf', async () => {
+        setupCopy('MAINTENANCE', 'book-inv-999');
+        expect((await updateBookCopyStatus({ id: 'copy-1', status: 'AVAILABLE' })).success).toBe(true);
+        expectInvalidated('book-inv-999');
       });
 
-      it('calls revalidateTag on MAINTENANCE status update and closes lingering active borrows', async () => {
-        const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-        const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
+      it('invalidates the same tags on MAINTENANCE', async () => {
+        setupCopy('AVAILABLE', 'book-maint-555');
+        expect((await updateBookCopyStatus({ id: 'copy-1', status: 'MAINTENANCE' })).success).toBe(true);
+        expectInvalidated('book-maint-555');
+      });
 
-        copyBuilder.single.mockResolvedValueOnce({
-          data: { id: 'copy-maint-1', book_id: 'book-maint-555', status: 'MAINTENANCE' },
-          error: null,
-        });
-
-        const result = await updateBookCopyStatus({
-          id: 'copy-maint-1',
-          status: 'MAINTENANCE',
-        });
-
-        expect(result.success).toBe(true);
-        expect(borrowBuilder.update).toHaveBeenCalledWith(
-          expect.objectContaining({ status: 'RETURNED' })
+      it('invalidates the same tags on LOST and marks the open loan LOST', async () => {
+        setupCopy('BORROWED', 'book-lost-222');
+        expect((await updateBookCopyStatus({ id: 'copy-1', status: 'LOST' })).success).toBe(true);
+        expect(mockClientHelper.getTableBuilder('borrowing_records').update).toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'LOST' })
         );
-        expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
-        expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
-        expect(revalidateTag).toHaveBeenCalledWith('book-book-maint-555', 'max');
+        expectInvalidated('book-lost-222');
       });
-
-      it('calls revalidateTag on BORROWED status update without modifying borrowing records', async () => {
-        const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-        const borrowBuilder = mockClientHelper.getTableBuilder('borrowing_records');
-
-        copyBuilder.single.mockResolvedValueOnce({
-          data: { id: 'copy-borrow-1', book_id: 'book-borrow-222', status: 'BORROWED' },
-          error: null,
-        });
-
-        const result = await updateBookCopyStatus({
-          id: 'copy-borrow-1',
-          status: 'BORROWED',
-        });
-
-        expect(result.success).toBe(true);
-        expect(borrowBuilder.update).not.toHaveBeenCalled();
-        expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
-        expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
-        expect(revalidateTag).toHaveBeenCalledWith('book-book-borrow-222', 'max');
-        expect(revalidatePath).toHaveBeenCalledWith('/catalog');
-        expect(revalidatePath).toHaveBeenCalledWith('/catalog/book-borrow-222');
-      });
-
       it('rejects update when caller is student_assistant', async () => {
         vi.mocked(getMe).mockResolvedValue({
           ...mockStaffUser('student_assistant', 'sa-1'),

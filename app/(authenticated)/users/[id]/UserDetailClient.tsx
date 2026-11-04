@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, startTransition } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
@@ -39,6 +39,16 @@ export function UserDetailClient({
   const [isSaving, setIsSaving] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      startTransition(() => {
+        router.refresh();
+      });
+    }, 500);
+  }, [router]);
+
   // Realtime subscription for profile changes (e.g. avatar updates from the user)
   useEffect(() => {
     const channelId = `user-detail-${initialUser.id}-${Math.random().toString(36).slice(2, 9)}`;
@@ -70,9 +80,7 @@ export function UserDetailClient({
               permissions: mapped.permissions,
             }));
           }
-          startTransition(() => {
-            router.refresh();
-          });
+          debouncedRefresh();
         }
       )
       .on(
@@ -83,11 +91,7 @@ export function UserDetailClient({
           table: "borrowing_records",
           filter: `user_id=eq.${initialUser.id}`,
         },
-        () => {
-          startTransition(() => {
-            router.refresh();
-          });
-        }
+        debouncedRefresh
       )
       .on(
         "postgres_changes",
@@ -97,18 +101,15 @@ export function UserDetailClient({
           table: "library_cards",
           filter: `user_id=eq.${initialUser.id}`,
         },
-        () => {
-          startTransition(() => {
-            router.refresh();
-          });
-        }
+        debouncedRefresh
       )
       .subscribe();
 
     return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [initialUser.id, supabase, router]);
+  }, [initialUser.id, supabase, debouncedRefresh]);
 
   // Modals
   const [permissionsOpen, setPermissionsOpen] = useState(false);
