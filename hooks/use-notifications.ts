@@ -19,24 +19,33 @@ export interface Notification {
 export function useNotifications() {
   const [supabase] = useState(() => createClient())
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  // Unread notifications older than the 50 loaded ones (the badge must count them too)
+  const [olderUnread, setOlderUnread] = useState(0)
   const [loading, setLoading] = useState(true)
   // Cache userId to avoid redundant getUser() network calls
   const userIdRef = useRef<string | null>(null)
 
   const fetchNotifications = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50)
+    const [{ data, error }, { count }] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false),
+    ])
 
     if (error) {
       console.error('Error fetching notifications:', error)
     } else {
-      setNotifications(data || [])
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0)
+      const loaded = data || []
+      setNotifications(loaded)
+      setOlderUnread(Math.max(0, (count ?? 0) - loaded.filter(n => !n.is_read).length))
     }
     setLoading(false)
   }, [supabase])
@@ -126,10 +135,7 @@ export function useNotifications() {
     }
   }, [supabase, fetchNotifications])
 
-  // Recalculate unread count whenever notifications change
-  useEffect(() => {
-    setUnreadCount(notifications.filter(n => !n.is_read).length)
-  }, [notifications])
+  const unreadCount = olderUnread + notifications.filter(n => !n.is_read).length
 
   const markAsRead = async (id: string) => {
     const { error } = await supabase
@@ -159,6 +165,7 @@ export function useNotifications() {
       toast.error('Failed to update notifications')
     } else {
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      setOlderUnread(0)
     }
   }
 

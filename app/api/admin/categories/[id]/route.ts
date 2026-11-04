@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { toSlug } from "@/lib/utils";
 import { CategoryUpdateSchema } from "@/lib/validations/api";
 import { logAuditActivity } from "@/lib/audit";
@@ -138,6 +139,8 @@ export async function PUT(
       data
     );
 
+    revalidateTag("categories", "default");
+    revalidatePath("/catalog", "page");
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error updating category:", error);
@@ -191,6 +194,8 @@ export async function DELETE(
       { is_active: false }
     );
 
+    revalidateTag("categories", "default");
+    revalidatePath("/catalog", "page");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting category:", error);

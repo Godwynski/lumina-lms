@@ -79,7 +79,7 @@ export function ScanStep({
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground">
+                            <Button variant="ghost" size="icon" aria-label="Scanning tips" className="h-8 w-8 rounded-full text-muted-foreground">
                                 <HelpCircle className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>

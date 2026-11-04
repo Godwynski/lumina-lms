@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
+import { assertSafeTarget, clearTable } from './db-guard.ts';
 
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
@@ -12,6 +13,7 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.error('Missing Supabase environment variables');
   process.exit(1);
 }
+assertSafeTarget(supabaseUrl);
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
@@ -36,28 +38,22 @@ async function clean() {
   console.info('🧹 Cleaning up database tables in dependency order...');
   
   try {
-    await supabase.from('rate_limit_log').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('deleted_profile_info').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('ui_preferences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('checklist_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('checklist_dropdown_options').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('announcements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('attendance').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('reservations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('borrowing_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('checkout_idempotency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('return_idempotency').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    
+    for (const table of [
+      'rate_limit_log', 'deleted_profile_info', 'ui_preferences', 'checklist_items', 'checklist_dropdown_options',
+      'audit_logs', 'reports', 'announcements', 'notifications', 'attendance', 'reservations', 'borrowing_records',
+      'checkout_idempotency', 'return_idempotency',
+    ]) {
+      await clearTable(supabase, table);
+    }
+
     // Preserve library cards that belong to the real profiles
-    await supabase.from('library_cards').delete().not('user_id', 'in', `(${Object.values(profileIds).join(',')})`);
-    
-    await supabase.from('book_copies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('books').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('categories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    
+    const { error: cardError } = await supabase.from('library_cards').delete().not('user_id', 'in', `(${Object.values(profileIds).join(',')})`);
+    if (cardError) throw new Error(`Failed to clear library_cards: ${cardError.message}`);
+
+    for (const table of ['book_copies', 'books', 'categories']) {
+      await clearTable(supabase, table);
+    }
+
     console.info('✨ Database cleanup completed successfully! (Preserved all user profiles and cards)');
   } catch (error) {
     console.error('❌ Error cleaning database:', error);

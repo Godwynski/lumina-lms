@@ -1,34 +1,7 @@
 import { revalidatePath } from "next/cache";
-import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
+import { DEFAULT_POLICIES, isValidPolicyValue } from "@/lib/actions/policy-constants";
 import { logAuditActivity } from "@/lib/audit";
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
-
-function isValidPolicyValue(key: string, value: string) {
-  const config = DEFAULT_POLICIES[key];
-  if (!config) return value.trim().length > 0;
-
-  const { validation } = config;
-  if (!validation) return value.trim().length > 0;
-
-  if (validation.type === "number") {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return false;
-    if (validation.min !== undefined && parsed < validation.min) return false;
-    if (validation.max !== undefined && parsed > validation.max) return false;
-    return true;
-  }
-
-  if (validation.type === "json") {
-    try {
-      JSON.parse(value);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  return value.trim().length > 0;
-}
 
 export const GET = withAuthApi(
   async (request, { supabase }) => {

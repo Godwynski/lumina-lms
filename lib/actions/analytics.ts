@@ -63,6 +63,7 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
     supabase
       .from('borrowing_records')
       .select('book_copies(books(id, title))')
+      .gte('borrowed_at', startDate.toISOString())
       .order('borrowed_at', { ascending: false })
       .limit(500)
   ]);

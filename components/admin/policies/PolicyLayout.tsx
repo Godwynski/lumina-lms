@@ -18,7 +18,7 @@ import {
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { cn } from "@/lib/utils";
 import { PolicyCommitModal } from "../PolicyCommitModal";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CategoryManagement } from "../CategoryManagement";
 import { PolicySimulationPanel } from "../PolicySimulationPanel";
 import { PolicyField } from "./PolicyField";
@@ -462,6 +462,7 @@ export function PolicyLayout({
       />
       <Dialog open={pendingCategory !== null} onOpenChange={(open) => { if (!open) setPendingCategory(null); }}>
         <DialogContent className="sm:max-w-[400px] border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
+          <DialogTitle className="sr-only">Unsaved changes</DialogTitle>
           <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
               <div className="h-11 w-11 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/10">

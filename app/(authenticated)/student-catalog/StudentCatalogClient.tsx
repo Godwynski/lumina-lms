@@ -193,7 +193,7 @@ export function StudentCatalogClient({
     setPage(parseInt(searchParams.get('page') || '1', 10));
     setSelectedCategory(searchParams.get('category') || '');
     setAvailableOnly(searchParams.get('available') === 'true');
-    setSortBy((searchParams.get('sort') as 'title' | 'author' | 'availability' | 'newest') || 'title');
+    setSortBy((searchParams.get('sort') as 'title' | 'author' | 'availability' | 'newest') || 'newest');
   }, [searchParams, urlQuery]);
 
   // Debounce search input for realtime as-you-type search

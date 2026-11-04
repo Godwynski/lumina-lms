@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Log successful reservation
     await logAuditActivity(
       user.id,
-      "borrowing_record",
+      "reservation",
       result.reservation_id || null,
       "reserve",
       `Placed reservation for book (ID: ${bookId})${userId ? ` for user ${userId}` : ""}`,

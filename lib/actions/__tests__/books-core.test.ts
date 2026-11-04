@@ -153,15 +153,15 @@ describe('books-core server actions', () => {
       expect(booksBuilder.order).toHaveBeenCalledWith('author', { ascending: false });
     });
 
-    it('orders by availability correctly mapping descending to true and ascending to false', async () => {
+    it('orders by availability correctly (asc = ascending)', async () => {
       mockClientHelper.setTableResponse('books', [], null, 0);
 
       await fetchBooksCore({ sortBy: 'availability', sortOrder: 'desc' });
       const booksBuilder = mockClientHelper.getTableBuilder('books');
-      expect(booksBuilder.order).toHaveBeenCalledWith('available_copies', { ascending: true });
+      expect(booksBuilder.order).toHaveBeenCalledWith('available_copies', { ascending: false });
 
       await fetchBooksCore({ sortBy: 'availability', sortOrder: 'asc' });
-      expect(booksBuilder.order).toHaveBeenCalledWith('available_copies', { ascending: false });
+      expect(booksBuilder.order).toHaveBeenCalledWith('available_copies', { ascending: true });
     });
 
     it('orders by created_at correctly', async () => {

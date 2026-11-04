@@ -183,7 +183,7 @@ export function ModernInventoryClient({
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          jsonArray = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+          jsonArray = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { raw: false, defval: "" });
         } else {
           toast.error("Unsupported file format.");
           setIsParsing(false);

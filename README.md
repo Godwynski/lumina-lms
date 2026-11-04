@@ -344,7 +344,7 @@ thesis/
 ├── test/                               # Automated Vitest test suites (1,060+ tests)
 │   ├── actions-circulation-adversarial.test.ts
 │   ├── challenger-m1-adversarial.test.tsx
-│   ├── challenger-m2-rls-hardening.test.ts
+│   ├── db-real.test.ts                 # Real Postgres (PGlite) tests of the schema
 │   └── role-by-role-execution.test.ts
 ├── types/                              # Canonical TypeScript definitions & Supabase DB types
 ├── package.json                        # Project dependencies, engines & scripts
@@ -472,8 +472,7 @@ npx knip
 
 ### Key Test Categories
 - **Adversarial Circulation Tests (`test/actions-circulation-adversarial.test.ts`):** Verifies that concurrent checkouts, borrow limit overflows, and already-loaned copy requests are safely rejected.
-- **RLS & Security Hardening (`test/challenger-m2-rls-hardening.test.ts`):** Validates that student patrons cannot read administrative tables or modify records belonging to other users.
-- **Relational Invariants & Triggers (`test/challenger-m1-constraints.test.ts`):** Assures that negative copy quantities, invalid due dates, and unlinked transactions are rejected by database check constraints.
+- **Real Database (`test/db-real.test.ts`):** Loads `supabase/schema_clean_install.sql` into real Postgres (PGlite) and acts as each role to check RLS, triggers, constraints and the circulation functions. Known open bugs are marked `it.fails` until fixed.
 - **Navigation & Loading Skeletons (`test/navigation-and-loading-states.test.ts`):** Guarantees that all route-level loading skeletons and accessible navigation elements render cleanly.
 
 ---

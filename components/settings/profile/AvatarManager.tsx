@@ -55,17 +55,7 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // 1. Delete existing files in the user's avatar directory to save space
-      const { data: existingFiles } = await supabase.storage
-        .from("avatars")
-        .list(user.id);
-        
-      if (existingFiles && existingFiles.length > 0) {
-        const filesToRemove = existingFiles.map((f) => `${user.id}/${f.name}`);
-        await supabase.storage.from("avatars").remove(filesToRemove);
-      }
-
-      // 2. Upload the new cropped and resized blob
+      // 1. Upload the new cropped and resized blob
       const fileName = `${user.id}/${Date.now()}.jpg`;
       const filePath = `${fileName}`;
 
@@ -78,13 +68,24 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
 
       if (uploadError) throw uploadError;
 
-      // 3. Get Public URL
+      // 2. Get Public URL
       const { data: { publicUrl } } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
-      // 4. Update Profile Table
+      // 3. Update Profile Table
       await updateAvatarUrl(publicUrl);
+
+      // 4. Only now delete the old files, so a failed upload keeps the current photo
+      const { data: existingFiles } = await supabase.storage
+        .from("avatars")
+        .list(user.id);
+      const filesToRemove = (existingFiles ?? [])
+        .map((f) => `${user.id}/${f.name}`)
+        .filter((p) => p !== filePath);
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from("avatars").remove(filesToRemove);
+      }
 
       toast.success("Profile picture updated.");
     } catch (error: unknown) {

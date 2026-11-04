@@ -265,8 +265,6 @@ export const checkoutBook = createSafeAction(
     return result;
   },
   { 
-    auditAction: 'checkout', 
-    auditEntity: 'borrowing_record', 
     allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
     allowedPermissions: ['manage_circulation']
   }
@@ -380,8 +378,6 @@ export const returnBook = createSafeAction(
     return result;
   },
   { 
-    auditAction: 'return', 
-    auditEntity: 'book_copy', 
     allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
     allowedPermissions: ['manage_circulation']
   }
