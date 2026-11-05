@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition, useState, useEffect, useCallback } from "react";
+import { useTransition, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus, 
@@ -137,6 +137,7 @@ export function ModernInventoryClient({
   const [importFile, setImportFile] = useState<File | null>(null);
   const [parsedBooks, setParsedBooks] = useState<ParsedBook[]>([]);
   const [isParsing, setIsParsing] = useState(false);
+  const parseIdRef = useRef(0);
   const [isImporting, setIsImporting] = useState(false);
   const [addCopiesToDuplicates, setAddCopiesToDuplicates] = useState(false);
   const [importResults, setImportResults] = useState<{
@@ -164,14 +165,31 @@ export function ModernInventoryClient({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // A new selection always discards rows from the previous file, and any
+    // parse still running for an older file is ignored when it finishes.
+    const parseId = ++parseIdRef.current;
     setImportFile(file);
+    setParsedBooks([]);
     setIsParsing(true);
     setImportResults(null);
 
+    const failParse = (message: string) => {
+      toast.error(message);
+      setParsedBooks([]);
+      setImportFile(null);
+      setIsParsing(false);
+    };
+
     const fileType = file.name.split(".").pop()?.toLowerCase();
     const reader = new FileReader();
-    
+
+    reader.onerror = () => {
+      if (parseId !== parseIdRef.current) return;
+      failParse("Could not read the selected file.");
+    };
+
     reader.onload = (event) => {
+      if (parseId !== parseIdRef.current) return;
       try {
         let jsonArray: Record<string, unknown>[] = [];
         
@@ -186,16 +204,12 @@ export function ModernInventoryClient({
           const worksheet = workbook.Sheets[sheetName];
           jsonArray = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { raw: false, defval: "" });
         } else {
-          toast.error("Unsupported file format.");
-          setIsParsing(false);
-          setImportFile(null);
+          failParse("Unsupported file format.");
           return;
         }
 
         if (jsonArray.length === 0) {
-          toast.error("The file appears to be empty.");
-          setIsParsing(false);
-          setImportFile(null);
+          failParse("The file appears to be empty.");
           return;
         }
 
@@ -223,14 +237,16 @@ export function ModernInventoryClient({
         });
 
         const validBooks = normalized.filter(b => b.title && b.author);
+        if (validBooks.length === 0) {
+          failParse("No rows with both a title and an author were found.");
+          return;
+        }
         setParsedBooks(validBooks);
+        setIsParsing(false);
         toast.success(`Successfully parsed ${validBooks.length} valid book records.`);
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        toast.error(`Error reading file: ${errMsg}`);
-        setImportFile(null);
-      } finally {
-        setIsParsing(false);
+        failParse(`Error reading file: ${errMsg}`);
       }
     };
     
@@ -243,7 +259,7 @@ export function ModernInventoryClient({
 
   // Run the batch import server action
   const handleStartImport = async () => {
-    if (parsedBooks.length === 0) return;
+    if (parsedBooks.length === 0 || isParsing || !importFile) return;
     setIsImporting(true);
     try {
       const res = await batchImportBooks(parsedBooks, { addCopiesToDuplicates });
@@ -558,7 +574,8 @@ export function ModernInventoryClient({
                 searchQuery ? "text-primary scale-110" : "text-muted-foreground/30"
               )} />
               <input
-                type="text"
+                type="search"
+                aria-label="Search inventory"
                 placeholder="Search inventory..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -568,6 +585,7 @@ export function ModernInventoryClient({
                 <button
                   type="button"
                   onClick={clearSearch}
+                  aria-label="Clear search"
                   className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-90"
                 >
                   <X className="h-4 w-4" />
@@ -578,8 +596,9 @@ export function ModernInventoryClient({
 
           <Sheet>
             <SheetTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
+                aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}
                 className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 relative"
               >
                 <SlidersHorizontal className="h-4 w-4 text-primary/80" />
@@ -593,7 +612,7 @@ export function ModernInventoryClient({
             </SheetTrigger>
             <SheetContent showCloseButton={false} side="right" className="w-full sm:max-w-md rounded-l-3xl border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
               <div className="absolute top-0 right-0 p-4 z-10">
-                <SheetClose className="rounded-full h-8 w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
+                <SheetClose aria-label="Close filters" className="rounded-full h-8 w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
                    <X className="h-4 w-4" />
                 </SheetClose>
               </div>
@@ -634,7 +653,7 @@ export function ModernInventoryClient({
                   <div className="space-y-3">
                     <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Sorting Order</label>
                     <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                      <SelectTrigger className="h-10 w-full rounded-lg border border-border/10 bg-muted/5 px-3 text-[11px] font-medium shadow-none focus:ring-0">
+                      <SelectTrigger aria-label="Sorting order" className="h-10 w-full rounded-lg border border-border/10 bg-muted/5 px-3 text-[11px] font-medium shadow-none focus:ring-0">
                         <div className="flex items-center gap-2">
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
                           <SelectValue />
@@ -691,9 +710,8 @@ export function ModernInventoryClient({
                   variant="outline" 
                   className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest border-border/10"
                   onClick={() => {
-                    setCategoryId("all");
-                    setStatus("ACTIVE");
-                    setSortBy("newest");
+                    // One URL update so later resets don't overwrite earlier ones.
+                    updateParams({ categoryId: null, status: null, sort: null });
                   }}
                 >
                   Reset All
@@ -712,7 +730,7 @@ export function ModernInventoryClient({
             <div className="flex gap-2 shrink-0">
               <Dialog open={isBatchOpen} onOpenChange={setIsBatchOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 text-[11px] font-bold uppercase tracking-wider">
+                  <Button variant="outline" aria-label="Batch operations" className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 text-[11px] font-bold uppercase tracking-wider">
                     <Upload className="h-4 w-4 text-primary/80" />
                     <span className="hidden sm:inline">Batch Ops</span>
                   </Button>
@@ -835,7 +853,7 @@ export function ModernInventoryClient({
 
                           <Button
                             onClick={handleStartImport}
-                            disabled={isImporting}
+                            disabled={isImporting || isParsing || !importFile || parsedBooks.length === 0}
                             className="w-full h-11 rounded-xl text-xs font-black uppercase tracking-widest bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                           >
                             {isImporting ? (
@@ -1114,12 +1132,12 @@ export function ModernInventoryClient({
                 </DialogContent>
               </Dialog>
 
-              <Link href="/inventory/add" className="shrink-0">
-                <Button className="h-11 rounded-2xl px-5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
-                  <Plus className="sm:mr-2 h-4 w-4 transition-transform group-hover:rotate-90" />
+              <Button asChild className="shrink-0 h-11 rounded-2xl px-5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
+                <Link href="/inventory/add" aria-label="Add item">
+                  <Plus className="sm:mr-2 h-4 w-4 transition-transform group-hover:rotate-90" aria-hidden="true" />
                   <span className="hidden sm:inline">Add Item</span>
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -74,21 +75,32 @@ export function PolicyField({
 
   const labelText = config.label.replace(/_/g, ' ');
 
+  // The user's in-progress text for number fields. Only valid integers in range
+  // are sent to the parent, so an invalid draft (e.g. an empty box) can never be
+  // committed. On blur the box falls back to the last valid value.
+  const [draft, setDraft] = useState<string | null>(null);
+  const fieldId = useId();
+  const errorId = `${fieldId}-error`;
+
+  const validateNumber = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    if (trimmed === "") return "Enter a value.";
+    if (!/^\d+$/.test(trimmed)) return "Enter a whole number.";
+    const num = Number(trimmed);
+    if (validation?.min !== undefined && num < validation.min) return `Minimum is ${validation.min}.`;
+    if (validation?.max !== undefined && num > validation.max) return `Maximum is ${validation.max}.`;
+    return null;
+  };
+
+  const numberError = validation?.type === "number" && draft !== null ? validateNumber(draft) : null;
+
   const handleNumericChange = (val: string) => {
-    if (validation?.type === "number") {
-      const num = parseInt(val);
-      if (isNaN(num)) {
-        onChange("0");
-        return;
-      }
-      // Enforce limits immediately in the UI if it's a number
-      let clamped = num;
-      if (validation.min !== undefined) clamped = Math.max(validation.min, clamped);
-      if (validation.max !== undefined) clamped = Math.min(validation.max, clamped);
-      onChange(clamped.toString());
-    } else {
+    if (validation?.type !== "number") {
       onChange(val);
+      return;
     }
+    setDraft(val);
+    if (validateNumber(val) === null) onChange(String(Number(val.trim())));
   };
 
   if (isIdentityList) {
@@ -168,6 +180,7 @@ export function PolicyField({
                 step={validation?.step ?? 1}
                 value={[parseInt(value || "0")]}
                 onValueChange={(vals) => onChange(vals[0].toString())}
+                aria-label={labelText}
                 disabled={loading || disabled}
                 className="flex-1"
               />
@@ -196,6 +209,7 @@ export function PolicyField({
               <Switch
                 checked={value === "true"}
                 onCheckedChange={(checked) => onChange(checked ? "true" : "false")}
+                aria-label={labelText}
                 disabled={loading || disabled}
                 className="scale-110 data-[state=checked]:bg-primary"
               />
@@ -203,19 +217,33 @@ export function PolicyField({
           ) : (
             <div className="relative group/input">
               <Input
-                aria-label={labelText}
+                id={fieldId}
+                aria-label={unit ? `${labelText} (${unit.toLowerCase()})` : labelText}
+                aria-invalid={numberError ? true : undefined}
+                aria-describedby={numberError ? errorId : undefined}
                 type={validation?.type === "number" ? "number" : "text"}
+                inputMode={validation?.type === "number" ? "numeric" : undefined}
                 min={validation?.min}
                 max={validation?.max}
-                value={value || ""}
+                step={validation?.type === "number" ? 1 : undefined}
+                value={draft ?? value ?? ""}
                 onChange={(e) => handleNumericChange(e.target.value)}
+                onBlur={() => setDraft(null)}
                 disabled={loading || disabled}
-                className="h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-12 transition-all shadow-sm"
+                className={cn(
+                  "h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-16 transition-all shadow-sm",
+                  numberError && "border-destructive focus-visible:ring-destructive/30"
+                )}
               />
               {unit && (
-                <span className={cn("absolute right-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground pointer-events-none uppercase tracking-widest border-l border-border/5 pl-2.5", isCorePolicy ? "text-[10px]" : "text-[7px]")}>
+                <span aria-hidden="true" className="absolute right-8 top-1/2 -translate-y-1/2 text-[11px] font-bold text-muted-foreground pointer-events-none uppercase tracking-wider">
                   {unit}
                 </span>
+              )}
+              {numberError && (
+                <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-destructive">
+                  {numberError}
+                </p>
               )}
             </div>
           )}

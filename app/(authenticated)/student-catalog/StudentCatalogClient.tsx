@@ -226,7 +226,8 @@ export function StudentCatalogClient({
           <div className="relative flex-1 min-w-[240px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
             <Input
-              type="text"
+              type="search"
+              aria-label="Search the catalog"
               placeholder="Search by title, author, or ISBN..."
               value={localQuery}
               onChange={(e) => setLocalQuery(e.target.value)}
@@ -241,7 +242,8 @@ export function StudentCatalogClient({
             {localQuery && (
               <Button 
                 variant="ghost" 
-                size="icon" 
+                size="icon"
+                aria-label="Clear search"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={() => { setLocalQuery(''); updateParams({ q: null }); }}
               >
@@ -298,6 +300,7 @@ export function StudentCatalogClient({
               variant={availableOnly ? 'secondary' : 'outline'}
               size="sm"
               onClick={handleAvailableToggle}
+              aria-pressed={availableOnly}
               className={cn(
                 "h-9 px-4 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all",
                 availableOnly ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shadow-none" : "border-border/40 bg-background/50 text-muted-foreground shadow-none"
@@ -309,7 +312,7 @@ export function StudentCatalogClient({
             <div className="h-6 w-[1px] bg-border/40 mx-1 hidden sm:block" />
 
             <Select value={sortBy} onValueChange={handleSortChange}>
-              <SelectTrigger className="h-9 w-[130px] rounded-xl border-border/40 bg-background/50 px-3 text-[11px] font-bold shadow-none focus:ring-0">
+              <SelectTrigger aria-label="Sort books" className="h-9 w-[130px] rounded-xl border-border/40 bg-background/50 px-3 text-[11px] font-bold shadow-none focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

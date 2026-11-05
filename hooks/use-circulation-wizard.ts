@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import { resolveScan, checkoutBook, returnBook } from '@/lib/actions/circulation';
@@ -55,6 +55,10 @@ export function useCirculationWizard() {
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
   const [pendingReturn, setPendingReturn] = useState<PendingReturn | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCommitting, setIsCommitting] = useState(false);
+  // Bumped on reset/mode switch. Async results from an older generation are
+  // dropped so they can't repopulate a cleared wizard or the wrong mode.
+  const generationRef = useRef(0);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [reservationData, setReservationData] = useState<{ ready: boolean; studentName?: string }>({ ready: false });
 
@@ -75,6 +79,7 @@ export function useCirculationWizard() {
   const steps = mode === 'checkout' ? CHECKOUT_STEPS : RETURN_STEPS;
 
   const handleReset = useCallback(() => {
+    generationRef.current++;
     setActiveStudent(null);
     setPendingCheckout(null);
     setPendingReturn(null);
@@ -92,6 +97,8 @@ export function useCirculationWizard() {
   }, [handleReset, router, searchParams]);
 
   const processScan = async (value: string, isManual: boolean = false): Promise<boolean> => {
+    const gen = generationRef.current;
+    const isStale = () => gen !== generationRef.current;
     setIsProcessing(true);
     logger.info('Circulation', `Processing scan: ${value}`, { mode, hasStudent: !!activeStudent });
 
@@ -99,6 +106,7 @@ export function useCirculationWizard() {
       if (mode === 'checkout') {
         if (!activeStudent) {
           const result = await resolveScan({ scanValue: value, expectedType: 'auto', isManual });
+          if (isStale()) return false;
           
           if (result.success && result.data.type === 'student') {
             setActiveStudent(result.data.data as ActiveStudent);
@@ -117,6 +125,7 @@ export function useCirculationWizard() {
             previewOnly: true,
             isManual
           });
+          if (isStale()) return false;
 
           if (result.success) {
             setPendingCheckout({
@@ -135,6 +144,7 @@ export function useCirculationWizard() {
         }
       } else {
         const result = await returnBook({ bookQr: value, previewOnly: true, isManual });
+        if (isStale()) return false;
 
         if (result.success) {
           setPendingReturn({
@@ -154,18 +164,22 @@ export function useCirculationWizard() {
         }
       }
     } catch (err: unknown) {
+      if (isStale()) return false;
       const message = err instanceof Error ? err.message : 'Process failed.';
       logger.error('Circulation', 'Scan process error', {}, err);
       toast.error(message, { id: 'circulation-error-toast' });
       return false;
     } finally {
-      setIsProcessing(false);
+      if (!isStale()) setIsProcessing(false);
       logger.info('Circulation', 'Scan processing finished');
     }
   };
 
   const confirmAction = async () => {
+    const gen = generationRef.current;
+    const isStale = () => gen !== generationRef.current;
     setIsProcessing(true);
+    setIsCommitting(true);
 
     try {
       if (mode === 'checkout' && activeStudent && pendingCheckout) {
@@ -176,7 +190,8 @@ export function useCirculationWizard() {
           previewOnly: false,
           isManual: true,
         });
-        
+        if (isStale()) return;
+
         if (result.success) {
           setIsConfirmed(true);
           toast.success('Transaction recorded', {
@@ -192,6 +207,7 @@ export function useCirculationWizard() {
           previewOnly: false,
           isManual: true,
         });
+        if (isStale()) return;
 
         if (result.success) {
           setIsConfirmed(true);
@@ -206,10 +222,12 @@ export function useCirculationWizard() {
         }
       }
     } catch (err: unknown) {
+      if (isStale()) return;
       const message = err instanceof Error ? err.message : 'Network failure during confirmation.';
       toast.error(message);
     } finally {
-      setIsProcessing(false);
+      setIsCommitting(false);
+      if (!isStale()) setIsProcessing(false);
     }
   };
 
@@ -221,6 +239,7 @@ export function useCirculationWizard() {
     pendingCheckout,
     pendingReturn,
     isProcessing,
+    isCommitting,
     isConfirmed,
     reservationData,
     switchMode,

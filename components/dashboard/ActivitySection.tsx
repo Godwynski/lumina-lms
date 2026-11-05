@@ -2,6 +2,7 @@
 
 import { BookOpen, Bookmark, XCircle, Ticket, Clock, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { CardButton } from '@/components/ui/card-action';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -59,10 +60,10 @@ export function ActivitySection({
         ) : (
           <div className="grid gap-2">
             {activeBorrows.map((borrow) => (
-              <Card 
-                key={borrow.id} 
-                role="button"
+              <CardButton
+                key={borrow.id}
                 onClick={() => onOpenBook(borrow.books?.id || '')}
+                aria-label={`Open details for ${borrow.books?.title || 'this book'}`}
                 className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm cursor-pointer group"
               >
                 <CardContent className="flex items-center justify-between gap-4 p-3">
@@ -81,7 +82,7 @@ export function ActivitySection({
                     {borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'Overdue' : 'Active'}
                   </Badge>
                 </CardContent>
-              </Card>
+              </CardButton>
             ))}
           </div>
         )}
@@ -109,15 +110,16 @@ export function ActivitySection({
                 <Card key={res.id} className={`relative overflow-hidden border shadow-none transition-all ${isReady ? 'border-emerald-500/20 bg-emerald-50/5' : 'border-border/20 bg-card/10 backdrop-blur-sm'}`}>
                   <div className={`absolute left-0 top-0 bottom-0 w-1 ${isReady ? 'bg-emerald-500' : 'bg-primary/30'}`} />
                   <CardContent className="pl-4 pr-3 py-3 flex gap-3 items-center">
-                    <div 
-                      role="button"
+                    <button
+                      type="button"
                       onClick={() => onOpenBook(res.books?.id ?? '')}
-                      className="shrink-0 group cursor-pointer"
+                      aria-label={`Open details for ${res.books?.title || 'this book'}`}
+                      className="shrink-0 group cursor-pointer rounded outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                      <div className="relative h-10 w-7 rounded bg-muted/20 overflow-hidden shadow-sm ring-1 ring-border/10 group-hover:ring-primary/30 transition-all">
+                      <span className="relative block h-10 w-7 rounded bg-muted/20 overflow-hidden shadow-sm ring-1 ring-border/10 group-hover:ring-primary/30 transition-all">
                         <ActivityItemCover src={res.books?.cover_url} />
-                      </div>
-                    </div>
+                      </span>
+                    </button>
                     
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-xs font-black text-foreground/90 leading-tight">
@@ -129,7 +131,7 @@ export function ActivitySection({
                     </div>
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <button onClick={() => onCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="text-[11px] font-bold text-muted-foreground hover:text-destructive flex items-center gap-1 disabled:opacity-30">
+                      <button type="button" aria-label={`Cancel reservation for ${res.books?.title || 'this book'}`} onClick={() => onCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="text-[11px] font-bold text-muted-foreground hover:text-destructive flex items-center gap-1 disabled:opacity-30">
                         <XCircle size={12} /> Cancel
                       </button>
                     </div>

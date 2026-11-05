@@ -15,7 +15,7 @@ interface ReserveTitleButtonProps {
   isReady?: boolean;
   queuePosition?: number | null;
   holdExpiresAt?: string | null;
-  onReserveSuccess?: (queuePosition: number, status: 'READY' | 'ACTIVE') => void;
+  onReserveSuccess?: (queuePosition: number, status: 'READY' | 'ACTIVE', holdExpiresAt?: string | null) => void;
   variant?: "default" | "outline" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
@@ -125,7 +125,7 @@ export function ReserveTitleButton({
         );
 
         // Notify parent so it can update the list row instantly
-        onReserveSuccess?.(finalPos, finalStatus);
+        onReserveSuccess?.(finalPos, finalStatus, fresh.holdExpiresAt);
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : 'Failed to place reservation');
       }
@@ -148,7 +148,7 @@ export function ReserveTitleButton({
         className={`rounded-xl gap-2 font-black border-emerald-300 bg-emerald-50 text-emerald-700 animate-pulse shadow-sm ${className}`}
       >
         <Clock className="h-4 w-4" />
-        Ready (Until {dateStr})
+        {dateStr ? `Ready (Until ${dateStr})` : 'Ready for Pickup'}
       </Button>
     );
   }

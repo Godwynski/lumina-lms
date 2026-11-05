@@ -44,7 +44,11 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
         role="button"
         tabIndex={0}
         onClick={() => setModalOpen(true)}
+        aria-label={`View details for ${book.title}`}
         onKeyDown={(e) => {
+          // Ignore keys from nested controls (e.g. the reserve button) so they
+          // keep their own native Enter/Space behavior.
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setModalOpen(true);
@@ -100,7 +104,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
               {book.available_copies} / {book.total_copies}
             </Badge>
             
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
               <ReserveTitleButton
                 bookId={book.id}
                 isAvailable={book.available_copies > 0}

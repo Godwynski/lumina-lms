@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DigitalCard from "./DigitalCard";
 import { m } from "framer-motion";
 import { Download, RefreshCw, RotateCcw, Wallet, QrCode } from "lucide-react";
@@ -92,72 +92,79 @@ type AssetStatusResponse = {
 
 export default function MyCardContainer({ initialData, variant = "page" }: MyCardContainerProps) {
   const { profile } = usePreferences();
-  const [data, setData] = useState(initialData);
+  // Hydrated card assets are kept apart from profile props, so a parent refresh
+  // (e.g. the dashboard passing qrUrl: null) can't wipe a loaded QR.
+  const [assets, setAssets] = useState<{
+    qrUrl?: string;
+    avatarUrl?: string;
+    studentId?: string;
+    cardNumber?: string;
+  }>({});
+  const data = useMemo(
+    () => ({
+      ...initialData,
+      qrUrl: assets.qrUrl ?? initialData.qrUrl,
+      avatarUrl: assets.avatarUrl ?? initialData.avatarUrl,
+      studentId: assets.studentId ?? initialData.studentId,
+      cardNumber: assets.cardNumber ?? initialData.cardNumber,
+    }),
+    [initialData, assets]
+  );
   const [isRefreshingAssets, setIsRefreshingAssets] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showBack, setShowBack] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
+  const [assetError, setAssetError] = useState(false);
+  const assetRequestRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Hydrate with fresh server data
-  useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
-
-  // Client short-circuit check for existing static assets
-  useEffect(() => {
-    let mounted = true;
+  // Check for existing static card assets. Re-runs if the card owner changes.
+  const checkAssets = useCallback(async () => {
+    const requestId = ++assetRequestRef.current;
     setIsLoadingAssets(true);
+    setAssetError(false);
+    try {
+      const response = await fetch("/api/my-card/assets-status", {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
 
-    const checkAssets = async () => {
-      try {
-        const response = await fetch("/api/my-card/assets-status", {
-          method: "GET",
-          cache: "no-store",
-        });
+      const status = (await response.json()) as AssetStatusResponse;
+      if (requestId !== assetRequestRef.current) return;
 
-        if (!response.ok) return;
-
-        const status = (await response.json()) as AssetStatusResponse;
-        if (!mounted) return;
-
-        setData((current) => {
-          const nextQrUrl = status.qr_exists ? status.qr_url : current.qrUrl;
-          const nextAvatarUrl =
-            status.profile_exists && status.profile_url
-              ? status.profile_url
-              : current.avatarUrl;
-
-          if (nextQrUrl === current.qrUrl && nextAvatarUrl === current.avatarUrl) {
-            return current;
-          }
-
-          const updated = {
-            ...current,
-            qrUrl: nextQrUrl,
-            avatarUrl: nextAvatarUrl,
-          };
-
-          return updated;
-        });
-      } catch {
-        // Fallback to current static URLs if status endpoint fails.
-      } finally {
-        if (mounted) setIsLoadingAssets(false);
-      }
-    };
-
-    checkAssets();
-
-    return () => {
-      mounted = false;
-    };
+      setAssets((current) => ({
+        ...current,
+        qrUrl: status.qr_exists ? status.qr_url : current.qrUrl,
+        avatarUrl:
+          status.profile_exists && status.profile_url ? status.profile_url : current.avatarUrl,
+      }));
+    } catch {
+      if (requestId === assetRequestRef.current) setAssetError(true);
+    } finally {
+      if (requestId === assetRequestRef.current) setIsLoadingAssets(false);
+    }
   }, []);
+
+  useEffect(() => {
+    setAssets({});
+    void checkAssets();
+    return () => {
+      // Ignore any in-flight response after unmount or owner change.
+      assetRequestRef.current++;
+    };
+  }, [initialData.studentId, checkAssets]);
+
+  const qrReady = Boolean(data.qrUrl) && !isLoadingAssets;
+  const exportDisabled = isExporting || !qrReady;
+  const qrNotReadyMessage = isLoadingAssets
+    ? "Your card QR is still loading. Try again in a moment."
+    : "Your card QR isn't available yet. Retry loading it first.";
 
   const refreshAssets = async () => {
     setIsRefreshingAssets(true);
@@ -177,13 +184,14 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         student_id?: string;
       };
 
-      setData((current) => ({
+      setAssets((current) => ({
         ...current,
         qrUrl: payload.qr_url ?? current.qrUrl,
         avatarUrl: payload.profile_url ?? current.avatarUrl,
         studentId: payload.student_id ?? current.studentId,
         cardNumber: payload.student_id ?? current.cardNumber,
       }));
+      setAssetError(false);
       toast.success("Card assets refreshed successfully!");
     } catch {
       toast.error("An error occurred while refreshing assets.");
@@ -195,7 +203,15 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
   const exportCardAsImage = async () => {
     const frontCardEl = document.getElementById("library-card-front-export-card");
     const backCardEl = document.getElementById("library-card-back-export-card");
-    if (!frontCardEl || !backCardEl || isExporting) return;
+    if (isExporting) return;
+    if (!qrReady) {
+      toast.error(qrNotReadyMessage);
+      return;
+    }
+    if (!frontCardEl || !backCardEl) {
+      toast.error("Card preview isn't ready to export yet.");
+      return;
+    }
 
     setIsExporting(true);
     try {
@@ -262,7 +278,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
       link.click();
       document.body.removeChild(link);
     } catch {
-      // No-op fallback for export failures.
+      toast.error("Couldn't export your card. Check your connection and try again.");
     } finally {
       setIsExporting(false);
     }
@@ -270,7 +286,15 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
   const exportWalletPreset = async () => {
     const frontCardEl = document.getElementById("library-card-front-export-card");
-    if (!frontCardEl || isExporting) return;
+    if (isExporting) return;
+    if (!qrReady) {
+      toast.error(qrNotReadyMessage);
+      return;
+    }
+    if (!frontCardEl) {
+      toast.error("Card preview isn't ready to export yet.");
+      return;
+    }
 
     setIsExporting(true);
     try {
@@ -308,7 +332,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
       link.click();
       document.body.removeChild(link);
     } catch {
-      // No-op fallback for export failures.
+      toast.error("Couldn't export the wallet card. Check your connection and try again.");
     } finally {
       setIsExporting(false);
     }
@@ -355,15 +379,24 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             <Button
               type="button"
               onClick={exportCardAsImage}
-              disabled={isExporting}
+              disabled={exportDisabled}
               size="sm"
               className="h-8 gap-1.5 text-[11px] font-bold"
             >
               <Download className="h-3.5 w-3.5" />
-              {isExporting ? "..." : "Export"}
+              {isExporting ? "Exporting..." : "Export"}
             </Button>
           </div>
         </div>
+
+        {assetError && !data.qrUrl && (
+          <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <span>Couldn&apos;t load your card QR.</span>
+            <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void checkAssets()}>
+              Retry
+            </Button>
+          </div>
+        )}
 
         <m.div
           initial={{ opacity: 0, scale: 0.98 }}
@@ -475,7 +508,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             <Button
               type="button"
               onClick={exportCardAsImage}
-              disabled={isExporting}
+              disabled={exportDisabled}
               size="sm"
               className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
             >
@@ -486,7 +519,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
             <Button
               type="button"
               onClick={exportWalletPreset}
-              disabled={isExporting}
+              disabled={exportDisabled}
               variant="outline"
               size="sm"
               className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
@@ -509,6 +542,15 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               </Button>
             )}
           </div>
+
+          {assetError && !data.qrUrl && (
+            <div role="alert" className="flex w-full items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive sm:w-auto">
+              <span>Couldn&apos;t load your card QR.</span>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void checkAssets()}>
+                Retry
+              </Button>
+            </div>
+          )}
 
           <div className="hidden text-[11px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
             Verified • {mounted ? new Date().toLocaleDateString("en-US") : "..."}

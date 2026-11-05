@@ -134,6 +134,28 @@ export const toggleAttendanceByCard = createSafeAction(
         userName: fullName
       };
     } else {
+      // A camera scan right after a Time Out is the same card still in view,
+      // not a new visit. Don't flip the patron straight back IN.
+      if (!isManual) {
+        const { data: lastOut } = await supabase
+          .from("attendance")
+          .select("check_out_at")
+          .eq("user_id", userId)
+          .not("check_out_at", "is", null)
+          .order("check_out_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastOut?.check_out_at && Date.now() - new Date(lastOut.check_out_at).getTime() < 60_000) {
+          return {
+            status: "OUT",
+            message: `Already timed out, ${fullName}.`,
+            description: "Already timed out.",
+            userName: fullName
+          };
+        }
+      }
+
       // LOG IN
       const { error: inError } = await supabase
         .from("attendance")
@@ -179,7 +201,7 @@ export const toggleAttendanceByCard = createSafeAction(
 
 export async function getAttendanceHistory(
   userId?: string, 
-  options?: { range?: 'today' | 'all'; limit?: number }
+  options?: { range?: 'today' | 'all'; limit?: number; search?: string }
 ) {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -203,12 +225,25 @@ export async function getAttendanceHistory(
       : null;
 
     if (options?.limit) {
+      // Strip characters that have meaning in PostgREST filter syntax.
+      const search = options.search?.replace(/[,()%*\\:]/g, " ").trim();
+
       let query = supabase
         .from("attendance")
-        .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)");
+        .select(
+          search
+            ? "id, check_in_at, check_out_at, user_id, notes, profiles!inner(full_name, student_id)"
+            : "id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)"
+        );
 
       if (manilaStr) {
         query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
+      }
+
+      if (search) {
+        query = query.or(`full_name.ilike.%${search}%,student_id.ilike.%${search}%`, {
+          referencedTable: "profiles",
+        });
       }
 
       const { data, error } = await query
