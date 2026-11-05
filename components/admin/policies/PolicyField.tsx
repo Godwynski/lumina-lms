@@ -63,8 +63,10 @@ export function PolicyField({
   
   // Type detection logic
   const validation = config.validation;
-  const isSlider = validation?.type === "number" && validation?.max !== undefined && validation.max <= 50;
+  const isCorePolicy = config.category === "circulation" || config.category === "reservations";
+  const isSlider = !isCorePolicy && validation?.type === "number" && validation?.max !== undefined && validation.max <= 50;
   const isDays = policyKey.includes("days") || policyKey.includes("period");
+  const unit = isDays ? "Days" : isCorePolicy && validation?.type === "number" ? "Books" : null;
   const isToggle = config.value === "true" || config.value === "false" || policyKey.includes("enable") || policyKey.includes("required");
   const isSupportFAQ = policyKey === "support_faqs" || policyKey === "student_faq_list";
   const isIdentityList = (config.category === "identity" || policyKey.includes("list") || policyKey.includes("identities") || (value || config.value).startsWith("[")) && !isSupportFAQ;
@@ -201,6 +203,7 @@ export function PolicyField({
           ) : (
             <div className="relative group/input">
               <Input
+                aria-label={labelText}
                 type={validation?.type === "number" ? "number" : "text"}
                 min={validation?.min}
                 max={validation?.max}
@@ -209,9 +212,9 @@ export function PolicyField({
                 disabled={loading || disabled}
                 className="h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-12 transition-all shadow-sm"
               />
-              {isDays && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[7px] font-bold text-muted-foreground pointer-events-none uppercase tracking-widest border-l border-border/5 pl-2.5">
-                  Days
+              {unit && (
+                <span className={cn("absolute right-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground pointer-events-none uppercase tracking-widest border-l border-border/5 pl-2.5", isCorePolicy ? "text-[10px]" : "text-[7px]")}>
+                  {unit}
                 </span>
               )}
             </div>
