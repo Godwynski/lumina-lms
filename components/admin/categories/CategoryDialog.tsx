@@ -112,10 +112,14 @@ export function CategoryDialog({
                 onChange={(e) =>
                   setFormData((p) => {
                     const nextName = e.target.value;
+                    // New categories: the slug follows the name until the user
+                    // edits the slug by hand. Existing slugs are never changed
+                    // automatically, so category links stay stable.
+                    const slugIsAuto = !editingId && (p.slug === "" || p.slug === toSlug(p.name));
                     return {
                       ...p,
                       name: nextName,
-                      slug: toSlug(p.slug ? p.slug : nextName),
+                      slug: slugIsAuto ? toSlug(nextName) : p.slug,
                     };
                   })
                 }

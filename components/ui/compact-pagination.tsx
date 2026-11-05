@@ -51,7 +51,7 @@ export function CompactPagination({
           <div className="flex items-center gap-2 pr-2 border-r border-border/10">
             <span className="text-[11px] font-bold uppercase tracking-tighter text-muted-foreground">Per Page</span>
             <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-              <SelectTrigger className="h-7 w-14 rounded-lg border-none bg-muted/20 hover:bg-muted/30 transition-colors text-[11px] font-bold shadow-none focus:ring-0">
+              <SelectTrigger aria-label="Items per page" className="h-7 w-14 rounded-lg border-none bg-muted/20 hover:bg-muted/30 transition-colors text-[11px] font-bold shadow-none focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="min-w-[5rem] rounded-xl border-border/10 shadow-xl">
@@ -72,11 +72,12 @@ export function CompactPagination({
             className="h-8 w-8 rounded-xl hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-20"
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}
+            aria-label="Previous page"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
           
-          <div className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-muted/10 border border-border/5">
+          <div className="flex items-center gap-1.5 px-3 h-8 rounded-xl bg-muted/10 border border-border/5" aria-label={`Page ${page} of ${totalPages}`} role="status">
             <span className="text-[11px] font-black text-foreground">{page}</span>
             <span className="text-[11px] font-bold text-muted-foreground">/</span>
             <span className="text-[11px] font-bold text-muted-foreground">{totalPages}</span>
@@ -88,8 +89,9 @@ export function CompactPagination({
             className="h-8 w-8 rounded-xl hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-20"
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
+            aria-label="Next page"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>

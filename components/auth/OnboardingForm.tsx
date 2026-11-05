@@ -152,7 +152,7 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
               onValueChange={(val) => setFormData(prev => ({ ...prev, department: val }))}
               required
             >
-              <SelectTrigger className="h-11 rounded-xl transition-all focus-visible:ring-primary/20">
+              <SelectTrigger id="program" className="h-11 rounded-xl transition-all focus-visible:ring-primary/20">
                 <SelectValue placeholder="Select your program" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">

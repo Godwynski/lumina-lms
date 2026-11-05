@@ -11,26 +11,35 @@ import { ISBNLookupBar } from '@/components/catalog/add/ISBNLookupBar';
 import { BookDetailsForm } from '@/components/catalog/add/BookDetailsForm';
 import { CoverUploader } from '@/components/catalog/add/CoverUploader';
 import { toast } from 'sonner';
+import { NavigationGuard } from '@/components/layout/NavigationGuard';
+
+const EMPTY_FORM = {
+  title: '',
+  author: '',
+  isbn: '',
+  categoryId: '',
+  tags: '',
+  location: '',
+  section: '',
+  cover_url: '',
+  copies: 1,
+  dewey_decimal: '',
+};
 
 export function AddBookClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isbnLoading, setIsbnLoading] = useState(false);
   
-  const [formData, setFormData] = useState({
-    title: '',
-    author: '',
-    isbn: '',
-    categoryId: '',
-    tags: '',
-    location: '',
-    section: '',
-    cover_url: '',
-    copies: 1,
-    dewey_decimal: '',
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  // Set after a successful save so leaving the page doesn't trigger the guard.
+  const [saved, setSaved] = useState(false);
+  const isDirty =
+    !saved &&
+    (coverFile !== null ||
+      (Object.keys(EMPTY_FORM) as Array<keyof typeof EMPTY_FORM>).some((k) => formData[k] !== EMPTY_FORM[k]));
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -184,6 +193,7 @@ export function AddBookClient() {
 
       if (!result.success) throw new Error(result.error);
 
+      setSaved(true);
       router.refresh();
       router.push('/inventory');
     } catch (err: unknown) {
@@ -200,6 +210,7 @@ export function AddBookClient() {
 
   return (
     <div className="w-full space-y-6">
+      <NavigationGuard isDirty={isDirty} message="You have an unsaved book draft. Leave this page and discard it?" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 relative overflow-hidden">

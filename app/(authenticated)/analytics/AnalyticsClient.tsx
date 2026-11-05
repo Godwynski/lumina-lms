@@ -41,12 +41,25 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const summaryRequestRef = useRef(0);
+
   const loadSummary = useCallback(async () => {
+    // Only the newest request may update the charts (e.g. after fast range changes).
+    const requestId = ++summaryRequestRef.current;
+    setIsLoadingSummary(true);
+    setSummaryError(null);
     try {
       const data = await getAnalyticsSummary(range);
+      if (requestId !== summaryRequestRef.current) return;
       setSummary(data);
     } catch {
+      if (requestId !== summaryRequestRef.current) return;
+      setSummaryError("Analytics data couldn't be loaded.");
       toast.error("Failed to load analytics data");
+    } finally {
+      if (requestId === summaryRequestRef.current) setIsLoadingSummary(false);
     }
   }, [range]);
 
@@ -93,6 +106,8 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
           {RANGES.map((r) => (
             <button
               key={r.value}
+              type="button"
+              aria-pressed={range === r.value}
               onClick={() => setRange(r.value)}
               className={cn(
                 "px-4 py-1.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all",
@@ -156,6 +171,21 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
         ))}
       </section>
 
+      {!summary && summaryError ? (
+        <section role="alert" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-16 text-center">
+          <p className="text-sm font-semibold text-foreground">{summaryError}</p>
+          <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+          <button
+            type="button"
+            onClick={() => void loadSummary()}
+            disabled={isLoadingSummary}
+            className="mt-2 h-9 rounded-lg border border-border px-4 text-xs font-bold hover:bg-muted/40 disabled:opacity-50"
+          >
+            {isLoadingSummary ? "Retrying..." : "Retry"}
+          </button>
+        </section>
+      ) : (
+      <>
       {/* Primary Visualizations */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="relative overflow-hidden">
@@ -168,7 +198,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
               color="hsl(var(--primary))" 
             />
           )}
-          {isPending && summary && (
+          {(isPending || isLoadingSummary) && summary && (
             <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20 overflow-hidden">
                <div className="h-full bg-primary animate-[shimmer_2s_infinite_linear]" style={{ width: '30%', background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)' }} />
             </div>
@@ -186,7 +216,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
               href="/history"
             />
           )}
-          {isPending && summary && (
+          {(isPending || isLoadingSummary) && summary && (
             <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20 overflow-hidden">
                <div className="h-full bg-primary animate-[shimmer_2s_infinite_linear]" style={{ width: '30%', background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)' }} />
             </div>
@@ -269,6 +299,8 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
           </div>
         </div>
       </section>
+      </>
+      )}
       {selectedBookId && (
         <BookDetailModal
           bookId={selectedBookId}

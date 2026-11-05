@@ -541,9 +541,9 @@ export function AuditLogExportImportModal({
                   {AVAILABLE_COLUMNS.map((col) => {
                     const isSelected = selectedColumns.includes(col.id);
                     return (
-                      <div
+                      // A wrapping label names the checkbox and makes the whole row toggle it natively.
+                      <label
                         key={col.id}
-                        onClick={() => handleColumnToggle(col.id)}
                         className={cn(
                           "flex items-start gap-2.5 p-2 rounded-xl border border-transparent cursor-pointer transition-all hover:bg-muted/25 select-none",
                           isSelected ? "bg-muted/10" : "opacity-60"
@@ -552,16 +552,16 @@ export function AuditLogExportImportModal({
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          readOnly
+                          onChange={() => handleColumnToggle(col.id)}
                           className="mt-0.5 accent-primary h-3.5 w-3.5 rounded border-border/20 cursor-pointer"
                         />
-                        <div className="min-w-0">
+                        <span className="min-w-0">
                           <span className="text-xs font-bold block">{col.label}</span>
                           <span className="text-[11px] text-muted-foreground leading-tight block truncate">
                             {col.desc}
                           </span>
-                        </div>
-                      </div>
+                        </span>
+                      </label>
                     );
                   })}
                 </div>

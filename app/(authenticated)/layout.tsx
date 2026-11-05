@@ -60,6 +60,13 @@ export default async function ProtectedLayout({
       <SWRProvider>
         <BatchTaskProvider>
           <SidebarProvider defaultOpen={defaultOpen}>
+            {/* First tab stop: lets keyboard users jump past the navigation. */}
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              Skip to main content
+            </a>
             <StreamedNav />
 
             <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
@@ -81,7 +88,11 @@ export default async function ProtectedLayout({
               <MainHeader />
 
               {/* Page content */}
-              <div className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6">
+              <div
+                id="main-content"
+                tabIndex={-1}
+                className="mx-auto mt-4 w-full max-w-[1450px] p-4 md:mt-0 md:pt-2 md:px-6 md:pb-6 outline-none"
+              >
                 <NavAnimatePresence>
                   {children}
                 </NavAnimatePresence>

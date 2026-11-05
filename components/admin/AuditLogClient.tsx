@@ -33,11 +33,29 @@ import {
 } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "./AdminTableShell";
 import { AuditLogExportImportModal } from "./AuditLogExportImportModal";
+
+// Always shown in library time (Asia/Manila), whatever the viewer's browser zone is.
+const manilaFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Manila",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+function formatManilaTimestamp(iso: string) {
+  const parts = Object.fromEntries(
+    manilaFormatter.formatToParts(new Date(iso)).map((p) => [p.type, p.value])
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
 
 // --- Types & Interfaces ---
 
@@ -492,7 +510,7 @@ export function AuditLogClient() {
             
             <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger className="flex-1 sm:flex-initial sm:w-[160px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
+                <SelectTrigger aria-label="Filter by entity type" className="flex-1 sm:flex-initial sm:w-[160px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
                   <div className="flex items-center gap-2 truncate">
                     <Filter className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                     <SelectValue placeholder="All Entities" />
@@ -609,7 +627,7 @@ export function AuditLogClient() {
           <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-border/20 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                  <th className="p-3 font-bold w-48">Timestamp (UTC)</th>
+                  <th className="p-3 font-bold w-48">Timestamp (Manila, UTC+8)</th>
                   <th className="p-3 font-bold w-48">Admin</th>
                   <th className="p-3 font-bold">Action</th>
                   <th className="p-3 font-bold">Entity</th>
@@ -619,7 +637,7 @@ export function AuditLogClient() {
               </thead>
               <tbody className="divide-y divide-border/10">
                 {data.logs.map((log) => {
-                  const dateString = log.created_at ? format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss") : "N/A";
+                  const dateString = log.created_at ? formatManilaTimestamp(log.created_at) : "N/A";
                   const isExpanded = expandedRowId === log.id;
                   const details = parseLogDetails(log.details);
                   const hasDetails = (details && (details.added?.length || details.removed?.length || Object.keys(details).filter(k => !['added', 'removed'].includes(k) && !IGNORED_KEYS.includes(k)).length > 0)) || log.old_value || log.new_value;
@@ -781,11 +799,11 @@ export function AuditLogClient() {
           <div className="space-y-4 py-3">
             {/* Action Type Filter */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label id="audit-action-type-label" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Action Type
               </label>
               <Select value={actionType} onValueChange={(v) => { setActionType(v); setPage(1); }}>
-                <SelectTrigger className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
+                <SelectTrigger aria-labelledby="audit-action-type-label" className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
                   <div className="flex items-center gap-2 truncate">
                     <Filter className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                     <SelectValue placeholder="All Actions" />
@@ -812,12 +830,13 @@ export function AuditLogClient() {
             {/* Date Range Filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                <label htmlFor="audit-start-date" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3 text-muted-foreground/60" aria-hidden="true" />
                   Start Date
                 </label>
-                <Input 
-                  type="date" 
+                <Input
+                  id="audit-start-date"
+                  type="date"
                   value={startDate}
                   max={new Date().toISOString().split('T')[0]}
                   onChange={(e) => handleStartDateChange(e.target.value)}
@@ -826,12 +845,13 @@ export function AuditLogClient() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3 text-muted-foreground/60" />
+                <label htmlFor="audit-end-date" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3 text-muted-foreground/60" aria-hidden="true" />
                   End Date
                 </label>
-                <Input 
-                  type="date" 
+                <Input
+                  id="audit-end-date"
+                  type="date"
                   value={endDate}
                   max={new Date().toISOString().split('T')[0]}
                   onChange={(e) => handleEndDateChange(e.target.value)}
@@ -842,11 +862,11 @@ export function AuditLogClient() {
 
             {/* Entity Quick Select inside Modal as well */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label id="audit-entity-type-label" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Entity Type
               </label>
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
+                <SelectTrigger aria-labelledby="audit-entity-type-label" className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
                   <div className="flex items-center gap-2 truncate">
                     <Filter className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                     <SelectValue placeholder="All Entities" />

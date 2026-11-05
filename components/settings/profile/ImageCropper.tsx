@@ -86,6 +86,7 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
               max={3}
               step={0.1}
               onValueChange={(val) => setZoom(val[0])}
+              aria-label="Zoom level"
               className="py-4"
             />
           </div>

@@ -16,12 +16,17 @@ export interface Notification {
   created_at: string
 }
 
+const PAGE_SIZE = 50
+
 export function useNotifications() {
   const [supabase] = useState(() => createClient())
   const [notifications, setNotifications] = useState<Notification[]>([])
-  // Unread notifications older than the 50 loaded ones (the badge must count them too)
+  // Unread notifications older than the loaded ones (the badge must count them too)
   const [olderUnread, setOlderUnread] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   // Cache userId to avoid redundant getUser() network calls
   const userIdRef = useRef<string | null>(null)
 
@@ -32,7 +37,7 @@ export function useNotifications() {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(50),
+        .limit(PAGE_SIZE),
       supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
@@ -42,12 +47,61 @@ export function useNotifications() {
 
     if (error) {
       console.error('Error fetching notifications:', error)
+      setError("Notifications couldn't be loaded.")
     } else {
       const loaded = data || []
+      setError(null)
       setNotifications(loaded)
+      setHasMore(loaded.length === PAGE_SIZE)
       setOlderUnread(Math.max(0, (count ?? 0) - loaded.filter(n => !n.is_read).length))
     }
     setLoading(false)
+  }, [supabase])
+
+  // Load the next page of older notifications.
+  const loadMore = useCallback(async () => {
+    const userId = userIdRef.current
+    const oldest = notifications[notifications.length - 1]
+    if (!userId || !oldest || loadingMore) return
+
+    setLoadingMore(true)
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .lt('created_at', oldest.created_at)
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE)
+    setLoadingMore(false)
+
+    if (error) {
+      toast.error("Couldn't load older notifications")
+      return
+    }
+    const page = (data || []) as Notification[]
+    setNotifications(prev => {
+      const seen = new Set(prev.map(n => n.id))
+      return [...prev, ...page.filter(n => !seen.has(n.id))]
+    })
+    setOlderUnread(prev => Math.max(0, prev - page.filter(n => !n.is_read).length))
+    setHasMore(page.length === PAGE_SIZE)
+  }, [supabase, notifications, loadingMore])
+
+  // Search every notification on the server, not just the loaded page.
+  const searchNotifications = useCallback(async (term: string): Promise<Notification[] | null> => {
+    const userId = userIdRef.current
+    // Strip characters that have meaning in PostgREST filter syntax.
+    const clean = term.replace(/[,()%*\\:]/g, ' ').trim()
+    if (!userId || !clean) return []
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`title.ilike.%${clean}%,content.ilike.%${clean}%`)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    if (error) return null
+    return (data || []) as Notification[]
   }, [supabase])
 
   useEffect(() => {
@@ -133,6 +187,8 @@ export function useNotifications() {
     if (error) {
       toast.error('Failed to update notification')
     } else {
+      // An unread item that isn't loaded (e.g. from search) was counted in olderUnread.
+      if (!notifications.some(n => n.id === id)) setOlderUnread(prev => Math.max(0, prev - 1))
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     }
   }
@@ -160,13 +216,22 @@ export function useNotifications() {
   return {
     notifications,
     unreadCount,
+    olderUnread,
     loading,
+    error,
+    hasMore,
+    loadingMore,
+    loadMore,
+    searchNotifications,
     markAsRead,
     markAllAsRead,
     refresh: async () => {
         // Use cached userId instead of re-fetching from auth endpoint
         const userId = userIdRef.current
-        if (userId) await fetchNotifications(userId)
+        if (userId) {
+          setLoading(true)
+          await fetchNotifications(userId)
+        }
     }
   }
 }

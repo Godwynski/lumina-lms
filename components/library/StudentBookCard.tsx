@@ -29,7 +29,9 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
   const isOutOfStock = book.available_copies === 0;
   const isReady = reservedInfo?.status === "READY";
   const [modalOpen, setModalOpen] = useState(false);
-  const [imgSrc, setImgSrc] = useState(book.cover_url || "/images/default-book-cover.png");
+  // Derived from the prop so an updated cover shows up; only a failed URL falls back.
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const imgSrc = book.cover_url && book.cover_url !== failedCover ? book.cover_url : "/images/default-book-cover.png";
   
   return (
     <m.div
@@ -94,7 +96,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
                 sizes="80px"
                 priority={priority}
                 unoptimized
-                onError={() => setImgSrc("/images/default-book-cover.png")}
+                onError={() => setFailedCover(book.cover_url ?? null)}
               />
             </div>
           </div>

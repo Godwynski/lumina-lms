@@ -36,6 +36,41 @@ Priority reflects user impact and available evidence. Missing accessible names a
 
 These scores summarize implementation evidence, not Lighthouse, axe, Core Web Vitals, measured contrast, or physical-device results. The performance score has lower confidence than the interaction findings.
 
+## Remediation status (2026-11-06)
+
+All 35 findings and R-01 have a code fix on branch `worktree-ui-audit-fixes`. Verified with `npm run typecheck`, `eslint` (no new warnings), and the full Vitest suite (50 files, 1011 tests, including new `test/ui-audit-regressions.test.tsx`). **No browser, device, camera, or screen-reader pass has been run yet**, so each "Retest" step below still applies.
+
+| ID | Fix | Still needs runtime check |
+|---|---|---|
+| UI-01 | Only explicit edits are kept locally; untouched fields follow live updates. If another admin changes a field you edited, a prompt asks which value to keep and Review is blocked until resolved. | Two-session test |
+| UI-02 | New file selection and every parse failure clears parsed rows; results from a superseded file are ignored; Import disabled until the current file parses. | Replacement-file fixtures |
+| UI-03 / UI-24 | Hydrated QR/avatar kept separately from refreshed profile props. Asset load failure shows Retry; export is disabled until the QR is ready and failures show a toast. | Dashboard refresh, export |
+| UI-04 | Card ignores key events from nested controls; reserve wrapper stops keydown too. | Keyboard |
+| UI-05 | Dashboard/activity cards are now native links (`CardLink`) or buttons (`CardButton`). | Keyboard |
+| UI-06 | Reset/mode switch bumps an operation id; older responses are dropped. Mode/Reset locked while a transaction commits. | Delayed responses |
+| UI-07 | Scanner accepts the same code again only after it has been out of view for 3 s. Server skips a camera Time In within 60 s of a Time Out. | Physical scan, isolated DB |
+| UI-08 / UI-09 | `startScanner` is now stable (refs + constant default formats), so Stop stays stopped. Switch Camera passes the new facing mode explicitly. | Two-camera device |
+| UI-10 | All History search runs on the server; "Load older records" extends the window; the footer states how many records are shown. | >300 rows |
+| UI-11 / UI-12 | Row keyboard handler ignores nested controls; `<tr>` keeps row semantics. Mobile rows get named checkboxes plus "Select all". | Mobile widths |
+| UI-13 | Reset All updates the URL once. | — |
+| UI-14 / UI-15 | Edits no longer send `is_active: true`. New-category slug follows the name until edited by hand; existing slugs never change automatically. | — |
+| UI-16 | Audit timestamps formatted in Asia/Manila and labelled "Manila, UTC+8". | — |
+| UI-17 / UI-18 | Analytics has separate error state with Retry. Analytics and Users ignore responses from older requests. | Slow network |
+| UI-19 / UI-20 | Notifications page searches the server, has "Load older notifications", and shows how many older unread remain. Fetch failures show an error with Retry instead of "all caught up". | >50 notifications |
+| UI-21 / UI-22 | Full page shows complete text (bell preview stays short). Mark-read button no longer navigates by keyboard. | — |
+| UI-23 | Reserve callback passes the pickup expiry; "Ready (Until )" can no longer render. | — |
+| UI-25 | `FieldGroup` and a new `Field` wrapper link labels to `Input`/`Textarea`/`SelectTrigger` automatically; hand-rolled forms converted. | Accessibility tree |
+| UI-26 / UI-27 | Named: permission switches, pagination, sliders, cropper zoom, inventory/users icon buttons, search fields, sort/filter triggers, export column checkboxes. Toggle filters expose `aria-pressed`. Onboarding label points at its trigger. | Accessibility tree |
+| UI-28 | Number fields keep the typed draft, validate whole numbers and range inline, and never commit an invalid value. | — |
+| UI-29 / UI-30 | Skip link to `#main-content` added; Settings inner `<main>` changed to `<div>`. | Keyboard |
+| UI-31 | Add-book page uses `NavigationGuard`. Browser Back is still not intercepted (same limitation as the existing guard). | Back button |
+| UI-32 | Create-user is a real `<form>` with `type="email"` and autocomplete. | — |
+| UI-33 | Book card covers derive from the prop; only a failed URL falls back. | — |
+| UI-34 | Profile values wrap instead of truncating. | 320px / 200% zoom |
+| UI-35 | 404 action renamed "Go to Dashboard"; error page no longer claims the team was notified; both use `Button asChild` (no button inside link). | — |
+| R-01 | Demo buttons show in local dev, and in production only when `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`. | Set the flag on the demo deployment |
+| Toast width | Toasts capped to viewport width; long titles wrap. | 320px |
+
 ## QA execution and limitations
 
 | Check | Result | What it establishes |

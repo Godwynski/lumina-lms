@@ -82,10 +82,10 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         const response = await fetch(`/api/admin/categories/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
+          // No is_active here: editing an archived category must not restore it.
           body: JSON.stringify({
             ...formData,
             slug: normalizedSlug,
-            is_active: true,
           }),
         });
 

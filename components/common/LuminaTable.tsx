@@ -64,10 +64,14 @@ export function LuminaTable<T extends { id: string | number }>({
 }: LuminaTableProps<T>) {
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  const rowKeyboardProps = (item: T) => onRowClick ? {
+  // `asButton` is used for the mobile card rows. Desktop <tr> rows keep their
+  // row role so table semantics survive.
+  const rowKeyboardProps = (item: T, asButton = false) => onRowClick ? {
     tabIndex: 0,
-    role: "button",
+    ...(asButton ? { role: "button" } : {}),
     onKeyDown: (e: React.KeyboardEvent) => {
+      // Keys pressed on nested controls (checkboxes, buttons) belong to them.
+      if (e.target !== e.currentTarget) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         onRowClick(item);
@@ -125,7 +129,7 @@ export function LuminaTable<T extends { id: string | number }>({
                   rowClassName
                 )}
                 onClick={() => onRowClick?.(item)}
-                {...rowKeyboardProps(item)}
+                {...rowKeyboardProps(item, true)}
               >
                 {mobileRenderer(item)}
               </div>

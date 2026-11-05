@@ -1,6 +1,6 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
+import { Label, Field } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookText, MapPin, Layers, Tag, PlusCircle } from "lucide-react";
@@ -39,7 +39,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
       <section className="space-y-4">
         <SectionHeader icon={BookText} title="Basic Information" />
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Book Title *</Label>
             <Input
               type="text" 
@@ -49,9 +49,9 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               placeholder="e.g. Clean Code"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
-          </div>
+          </Field>
 
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Author *</Label>
             <Input
               type="text" 
@@ -61,7 +61,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               placeholder="e.g. Robert C. Martin"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
-          </div>
+          </Field>
         </div>
       </section>
 
@@ -69,7 +69,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
       <section className="space-y-4">
         <SectionHeader icon={Layers} title="Cataloging & Classification" />
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Category</Label>
             <Select value={formData.categoryId || 'none'} onValueChange={(value) => onUpdate({ categoryId: value === 'none' ? '' : value })}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm focus:bg-background focus:ring-2 focus:ring-primary/20">
@@ -82,9 +82,9 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </Field>
 
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Dewey Decimal (DDC)</Label>
             <Input
               type="text" 
@@ -93,9 +93,9 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               placeholder="e.g. 621.389"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
-          </div>
+          </Field>
 
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">ISBN Reference</Label>
             <Input
               type="text" 
@@ -104,10 +104,10 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               placeholder="9780132350884"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
-          </div>
+          </Field>
         </div>
 
-        <div className="space-y-2 text-left pt-2">
+        <Field className="space-y-2 text-left pt-2">
           <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Subject Tags (Comma Separated)</Label>
           <div className="relative group">
             <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
@@ -119,14 +119,14 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 pl-10 pr-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
             />
           </div>
-        </div>
+        </Field>
       </section>
 
       {/* 3. Inventory & Placement */}
       <section className="space-y-4">
         <SectionHeader icon={MapPin} title="Inventory & Placement" />
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Physical Section</Label>
             <Input
               type="text" 
@@ -135,9 +135,9 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               placeholder="e.g. CS Reference"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
-          </div>
+          </Field>
           
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground">Exact Location</Label>
             <Input
               type="text" 
@@ -146,9 +146,9 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               placeholder="e.g. Shelf A-5"
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
             />
-          </div>
+          </Field>
 
-          <div className="space-y-2 text-left">
+          <Field className="space-y-2 text-left">
             <Label className="ml-1 text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground flex items-center gap-1.5">
               Initial Copies
               <PlusCircle size={10} className="text-primary" />
@@ -166,7 +166,7 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
               onChange={e => onUpdate({ copies: parseInt(e.target.value) || 0 })}
               className="h-10 w-full rounded-xl border-border/40 bg-muted/20 px-4 text-sm font-bold text-foreground transition-all focus:bg-background focus:ring-2 focus:ring-primary/20 shadow-sm"
             />
-          </div>
+          </Field>
         </div>
       </section>
     </div>

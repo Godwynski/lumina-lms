@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
 import { useState, useRef, useEffect } from 'react';
+import { Label, Field } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
@@ -169,10 +170,10 @@ export function ScanStep({
                 </div>
 
                 <div className="flex flex-col gap-4">
-                    <div className="space-y-2">
-                        <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
+                    <Field className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
                             Direct Entry
-                        </label>
+                        </Label>
                         <div className="flex gap-2">
                             <Input
                                 ref={manualInputRef}
@@ -193,7 +194,7 @@ export function ScanStep({
                         <p className="text-[11px] text-muted-foreground ml-1 font-medium opacity-60">
                             Enter the identifier manually if scan fails.
                         </p>
-                    </div>
+                    </Field>
                 </div>
             </div>
         </div>

@@ -17,9 +17,10 @@ export function SettingsShell({
       <NavigationGuard isDirty={isDirty} />
       
       <div className="grid w-full grid-cols-1 items-start gap-4 lg:gap-6">
-        <main className="min-w-0">
+        {/* Plain div: the app shell already provides the page's <main> landmark. */}
+        <div className="min-w-0">
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );

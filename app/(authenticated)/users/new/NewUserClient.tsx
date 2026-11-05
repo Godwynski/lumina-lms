@@ -6,7 +6,6 @@ import { Mail } from "lucide-react";
 import { inviteUser } from "@/lib/actions/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
@@ -25,8 +24,10 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
 
   const isDirty = inviteEmail.length > 0 || inviteDept.length > 0;
 
-  const handleInvite = async () => {
-    if (!inviteEmail) return;
+  // A real form, so Enter in any field submits once, same as the button.
+  const handleInvite = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!inviteEmail.trim() || isSaving) return;
     setIsSaving(true);
     try {
       const email = inviteEmail.trim().toLowerCase();
@@ -39,7 +40,7 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
       if (!res.success) {
         throw new Error(res.error);
       }
-      
+
       toast.success(`Access granted to ${email}`);
       router.push("/users");
       startTransition(() => {
@@ -55,28 +56,33 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
 
   return (
     <SettingsShell isDirty={isDirty}>
-      <div className="flex flex-col gap-6 pt-2">
+      <form onSubmit={handleInvite} className="flex flex-col gap-6 pt-2">
         <div className="grid gap-6">
           <Section title="Access Details" icon={Mail} hideHeaderOnMobile>
             <div className="flex flex-col gap-4">
               <FieldGroup label="Target Email Address">
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input 
-                    value={inviteEmail} 
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <Input
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    required
+                    aria-describedby="invite-email-hint"
+                    value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="name@organization.com"
                     className="h-10 rounded-lg pl-9 text-sm"
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p id="invite-email-hint" className="text-[11px] text-muted-foreground">
                   The user must have already signed up to the system via SSO or Email initially.
                 </p>
               </FieldGroup>
             </div>
           </Section>
-          <div className="space-y-2">
-            <Label>Assign Role</Label>
+          <FieldGroup label="Assign Role">
             <Select value={inviteRole} onValueChange={setInviteRole} disabled={isLibrarian}>
               <SelectTrigger>
                 <SelectValue />
@@ -88,26 +94,27 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
                 {isSuperAdmin && <SelectItem value="super_admin">Admin</SelectItem>}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Academic Program / Department</Label>
+          </FieldGroup>
+          <FieldGroup label="Academic Program / Department">
             <Input
               type="text"
+              name="department"
+              autoComplete="organization-title"
               value={inviteDept}
               onChange={(e) => setInviteDept(e.target.value)}
               placeholder="e.g. Computer Science"
             />
-          </div>
+          </FieldGroup>
           <div className="pt-4 border-t mt-6 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => router.push('/users')} disabled={isSaving}>
+            <Button type="button" variant="outline" onClick={() => router.push('/users')} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleInvite} disabled={!inviteEmail || isSaving}>
+            <Button type="submit" disabled={!inviteEmail.trim() || isSaving}>
               {isSaving ? "Sending..." : "Send Invitation"}
             </Button>
           </div>
         </div>
-      </div>
+      </form>
     </SettingsShell>
   );
 }

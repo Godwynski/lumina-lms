@@ -22,7 +22,10 @@ interface ModernBookCardProps {
 export function ModernBookCard({ book, priority = false, canManage = true }: ModernBookCardProps) {
   const isOutOfStock = book.available_copies === 0;
   const [modalOpen, setModalOpen] = useState(false);
-  const [imgSrc, setImgSrc] = useState(book.cover_url || "/images/default-book-cover.png");
+  // Derived from the prop so an updated cover shows up; only a URL that failed
+  // to load falls back to the default image.
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const imgSrc = book.cover_url && book.cover_url !== failedCover ? book.cover_url : "/images/default-book-cover.png";
   
   return (
     <>
@@ -30,7 +33,10 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
         role="button"
         tabIndex={0}
         onClick={() => setModalOpen(true)}
+        aria-label={`View details for ${book.title}`}
         onKeyDown={(e) => {
+          // Keys on nested controls belong to them.
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setModalOpen(true);
@@ -85,7 +91,7 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
                 sizes="80px"
                 priority={priority}
                 unoptimized
-                onError={() => setImgSrc("/images/default-book-cover.png")}
+                onError={() => setFailedCover(book.cover_url ?? null)}
               />
               {isOutOfStock && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
