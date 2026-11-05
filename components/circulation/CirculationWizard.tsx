@@ -23,6 +23,7 @@ export function CirculationWizard() {
     pendingCheckout,
     pendingReturn,
     isProcessing,
+    isCommitting,
     isConfirmed,
     reservationData,
     switchMode,
@@ -45,14 +46,18 @@ export function CirculationWizard() {
             <Button
               variant={mode === 'checkout' ? 'default' : 'ghost'}
               className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
-              onClick={() => switchMode('checkout')}
+              aria-pressed={mode === 'checkout'}
+              disabled={isCommitting}
+              onClick={() => mode !== 'checkout' && switchMode('checkout')}
             >
               Checkout
             </Button>
             <Button
               variant={mode === 'return' ? 'default' : 'ghost'}
               className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
-              onClick={() => switchMode('return')}
+              aria-pressed={mode === 'return'}
+              disabled={isCommitting}
+              onClick={() => mode !== 'return' && switchMode('return')}
             >
               Return
             </Button>
@@ -62,6 +67,7 @@ export function CirculationWizard() {
             variant="ghost"
             size="sm"
             className="h-8 gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            disabled={isCommitting}
             onClick={handleReset}
           >
             <RefreshCcw className="h-3.5 w-3.5" />

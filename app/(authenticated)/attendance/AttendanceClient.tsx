@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import type { AttendanceRecord } from "@/lib/actions/attendance";
 
+const ALL_HISTORY_STEP = 300;
+
 export function AttendanceClient({ 
   systemTodayPromise,
   systemAllPromise,
@@ -60,6 +62,15 @@ export function AttendanceClient({
 
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
   const [searchQuery, setSearchQuery] = useState("");
+
+  // "All History" is loaded in steps. Searching it queries the server so older
+  // records beyond the loaded window can still be found.
+  const [allLimit, setAllLimit] = useState(ALL_HISTORY_STEP);
+  const allLimitRef = useRef(ALL_HISTORY_STEP);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [allSearchResults, setAllSearchResults] = useState<AttendanceRecord[] | null>(null);
+  const [isSearchingAll, setIsSearchingAll] = useState(false);
+  const searchRequestRef = useRef(0);
   const [cardNumber, setCardNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -106,7 +117,7 @@ export function AttendanceClient({
         // Instantly refresh records so local state updates immediately without waiting for websocket
         const [freshToday, freshAll] = await Promise.all([
           getAttendanceHistory(undefined, { range: 'today' }),
-          getAttendanceHistory(undefined, { range: 'all', limit: 300 })
+          getAttendanceHistory(undefined, { range: 'all', limit: allLimitRef.current })
         ]);
         setSystemTodayRecords(freshToday);
         setSystemAllRecords(freshAll);
@@ -156,7 +167,7 @@ export function AttendanceClient({
         if (isStaff) {
           const [freshToday, freshAll, freshPersonal] = await Promise.all([
             getAttendanceHistory(undefined, { range: 'today' }),
-            getAttendanceHistory(undefined, { range: 'all', limit: 300 }),
+            getAttendanceHistory(undefined, { range: 'all', limit: allLimitRef.current }),
             getAttendanceHistory(userId)
           ]);
           setSystemTodayRecords(freshToday);
@@ -195,6 +206,46 @@ export function AttendanceClient({
     setStaffPage(1);
   }, [activeTab, searchQuery]);
 
+  // Server-side search for All History (debounced; older responses ignored).
+  useEffect(() => {
+    const q = searchQuery.trim();
+    const requestId = ++searchRequestRef.current;
+    if (!isStaff || activeTab !== 'all' || !q) {
+      setAllSearchResults(null);
+      setIsSearchingAll(false);
+      return;
+    }
+    setIsSearchingAll(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await getAttendanceHistory(undefined, { range: 'all', limit: allLimit, search: q });
+        if (requestId === searchRequestRef.current) setAllSearchResults(results);
+      } catch {
+        if (requestId === searchRequestRef.current) {
+          toast.error("Couldn't search attendance history.", { id: "attendance-search-error" });
+        }
+      } finally {
+        if (requestId === searchRequestRef.current) setIsSearchingAll(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [isStaff, activeTab, searchQuery, allLimit]);
+
+  const loadOlderHistory = async () => {
+    const nextLimit = allLimitRef.current + ALL_HISTORY_STEP;
+    setIsLoadingOlder(true);
+    try {
+      const records = await getAttendanceHistory(undefined, { range: 'all', limit: nextLimit });
+      allLimitRef.current = nextLimit;
+      setAllLimit(nextLimit);
+      setSystemAllRecords(records);
+    } catch {
+      toast.error("Couldn't load older records. Please try again.");
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
+
   // Auto-start scanner when modal opens; teardown camera when modal closes
   useEffect(() => {
     if (isScannerOpen) {
@@ -226,6 +277,7 @@ export function AttendanceClient({
 
   // Filter staff records by tab & search query
   const filteredStaffRecords = useMemo(() => {
+    if (activeTab === 'all' && searchQuery.trim() && allSearchResults) return allSearchResults;
     const base = activeTab === 'today' ? systemTodayRecords : systemAllRecords;
     if (!searchQuery.trim()) return base;
     const q = searchQuery.toLowerCase().trim();
@@ -234,7 +286,12 @@ export function AttendanceClient({
       const sid = r.profiles?.student_id?.toLowerCase() || '';
       return name.includes(q) || sid.includes(q);
     });
-  }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery]);
+  }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery, allSearchResults]);
+
+  const isAllSearch = activeTab === 'all' && searchQuery.trim().length > 0;
+  const allWindowFull = isAllSearch
+    ? (allSearchResults?.length ?? 0) >= allLimit
+    : systemAllRecords.length >= allLimit;
 
   // Paginated staff records
   const totalStaffItems = filteredStaffRecords.length;
@@ -263,6 +320,7 @@ export function AttendanceClient({
             <button
               type="button"
               onClick={() => setActiveTab('today')}
+              aria-pressed={activeTab === 'today'}
               className={cn(
                 "h-7 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
                 activeTab === 'today' 
@@ -281,6 +339,7 @@ export function AttendanceClient({
             <button
               type="button"
               onClick={() => setActiveTab('all')}
+              aria-pressed={activeTab === 'all'}
               className={cn(
                 "h-7 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
                 activeTab === 'all' 
@@ -312,6 +371,8 @@ export function AttendanceClient({
           <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
+              type="search"
+              aria-label="Search attendance by patron name or ID"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search patron or ID..."
@@ -327,6 +388,7 @@ export function AttendanceClient({
               <ScanLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 ref={inputRef}
+                aria-label="Card ID or student number"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
                 placeholder="Card ID or Student No..."
@@ -493,6 +555,30 @@ export function AttendanceClient({
           <Suspense fallback={<TableLoadingSkeleton />}>
             <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
           </Suspense>
+
+          {activeTab === 'all' && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-border/10 text-[11px] text-muted-foreground" aria-live="polite">
+              <span>
+                {isSearchingAll
+                  ? "Searching all history..."
+                  : isAllSearch
+                    ? `Search covers the latest ${allLimit.toLocaleString()} matching records.`
+                    : `Showing the latest ${systemAllRecords.length.toLocaleString()} records.`}
+              </span>
+              {allWindowFull && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  disabled={isLoadingOlder}
+                  onClick={() => void loadOlderHistory()}
+                >
+                  {isLoadingOlder ? "Loading..." : "Load older records"}
+                </Button>
+              )}
+            </div>
+          )}
         </AdminTableShell>
       </div>
     );

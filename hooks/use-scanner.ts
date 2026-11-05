@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
+// Stable default so startScanner isn't recreated on every render.
+const DEFAULT_FORMATS = [0]; // 0 is Html5QrcodeSupportedFormats.QR_CODE
+
+// The same code is only accepted again after it has been out of view this long.
+// While a card stays in front of the camera, every detection refreshes the timer.
+const SAME_CODE_REARM_MS = 3000;
+
 interface UseScannerProps {
   onScan: (value: string) => Promise<void>;
   isProcessing: boolean;
@@ -18,7 +25,7 @@ export function useScanner({
   onScan, 
   isProcessing, 
   scannerId = 'qr-reader',
-  formats = [0] // 0 is Html5QrcodeSupportedFormats.QR_CODE
+  formats = DEFAULT_FORMATS
 }: UseScannerProps) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraSupported, setCameraSupported] = useState(true);
@@ -30,6 +37,14 @@ export function useScanner({
   
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const lastScanRef = useRef<{ value: string; time: number } | null>(null);
+  // Refs keep startScanner stable; a changing callback used to re-trigger
+  // auto-start effects (e.g. restarting the camera right after Stop).
+  const isInitializingRef = useRef(false);
+  const facingModeRef = useRef<'user' | 'environment'>('environment');
+  const formatsRef = useRef(formats);
+  useEffect(() => {
+    formatsRef.current = formats;
+  }, [formats]);
   
   const onScanRef = useRef(onScan);
   const isProcessingRef = useRef(isProcessing);
@@ -73,6 +88,7 @@ export function useScanner({
     }
 
     setCameraOpen(false);
+    isInitializingRef.current = false;
     setIsInitializing(false);
   }, [scannerId]);
 
@@ -80,9 +96,17 @@ export function useScanner({
     lastScanRef.current = null;
   }, []);
 
-  const startScanner = useCallback(async () => {
-    if (isInitializing || (scannerRef.current && scannerRef.current.isScanning)) return;
-    
+  const startScanner = useCallback(async (requestedMode?: 'user' | 'environment') => {
+    if (isInitializingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
+
+    if (requestedMode) {
+      facingModeRef.current = requestedMode;
+      setFacingMode(requestedMode);
+    }
+    const facingMode = facingModeRef.current;
+    const formats = formatsRef.current;
+
+    isInitializingRef.current = true;
     setIsInitializing(true);
     setCameraSupported(true);
     setCameraIssue(null);
@@ -139,13 +163,17 @@ export function useScanner({
         const now = Date.now();
         console.info(`[Scanner] Detected: ${decodedText}`);
 
-        if (isProcessingRef.current) {
-          console.warn('[Scanner] Scan ignored: System is currently processing.');
+        // Same code still in view (seen recently): refresh the timer and ignore.
+        // It is only accepted again once it has left the camera for a while,
+        // so one presented card can't trigger two transitions (e.g. OUT then IN).
+        const last = lastScanRef.current;
+        if (last?.value === decodedText && now - last.time < SAME_CODE_REARM_MS) {
+          last.time = now;
           return;
         }
 
-        if (lastScanRef.current?.value === decodedText && now - (lastScanRef.current?.time ?? 0) < 2000) {
-          console.debug('[Scanner] Scan ignored: Debounce (duplicate).');
+        if (isProcessingRef.current) {
+          console.warn('[Scanner] Scan ignored: System is currently processing.');
           return;
         }
 
@@ -166,6 +194,7 @@ export function useScanner({
         const errText = String(startErr).toLowerCase();
         if (facingMode === 'environment' && (errText.includes('overconstrained') || errText.includes('notfound') || errText.includes('not found') || errText.includes('constraint'))) {
           console.warn('[Scanner] Environment camera unavailable, falling back to user camera...');
+          facingModeRef.current = 'user';
           setFacingMode('user');
           await html5QrCode.start(
             { facingMode: 'user' },
@@ -223,20 +252,23 @@ export function useScanner({
       
       void stopCamera();
     } finally {
+      isInitializingRef.current = false;
       setIsInitializing(false);
     }
-  }, [isInitializing, scannerId, formats, facingMode, stopCamera]);
+  }, [scannerId, stopCamera]);
 
   const switchCamera = useCallback(async () => {
-    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    const newMode = facingModeRef.current === 'user' ? 'environment' : 'user';
+    facingModeRef.current = newMode;
     setFacingMode(newMode);
-    
+
     if (cameraOpen) {
       await stopCamera();
-      // Give it a small timeout to ensure the hardware is released
-      setTimeout(() => startScanner(), 400);
+      // Give it a small timeout to ensure the hardware is released.
+      // Pass the mode explicitly so the restart can't use a stale value.
+      setTimeout(() => void startScanner(newMode), 400);
     }
-  }, [facingMode, cameraOpen, stopCamera, startScanner]);
+  }, [cameraOpen, stopCamera, startScanner]);
 
   // Lazy support check — only validates API presence (no device enumeration, no dynamic imports)
   useEffect(() => {

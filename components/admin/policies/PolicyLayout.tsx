@@ -123,7 +123,16 @@ export function PolicyLayout({
     return values;
   }, [settings]);
 
-  const [formData, setFormData] = useState<Record<string, string>>(initialValues);
+  // Only explicit edits live in local state. Untouched fields always follow the
+  // latest server values, so a live refresh can't turn them into rollback edits.
+  // `base` is the server value when the edit started, used to detect conflicts.
+  const [edits, setEdits] = useState<Record<string, { value: string; base: string }>>({});
+  const formData = useMemo(() => {
+    const merged = { ...initialValues };
+    for (const [key, edit] of Object.entries(edits)) merged[key] = edit.value;
+    return merged;
+  }, [initialValues, edits]);
+  const discardEdits = () => setEdits({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,6 +143,8 @@ export function PolicyLayout({
   }, [error]);
 
   const changedKeys = Object.keys(DEFAULT_POLICIES).filter((key) => (formData[key] ?? "") !== (initialValues[key] ?? ""));
+  // Edited keys whose server value changed after the local edit began.
+  const conflictKeys = Object.keys(edits).filter((key) => edits[key].base !== initialValues[key]);
   const isDirty = changedKeys.length > 0 || isAnnouncementDirty;
 
   useEffect(() => {
@@ -175,12 +186,35 @@ export function PolicyLayout({
   }, [sidebarItems]);
 
   const handleChange = (key: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setEdits((prev) => {
+      if (value === initialValues[key]) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: { value, base: prev[key]?.base ?? initialValues[key] } };
+    });
     setError(null);
+  };
+
+  const resolveConflicts = (keep: "mine" | "server") => {
+    setEdits((prev) => {
+      const next = { ...prev };
+      for (const key of conflictKeys) {
+        if (keep === "server") delete next[key];
+        else next[key] = { value: next[key].value, base: initialValues[key] };
+      }
+      return next;
+    });
   };
 
   const handleConfirmCommit = async (reason: string) => {
     if (!canEdit) return;
+    if (conflictKeys.length > 0) {
+      setIsCommitModalOpen(false);
+      toast.error("Another administrator changed a setting you edited. Resolve the conflict first.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -202,6 +236,7 @@ export function PolicyLayout({
         }
       }
 
+      setEdits({});
       startTransition(() => {
         router.refresh();
       });
@@ -419,6 +454,32 @@ export function PolicyLayout({
       </div>
 
       {/* ── Floating Review Bar ───────────────────────────────── */}
+      {canEdit && conflictKeys.length > 0 && (
+        <div role="alert" className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md">
+          <div className="rounded-2xl border border-amber-500/30 bg-background/95 p-4 shadow-2xl backdrop-blur-xl space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
+              <p className="text-xs text-foreground leading-relaxed">
+                Another administrator changed{" "}
+                <span className="font-semibold">
+                  {conflictKeys
+                    .map((k) => DEFAULT_POLICIES[k as keyof typeof DEFAULT_POLICIES]?.label ?? k)
+                    .join(", ")}
+                </span>{" "}
+                while you were editing. Choose which value to keep.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => resolveConflicts("server")}>
+                Use their value
+              </Button>
+              <Button size="sm" onClick={() => resolveConflicts("mine")}>
+                Keep my edit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {canEdit && changedKeys.length > 0 && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-sm animate-in slide-in-from-bottom-8 duration-500">
           <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/10 bg-background/90 p-2 pl-5 shadow-2xl backdrop-blur-xl">
@@ -432,7 +493,7 @@ export function PolicyLayout({
                <Button
                   variant="outline"
                   onClick={() => {
-                    setFormData(initialValues);
+                    discardEdits();
                     toast.success("All unsaved changes discarded");
                   }}
                   className="h-9 rounded-xl px-4 text-[11px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
@@ -441,6 +502,7 @@ export function PolicyLayout({
                </Button>
                <Button
                   onClick={() => setIsCommitModalOpen(true)}
+                  disabled={conflictKeys.length > 0}
                   className="h-9 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
                >
                   Review Changes
@@ -499,7 +561,7 @@ export function PolicyLayout({
                   if (activeCategory === "broadcasts") {
                     setAnnouncementDraft({ title: "", content: "", target: "students" });
                   }
-                  setFormData(initialValues);
+                  discardEdits();
                   setActiveCategory(pendingCategory);
                   setPendingCategory(null);
                   toast.success("Changes discarded");

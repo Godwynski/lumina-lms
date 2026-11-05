@@ -15,6 +15,7 @@ import {
   BookMarked
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { CardLink, CardButton } from '@/components/ui/card-action';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { useTransition, useMemo, useState, useEffect, use, useRef, useCallback } from 'react';
@@ -360,9 +361,8 @@ export function DashboardClient({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {isPendingApprovals && (
-                  <Card 
-                    role="button"
-                    onClick={() => router.push('/users')}
+                  <CardLink
+                    href="/users"
                     className="group border border-border/40 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer p-3.5 flex items-center justify-between rounded-lg shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -377,13 +377,12 @@ export function DashboardClient({
                       </div>
                     </div>
                     <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
-                  </Card>
+                  </CardLink>
                 )}
 
                 {isOverdue && (
-                  <Card 
-                    role="button"
-                    onClick={() => router.push('/history?view=logs&status=OVERDUE')}
+                  <CardLink
+                    href="/history?view=logs&status=OVERDUE"
                     className="group border border-border/40 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer p-3.5 flex items-center justify-between rounded-lg shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -398,13 +397,12 @@ export function DashboardClient({
                       </div>
                     </div>
                     <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
-                  </Card>
+                  </CardLink>
                 )}
 
                 {isReadyHolds && (
-                  <Card 
-                    role="button"
-                    onClick={() => router.push('/circulation')}
+                  <CardLink
+                    href="/circulation"
                     className="group border border-border/40 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer p-3.5 flex items-center justify-between rounded-lg shadow-none"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -419,7 +417,7 @@ export function DashboardClient({
                       </div>
                     </div>
                     <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
-                  </Card>
+                  </CardLink>
                 )}
               </div>
             )}
@@ -428,9 +426,8 @@ export function DashboardClient({
 
         {/* ==================== SYSTEM METRICS GRID ==================== */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-          <Card 
-            role="button"
-            onClick={() => router.push('/attendance')}
+          <CardLink
+            href="/attendance"
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -444,11 +441,10 @@ export function DashboardClient({
             <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.attendanceToday}
             </div>
-          </Card>
+          </CardLink>
 
-          <Card 
-            role="button"
-            onClick={() => router.push('/history?view=logs&status=ACTIVE')}
+          <CardLink
+            href="/history?view=logs&status=ACTIVE"
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -462,11 +458,10 @@ export function DashboardClient({
             <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.activeBorrows}
             </div>
-          </Card>
+          </CardLink>
 
-          <Card 
-            role="button"
-            onClick={() => router.push('/inventory')}
+          <CardLink
+            href="/inventory"
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -480,11 +475,10 @@ export function DashboardClient({
             <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.totalBooks}
             </div>
-          </Card>
+          </CardLink>
 
-          <Card 
-            role="button"
-            onClick={() => router.push('/users')}
+          <CardLink
+            href="/users"
             className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -498,16 +492,15 @@ export function DashboardClient({
             <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
               {stats.totalUsers}
             </div>
-          </Card>
+          </CardLink>
         </section>
 
         {/* ==================== SYSTEM SHORTCUTS GRID ==================== */}
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
           {quickShortcuts.map((shortcut) => (
-            <Card 
+            <CardLink
               key={shortcut.path}
-              role="button"
-              onClick={() => router.push(shortcut.path)}
+              href={shortcut.path}
               className={`group border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer p-3.5 sm:p-4 flex items-center gap-3.5 rounded-xl ${shortcut.color}`}
             >
               <div className={`p-2.5 rounded-lg transition-all duration-300 shrink-0 ${shortcut.iconBg}`}>
@@ -517,7 +510,7 @@ export function DashboardClient({
                 <p className="text-sm font-bold text-foreground/90 truncate">{shortcut.title}</p>
                 <p className="text-[11px] text-muted-foreground truncate mt-0.5">{shortcut.desc}</p>
               </div>
-            </Card>
+            </CardLink>
           ))}
         </section>
 
@@ -533,9 +526,8 @@ export function DashboardClient({
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {stats.recentBooks.map((book) => (
-                  <Card 
+                  <CardButton
                     key={book.id}
-                    role="button"
                     onClick={() => {
                       setSelectedBookId(book.id);
                       setModalOpen(true);
@@ -553,7 +545,7 @@ export function DashboardClient({
                         {book.author}
                       </p>
                     </div>
-                  </Card>
+                  </CardButton>
                 ))}
               </div>
             )}
@@ -620,9 +612,8 @@ export function DashboardClient({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {hasCirculationPerm && (
-                <Card 
-                  role="button"
-                  onClick={() => router.push('/circulation')}
+                <CardLink
+                  href="/circulation"
                   className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
                 >
                   <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
@@ -632,13 +623,12 @@ export function DashboardClient({
                     <p className="text-xs font-bold text-foreground/90 truncate">Circulation Desk</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Checkout & return books</p>
                   </div>
-                </Card>
+                </CardLink>
               )}
 
               {hasAttendancePerm && (
-                <Card 
-                  role="button"
-                  onClick={() => router.push('/attendance')}
+                <CardLink
+                  href="/attendance"
                   className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
                 >
                   <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
@@ -648,12 +638,11 @@ export function DashboardClient({
                     <p className="text-xs font-bold text-foreground/90 truncate">Attendance Logs</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Scanner & visitor logs</p>
                   </div>
-                </Card>
+                </CardLink>
               )}
 
-              <Card 
-                role="button"
-                onClick={() => router.push('/student-catalog')}
+              <CardLink
+                href="/student-catalog"
                 className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
               >
                 <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
@@ -663,7 +652,7 @@ export function DashboardClient({
                   <p className="text-xs font-bold text-foreground/90 truncate">Book Catalog</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Search & explore books</p>
                 </div>
-              </Card>
+              </CardLink>
             </div>
           </div>
         </section>
