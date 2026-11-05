@@ -112,6 +112,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   }, [currentPage, debouncedSearch, activeTab]);
 
   const isInitialMount = React.useRef(true);
+  const loadRequestRef = React.useRef(0);
 
   const loadUsers = useCallback(async (isInitial = false) => {
     if (isInitial && isInitialMount.current) {
@@ -119,6 +120,8 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
       return;
     }
 
+    // Only the latest request may update the list; slower older ones are dropped.
+    const requestId = ++loadRequestRef.current;
     setIsLoadingUsers(true);
     setLoadError(null);
     try {
@@ -128,13 +131,15 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
         page: currentPage,
         pageSize,
       });
+      if (requestId !== loadRequestRef.current) return;
 
       setUsers(res.users);
       setTotalUsers(res.total);
     } catch (error) {
+      if (requestId !== loadRequestRef.current) return;
       setLoadError(error instanceof Error ? error.message : "Failed to load users");
     } finally {
-      setIsLoadingUsers(false);
+      if (requestId === loadRequestRef.current) setIsLoadingUsers(false);
     }
   }, [currentPage, debouncedSearch, activeTab, pageSize]);
 
@@ -249,7 +254,8 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
             <div className="relative w-full sm:max-w-md">
               <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                type="text"
+                type="search"
+                aria-label="Search users by name or email"
                 placeholder="Search by name or email"
                 className="pl-9"
                 value={searchQuery}
@@ -258,8 +264,12 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
             </div>
             <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="h-9 px-3 gap-2">
-                  <Filter size={14} />
+                <Button
+                  variant="outline"
+                  className="h-9 px-3 gap-2"
+                  aria-label={activeTab !== "all" ? `Filter users (${roleFilterLabels[activeTab]})` : "Filter users"}
+                >
+                  <Filter size={14} aria-hidden="true" />
                   <span className="hidden sm:inline">Filter</span>
                   {activeTab !== "all" && (
                     <Badge variant="secondary" className="h-5 px-1.5 text-[11px] min-w-5 justify-center">
@@ -281,6 +291,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                         setIsFilterModalOpen(false);
                       }}
                       variant={activeTab === tab ? "default" : "outline"}
+                      aria-pressed={activeTab === tab}
                       className="justify-start h-10 px-4 text-sm"
                     >
                       {roleFilterLabels[tab]}
@@ -308,6 +319,17 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           ) : null
         }
       >
+        {canReactivate && users.length > 0 && !isLoadingUsers && (
+          <label className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border/50 text-xs font-medium text-muted-foreground">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-primary"
+              checked={allOnPageSelected}
+              onChange={() => setSelectedIds(allOnPageSelected ? new Set() : new Set(users.map((u) => u.id)))}
+            />
+            Select all users on this page
+          </label>
+        )}
         <LuminaTable
           data={users}
           columns={columns}
@@ -316,6 +338,20 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           noBorder
           renderMobileRow={(user) => (
             <div className="flex items-start gap-3">
+              {canReactivate && (
+                <label
+                  className="-m-2 p-2 shrink-0 flex items-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${user.name}`}
+                    className="h-5 w-5 accent-primary"
+                    checked={selectedIds.has(user.id)}
+                    onChange={() => toggleSelected(user.id)}
+                  />
+                </label>
+              )}
               <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>

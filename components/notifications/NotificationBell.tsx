@@ -20,8 +20,10 @@ export function NotificationBell() {
     notifications, 
     unreadCount, 
     markAsRead, 
-    markAllAsRead, 
-    loading 
+    markAllAsRead,
+    loading,
+    error,
+    refresh
   } = useNotifications()
 
   return (
@@ -74,6 +76,8 @@ export function NotificationBell() {
             notifications={notifications}
             loading={loading}
             onMarkRead={markAsRead}
+            error={error}
+            onRetry={() => void refresh()}
             variant="compact"
           />
         </div>

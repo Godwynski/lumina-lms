@@ -88,6 +88,8 @@ export const NotificationItem = memo(({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
+        // Keys on the nested "Mark as read" button must not also navigate.
+        if (e.target !== e.currentTarget) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           handleClick()
@@ -109,11 +111,12 @@ export const NotificationItem = memo(({
 
       {/* Content Section */}
       <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 overflow-hidden">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <Icon className={cn("h-4 w-4 shrink-0", notification.is_read ? "text-muted-foreground/50" : config.color)} />
             <h4 className={cn(
-              "text-sm font-medium truncate transition-colors",
+              "text-sm font-medium transition-colors",
+              variant === 'compact' ? "truncate" : "break-words",
               !notification.is_read ? "text-foreground" : "text-muted-foreground"
             )}>
               {notification.title}
@@ -127,7 +130,8 @@ export const NotificationItem = memo(({
         <p className={cn(
           "text-xs leading-relaxed font-medium transition-colors",
           notification.is_read ? "text-muted-foreground" : "text-muted-foreground",
-          variant === 'compact' ? "line-clamp-1" : "line-clamp-2"
+          // The full page shows the whole message; the compact bell preview stays short.
+          variant === 'compact' ? "line-clamp-1" : "whitespace-pre-line break-words"
         )}>
           {notification.content}
         </p>

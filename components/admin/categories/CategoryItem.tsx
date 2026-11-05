@@ -6,6 +6,7 @@ import { Edit2, Archive, Check, RotateCcw, Hash, Type, AlignLeft } from "lucide-
 import { cn } from "@/lib/utils";
 import { Category } from "@/types/admin";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Label, Field } from "@/components/ui/label";
 
 interface CategoryItemProps {
   category: Category;
@@ -44,42 +45,42 @@ export function CategoryItem({
       <div className="flex-1 min-w-0">
         {isBulkEditing && draftCategory && onDraftChange ? (
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
+            <Field className="space-y-1.5">
+              <Label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Type className="h-3 w-3" />
                 Category Name
-              </label>
+              </Label>
               <Input
                 value={draftCategory.name}
                 onChange={(e) => onDraftChange("name", e.target.value)}
                 className="h-9 rounded-lg bg-background border-border text-xs font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder="Category Name"
               />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
+            </Field>
+            <Field className="space-y-1.5">
+              <Label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Hash className="h-3 w-3" />
                 Slug (URL Identifier)
-              </label>
+              </Label>
               <Input
                 value={draftCategory.slug}
                 onChange={(e) => onDraftChange("slug", e.target.value)}
                 className="h-9 rounded-lg bg-background border-border text-xs font-mono font-medium focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder="slug-identifier"
               />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
+            </Field>
+            <Field className="space-y-1.5">
+              <Label className="text-[11px] font-semibold text-muted-foreground ml-1 flex items-center gap-1.5">
                 <AlignLeft className="h-3 w-3" />
                 Description
-              </label>
+              </Label>
               <Input
                 value={draftCategory.description || ""}
                 onChange={(e) => onDraftChange("description", e.target.value)}
                 className="h-9 rounded-lg bg-background border-border text-xs font-medium focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder="Optional description"
               />
-            </div>
+            </Field>
           </div>
         ) : (
           <div className="flex flex-col gap-1">

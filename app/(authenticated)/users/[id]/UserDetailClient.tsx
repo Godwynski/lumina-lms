@@ -543,10 +543,12 @@ export function UserDetailClient({
                 className="flex items-start justify-between gap-4 px-3 py-3.5 rounded-xl hover:bg-muted/50 transition-all border border-border/40 bg-card"
               >
                 <div className="space-y-1 pr-2">
-                  <p className="text-xs font-bold text-foreground">{p.label}</p>
-                  <p className="text-[11px] text-muted-foreground leading-normal">{p.desc}</p>
+                  <p id={`perm-${p.key}-label`} className="text-xs font-bold text-foreground">{p.label}</p>
+                  <p id={`perm-${p.key}-desc`} className="text-[11px] text-muted-foreground leading-normal">{p.desc}</p>
                 </div>
                 <Switch
+                  aria-labelledby={`perm-${p.key}-label`}
+                  aria-describedby={`perm-${p.key}-desc`}
                   checked={form.permissions?.[p.key] ?? false}
                   onCheckedChange={(checked) =>
                     setForm(prev => ({

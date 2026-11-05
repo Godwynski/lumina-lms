@@ -4,6 +4,7 @@ import React from 'react'
 import { Bell, Loader2 } from 'lucide-react'
 import { Notification } from '@/hooks/use-notifications'
 import { NotificationItem } from './NotificationItem'
+import { Button } from '@/components/ui/button'
 
 interface NotificationListProps {
   notifications: Notification[]
@@ -11,6 +12,8 @@ interface NotificationListProps {
   onMarkRead: (id: string) => void
   variant?: 'compact' | 'full'
   emptyMessage?: string
+  error?: string | null
+  onRetry?: () => void
 }
 
 export function NotificationList({
@@ -18,8 +21,24 @@ export function NotificationList({
   loading,
   onMarkRead,
   variant = 'full',
-  emptyMessage = "You're all caught up"
+  emptyMessage = "You're all caught up",
+  error,
+  onRetry,
 }: NotificationListProps) {
+  // A failed load must never look like an empty inbox.
+  if (error && !loading && notifications.length === 0) {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center py-12 text-center gap-3">
+        <p className="text-sm text-foreground">{error}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            Retry
+          </Button>
+        )}
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">

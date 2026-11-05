@@ -14,7 +14,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
+    // Logged to the browser console only; no external reporting is wired up.
     console.error(error);
   }, [error]);
 
@@ -45,7 +45,7 @@ export default function Error({
         transition={{ delay: 0.2, duration: 0.4 }}
         className="mt-4 max-w-md text-muted-foreground"
       >
-        An unexpected error occurred while processing your request. Our team has been notified.
+        An unexpected error occurred while processing your request. Try again, and if it keeps happening, contact the library staff.
       </m.p>
 
       {process.env.NODE_ENV === "development" && (
@@ -76,16 +76,17 @@ export default function Error({
           <RefreshCcw className="mr-2 h-4 w-4" />
           Try again
         </Button>
-        <Link href="/" className="w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-12 w-full rounded-2xl border-input px-8 text-sm font-semibold hover:bg-muted sm:w-auto"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+        <Button
+          asChild
+          variant="outline"
+          size="lg"
+          className="h-12 w-full rounded-2xl border-input px-8 text-sm font-semibold hover:bg-muted sm:w-auto"
+        >
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
             Go to Home
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </m.div>
     </div>
   );

@@ -251,7 +251,8 @@ export default function HistoryContent({
       >
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
         <Input
-          type="text"
+          type="search"
+          aria-label="Search borrowing history"
           placeholder="Search timeline, borrower, book, barcode..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
@@ -265,6 +266,8 @@ export default function HistoryContent({
         {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
           <button
             key={status}
+            type="button"
+            aria-pressed={statusFilter === status}
             onClick={() => updateFilters({ status, page: 1 })}
             className={cn(
               "rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all",

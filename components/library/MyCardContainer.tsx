@@ -151,13 +151,10 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
     }
   }, []);
 
+  // Each call bumps the request id, so a response for a previous owner is ignored.
   useEffect(() => {
     setAssets({});
     void checkAssets();
-    return () => {
-      // Ignore any in-flight response after unmount or owner change.
-      assetRequestRef.current++;
-    };
   }, [initialData.studentId, checkAssets]);
 
   const qrReady = Boolean(data.qrUrl) && !isLoadingAssets;

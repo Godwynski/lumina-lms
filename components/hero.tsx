@@ -11,6 +11,9 @@ import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+const SHOW_DEMO_LOGIN =
+  process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true';
+
 export function Hero({ user, role }: { user: User | null; role: string | null }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
@@ -127,8 +130,9 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
               <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
             </Button>
 
-            {/* Hide the demo access buttons on the landing page */}
-            {true && (
+            {/* Shared demo accounts: shown in local dev, and on a deployment only
+                when NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true (use an isolated demo database). */}
+            {SHOW_DEMO_LOGIN && (
               <div className="w-full space-y-4 mt-2">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
