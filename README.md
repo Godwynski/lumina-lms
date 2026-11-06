@@ -416,7 +416,7 @@ For thesis presentation defenses, stakeholder reviews, and evaluative demonstrat
 | **Student Assistant (Staff)** | `staff@lumina.test` | `Password123!` | Front-desk circulation scanning, attendance gate logging, catalog searching, personal loan log. |
 | **Student Patron** | `student@lumina.test` | `Password123!` | Digital 3D Library Card with QR export, book hold reservations, active borrowing timeline, FAQs. |
 
-> **Production Deployment Notice:** The Quick Demo Access buttons always appear in local development. On production builds they are hidden unless `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` is set. Only set it on a demo deployment backed by an isolated database, and make sure these accounts don't exist on a real production database.
+> **Production Deployment Notice:** The Quick Demo Access buttons are shown by default. For a real production launch, hide them by setting `NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true` and make sure these accounts don't exist on the production database.
 
 ---
 

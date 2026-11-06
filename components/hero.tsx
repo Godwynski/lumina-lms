@@ -11,8 +11,9 @@ import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-const SHOW_DEMO_LOGIN =
-  process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true';
+// Demo buttons are on by default (needed for thesis evaluation).
+// Set NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true to hide them on a real production site.
+const SHOW_DEMO_LOGIN = process.env.NEXT_PUBLIC_DISABLE_DEMO_LOGIN !== 'true';
 
 export function Hero({ user, role }: { user: User | null; role: string | null }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -130,8 +131,8 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
               <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
             </Button>
 
-            {/* Shared demo accounts: shown in local dev, and on a deployment only
-                when NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true (use an isolated demo database). */}
+            {/* Shared demo accounts for evaluators. Hidden only when
+                NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true. */}
             {SHOW_DEMO_LOGIN && (
               <div className="w-full space-y-4 mt-2">
                 <div className="relative">

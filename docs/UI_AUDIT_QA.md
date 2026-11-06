@@ -68,7 +68,7 @@ All 35 findings and R-01 have a code fix on branch `worktree-ui-audit-fixes`. Ve
 | UI-33 | Book card covers derive from the prop; only a failed URL falls back. | — |
 | UI-34 | Profile values wrap instead of truncating. | 320px / 200% zoom |
 | UI-35 | 404 action renamed "Go to Dashboard"; error page no longer claims the team was notified; both use `Button asChild` (no button inside link). | — |
-| R-01 | Demo buttons show in local dev, and in production only when `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`. | Set the flag on the demo deployment |
+| R-01 | Demo buttons are kept on by default for thesis evaluation (owner decision); `NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true` hides them. Risk accepted for the demo deployment. | Set the flag before any real production launch |
 | Toast width | Toasts capped to viewport width; long titles wrap. | 320px |
 
 ## QA execution and limitations
