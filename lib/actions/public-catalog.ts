@@ -4,6 +4,9 @@ import { createSafeClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
 import { fetchBooksCore, fetchCategoriesCore } from './books-core';
 
+/** 'relevance' = "Best match": title matches first (only used with a search query). */
+type CatalogSort = 'relevance' | 'title' | 'author' | 'availability' | 'newest';
+
 // Data fetching function for search, intended to be wrapped by cache
 async function fetchPublicBooks(
   query: string,
@@ -12,7 +15,7 @@ async function fetchPublicBooks(
   availableOnly: boolean = false,
   page: number = 1,
   limit: number = 20,
-  sortBy: 'title' | 'author' | 'availability' | 'newest' = 'title'
+  sortBy: CatalogSort = 'title'
 ) {
   return fetchBooksCore({
     query,
@@ -34,7 +37,7 @@ export async function getPublicBooksCached(
   availableOnly: boolean = false,
   page: number = 1,
   limit: number = 20,
-  sortBy: 'title' | 'author' | 'availability' | 'newest' = 'title'
+  sortBy: CatalogSort = 'title'
 ) {
   return unstable_cache(
     () => fetchPublicBooks(query, categoryId, section, availableOnly, page, limit, sortBy),

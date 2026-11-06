@@ -41,25 +41,86 @@ describe('books-core server actions', () => {
       });
     });
 
-    it('performs short query search (< 3 chars) using ILIKE across title, author, and isbn', async () => {
+    it('performs short query search (< 3 chars) on titles only', async () => {
       mockClientHelper.setTableResponse('books', [], null, 0);
 
       await fetchBooksCore({ query: 'ai' });
 
       const booksBuilder = mockClientHelper.getTableBuilder('books');
-      expect(booksBuilder.or).toHaveBeenCalledWith('title.ilike.%ai%,author.ilike.%ai%,isbn.ilike.%ai%');
+      expect(booksBuilder.ilike).toHaveBeenCalledWith('title', '%ai%');
+      expect(booksBuilder.or).not.toHaveBeenCalled();
       expect(booksBuilder.textSearch).not.toHaveBeenCalled();
     });
 
-    it('trims whitespace and searches with ILIKE for short query', async () => {
+    it('trims whitespace and searches titles for short query', async () => {
       mockClientHelper.setTableResponse('books', [], null, 0);
 
       await fetchBooksCore({ query: '  js  ' });
 
       const booksBuilder = mockClientHelper.getTableBuilder('books');
       // "js" has length 2
-      expect(booksBuilder.or).toHaveBeenCalledWith('title.ilike.%js%,author.ilike.%js%,isbn.ilike.%js%');
+      expect(booksBuilder.ilike).toHaveBeenCalledWith('title', '%js%');
       expect(booksBuilder.textSearch).not.toHaveBeenCalled();
+    });
+
+    describe('relevance ("Best match") sort', () => {
+      it('uses the ranked SQL function and keeps its order', async () => {
+        mockClientHelper.setRpcResponse(
+          [
+            { id: 'b-title', total_count: 3 },
+            { id: 'b-author', total_count: 3 },
+          ],
+          null,
+          'search_book_ids'
+        );
+        // The table returns rows in a different order; ranking order must win.
+        mockClientHelper.setTableResponse('books', [
+          { id: 'b-author', title: 'Snakes', author: 'Python Jones' },
+          { id: 'b-title', title: 'Python Crash Course', author: 'Eric' },
+        ]);
+
+        const result = await fetchBooksCore({
+          query: ' python ',
+          sortBy: 'relevance',
+          categoryId: 'c1,c2',
+          page: 1,
+          pageSize: 2,
+        });
+
+        expect(mockClientHelper.rpc).toHaveBeenCalledWith('search_book_ids', {
+          p_query: 'python',
+          p_status: 'ACTIVE',
+          p_category_ids: ['c1', 'c2'],
+          p_section: null,
+          p_available_only: false,
+          p_offset: 0,
+          p_limit: 2,
+        });
+        expect(mockClientHelper.getTableBuilder('books').in).toHaveBeenCalledWith('id', ['b-title', 'b-author']);
+        expect(result.books.map((b) => b.id)).toEqual(['b-title', 'b-author']);
+        expect(result.total).toBe(3);
+        expect(result.hasMore).toBe(true);
+      });
+
+      it('falls back to the plain search when the SQL function is unavailable', async () => {
+        mockClientHelper.setRpcResponse(null, { message: 'function does not exist' }, 'search_book_ids');
+        mockClientHelper.setTableResponse('books', [], null, 0);
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        await fetchBooksCore({ query: 'machine learning', sortBy: 'relevance' });
+
+        const booksBuilder = mockClientHelper.getTableBuilder('books');
+        expect(booksBuilder.textSearch).toHaveBeenCalledWith('search_vector', 'machine:* & learning:*');
+        warn.mockRestore();
+      });
+
+      it('ignores relevance when there is no query', async () => {
+        mockClientHelper.setTableResponse('books', [], null, 0);
+
+        await fetchBooksCore({ sortBy: 'relevance' });
+
+        expect(mockClientHelper.rpc).not.toHaveBeenCalled();
+      });
     });
 
     it('performs full-text search (>= 3 chars) by converting terms to prefix tokens', async () => {

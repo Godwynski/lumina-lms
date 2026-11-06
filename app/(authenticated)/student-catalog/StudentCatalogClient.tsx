@@ -49,9 +49,11 @@ interface StudentCatalogClientProps {
     categoryId: string;
     availableOnly: boolean;
     page: number;
-    sortBy: 'title' | 'author' | 'availability' | 'newest';
+    sortBy: CatalogSort;
   };
 }
+
+type CatalogSort = 'relevance' | 'title' | 'author' | 'availability' | 'newest';
 
 export function StudentCatalogClient({ 
   booksPromise, 
@@ -150,7 +152,12 @@ export function StudentCatalogClient({
 
   const [selectedCategory, setSelectedCategory] = useState(initialFilters.categoryId);
   const [availableOnly, setAvailableOnly] = useState(initialFilters.availableOnly);
-  const [sortBy, setSortBy] = useState(initialFilters.sortBy);
+  // An explicit Sort choice wins; otherwise searches show "Best match" first.
+  const explicitSort = searchParams.get('sort') as CatalogSort | null;
+  const hasQuery = urlQuery.trim().length > 0;
+  const sortBy: CatalogSort = explicitSort && (explicitSort !== 'relevance' || hasQuery)
+    ? explicitSort
+    : (hasQuery ? 'relevance' : 'newest');
 
 
   const books = initialData.books || [];
@@ -182,7 +189,6 @@ export function StudentCatalogClient({
     setPage(parseInt(searchParams.get('page') || '1', 10));
     setSelectedCategory(searchParams.get('category') || '');
     setAvailableOnly(searchParams.get('available') === 'true');
-    setSortBy((searchParams.get('sort') as 'title' | 'author' | 'availability' | 'newest') || 'newest');
   }, [searchParams, urlQuery]);
 
   // Debounce search input for realtime as-you-type search
@@ -215,7 +221,7 @@ export function StudentCatalogClient({
   const handlePageChange = (p: number) => updateParams({ page: p });
 
   const clearFilters = () => {
-    updateParams({ q: null, category: null, available: null, sort: 'title', page: 1 });
+    updateParams({ q: null, category: null, available: null, sort: null, page: 1 });
   };
 
   return (
@@ -316,6 +322,7 @@ export function StudentCatalogClient({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                {hasQuery && <SelectItem value="relevance">Best Match</SelectItem>}
                 <SelectItem value="newest">Recently Added</SelectItem>
                 <SelectItem value="title">Title A-Z</SelectItem>
                 <SelectItem value="author">Author</SelectItem>
@@ -324,7 +331,7 @@ export function StudentCatalogClient({
             </Select>
           </div>
 
-          {(selectedCategory || availableOnly || localQuery || sortBy !== 'title') && (
+          {(selectedCategory || availableOnly || localQuery || explicitSort) && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-[11px] font-bold uppercase text-muted-foreground hover:text-destructive transition-colors ml-auto sm:ml-0">
               Reset
             </Button>

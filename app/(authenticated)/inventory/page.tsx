@@ -14,7 +14,7 @@ export const metadata = {
 export default function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string; sort?: string }>;
 }) {
   return (
     <div className="space-y-4 pb-14 overflow-x-hidden relative">
@@ -29,7 +29,7 @@ export default function InventoryPage({
 async function InventoryDataWrapper({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string; sort?: string }>;
 }) {
   const me = await getMe();
   if (!me) {
@@ -55,7 +55,12 @@ async function InventoryDataWrapper({
   const status = (params.status?.toUpperCase() as 'ACTIVE' | 'ARCHIVED' | 'ALL') || 'ACTIVE';
 
   const categoriesPromise = getCategories();
-  const dataPromise = getBooks(q, categoryId || undefined, page, 12, 'newest', status);
+  // The Sort dropdown's choice wins; otherwise searches rank by best match.
+  const hasQuery = q.trim().length > 0;
+  const sort = params.sort && (params.sort !== 'relevance' || hasQuery)
+    ? params.sort
+    : (hasQuery ? 'relevance' : 'newest');
+  const dataPromise = getBooks(q, categoryId || undefined, page, 12, sort, status);
 
   return (
     <CatalogContent

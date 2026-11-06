@@ -66,7 +66,12 @@ async function StudentCatalogLoader({
   const categoryId = params.category || '';
   const availableOnly = params.available === 'true';
   const page = parseInt(params.page || '1', 10);
-  const sortBy = (params.sort as 'title' | 'author' | 'availability' | 'newest') || 'newest';
+  // The Sort dropdown's choice wins; otherwise searches rank by best match.
+  const hasQuery = q.trim().length > 0;
+  const requestedSort = params.sort as 'relevance' | 'title' | 'author' | 'availability' | 'newest' | undefined;
+  const sortBy = requestedSort && (requestedSort !== 'relevance' || hasQuery)
+    ? requestedSort
+    : (hasQuery ? 'relevance' : 'newest');
   const pageSize = 16;
 
   // All three fire concurrently — none are awaited here

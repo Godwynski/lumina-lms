@@ -21,6 +21,7 @@ export async function getBooks(
 ) {
   const supabase = await assertStaffCatalogAccess(true);
   const [sortBy, sortOrder] = ({
+    relevance: ['relevance', 'asc'],
     newest: ['created_at', 'desc'],
     title_desc: ['title', 'desc'],
     availability_desc: ['availability', 'desc'],

@@ -120,11 +120,16 @@ export function ModernInventoryClient({
   const [isPending, startTransition] = useTransition();
 
   // Derived values from URL
-  const sortBy = (searchParams.get("sort") as "newest" | "title_asc" | "title_desc" | "availability_desc" | "availability_asc") || "newest";
+  const urlQuery = searchParams.get("q") || "";
+  // An explicit Sort choice wins; otherwise searches show "Best match" first.
+  const explicitSort = searchParams.get("sort") as "relevance" | "newest" | "title_asc" | "title_desc" | "availability_desc" | "availability_asc" | null;
+  const hasQuery = urlQuery.trim().length > 0;
+  const sortBy = explicitSort && (explicitSort !== "relevance" || hasQuery)
+    ? explicitSort
+    : (hasQuery ? "relevance" : "newest");
   const status = (searchParams.get("status")?.toUpperCase() as "ACTIVE" | "ARCHIVED" | "ALL") || "ACTIVE";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
-  const urlQuery = searchParams.get("q") || "";
 
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   const pageSize = 12;
@@ -560,7 +565,7 @@ export function ModernInventoryClient({
   }, [searchQuery, urlQuery, updateParams]);
 
 
-  const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (sortBy !== "newest" ? 1 : 0);
+  const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (explicitSort ? 1 : 0);
 
   return (
     <div className="w-full space-y-6 pb-10">
@@ -660,6 +665,9 @@ export function ModernInventoryClient({
                         </div>
                       </SelectTrigger>
                       <SelectContent className="rounded-lg border-border/10">
+                        {urlQuery.trim() && (
+                          <SelectItem value="relevance" className="text-[11px]">Best Match</SelectItem>
+                        )}
                         <SelectItem value="newest" className="text-[11px]">Recently Added</SelectItem>
                         <SelectItem value="title_asc" className="text-[11px]">Title A-Z</SelectItem>
                         <SelectItem value="title_desc" className="text-[11px]">Title Z-A</SelectItem>
