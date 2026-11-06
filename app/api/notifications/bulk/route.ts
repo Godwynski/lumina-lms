@@ -1,9 +1,9 @@
-import { sendBulkNotifications } from '@/lib/notifications'
+import { sendBulkNotifications, sendNotification } from '@/lib/notifications'
 import { NextResponse } from 'next/server'
 import { BulkNotificationSchema } from '@/lib/validations/api'
 import { withAuthApi } from '@/lib/api-utils'
 
-export const POST = withAuthApi(async (request, { supabase }) => {
+export const POST = withAuthApi(async (request, { supabase, user, role }) => {
   try {
     // Parse request body
     let rawBody: unknown;
@@ -23,6 +23,18 @@ export const POST = withAuthApi(async (request, { supabase }) => {
 
     const { userIds, target, title, content, type, priority, metadata } = parseResult.data
 
+    // The sender also gets a copy of what they sent, unless the audience already includes them.
+    const notifySender = async () => {
+      await sendNotification({
+        userId: user.id,
+        title,
+        content,
+        type: type || 'SYSTEM',
+        priority: priority || 'high',
+        metadata: { ...(metadata || {}), sent_by_you: true },
+      })
+    }
+
     // A whole audience is one INSERT … SELECT in SQL: reading the ids into the app stopped at 1,000 (M8).
     if (target) {
       const { data: count, error: rpcError } = await supabase.rpc('send_bulk_notifications_by_target', {
@@ -39,6 +51,8 @@ export const POST = withAuthApi(async (request, { supabase }) => {
       if (!count) {
         return NextResponse.json({ error: 'No recipients found for notification' }, { status: 400 })
       }
+      // 'all' already covers every profile; 'students' leaves out staff senders.
+      if (target === 'students' && role !== 'student') await notifySender()
       return NextResponse.json({ success: true, count })
     }
 
@@ -59,6 +73,8 @@ export const POST = withAuthApi(async (request, { supabase }) => {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
+
+    if (!resolvedUserIds.includes(user.id)) await notifySender()
 
     return NextResponse.json({ success: true, count: resolvedUserIds.length })
   } catch (error: unknown) {

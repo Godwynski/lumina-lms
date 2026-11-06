@@ -14,7 +14,15 @@ export interface AnalyticsSummary {
   borrowingTrends: TrendDataPoint[];
   categoryDistribution: { name: string; value: number }[];
   peakHours: { hour: string; count: number }[];
-  popularBooks: { id: string; title: string; count: number }[];
+  popularBooks: PopularBook[];
+}
+
+export interface PopularBook {
+  id: string;
+  title: string;
+  count: number;
+  author: string | null;
+  isbn: string | null;
 }
 
 /**
@@ -29,12 +37,31 @@ export async function getAnalyticsSummary(range: AnalyticsRange): Promise<Analyt
   const { data, error } = await me.supabase.rpc('get_analytics_summary', { p_range: range });
   if (error) throw new Error(error.message);
 
-  const summary = (data ?? {}) as Partial<AnalyticsSummary>;
+  const summary = (data ?? {}) as Partial<Omit<AnalyticsSummary, 'popularBooks'>> & {
+    popularBooks?: { id: string; title: string; count: number }[];
+  };
+
+  // The RPC returns only id/title/count. Look up author and ISBN for the top books
+  // so titles shared by different books can be told apart.
+  const popular = summary.popularBooks ?? [];
+  const details = new Map<string, { author: string | null; isbn: string | null }>();
+  if (popular.length > 0) {
+    const { data: books } = await me.supabase
+      .from('books')
+      .select('id, author, isbn')
+      .in('id', popular.map((b) => b.id));
+    for (const b of books ?? []) details.set(b.id, { author: b.author ?? null, isbn: b.isbn ?? null });
+  }
+
   return {
     attendanceTrends: summary.attendanceTrends ?? [],
     borrowingTrends: summary.borrowingTrends ?? [],
     categoryDistribution: summary.categoryDistribution ?? [],
     peakHours: summary.peakHours ?? [],
-    popularBooks: summary.popularBooks ?? [],
+    popularBooks: popular.map((b) => ({
+      ...b,
+      author: details.get(b.id)?.author ?? null,
+      isbn: details.get(b.id)?.isbn ?? null,
+    })),
   };
 }

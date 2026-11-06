@@ -88,16 +88,31 @@ describe('Analytics Server Actions', () => {
       expect(mockClientHelper.rpc).toHaveBeenCalledWith('get_analytics_summary', { p_range: range });
     });
 
-    it('returns the SQL summary as is', async () => {
+    it('returns the SQL summary with author and ISBN added to popular books', async () => {
       const summary = {
         attendanceTrends: [{ label: 'Nov 04', count: 1500 }],
         borrowingTrends: [{ label: 'Nov 04', count: 1200 }],
         categoryDistribution: [{ name: 'Science', value: 900 }],
         peakHours: [{ hour: '9 AM', count: 300 }],
-        popularBooks: [{ id: 'b-1', title: 'SICP', count: 42 }],
+        popularBooks: [
+          { id: 'b-1', title: 'SICP', count: 42 },
+          { id: 'b-2', title: 'SICP', count: 10 },
+          { id: 'b-3', title: 'Gone', count: 1 },
+        ],
       };
       mockClientHelper.setRpcResponse(summary, null, 'get_analytics_summary');
-      await expect(getAnalyticsSummary('30d')).resolves.toEqual(summary);
+      mockClientHelper.setTableResponse('books', [
+        { id: 'b-1', author: 'Abelson', isbn: '9780262510875' },
+        { id: 'b-2', author: 'Someone Else', isbn: null },
+      ]);
+      await expect(getAnalyticsSummary('30d')).resolves.toEqual({
+        ...summary,
+        popularBooks: [
+          { id: 'b-1', title: 'SICP', count: 42, author: 'Abelson', isbn: '9780262510875' },
+          { id: 'b-2', title: 'SICP', count: 10, author: 'Someone Else', isbn: null },
+          { id: 'b-3', title: 'Gone', count: 1, author: null, isbn: null },
+        ],
+      });
     });
 
     it('returns empty lists when the function returns nothing', async () => {

@@ -252,8 +252,9 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
             {summary ? (
               <div className="divide-y divide-border/5">
                 {summary.popularBooks.length > 0 ? summary.popularBooks.map((book, i) => (
-                  <button 
-                    key={i} 
+                  <button
+                    key={book.id}
+                    type="button"
                     onClick={() => {
                       setSelectedBookId(book.id);
                       setModalOpen(true);
@@ -262,9 +263,16 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <span className="text-[11px] font-black text-muted-foreground w-4 group-hover:text-primary/40 transition-colors">0{i + 1}</span>
-                      <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{book.title}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{book.title}</p>
+                        {/* Author (and ISBN) tell apart books that share a title. */}
+                        <p className="text-xs text-muted-foreground truncate">
+                          {book.author ? `by ${book.author}` : 'Unknown author'}
+                          {book.isbn && <span className="font-mono"> · ISBN {book.isbn}</span>}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
                       <div className="h-1 w-12 bg-muted/20 rounded-full overflow-hidden hidden sm:block">
                         <div 
                           className="h-full bg-primary/40 rounded-full" 

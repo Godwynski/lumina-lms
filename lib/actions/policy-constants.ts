@@ -60,7 +60,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
       { question: "Can I use the card on my phone only?", answer: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed." },
       { question: "Where can I see my current borrows?", answer: "Use My Borrowing from the dashboard quick actions to review active and past borrowing records." }
     ]),
-    label: "Student Help Center (FAQ)",
+    label: "Help Center (FAQ)",
     description: "Helpful questions and answers shown in the student dashboard to guide them on borrowing, returns, and library cards.",
     example: "",
     category: "support",
