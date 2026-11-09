@@ -1,7 +1,7 @@
 # Vercel Cloud Platform & Next.js Server Architecture Audit Report
 
 **Target Project**: `neurawyn/system`  
-**Repository**: `Godwynski/system` (`C:\Users\Godwyn\Documents\Projects\thesis`)  
+**Repository**: `Godwynski/lumina-lms` (`C:\Users\Godwyn\Documents\Projects\thesis`)  
 **Evaluation Standard**: OWASP Application Security Verification Standard (ASVS), Vercel Production Standards, Next.js 16 Best Practices  
 **Target Architecture**: Next.js 16.2.6 (App Router, Turbopack), React 19.0.0, Node.js 24.x, Supabase SSR 0.9.0  
 **Audit Date**: 2026-10-07  
