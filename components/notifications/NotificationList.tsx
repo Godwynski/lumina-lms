@@ -10,6 +10,7 @@ interface NotificationListProps {
   notifications: Notification[]
   loading: boolean
   onMarkRead: (id: string) => void
+  onOpen?: (notification: Notification) => void
   variant?: 'compact' | 'full'
   emptyMessage?: string
   error?: string | null
@@ -20,6 +21,7 @@ export function NotificationList({
   notifications,
   loading,
   onMarkRead,
+  onOpen,
   variant = 'full',
   emptyMessage = "You're all caught up",
   error,
@@ -70,6 +72,7 @@ export function NotificationList({
           key={notification.id} 
           notification={notification} 
           onMarkRead={onMarkRead}
+          onOpen={onOpen}
           variant={variant}
         />
       ))}

@@ -49,6 +49,7 @@ export function PolicyField({
   value,
   initialValue,
   onChange,
+  onInvalidChange,
   disabled,
   loading
 }: {
@@ -56,6 +57,8 @@ export function PolicyField({
   value: string;
   initialValue: string;
   onChange: (val: string) => void;
+  /** Told whether the box currently holds an out-of-range draft, so the parent can block saving. */
+  onInvalidChange?: (invalid: boolean) => void;
   disabled: boolean;
   loading: boolean;
 }) {
@@ -77,7 +80,8 @@ export function PolicyField({
 
   // The user's in-progress text for number fields. Only valid integers in range
   // are sent to the parent, so an invalid draft (e.g. an empty box) can never be
-  // committed. On blur the box falls back to the last valid value.
+  // committed. An invalid draft stays visible with its error (and blocks saving
+  // via onInvalidChange) until the user fixes it.
   const [draft, setDraft] = useState<string | null>(null);
   const fieldId = useId();
   const errorId = `${fieldId}-error`;
@@ -88,7 +92,7 @@ export function PolicyField({
     if (!/^\d+$/.test(trimmed)) return "Enter a whole number.";
     const num = Number(trimmed);
     if (validation?.min !== undefined && num < validation.min) return `Minimum is ${validation.min}.`;
-    if (validation?.max !== undefined && num > validation.max) return `Maximum is ${validation.max}.`;
+    if (validation?.max !== undefined && num > validation.max) return `Only up to ${validation.max} allowed`;
     return null;
   };
 
@@ -100,7 +104,9 @@ export function PolicyField({
       return;
     }
     setDraft(val);
-    if (validateNumber(val) === null) onChange(String(Number(val.trim())));
+    const valid = validateNumber(val) === null;
+    onInvalidChange?.(!valid);
+    if (valid) onChange(String(Number(val.trim())));
   };
 
   if (isIdentityList) {
@@ -228,7 +234,7 @@ export function PolicyField({
                 step={validation?.type === "number" ? 1 : undefined}
                 value={draft ?? value ?? ""}
                 onChange={(e) => handleNumericChange(e.target.value)}
-                onBlur={() => setDraft(null)}
+                onBlur={() => { if (!numberError) setDraft(null); }}
                 disabled={loading || disabled}
                 className={cn(
                   "h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-16 transition-all shadow-sm",

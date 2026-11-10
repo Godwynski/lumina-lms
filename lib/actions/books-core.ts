@@ -1,6 +1,5 @@
 import { createSafeClient } from '@/lib/supabase/server';
 import { Book } from '@/lib/types';
-import { sanitizeFilterInput } from '@/lib/utils';
 
 interface BookSearchParams {
   query?: string;
@@ -50,24 +49,16 @@ export async function fetchBooksCore(
   if (query) {
     const cleanQuery = query.trim();
     if (cleanQuery) {
+      // Plain case-insensitive substring match. LIKE wildcards and characters
+      // that would break a PostgREST filter become "_" (any single character),
+      // so "Dr. Seuss" still finds "Dr. Seuss" and nothing can inject a filter.
+      const pattern = `%${cleanQuery.replace(/[%_(),.:*\\"]/g, '_')}%`;
       if (cleanQuery.length < 3) {
         // 1-2 characters: match titles only, so results aren't flooded by
         // authors/ISBNs that happen to contain those letters.
-        const safeQuery = sanitizeFilterInput(cleanQuery);
-        dbQuery = dbQuery.ilike('title', `%${safeQuery}%`);
+        dbQuery = dbQuery.ilike('title', pattern);
       } else {
-        // For longer queries, use Full Text Search with prefix support
-        // We transform "lord of" into "lord:* & of:*"
-        const terms = cleanQuery.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
-        const formattedQuery = terms.map(t => `${t}:*`).join(' & ');
-        
-        // Use 'to_tsquery' style search via default type
-        if (terms.length > 0) {
-          dbQuery = dbQuery.textSearch('search_vector', formattedQuery);
-        } else {
-          const safeQuery = sanitizeFilterInput(cleanQuery);
-          dbQuery = dbQuery.or(`title.ilike.%${safeQuery}%,author.ilike.%${safeQuery}%,isbn.ilike.%${safeQuery}%`);
-        }
+        dbQuery = dbQuery.or(`title.ilike.${pattern},author.ilike.${pattern},isbn.ilike.${pattern}`);
       }
     }
   }

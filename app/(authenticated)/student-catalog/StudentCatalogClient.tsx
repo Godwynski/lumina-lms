@@ -147,6 +147,8 @@ export function StudentCatalogClient({
 
   const urlQuery = searchParams.get('q') || '';
   const [localQuery, setLocalQuery] = useState(initialFilters.q);
+  // Queries this component pushed that the URL hasn't caught up with yet.
+  const pendingQueries = useRef<string[]>([]);
   const [page, setPage] = useState(initialFilters.page);
   const pageSize = 16;
 
@@ -185,20 +187,39 @@ export function StudentCatalogClient({
 
   // Synchronize local states when search params change (e.g. back button)
   useEffect(() => {
-    setLocalQuery(urlQuery);
     setPage(parseInt(searchParams.get('page') || '1', 10));
     setSelectedCategory(searchParams.get('category') || '');
     setAvailableOnly(searchParams.get('available') === 'true');
-  }, [searchParams, urlQuery]);
+  }, [searchParams]);
+
+  // The input owns its value. Only adopt the URL's query when it changed from
+  // outside (back button, link); our own debounced pushes are ignored so a
+  // late-landing URL never overwrites what the user is still typing.
+  useEffect(() => {
+    const i = pendingQueries.current.lastIndexOf(urlQuery);
+    if (i !== -1) {
+      pendingQueries.current = pendingQueries.current.slice(i + 1);
+      return;
+    }
+    pendingQueries.current = [];
+    setLocalQuery(urlQuery);
+  }, [urlQuery]);
+
+  const pushQuery = useCallback((raw: string) => {
+    const q = raw.trim();
+    if (q !== urlQuery) pendingQueries.current.push(q);
+    updateParams({ q: q || null, page: 1 });
+  }, [urlQuery, updateParams]);
 
   // Debounce search input for realtime as-you-type search
   useEffect(() => {
     if (localQuery.trim() === urlQuery.trim()) return;
-    const timer = setTimeout(() => {
-      updateParams({ q: localQuery.trim() || null, page: 1 });
-    }, 300);
+    const timer = setTimeout(() => pushQuery(localQuery), 300);
     return () => clearTimeout(timer);
-  }, [localQuery, urlQuery, updateParams]);
+  }, [localQuery, urlQuery, pushQuery]);
+
+  // Results belong to the typed query only once the debounce and navigation finish.
+  const isSearchSettled = !isPending && localQuery.trim() === urlQuery.trim();
 
   const selectedIds = selectedCategory ? selectedCategory.split(',').filter(Boolean) : [];
 
@@ -221,6 +242,7 @@ export function StudentCatalogClient({
   const handlePageChange = (p: number) => updateParams({ page: p });
 
   const clearFilters = () => {
+    setLocalQuery('');
     updateParams({ q: null, category: null, available: null, sort: null, page: 1 });
   };
 
@@ -240,7 +262,7 @@ export function StudentCatalogClient({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  updateParams({ q: localQuery.trim() || null, page: 1 });
+                  pushQuery(localQuery);
                 }
               }}
               className="h-10 pl-9 pr-10 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20"
@@ -251,7 +273,7 @@ export function StudentCatalogClient({
                 size="icon"
                 aria-label="Clear search"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                onClick={() => { setLocalQuery(''); updateParams({ q: null }); }}
+                onClick={() => { setLocalQuery(''); pushQuery(''); }}
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -371,7 +393,14 @@ export function StudentCatalogClient({
           </m.div>
         </AnimatePresence>
 
-        {books.length === 0 && (
+        {books.length === 0 && !isSearchSettled && (
+          // Don't claim "no results" while a search is still in flight.
+          <div role="status" className="flex min-h-[320px] items-center justify-center text-sm text-muted-foreground">
+            Searching...
+          </div>
+        )}
+
+        {books.length === 0 && isSearchSettled && (
           <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/40 bg-muted/5 px-4 py-20 text-center backdrop-blur-sm">
             <div className="mb-4 rounded-full bg-primary/5 p-5 text-primary/30 ring-1 ring-primary/10">
               <Search className="h-10 w-10" />

@@ -1,0 +1,2346 @@
+TAB 1: Capstone 1 main pages
+
+INTRODUCTION
+
+Project Context
+
+The way information is managed continues to change as technology becomes more advanced, yet many
+school libraries still face challenges in organizing and maintaining their resources at STI College Alabang, the
+library serves a large number of students from different academic programs, each needing access to various
+books, references, and learning materials every day. Because of this high demand, the library needs a system
+that can efficiently track and manage all resources.
+
+At present, the library still uses manual methods such as writing borrowed books in logbooks or recording
+them in spreadsheets. Librarians also check shelves manually to see if books are available. These methods
+take a lot of time and can lead to mistakes. Records may not always be updated right away, information can
+be misplaced, and handwriting may be difficult to read. Because of this, students sometimes have a hard time
+finding the books they need, and librarians struggle to keep accurate records.
+
+This problem is not only seen in STI College Alabang but also in many schools that still use traditional library
+systems. As the number of students and books increases, it becomes harder to manage all transactions
+properly. Books may be returned late, misplaced, or even lost without proper tracking. Over time, this can lead
+to incorrect inventory records, which affects how the library operates.
+
+To solve these problems, this study proposes a web-based library book reservation, borrowing, and inventory
+management system with QR-based scanning for STI College Alabang. The system is designed to make
+library transactions faster and easier. Students can reserve books online, while librarians can manage records
+through a single system. QR codes will be used to quickly identify books and process borrowing and
+returning.
+
+With QR-based scanning, each book is given a unique code that can be scanned using a device. This makes
+the process faster and reduces human error. It also allows the system to update records in real time, helping
+ensure that the inventory is always accurate.
+
+The system also aims to improve convenience for both students and librarians. Students will no longer need
+to manually search for book availability, as they can easily check and reserve materials through the system.
+Librarians, on the other hand, can spend less time on manual encoding and focus more on assisting students.
+
+In addition, the system helps improve data safety and organization. Digital records are easier to store, update,
+and back up compared to manual records. It also helps reduce the risk of losing important information and
+ensures that only authorized users can access or modify data.
+
+Lastly, the system can help the library make better decisions. With organized data, librarians can see which
+books are most used, which materials need updating, and how resources are being used overall. This helps
+improve the library's services and better support student needs.
+
+Purpose and Description
+
+This project provides STI College Alabang with a streamlined digital library management system that replaces
+manual processes with efficient QR code scanning and online book reservations. Designed for reliability, the
+user-friendly platform centralizes library tasks into one accessible web interface, ensuring that data is
+managed effectively and operations remain consistent. By modernizing circulation and inventory tracking, the
+system enhances data security and provides a more organized, seamless experience for both students and
+Admin.
+Statement of the Problem
+
+General Problem
+
+The primary challenge of this research is to design, develop, and implement a comprehensive, web-based
+library management ecosystem for STI College Alabang that replaces manual or fragmented processes with a
+unified digital framework. Specifically, the problem centers on how to effectively integrate Microsoft O365
+authentication for secure institutional access and QR-based scanning technology for efficient asset tracking,
+while simultaneously providing a dual-interface system that automates the entire lifecycle of book
+reservations, borrowing transactions, and inventory auditing to ensure data integrity and operational efficiency
+for both students and administrators.
+
+Specific Problem
+
+Super Admin
+
+How to implement a secure login module using Microsoft O365 authentication for Super Administrator?
+
+In this module, Super Administrator can access the system using their institutional accounts to verify their
+identity. This ensures that only authorized personnel can access sensitive library administrative tools and data
+through a standardized sign-in process.
+
+How to develop a centralized dashboard module that provides a real-time overview of daily library operations
+for super administrators?
+
+In this module, super administrators can monitor key metrics such as daily visitors, registered users, total
+inventory, and active loans in real time. This ensures efficient resource tracking while providing quick-access
+shortcuts to core features like the circulation desk, user directories, and audit logs, alongside a visual gallery
+of recently cataloged library assets.real time
+
+How to design an efficient inventory module that enables automated and batch cataloging operations for the
+super administrator?
+
+In this module, the super administrator can manage the library's collection by automatically fetching book
+details via ISBN lookup and manually finalizing storage and classification records. This ensures streamlined
+data entry through batch spreadsheet imports, sequential bulk lookups, and fully customizable data export
+options for flexible catalog management.
+
+How to automate the borrowing and returning process using QR-code scanning technologies for the
+circulation desk?
+
+In this module, the system utilizes QR-code scanning of student IDs and book codes to automatically link
+borrowers to their selected items. This ensures a fast and accurate transaction process by significantly
+reducing manual data entry and minimizing administrative wait times.
+
+How to create a comprehensive borrowing logs module that allows the super administrator to monitor and
+filter book transaction histories?
+
+In this module, the super administrator can track library items through a centralized, view-only list displaying
+borrower identities, book information, and critical transaction timelines. This ensures efficient record tracking
+by utilizing status tags for overdue or active loans alongside built-in search and filter controls to quickly isolate
+specific data.
+
+How to develop an analytics module with data visualization tools to track system trends and library
+performance for the super administrator?
+In this module, the super administrator can filter performance metrics across dynamic timeframes to evaluate
+daily traffic, book circulation, asset statuses, and member registration. This ensures informed, data-driven
+decision-making by utilizing line graphs, status donut charts, and high-demand book leaderboards to visually
+present complex library operational trends.
+
+How to implement a comprehensive user directory module that enables the super administrator to manage
+and modify registered user accounts?
+
+In this module, the super administrator can view a master list of users detailing names, unique IDs, system
+roles, and academic programs. This ensures efficient administration by utilizing quick search and filter tools,
+alongside dedicated profile pages where administrators can update system access, modify account statuses,
+or archive profiles.
+
+How to implement an attendance logs module using card-scanning technology to monitor student traffic within
+the library?
+
+In this module, the super administrator can track library usage by checking students in and out using
+automated library card scans. This ensures accurate administrative monitoring by generating a complete
+real-time list of visitors paired with precise entry and exit timestamps to monitor daily traffic patterns efficiently.
+
+How to develop a centralized settings and policies module that enables the super administrator to manage
+operational rules and backend configurations?
+
+In this module, the super administrator can define circulation limits, organize library categories, configure
+academic programs, and publish system announcements. This ensures cohesive system management by
+combining operational policy controls with backend maintenance tools, troubleshooting logs, and automated
+communication scripts in a unified setup view.
+
+How to implement a secure audit logs module that tracks, filters, and exports system activities for
+administrative accountability?
+
+In this module, the super administrator can access a security tracking system that records timestamps, user
+identities, and technical differences for every action taken. This ensures rigorous system oversight by
+providing live-refresh data, advanced search and dropdown filters, and seamless data import/export
+capabilities in CSV and JSON formats
+
+How to design an efficient notification module that alerts the super administrator about critical system events
+and updates in real time?
+
+In this module, the super administrator can access recent alerts instantly through a quick drop-down panel in
+the system header or navigate to a dedicated notifications page. This ensures timely awareness and
+streamlined alert management by utilizing a search bar and quick filter tabs to organize complex system
+updates.
+
+How to create a secure, view-only profile module that displays comprehensive account details for logged-in
+users?
+
+In this module, authenticated users can review their own institutional and contact information including full
+name, system ID, official email, and security status on a read-only page. This ensures personal data
+transparency and role clarity by providing users with a standardized, tamper-proof overview of their account
+credentials and system privileges.
+
+Librarian
+
+How to implement a secure login module using Microsoft O365 authentication for Librarian?
+In this module, Librarian can access the system using their institutional accounts to verify their identity. This
+ensures that only authorized personnel can access sensitive library administrative tools and data through a
+standardized sign-in process.
+
+How to develop a centralized dashboard module that provides a real-time overview of daily library operations
+for the librarian?
+
+In this module, the librarian can monitor critical real-time data such as daily visitor counts, registered users,
+total book inventory, and active loans for efficient resource tracking. This ensures streamlined workflow
+management by providing quick-access shortcuts to core features like user directories, audit logs, and
+analytics, alongside a visual showcase of recently cataloged library assets.
+
+How to design an efficient inventory module that enables automated and batch cataloging operations for the
+librarian?
+
+In this module, the librarian can manage the library's collection by automatically fetching book details via ISBN
+lookup and manually refining specific storage and classification records. This ensures optimal workflow
+efficiency through batch catalog panel tools, drag-and-drop spreadsheet imports, sequential bulk lookups, and
+fully customizable format exports.
+
+How to automate the borrowing and returning process using QR-code scanning technologies for the librarian
+at the circulation desk?
+
+In this module, the system utilizes QR-code scanning of student IDs and book codes to automatically link
+borrowers to their designated items. This ensures a swift transaction process for the librarian by drastically
+reducing manual text entry and minimizing administrative processing time.
+
+How to create a centralized borrowing logs module that allows the librarian to track and filter historical book
+transactions?
+
+In this module, the librarian can track loan lifecycles through a comprehensive, view-only list that showcases
+borrower identities, book data, and strict timelines for due dates and returns. This ensures quick record
+discovery by utilizing distinct status tags for active or overdue items coupled with targeted search fields and
+quick-filter buttons.
+
+How to build an analytics module with dynamic visualization components to track library trends and system
+performance for the librarian?
+
+In this module, the librarian can filter and evaluate system metrics across tailored timeframes to monitor visitor
+distribution, circulation volumes, and membership growth. This ensures intuitive insights by utilizing visual line
+graphs, asset allocation donut charts, and high-demand catalog leaderboards to break down complex
+operational data.
+
+How to implement a structured user directory module that allows the librarian to review accounts and modify
+specific status permissions?
+
+In this module, the librarian can oversee a comprehensive user register detailing names, unique student IDs,
+system roles, and academic programs. This ensures effective user management by integrating rapid search
+and filter systems alongside dedicated profile expansion pages where the librarian can review contact details
+and modify account statuses between active and pending states.
+
+How to integrate an attendance logs module utilizing card-scanning technology to assist the librarian in
+tracking daily library traffic?
+
+In this module, the librarian can monitor daily student facility utilization through automated library card
+scanning at entry and exit points. This ensures precise administrative tracking by populating an active visitor
+roster paired with accurate, real-time timestamps to analyze traffic density effectively.
+How to configure a dedicated settings and policies module that enables the librarian to adjust library rules and
+manage student support logs?
+
+In this module, the librarian can utilize several specialized views to establish circulation boundaries, arrange
+book categories, align academic paths, and push wide-reaching system announcements. This ensures
+cohesive administrative management by providing an accessible Q&A support environment tailored to
+troubleshooting and assisting students.
+
+How to construct an intuitive notification module that keeps the librarian instantly updated on major system
+actions and changes?
+
+In this module, the librarian can view urgent alerts dynamically via a quick-drop header widget or transition to
+a standalone notifications control page. This ensures rapid awareness and response times by using intuitive
+filter tabs and specialized keyword search inputs to sort through system-generated event updates.
+
+How to establish a secure, read-only profile module for librarians to safely verify their personal account
+credentials?
+
+In this module, the logged-in librarian can cross-reference their account specifics including name, institutional
+ID, official email, academic programs, and security flags on a protected, view-only layout. This ensures
+system transparency by offering a clear, unalterable view of the user's specific registration record and
+clearance standing.
+
+Student Assistant
+
+How to implement a secure login module using Microsoft O365 authentication for Student Assistants?
+
+In this module, Student Assistants can access the system using their institutional accounts to verify their
+identity. This ensures that only authorized personnel can access sensitive library administrative tools and data
+through a standardized sign-in process.
+
+How to develop a centralized dashboard module that provides a quick overview of daily activities and personal
+metrics for student assistants?
+
+In this module, student assistants can view real-time statistics for daily visitors, total users, and active loans,
+alongside quick navigation shortcuts to the circulation desk, attendance logs, and book catalog. This ensures
+dual-purpose tracking by also displaying a personalized bottom row showcasing the student assistant's
+current borrows, reservations, and recent attendance.
+
+How to design an intuitive catalog module that allows student assistants to browse, search, and reserve items
+from the book collection?
+
+In this module, student assistants can look up books using a keyword search bar for titles, authors, or ISBN
+codes, and refine results using dropdown filters for categories and availability indicators. This ensures a
+streamlined discovery process while enabling users to secure items directly via an integrated reservation
+button.
+
+How to implement an inventory monitoring module with tabular data and QR-code generation for student
+assistants?
+
+In this module, student assistants can monitor registered book items using a structured data table displaying
+titles, authors, categories, and ISBN codes. This ensures easy tracking and item location through category
+selection filters, search options, and individual system-generated QR codes for every book item.
+
+How to automate the borrowing and returning process using QR-code scanning technologies for the student
+assistant at the circulation desk?
+In this module, the system utilizes QR-code scanning of student IDs and book codes to automatically link
+borrowers to their selected items. This ensures a swift transaction process for the student assistant by
+minimizing manual data entry and reducing wait times at the desk.
+
+How to create a structured borrowing history module for student assistants to track their personal book
+transactions?
+
+In this module, student assistants can view their personal transaction timelines, including borrowed dates, due
+dates, actual return dates, and item statuses. This ensures easy tracking of personal historical data by
+utilizing status filters and a specialized timeline search bar.
+
+How to implement a view-only borrowing logs module that allows student assistants to monitor global library
+transactions?
+
+In this module, student assistants can access a centralized list tracking borrower details, book titles, and
+due-date timelines across the library. This ensures simple record verification through clear status tags
+alongside built-in search and filtering tools to quickly locate specific logs.
+
+How to design a personal attendance tracking module for student assistants to review their library visitation
+history?
+
+In this module, student assistants can reference a structured data table showing dates, check-in/check-out
+timestamps, and session statuses for their library visits. This ensures transparent personal record keeping by
+allowing users to seamlessly review their chronological logs through an all-time history option.
+
+How to integrate an attendance logs module using card-scanning technology to help student assistants track
+daily library traffic?
+
+In this module, student assistants can track facility utilization by scanning student library cards at entry and
+exit points. This ensures straightforward administrative monitoring by populating a complete, real-time list of
+checked-in and checked-out visitors with precise timestamps.
+
+How to build a responsive notification module that updates student assistants on system-wide events and
+alerts?
+
+In this module, student assistants can view urgent updates via a header dropdown panel or manage
+comprehensive alerts on a dedicated notifications page. This ensures streamlined event monitoring through
+the use of quick filter tabs and targeted keyword search functionalities.
+
+How to establish a secure, view-only profile module for student assistants to verify their personal account
+details?
+
+In this module, logged-in student assistants can cross-reference their account information such as full name,
+system ID, account status, and membership role on a read-only page. This ensures personal data clarity and
+account security by providing a standardized, unalterable overview of their credentials.
+
+Student
+
+How to implement a secure login module using Microsoft O365 authentication for Students?
+
+In this module, Students can access the system using their institutional accounts to verify their identity. This
+ensures that only authorized personnel can access sensitive library administrative tools and data through a
+standardized sign-in process.
+
+How to design a personalized dashboard module that provides students with a real-time overview of their
+library account status and credentials?
+In this module, students can access a digital library card with a scannable QR code alongside tracked
+sections for current borrows, active reservations, and recent attendance histories. This ensures a centralized,
+user-centric experience by also integrating an easily accessible support and FAQs panel for quick system
+troubleshooting.
+
+How to implement an intuitive category browsing module that enables students to search, filter, and reserve
+books from the library collection?
+
+In this module, students can explore books using specialized fractional availability indicators and search
+parameters for titles, authors, or ISBN codes. This ensures seamless book discovery and acquisition by
+pairing dynamic category and availability dropdown filters with a direct reservation hold button.
+
+How to build a structured borrowing history module that allows students to monitor personal book transactions
+and due dates?
+
+In this module, students can navigate a transactional table detailing library resources, borrowing dates, and
+strict timeline intervals for returns. This ensures efficient tracking of book statuses by utilizing a keyword
+timeline search bar and status filters to quickly isolate active, returned, or overdue materials.
+
+How to develop a personal attendance tracking module for students to review their chronological library visits?
+
+In this module, students can access a structured data table that displays precise dates, check-in/out
+timestamps, and session statuses for each library visit. This ensures clear personal visibility into facility usage
+by allowing users to toggle an all-time history option for full chronological tracking.
+
+How to create a responsive notification module that alerts students regarding important library updates and
+usage events?
+
+In this module, students can open a quick drop-down panel in the system header to view recent notifications
+or navigate to a dedicated page for more comprehensive tracking. This ensures that students stay informed of
+crucial status changes, library usage alerts, and upcoming transaction dates through clean filter categories.
+
+How to establish a secure, view-only profile module for students to verify their institutional account
+information?
+
+In this module, logged-in students can cross-reference their personal profiles, including full names, unique
+system IDs, program paths, and security configurations, on a read-only page. This ensures data transparency
+and identity verification by presenting an unalterable overview of the student's registration details.
+
+OBJECTIVES
+
+General Objectives
+
+To design and develop Lumina, a web-based library book reservation, borrowing, and inventory management
+system with QR-based scanning for STI College Alabang. The system aims to enhance efficiency in library
+transactions through a centralized online platform, improve inventory tracking accuracy, and provide seamless
+real-time access to library services for both students and librarians.
+
+Specific Objectives
+
+Super Admin
+
+To integrate a secure login module using Microsoft O365 authentication for identity verification.
+
+This objective ensures a secure and standardized sign-in process by leveraging institutional accounts,
+verifying that only authorized personnel can access administrative tools.
+To develop a Centralized Dashboard Module that displays a real-time overview of daily library operations,
+critical system metrics, and quick-access navigation shortcuts.
+
+This objective aims to provide super admin with a centralized, high-level control panel of daily visitor counts,
+registered users, total book inventory, and active loans, enabling efficient resource monitoring, rapid system
+navigation, and data-driven management.
+
+To develop an Inventory Module that enables Super administrators to manage the library's book collection
+through automated ISBN fetching and detailed manual cataloging.
+
+This objective aims to provide library staff with a streamlined system to add new items by automatically
+retrieving book information via ISBN, while allowing manual inputs for Dewey Decimal numbers, categories,
+copies, and exact shelf locations, enabling efficient asset tracking and organized resource management.
+
+To develop a Circulation Desk Module that automates the library's borrowing and returning processes utilizing
+QR-code scanning technologies.
+
+This objective aims to streamline front-desk operations by allowing staff to scan student IDs and book codes
+to automatically link borrowers to their items, significantly reducing manual data entry and transaction time
+while improving overall operational efficiency.
+
+To develop a Borrowing Logs Module that provides a centralized, view-only tracking system for all book
+borrowing and returning transactions.
+
+This objective aims to provide the super administrator and staff with a consolidated overview of key
+transaction details including borrower information, book metadata, transaction timelines, and real-time status
+tags integrated with search and filtering capabilities to enable rapid record retrieval and efficient monitoring of
+overdue assets.
+
+To develop an Analytics Module that provides a visual data dashboard to track system trends, library
+performance, and historical data distributions.
+
+This objective aims to provide the super administrator with key metric summaries including visitor traffic,
+active borrows, inventory volumes, and membership counts equipped with custom timeframe filters, line
+graphs, donut charts, and demand leaderboards to enable data-driven insights and efficient long-term
+resource planning.
+
+To develop a User Directory Module that allows the Super Administrator to view, manage, and modify all
+registered user accounts in a centralized master list.
+
+This objective aims to provide the Super Administrator with efficient user management capabilities including
+search and filter functionalities, detailed profile viewing, and administrative control tools to facilitate rapid
+account updates, role adjustments, status changes, and profile archiving.
+
+To develop an Attendance Logs Module that enables the super administrator to monitor and track student
+traffic within the library in real time.
+
+This objective aims to provide the super administrator with an automated tracking system that utilizes library
+card scanning to record student check-ins and check-outs alongside exact entry and exit timestamps,
+providing a streamlined method to analyze daily library usage and monitor visitor flow.
+
+To develop a Setting and Policies Module that enables the super administrator to manage system rules,
+operational configurations, and backend maintenance through dedicated setup views.
+
+This objective aims to provide the super administrator with centralized administrative controls including tools
+to define circulation limits, configure academic programs, organize book categories, and post announcements
+integrated with support logs, batch account resets, and automated email dispatches to ensure seamless
+system customization and efficient backend troubleshooting.
+
+To develop an Audit Logs Module that provides a secure tracking system to record, monitor, and review all
+administrative activities and system changes.
+
+This objective aims to provide the super administrator with a comprehensive security table detailing exact
+timestamps, user identities, action types, affected entities, and technical differences, integrated with advanced
+search, dropdown filtering, live refreshing, and CSV export capabilities to ensure robust accountability, rapid
+incident investigation, and efficient compliance auditing.
+
+To develop a Notification Module that alerts the super administrator about critical system events and updates
+via real-time header indicators and a dedicated management interface.
+
+This objective aims to provide administrators and staff with immediate situational awareness through a header
+notification bell and drop-down panel, integrated with quick filter tabs and search bar capabilities on a
+dedicated alerts page to facilitate rapid event monitoring and efficient system update tracking.
+
+To develop a Profile Module that provides a secure, view-only interface for logged-in users to access and
+review their personal account information.
+
+This objective aims to provide users with a centralized, read-only profile page displaying critical account data
+including full names, system IDs, official emails, contact details, residential addresses, and membership
+statuses ensuring transparent data access, account clarity, and straightforward user detail verification.
+
+Librarian
+
+To develop a secure Login Module that serves as a standardized entry point for authorized library staff using
+Microsoft O365 authentication.
+
+This objective aims to protect library data by restricting access to administrative tools, ensuring that only
+verified personnel can log in and manage the system's core backend features.
+
+To develop a Centralized Dashboard Module that displays a real-time overview of daily library operations,
+critical system metrics, and quick-access navigation shortcuts.
+
+This objective aims to provide Librarians with a centralized, high-level control panel of daily visitor counts,
+registered users, total book inventory, and active loans, enabling efficient resource monitoring, rapid system
+navigation, and immediate visibility of newly cataloged assets.
+
+To develop an Inventory Module that enables Librarians to manage the library's book collection through
+automated ISBN fetching and detailed manual cataloging.
+
+This objective aims to provide library staff with a streamlined system to add new items by automatically
+retrieving book information via ISBN, while allowing manual inputs for Dewey Decimal numbers, categories,
+copies, and exact shelf locations, enabling efficient asset tracking and organized resource management.
+
+To develop a Circulation Desk Module that automates the library's borrowing and returning processes utilizing
+QR-code scanning technologies.
+
+This objective aims to streamline front-desk operations by allowing staff to scan student IDs and book codes
+to automatically link borrowers to their items, significantly reducing manual data entry and transaction time
+while improving overall operational efficiency.
+
+To develop a Borrowing Logs Module that provides a centralized, view-only tracking system for all book
+borrowing and returning transactions.
+This objective aims to provide the Librarian and staff with a consolidated overview of key transaction details
+including borrower information, book metadata, transaction timelines, and real-time status tags integrated with
+search and filtering capabilities to enable rapid record retrieval and efficient monitoring of overdue assets.
+
+To develop an Analytics Module that provides a visual data dashboard to track system trends, library
+performance, and historical data distributions.
+
+This objective aims to provide the super administrator with key metric summaries including visitor traffic,
+active borrows, inventory volumes, and membership counts equipped with custom timeframe filters, line
+graphs, donut charts, and demand leaderboards to enable data-driven insights and efficient long-term
+resource planning.
+
+To develop a User Directory Module that allows the Librarian to view, manage, and modify registered user
+accounts from a centralized master list.
+
+This objective aims to provide the Librarian with comprehensive user management capabilities including
+profile search and filtering to open detailed user profiles, review contact details, and update critical account
+parameters such as setting account statuses to Active or Pending.
+
+To develop an Attendance Logs Module that enables the Librarian to monitor and track student traffic within
+the library in real time.
+
+This objective aims to provide an automated tracking system that utilizes library card scanning to record
+student check-ins and check-outs alongside exact entry and exit timestamps, providing a streamlined method
+to analyze daily library usage and monitor visitor flow.
+
+To develop a Setting and Policies Module that enables the Librarian to configure library rules, operational
+setups, and support documentation through dedicated views.
+
+This objective aims to provide the Librarian with centralized administrative control to define circulation limits,
+set up academic programs, organize book categories, and broadcast system-wide announcements, while
+hosting a Q&A support log to assist students with system troubleshooting.
+
+To develop a Notification Module that alerts the Librarian about critical system events and updates via
+real-time header indicators and a dedicated management interface.
+
+This objective aims to provide administrators and staff with immediate situational awareness through a header
+notification bell and drop-down panel, integrated with quick filter tabs and search bar capabilities on a
+dedicated alerts page to facilitate rapid event monitoring and efficient system update tracking.
+
+To develop a Profile Module that provides a secure, view-only interface for logged-in users to access and
+review their personal account information.
+
+This objective aims to provide users with a centralized, read-only profile page displaying critical account data
+including full names, system IDs, official emails, contact details, residential addresses, and membership
+statuses ensuring transparent data access, account clarity, and straightforward user detail verification.
+
+Student Assistant
+
+To develop a secure Login Module that serves as a standardized entry point for library staff utilizing Microsoft
+O365 authentication.
+
+This objective aims to safeguard system data by restricting administrative access to authorized personnel,
+ensuring that only verified staff members can access and manage library resources.
+
+To develop a Centralized Dashboard Module that provides Student Assistants with a central control panel
+displaying daily activities, system metrics, and personal activity rows.
+This objective aims to provide Student Assistants with immediate visibility into real-time metrics including daily
+visitors, total users, and active loans complemented by quick-access navigation shortcuts and a personalized
+tracking section for their own borrows, reservations, and recent attendance.
+
+To develop a Catalog Module that enables Student Assistants to browse, search, and filter the library's entire
+book collection.
+
+This objective aims to provide an interactive search interface displaying detailed book cards with fractional
+availability indicators, integrated with multi-parameter filtering options and a reserve for pickup function to
+allow users to efficiently locate and hold books.
+
+To develop an Inventory Module that provides Student Assistants with a structured tabular overview to
+monitor and manage individual book copies within the system.
+
+This objective aims to provide an organized data table detailing book titles, authors, categories, and ISBN
+codes, equipped with keyword search tools, category filters, and generated QR codes for every book item to
+streamline asset tracking.
+
+To develop a Circulation Desk Module that automates the library's borrowing and returning processes utilizing
+QR-code scanning technologies.
+
+This objective aims to streamline front-desk operations by allowing Student Assistants to scan student IDs
+and book codes to automatically link borrowers to their items, significantly reducing manual data entry and
+transaction time.
+
+To develop a Borrowing Module that provides a structured timeline view of a Student Assistant's personal
+borrow history.
+
+This objective aims to deliver an organized transactional table showing resource metadata, borrow dates, due
+date timelines, and status logs, embedded with search bars and status filters to let individuals monitor their
+active, returned, and overdue books.
+
+To develop a Borrowing Logs Module that provides Student Assistants with a simple, view-only list to track
+broad system-wide borrowing and returning histories.
+
+This objective aims to provide a centralized monitoring page displaying borrower data, book details, and
+transaction timelines alongside color-coded status tags, keyword search tools, and quick filters to easily find
+specific circulation records.
+
+To develop an Attendance Module that provides students with a personal, read-only tracking record of their
+individual library visits.
+
+This objective aims to grant students transparent access to their own check-in and check-out sessions,
+displaying exact dates, entry/exit timestamps, and session statuses through an all-time chronological history
+table.
+
+To develop an Attendance Logs Module that enables Student Assistants to monitor and track student traffic
+within the library.
+
+This objective aims to provide an automated tracking system that utilizes library card scanning to display
+real-time check-in and check-out logs alongside precise entry and exit timestamps, simplifying the process of
+evaluating daily library utilization.
+
+To develop a Notification Module that alerts Student Assistants about important system events and updates
+through multi-layered interface elements.
+
+This objective aims to maintain prompt situational awareness through a header notification bell and
+drop-down alert panel, paired with a dedicated alerts management page featuring search bars and filter tabs
+for quick update navigation.
+
+To develop a Profile Module that provides a secure, view-only interface for logged-in users to review their
+personal account information.
+
+This objective aims to provide users with a clean, read-only display of critical account data including full
+names, system IDs, official emails, contact details, residential addresses, and membership roles ensuring
+transparent data verification and account clarity.
+
+Student
+
+To develop a secure Login Module that enables students to sign in using Microsoft O365 institutional accounts
+and includes a multi-step profile completion workflow.
+
+This objective aims to ensure only verified institutional individuals gain entry, while requiring new users to
+submit residential, contact, and academic details for a pending administrative review state before full system
+access is granted.
+
+To develop a Centralized Dashboard Module that provides students with a personalized, real-time overview of
+their library account status and support resources.
+
+This objective aims to present students with an interactive interface featuring an exportable digital Library
+Card with a scannable QR code, real-time tracking tables for active borrows, reservations, and recent
+attendance durations, alongside a dedicated Support & FAQs panel.
+
+To develop a Category Module that enables students to browse, look up, and place holds on items within the
+library's book collection.
+
+This objective aims to provide students with an interactive visual catalog displaying detailed book cards and
+fractional availability indicators, integrated with multi-parameter search bars and dropdown filters, alongside a
+reserve for pickup feature.
+
+To develop a Borrow Module that provides students with a structured, chronological timeline of their personal
+borrowing histories.
+
+This objective aims to provide students with a comprehensive transactional table detailing resource metadata,
+borrow dates, and return timelines, equipped with keyword search bars and status filters to easily monitor
+active, returned, and overdue books.
+
+To develop an Attendance Module that provides students with a detailed, personal record of their library
+check-in and check-out sessions.
+
+This objective aims to give students transparent visibility into their daily library visits through a structured data
+table displaying exact timestamps and session statuses, complete with an all-time chronological history
+tracking option.
+
+To develop a Notification Module that alerts students about critical library updates, system events, and
+personal usage logs.
+
+This objective aims to maintain prompt situational awareness for students through a quick header notification
+bell and drop-down alert panel, paired with a dedicated notification page for managing and tracking library
+updates.
+
+To develop a Profile Module that provides a secure, view-only interface for logged-in users to review their
+personal account information.
+This objective aims to provide students with a clean, read-only display of their critical account data including
+full names, system IDs, official emails, contact numbers, residential addresses, and membership roles
+ensuring transparent data verification and account clarity.
+
+Scope and Limitations
+
+Technology has changed the way libraries work, making it much faster to track books and share information
+compared to old paper methods. Instead of searching through boxes of cards, computers now let us check if a
+book is available in just a few seconds. This project follows that trend by bringing digital tools to the STI
+College Alabang library.
+
+Scope of the Study
+
+Super Admin
+
+Login Module
+
+This module provides a secure and standardized entry point for library staff using Microsoft O365
+authentication. It restricts access to administrative tools to ensure that only authorized personnel can manage
+library data.
+
+Dashboard Module
+
+This module provides a centralized, high-level control panel that gives Super administrators a real-time
+overview of daily operations and system metrics. It displays critical data including daily visitor counts,
+registered users, total book inventory, and active loans, allowing for efficient resource monitoring. Additionally,
+the module features quick-access navigation shortcuts to core administrative features such as circulation
+desk, book inventory, user directories, visitor logs, audit logs, and analytics and showcases a visual gallery of
+the most recently cataloged library assets.
+
+Inventory Module
+
+This module allows the Super Administrator to manage the library's collection of books by automatically
+fetching details via ISBN lookup and manually finalizing records like Dewey Decimal numbers, categories,
+copy counts, and shelf locations. It also includes a Batch Catalog Operations panel featuring an Import Sheet
+tool for uploading spreadsheets via drag-and-drop, an ISBN Fallback text field for bulk sequential lookups and
+cover art retrieval, and an Export Data manager with fully customizable column selection to download the
+active catalog as a Spreadsheet, CSV, JSON Data, or Covers ZIP file.
+
+Circulation Desk Module
+
+This module automates the borrowing and returning process by utilizing QR-Code scanning technologies. By
+scanning student IDs and book codes, the system automatically links the borrower to the item, reducing
+manual data entry and transaction time.
+
+Borrowing Logs Module
+
+This module shows a simple, view-only list that lets the super administrator track when books are borrowed
+and returned. It displays all the key details in one place, including the borrower's name and ID, the book title
+and author, the date the book was taken, and the timeline for due dates and return dates. It also uses clear
+status tags to show if a book is still out, returned, or overdue. Staff can easily use the search bar or click the
+filter buttons (All, Active, Returned, Overdue) to quickly find specific records.
+
+Analytics Module
+
+This module provides super administrator with a visual data dashboard to track system trends and
+performance over time. It allows users to filter data by specific timeframes, including 7 days, 30 days, or 1
+year. The module features key metric summaries for daily visitor traffic, active book borrows, total inventory
+volumes, and registered library members. It uses line graphs to display daily traffic distribution and circulation
+trends, a donut chart to break down asset allocation by status (returned, active, or overdue), and a
+leaderboard list showcasing the highest-demand catalog books based on borrow counts.
+
+User Directory Modules
+
+This module allows the Super Administrator to view and manage all registered user accounts in the system. It
+displays a master list of users with their names, emails, unique IDs, system roles, account statuses, and
+academic programs. Super Administrator can quickly search for accounts by name or email, or use the filter
+button to narrow down the list. Clicking on a user opens their detailed profile page, where super administrator
+can view contact information and update account settings, such as changing their system role, modifying their
+account status, or archiving the profile.
+
+Attendance Logs Module
+
+This module allows the super adminintrator to monitor and track student traffic within the library. By scanning
+the student's library card, the super administrator can see a complete list of all checked-in and checked-out
+students alongside the exact timestamp of their entry and exit, providing a simple way to track daily library
+usage.
+
+Setting and Policies Modules
+
+This module allows super administrator to manage system rules and operational configurations through
+several dedicated setup views. It enables super administrator to define circulation and reservation limits,
+configure student academic programs, organize book categories, and post system-wide announcements.
+Additionally, it contains a question-and-answer support log for troubleshooting, alongside backend
+maintenance tools for handling batch account resets, automated email dispatches, and configuration testing.
+
+Audit Logs Module
+
+This module provides a security tracking system that records all changes and activities made within the
+system. It displays a table detailing the exact timestamp of each action, the name of the administrator or user
+who performed it, the type of action taken, the affected entity, a short reason or description of the change, and
+a button to view specific technical differences. Super Admininstrator can easily manage large lists of logs
+using the search bar to find names, actions, or reasons, use dropdown filters to sort by specific entities or
+actions, refresh the data live, and Import and export data via Spreadsheet CSV and developer JSON.
+
+Notification Module
+
+This module alerts super Administrator about important system events and updates. Clicking the notification
+bell in the system header opens a quick drop-down panel showing recent alerts. The dedicated notifications
+page allows staff to manage alerts using quick filter tabs and find specific updates using a search bar to filter
+events.
+
+My Profile Module
+
+This module provides a view-only page where logged-in users can check their personal account details. It
+displays the user's full name, system ID, official email, contact number, residential address, account status,
+membership role, and security status.
+
+Librarian
+
+Login Module
+
+This module provides a secure and standardized entry point for library staff using Microsoft O365
+authentication. It restricts access to administrative tools to ensure that only authorized personnel can manage
+library data.
+Dashboard Module
+
+This module provides a centralized, high-level control panel that gives Librarian a real-time overview of daily
+operations and system metrics. It displays critical data including daily visitor counts, registered users, total
+book inventory, and active loans, allowing for efficient resource monitoring. Additionally, the module features
+quick-access navigation shortcuts to core administrative features such as user directories, audit logs, and
+analytics and showcases a visual gallery of the most recently cataloged library assets.
+
+Inventory Module
+
+This module allows the Super Administrator to manage the library's collection of books by automatically
+fetching details via ISBN lookup and manually finalizing records like Dewey Decimal numbers, categories,
+copy counts, and shelf locations. It also includes a Batch Catalog Operations panel featuring an Import Sheet
+tool for uploading spreadsheets via drag-and-drop, an ISBN Fallback text field for bulk sequential lookups and
+cover art retrieval, and an Export Data manager with fully customizable column selection to download the
+active catalog as a Spreadsheet, CSV, JSON Data, or Covers ZIP file.
+
+Circulation Desk Module
+
+This module automates the borrowing and returning process by utilizing QR-Code scanning technologies. By
+scanning student IDs and book codes, the system automatically links the borrower to the item, reducing
+manual data entry and transaction time.
+
+Borrowing Logs Module
+
+This module shows a simple, view-only list that lets the Librarian track when books are borrowed and
+returned. It displays all the key details in one place, including the borrower's name and ID, the book title and
+author, the date the book was taken, and the timeline for due dates and return dates. It also uses clear status
+tags to show if a book is still out, returned, or overdue. Staff can easily use the search bar or click the filter
+buttons (All, Active, Returned, Overdue) to quickly find specific records.
+
+Analytics Module
+
+This module provides super administrator with a visual data dashboard to track system trends and
+performance over time. It allows users to filter data by specific timeframes, including 7 days, 30 days, or 1
+year. The module features key metric summaries for daily visitor traffic, active book borrows, total inventory
+volumes, and registered library members. It uses line graphs to display daily traffic distribution and circulation
+trends, a donut chart to break down asset allocation by status (returned, active, or overdue), and a
+leaderboard list showcasing the highest-demand catalog books based on borrow counts.
+
+User Directory Module
+
+This module allows the Librarian to view and manage all registered user accounts in the system. It displays a
+master list of users with their names, emails, unique IDs, system roles, account statuses, and academic
+programs. Librarian can quickly search for accounts by name or email, or use the filter button to narrow down
+the list. Clicking on a user opens their detailed profile page, where Librarian can view contact information and
+update account settings, modifying their account status to Active and Pending,
+
+Attendance Logs Module
+
+This module allows the Librarian to monitor and track student traffic within the library. By scanning the
+student's library card, the Librarian can see a complete list of all checked-in and checked-out students
+alongside the exact timestamp of their entry and exit, providing a simple way to track daily library usage.
+
+Setting and Policies Module
+This module allows Librarian to manage system rules and operational configurations through several
+dedicated setup views. It enables the Librarian to define circulation and reservation limits, configure student
+academic programs, organize book categories, and post system-wide announcements. Additionally, it
+contains a question-and-answer support log for helping students.
+
+Notification module
+
+This module alerts Librarian about important system events and updates. Clicking the notification bell in the
+system header opens a quick drop-down panel showing recent alerts. The dedicated notifications page allows
+Librarian to manage alerts using quick filter tabs and find specific updates using a search bar to filter events.
+
+My Profile Module
+
+This module provides a view-only page where logged-in users can check their personal account details. It
+displays the user's full name, system ID, official email, contact number, residential address, account status,
+membership role, and security status.
+
+Student Assistants
+
+Login Module
+
+This module provides a secure and standardized entry point for library staff using Microsoft O365
+authentication. It restricts access to administrative tools to ensure that only authorized personnel can manage
+library data.
+
+Dashboard Module
+
+This module provides Student Assistant with a central control panel that gives a quick overview of daily
+activities and system statistics. At the top, it displays real-time numbers for today's visitors, total users, and
+active book loans. Below these stats, it features quick system shortcuts for easy navigation to the Circulation
+Desk, Attendance Logs, and Book Catalog. Finally, the bottom section includes a visual row showing the
+student assistant his current borrows, Reservation, and Recent Attendance .
+
+Catalog Module
+
+This module provides Student Assistant to browse and search the library's book collection. Each book card
+displays the book's title, author name, cover image, and a fractional availability indicator showing the number
+of available copies. Users can look up items using a keyword search bar that supports titles, authors, or ISBN
+codes, and refine the list using dropdown filters for book categories, availability status, and alphabetical
+sorting. Additionally, each book contains a Reserve for Pickup button, allowing users to place a hold on their
+selected book.
+
+Inventory Module
+
+This module provides Student Assistants with a tabular overview to monitor and manage individual book
+copies within the system. The interface features a structured data table displaying the Title, Author, Category,
+and ISBN code for each registered book item. Student Assistants can filter the displayed inventory items using
+a category selection menu or quickly locate specific entries by typing keywords into the search bar.
+Additionally, the module includes a generated QR code for every book item.
+
+Circulation Desk Module
+
+This module automates the borrowing and returning process by utilizing QR-Code scanning technologies. By
+scanning student IDs and book codes, the system automatically links the borrower to the item, reducing
+manual data entry and transaction time.
+
+My Borrowing Module
+This module provides student assistant with a structured timeline of their borrowed history. The main interface
+features a transactional table listing the library Resource (displaying the title, and author), the Borrowed date,
+a detailed Timeline showing the due date along with actual return dates, and the current Status. Student
+Assistant can locate specific entries using a keyword timeline search bar or instantly filter the list by four
+distinct status views: All, Active, Returned, and Overdue.
+
+Borrowing Logs Module
+
+This module shows a simple, view-only list that lets the Student Assistant track when books are borrowed and
+returned. It displays all the key details in one place, including the borrower's name and ID, the book title and
+author, the date the book was taken, and the timeline for due dates and return dates. It also uses clear status
+tags to show if a book is still out, returned, or overdue. Staff can easily use the search bar or click the filter
+buttons (All, Active, Returned, Overdue) to quickly find specific records.
+
+My Attendance Module
+
+This module provides Students with a personal record of their library check-in and check-out sessions. The
+interface features a structured data table displaying the Date, Check In time, Check Out time, and session
+Status for each visit. Students can also view their chronological tracking logs through an All-Time History
+option
+
+Attendance Logs Module
+
+This module allows the Student Assistant to monitor and track student traffic within the library. By scanning
+the student's library card, the Student Assistant can see a complete list of all checked-in and checked-out
+students alongside the exact timestamp of their entry and exit, providing a simple way to track daily library
+usage.
+
+Notification Module
+
+This module alerts Student Assistant about important system events and updates. Clicking the notification bell
+in the system header opens a quick drop-down panel showing recent alerts. The dedicated notifications page
+allows Student Assistant to manage alerts using quick filter tabs and find specific updates using a search bar
+to filter events.
+
+My Profile Module
+
+This module provides a view-only page where logged-in users can check their personal account details. It
+displays the user's full name, system ID, official email, contact number, residential address, account status,
+membership role, and security status.
+
+Student
+
+Login Module
+
+This module enables students to access the system securely by logging in with their Microsoft O365
+institutional accounts, ensuring only verified individuals from the institution can sign in. For new users, the
+module features a profile completion step where they must provide their residential address, contact details,
+and academic program. Upon submission, the account enters a "Pending" state, restricting system utilization
+until a super administrator reviews and approves the profile.
+
+Dashboard Module
+
+This module provides students with a personalized overview of their library account status. The top section
+features their digital Library Card, showing their profile picture, name, program, academic year, a scannable
+QR code, and Back and Export actions. Below, the interface tracks three sections: Current Borrows (active
+books and due dates), Reservations (books ready for pickup or queue placement with a cancel option), and
+Recent Attendance (a snapshot of check-in/out timestamps and visit durations). The bottom includes a
+Support & FAQs panel for students to know about the system.
+
+Category Module
+
+This module provides Student Assistant to browse and search the library's book collection. Each book card
+displays the book's title, author name, cover image, and a fractional availability indicator showing the number
+of available copies. Users can look up items using a keyword search bar that supports titles, authors, or ISBN
+codes, and refine the list using dropdown filters for book categories, availability status, and alphabetical
+sorting. Additionally, each book contains a Reserve for Pickup button, allowing users to place a hold on their
+selected book.
+
+My Borrow Module
+
+This module provides students with a structured timeline of their borrowed history. The main interface features
+a transactional table listing the library Resource (displaying the title, and author), the Borrowed date, a
+detailed Timeline showing the due date along with actual return dates, and the current Status. Students can
+locate specific entries using a keyword timeline search bar or instantly filter the list by four distinct status
+views: All, Active, Returned, and Overdue.
+
+My Attendance Module
+
+This module provides Students with a personal record of their library check-in and check-out sessions. The
+interface features a structured data table displaying the Date, Check In time, Check Out time, and session
+Status for each visit. Students can also view their chronological tracking logs through an All-Time History
+option.
+
+Notification Module
+
+This module alerts students about important system events and updates. Clicking the notification bell in the
+system header opens a quick drop-down panel showing recent alerts. The dedicated notifications page allows
+Students to track their library usage.
+
+My Profile Module
+
+This module provides a view-only page where logged-in users can check their personal account details. It
+displays the user's full name, system ID, official email, contact number, residential address, account status,
+membership role, and security status.
+
+Limitation
+
+The system requires an active internet connection to synchronize data and operate its cloud-based features.
+
+System capacity and performance are restricted by the database size, serverless execution bounds, and
+storage limits of the chosen free-tier cloud infrastructure.
+
+Automated fetching of book data via ISBN is often incomplete, requiring librarians to manually calculate and
+input critical information like Dewey Decimal call numbers and accession numbers.
+
+Authentication is exclusively tied to Microsoft 365 institutional accounts, which prevents access for outside
+researchers or users without an official school email.
+
+The QR-based automation heavily depends on functional device cameras and readable physical codes,
+meaning transactions will fail if the hardware is broken or the printed code is damaged.
+The searchable catalog focuses strictly on physically available local resources and local thesis soft copies,
+meaning it does not integrate with enterprise-grade electronic research databases like EBSCO.
+
+The application is constrained by external API rate limits and real-time synchronization quotas, which may
+restrict the volume of requests processed during peak library hours
+
+REVIEW OF RELATED LITERATURE / SYSTEM
+
+Review of Related Literature
+
+Global Shift Toward Digital Library Transformation
+
+The rapid evolution of digital technologies has significantly impacted how libraries operate, leading to a shift in
+library services locally and internationally. Despite the widespread acknowledgment of this digital shift, there
+remains a substantial gap in understanding of how academic libraries are adapting, specifically in integrating
+digital innovations to enhance user access and engagement. In the study of Distanont et al (2024), there is a
+critical global trend toward integrating digital innovations to enhance user engagement. This shift is not merely
+about digitizing records but about strategic adaptation to a landscape where users expect seamless access.
+This is further supported by Wijaya et al (2025), which emphasizes that libraries relying on manual
+bookkeeping face inaccurate data recording and time-consuming searches, which hinder the efficiency of
+library services and reduce the interest of students. As libraries, such as STI College Alabang, manage
+growing collections and student population, the integration of modern identification and tracking technologies
+has become essential for maintaining operational integrity and user satisfaction.
+
+Institutional Security and Microsoft 365 Integration
+
+A primary concern in digital transformation is the security of institutional data. Literature on Identity and
+Access Management (IAM) highlights that existing platforms, like Microsoft O365, provides enterprise-grade
+security, including Multi-Factor Authentication (MFA). In line with this, Kasahara and Shimayoshi (2022)
+provided a high-level technical precedent for the use of Microsoft 365 tenants to manage university students.
+The research highlights the necessity of Multi-Factor Authentication (MFA) and Azure Active Directory to
+prevent malicious software from compromising student accounts. By implementing M365 authentication, the
+present study aligns with global best practices that prioritize controls of user access behavior, ensuring that
+library services are restricted to verified students while offering a self-enrolling convenience that reduces
+administrative conflict (Kasahara & Shimayoshi, 2022).
+
+QR-Based Scanning and Operational Efficiency The integration of Quick Response (QR) codes represents an
+opportunity to modernize asset tracking. Paul and Naikar (2024) defined QR codes as powerful tools for
+instant access to catalog information and operational efficiency. Unlike traditional bookkeeping, QR codes can
+be scanned using mobile devices or low-cost scanners and QR technology allows for fast data retrieval at a
+minimal cost (Din & Fazla, 2021). This automation ensures that every transaction is instantly linked to the
+correct user profile, maintaining a precise digital borrowed history.
+
+However, in practical application, as seen in the study of Mulya and Sari (2024), the transition from
+conventional systems to QR-web-based applications enables librarians to manage large quantities of data
+effectively. This technology minimizes manual effort and reduces data-entry errors by automating the link
+between the identity of the borrower and the library asset (Pebrian & Gunanto; 2025, Wijaya et al., 2025).
+
+Centralized Web-Based Architectures and Real-Time Data Modern Library Management Information Systems
+(MIS) are increasingly built on robust web frameworks, like JavaScript, Tailwind CSS, TypeScript, or
+PostgreSQL, to ensure structured and secure development (Rajee et al., 2022, Wijaya et al., 2025). The
+literature suggests that a module-based approach, which comprises registration and circulation among the
+university is the most effective way to meet the needs of diverse users (Abdullah et al., 2021). Furthermore,
+the inclusion of an audit log provides a transparent trail of all system modifications, which suggests that
+automated logs are essential for preventing unauthorized changes and ensuring the safety of institutional
+data.
+
+A benefit identified in the study of Pebrian and Gunanto (2025) is the real-time synchronization of stock
+quantities. When a student submits a borrowing request using a web interface, the system updates in
+real-time, providing an up-to-date status that supports data-driven evaluation and strategic decision-making
+for administrators, such as librarians and even university principals.
+
+Enhancing User Experience through Personalization and Visualization Modern library users expect the same
+level of convenience found in e-commerce platforms. Beyond simple borrowing, advanced web applications
+are now incorporating data visualization and personalized recommendations to meet the evolving needs of
+students (Facunla & Encarnacion, 2024). Guided by Technological Acceptance Theory (TAT), researchers
+found that tailored web applications can achieve effectiveness rates as high as 97.48% when they focus on
+usability and reliability. This aligns with the Lumina project goal of providing a personalized student dashboard
+to help students track their own history and deadlines, thereby increasing their engagement with library
+resources.
+
+Related Studies and Systems
+
+Local Studies and/or Systems
+
+The research conducted on library management systems highlights the importance of efficient resource
+tracking and circulation in educational institutions. The studies emphasize the significance of accurate,
+real-time library inventories to prevent data loss, ensure optimal resource utilization, and seamlessly meet the
+academic needs of both students and library personnel.
+
+The studies reviewed the functionality of automated library management systems in terms of speed, data
+handling, accuracy, security, stability, and usability. They compared traditional manual logbook methods with
+digitized web-based systems, highlighting the massive advantages of integrating QR-code technology and
+automated workflows in solving administrative challenges, eliminating manual encoding errors, and improving
+overall library functionality.
+
+Enhanced Information Retrieval: Aemilianum College Inc.'s Library Management System (2023) This research
+details the development of a web-based Library Management System aimed at overcoming the limitations of
+physical document deterioration, rising costs, and the frequent misplacement of files. Just as this study
+ensures seamless access to educational resources through an intuitive and convenient interface, Lumina will
+provide STI College Alabang with a centralized, reliable digital platform. By transitioning to this web-based
+solution, Lumina aligns directly with the goal of maximizing the utility of technological resources to make
+information retrieval, cataloging, and inventory auditing far more efficient (Gito et al., 2023)
+
+Development and Evaluation of an ICT-Based Library Automation System for Northern Iloilo Polytechnic State
+College Using ISO Standards (2025) This study addresses the inefficiencies of predominantly manual library
+operations, such as handwritten client logging and inventory updates, by proposing an Information and
+Communication Technology (ICT)-based Library Automation System. Just as this study demonstrated that
+transitioning to a QR-integrated digital platform drastically reduces manual workload and improves service
+delivery, Lumina will implement similar QR-based borrowing and returning transactions for STI College
+Alabang to ensure high system accuracy, efficiency, and secure user account management (Villoga, 2025).
+
+Library Systems Development: Utilization, Usability and Impact for Private Schools in Negros Occidental,
+Philippines (2025) This study details the creation and deployment of a web-based Library Management
+System (LMS) at Colegio de Sta. Ana de Victorias to replace traditional, inefficient manual library processes.
+This successful implementation of a centralized dashboard and online catalog directly inspires Lumina's
+objective to provide STI College Alabang with a searchable online catalog displaying real-time book
+availability. By adapting these features, Lumina will automate the circulation tracker to reduce processing time
+and grant students instantaneous retrieval of information (Lampaza et al., 2025).
+
+Aligning Expectations and Perceptions: Analyzing Library User Satisfaction in Higher Education in Rural
+Philippines (2025) This research examines the alignment between user expectations and perceptions of
+academic library services, revealing that modern students hold high expectations for digital service provision
+and efficient communication channels. Addressing the critical service quality gaps identified in traditional
+setups, Lumina aims to provide a responsive, user-centered digital framework for STI College Alabang. By
+digitizing borrowing policies and improving technology availability, Lumina aligns directly with modern
+students' high expectations for accessible and equitable learning resources (Seno-Sanoria, 2025).
+
+School Management System 1: Library with QR Code Innovation and Book Monitoring: Student Information in
+Bestlink College of the Philippines (2026) This proposed system introduces a modernized approach to
+managing school libraries by streamlining the tracking and access of library resources through QR code
+scanning, an automated fine tracker, and an online book reservation option. Similar to how this system
+replaces disorganized collections and outdated checking methods, Lumina aims to resolve these exact
+frustrations at STI College Alabang. By adapting these QR code innovations and online reservation features,
+Lumina will minimize errors in tracking overdue items, create a much smoother transaction process, and
+guarantee a highly convenient library experience for both students and librarians (Gargoles et al., 2026)..
+
+School Management System: Library Management System with Online Reservation and Renewal Powered by
+A.I. Based Adaptive Learning and Skill Development (2026) This study presents a modernized library
+management system designed to enhance operational efficiency through online book reservation, real-time
+penalty notifications, and a centralized digital library database. Just as this system significantly automates
+administrative tasks and improves user engagement, Lumina will implement similar web-based reservation
+and real-time tracking features. By adapting these digital capabilities, Lumina ensures that STI College
+Alabang students can seamlessly check book availability and manage their borrowing transactions online,
+fostering a highly convenient, efficient, and learner-centered academic environment (Mendiola et al., 2026).
+
+Foreign Studies and/or Systems
+
+A Smart QR: Based Library Management System (2024) This study introduces a smart, user-friendly method
+for managing library materials in tertiary institutions using a QR code system, aiming to replace expensive
+RFID or IoT alternatives. Lumina adopts this highly cost-effective methodology, utilizing QR codes to
+empower STI College Alabang students to independently search for books and process checkouts. By
+scanning unique QR codes, Lumina will drastically reduce the cost, time, and human supervision required for
+circulation management while digitally managing overdue penalties (Aliyu, Mohammed, & Yakubu, 2024).
+
+A Dual-Validation Mobile Attendance Application for Discipline-Oriented Vocational Schools: Development
+and Evaluation Using the Waterfall (2025) While focusing on a different educational administrative process,
+this study highlights the effectiveness of using QR codes to digitize and secure tracking systems that were
+previously entirely manual and prone to data manipulation. This validates Lumina's core mechanism,
+demonstrating that by linking unique QR codes to a centralized digital database, Lumina will substantially
+enhance data integrity, drastically reduce administrative workloads, and provide a highly reliable tool for
+tracking library resources at STI College Alabang (Kurnia et al., 2025).
+
+Enhancing Library Efficiency With Vmedulife Integrated Library Management Cloud Based System: A Case
+Study at SVPM's Institute of Management Malegaon Bk (2025) This study highlights the effectiveness of
+using a cloud-based Integrated Library Management System (ILMS) to modernize academic institutions by
+offering a digital catalog, student self-service portals, and real-time analytical reports. Aligning with this
+cloud-based approach, Lumina will implement a highly secure web architecture to empower students with a
+self-service dashboard where they can independently search for books, track due dates, and reserve titles. As
+proven by this study, bringing these operations to the cloud ensures that library services remain continuously
+accessible while drastically reducing the manual workload of administrators (Wayal, 2025).
+Integration of Koha Library Management System with Open-Source Tools for Customized Readers ID Card
+with QR Codes (2025) This research explores the integration of QR codes into library reader ID cards to
+ensure quick and error-free library transactions, such as check-ins, check-outs, and gate entries. Validating
+Lumina's core tracking mechanism, this study demonstrates that replacing traditional manual cards with
+unique QR codes linked directly to the library's central database substantially minimizes human intervention.
+By adopting this methodology, Lumina will avoid manual data entry errors, prevent alignment mismatches,
+and provide a highly reliable, cost-effective tool for tracking resource circulation at STI College Alabang (Koya
+& Waral, 2025).
+
+Library Automation and Its Impact on Services: A Case Study of the Central Library (2025)
+
+Modern advancements in academic infrastructure emphasize the transition from physical card-based systems
+to technology-driven procedures that utilize Integrated Library Management Systems (ILMS) to consolidate
+diverse functions. Research indicates that platforms such as Koha serve as a foundation for contemporary
+library administration by automating repetitive tasks including acquisitions, circulation, and user account
+management which effectively reduces the necessity for manual intervention. By replacing traditional manual
+methods with digital transaction records and automated searching through an Online Public Access Catalog
+(OPAC), institutions can significantly minimize manual errors and enhance real-time resource tracking. For
+collegiate environments like STI College Alabang, adopting this automated methodology not only optimizes
+internal operations and reduces administrative burdens for library personnel but also improves student
+engagement by providing seamless access to digital and physical resources (Sujana & Putu, 2025).
+
+Synthesis
+
+The global transition from manual library processes to digital platforms is driven by the need to overcome
+inefficient data recording and time-consuming searches that hinder user engagement. Modern literature
+establishes that deploying robust, web-based architectures integrated with Quick Response (QR) technology
+is the most effective strategy for automating resource tracking and minimizing manual data-entry errors. QR
+codes provide a highly cost-effective alternative to traditional systems, enabling instant catalog access and
+the seamless synchronization of borrowed assets. Furthermore, centralized cloud-based architectures provide
+real-time data, allowing administrators to continuously monitor stock quantities and make data-driven
+decisions while ensuring the safety of institutional records through automated audit logs.
+
+Beyond operational efficiency, recent studies emphasize that automated systems must strictly prioritize
+institutional security and user-centered design. Implementing enterprise-grade access controls, such as
+Microsoft 365 and Multi-Factor Authentication (MFA), is crucial for restricting services to verified users and
+preventing malicious data breaches. Additionally, equipping systems with personalized dashboards, online
+reservations, and real-time visualizations directly aligns with the modern student's high expectations for
+convenience, significantly enhancing their overall academic experience.
+
+The proposed project, Lumina, is highly justified as it actively synthesizes the most effective technological
+advancements identified in both local and foreign literature. By completely replacing outdated, error-prone
+manual procedures with a centralized web platform, Lumina addresses the critical service quality gaps at STI
+College Alabang. Its seamless integration of QR-based tracking, secure Microsoft 365 authentication, and
+real-time inventory auditing ensures a modernized, secure, and highly efficient digital learning environment
+that effectively meets the evolving demands of both students and library personnel.
+
+Technical Background
+
+Overview of current Technologies to be used in the system
+
+The system is built upon a modern, high-performance tech stack designed for scalability, security, and a
+premium user experience. At its core, the application utilizes Next.js, a powerful React framework that enables
+server-side rendering and optimized routing, ensuring fast load times and seamless navigation. This
+foundation is reinforced by TypeScript, which provides a robust type system to catch errors early and maintain
+high code quality across the entire development lifecycle. The combination of these core technologies allows
+for a highly responsive and maintainable codebase that can adapt to evolving requirements.
+
+For backend infrastructure, the system leverages Supabase, an open-source Backend-as-a-Service that
+provides a managed PostgreSQL database, integrated authentication, and real-time data synchronization.
+This allows the system to handle complex data relationships and user security with minimal overhead, utilizing
+Row-Level Security (RLS) to ensure data integrity at the database level. The backend is further supported by
+Node.js, providing a scalable runtime environment for executing server-side logic and managing
+asynchronous operations efficiently.
+
+The user interface is crafted with a focus on aesthetics and accessibility, utilizing Tailwind CSS for rapid,
+utility-first styling and Radix UI for unstyled, accessible component primitives. Fluid animations and interactive
+transitions are powered by Framer Motion, while Lucide React provides a consistent and modern iconography
+set. Data visualization is handled by Recharts, offering clear and actionable insights through responsive
+charts. Together, these tools create a cohesive design system that feels premium, alive, and intuitive for every
+user.
+
+Date-fns
+
+Date-fns is a modern JavaScript date utility library that provides a comprehensive and modular set of
+functions for manipulating and formatting dates. Unlike traditional libraries, it is built with a functional
+approach, allowing developers to import only the specific functions they need, which significantly reduces the
+final bundle size. It supports a wide range of locales and provides precise control over date arithmetic, making
+it indispensable for handling time-sensitive data within the library system.
+
+ESLint
+
+ESLint serves as the primary pluggable and configurable linting tool for the project, used to identify and report
+on patterns in JavaScript and TypeScript code. By enforcing a consistent coding style and flagging potential
+bugs or anti-patterns during development, it ensures that the codebase remains clean and maintainable. It
+integrates directly into the development workflow, providing real-time feedback and maintaining high
+standards across the entire development team.
+
+Figma
+
+Figma is a browser-based web design and prototyping tool that plays a critical role in the system's UI and UX
+design phase. It allows for real-time collaboration between designers and developers, ensuring that visual
+components, layout structures, and user flows are finalized before implementation. By using Figma, the team
+can create high-fidelity mockups and interactive prototypes that serve as the visual blueprint for the entire web
+application.
+
+Framer Motion
+
+Framer Motion is a production-ready motion library for React that is used to create fluid, interactive, and
+high-performance animations. It simplifies the process of adding complex transitions, gestures, and
+physics-based animations to UI components, making the interface feel more responsive and engaging. In this
+system, it is utilized to enhance the "premium" feel by providing smooth state transitions and subtle
+micro-animations that guide user attention.
+
+HTML5-QRCode
+HTML5-QRCode is a lightweight and versatile library used for scanning and generating QR codes directly
+within the web browser. It leverages the device's camera via HTML5 standards to provide a fast and reliable
+scanning experience for library materials and student identification cards. This technology is a core
+component of the system's inventory and attendance modules, enabling quick data entry and verification
+without the need for specialized hardware.
+
+Lucide React
+
+Lucide React is a library of consistent and beautiful icons designed to provide clear visual cues and enhance
+the overall user interface. Each icon is built as a highly customizable React component, allowing for easy
+integration with the system's design system and styling tools. These icons are strategically placed throughout
+the application to improve scannability and ensure that navigation remains intuitive and visually cohesive.
+
+NodeMailer
+
+Nodemailer is to easily and securely send emails from Node.js applications. It eliminates complex
+configuration by streamlining the email-sending process, allowing developers to handle transactional emails,
+notifications, and verification codes (OTPs) directly from their backend..
+
+Next.js
+
+Next.js is a comprehensive React framework used for building the full-stack web application, providing
+essential features like server-side rendering (SSR), static site generation (SSG), and optimized routing. It
+streamlines the development process by handling complex configurations and offering built-in performance
+optimizations like image processing and code splitting. This framework is the primary engine of the system,
+ensuring that the application is both SEO-friendly and exceptionally fast for the end user.
+
+Node.js
+
+Node.js is a cross-platform JavaScript runtime environment that allows the execution of JavaScript code
+outside of a web browser. In the context of this system, it provides the foundation for the build tools,
+server-side logic, and various background scripts that handle data processing. Its non-blocking, event-driven
+architecture makes it ideal for handling the multiple concurrent requests and real-time updates required by a
+modern library management system.
+
+Nodemailer
+
+Nodemailer is a module for Node.js applications that allows for easy email sending. It is the primary engine
+used by the system to communicate with the Mailtrap SMTP server, handling the complexities of connection
+management and message formatting. It supports various transport methods and is utilized here to send
+professional, HTML-formatted notifications to library members and administrators reliably.
+
+Radix UI
+
+Radix UI is an unstyled, accessible component library that provides the foundational building blocks for
+creating high-quality design systems. By offering "headless" components that handle complex logic such as
+focus management, keyboard navigation, and ARIA attributes it allows developers to focus entirely on custom
+styling. This ensures that the system's interactive elements are fully accessible and standards-compliant while
+maintaining a unique and premium visual identity.
+
+Recharts
+
+Recharts is a composable charting library built with React components, specifically designed for rendering
+data-rich analytics and statistics. It uses a declarative approach to define charts, making it easy to build
+complex visualizations like line graphs, bar charts, and pie charts that are both responsive and interactive. In
+the system dashboard, Recharts is used to translate raw library data into actionable visual insights for
+administrators and librarians.
+
+Sonner
+
+Sonner is an opinionated and lightweight toast component for React that provides customizable, non-intrusive
+notifications for user actions. It is used to deliver real-time feedback such as success messages after saving
+data or error alerts when a scan fails without disrupting the user's flow. Its clean design and smooth
+animations align perfectly with the system's aesthetic, providing a polished way to manage transient
+application states.
+
+Supabase
+
+Supabase is an open-source Backend-as-a-Service (BaaS) that provides the core infrastructure for the
+system, including a PostgreSQL database, user authentication, and real-time APIs. It simplifies backend
+development by offering a unified interface for data management and security, allowing the team to implement
+complex features like Row-Level Security (RLS) with ease. Supabase serves as the "source of truth" for all
+system data, ensuring reliability and high availability.
+
+Tailwind CSS
+
+Tailwind CSS is a utility-first CSS framework used for rapidly building and styling custom, responsive user
+interfaces. Instead of writing traditional CSS, it allows developers to apply styles directly within HTML or JSX
+using predefined utility classes, which promotes consistency and speed. This framework is essential for
+maintaining the system's high-density layout and ensuring that the design remains responsive across various
+device types
+
+TypeScript
+
+TypeScript is a strongly typed programming language that builds on JavaScript by adding static type
+definitions. It is used throughout the codebase to ensure better code quality, improve developer productivity,
+and eliminate entire classes of runtime bugs. By providing clear interfaces and type safety for both frontend
+and backend logic, TypeScript makes the system more robust and easier to refactor as it grows in complexity.
+
+Vercel
+
+Vercel is a cloud platform specifically tailored for Next.js workflows, used for deploying and hosting the web
+application. It provides a seamless CI/CD pipeline, automatically deploying changes from the repository and
+offering global edge network delivery for maximum performance. Vercel's infrastructure ensures that the
+system is always accessible, fast, and secure, with features like automatic SSL and serverless function
+scaling.
+
+Zod
+
+Zod is a TypeScript-first schema declaration and validation library used for ensuring the integrity of data inputs
+and API responses. It allows developers to define clear data schemas that are automatically synchronized
+with TypeScript types, providing both runtime validation and compile-time safety. In this system, Zod is used
+to validate form submissions, environment variables, and database records, preventing malformed data from
+causing system errors.
+
+Calendar of Activities
+
+Brainstorming
+
+The proponents spent the initial phase of the development period collaborating and exchanging ideas to
+identify the common problems in the current library operations of STI College Alabang. This phase focused on
+planning the core features, such as the QR-based scanning for books, the book reservation workflow, and the
+inventory management modules for both students and administrators.
+Documentation: Chapter I
+The developers completed Chapter I with consistent weekly revisions. This chapter serves as the foundation
+of the study, covering the Project Context, Statement of the Problem, Purpose and Description of the Project,
+and the Scope and Limitations. It provides a clear roadmap for how the Web-Based Library Book Reservation,
+Borrowing, and Inventory Management System will function.
+Documentation: Chapter II
+Chapter II was developed and refined to provide theoretical support for the project. This section includes the
+Review of Related Literature and Related Systems, comparing existing library software with the proposed
+QR-based system to ensure the project offers unique and helpful features for the school.
+Documentation: Chapter III
+The developers completed Chapter III to outline the technical side of the project. This chapter explains the
+software and hardware requirements, the calendar of activities, and the specific technologies used, such as
+Microsoft O365 for user authentication, providing a clear overview of the development timeline.
+
+Diagrams
+The developers designed the Entity Relationship Diagram (ERD) and Use Case Diagram for the system.
+These diagrams were revised multiple times to accurately represent how the database stores book
+information and how different users such as students and admins interact with the library system's features
+Flowchart
+The developers created detailed flowcharts to illustrate the step-by-step processes of the system. These
+charts show the workflow for scanning QR codes, the logic for borrowing and returning books, and how
+notifications are sent to students when their reservations are approved.
+GanttChart
+
+MONTH
+FEBRUARY
+
+MARCH
+
+APRIL
+
+MAY
+
+ACTIVITIES
+
+Requirements Gathering
+Title Proposal
+Brainstorming
+Researching
+Documentation
+Chapter 1: Introduction
+Chapter 2: Review Related Literature
+Chapter 3: Technical Background
+System Development
+
+Transcript of Interview
+
+Resources
+Specification:
+Hardware Requirements
+Processor
+Intel Core i5-12400
+Graphics Card
+AMD Radeon RX 580
+Memory
+32 GB
+Disk Storage
+500 GB
+Table 1 Hardware Requirements
+Software Requirements
+Operating System
+Windows 11
+Integrated Development Environment (IDE) and/or Code Editors
+Visual Studio Code
+Database
+Supabase
+Programming Languages and other Technologies
+Next.js, TypeScript,
+Documentation
+Microsoft 0365 Word
+
+Table 2 Software Requirements
+
+Requirements Analysis
+Minimum Hardware Requirements (For Development)
+
+MINIMUM
+RECOMMENDED
+Processor
+Intel Core i3-10100 @ 3.6- GHz (4 cores, 8 threads)/ AMD Ryzen 3 3200G @ 3.6GHz (4 cores, threads)
+Intel Core i5-11400 @ 2.60GHz (6 cores, 12 threads) / AMD Ryzen 5 5600X
+Memory
+8GB DDR4
+3.7GHz (6 cores, 12 threads) 16GB DDR4
+Graphics Card
+Integrated Graphics (e.g., Intel UHD Graphics 630 / AMD Radeon Vega 8)
+Dedicated Graphics (e.g., NVIDIA GeForce GTX 1660 6GB / AMD Radeon RX 5600 XT 6GB)
+Disk Storage
+128GB
+256GB or more
+Table 3 Minimum Hardware Requirements (For Development)
+Minimum Hardware Requirements (For Users)
+
+Processor
+Intel Core 2 Duo E8400 @ 3.0GHz / AMD Athlon II X2 250 @3.0GHz.
+Memory
+4GB RAM
+Graphics
+Integrated sound card (100% DirectX 10 compatible)
+
+Table 4 Minimum Hardware Requirements (For Users)
+METHODOLOGY
+This project uses the Iterative Development method to build and set up A Web-Based Library Book
+Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College
+Alabang. We chose this approach for one main reason: it allows us to build the system and write our research
+paper at the same time. Instead of waiting to finish all the paperwork before writing code, this method lets us
+work on small parts of both tasks together. This helps us make steady progress and ensures our written report
+always matches the real, working system.
+[image omitted]
+
+Stage 1 Planning
+In this first step, we plan the main features we want to create for a specific part of the library system, such as
+the login page or the QR scanner. At the same time, we write down these initial plans and requirements
+directly into our project document.
+Stage 2 Design
+Next, we design how that specific part of the system will look and work. We map out the user screens and
+database layouts for that feature. As soon as the design is ready, we add these sketches and diagrams to our
+paper.
+Stage 3 Implementation
+This is the step where we actually write the code and build the feature we just designed, like creating the book
+inventory table. Working this way allows us to draft the technical descriptions in our manuscript while the
+coding is fresh in our minds.
+Stage 4 Testing
+Once the feature is coded, we test it carefully to make sure there are no errors. We check that the QR codes
+scan properly and that books can be borrowed without issues. All the test results and fixes are written straight
+into our report.
+Stage 5 Evaluation
+In this final step of the cycle, we look at the tested feature to see what works and what needs to be fixed.
+Once this part is reviewed and finalized, we update our paper to match it perfectly, and then we start the cycle
+all over again for the next system feature.
+
+[image omitted]
+Figure 1 Entity Relationship Diagram 1
+[image omitted]
+
+Figure 1.1 Entity Relationship Diagram 2
+
+[image omitted]
+Figure 2 Data Flow Diagram level
+
+Figure 2.1 Data flow diagram level 1
+
+[image omitted]
+
+Figure 3 Entry Authentication flowchart
+[image omitted]
+Figure 4 Super-Admin Dashboard Flowchart
+[image omitted]
+Figure 4.1 Super-Admin Inventory Flowchart
+[image omitted]
+Figure 4.2 Super-Admin Circulation Desk Flowchart
+[image omitted]
+Figure 4.3 Super-Admin Borrowing Logs Flowchart
+
+[image omitted]
+Figure 4.4 Super-Admin Analytics Flowchart
+
+[image omitted]
+Figure 4.5 Super-Admin User Directory Flowchart
+[image omitted]
+Figure 4.6 Super-Admin Attendance Logs Flowchart
+
+[image omitted]
+Figure 4.7 Super-Admin Setting & Policies Flowchart
+
+[image omitted]
+Figure 4.8 Super-Admin Audit Logs Flowchart
+[image omitted]
+Figure 4.9 Super-Admin Profile Flowchart
+[image omitted]
+Figure 5 Librarian Dashboard Flowchart
+[image omitted]
+Figure 5.1 Librarian Inventory Flowchart
+
+[image omitted]
+Figure 5.2 Librarian Circulation Desk Flowchart
+[image omitted]
+Figure 5.3 Librarian Borrowing Logs Flowchart
+
+[image omitted]
+Figure 5.4 Librarian Analytics Flowchart
+[image omitted]
+Figure 5.5 Librarian User Directory Flowchart
+
+[image omitted]
+Figure 5.6 Librarian Attendance Logs Flowchart
+
+[image omitted]
+Figure 5.7 Librarian Settings & Policies Flowchart
+[image omitted]
+Figure 5.8 Librarian Profile Flowchart
+[image omitted]
+Figure 6 Student-Assistant Dashboard Flowchart
+
+[image omitted]
+Figure 6.1 Student-Assistant Inventory Flowchart
+[image omitted]
+Figure 6.2 Student-Assistant Circulation Desk Flowchart
+[image omitted]
+Figure 6.3 Student-Assistant My Attendance Flowchart
+[image omitted]
+Figure 6.4 Student-Assistant Attendance Logs Flowchart
+[image omitted]
+Figure 6.5 Student-Assistant My Borrow Flowchart
+[image omitted]
+Figure 6.6 Student-Assistant Borrowing Logs
+[image omitted]
+Figure 6.7 Student-Assistant Profile Flowchart
+
+[image omitted]
+Figure 7 Student Dashboard Flowchart
+[image omitted]
+Figure 7.1 Student Catalog Flowchart
+[image omitted]
+Figure 7.2 Student My Borrow Flowchart
+
+[image omitted]
+Figure 7.3 Student My Attendance Flowchart
+[image omitted]
+Figure 7.4 Student Profile Flowchart
+REFERENCES
+Abdullah, A., Nasir, N. E., Mei, L. C., & Lee, K. M. (2021, March). Automating secondary school libraries: a
+web-based library management system. In IASL Annual Conference Proceedings (pp. 193-202).
+https://doi.org/10.29173/iasl8078
+
+Aliyu, M., Mohammed, L., & Yakubu, I. Z. (2024). A smart QR: Based library management system.
+International Journal of Innovative Science and Research Technology, 9(10), 714-719.
+https://doi.org/10.38124/ijisrt/IJISRT24OCT212
+
+Din, M. M., & Fazal Fazla, A. (2021, March). Integration of Web-Based and Mobile Application with QR Code
+implementation for the library management system. In Journal of Physics: Conference Series (Vol. 1860, No.
+1, p. 012018). IOP Publishing. doi.org/10.1088/1742-6596/1860/1/012018
+
+Distanont, A., Khongmalai, O., Distanont, S., & Treenuchagron, C. (2024, September). Library Trends and
+developments in a technologically driven era. In European Conference on Innovation and Entrepreneurship
+(pp. 158-166). Academic Conferences International Limited. https://doi.org/10.34190/ecie.19.1.2486
+
+Facunla, H. L., & Encarnacion, P. C. (2024). Development of a Web application for MLIS and BLIS library
+academic resources. International Journal, 13(3). https://doi.org/10.30534/ijatcse/2024/051332024
+
+Gargoles, J., Peria, N. R., Obelidor, I., Ricablanca, C., Bamba, M., & Roldan, R. G. Jr. (2026). School
+management system 1: Library with QR code innovation and book monitoring: Student information in Bestlink
+College of the Philippines. Ascendens Asia Singapore - Bestlink College of the Philippines Journal of
+Multidisciplinary Research, 7(1). Retrieved from
+https://ojs.aaresearchindex.com/index.php/aasgbcpjmra/article/view/16329
+
+Gito, J., et al. (2023). Enhanced information retrieval: Aemilianum College Inc.'s Library Management System.
+Global Scientific Journal, 11(7), 1648-1651. https://www.globalscientificjournal.com/researchpaper/ENHANC
+ED_INFORMATION_RETRIEVAL_AEMILIANUM_COLLEGE_INC_S_LIBRARY_MANAGEMENT_SYSTEM.
+pdf
+
+Kasahara, Y., & Shimayoshi, T. (2022, March). Our Design and Implementation of Multi-Factor Authentication
+Deployment for Microsoft 365 in Kyushu University. In Proceedings of the 2022 ACM SIGUCCS Annual
+Conference (pp. 56-61). https://doi.org/10.1145/3501292.3511569
+
+Koya, U. P. T., & Waral, N. L. (2025). Integration of Koha library management system with open-source tools
+for customized readers ID card with QR codes. International Journal of Research and Innovation in Applied
+Science, 10(6), 1307-1314. https://doi.org/10.51584/IJRIAS.2025.10060098
+
+Kurnia, H., Farell, G., Kurniadi, D., & Marta, R. (2025). A dual-validation mobile attendance application for
+discipline-oriented vocational schools: Development and evaluation using the waterfall. Journal of
+Hypermedia & Technology-Enhanced Learning, 3(3), 283-295. https://doi.org/10.58536/j-hytel.200
+
+Lampaza, S. L., Parrenas, M. J. P., Suarez, A. D., & Soberano, K. T. (2025). Library systems development:
+Utilization, usability and impact for private schools in Negros Occidental, Philippines. International Journal of
+Computer Science and Mobile Computing, 14(1), 11-19. https://doi.org/10.47760/ijcsmc.2025.v14i01.002
+
+Mendiola, V. J., Panganiban, M. S., Vicotorino, J. K., Santiago, F. III, Delos Reyes, G., & Laynesa, M. (2026).
+School management system: Library management system with online reservation and renewal powered by
+A.I. based adaptive learning and skill development. Ascendens Asia Singapore - Bestlink College of the
+Philippines Journal of Multidisciplinary Research, 7(1).
+https://ojs.aaresearchindex.com/index.php/aasgbcpjmra/article/view/16355
+
+Mulya, N., & Sari, I. W. (2024). Web-Based Library Information System Application with QR Code support
+(Case Study at SMK Negeri 1 Tambusai). Jukoti-Journal of Computer and Technology, 1(1), 15-23.
+https://zakirjournal.com/jukoti/article/view/3
+
+Paul, M., & Naikar, S. (2024). Innovative use of QR codes in academic libraries: Benefits and challenges.
+Journal of Emerging Technologies and Innovative Research (JETIR), 11(6), 565-572. https://www.researchga
+te.net/publication/382073914_Innovative_Use_of_QR_Codes_in_Academic_Libraries_Benefits_and_Challen
+ges
+Pebrian, R., & Gunanto, S. (2025). Implementation of a Web-Based E-Library System for Optimizing Library
+Services: A Case Study of SMAN 1 Abung Pekurun. Jurnal Ilmiah Multidisiplin Indonesia (JIM-ID), 4(10),
+1565-1576. https://ejournal.seaninstitute.or.id/index.php/esaprom/article/view/7532/5697
+Rajee, A., Roy, S., Nushera Islam, M. S., & Ali, M. A. (2022). Online Library Management System. Library Hi
+Tech News. https://doi.org/10.13140/rg.2.2.33360.48649
+Seno-Sanoria, M. T. (2025). Aligning expectations and perceptions: Analyzing library user satisfaction in
+higher education in rural Philippines. Journal of Interdisciplinary Perspectives, 3(8), 480-493.
+https://doi.org/10.69569/jip.2024.394
+Villoga, J. B. (2025). Development and evaluation of an ICT-based library automation system for Northern
+Iloilo Polytechnic State College using ISO standards. Technologique: A Global Journal on Technological
+Developments and Scientific Innovations, 6(1), 13-22.
+https://doi.org/10.62718/vmca.tech-gjtdsi.6.1.SC-1125-023
+Wayal, R. S. (2025). Enhancing library efficiency with Vmedulife integrated library management cloud based
+system: A case study at SVPM's Institute of Management Malegaon Bk. International Journal of Research
+and Scientific Innovation, 12(8), 2159-2166. https://doi.org/10.51244/IJRSI.2025.120800194
+
+Wijaya, R. D., Rais, N. A. R., & Rokhmah, S. (2025). The Implementation of a Web-Based Library
+Management Information System Using Barcodes at Al-Islam Vocational High School Surakarta: A Research
+and Development (R&D) Approach. Journal of Artificial Intelligence and Engineering Applications (JAIEA),
+4(3), 2488-2501. https://doi.org/10.59934/jaiea.v4i3.1199
+Sujana, I. G. E. P., & Putu, N. L. (2025). Library Automation and Its Impact on Services: A Case Study of the
+Central Library, Sido Kanhu Murmu University (SKMU), Dumka, Jharkhand. International Journal of Research
+in Library Science, 11(4), 191-205. https:doi.org/10.26761/IJRLS.11.4.2025.1987
+
+APPENDIX A. RESOURCE PERSONS
+
+RESOURCE PERSON
+The developers of this capstone project would like to express their gratitude to several individuals whose
+contributions were invaluable to its successful completion. We are particularly indebted to our esteemed
+capstone advisor, Mr. John Renaund L. Baybay. His insightful guidance, unwavering support, and vast
+knowledge in the field were instrumental in shaping this project's direction. Mr.Baybay's extensive knowledge
+and wealth of experience have left an indelible mark on the academic research and daily pursuit of the
+developers.
+Furthermore, the authors express their sincere gratitude to the faculty at STI College Alabang. Their
+unwavering support, patience, and insightful feedback throughout the project journey significantly enhanced
+the outcome of the Capstone Project.
+
+APPENDIX B. PERSONAL TECHNICAL VITAE
+Curriculum Vitae of
+Dadea, Jerico B.
+300 Marcelo 2 Bagumbayan, Taguig City
+Jericodadea26@gmail.com
+09854036633
+
+EDUCATIONAL BACKGROUND
+
+Level
+Inclusive Dates
+Name of school/ Institution
+Tertiary
+2023 - Present
+STI College Alabang
+Vocational/Technical
+2018 - 2020
+Amtic National High School
+High School
+2014 - 2018
+Amtic National High School
+Elementary
+2008 - 2014
+Basag Elementary School
+
+PROFESSIONAL OR VOLUNTEER EXPERIENCE
+
+Inclusive Dates
+Nature of Experience/
+Job Title
+Name and Address of Company or Organization
+2024
+NSTP
+STI College Alabang
+
+AFFILIATIONS
+Inclusive Dates
+Name of Organization
+Position
+2024 - Present
+2024 - Present
+Computer Society
+Coders Club
+Technical
+Technical
+.
+SKILLS
+
+SKILLS
+Level of Competency
+Date Acquired
+SAP
+Beginner
+2025
+SAP
+Advance
+2025
+JAVA
+Beginner
+2023
+
+TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+
+Inclusive Dates
+Title of Training, Seminar, or Workshop
+2024
+2023
+2023
+Key IT Trends to Watch
+Step Info Success Pre Employment Essentials for the future
+What's Next In Tech
+Curriculum Vitae of
+Floriano, Kayle Andrew P.
+Blk 5 Lot 46 Cristina Homes San Pedro Laguna
+kaylefloriano1826@gmail.com
+09615091963
+
+EDUCATIONAL BACKGROUND
+
+Level
+Inclusive Dates
+Name of school/ Institution
+Tertiary
+2023 - Current
+STI College Alabang
+Vocational/Technical
+2021 - 2023
+Laguna Northwestern College
+High School
+2017-2021
+Muntinlupa National High School
+Elementary
+2011-2017
+Mountaintop Christian Academy
+
+PROFESSIONAL OR VOLUNTEER EXPERIENCE
+
+Inclusive Dates
+Nature of Experience/
+Job Title
+Name and Address of Company or Organization
+2023
+NSTP
+STI College Alabang
+AFFILIATIONS
+
+Inclusive Dates
+Name of Organization
+Position
+
+N/A
+
+Listed in reverse chronological order (most recent first).
+SKILLS
+SKILLS
+Level of Competency
+Date Acquired
+SAP
+Beginner
+2025
+CSS
+Beginner
+2024
+HTML
+Beginner
+2024
+JAVA
+Beginner
+2023
+
+TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+
+Inclusive Dates
+Title of Training, Seminar, or Workshop
+2024
+Cyber Awareness Seminar
+2023
+Elms Tech Tool
+Curriculum Vitae of
+Godwyn Neri
+12A Laos, Better Living Paranaque
+kuyagodwyn@gmai.com
+09935223815
+
+EDUCATIONAL BACKGROUND
+
+Level
+Inclusive Dates
+Name of school/ Institution
+Tertiary
+2023 - Present
+STI College Alabang
+Vocational/Technical
+2021 - 2023
+Siniloan Integrated National High School
+High School
+2017 - 2021
+Gov. Felicisimo T. San Luis National Agro Industrial Integrated High School
+Elementary
+2011 - 2017
+Kapatalan Elementary School
+
+PROFESSIONAL OR VOLUNTEER EXPERIENCE
+
+Inclusive Dates
+Nature of Experience/
+Job Title
+Name and Address of Company or Organization
+
+2023
+NSTP
+STI College Alabang
+
+AFFILIATIONS
+
+Inclusive Dates
+Name of Organization
+Position
+2025 - Present
+Coders Club
+Auditor
+
+SKILLS
+
+SKILLS
+Level of Competency
+Date Acquired
+ESP32 & IoT Development
+Intermediate
+2025
+
+TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+
+Inclusive Dates
+Title of Training, Seminar, or Workshop
+2024
+2023
+2023
+Key IT Trends to Watch
+Step Info Success Pre Employment Essentials for the future
+What's Next In Tech
+
+Curriculum Vitae of
+Resurreccion, Rhed R.
+Phase 1 Block 10 Lot 26 Southville 3
+Poblacion, Muntinlupa City
+rhedresurreccion@gmail.com
+0945-972-7869/0949-838-1414
+
+EDUCATIONAL BACKGROUND
+
+Level
+Inclusive Dates
+Name of school/ Institution
+Tertiary
+2023 - Present
+STI College Alabang
+Vocational/Technical
+2021 - 2023
+Tunasan National High-School
+High School
+2017 - 2021
+Poblacion National High-School
+Elementary
+2011 - 2017
+Poblacion Elementary School
+
+PROFESSIONAL OR VOLUNTEER EXPERIENCE
+
+Inclusive Dates
+Nature of Experience/
+Job Title
+Name and Address of Company or Organization
+2023
+NSTP
+STI College Alabang
+
+Listed in reverse chronological order (most recent first).
+
+AFFILIATIONS
+Inclusive Dates
+Name of Organization
+Position
+2024 - Present
+Computer Society
+Technical Officer
+
+Listed in reverse chronological order (most recent first).
+
+SKILLS
+
+SKILLS
+Level of Competency
+Date Acquired
+JAVA
+Beginner
+2023
+JAVA
+Beginner
+2023
+
+TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+
+Inclusive Dates
+Title of Training, Seminar, or Workshop
+2023
+Basic Training
+2023
+MARPOL Training
+
+Curriculum Vitae of
+Tolentino, Kenneth James B.
+#21A San Nicolas de Tolentino st.
+Purok 2 Brgy. Cupang, Muntinlupa City
+kennethjaemstolentino4@gmail.com
+0969.166.0480
+
+EDUCATIONAL BACKGROUND
+
+Level
+Inclusive Dates
+Name of school/ Institution
+Tertiary
+2023-Present
+STI College Alabang
+Vocational/Technical
+2021-2023
+Cupang Senior High School
+High School
+2017-2021
+Muntinlupa Business High School Main
+Elementary
+2010 - 2017
+Cupang Elementary School Main
+
+PROFESSIONAL OR VOLUNTEER EXPERIENCE
+
+Inclusive Dates
+Nature of Experience/
+Job Title
+Name and Address of Company or Organization
+2023
+NSTP
+STI College Alabang
+
+AFFILIATIONS
+
+Inclusive Dates
+Name of Organization
+Position
+2024
+Computer Society
+Technical Officer
+
+SKILLS
+
+SKILLS
+Level of Competency
+Date Acquired
+SAP
+Beginner
+2025
+SAP
+Advance
+2025
+HTML
+Beginner
+2024
+JAVA
+Beginner
+2023
+
+TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+
+Inclusive Dates
+Title of Training, Seminar, or Workshop
+2024
+Cyber Awareness Seminar
+2023
+Elms Tech Tool
+
+Transcript of Interview
+Interviewer: Today, we are here for an interview about our research title: "A Web-Based Library Book
+Reservation, Borrowing, And Inventory Management System With Qr-Based Scanning For STI College
+Alabang." Are there any features you can suggest we add?
+Interviewee: Do you have a set of questions prepared? First, is the design origin intended to be online or
+offline?
+
+Interviewer: What we have in mind is to make it both online and offline. It can function offline so that when
+there's no internet, the system will still work. But when there is internet connection, it will sync to the cloud,
+similar to the concept of Microsoft 365. We designed it this way so that when recording data, since books
+have ISBN barcodes, we can simply scan them, and the title and author will automatically be fetched.
+
+Interviewee: The first group I talked to had a Windows-based system, but your concept can indeed be a
+web-based system that works both online and offline. Okay, go ahead. What are your questions regarding the
+features?
+
+Interviewer: We just want to ask if there are any specific features you'd like us to add? Also, our system is
+capable of generating...
+
+Interviewee: My first question is, what are the basic requirements of a library system? Do you have an idea?
+
+Interviewer: Borrowing, sir. We will allow that in the system.
+
+Interviewee: Usually, it requires more than just borrowing. What modules make up the basic system of a
+library?
+
+Interviewer: It will record the data of the books. But it's not just about recording.
+
+Interviewee: Let's ask AI: "What are the basic modules or requirements of a library system based on
+standards used widely in universities abroad and here in the Philippines?" Also, we need to clarify is this
+library system intended for Senior High School (SHS) or the college level?
+
+Interviewer: Actually, sir, it's intended for the whole school.
+
+Interviewee: That's possible. There is a specific system structure used for Senior High, but we can confirm the
+appropriate standards with your school librarian.
+
+Interviewer: I think a unified system is possible because we plan to use the students' school Microsoft
+accounts for the logins.
+
+Interviewee: Usually, college and senior high school libraries are managed separately. When you go to a
+library, books are categorized by specific numbers--you don't just search for them randomly. They follow a
+classification system, like the Dewey Decimal System, where specific numbers correspond to specific
+subjects. Aside from the ISBN, there is a traditional coding system you must follow. An integrated library
+system, like Koha or Follett Destiny, can actually manage both levels. They handle this by using the same
+software but assigning different branch codes, allowing the librarian to see which book belongs to the high
+school wing and which to the college wing. You need to consider these library standards and perhaps look
+into what top universities use, such as enterprise-grade library platforms.
+
+Interviewer: We also have an idea regarding the data. Since the books have ISBN codes, we can use those
+codes to automatically fetch all the information about the book from the internet and store it locally. We will
+scan the books one by one, place the retrieved data into the local database, and then sync it to the cloud.
+
+Interviewee: Take note that libraries use specific classification numbers. The ISBN is good for finding a unique
+title, but the Dewey Decimal numbers are what librarians use to instantly identify a book's category. What will
+be your system's process flow? You need to follow standard library processes, otherwise, no matter how good
+the system you build is, it will be incorrect.
+
+Interviewer: So we should integrate the standard library process--for example, the specific classification
+codes used for Filipiniana books--because we can't just rely on ISBNs and titles. In our school's library, the
+numbering system seems mixed up and not consecutive, but there is an underlying structure recorded in an
+Excel file.
+
+Interviewee: Even if they seem mixed, books with similar classification codes are grouped together on the
+shelves to make them easy to locate. That's why your actual client here must be the librarian. You should
+research Koha, an open-source library system. You need to benchmark against it because your panelists
+might ask you during defense: "Why should we use your system when Koha is free and already available?"
+You need to figure out what makes your system better than existing open-source platforms.
+
+Interviewee: Koha is used globally and strictly follows international standards. Before you consult the librarian,
+you should familiarize yourself with library technicalities. For example, there's the OPAC (Online Public
+Access Catalog)--this is where students search for books. There's also Cataloging, which handles the
+processing of book data. Then there's Circulation, which manages loans, returns, transfers, and acquisitions.
+You will also need a Reporting module.
+
+Interviewer: We already planned a feature for that, sir. If the age limit of a book in the library is, for instance,
+20 years, and it was published in 2007, it should be pulled out next year. Our system will have a feature to
+notify the librarian for the disposal of outdated books.
+
+Interviewee: Yes, you can include predictive reporting for book disposal. To improve your system's concept, I
+highly recommend visiting the National Library to observe their system. Another thing our current library lacks
+is a local repository for thesis papers. Would you like to include soft copies (PDFs) of local research and
+theses in your system?
+
+Interviewer: We can put the thesis files there, sir.
+
+Interviewee: Students are required to submit their theses to the library. If you host soft copies locally, the
+system can establish that those studies are the intellectual property of the creators and the school.
+
+Interviewer: How will the system be useful if it is strictly designed for the librarian and not the students? We
+originally planned the system purely for borrowing and reservation.
+
+Interviewee: There is no library system made solely for the librarian! To make your system unique, you could
+add an offline access feature to view soft copy resources hosted on a local server. This allows students to
+access research papers directly from the library system's database without triggering major copyright
+violations on the public internet.
+
+Interviewer: We would need to place computers in the library for that. Are the current ones usable?
+
+Interviewee: Yes, they are. Libraries are actually required to have computer stations for students to access
+digital resources.
+
+Interviewee: We will probably add a mapping feature to our system. It would function like Google Maps to
+show the exact physical location of the books inside the library.
+
+Interviewer: Yes, when a book is searched, the details and its specific shelf location should be displayed. To
+make your user interface and OPAC even more unique, you could integrate connections to scholarly sites like
+Google Scholar or Research Hub for when the system is online. I highly suggest you benchmark by visiting
+the National Library; it's free. You can also visit the Muntinlupa Public Library to compare systems, but use the
+National Library to establish your core standard.
+
+Interviewee: Before you start coding, you need to finalize the logic design and system flow. Many developers
+make the mistake of coding the system first and thinking about the logic later. Use the Agile methodology and
+map out a flowchart first to see how modules connect. An integrated library system means all tasks must
+sync. If a book is checked out in the circulation module, it must automatically update in the OPAC so students
+won't see it as available. Cataloging is the brain that processes data, OPAC is the face where students log in
+to reserve books, and Circulation handles limits, returns, and inventory.
+Interviewer: We have included inventory management, sir.
+
+Interviewee: Good. Ensure you add the baseline features that are missing before focusing on unique
+additions. Your system must cover these standard library modules first.
+
+Interviewer: We are working on a library book reservation, borrowing, and inventory management system with
+code-based scanning. Our plan is to provide both online and offline functionality, where the system works
+without internet but syncs to the cloud once connected. For data recording, we intend to use ISBN barcodes
+to automatically retrieve book titles and authors from the internet.
+
+Interviewee: This should be a web-based online/offline system. Beyond basic recording, you must determine
+the requirements based on international and local university standards. For instance, a library requires a
+coding system like the Dewey Decimal System; you cannot categorize books by ISBN and title alone.
+
+Interviewer: Regarding basic requirements, I believe the system needs to handle borrowing and recording
+book data. I also think we can integrate the school's Microsoft login for user access.
+
+Interviewee: Using a unified system for both Senior High School (SHS) and college is recommended for
+library literacy, as it teaches students how to navigate university libraries early on. An Integrated Library
+System (ILS) like Koha or Follett Destiny can manage both levels, using branch codes if the collections are in
+separate buildings, The Dewey Decimal System remains the international standard you should use.
+
+Interviewee: Large institutions use enterprise-grade Library Service Platforms (LSP) and Electronic Resource
+Management (ERM). While they use online resources like EBSCO, your system will focus on local
+resources--those physically available in the library.
+
+Interviewer: My idea for the ISBN codes is to pull all book information from the internet and store it locally in
+our database.
+
+Interviewee: The real challenge is the process flow. Even with QR codes and borrowing features, the system
+is incorrect if it doesn't follow standard library flows. For the tertiary level, you must ensure the system has a
+Z39.50 feature to allow for copy cataloging from larger libraries. You must research these proper processes
+and standard codes because a professional librarian will require them.
+
+Interviewer: At the National Library, we saw they use barcodes for attendance (time in/out) and borrowing.
+They have a website for searching called OPAC, which sometimes includes logos that direct you to a
+borrowing page. For physical books, we reserve them using an account and a library ID card. We don't have
+access to the shelves; the staff retrieves the books for us at the desk.
+
+Interviewee: That concept is likely because they are protecting a large collection of books. In that system, the
+circulation area is where you return the books, and they are not allowed outside the library. They use QR
+codes to verify returns at the guard station to ensure no books are taken out without being cleared.
+
+Interviewer: We want to adapt parts of that. Our plan is to use a QR code scanner where students have digital
+library cards on their phones, which they can also print.
+
+Interviewee: You need to be careful with the technicality of library standards. Even if a web app has the
+default UI (like minimize/maximize/exit), the process flow must meet minimum librarian requirements. You
+mentioned not wanting to use a standard system like Dewey because our library is small, but your system
+must be future proof. If the library grows beyond 5,000 books, a limited system will fail.
+
+Interviewer: Our system will include reservation functionality, though it's optional. To borrow, a student brings
+a book to the librarian, who scans the student's QR library card and then the book's QR code to register the
+transaction. We also want to set borrowing limits for example, one day for textbooks and longer for fiction.
+
+Interviewee: Regarding user roles, you should have Admin, Librarian, and Staff/Student Assistant accounts.
+However, inventory and resource management must be restricted to those with high accountability
+(Librarians/Admins). Student assistants should only handle basic tasks like borrowing and returning, as
+inventory involves resources that cost money.
+
+Interviewer: For the inventory, we added a feature were scanning an ISBN automatically retrieves the book
+title and information for the OPAC/catalog.
+
+Interviewee: Check what standards are required for cataloging. Usually, it includes title, edition, ISBN, subject
+headings, keywords, call number, and location status. I suggest you consult a professional librarian, like Miss
+Bet, or a Library Science graduate to ensure the process flow is correct.
+
+Interviewer: We also want to make it innovative. We are thinking of sorting books by category using machine
+learning or analytics. We are also considering adding a login/logout feature for student attendance.
+
+Interviewee: To maximize the system for students, make it a "Study Body" tool. Instead of just borrowing,
+allow them to use it for research, taking notes, or creating reviewers with linked resources and PDFs. You
+could also include a local server for digital theses and offline e-books to avoid storage and copyright issues.
+
+Interviewer: For the payment of fines or violations, we are thinking of a walk-in process where the library
+manually inputs the payment into the system.
+
+Interviewee: That's fine. The library can handle the manual input. Regarding penalties, if a student has an
+overdue book, the system should calculate a penalty--for example, five pesos per day. However, the system
+must be configurable so the librarian can decide the daily rate or even "waive" the penalty for valid reasons,
+such as a death in the family.
+
+Interviewer: We are planning to visit other schools and libraries to conduct further research on their
+processes.
+
+Interviewee: You should search for libraries that follow international standards. Public libraries may not always
+be organized, but the National Library is a good benchmark. I recommend looking at "Big Four" universities
+like UST, La Salle, or Ateneo, as they invest heavily in their library systems. You need to observe their
+traditional library processes, even if they still use paper for some tasks.
+
+Interviewer: We were looking into OPAC (Online Public Access Catalog). In our system, it's mostly just the
+catalog without a separate front-end search engine.
+
+Interviewee: OPAC is essentially the front-end search engine where the bibliographic details author, date of
+publication, and summaries live. Your system needs an inventory entry module for this bibliographic data, as
+well as resource management and authority control. You also need a User Management or CRM module to
+track who can borrow and their transaction history.
+
+Interviewer: For user access, we plan to restrict logins to those with a Microsoft school account. We will filter
+registration so only emails with the school's domain (e.g., @alabang.sti.edu.ph) can enter the system.
+
+Interviewee: Ensure you include the faculty and staff as well, as their emails might have slightly different
+indicators (like.edu.ph or specific staff codes). If the filter identifies them as being from the Alabang branch, it
+will work. For your continued research, focus on schools with the budget to properly maintain these systems,
+as they will provide the best examples of high-standard library management.
+
+Interviewer: In our previous interviews, we mentioned that the system would have both online and offline
+features. However, because we have integrated cloud-based features that require continuous internet access,
+we are no longer able to include an offline mode. This shift occurred because the system transitioned to a
+cloud-based framework.
+
+Interviewee: Since it is cloud-based, that inherently means it is online. What is the core concept of your
+system now? Can they access it from home?.
+Interviewer: Yes, sir. Users can access the system remotely from their homes because it is now a web-based
+platform. Even when they are physically at the school library, the system remains accessible. Students can
+use the online catalog to check for available book copies and make reservations.
+Interviewee: The inventory should definitely be reflected there. But what happens if there is no internet
+connection? Will students still be able to borrow books?.
+Interviewer: If there is no internet, the website will be unavailable, but the library itself will not close. During
+such instances, the library will revert to manual features and manual transactions. Once the internet
+connection is restored, the system will return to normal operation. Our system's technical limitations
+specifically state that it requires continuous internet access to function.
+Interviewee: Why did you decide to focus primarily on the online aspect?.
+Interviewer: We decided to focus on the online system because the institution (STI) provides consistent
+internet access, so we prioritized optimizing those features.
+Interviewee: How does the process work when a student enters the library?.
+Interviewer: Students will use their library cards for attendance. Even though the system is online and they
+can log in from anywhere, physical entry to the library still requires a screening process. We have integrated
+an attendance feature where the system scans the student's library card for time-in and time-out purposes.
+Interviewee: So, the library card is the basis for entry?.
+Interviewer: Yes, sir. Students will use a QR code on their cards for both entry and exit tracking. This same
+QR code is also used for the book borrowing process. To summarize, the system requires internet access to
+operate these features; otherwise, the library must utilize manual transactions during a power outage or
+internet downtime.
+
+INTERVIEWERS:
+DADEA, JERICO B.
+FLORIANO, KAYLE ANDREW P.
+NERI, GODWYN O.
+RESSURRECION, RHED R.
+TOLENTINO, KENNETH JAMES B.
+
+INTERVIEWEE:
+
+Mr. Ricardo M. Ricson Academic Head, STI College Alabang
+Interviewer: We are planning to transition the library's manual transaction process into a digital one. Instead of
+manual writing, we want to use ISBN codes and student ID numbers for a barcode-based system.
+Interviewee: Before you transition to digital, all books must be classified with a call number. The system must
+be able to identify if a book is copyrighted within the last five years, which is the standard for professional and
+updated collections, unless the book is historical. Subject classification typically ranges from 000 to 999.
+Interviewer: What specific classification system should we be using?
+Interviewee: You should use the Dewey Decimal Classification (DDC) system, as it is the standard unless you
+are using the Library of Congress system. For your research, I recommend studying existing systems like
+Platonics or Sophia. These will give you a clear idea of how to handle charging and discharging
+(borrowing/returning), inventory, and loan records.
+Interviewer: Our current system uses generated QR codes for every book and scans student library cards for
+identification.
+Interviewee: That works, but the system must also reflect the library's rules and regulations, including policies
+on loan durations and penalties. You also need to manage different user types, such as Senior High School
+and College students, faculty, and even outside researchers who might visit with a referral letter.
+Interviewer: When we add a new book to the system, what information is essential besides the title and
+author?
+Interviewee: A book should not be cataloged or assigned a call number until it is fully paid for. Once it is, you
+must assign an accession number. While many books may share the same copyright date (e.g., 2020), the
+accession number is unique to every single copy in the library. This allows you to track exactly which copy is
+missing if one is lost.
+Interviewer: We are currently using ISBN codes to automatically "fetch" data like the title and cover photo from
+the internet.
+Interviewee: Automated data fetching is helpful, but it is often incomplete. The most critical inputs that a
+librarian must verify or input manually are the call number (classification) and the accession number. The call
+number is derived from the subject and the author's surname to ensure the book is placed correctly in the
+collection.
+
+INTERVIEWERS:
+DADEA, JERICO B.
+FLORIANO, KAYLE ANDREW P.
+NERI, GODWYN O.
+RESSURRECION, RHED R.
+TOLENTINO, KENNETH JAMES B.
+
+INTERVIEWEE:
+
+Ms. Elizabeth A. Bumalay Faculty, STI College Alabang
