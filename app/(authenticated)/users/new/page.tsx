@@ -3,6 +3,8 @@ import { getMe } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { NewUserClient } from "./NewUserClient";
 
+export const metadata = { title: "Invite user | Lumina LMS" };
+
 // getMe() is cache()-memoized — reuses auth already fetched by the layout.
 // NewUserClient is a pure client form with no server data deps beyond auth.
 async function NewUserContent() {

@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import { AddBookClient } from './AddBookClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
+export const metadata = { title: "Add book | Lumina LMS" };
+
 export default function AddBookPage() {
   return (
     <div className="w-full space-y-6">

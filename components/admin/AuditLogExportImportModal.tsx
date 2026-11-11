@@ -418,6 +418,7 @@ export function AuditLogExportImportModal({
           {/* Custom Switcher Tabs */}
           <div className="flex gap-1.5 bg-muted/40 p-1 rounded-2xl border border-border/5 mt-4">
             <button
+              aria-pressed={activeTab === "export"}
               onClick={() => {
                 setActiveTab("export");
                 resetImport();
@@ -433,6 +434,7 @@ export function AuditLogExportImportModal({
               Custom Export Settings
             </button>
             <button
+              aria-pressed={activeTab === "import"}
               onClick={() => setActiveTab("import")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 px-3 rounded-xl transition-all",
@@ -460,6 +462,7 @@ export function AuditLogExportImportModal({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
+                    aria-pressed={exportFormat === "csv"}
                     onClick={() => setExportFormat("csv")}
                     className={cn(
                       "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all",
@@ -477,6 +480,7 @@ export function AuditLogExportImportModal({
 
                   <button
                     type="button"
+                    aria-pressed={exportFormat === "json"}
                     onClick={() => setExportFormat("json")}
                     className={cn(
                       "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all",
@@ -494,6 +498,7 @@ export function AuditLogExportImportModal({
 
                   <button
                     type="button"
+                    aria-pressed={exportFormat === "xlsx"}
                     onClick={() => setExportFormat("xlsx")}
                     className={cn(
                       "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all col-span-2 sm:col-span-1",
@@ -610,8 +615,7 @@ export function AuditLogExportImportModal({
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-border/20 bg-muted/5 hover:bg-muted/15 rounded-3xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:border-primary/45 group"
+                  className="border-2 border-dashed border-border/20 bg-muted/5 hover:bg-muted/15 rounded-3xl p-8 flex flex-col items-center justify-center text-center transition-all hover:border-primary/45 group"
                 >
                   <input
                     type="file"
@@ -627,7 +631,7 @@ export function AuditLogExportImportModal({
                   <div className="text-[11px] text-muted-foreground mt-1 max-w-[280px]">
                     Supports JSON (native exports), CSV, or Excel XLSX files containing audit logs.
                   </div>
-                  <Button variant="link" size="sm" className="mt-3 h-8 text-[11px] font-bold text-primary">
+                  <Button type="button" onClick={() => fileInputRef.current?.click()} variant="link" size="sm" className="mt-3 h-8 text-[11px] font-bold text-primary">
                     Browse Files
                   </Button>
                 </div>

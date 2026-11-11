@@ -43,7 +43,7 @@ export function AdminTableShell({
   const isGhost = variant === 'ghost';
 
   return (
-    <div className={cn("flex w-full flex-col gap-4", className)}>
+    <div className={cn("flex w-full min-w-0 flex-col gap-4", className)}>
       {(title || headerActions) && (
         <div className={cn(
           "flex flex-col gap-4 pb-2 sm:flex-row sm:items-end sm:justify-between",
@@ -56,12 +56,12 @@ export function AdminTableShell({
               </h1>
             )}
             {description && (
-              <div className="text-sm font-medium text-muted-foreground hidden md:block opacity-70 leading-relaxed max-w-2xl">
+              <div className="text-sm font-medium text-muted-foreground leading-relaxed max-w-2xl">
                 {description}
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
             {headerActions}
           </div>
         </div>

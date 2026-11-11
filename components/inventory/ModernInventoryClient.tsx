@@ -658,6 +658,7 @@ export function ModernInventoryClient({
                           key={s}
                           variant={status === s ? "default" : "outline"}
                           size="sm"
+                          aria-pressed={status === s}
                           onClick={() => setStatus(s)}
                           className={cn(
                             "h-9 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
@@ -699,6 +700,7 @@ export function ModernInventoryClient({
                       <Button
                         variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
                         size="sm"
+                        aria-pressed={selectedCategoryIds.length === 0}
                         onClick={() => setCategoryId("all")}
                         className={cn(
                           "h-9 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider transition-all",
@@ -714,6 +716,7 @@ export function ModernInventoryClient({
                             key={cat.id}
                             variant={isSelected ? "default" : "outline"}
                             size="sm"
+                            aria-pressed={isSelected}
                             onClick={() => handleCategoryToggle(cat.id)}
                             className={cn(
                               "h-10 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest transition-all",
@@ -770,6 +773,7 @@ export function ModernInventoryClient({
                   {/* Beautiful Glassmorphic Tab Selectors */}
                   <div className="flex gap-1 p-1 rounded-xl bg-muted/20 border border-border/5 mb-6">
                     <button
+                      aria-pressed={activeTab === "import"}
                       onClick={() => setActiveTab("import")}
                       className={cn(
                         "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
@@ -780,6 +784,7 @@ export function ModernInventoryClient({
                       Import Sheet
                     </button>
                     <button
+                      aria-pressed={activeTab === "isbn"}
                       onClick={() => setActiveTab("isbn")}
                       className={cn(
                         "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
@@ -790,6 +795,7 @@ export function ModernInventoryClient({
                       ISBN Fallback
                     </button>
                     <button
+                      aria-pressed={activeTab === "export"}
                       onClick={() => setActiveTab("export")}
                       className={cn(
                         "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
@@ -804,9 +810,10 @@ export function ModernInventoryClient({
                   {/* Tab 1: Import Sheet */}
                   {activeTab === "import" && (
                     <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                      <div className="border-2 border-dashed border-border/20 rounded-2xl p-8 flex flex-col items-center justify-center bg-muted/5 transition-all hover:border-primary/30 relative">
+                      <div className="border-2 border-dashed border-border/20 rounded-2xl p-8 flex flex-col items-center justify-center bg-muted/5 transition-all hover:border-primary/30 focus-within:ring-2 focus-within:ring-primary relative">
                         <input
                           type="file"
+                          aria-label="Choose JSON, CSV or Excel file"
                           accept=".json,.csv,.xlsx,.xls"
                           onChange={handleFileChange}
                           className="absolute inset-0 opacity-0 cursor-pointer"
@@ -829,7 +836,7 @@ export function ModernInventoryClient({
                                 setParsedBooks([]);
                                 setImportResults(null);
                               }}
-                              className="mt-3 text-xs text-destructive font-bold hover:underline"
+                              className="relative mt-3 text-xs text-destructive font-bold hover:underline"
                             >
                               Remove File
                             </button>
@@ -928,8 +935,9 @@ export function ModernInventoryClient({
                   {activeTab === "isbn" && (
                     <div className="flex-1 overflow-y-auto space-y-4 pr-1 flex flex-col">
                       <div className="space-y-2">
-                        <label className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">Paste ISBN List</label>
+                        <label htmlFor="inventory-isbns" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground ml-1">Paste ISBN List</label>
                         <textarea
+                          id="inventory-isbns"
                           placeholder="9780743273565&#10;9780451524935&#10;9780061120084"
                           value={isbnInput}
                           onChange={(e) => setIsbnInput(e.target.value)}
@@ -1037,15 +1045,8 @@ export function ModernInventoryClient({
                           {AVAILABLE_BOOK_COLUMNS.map((col) => {
                             const isSelected = selectedExportColumns.includes(col.id);
                             return (
-                              <div
+                              <label
                                 key={col.id}
-                                onClick={() => {
-                                  setSelectedExportColumns(prev =>
-                                    prev.includes(col.id)
-                                      ? prev.filter(id => id !== col.id)
-                                      : [...prev, col.id]
-                                  );
-                                }}
                                 className={cn(
                                   "flex items-start gap-2 p-1.5 rounded-xl border border-transparent cursor-pointer transition-all hover:bg-muted/20 select-none",
                                   isSelected ? "bg-muted/10 border-border/5" : "opacity-60 hover:opacity-100"
@@ -1054,16 +1055,22 @@ export function ModernInventoryClient({
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
-                                  readOnly
+                                  onChange={() => {
+                                    setSelectedExportColumns(prev =>
+                                      prev.includes(col.id)
+                                        ? prev.filter(id => id !== col.id)
+                                        : [...prev, col.id]
+                                    );
+                                  }}
                                   className="mt-0.5 accent-primary h-3.5 w-3.5 rounded border-border/20 cursor-pointer"
                                 />
-                                <div className="min-w-0">
+                                <span className="min-w-0">
                                   <span className="text-xs font-bold block">{col.label}</span>
                                   <span className="text-[11px] text-muted-foreground leading-tight block truncate">
                                     {col.desc}
                                   </span>
-                                </div>
-                              </div>
+                                </span>
+                              </label>
                             );
                           })}
                         </div>

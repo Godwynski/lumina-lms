@@ -27,7 +27,7 @@ export function CoverUploader({ coverPreviewUrl, coverUrl, onCoverSelected }: Co
             className="object-cover transition-transform group-hover:scale-105"
             unoptimized={true}
           />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center z-10">
             <Button 
               type="button" 
               variant="secondary" 

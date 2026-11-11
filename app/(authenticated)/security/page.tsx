@@ -3,6 +3,8 @@ import { SecuritySection } from "@/components/settings/sections/SecuritySection"
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+export const metadata = { title: "Security | Lumina LMS" };
+
 // getMe() is cache()-memoized — reuses auth already fetched by the layout
 async function SecurityPageContent() {
   const me = await getMe();

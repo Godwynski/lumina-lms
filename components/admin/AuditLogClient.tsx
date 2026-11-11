@@ -686,6 +686,8 @@ export function AuditLogClient() {
                               variant="ghost" 
                               size="sm" 
                               className="h-7 px-2 text-[11px] font-bold uppercase tracking-wider hover:bg-background border border-border/10"
+                              aria-expanded={isExpanded}
+                              aria-label={`${isExpanded ? "Hide" : "View"} details for ${log.action} at ${dateString}`}
                               onClick={(e) => { e.stopPropagation(); setExpandedRowId(isExpanded ? null : log.id); }}
                             >
                               {isExpanded ? "Hide" : "View"}

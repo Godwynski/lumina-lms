@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { UsersContent } from "./UsersContent";
 import { getUsers } from "@/lib/actions/users";
 
+export const metadata = { title: "Users | Lumina LMS" };
+
 const PAGE_SIZE = 12;
 
 // getMe() is cache()-memoized — reuses the auth result from the layout,
