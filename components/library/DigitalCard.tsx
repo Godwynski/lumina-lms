@@ -112,7 +112,7 @@ function CardFront({
             "flex items-center justify-center border-r border-foreground bg-[#ffdb00]",
             exportMode ? "p-2" : "p-1 sm:p-2"
           )}>
-            <div className="text-center leading-none text-[#005aa9]">
+            <div className="text-center leading-none text-[#004b8c]">
               <p className={cn("font-black", exportMode ? "text-3xl" : "text-lg sm:text-3xl")}>STI</p>
               <p className={cn("mt-0.5 font-bold tracking-[0.12em]", exportMode ? "text-[10px]" : "text-[7px] sm:text-[10px]")}>ALABANG</p>
             </div>
@@ -202,7 +202,7 @@ function CardFront({
             </button>
             <div className="flex flex-col items-center leading-none">
               <p className={cn("font-mono font-black tracking-tighter text-foreground break-all text-center", exportMode ? "text-[14px]" : "text-[11px] sm:text-[14px]")}>{cardNumber}</p>
-              <p className={cn("mt-0.5 text-center font-bold uppercase tracking-tight text-muted-foreground/80", exportMode ? "text-[8px]" : "text-[6px] sm:text-[8px]")}>Scan</p>
+              <p className={cn("mt-0.5 text-center font-bold uppercase tracking-tight text-foreground", exportMode ? "text-[8px]" : "text-[6px] sm:text-[8px]")}>Scan</p>
             </div>
           </div>
         </div>
@@ -221,7 +221,7 @@ function FieldLine({ label, value, exportMode }: { label: string; value: string;
         )}>{value}</p>
       </div>
       <p className={cn(
-        "pt-0.5 text-center font-sans font-bold uppercase tracking-widest text-muted-foreground/80",
+        "pt-0.5 text-center font-sans font-bold uppercase tracking-widest text-foreground",
         exportMode ? "text-[11px]" : "text-[9px] sm:text-[11px]"
       )}>{label}</p>
     </div>
@@ -256,7 +256,7 @@ function CardBack({
             "flex items-center justify-center border-r border-foreground bg-[#ffdb00]",
             exportMode ? "p-2" : "p-1 sm:p-2"
           )}>
-            <div className="text-center leading-none text-[#005aa9]">
+            <div className="text-center leading-none text-[#004b8c]">
               <p className={cn("font-black", exportMode ? "text-3xl" : "text-lg sm:text-3xl")}>STI</p>
               <p className={cn("mt-0.5 font-bold tracking-[0.12em]", exportMode ? "text-[10px]" : "text-[7px] sm:text-[10px]")}>ALABANG</p>
             </div>
@@ -301,7 +301,7 @@ function CardBack({
               <div className={cn("border-b border-foreground text-center", exportMode ? "min-w-[140px]" : "min-w-[100px] sm:min-w-[140px]")}>
                 <p className={cn("font-sans font-bold text-foreground", exportMode ? "text-sm" : "text-[11px] sm:text-sm")}>{roleLabel || "Librarian"}</p>
               </div>
-              <p className="mt-0.5 text-[8px] uppercase tracking-widest text-muted-foreground/60">Signature</p>
+              <p className="mt-0.5 text-[8px] uppercase tracking-widest text-foreground">Signature</p>
             </div>
           </div>
         </div>

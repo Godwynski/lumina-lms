@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 export const metadata = {
-  title: "Update Password | Lumina LMS",
+  title: "Update Password",
 };
 
 export default async function UpdatePasswordPage() {

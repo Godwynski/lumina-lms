@@ -13,7 +13,7 @@ export async function generateMetadata({
   searchParams: Promise<{ view?: string }>;
 }) {
   const me = await getMe();
-  if (!me) return { title: "My Borrowing | Lumina LMS" };
+  if (!me) return { title: "My Borrowing" };
 
   const params = await searchParams;
   const view = params.view || "";
@@ -26,7 +26,7 @@ export async function generateMetadata({
   const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
 
   return {
-    title: `${showAllLogs ? "Borrowing Logs" : "My Borrowing"} | Lumina LMS`,
+    title: `${showAllLogs ? "Borrowing Logs" : "My Borrowing"}`,
     description: showAllLogs 
       ? "View and manage complete library transaction registers and audit trails."
       : "Track your library borrowing timeline and returns.",

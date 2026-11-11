@@ -5,6 +5,8 @@ import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { StudentBookDetailClient } from './StudentBookDetailClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
+export const metadata = { title: "Catalog Book Details" };
+
 export function BookDetailSkeleton() {
   return (
     <div className="p-4 md:p-6 space-y-6 animate-pulse">

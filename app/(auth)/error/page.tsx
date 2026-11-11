@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, ShieldAlert, AlertCircle, LogIn } from "lucide-react";
@@ -129,7 +129,7 @@ async function ErrorContent({
 }
 
 export const metadata = {
-  title: "Authentication Error | Lumina LMS",
+  title: "Authentication Error",
 };
 
 export default function Page({
@@ -149,7 +149,7 @@ export default function Page({
             <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-2">
               <ShieldAlert className="w-7 h-7 text-destructive" />
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">Authentication Error</CardTitle>
+            <h1 className="text-2xl font-bold tracking-tight">Authentication Error</h1>
             <CardDescription className="text-sm font-medium">
               Access to the system was restricted
             </CardDescription>

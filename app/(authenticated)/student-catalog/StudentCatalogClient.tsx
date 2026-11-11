@@ -280,7 +280,7 @@ export function StudentCatalogClient({
             )}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <div className="flex flex-wrap items-center gap-2 py-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -340,7 +340,7 @@ export function StudentCatalogClient({
             <div className="h-6 w-[1px] bg-border/40 mx-1 hidden sm:block" />
 
             <Select value={sortBy} onValueChange={handleSortChange}>
-              <SelectTrigger aria-label="Sort books" className="h-9 w-[130px] rounded-xl border-border/40 bg-background/50 px-3 text-[11px] font-bold shadow-none focus:ring-0">
+              <SelectTrigger aria-label="Sort books" className="h-9 w-[130px] rounded-xl border-border/40 bg-background/50 px-3 text-[11px] font-bold shadow-none">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -371,6 +371,7 @@ export function StudentCatalogClient({
         ) : null
       }
     >
+      <p className="sr-only" role="status">{isSearchSettled ? `${totalBooks} ${totalBooks === 1 ? "book" : "books"} found.` : "Searching..."}</p>
       <div className={cn("transition-opacity w-full pb-10", isPending && "opacity-50")}>
         <AnimatePresence mode="popLayout" initial={false}>
           <m.div 
@@ -395,7 +396,7 @@ export function StudentCatalogClient({
 
         {books.length === 0 && !isSearchSettled && (
           // Don't claim "no results" while a search is still in flight.
-          <div role="status" className="flex min-h-[320px] items-center justify-center text-sm text-muted-foreground">
+          <div className="flex min-h-[320px] items-center justify-center text-sm text-muted-foreground">
             Searching...
           </div>
         )}

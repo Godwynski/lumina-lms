@@ -2,6 +2,8 @@ import { getMe } from '@/lib/auth-helpers';
 import { UserPermissions } from '@/lib/types';
 import { redirect } from 'next/navigation';
 
+export const metadata = { title: "Library Circulation" };
+
 async function CirculationGuard({ children }: { children: React.ReactNode }) {
   const me = await getMe();
   if (!me) redirect('/');

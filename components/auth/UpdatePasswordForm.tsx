@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -25,19 +24,21 @@ export function UpdatePasswordForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const supabase = createClient();
+    setFormError("");
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      router.push("/protected");
+      router.push("/dashboard");
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setFormError(error instanceof Error ? error.message : "An error occurred");
       setIsLoading(false);
     }
   };
@@ -56,12 +57,13 @@ export function UpdatePasswordForm({
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleUpdatePassword} className="space-y-4">
+          <form aria-busy={isLoading} onSubmit={handleUpdatePassword} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">New password</Label>
               <div className="relative">
                 <Input
                   id="password"
+                  autoComplete="new-password"
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
@@ -89,6 +91,7 @@ export function UpdatePasswordForm({
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isLoading ? "Updating..." : "Update password"}
             </Button>
+            {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
           </form>
         </CardContent>
       </Card>

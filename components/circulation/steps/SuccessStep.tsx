@@ -21,7 +21,7 @@ export function SuccessStep({ title, message, onReset, reservationReady, reserve
       </div>
 
       <div className="text-center space-y-2 max-w-sm">
-        <h3 className="text-xl font-black uppercase tracking-tight text-foreground">{title}</h3>
+        <h2 className="text-xl font-black uppercase tracking-tight text-foreground">{title}</h2>
         <p className="text-xs text-muted-foreground leading-relaxed font-medium">
           {message}
         </p>
@@ -33,9 +33,9 @@ export function SuccessStep({ title, message, onReset, reservationReady, reserve
             <Bookmark className="h-5 w-5 fill-primary/20" />
           </div>
           <div className="text-left">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-primary/60">Hold Fulfillment</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-primary">Hold Fulfillment</p>
             <p className="text-[11px] font-black text-primary leading-tight mt-0.5 uppercase">Place on Hold Shelf</p>
-            <p className="text-[11px] font-medium text-primary/80 truncate">{reservedFor || 'Reserved Student'}</p>
+            <p className="text-[11px] font-medium text-primary break-words">{reservedFor || 'Reserved Student'}</p>
           </div>
         </div>
       )}

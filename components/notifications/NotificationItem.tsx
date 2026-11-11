@@ -91,17 +91,6 @@ export const NotificationItem = memo(({
 
   return (
     <div 
-      onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        // Keys on the nested "Mark as read" button must not also navigate.
-        if (e.target !== e.currentTarget) return
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          handleClick()
-        }
-      }}
       className={cn(
         "group relative flex items-start gap-3 transition-all duration-200 border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:bg-muted/30",
         notification.is_read 
@@ -126,7 +115,10 @@ export const NotificationItem = memo(({
               variant === 'compact' ? "truncate" : "break-words",
               !notification.is_read ? "text-foreground" : "text-muted-foreground"
             )}>
-              {notification.title}
+              <button type="button" onClick={handleClick} className="cursor-pointer text-left after:absolute after:inset-0 after:z-10 focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-primary">
+                {!notification.is_read && <span className="sr-only">Unread: </span>}
+                {notification.title}
+              </button>
             </h4>
           </div>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -146,7 +138,7 @@ export const NotificationItem = memo(({
 
       {/* Single direct action: Mark as read (Unread items only) */}
       {!notification.is_read && (
-        <div className="flex items-center self-start pt-0.5">
+        <div className="relative z-20 flex items-center self-start pt-0.5">
           <Button 
             variant="ghost" 
             size="icon" 

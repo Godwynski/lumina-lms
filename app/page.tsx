@@ -36,7 +36,8 @@ async function AuthRedirect() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background selection:bg-muted/40 overflow-x-clip">
+    <div className="min-h-screen bg-background selection:bg-muted/40 overflow-x-clip">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded focus:bg-background focus:p-3 focus:text-foreground">Skip to main content</a>
       <Suspense fallback={null}>
         <AuthRedirect />
       </Suspense>
@@ -63,7 +64,7 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col items-center">
+        <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col items-center scroll-mt-16">
           <Suspense fallback={
             <div className="min-h-[70vh] w-full flex flex-col items-center justify-center gap-8 px-6">
               <Skeleton className="h-16 w-[300px] sm:w-[500px] rounded-2xl opacity-20" />
@@ -76,10 +77,10 @@ export default function Home() {
           }>
             <HeroSection />
           </Suspense>
-        </div>
+        </main>
 
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -328,10 +328,9 @@ export function ProtectedNav({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  aria-label={`${initials} ${userData.name} ${userData.email} account menu`.trim()}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <Avatar className="h-8 w-8 rounded-lg">
+                  <Avatar aria-hidden="true" className="h-8 w-8 rounded-lg">
                     <AvatarImage src={userData.avatarUrl || ""} alt="" fetchPriority="high" />
                     <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-accent-foreground font-bold">
                       {userData.initials}
@@ -341,6 +340,7 @@ export function ProtectedNav({
                     <span className="truncate font-semibold">{userData.name}</span>
                     <span className="truncate text-xs text-muted-foreground">{userData.email}</span>
                   </div>
+                  <span className="sr-only">Account menu for {userData.name}</span>
                   <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>

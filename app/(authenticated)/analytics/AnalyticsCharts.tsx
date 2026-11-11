@@ -162,7 +162,7 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
 
   return (
     <>
-      {href ? <Link href={href} className="block w-full" aria-label={`View details for ${title}`}>{content}</Link> : content}
+      {href ? <Link href={href} className="block w-full">{content}</Link> : content}
       <ChartValues title={title} column="Period" measure="Borrows" rows={data} />
     </>
   );

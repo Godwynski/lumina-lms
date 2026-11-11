@@ -419,7 +419,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
           </div>
 
           {/* Export Hidden Layer */}
-          <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
+          <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" inert aria-hidden>
              <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
               <DigitalCard
                 {...cardProps}
@@ -584,7 +584,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
           />
         </div>
 
-        <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" aria-hidden>
+        <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" inert aria-hidden>
           <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
             <DigitalCard
               {...cardProps}

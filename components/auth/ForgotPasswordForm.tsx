@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -24,11 +23,13 @@ export function ForgotPasswordForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
   const [success, setSuccess] = useState(false);
+  const [formError, setFormError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const supabase = createClient();
+    setFormError("");
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -37,7 +38,7 @@ export function ForgotPasswordForm({
       if (error) throw error;
       setSuccess(true);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
+      setFormError(error instanceof Error ? error.message : "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +54,7 @@ export function ForgotPasswordForm({
           </Link>
           
           {success ? (
-            <div className="flex flex-col items-center justify-center pt-4 pb-2 animate-in zoom-in duration-300">
+            <div role="status" className="flex flex-col items-center justify-center pt-4 pb-2 animate-in zoom-in duration-300">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
                 <MailCheck className="h-7 w-7 text-primary" />
               </div>
@@ -82,11 +83,12 @@ export function ForgotPasswordForm({
             </Button>
           ) : (
             <>
-              <form onSubmit={handleForgotPassword} className="space-y-4">
+              <form aria-busy={isLoading} onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-medium">Email address</Label>
                   <Input
                     id="email"
+                  autoComplete="email"
                     type="email"
                     placeholder="you@example.com"
                     required
@@ -110,6 +112,7 @@ export function ForgotPasswordForm({
                     "Send reset link"
                   )}
                 </Button>
+                {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
               </form>
 
               <Link

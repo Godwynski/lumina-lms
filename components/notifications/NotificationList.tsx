@@ -43,7 +43,7 @@ export function NotificationList({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
+      <div role="status" className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         <span className="text-sm text-muted-foreground">
           Loading...
@@ -54,7 +54,7 @@ export function NotificationList({
 
   if (notifications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+      <div role="status" className="flex flex-col items-center justify-center py-16 text-center gap-3">
         <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
           <Bell className="w-5 h-5 text-muted-foreground" />
         </div>

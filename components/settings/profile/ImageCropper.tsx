@@ -4,7 +4,8 @@ import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { 
   Dialog, 
-  DialogContent, 
+  DialogContent,
+  DialogDescription,
   DialogHeader, 
   DialogTitle, 
   DialogFooter 
@@ -26,6 +27,9 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [mediaSize, setMediaSize] = useState({ width: 0, height: 0 });
+  const [cropSize, setCropSize] = useState({ width: 0, height: 0 });
+  const [cropError, setCropError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const onCropChange = (crop: Point) => {
@@ -40,14 +44,25 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
     setCroppedAreaPixels(pixelCrop);
   }, []);
 
+  const movePhoto = (dx: number, dy: number) => {
+    const limitX = Math.max(0, (mediaSize.width * zoom - cropSize.width) / 2);
+    const limitY = Math.max(0, (mediaSize.height * zoom - cropSize.height) / 2);
+    setCrop(({ x, y }) => ({
+      x: Math.max(-limitX, Math.min(limitX, x + dx)),
+      y: Math.max(-limitY, Math.min(limitY, y + dy)),
+    }));
+  };
+
   const handleSave = async () => {
     if (!croppedAreaPixels) return;
     try {
+      setCropError("");
       setIsProcessing(true);
       const croppedBlob = await getCroppedImg(image, croppedAreaPixels);
       onCropComplete(croppedBlob);
     } catch (e) {
       console.error(e);
+      setCropError("The photo could not be cropped. Try again or choose another image.");
     } finally {
       setIsProcessing(false);
     }
@@ -55,12 +70,13 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
 
   return (
     <Dialog open={!!image} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-xl border-border/40 p-0 overflow-hidden rounded-[2rem]">
+      <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-xl border-border/40 p-0 max-h-[90dvh] overflow-y-auto rounded-[2rem]">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-xl font-black uppercase tracking-tight">Adjust Profile Photo</DialogTitle>
+          <DialogDescription>Use the direction buttons to position your photo, then adjust the zoom.</DialogDescription>
         </DialogHeader>
 
-        <div className="relative h-80 w-full bg-muted/20 mt-4">
+        <div className="relative h-[min(35dvh,20rem)] w-full bg-muted/20 mt-4">
           <Cropper
             image={image}
             crop={crop}
@@ -69,12 +85,20 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
             onCropChange={onCropChange}
             onCropComplete={onCropCompleteInternal}
             onZoomChange={onZoomChange}
+            onMediaLoaded={setMediaSize}
+            onCropSizeChange={setCropSize}
+            cropperProps={{ "aria-label": "Photo position. Use arrow keys to move the photo." }}
             cropShape="round"
             showGrid={false}
           />
         </div>
 
         <div className="p-6 space-y-6">
+          <div role="group" aria-label="Move photo" className="flex flex-wrap gap-2">
+            {([["Left", -10, 0], ["Right", 10, 0], ["Up", 0, -10], ["Down", 0, 10]] as const).map(([label, dx, dy]) => (
+              <Button key={label} type="button" variant="outline" size="sm" onClick={() => movePhoto(dx, dy)}>{label}</Button>
+            ))}
+          </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Zoom Level</span>
@@ -91,6 +115,7 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
             />
           </div>
 
+          {cropError && <p role="alert" className="text-sm text-destructive">{cropError}</p>}
           <DialogFooter className="flex-row gap-3">
             <Button 
               variant="outline" 
@@ -105,7 +130,7 @@ export function ImageCropper({ image, onCropComplete, onCancel }: ImageCropperPr
               className="flex-1 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20"
             >
               {isProcessing ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <><Loader2 className="h-3 w-3 animate-spin" /> Saving</>
               ) : (
                 "Save Changes"
               )}

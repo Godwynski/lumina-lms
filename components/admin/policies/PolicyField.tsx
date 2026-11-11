@@ -138,7 +138,7 @@ export function PolicyField({
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground leading-none">{labelText}</h3>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
-                    <button type="button" className="text-muted-foreground hover:text-primary transition-colors focus:outline-none cursor-help mb-0.5">
+                    <button type="button" aria-label={`About ${labelText}`} className="grid size-6 place-items-center rounded text-muted-foreground hover:text-primary cursor-help">
                       <HelpCircle size={12} />
                     </button>
                   </TooltipTrigger>
@@ -149,7 +149,7 @@ export function PolicyField({
                       </div>
                       <p className="text-[11px] font-medium text-foreground/80 leading-relaxed">{config.description}</p>
                       {validation?.type === "number" && (
-                        <p className="text-[11px] font-bold text-primary/60 uppercase tracking-widest">
+                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest">
                           Limit: {validation.min ?? 0} - {validation.max ?? '∞'}
                         </p>
                       )}

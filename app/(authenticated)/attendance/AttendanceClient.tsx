@@ -31,6 +31,7 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
+  DialogTrigger,
   DialogTitle, 
   DialogDescription 
 } from "@/components/ui/dialog";
@@ -74,7 +75,6 @@ export function AttendanceClient({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const lastScannedValRef = useRef<string | null>(null);
   const lastScanTimeRef = useRef(0);
 
@@ -257,13 +257,6 @@ export function AttendanceClient({
     }
   }, [isScannerOpen, startScanner, stopCamera]);
 
-  // Focus manual input when not using scanner
-  useEffect(() => {
-    if (isStaff && !isScannerOpen) {
-      inputRef.current?.focus();
-    }
-  }, [isStaff, isScannerOpen]);
-
   // Compute active & completed stats for today
   const activeCount = useMemo(() => 
     systemTodayRecords.filter(r => !r.check_out_at).length, 
@@ -357,7 +350,7 @@ export function AttendanceClient({
           </div>
 
           {/* Quick stats pill */}
-          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/10 text-[11px] font-medium text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/10 text-[11px] font-medium text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <strong className="text-foreground">{activeCount}</strong> active
@@ -382,19 +375,21 @@ export function AttendanceClient({
 
         {/* Right: Manual Input Form + Scanner Button */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <form onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
+          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
             <div className="relative flex-1 sm:w-44">
-              <ScanLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                ref={inputRef}
-                aria-label="Card ID or student number"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-                placeholder="Card ID or Student No..."
-                className="h-8 pl-8 pr-2 text-xs bg-background/50 rounded-lg border-border/20"
-                disabled={isProcessing}
-                autoComplete="off"
-              />
+              <label htmlFor="attendance-card-id" className="block text-xs font-medium">Card ID or student number</label>
+              <div className="relative">
+                <ScanLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  id="attendance-card-id"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  placeholder="Card ID or Student No..."
+                  className="h-8 pl-8 pr-2 text-xs bg-background/50 rounded-lg border-border/20"
+                  readOnly={isProcessing}
+                  autoComplete="off"
+                />
+              </div>
             </div>
             <Button 
               type="submit" 
@@ -402,20 +397,21 @@ export function AttendanceClient({
               disabled={isProcessing || !cardNumber.trim()}
               className="h-8 px-3 font-semibold text-xs rounded-lg shrink-0"
             >
-              {isProcessing ? "..." : "Log"}
+              {isProcessing ? "Recording…" : "Log"}
             </Button>
           </form>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsScannerOpen(true)}
-            className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/30 hover:bg-muted/40"
-            disabled={isProcessing}
-          >
-            <Camera className="w-3.5 h-3.5 text-primary" />
-            <span>Launch Scanner</span>
-          </Button>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/30 hover:bg-muted/40"
+              disabled={isProcessing}
+            >
+              <Camera className="w-3.5 h-3.5 text-primary" />
+              <span>Launch Scanner</span>
+            </Button>
+          </DialogTrigger>
         </div>
       </div>
     </div>
@@ -423,7 +419,7 @@ export function AttendanceClient({
 
   if (isStaff) {
     return (
-      <div className="w-full space-y-4">
+      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
         <AdminTableShell
           controls={scannerControls}
           pagination={
@@ -439,13 +435,6 @@ export function AttendanceClient({
           }
           className="max-w-none animate-in fade-in-50 duration-300"
         >
-          <Dialog 
-            open={isScannerOpen} 
-            onOpenChange={(open) => {
-              setIsScannerOpen(open);
-              if (!open) void stopCamera();
-            }}
-          >
             <DialogContent className="sm:max-w-md p-6 rounded-3xl border border-border/20 bg-background/95 backdrop-blur-xl shadow-2xl flex flex-col items-center">
               <DialogHeader className="text-center w-full pb-1">
                 <DialogTitle className="text-base font-bold flex items-center justify-center gap-2">
@@ -468,7 +457,7 @@ export function AttendanceClient({
 
                 {/* Loading or Processing Overlay */}
                 {(isProcessing || isInitializing) && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
+                  <div role="status" className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
                     <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
                     {isInitializing && (
                       <span className="text-[11px] font-bold uppercase tracking-widest text-primary animate-pulse">
@@ -520,6 +509,7 @@ export function AttendanceClient({
                         !hasMultipleCameras && "invisible"
                       )}
                       onClick={switchCamera}
+                      aria-label="Switch camera"
                       title="Switch Camera"
                     >
                       <RefreshCcw className="h-4 w-4" />
@@ -538,7 +528,7 @@ export function AttendanceClient({
                 {/* Camera Issue Warning Banner */}
                 {cameraIssue && !cameraOpen && !isInitializing && (
                   <div className="absolute top-4 inset-x-4 z-20">
-                    <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[11px] text-destructive font-medium text-center shadow-sm">
+                    <div role="alert" className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[11px] text-destructive font-medium text-center shadow-sm">
                       {cameraIssue}
                     </div>
                   </div>
@@ -549,8 +539,10 @@ export function AttendanceClient({
                 Keep code centered. Camera stays active for continuous scanning.
               </p>
             </DialogContent>
-          </Dialog>
 
+          <p role="status" className="sr-only">
+            {searchQuery.trim() && !isSearchingAll ? `${totalStaffItems} matching attendance records` : ""}
+          </p>
           <Suspense fallback={<TableLoadingSkeleton />}>
             <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
           </Suspense>
@@ -579,7 +571,7 @@ export function AttendanceClient({
             </div>
           )}
         </AdminTableShell>
-      </div>
+      </Dialog>
     );
   }
 
@@ -618,7 +610,7 @@ function TableLoadingSkeleton() {
   return (
     <div className="p-12 flex flex-col items-center justify-center gap-4 text-muted-foreground">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <p className="text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Logs...</p>
+      <p role="status" className="text-xs font-bold uppercase tracking-widest">Syncing logs…</p>
     </div>
   );
 }
@@ -638,7 +630,7 @@ function AttendanceTable({
         header: "User",
         cell: (record) => (
           <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
+            <Avatar aria-hidden="true" className="h-8 w-8">
               <AvatarFallback className="bg-muted text-muted-foreground text-[11px] font-bold">
                 {(record.profiles?.full_name || "Student").charAt(0)}
               </AvatarFallback>
@@ -713,7 +705,7 @@ function AttendanceTable({
           <div className="flex items-center gap-3">
             {!isPersonal ? (
               <>
-                <Avatar className="h-10 w-10">
+                <Avatar aria-hidden="true" className="h-10 w-10">
                   <AvatarFallback className="bg-muted text-muted-foreground font-bold">
                     {(record.profiles?.full_name || "S").charAt(0)}
                   </AvatarFallback>
@@ -727,7 +719,7 @@ function AttendanceTable({
                     <span className="opacity-20 text-[11px]">•</span>
                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       <LogIn className="w-2.5 h-2.5 text-emerald-500" />
-                      {format(new Date(record.check_in_at), "hh:mm a")}
+                      In: {format(new Date(record.check_in_at), "hh:mm a")}
                     </div>
                   </div>
                 </div>

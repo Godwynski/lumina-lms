@@ -99,6 +99,14 @@ html { scroll-padding-block-start: 4.5rem; }
   background: hsl(var(--muted-foreground) / 0.4);
 }
 
+/* Text on Sonner's light status backgrounds must retain 4.5:1 contrast. */
+body [data-sonner-toaster][data-sonner-theme="light"] {
+  --success-text: #10632d;
+  --warning-text: #8a460d;
+  --info-text: #1559a2;
+  --error-text: #b91c1c;
+}
+
 /* Compact Sonner Toasts */
 [data-sonner-toast] {
   min-width: 240px !important;

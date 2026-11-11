@@ -113,6 +113,7 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
             </Label>
             <Input 
               id="address"
+              autoComplete="street-address"
               placeholder="House No., Street, Brgy, City"
               value={formData.address}
               onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
@@ -128,6 +129,7 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
             </Label>
             <Input 
               id="phone"
+              autoComplete="tel"
               type="tel"
               placeholder="e.g. 09123456789"
               value={formData.phone}

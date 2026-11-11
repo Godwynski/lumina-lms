@@ -3,6 +3,8 @@ import { ProfileSection } from "@/components/settings/sections/ProfileSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+export const metadata = { title: "Profile" };
+
 // getMe() is cache()-memoized — reuses auth already fetched by the layout
 function buildProfilePromise() {
   return getMe().then(async (me) => {

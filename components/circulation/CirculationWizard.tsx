@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CirculationStepper } from './CirculationStepper';
@@ -60,6 +60,21 @@ export function CirculationWizard() {
   // Stepped back to student identification with a student already scanned.
   const reviewingStudent = mode === 'checkout' && step === 1 && !!activeStudent;
 
+  // When a step replaces the focused control, move focus to the new stage.
+  // Preserve normal route-entry focus and keep failed scans in the current field.
+  const stageRef = useRef<HTMLElement>(null);
+  const stageKey = `${mode}-${step}`;
+  const previousStage = useRef(stageKey);
+  useEffect(() => {
+    if (previousStage.current !== stageKey) {
+      previousStage.current = stageKey;
+      stageRef.current?.focus();
+    }
+  }, [stageKey]);
+  const stageLabel = isConfirmed
+    ? (mode === 'checkout' ? 'Checkout complete' : 'Return complete')
+    : `Step ${step} of ${steps.length}: ${steps[step - 1].label}`;
+
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Centered Compact Stepper */}
@@ -72,9 +87,9 @@ export function CirculationWizard() {
         />
       </div>
 
-      <main className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
+      <div className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
         {/* Header Action Bar */}
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-border/20">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-8 pb-6 border-b border-border/20">
           <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/10">
             <Button
               variant={mode === 'checkout' ? 'default' : 'ghost'}
@@ -122,7 +137,7 @@ export function CirculationWizard() {
           </div>
         </div>
 
-        <div>
+        <section ref={stageRef} tabIndex={-1} aria-label={stageLabel} className="scroll-mt-6 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
           {isConfirmed ? (
             <SuccessStep 
               title={mode === 'checkout' ? 'Checkout Complete' : 'Return Complete'}
@@ -184,7 +199,7 @@ export function CirculationWizard() {
                 borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
               />
               
-              <div className="flex gap-3 justify-end pt-6 border-t border-border/20">
+              <div className="flex flex-wrap gap-3 justify-end pt-6 border-t border-border/20">
                   <Button 
                     variant="ghost" 
                     onClick={handleReset} 
@@ -203,9 +218,9 @@ export function CirculationWizard() {
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-      </main>
+      </div>
     </div>
   );
 }

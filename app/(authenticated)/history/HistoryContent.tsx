@@ -262,7 +262,7 @@ export default function HistoryContent({
           <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary animate-spin" />
         )}
       </form>
-      <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
+      <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
         {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
           <button
             key={status}

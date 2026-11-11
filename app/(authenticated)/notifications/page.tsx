@@ -103,7 +103,7 @@ export default function NotificationsPage() {
 
       <Tabs defaultValue="all" className="w-full space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <TabsList>
+          <TabsList aria-label="Filter notifications">
             <TabsTrigger value="all">
               All
             </TabsTrigger>

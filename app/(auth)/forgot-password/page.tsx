@@ -4,7 +4,7 @@ import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { Suspense } from "react";
 
 export const metadata = {
-  title: "Forgot Password | Lumina LMS",
+  title: "Forgot Password",
 };
 
 export default function ForgotPasswordPage() {

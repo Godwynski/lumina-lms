@@ -3,6 +3,8 @@ import { PoliciesSection } from "@/components/settings/sections/PoliciesSection"
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+export const metadata = { title: "Library Policies" };
+
 async function PoliciesPageContent() {
   const me = await getMe();
 

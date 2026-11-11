@@ -18,6 +18,7 @@ import { PolicyField } from '@/components/admin/policies/PolicyField';
 import { LuminaTable } from '@/components/common/LuminaTable';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { FieldGroup } from '@/components/common/FieldGroup';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Notification } from '@/hooks/use-notifications';
@@ -164,5 +165,32 @@ describe('UI-25 FieldGroup label association', () => {
     const input = container.querySelector('input') as HTMLInputElement;
     expect(input.id).toBeTruthy();
     expect(label.htmlFor).toBe(input.id);
+  });
+});
+
+
+describe('WCAG controlled dialog focus', () => {
+  it('restores the opener when a controlled dialog has no Radix trigger', async () => {
+    const opener = document.body.appendChild(document.createElement('button'));
+    opener.textContent = 'Book details';
+    const rects = vi.spyOn(opener, 'getClientRects').mockReturnValue([{}] as unknown as DOMRectList);
+    opener.focus();
+    try {
+      await act(async () => root.render(
+        <Dialog open>
+          <DialogContent aria-describedby={undefined}>
+            <DialogTitle>Book details</DialogTitle>
+            <button>Reserve</button>
+          </DialogContent>
+        </Dialog>
+      ));
+      expect(document.querySelector('[role="dialog"]')).toHaveAccessibleName('Book details');
+      await act(async () => root.render(<Dialog open={false}><DialogContent><DialogTitle>Book details</DialogTitle></DialogContent></Dialog>));
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+      expect(opener).toHaveFocus();
+    } finally {
+      rects.mockRestore();
+      opener.remove();
+    }
   });
 });

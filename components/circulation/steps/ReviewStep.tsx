@@ -31,10 +31,10 @@ export function ReviewStep({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+        <h2 className="text-base font-bold text-foreground flex items-center gap-2">
           {isCheckout ? <FileText className="h-4 w-4 text-primary" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           {isCheckout ? 'Review Checkout' : 'Review Return'}
-        </h3>
+        </h2>
         <p className="text-[11px] text-muted-foreground uppercase tracking-tight font-medium">
           {isCheckout 
             ? 'Verify borrower and item details.' 
@@ -89,7 +89,7 @@ export function ReviewStep({
                   <Calendar className="h-3 w-3" />
                   DUE DATE
                 </span>
-                <span className={`font-black ${isCheckout ? 'text-primary' : 'text-emerald-600'}`}>
+                <span className={`font-black ${isCheckout ? 'text-primary' : 'text-emerald-700 dark:text-emerald-400'}`}>
                   {dueDate}
                 </span>
               </div>
@@ -100,7 +100,7 @@ export function ReviewStep({
 
       <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-3 flex items-start gap-3">
          <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-         <p className="text-[11px] text-amber-900/60 font-medium leading-normal uppercase tracking-tight">
+         <p className="text-[11px] text-amber-900 dark:text-amber-200 font-medium leading-normal uppercase tracking-tight">
            Once confirmed, this transaction is recorded. Ensure the physical copy matches.
          </p>
       </div>

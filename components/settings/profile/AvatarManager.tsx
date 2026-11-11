@@ -112,12 +112,12 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className={cn(
-            "absolute inset-0 flex flex-col items-center justify-center bg-black/40 rounded-3xl opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 backdrop-blur-[2px]",
+            "absolute inset-0 flex flex-col items-center justify-center bg-black/75 rounded-3xl opacity-0 group-hover/avatar:opacity-100 focus-visible:opacity-100 transition-all duration-300 backdrop-blur-[2px]",
             isUploading && "opacity-100 bg-black/60 cursor-not-allowed"
           )}
         >
           {isUploading ? (
-            <Loader2 className="h-8 w-8 text-white animate-spin" />
+            <><Loader2 className="h-8 w-8 text-white animate-spin" /><span className="sr-only">Uploading photo</span></>
           ) : (
             <>
               <Camera className="h-8 w-8 text-white mb-1" />

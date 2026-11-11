@@ -26,8 +26,8 @@ export function MemberPreview({ student }: MemberPreviewProps) {
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h4 className="text-xs font-bold truncate">{student.fullName}</h4>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-bold break-words">{student.fullName}</p>
           <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider">
             {student.status}
           </span>

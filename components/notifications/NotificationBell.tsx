@@ -5,12 +5,11 @@ import { Bell } from 'lucide-react'
 import Link from 'next/link'
 import { useNotifications, type Notification } from '@/hooks/use-notifications'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { NotificationList } from './NotificationList'
@@ -31,14 +30,13 @@ export function NotificationBell() {
 
   const handleOpen = (notification: Notification) => {
     if (!notification.is_read) markAsRead(notification.id)
-    setMenuOpen(false)
     setSelected(notification)
   }
 
   return (
     <>
-    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-      <DropdownMenuTrigger asChild>
+    <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+      <DialogTrigger asChild>
         <Button 
           variant="ghost" 
           size="icon" 
@@ -55,18 +53,18 @@ export function NotificationBell() {
             </Badge>
           )}
         </Button>
-      </DropdownMenuTrigger>
+      </DialogTrigger>
       
       {/* Adaptive width: full on mobile (via padding/margins), 320px on sm+ */}
-      <DropdownMenuContent 
-        align="end" 
-        className="w-[calc(100vw-2rem)] sm:w-80 p-0 overflow-hidden rounded-2xl border-border/40 shadow-2xl backdrop-blur-md bg-card/95"
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-h-[90dvh] w-[calc(100vw-2rem)] sm:max-w-sm p-0 gap-0 overflow-y-auto rounded-2xl border-border/40 shadow-2xl backdrop-blur-md bg-card/95"
       >
-        <DropdownMenuLabel className="px-5 py-4 flex items-center justify-between bg-muted/5">
+        <div className="pl-5 pr-12 py-4 flex items-center justify-between bg-muted/5">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground/80">Notifications</span>
+            <DialogTitle className="text-sm font-bold text-foreground">Notifications</DialogTitle>
             {unreadCount > 0 && (
-              <span className="text-[11px] font-bold text-primary/60 tracking-wider italic">{unreadCount} new events</span>
+              <span className="text-[11px] font-bold text-primary tracking-wider italic">{unreadCount} new events</span>
             )}
           </div>
           {unreadCount > 0 && (
@@ -77,9 +75,9 @@ export function NotificationBell() {
               Mark all read
             </button>
           )}
-        </DropdownMenuLabel>
+        </div>
         
-        <DropdownMenuSeparator className="m-0 opacity-50" />
+        <hr className="m-0 opacity-50" />
         
         <div className="max-h-[350px] overflow-y-auto">
           <NotificationList 
@@ -93,19 +91,19 @@ export function NotificationBell() {
           />
         </div>
         
-        <DropdownMenuSeparator className="m-0 opacity-50" />
+        <hr className="m-0 opacity-50" />
         
         <div className="p-3 bg-muted/5">
           <Link 
-            href="/notifications" 
+            href="/notifications" onClick={() => setMenuOpen(false)}
             className="block w-full py-2 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-all text-center"
           >
             Expand Activity Log
           </Link>
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    {/* Sibling of the menu so it survives the dropdown content unmounting. */}
+      </DialogContent>
+    </Dialog>
+
     <NotificationDetailsDialog notification={selected} onClose={() => setSelected(null)} />
     </>
   )

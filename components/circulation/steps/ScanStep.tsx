@@ -4,7 +4,7 @@ import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle, Loader2, RefreshCw } 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
-import { useState, useRef, useEffect } from 'react';
+import { useId, useState } from 'react';
 import { Label, Field } from "@/components/ui/label";
 import {
   Tooltip,
@@ -31,7 +31,7 @@ export function ScanStep({
   actionLabel
 }: ScanStepProps) {
   const [manualValue, setManualValue] = useState('');
-  const manualInputRef = useRef<HTMLInputElement>(null);
+  const entryHintId = useId();
   
     const {
         cameraOpen,
@@ -62,18 +62,14 @@ export function ScanStep({
         }
     };
 
-    useEffect(() => {
-        manualInputRef.current?.focus();
-    }, []);
-
     return (
         <div className="space-y-6">
             <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                         <ScanLine className="h-4 w-4 text-primary" />
                         {title}
-                    </h3>
+                    </h2>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-tight font-medium">{description}</p>
                 </div>
                 
@@ -85,7 +81,7 @@ export function ScanStep({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[200px] p-4 bg-card border border-border/10">
-                            <h4 className="text-[11px] font-bold uppercase tracking-widest mb-2">Scanning Tips</h4>
+                            <p className="text-[11px] font-bold uppercase tracking-widest mb-2">Scanning Tips</p>
                             <ul className="text-[11px] space-y-1.5 text-muted-foreground list-disc pl-3">
                                 <li>Ensure good lighting.</li>
                                 <li>Keep the code steady.</li>
@@ -107,8 +103,9 @@ export function ScanStep({
                     <div className="absolute inset-0 pointer-events-none border-[12px] border-background/20" />
                     
                     {(isProcessing || isInitializing) && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
+                        <div role="status" className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm">
                             <Loader2 className="h-8 w-8 text-primary animate-spin mb-4" />
+                            {isProcessing && !isInitializing && <span className="sr-only">Verifying entry…</span>}
                             {isInitializing && <span className="text-[11px] font-bold uppercase tracking-widest text-primary animate-pulse">Initializing...</span>}
                         </div>
                     )}
@@ -145,6 +142,7 @@ export function ScanStep({
                                 size="icon" 
                                 className={`h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10 ${!hasMultipleCameras ? 'invisible' : ''}`}
                                 onClick={switchCamera}
+                                aria-label="Switch camera"
                                 title="Switch Camera"
                             >
                                 <RefreshCcw className="h-4 w-4" />
@@ -162,7 +160,7 @@ export function ScanStep({
                     
                     {cameraIssue && !cameraOpen && !isInitializing && (
                          <div className="absolute top-4 inset-x-4 z-20">
-                            <div className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[11px] text-destructive font-medium text-center shadow-sm">
+                            <div role="alert" className="bg-destructive/10 border border-destructive/20 backdrop-blur-md rounded-xl p-3 text-[11px] text-destructive font-medium text-center shadow-sm">
                                 {cameraIssue}
                             </div>
                         </div>
@@ -172,26 +170,25 @@ export function ScanStep({
                 <div className="flex flex-col gap-4">
                     <Field className="space-y-2">
                         <Label className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
-                            Direct Entry
+                            {placeholder}
                         </Label>
-                        <div className="flex gap-2">
+                        <form onSubmit={(event) => { event.preventDefault(); void handleManualSubmit(); }} className="flex flex-wrap gap-2">
                             <Input
-                                ref={manualInputRef}
+                                aria-describedby={entryHintId}
                                 value={manualValue}
                                 onChange={(e) => setManualValue(e.target.value.toUpperCase())}
-                                onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
                                 placeholder={placeholder}
-                                className="h-11 rounded-xl bg-muted/30 border-border/20 focus:border-primary/40 focus:ring-0 uppercase text-xs"
+                                className="min-w-24 flex-1 h-11 rounded-xl bg-muted/30 uppercase text-xs"
                             />
                             <Button 
-                                onClick={handleManualSubmit}
+                                type="submit"
                                 disabled={isProcessing || !manualValue.trim()}
                                 className="h-11 rounded-xl px-6 font-bold text-[11px] uppercase tracking-widest"
                             >
-                                {isProcessing ? '...' : actionLabel}
+                                {isProcessing ? 'Verifying…' : actionLabel}
                             </Button>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground ml-1 font-medium opacity-60">
+                        </form>
+                        <p id={entryHintId} className="text-[11px] text-muted-foreground ml-1 font-medium">
                             Enter the identifier manually if scan fails.
                         </p>
                     </Field>

@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense } from 'react';
 import { getCategoryName } from '@/lib/utils';
 
+export const metadata = { title: "Book Details" };
+
 async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const id = resolvedParams.id;
@@ -19,7 +21,7 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
   }
 
   if (!book) {
-    return <div className="p-8 text-center text-muted-foreground">Book not found.</div>;
+    return <h1 className="p-8 text-center text-muted-foreground">Book not found.</h1>;
   }
 
   return (
@@ -28,7 +30,7 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
         <div className="relative aspect-[2/3] bg-muted rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
           <Image 
             src={book.cover_url || "/images/default-book-cover.png"} 
-            alt={book.title} 
+            alt=""
             fill
             className="object-cover" 
           />
@@ -76,7 +78,7 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
 
         {book.tags && book.tags.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-foreground mb-2">Subject Tags</h3>
+            <h2 className="text-sm font-medium text-foreground mb-2">Subject Tags</h2>
             <div className="flex flex-wrap gap-2">
               {book.tags.map((tag: string, i: number) => (
                 <span key={i} className="bg-muted text-muted-foreground px-2 py-1 rounded-md text-xs">
@@ -93,7 +95,7 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
 
 export default function PublicBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-8">
+    <main className="max-w-3xl mx-auto p-4 md:p-8">
       <Button
         asChild
         variant="ghost"
@@ -127,6 +129,6 @@ export default function PublicBookDetailPage({ params }: { params: Promise<{ id:
       }>
         <PublicBookDetailLoader params={params} />
       </Suspense>
-    </div>
+    </main>
   );
 }

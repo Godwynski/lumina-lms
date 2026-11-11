@@ -22,7 +22,7 @@ export function CatalogSkeletonView() {
 }
 
 export const metadata = {
-  title: 'Catalog | Lumina LMS',
+  title: 'Catalog',
   description: 'Browse the library catalog and check real-time availability.',
 };
 
