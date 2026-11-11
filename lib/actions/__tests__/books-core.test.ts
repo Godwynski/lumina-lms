@@ -110,7 +110,10 @@ describe('books-core server actions', () => {
         await fetchBooksCore({ query: 'machine learning', sortBy: 'relevance' });
 
         const booksBuilder = mockClientHelper.getTableBuilder('books');
-        expect(booksBuilder.textSearch).toHaveBeenCalledWith('search_vector', 'machine:* & learning:*');
+        expect(booksBuilder.or).toHaveBeenCalledWith(
+          'title.ilike.%machine learning%,author.ilike.%machine learning%,isbn.ilike.%machine learning%'
+        );
+        expect(booksBuilder.textSearch).not.toHaveBeenCalled();
         warn.mockRestore();
       });
 
@@ -123,28 +126,34 @@ describe('books-core server actions', () => {
       });
     });
 
-    it('performs full-text search (>= 3 chars) by converting terms to prefix tokens', async () => {
+    it('performs a substring search (>= 3 chars) across title, author and ISBN', async () => {
       mockClientHelper.setTableResponse('books', [], null, 0);
 
-      await fetchBooksCore({ query: 'machine learning theory' });
+      await fetchBooksCore({ query: '  The Mythical Man ' });
 
       const booksBuilder = mockClientHelper.getTableBuilder('books');
-      expect(booksBuilder.textSearch).toHaveBeenCalledWith(
-        'search_vector',
-        'machine:* & learning:* & theory:*'
+      expect(booksBuilder.or).toHaveBeenCalledWith(
+        'title.ilike.%The Mythical Man%,author.ilike.%The Mythical Man%,isbn.ilike.%The Mythical Man%'
       );
-      expect(booksBuilder.or).not.toHaveBeenCalled();
+      expect(booksBuilder.ilike).not.toHaveBeenCalled();
+      expect(booksBuilder.textSearch).not.toHaveBeenCalled();
     });
 
-    it('safely handles queries containing dashes and punctuation without producing invalid tsquery tokens', async () => {
+    it('keeps dashes and turns LIKE wildcards and filter-breaking punctuation into single-character wildcards', async () => {
       mockClientHelper.setTableResponse('books', [], null, 0);
 
       await fetchBooksCore({ query: 'Harry Potter - Chamber' });
+      await fetchBooksCore({ query: 'Dr. Seuss, (100%_done)' });
 
       const booksBuilder = mockClientHelper.getTableBuilder('books');
-      expect(booksBuilder.textSearch).toHaveBeenCalledWith(
-        'search_vector',
-        'Harry:* & Potter:* & Chamber:*'
+      expect(booksBuilder.or).toHaveBeenNthCalledWith(
+        1,
+        'title.ilike.%Harry Potter - Chamber%,author.ilike.%Harry Potter - Chamber%,isbn.ilike.%Harry Potter - Chamber%'
+      );
+      const safe = '%Dr_ Seuss_ _100__done_%';
+      expect(booksBuilder.or).toHaveBeenNthCalledWith(
+        2,
+        `title.ilike.${safe},author.ilike.${safe},isbn.ilike.${safe}`
       );
     });
 

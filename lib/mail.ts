@@ -11,15 +11,16 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-function getFromAddress(): string {
+const DEFAULT_FROM_ADDRESS = 'no-reply@lumina-lms.com';
+
+// Automated mail always comes from a system no-reply address, never the
+// SMTP login. SMTP_FROM may be a full `"Name" <addr>`, a bare address, or a name.
+export function getFromAddress(): string {
   const customFrom = process.env.SMTP_FROM?.trim();
-  if (!customFrom) {
-    return `"Lumina LMS" <${process.env.SMTP_USER || 'noreply@lumina-lms.com'}>`;
-  }
-  if (customFrom.includes('<') && customFrom.includes('>')) {
-    return customFrom;
-  }
-  return `"${customFrom}" <${process.env.SMTP_USER || 'noreply@lumina-lms.com'}>`;
+  if (!customFrom) return `"Lumina LMS" <${DEFAULT_FROM_ADDRESS}>`;
+  if (customFrom.includes('<') && customFrom.includes('>')) return customFrom;
+  if (customFrom.includes('@')) return `"Lumina LMS" <${customFrom}>`;
+  return `"${customFrom}" <${DEFAULT_FROM_ADDRESS}>`;
 }
 
 // User-controlled values (names, titles) go into email HTML; escape them.

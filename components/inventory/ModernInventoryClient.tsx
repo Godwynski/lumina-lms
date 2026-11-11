@@ -132,6 +132,8 @@ export function ModernInventoryClient({
   const categoryId = searchParams.get("categoryId") || "all";
 
   const [searchQuery, setSearchQuery] = useState(urlQuery);
+  // Queries this component pushed that the URL hasn't caught up with yet.
+  const pendingQueries = useRef<string[]>([]);
   const pageSize = 12;
 
   // Batch Operations States
@@ -446,8 +448,16 @@ export function ModernInventoryClient({
     }
   };
 
-  // Sync with URL query
+  // The input owns its value. Only adopt the URL's query when it changed from
+  // outside (back button, link); our own debounced pushes are ignored so a
+  // late-landing URL never overwrites what the user is still typing.
   useEffect(() => {
+    const i = pendingQueries.current.lastIndexOf(urlQuery);
+    if (i !== -1) {
+      pendingQueries.current = pendingQueries.current.slice(i + 1);
+      return;
+    }
+    pendingQueries.current = [];
     setSearchQuery(urlQuery);
   }, [urlQuery]);
 
@@ -546,23 +556,29 @@ export function ModernInventoryClient({
   const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
   const setStatus = (s: typeof status) => updateParams({ status: s });
   const setPage = (p: number) => updateParams({ page: p });
+  const pushQuery = useCallback((raw: string) => {
+    const q = raw.trim();
+    if (q !== urlQuery) pendingQueries.current.push(q);
+    updateParams({ q: q || null });
+  }, [urlQuery, updateParams]);
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
-    updateParams({ q: searchQuery.trim() || null });
+    pushQuery(searchQuery);
   };
   const clearSearch = () => {
     setSearchQuery("");
-    updateParams({ q: null });
+    pushQuery("");
   };
 
   // Debounce search input for realtime as-you-type search
   useEffect(() => {
     if (searchQuery.trim() === urlQuery.trim()) return;
-    const timer = setTimeout(() => {
-      updateParams({ q: searchQuery.trim() || null });
-    }, 300);
+    const timer = setTimeout(() => pushQuery(searchQuery), 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, urlQuery, updateParams]);
+  }, [searchQuery, urlQuery, pushQuery]);
+
+  // Results belong to the typed query only once the debounce and navigation finish.
+  const isSearchSettled = !isPending && searchQuery.trim() === urlQuery.trim();
 
 
   const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (explicitSort ? 1 : 0);
@@ -1151,12 +1167,20 @@ export function ModernInventoryClient({
         </div>
       </div>
       <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>
-        <InventoryGrid 
-          books={books} 
-          canManage={canManage} 
-          isStudentView={isStudentView}
-          reservations={reservations}
-        />
+        {books.length === 0 && !isSearchSettled ? (
+          // Don't claim "empty" while a search is still in flight.
+          <div role="status" className="flex min-h-[320px] items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Searching...
+          </div>
+        ) : (
+          <InventoryGrid
+            books={books}
+            canManage={canManage}
+            isStudentView={isStudentView}
+            reservations={reservations}
+          />
+        )}
       </div>
 
       {totalItems > 0 && (

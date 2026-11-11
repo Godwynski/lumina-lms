@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Megaphone, Loader2, Users, Send, Target, AlertTriangle, HelpCircle } from 'lucide-react'
+import { Megaphone, Loader2, Users, Send, Target, AlertTriangle, HelpCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -40,6 +40,8 @@ export function SystemAnnouncement({
   const [localTarget, setLocalTarget] = useState<'all' | 'students'>('students')
   const [loading, setLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  // null = closed; otherwise the recipient count the API reported (undefined if it gave none).
+  const [sent, setSent] = useState<{ count?: number } | null>(null)
 
   const title = draft ? draft.title : localTitle
   const content = draft ? draft.content : localContent
@@ -107,9 +109,9 @@ export function SystemAnnouncement({
         throw new Error(data.error || 'Failed to send announcement')
       }
 
-      toast.success(`Announcement sent to ${data.count ?? 'all'} users`)
       handleReset()
       setConfirmOpen(false)
+      setSent({ count: typeof data.count === 'number' ? data.count : undefined })
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred'
       toast.error(message)
@@ -317,6 +319,32 @@ export function SystemAnnouncement({
               ) : "Confirm & Send"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={sent !== null} onOpenChange={(open) => { if (!open) setSent(null) }}>
+        <DialogContent className="rounded-2xl border-border bg-background p-6 shadow-xl sm:max-w-sm">
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-lg font-bold tracking-tight text-foreground">
+              Announcement Sent
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {sent?.count === undefined
+                ? 'Successfully broadcasted to users'
+                : `Successfully broadcasted to ${sent.count} ${sent.count === 1 ? 'user' : 'users'}`}
+            </DialogDescription>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setSent(null)}
+            className="w-full h-10 rounded-xl text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
+          >
+            Done
+          </Button>
         </DialogContent>
       </Dialog>
     </div>

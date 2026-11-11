@@ -1,6 +1,7 @@
 'use client';
 
-import { RefreshCcw } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CirculationStepper } from './CirculationStepper';
 import { ScanStep } from './steps/ScanStep';
@@ -27,16 +28,48 @@ export function CirculationWizard() {
     isConfirmed,
     reservationData,
     switchMode,
-    handleReset,
+    handleReset: resetWizard,
     processScan,
     confirmAction,
   } = useCirculationWizard();
+
+  // View-only step override for going back. The hook derives `reachedStep` from
+  // the scanned data, so stepping back never clears the student or the draft.
+  const reachedStep = currentStep;
+  const [viewStep, setViewStep] = useState<number | null>(null);
+  const step = isConfirmed || viewStep === null ? reachedStep : Math.min(viewStep, reachedStep);
+  const canNavigate = !isConfirmed && !isProcessing && !isCommitting;
+
+  const goToStep = (id: number) => {
+    if (canNavigate && id >= 1 && id <= reachedStep) setViewStep(id < reachedStep ? id : null);
+  };
+  const handleReset = () => {
+    setViewStep(null);
+    resetWizard();
+  };
+  const handleSwitchMode = (next: typeof mode) => {
+    setViewStep(null);
+    switchMode(next);
+  };
+  // A successful scan produces a fresh draft, so resume at the furthest step.
+  const handleScan: typeof processScan = async (value, isManual) => {
+    const ok = await processScan(value, isManual);
+    if (ok) setViewStep(null);
+    return ok;
+  };
+  // Stepped back to student identification with a student already scanned.
+  const reviewingStudent = mode === 'checkout' && step === 1 && !!activeStudent;
 
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Centered Compact Stepper */}
       <div className="bg-card/30 border border-border/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
-        <CirculationStepper steps={steps} currentStep={currentStep} />
+        <CirculationStepper
+          steps={steps}
+          currentStep={step}
+          reachedStep={reachedStep}
+          onStepClick={canNavigate ? goToStep : undefined}
+        />
       </div>
 
       <main className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
@@ -48,7 +81,7 @@ export function CirculationWizard() {
               className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
               aria-pressed={mode === 'checkout'}
               disabled={isCommitting}
-              onClick={() => mode !== 'checkout' && switchMode('checkout')}
+              onClick={() => mode !== 'checkout' && handleSwitchMode('checkout')}
             >
               Checkout
             </Button>
@@ -57,12 +90,25 @@ export function CirculationWizard() {
               className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
               aria-pressed={mode === 'return'}
               disabled={isCommitting}
-              onClick={() => mode !== 'return' && switchMode('return')}
+              onClick={() => mode !== 'return' && handleSwitchMode('return')}
             >
               Return
             </Button>
           </div>
 
+          <div className="flex items-center gap-1">
+          {step > 1 && !isConfirmed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-2 rounded-lg text-muted-foreground transition-colors"
+              disabled={!canNavigate}
+              onClick={() => goToStep(step - 1)}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Back</span>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -73,6 +119,7 @@ export function CirculationWizard() {
             <RefreshCcw className="h-3.5 w-3.5" />
             <span className="text-[11px] font-bold uppercase tracking-wider">Reset</span>
           </Button>
+          </div>
         </div>
 
         <div>
@@ -86,34 +133,45 @@ export function CirculationWizard() {
               reservationReady={reservationData.ready}
               reservedFor={reservationData.studentName}
             />
-          ) : (currentStep === 1 || (currentStep === 2 && mode === 'checkout')) ? (
+          ) : (step === 1 || (step === 2 && mode === 'checkout')) ? (
             <div key="scanning-flow">
               {activeStudent && mode === 'checkout' && (
                 <MemberPreview student={activeStudent} />
               )}
               
+              {reviewingStudent ? (
+                <div className="flex justify-end pt-6">
+                  <Button
+                    onClick={() => goToStep(2)}
+                    className="rounded-xl px-8 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              ) : (
               <ScanStep 
                 title={
-                  currentStep === 1 
+                  step === 1 
                     ? (mode === 'checkout' ? 'Identify Student' : 'Identify Resource')
                     : 'Scan Resource'
                 }
                 description={
-                  currentStep === 1
+                  step === 1
                     ? (mode === 'checkout' 
                         ? 'Scan student library card or enter number.' 
                         : 'Scan book copy QR code to begin.')
                     : 'Now scan the book copy QR code.'
                 }
                 placeholder={
-                  currentStep === 1
+                  step === 1
                     ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Book QR')
                     : 'Enter Book QR'
                 }
-                onScan={processScan}
+                onScan={handleScan}
                 isProcessing={isProcessing}
-                actionLabel={currentStep === 1 ? 'Process' : 'Verify'}
+                actionLabel={step === 1 ? 'Process' : 'Verify'}
               />
+              )}
             </div>
           ) : (
             <div key="review" className="space-y-8">

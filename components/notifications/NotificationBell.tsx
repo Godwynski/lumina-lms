@@ -1,9 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Bell } from 'lucide-react'
 import Link from 'next/link'
-import { useNotifications } from '@/hooks/use-notifications'
+import { useNotifications, type Notification } from '@/hooks/use-notifications'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { NotificationList } from './NotificationList'
+import { NotificationDetailsDialog } from './NotificationDetailsDialog'
 
 export function NotificationBell() {
   const { 
@@ -25,9 +26,18 @@ export function NotificationBell() {
     error,
     refresh
   } = useNotifications()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [selected, setSelected] = useState<Notification | null>(null)
+
+  const handleOpen = (notification: Notification) => {
+    if (!notification.is_read) markAsRead(notification.id)
+    setMenuOpen(false)
+    setSelected(notification)
+  }
 
   return (
-    <DropdownMenu>
+    <>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
@@ -76,6 +86,7 @@ export function NotificationBell() {
             notifications={notifications}
             loading={loading}
             onMarkRead={markAsRead}
+            onOpen={handleOpen}
             error={error}
             onRetry={() => void refresh()}
             variant="compact"
@@ -94,5 +105,8 @@ export function NotificationBell() {
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+    {/* Sibling of the menu so it survives the dropdown content unmounting. */}
+    <NotificationDetailsDialog notification={selected} onClose={() => setSelected(null)} />
+    </>
   )
 }

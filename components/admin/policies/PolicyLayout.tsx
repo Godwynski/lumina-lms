@@ -80,6 +80,7 @@ export function PolicyLayout({
     if (hasUnsavedChanges) {
       setPendingCategory(categoryId);
     } else {
+      clearDrafts();
       setActiveCategory(categoryId);
     }
   };
@@ -132,7 +133,22 @@ export function PolicyLayout({
     for (const [key, edit] of Object.entries(edits)) merged[key] = edit.value;
     return merged;
   }, [initialValues, edits]);
-  const discardEdits = () => setEdits({});
+  // Number fields currently showing an out-of-range draft. Saving is blocked
+  // while any exist. Bumping resetNonce remounts the fields to drop those drafts.
+  const [invalidKeys, setInvalidKeys] = useState<string[]>([]);
+  const [resetNonce, setResetNonce] = useState(0);
+  const clearDrafts = () => {
+    setInvalidKeys([]);
+    setResetNonce((n) => n + 1);
+  };
+  const discardEdits = () => {
+    setEdits({});
+    clearDrafts();
+  };
+  const handleInvalidChange = (key: string, invalid: boolean) =>
+    setInvalidKeys((prev) =>
+      invalid === prev.includes(key) ? prev : invalid ? [...prev, key] : prev.filter((k) => k !== key)
+    );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -209,7 +225,7 @@ export function PolicyLayout({
   };
 
   const handleConfirmCommit = async (reason: string) => {
-    if (!canEdit) return;
+    if (!canEdit || invalidKeys.length > 0) return;
     if (conflictKeys.length > 0) {
       setIsCommitModalOpen(false);
       toast.error("Another administrator changed a setting you edited. Resolve the conflict first.");
@@ -392,11 +408,12 @@ export function PolicyLayout({
                     <div className="space-y-0">
                       {activeKeys.map(key => (
                         <PolicyField 
-                          key={key}
+                          key={`${key}-${resetNonce}`}
                           policyKey={key}
                           value={formData[key]}
                           initialValue={initialValues[key]}
                           onChange={(val) => handleChange(key, val)}
+                          onInvalidChange={(invalid) => handleInvalidChange(key, invalid)}
                           disabled={!canEdit}
                           loading={loading}
                         />
@@ -426,11 +443,12 @@ export function PolicyLayout({
                 <div className="space-y-0">
                   {activeKeys.map(key => (
                     <PolicyField 
-                      key={key}
+                      key={`${key}-${resetNonce}`}
                       policyKey={key}
                       value={formData[key]}
                       initialValue={initialValues[key]}
                       onChange={(val) => handleChange(key, val)}
+                      onInvalidChange={(invalid) => handleInvalidChange(key, invalid)}
                       disabled={!canEdit}
                       loading={loading}
                     />
@@ -502,7 +520,7 @@ export function PolicyLayout({
                </Button>
                <Button
                   onClick={() => setIsCommitModalOpen(true)}
-                  disabled={conflictKeys.length > 0}
+                  disabled={conflictKeys.length > 0 || invalidKeys.length > 0}
                   className="h-9 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
                >
                   Review Changes

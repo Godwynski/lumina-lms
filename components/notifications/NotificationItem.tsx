@@ -19,9 +19,11 @@ interface NotificationItemProps {
   notification: Notification
   onMarkRead: (id: string) => void
   variant?: 'compact' | 'full'
+  /** When set, clicking the row opens details instead of marking read and redirecting. */
+  onOpen?: (notification: Notification) => void
 }
 
-const typeConfig = {
+export const typeConfig = {
   OVERDUE: {
     icon: AlertTriangle,
     color: 'text-red-500',
@@ -49,7 +51,7 @@ const typeConfig = {
   }
 }
 
-const getTargetUrl = (type: string) => {
+export const getTargetUrl = (type: string) => {
   switch (type) {
     case 'OVERDUE':
     case 'DUE_SOON':
@@ -66,7 +68,8 @@ const getTargetUrl = (type: string) => {
 export const NotificationItem = memo(({ 
   notification, 
   onMarkRead, 
-  variant = 'full'
+  variant = 'full',
+  onOpen
 }: NotificationItemProps) => {
   const router = useRouter()
   const config = typeConfig[notification.type as keyof typeof typeConfig] || typeConfig.SYSTEM
@@ -74,6 +77,10 @@ export const NotificationItem = memo(({
   const targetUrl = getTargetUrl(notification.type)
 
   const handleClick = () => {
+    if (onOpen) {
+      onOpen(notification)
+      return
+    }
     if (!notification.is_read) {
       onMarkRead(notification.id)
     }

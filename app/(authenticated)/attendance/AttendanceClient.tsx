@@ -22,7 +22,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
-import { StatusBadge } from "@/components/common/StatusBadge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
@@ -679,7 +678,7 @@ function AttendanceTable({
       },
       {
         header: "Check Out",
-        className: "w-[140px]",
+        className: "w-[170px]",
         cell: (record) => (
           <div className="flex items-center gap-1.5 text-xs font-medium">
             {record.check_out_at ? (
@@ -688,20 +687,9 @@ function AttendanceTable({
                 <span>{format(new Date(record.check_out_at), "hh:mm a")}</span>
               </>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold uppercase tracking-wider text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Active Inside
-              </span>
+              <StillInLibraryBadge />
             )}
           </div>
-        )
-      },
-
-      {
-        header: "Status",
-        className: "w-[100px]",
-        cell: (record) => (
-          <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
         )
       }
     );
@@ -759,16 +747,26 @@ function AttendanceTable({
             )}
           </div>
           <div className="flex flex-col items-end gap-1.5">
-            <StatusBadge status={record.check_out_at ? "COMPLETED" : "ACTIVE"} />
-            {record.check_out_at && (
+            {record.check_out_at ? (
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                 <LogOut className="w-2.5 h-2.5 text-orange-500" />
                 Out: {format(new Date(record.check_out_at), "hh:mm a")}
               </div>
+            ) : (
+              <StillInLibraryBadge />
             )}
           </div>
         </div>
       )}
     />
+  );
+}
+
+function StillInLibraryBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      Still in library
+    </span>
   );
 }
