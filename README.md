@@ -35,7 +35,7 @@
   - [Database Initialization & Migrations](#database-initialization--migrations)
   - [Seeding Data](#seeding-data)
   - [Running the Application](#running-the-application)
-- [10. Evaluation & Presentation Demo Credentials](#10-evaluation--presentation-demo-credentials)
+- [10. Signing In](#10-signing-in)
 - [11. Environment Configuration Reference](#11-environment-configuration-reference)
 - [12. Testing & Quality Assurance](#12-testing--quality-assurance)
 - [13. NPM Scripts Cheatsheet](#13-npm-scripts-cheatsheet)
@@ -405,18 +405,9 @@ Open [http://localhost:3000](http://localhost:3000) in your web browser.
 
 ---
 
-## 10. Evaluation & Presentation Demo Credentials
+## 10. Signing In
 
-For thesis presentation defenses, stakeholder reviews, and evaluative demonstrations, the landing page includes pre-configured **Quick Demo Access** accounts with full role access:
-
-| Role Persona | Demo Email | Default Password | Initial View / Clearance Scope |
-| :--- | :--- | :---: | :--- |
-| **Super Administrator** | `admin@lumina.test` | `Password123!` | Full administrative dashboard, audit logs, system policies, database maintenance tools. |
-| **Librarian** | `librarian@lumina.test` | `Password123!` | Collection cataloging, patron approvals, circulation desks, inventory spreadsheets, and analytics. |
-| **Student Assistant (Staff)** | `staff@lumina.test` | `Password123!` | Front-desk circulation scanning, attendance gate logging, catalog searching, personal loan log. |
-| **Student Patron** | `student@lumina.test` | `Password123!` | Digital 3D Library Card with QR export, book hold reservations, active borrowing timeline, FAQs. |
-
-> **Production Deployment Notice:** The Quick Demo Access buttons are shown by default. For a real production launch, hide them by setting `NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true` and make sure these accounts don't exist on the production database.
+Access is through **Sign in with Microsoft** with an `@alabang.sti.edu.ph` account only. There are no shared or demo accounts and no password sign-in. The **first** account to sign up on an empty system becomes the active super admin. Every account after that starts as `student` / `PENDING` until approved by staff.
 
 ---
 

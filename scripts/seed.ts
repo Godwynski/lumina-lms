@@ -27,11 +27,6 @@ export const profileIds = {
   kennethStudent: '486205e4-1fad-421c-8946-fdd0da5217bf', // Kenneth James Tolentino (STU-351534)
   rhedStudent: '31afd312-7272-413a-892a-a67be05caf10', // Rhed Resurreccion (STU-357161)
   baybayLibrarian: '769c24e8-098a-464e-b304-b42049da60fa', // John Renaund Baybay (FAC-982441)
-  luminaAdmin: '00000000-0000-0000-0000-000000000001', // Lumina Admin (FAC-ADM-001)
-  luminaLibrarian: '00000000-0000-0000-0000-000000000002', // Lumina Librarian (FAC-LIB-001)
-  luminaSA: '00000000-0000-0000-0000-000000000005', // Lumina Staff (FAC-STF-001)
-  demoStudent: '00000000-0000-0000-0000-000000000006', // Demo Student Patron (STU-001)
-  luminaSuperAdmin: '00000000-0000-0000-0000-000000000008', // Lumina Super Admin (FAC-SAD-001)
 };
 
 async function seed() {
@@ -90,11 +85,6 @@ async function seed() {
     { id: profileIds.kennethStudent, full_name: 'Tolentino, Kenneth James', department: 'BS Information Technology', phone: '+63 900 000 0006', address: 'Cupang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
     { id: profileIds.rhedStudent, full_name: 'Resurreccion, Rhed', department: 'BS Information Technology', phone: '+63 900 000 0007', address: 'Poblacion, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
     { id: profileIds.baybayLibrarian, full_name: 'Baybay, John Renaund', department: 'College of Information Technology', phone: '+63 900 000 0008', address: 'Alabang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.luminaSuperAdmin, full_name: 'Lumina Super Admin', department: 'Administration', phone: '+63 900 000 0009', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true, role: 'librarian' },
-    { id: profileIds.luminaAdmin, full_name: 'Lumina System Admin', department: 'IT Administration', phone: '+63 900 000 0010', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true, role: 'super_admin' },
-    { id: profileIds.luminaLibrarian, full_name: 'Lumina Head Librarian', department: 'Library Services', phone: '+63 900 000 0011', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.luminaSA, full_name: 'Lumina Desk Assistant', department: 'Library Services', phone: '+63 900 000 0012', address: 'Lumina Learning Resource Center', status: 'ACTIVE', onboarding_completed: true },
-    { id: profileIds.demoStudent, full_name: 'Demo Student Patron', department: 'BS Computer Science', phone: '+63 900 000 0013', address: 'STI College Alabang', status: 'ACTIVE', onboarding_completed: true },
   ];
 
   for (const prof of userProfileUpdates) {
@@ -1541,11 +1531,6 @@ const booksToSeed = [
     { user_id: profileIds.kennethStudent, card_number: 'STU-351534', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
     { user_id: profileIds.rhedStudent, card_number: 'STU-357161', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
     { user_id: profileIds.baybayLibrarian, card_number: 'FAC-982441', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
-    { user_id: profileIds.luminaAdmin, card_number: 'FAC-ADM-001', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
-    { user_id: profileIds.luminaLibrarian, card_number: 'FAC-LIB-001', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
-    { user_id: profileIds.luminaSA, card_number: 'FAC-STF-001', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
-    { user_id: profileIds.demoStudent, card_number: 'STU-001', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
-    { user_id: profileIds.luminaSuperAdmin, card_number: 'FAC-SAD-001', status: 'ACTIVE', issued_at: cardIssueDate.toISOString(), expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() },
   ];
 
   const { error: cardError } = await supabase
@@ -1570,13 +1555,10 @@ const booksToSeed = [
     profileIds.jericoSA,
     profileIds.kennethStudent,
     profileIds.rhedStudent,
-    profileIds.demoStudent,
   ];
 
   const deskStaff = [
     profileIds.baybayLibrarian,
-    profileIds.luminaLibrarian,
-    profileIds.luminaSA,
     profileIds.jericoSA,
   ];
 
@@ -1791,7 +1773,6 @@ const booksToSeed = [
     { user_id: profileIds.kayleStudent, hour: 10, min: 0, notes: 'Capstone mock defense review' },
     { user_id: profileIds.kennethStudent, hour: 10, min: 15, notes: 'System architecture reference study' },
     { user_id: profileIds.jericoSA, hour: 10, min: 30, notes: 'Inventory scanner counter check' },
-    { user_id: profileIds.demoStudent, hour: 11, min: 0, notes: 'Algorithms textbook reading' }
   ];
 
   for (const p of activeTodayPatrons) {
@@ -1808,8 +1789,6 @@ const booksToSeed = [
   const completedTodayPatrons = [
     { user_id: profileIds.rhedStudent, inH: 8, inM: 0, outH: 10, outM: 30, notes: 'Morning discrete structures study' },
     { user_id: profileIds.baybayLibrarian, inH: 7, inM: 45, outH: 12, outM: 0, notes: 'Faculty library collection review' },
-    { user_id: profileIds.luminaLibrarian, inH: 8, inM: 0, outH: 12, outM: 30, notes: 'Morning circulation supervision' },
-    { user_id: profileIds.luminaSA, inH: 8, inM: 30, outH: 11, outM: 45, notes: 'Book accessioning and shelf arrangement' },
     { user_id: profileIds.kaylePersonal, inH: 9, inM: 0, outH: 10, outM: 45, notes: 'Digital card scanner testing' }
   ];
 
@@ -1875,7 +1854,6 @@ const booksToSeed = [
     profileIds.jericoSA,
     profileIds.kennethStudent,
     profileIds.rhedStudent,
-    profileIds.demoStudent,
   ];
 
   for (let i = 0; i < notifUsers.length; i++) {
@@ -1952,7 +1930,7 @@ const booksToSeed = [
   console.info('📋 Seeding administrative audit logs...');
   const auditLogs = [
     {
-      admin_id: profileIds.luminaAdmin,
+      admin_id: profileIds.baybayLibrarian,
       entity_type: 'system_settings',
       action: 'UPDATE',
       old_value: { max_borrow_limit: 3 },
@@ -1981,7 +1959,7 @@ const booksToSeed = [
       details: { source: 'STI Learning Resource Center Acquisitions' }
     },
     {
-      admin_id: profileIds.luminaLibrarian,
+      admin_id: profileIds.baybayLibrarian,
       entity_type: 'library_cards',
       action: 'ISSUANCE',
       old_value: null,
@@ -1990,7 +1968,7 @@ const booksToSeed = [
       details: { status: 'ACTIVE' }
     },
     {
-      admin_id: profileIds.luminaLibrarian,
+      admin_id: profileIds.baybayLibrarian,
       entity_type: 'library_cards',
       action: 'ISSUANCE',
       old_value: null,
@@ -1999,7 +1977,7 @@ const booksToSeed = [
       details: { status: 'ACTIVE' }
     },
     {
-      admin_id: profileIds.luminaLibrarian,
+      admin_id: profileIds.baybayLibrarian,
       entity_type: 'borrowing_records',
       action: 'CHECKOUT',
       old_value: null,
@@ -2017,7 +1995,7 @@ const booksToSeed = [
       details: { counter: 'Desk-02' }
     },
     {
-      admin_id: profileIds.luminaSuperAdmin,
+      admin_id: profileIds.baybayLibrarian,
       entity_type: 'policy',
       action: 'UPDATE',
       old_value: { hold_expiry_days: 2 },

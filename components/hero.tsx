@@ -4,21 +4,14 @@ import type { User } from '@supabase/supabase-js';
 import { m } from "framer-motion";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2, ShieldCheck, BookOpen, UserCheck, GraduationCap } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
-// Demo buttons are on by default (needed for thesis evaluation).
-// Set NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true to hide them on a real production site.
-const SHOW_DEMO_LOGIN = process.env.NEXT_PUBLIC_DISABLE_DEMO_LOGIN !== 'true';
 
 export function Hero({ user, role }: { user: User | null; role: string | null }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleMicrosoftLogin = async () => {
     if (isLoading) return;
@@ -40,28 +33,6 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
       console.error(error);
       toast.error('Microsoft sign-in failed');
       setIsLoading(false);
-    }
-  };
-
-  const signInWithCredentials = async (email: string) => {
-    const supabase = createClient();
-    setIsLoading(true);
-    setLoadingEmail(email);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: "Password123!",
-      });
-      if (error) throw error;
-      toast.success('Successfully logged in!');
-      router.push("/dashboard");
-      router.refresh();
-    } catch (error: unknown) {
-      console.error(error);
-      const errorMessage = error instanceof Error ? error.message : 'Invalid credentials';
-      toast.error(`Login failed: ${errorMessage}`);
-      setIsLoading(false);
-      setLoadingEmail(null);
     }
   };
 
@@ -123,56 +94,14 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
               onClick={handleMicrosoftLogin}
               disabled={isLoading}
             >
-              {isLoading && !loadingEmail ? (
+              {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
                 <MicrosoftIcon className="h-5 w-5" />
               )}
-              <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
+              <span>{isLoading ? "Redirecting..." : "Sign in with Microsoft"}</span>
             </Button>
 
-            {/* Shared demo accounts for evaluators. Hidden only when
-                NEXT_PUBLIC_DISABLE_DEMO_LOGIN=true. */}
-            {SHOW_DEMO_LOGIN && (
-              <div className="w-full space-y-4 mt-2">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-[11px] font-bold uppercase tracking-widest">
-                    <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 w-full">
-                  {[
-                    { label: "Super Admin", email: "admin@lumina.test", icon: ShieldCheck, color: "hover:border-emerald-500/50 hover:bg-emerald-500/[0.04] hover:text-emerald-500 dark:hover:text-emerald-400" },
-                    { label: "Librarian", email: "librarian@lumina.test", icon: BookOpen, color: "hover:border-indigo-500/50 hover:bg-indigo-500/[0.04] hover:text-indigo-500 dark:hover:text-indigo-400" },
-                    { label: "Staff", email: "staff@lumina.test", icon: UserCheck, color: "hover:border-sky-500/50 hover:bg-sky-500/[0.04] hover:text-sky-500 dark:hover:text-sky-400" },
-                    { label: "Student", email: "student@lumina.test", icon: GraduationCap, color: "hover:border-amber-500/50 hover:bg-amber-500/[0.04] hover:text-amber-500 dark:hover:text-amber-400" },
-                  ].map((roleItem) => {
-                    const Icon = roleItem.icon;
-                    const isThisLoading = loadingEmail === roleItem.email;
-                    return (
-                      <Button
-                        key={roleItem.email}
-                        type="button"
-                        variant="outline"
-                        className={`group h-11 sm:h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-200 flex items-center justify-start px-3.5 sm:px-4 gap-2.5 active:scale-[0.98] ${roleItem.color}`}
-                        onClick={() => signInWithCredentials(roleItem.email)}
-                        disabled={isLoading}
-                      >
-                        {isThisLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-                        ) : (
-                          <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110" />
-                        )}
-                        <span className="truncate">{isThisLoading ? "Signing in..." : roleItem.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </m.div>

@@ -27,11 +27,6 @@ export const profileIds = {
   kennethStudent: '486205e4-1fad-421c-8946-fdd0da5217bf', // Kenneth James Tolentino (STU-351534)
   rhedStudent: '31afd312-7272-413a-892a-a67be05caf10', // Rhed Resurreccion (STU-357161)
   baybayLibrarian: '769c24e8-098a-464e-b304-b42049da60fa', // John Renaund Baybay (FAC-982441)
-  luminaAdmin: '00000000-0000-0000-0000-000000000001', // Lumina Admin (FAC-ADM-001)
-  luminaLibrarian: '00000000-0000-0000-0000-000000000002', // Lumina Librarian (FAC-LIB-001)
-  luminaSA: '00000000-0000-0000-0000-000000000005', // Lumina Staff (FAC-STF-001)
-  demoStudent: '00000000-0000-0000-0000-000000000006', // Demo Student Patron (STU-001)
-  luminaSuperAdmin: '00000000-0000-0000-0000-000000000008', // Lumina Super Admin (FAC-SAD-001)
 };
 
 async function clean() {

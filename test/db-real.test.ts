@@ -255,6 +255,20 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     expect((await tryq(`INSERT INTO auth.users(email) VALUES ('random.person@gmail.com')`)).ok).toBe(false);
   });
 
+  it('demo accounts are gone: a @lumina.test sign-up is rejected', async () => {
+    expect((await tryq(`INSERT INTO auth.users(email) VALUES ('admin@lumina.test')`)).ok).toBe(false);
+  });
+
+  it('the first sign-up becomes the active super admin, the next is a pending student', async () => {
+    await db.exec(`DELETE FROM auth.users`);
+    const first = await newUser('first.admin@alabang.sti.edu.ph');
+    const second = await newUser('second.person@alabang.sti.edu.ph');
+    const role = async (id: string) =>
+      (await q(`SELECT role, status FROM public.profiles WHERE id = $1`, [id]))[0];
+    expect(await role(first)).toMatchObject({ role: 'super_admin', status: 'ACTIVE' });
+    expect(await role(second)).toMatchObject({ role: 'student', status: 'PENDING' });
+  });
+
   it("C3 an outsider cannot take a real student's number before they sign up", async () => {
     await tryq(`INSERT INTO auth.users(email) VALUES ('fake.555555@gmail.com')`);
     expect((await tryq(`INSERT INTO auth.users(email) VALUES ('real.555555@alabang.sti.edu.ph')`)).ok).toBe(true);

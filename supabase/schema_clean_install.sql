@@ -444,7 +444,7 @@ END;
 $$;
 
 -- Creates user profiles & library cards automatically upon auth registration
--- All newly registered staff or students default to student role and PENDING status
+-- The first sign-up becomes the ACTIVE super admin; everyone after defaults to student / PENDING
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -453,17 +453,21 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 AS $$
 DECLARE
   card_number_val TEXT;
+  v_first BOOLEAN;
 BEGIN
-  -- Only school accounts may sign up (@lumina.test is for the demo accounts)
-  IF lower(COALESCE(new.email, '')) !~ '^[^@]+@(alabang\.sti\.edu\.ph|lumina\.test)$' THEN
+  IF lower(COALESCE(new.email, '')) !~ '^[^@]+@alabang\.sti\.edu\.ph$' THEN
     RAISE EXCEPTION 'Sign-up is limited to @alabang.sti.edu.ph accounts';
   END IF;
+
+  -- Serialise sign-ups so two people can never both become the first super admin.
+  PERFORM pg_advisory_xact_lock(hashtext('lumina_first_super_admin'));
+  v_first := NOT EXISTS (SELECT 1 FROM public.profiles WHERE role = 'super_admin'::public.user_role);
 
   -- Insert profile
   INSERT INTO public.profiles (id, full_name, avatar_url, email, status, role)
   VALUES (
-    new.id, 
-    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)), 
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'avatar_url',
     new.email,
     'PENDING',
@@ -478,6 +482,11 @@ BEGIN
   INSERT INTO public.library_cards (user_id, card_number, status, expires_at)
   VALUES (new.id, card_number_val, 'PENDING', now() + interval '100 years')
   ON CONFLICT (user_id) DO NOTHING;
+
+  IF v_first THEN
+    UPDATE public.profiles SET role = 'super_admin'::public.user_role, status = 'ACTIVE' WHERE id = new.id;
+    UPDATE public.library_cards SET status = 'ACTIVE' WHERE user_id = new.id;
+  END IF;
 
   RETURN new;
 END;
