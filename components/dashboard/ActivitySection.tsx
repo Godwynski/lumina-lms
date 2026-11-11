@@ -53,7 +53,7 @@ export function ActivitySection({
           </h2>
         </div>
         {activeBorrows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
+          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5">
              <BookOpen size={24} className="mb-2" />
              <p className="text-[11px] font-bold uppercase tracking-widest">No active borrows</p>
           </div>
@@ -98,7 +98,7 @@ export function ActivitySection({
         </div>
 
         {reservations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
+          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5">
             <Bookmark className="h-5 w-5 text-muted-foreground/20 mb-2" />
             <p className="text-[11px] font-bold uppercase tracking-widest">No active reservations</p>
           </div>
@@ -156,7 +156,7 @@ export function ActivitySection({
         </div>
 
         {attendanceLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5 opacity-50">
+          <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/20 rounded-2xl bg-muted/5">
             <Clock className="h-5 w-5 text-muted-foreground/20 mb-2" />
             <p className="text-[11px] font-bold uppercase tracking-widest">No logs yet</p>
           </div>

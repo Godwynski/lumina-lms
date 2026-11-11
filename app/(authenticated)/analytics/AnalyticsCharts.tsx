@@ -19,6 +19,33 @@ import {
 import type { TrendDataPoint } from '@/lib/actions/analytics';
 import { cn } from '@/lib/utils';
 
+function ChartValues({ title, column, measure, rows }: {
+  title: string;
+  column: string;
+  measure: string;
+  rows: { label: string; count: number }[];
+}) {
+  return (
+    <details className="mt-2 rounded-xl border border-border px-3 text-sm">
+      <summary className="cursor-pointer py-2 font-medium">View {title.toLowerCase()} data</summary>
+      {rows.length ? (
+        <table className="mb-3 w-full text-left">
+          <caption className="sr-only">{title}</caption>
+          <thead><tr><th scope="col">{column}</th><th scope="col">{measure}</th></tr></thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index} className="border-t border-border">
+                <th scope="row" className="py-1 font-normal">{row.label}</th>
+                <td>{row.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : <p className="pb-3">No data for this period.</p>}
+    </details>
+  );
+}
+
 interface TrendChartProps {
   data: TrendDataPoint[];
   title: string;
@@ -81,7 +108,7 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
         {href && (
-          <span className="text-[11px] font-black text-primary/40 group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
+          <span className="text-[11px] font-black text-primary group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
             View Details →
           </span>
         )}
@@ -102,7 +129,7 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
                   dataKey="label" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
+                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
                   dy={15}
                   interval="preserveStartEnd"
                   hide={!hasData}
@@ -110,7 +137,7 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
+                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
                   hide={!hasData}
                   domain={[0, 'auto']}
                 />
@@ -133,11 +160,12 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
     </div>
   );
 
-  if (href) {
-    return <Link href={href} className="block w-full">{content}</Link>;
-  }
-
-  return content;
+  return (
+    <>
+      {href ? <Link href={href} className="block w-full" aria-label={`View details for ${title}`}>{content}</Link> : content}
+      <ChartValues title={title} column="Period" measure="Borrows" rows={data} />
+    </>
+  );
 }
 
 interface CategoryPieChartProps {
@@ -166,6 +194,7 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
   return (
+    <>
     <div className="w-full h-[280px] relative flex flex-col border border-border/40 rounded-2xl p-4 bg-muted/[0.02] overflow-hidden transition-all duration-300">
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />
       
@@ -235,6 +264,8 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
         )}
       </div>
     </div>
+    <ChartValues title={title} column="Genre" measure="Count" rows={data.map(({ name, value }) => ({ label: name, count: value }))} />
+    </>
   );
 }
 
@@ -277,6 +308,7 @@ export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps
   const hasData = data && data.length > 0 && data.some(d => d.count > 0);
 
   return (
+    <>
     <div className="w-full h-[280px] flex flex-col group/chart border border-border/40 rounded-2xl p-4 bg-muted/[0.02] relative overflow-hidden transition-all duration-300">
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
@@ -300,13 +332,13 @@ export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps
                   dataKey="hour" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
+                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
                   dy={10}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.8)', fontWeight: 700 }} 
+                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
                   domain={[0, 'auto']}
                   allowDecimals={false}
                 />
@@ -323,6 +355,8 @@ export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps
         </div>
       </div>
     </div>
+    <ChartValues title={title} column="Hour" measure="Visits" rows={data.map(({ hour, count }) => ({ label: hour, count }))} />
+    </>
   );
 }
 

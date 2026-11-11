@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -35,7 +35,6 @@ interface UsersContentProps {
 }
 
 export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
-  const router = useRouter();
   const initialData = use(usersPromise);
   const supabase = useMemo(() => createClient(), []);
   const [users, setUsers] = useState<User[]>(initialData.users);
@@ -174,17 +173,13 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     };
   }, [supabase]);
 
-  const handleUserClick = useCallback((u: User) => {
-    router.push(`/users/${u.id}`);
-  }, [router]);
-
   const allOnPageSelected = users.length > 0 && users.every((u) => selectedIds.has(u.id));
   const selectColumn: LuminaColumn<User> = {
     header: (
       <input
         type="checkbox"
         aria-label="Select all users on this page"
-        className="h-4 w-4 accent-primary"
+        className="relative z-10 h-6 w-6 accent-primary"
         checked={allOnPageSelected}
         onChange={() => setSelectedIds(allOnPageSelected ? new Set() : new Set(users.map((u) => u.id)))}
       />
@@ -194,10 +189,8 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
       <input
         type="checkbox"
         aria-label={`Select ${user.name}`}
-        className="h-4 w-4 accent-primary"
+        className="relative z-10 h-6 w-6 accent-primary"
         checked={selectedIds.has(user.id)}
-        // The row itself opens the user; ticking the box must not.
-        onClick={(e) => e.stopPropagation()}
         onChange={() => toggleSelected(user.id)}
       />
     ),
@@ -213,7 +206,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="truncate font-medium text-foreground">{user.name}</p>
+            <Link href={`/users/${user.id}`} className="block truncate font-medium text-foreground underline-offset-2 hover:underline after:absolute after:inset-0">{user.name}</Link>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
           </div>
         </div>
@@ -323,7 +316,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           <label className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border/50 text-xs font-medium text-muted-foreground">
             <input
               type="checkbox"
-              className="h-5 w-5 accent-primary"
+              className="h-6 w-6 accent-primary"
               checked={allOnPageSelected}
               onChange={() => setSelectedIds(allOnPageSelected ? new Set() : new Set(users.map((u) => u.id)))}
             />
@@ -334,19 +327,19 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           data={users}
           columns={columns}
           isLoading={isLoadingUsers}
-          onRowClick={handleUserClick}
+          rowClassName="relative"
           noBorder
           renderMobileRow={(user) => (
             <div className="flex items-start gap-3">
               {canReactivate && (
                 <label
-                  className="-m-2 p-2 shrink-0 flex items-center"
+                  className="relative z-10 -m-2 p-2 shrink-0 flex items-center"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
                     type="checkbox"
                     aria-label={`Select ${user.name}`}
-                    className="h-5 w-5 accent-primary"
+                    className="h-6 w-6 accent-primary"
                     checked={selectedIds.has(user.id)}
                     onChange={() => toggleSelected(user.id)}
                   />
@@ -358,7 +351,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate font-medium text-foreground text-sm">{user.name}</p>
+                  <Link href={`/users/${user.id}`} className="block truncate font-medium text-foreground text-sm underline-offset-2 hover:underline after:absolute after:inset-0">{user.name}</Link>
                   <StatusBadge status={user.status} />
                 </div>
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
