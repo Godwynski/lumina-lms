@@ -337,7 +337,7 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
     if (fields.length === 0) return null;
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 p-4 bg-muted/20 rounded-2xl border border-border/5 opacity-60">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 p-4 bg-muted/20 rounded-2xl border border-border/5">
         {fields.map(([k, v]) => (
           <div key={k} className="flex flex-col gap-1 min-w-0 line-through decoration-muted-foreground/30">
             <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{k.replace(/_/g, ' ')}</span>
@@ -367,7 +367,7 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
             {k}
           </span>
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="line-through opacity-60 text-muted-foreground truncate max-w-[200px]">
+            <span className="line-through text-muted-foreground truncate max-w-[200px]">
               {formatValue(oldVal[k])}
             </span>
             <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/30" />
@@ -604,7 +604,7 @@ export function AuditLogClient() {
 
 
         {data?.logs?.length === 0 && (
-          <div className="h-64 flex flex-col items-center justify-center gap-3 opacity-60 bg-muted/5 rounded-[2.5rem] border border-border/10 border-dashed">
+          <div className="h-64 flex flex-col items-center justify-center gap-3 bg-muted/5 rounded-[2.5rem] border border-border/10 border-dashed">
             <div className="h-16 w-16 rounded-full bg-muted/10 flex items-center justify-center border border-border/10">
               <Search className="h-8 w-8 text-muted-foreground/30" />
             </div>
@@ -677,7 +677,7 @@ export function AuditLogClient() {
                         </td>
                         <td className="p-3">
                           <span className="truncate block max-w-[250px] font-medium" title={log.reason || ""}>
-                            {log.reason || <span className="italic opacity-50">No reason</span>}
+                            {log.reason || <span className="italic">No reason</span>}
                           </span>
                         </td>
                         <td className="p-3 text-center">
@@ -735,7 +735,7 @@ export function AuditLogClient() {
                                         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                                         Removed Elements
                                       </span>
-                                      <div className="grid gap-2 opacity-80">
+                                      <div className="grid gap-2">
                                         {details.removed.map((item: AuditLogDetailItem, idx: number) => (
                                           <div key={idx} className="bg-background/60 p-2.5 rounded-lg border border-border/5 flex flex-col gap-1 line-through decoration-red-500/30">
                                             {typeof item === 'object' && item !== null ? (

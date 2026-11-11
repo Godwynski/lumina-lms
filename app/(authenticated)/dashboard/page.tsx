@@ -3,7 +3,7 @@ import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import DashboardLoading from "./DashboardLoading";
 
 export const metadata = {
-  title: "Dashboard | Lumina LMS",
+  title: "Dashboard",
 };
 
 export default function ProtectedPage({

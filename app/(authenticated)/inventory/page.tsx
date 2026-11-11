@@ -7,7 +7,7 @@ import { LiveActivityTicker } from '@/components/dashboard/LiveActivityTicker';
 import { CatalogContent, CatalogSkeleton } from './CatalogContent';
 
 export const metadata = {
-  title: 'Inventory | Lumina LMS',
+  title: 'Inventory',
   description: 'Manage physical book inventory and resources.',
 };
 

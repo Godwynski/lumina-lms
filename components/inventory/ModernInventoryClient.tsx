@@ -759,7 +759,7 @@ export function ModernInventoryClient({
                 <DialogTrigger asChild>
                   <Button variant="outline" aria-label="Batch operations" className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 text-[11px] font-bold uppercase tracking-wider">
                     <Upload className="h-4 w-4 text-primary/80" />
-                    <span className="hidden sm:inline">Batch Ops</span>
+                    <span className="hidden sm:inline">Batch Operations</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="w-full sm:max-w-2xl rounded-3xl border border-border/10 bg-background/95 backdrop-blur-xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-[9999]">

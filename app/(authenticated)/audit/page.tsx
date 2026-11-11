@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AuditLogClient } from "@/components/admin/AuditLogClient";
 
 export const metadata = {
-  title: "Audit Logs | Lumina LMS",
+  title: "Audit Logs",
 };
 
 // Synchronous page shell — responds immediately.

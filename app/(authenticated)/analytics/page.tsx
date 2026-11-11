@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Analytics | Lumina LMS",
+  title: "Analytics",
 };
 
 export default async function AnalyticsPage() {

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { UsersContent } from "./UsersContent";
 import { getUsers } from "@/lib/actions/users";
 
-export const metadata = { title: "Users | Lumina LMS" };
+export const metadata = { title: "Users" };
 
 const PAGE_SIZE = 12;
 

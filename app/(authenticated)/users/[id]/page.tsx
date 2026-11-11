@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import { UserDetailClient } from "./UserDetailClient";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 
-export const metadata = { title: "User details | Lumina LMS" };
+export const metadata = { title: "User details" };
 
 // getMe() is cache()-memoized — reuses auth already fetched by the layout.
 // The profile lookup for the *target* user is the only DB call needed.
