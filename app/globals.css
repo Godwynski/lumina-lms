@@ -21,7 +21,7 @@
     --destructive: 0 65% 45%;
     --destructive-foreground: 0 0% 100%;
     --border: 214 20% 87%;
-    --input: 214 20% 87%;
+    --input: 215 14% 52%;
     --ring: 221 39% 28%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -30,9 +30,9 @@
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
 
-    --status-success: 142 72% 32%;
-    --status-warning: 38 92% 38%;
-    --status-danger: 0 72% 44%;
+    --status-success: 142 72% 24%;
+    --status-warning: 32 90% 29%;
+    --status-danger: 0 72% 37%;
     --status-neutral: 215 16% 38%;
 
     --sidebar: hsl(210 17% 97%);
@@ -71,6 +71,17 @@
     min-height: 100vh;
   }
 }
+
+/* Keep keyboard focus visible on light, dark and forced-color surfaces. */
+:where(a[href], button, input, select, textarea, [role], [tabindex]):focus-visible {
+  outline: 2px solid #172554 !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px white;
+}
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight !important; }
+}
+html { scroll-padding-block-start: 4.5rem; }
 
 /* Cross-browser clean scrollbars */
 ::-webkit-scrollbar {

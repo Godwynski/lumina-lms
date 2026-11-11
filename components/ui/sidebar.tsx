@@ -191,13 +191,20 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="w-[var(--sidebar-width)] bg-sidebar p-0 text-sidebar-foreground"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
+          onCloseAutoFocus={(event) => {
+            const trigger = document.querySelector<HTMLButtonElement>('button[data-sidebar="trigger"][aria-expanded]:not([hidden])');
+            if (trigger?.getClientRects().length) {
+              event.preventDefault();
+              trigger.focus();
+            }
+          }}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
@@ -262,10 +269,11 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile, openMobile, open } = useSidebar()
 
   return (
     <button
+      aria-expanded={isMobile ? openMobile : open}
       type="button"
       data-sidebar="trigger"
       data-slot="sidebar-trigger"

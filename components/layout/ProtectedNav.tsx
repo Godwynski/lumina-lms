@@ -64,6 +64,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import { Role, Profile, NavItem, hasPermission } from "@/lib/auth/permissions";
@@ -94,6 +95,7 @@ export function ProtectedNav({
   preferences?: Record<string, unknown>;
 }) {
   const router = useRouter();
+  const { isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
   const { role, profile } = usePreferences();
@@ -191,7 +193,7 @@ export function ProtectedNav({
     visibleItems.forEach(item => {
       if (item.href === "/history") {
         const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
-        
+
         if (isStaffUser) {
           // Staff gets ONLY Borrowing Logs
           items.push({
@@ -276,7 +278,7 @@ export function ProtectedNav({
           prefetch={true}
           onMouseEnter={() => handlePrefetch("/dashboard")}
           className="flex items-center gap-3 shrink-0 group-data-[collapsible=icon]:hidden" 
-          aria-label="Lumina LMS Platform"
+
         >
           <Logo size={20} className="scale-90 shrink-0" />
           <div className="flex flex-col whitespace-nowrap">
@@ -298,11 +300,13 @@ export function ProtectedNav({
                     tooltip={item.label}
                   >
                     <Link 
-                      href={item.href} 
+                      href={item.href}
+                      aria-label={item.label}
+                      aria-current={item.isActive ? (pathname === item.href.split('?')[0] ? 'page' : 'location') : undefined}
                       prefetch={true}
                       className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
-                      onClick={(e) => {
-                        e.currentTarget.blur();
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
                       }}
                       onMouseEnter={() => handlePrefetch(item.href)}
                     >
@@ -324,10 +328,11 @@ export function ProtectedNav({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
+                  aria-label={`${initials} ${userData.name} ${userData.email} account menu`.trim()}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={userData.avatarUrl || ""} alt={userData.name} fetchPriority="high" />
+                    <AvatarImage src={userData.avatarUrl || ""} alt="" fetchPriority="high" />
                     <AvatarFallback className="rounded-lg bg-sidebar-accent text-sidebar-accent-foreground font-bold">
                       {userData.initials}
                     </AvatarFallback>
@@ -366,8 +371,8 @@ export function ProtectedNav({
                       href="/profile" 
                       prefetch={true}
                       className="flex w-full cursor-pointer items-center" 
-                      onClick={(e) => {
-                        e.currentTarget.blur();
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
                       }}
                       onMouseEnter={() => handlePrefetch("/profile")}
                     >

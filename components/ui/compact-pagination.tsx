@@ -36,7 +36,7 @@ export function CompactPagination({
 
   return (
     <div className={cn(
-      "flex items-center justify-between gap-2 transition-all duration-300",
+      "flex flex-wrap items-center justify-between gap-2 transition-all duration-300",
       variant === "default" && "rounded-2xl border border-border/10 bg-card/50 p-2 shadow-xs backdrop-blur-sm",
       variant === "ghost" && "px-1"
     )}>

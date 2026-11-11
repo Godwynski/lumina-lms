@@ -79,7 +79,7 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
           <Button
             variant="ghost"
             className="relative h-10 w-10 rounded-xl transition-all hover:scale-[1.02] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 data-[state=open]:bg-slate-100"
-            aria-label="User navigation menu"
+            aria-label={`${initials} — account menu for ${name}`}
           >
           <Avatar className="h-10 w-10 rounded-xl border border-slate-300">
             <AvatarImage src={avatarUrl} alt={name} />
