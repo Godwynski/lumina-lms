@@ -98,3 +98,5 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
+
+/backups/
