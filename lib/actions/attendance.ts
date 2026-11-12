@@ -100,17 +100,19 @@ export const toggleAttendanceByCard = createSafeAction(
     if (activeRecord && Date.now() - new Date(activeRecord.check_in_at).getTime() < 60_000) {
       return {
         status: "IN",
+        recordedAt: activeRecord.check_in_at,
         message: `Already timed in, ${fullName}.`,
         description: "Already timed in.",
         userName: fullName
       };
     }
 
+    const recordedAt = new Date().toISOString();
     if (activeRecord) {
       // LOG OUT
       const { error: outError } = await supabase
         .from("attendance")
-        .update({ check_out_at: new Date().toISOString() })
+        .update({ check_out_at: recordedAt })
         .eq("id", activeRecord.id);
 
       if (outError) throw new Error("Failed to register Time Out.");
@@ -128,7 +130,8 @@ export const toggleAttendanceByCard = createSafeAction(
       revalidatePath("/dashboard", "page");
       
       return { 
-        status: "OUT", 
+        status: "OUT",
+        recordedAt,
         message: `Goodbye, ${fullName}!`,
         description: "Timed out successfully.",
         userName: fullName
@@ -149,6 +152,7 @@ export const toggleAttendanceByCard = createSafeAction(
         if (lastOut?.check_out_at && Date.now() - new Date(lastOut.check_out_at).getTime() < 60_000) {
           return {
             status: "OUT",
+            recordedAt: lastOut.check_out_at,
             message: `Already timed out, ${fullName}.`,
             description: "Already timed out.",
             userName: fullName
@@ -161,7 +165,7 @@ export const toggleAttendanceByCard = createSafeAction(
         .from("attendance")
         .insert({
           user_id: userId,
-          check_in_at: new Date().toISOString()
+          check_in_at: recordedAt
         });
 
       if (inError) {
@@ -184,7 +188,8 @@ export const toggleAttendanceByCard = createSafeAction(
       revalidatePath("/dashboard", "page");
       
       return { 
-        status: "IN", 
+        status: "IN",
+        recordedAt,
         message: `Welcome, ${fullName}!`,
         description: "Timed in successfully.",
         userName: fullName

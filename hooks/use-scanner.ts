@@ -1,310 +1,122 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import type { Html5Qrcode } from 'html5-qrcode';
 
-// Stable default so startScanner isn't recreated on every render.
-const DEFAULT_FORMATS = [0]; // 0 is Html5QrcodeSupportedFormats.QR_CODE
-
-// The same code is only accepted again after it has been out of view this long.
-// While a card stays in front of the camera, every detection refreshes the timer.
 const SAME_CODE_REARM_MS = 3000;
 
 interface UseScannerProps {
   onScan: (value: string) => Promise<void>;
   isProcessing: boolean;
-  scannerId?: string;
-  formats?: number[];
+  scannerId: string;
 }
 
-/**
- * useScanner - A robust cross-browser QR/Barcode scanning hook using html5-qrcode.
- * Replaces the experimental BarcodeDetector API which had poor Safari/Firefox support.
- */
-export function useScanner({ 
-  onScan, 
-  isProcessing, 
-  scannerId = 'qr-reader',
-  formats = DEFAULT_FORMATS
-}: UseScannerProps) {
+export function useScanner({ onScan, isProcessing, scannerId }: UseScannerProps) {
+  const instanceId = useId();
+  const containerId = scannerId + '-' + instanceId.replace(/[^a-zA-Z0-9_-]/g, '');
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [cameraSupported, setCameraSupported] = useState(true);
-  const [cameraPermission, setCameraPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const [cameraIssue, setCameraIssue] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [devices, setDevices] = useState<{ id: string; label: string }[]>([]);
-  
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const lastScanRef = useRef<{ value: string; time: number } | null>(null);
-  // Refs keep startScanner stable; a changing callback used to re-trigger
-  // auto-start effects (e.g. restarting the camera right after Stop).
-  const isInitializingRef = useRef(false);
-  const facingModeRef = useRef<'user' | 'environment'>('environment');
-  const formatsRef = useRef(formats);
-  useEffect(() => {
-    formatsRef.current = formats;
-  }, [formats]);
-  
-  const onScanRef = useRef(onScan);
-  const isProcessingRef = useRef(isProcessing);
+  const [devices, setDevices] = useState<string[]>([]);
+  const activeDevice = useRef<string | undefined>(undefined);
+  const scanner = useRef<Html5Qrcode | null>(null);
+  const generation = useRef(0);
+  const queue = useRef(Promise.resolve());
+  const last = useRef({ value: '', time: 0 });
+  const processing = useRef(false);
+  const callbacks = useRef({ onScan, isProcessing });
+  useEffect(() => { callbacks.current = { onScan, isProcessing }; }, [onScan, isProcessing]);
 
-  useEffect(() => {
-    onScanRef.current = onScan;
-    isProcessingRef.current = isProcessing;
-  }, [onScan, isProcessing]);
-
-  const stopCamera = useCallback(async () => {
-    if (scannerRef.current) {
-      if (scannerRef.current.isScanning) {
-        try {
-          await scannerRef.current.stop();
-        } catch (err) {
-          console.warn('[Scanner] Failed to stop scanner cleanly:', err);
-        }
-      }
-      try {
-        scannerRef.current.clear();
-      } catch {}
-      scannerRef.current = null;
-    }
-
-    // Aggressive track cleanup to ensure the hardware is released
-    // This fixes the "camera still in use" issue on mobile browsers
+  // Only one operation may own this scanner's video element at a time.
+  const release = useCallback(async () => {
+    const current = scanner.current;
+    scanner.current = null;
+    if (!current) return;
     try {
-      const container = document.getElementById(scannerId);
-      const videoElem = container?.querySelector('video') as HTMLVideoElement | null;
-      
-      if (videoElem && videoElem.srcObject instanceof MediaStream) {
-        console.debug('[Scanner] Manually stopping tracks for:', scannerId);
-        videoElem.srcObject.getTracks().forEach(track => {
-          track.stop();
-          console.debug(`[Scanner] Track stopped: ${track.kind} - ${track.label}`);
-        });
-        videoElem.srcObject = null;
-      }
-    } catch (e) {
-      console.debug('[Scanner] Manual track cleanup failed:', e);
+      if (current.isScanning) await current.stop();
+    } catch (error) {
+      console.warn('Could not stop QR scanner', error);
+      const video = document.getElementById(containerId)?.querySelector('video');
+      if (video?.srcObject instanceof MediaStream) video.srcObject.getTracks().forEach(track => track.stop());
     }
+    try { current.clear(); } catch { /* Container can already be unmounted. */ }
+  }, [containerId]);
 
+  const stopCamera = useCallback(() => {
+    ++generation.current;
     setCameraOpen(false);
-    isInitializingRef.current = false;
     setIsInitializing(false);
-  }, [scannerId]);
+    queue.current = queue.current.then(release);
+    return queue.current;
+  }, [release]);
 
-  const clearLastScan = useCallback(() => {
-    lastScanRef.current = null;
-  }, []);
-
-  const startScanner = useCallback(async (requestedMode?: 'user' | 'environment') => {
-    if (isInitializingRef.current || (scannerRef.current && scannerRef.current.isScanning)) return;
-
-    if (requestedMode) {
-      facingModeRef.current = requestedMode;
-      setFacingMode(requestedMode);
-    }
-    const facingMode = facingModeRef.current;
-    const formats = formatsRef.current;
-
-    isInitializingRef.current = true;
-    setIsInitializing(true);
-    setCameraSupported(true);
+  const startScanner = useCallback((deviceId?: string) => {
+    const request = ++generation.current;
+    const canceled = () => request !== generation.current;
     setCameraIssue(null);
-
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      
-      // Cleanup any existing instance
-      if (scannerRef.current) {
-        try {
-          if (scannerRef.current.isScanning) await scannerRef.current.stop();
-          scannerRef.current.clear();
-        } catch {}
-        scannerRef.current = null;
-      }
-
-      const html5QrCode = new Html5Qrcode(scannerId, { 
-        formatsToSupport: formats as unknown as Html5QrcodeSupportedFormats[], 
-        verbose: false 
-      });
-      scannerRef.current = html5QrCode;
-
+    setCameraOpen(false);
+    setIsInitializing(true);
+    queue.current = queue.current.then(async () => {
+      if (canceled()) return;
       try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (cameras && cameras.length > 0) {
-          setDevices(cameras.map(c => ({ id: c.id, label: c.label })));
-        } else {
-          setCameraSupported(false);
-          setCameraIssue('No camera hardware detected. Please use Direct Entry.');
-          setIsInitializing(false);
-          return;
-        }
-      } catch (camErr: unknown) {
-        const camErrStr = String(camErr).toLowerCase();
-        if (camErrStr.includes('notfound') || camErrStr.includes('no camera') || camErrStr.includes('not found') || camErrStr.includes('device')) {
-          setCameraSupported(false);
-          setCameraIssue('No camera hardware detected. Please use Direct Entry.');
-          setIsInitializing(false);
-          return;
-        }
+        await release();
+        if (canceled()) return;
+        if (!navigator.mediaDevices) throw new Error('Camera unavailable. Use a secure connection or enter the code manually.');
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        if (canceled()) return;
+        const current = new Html5Qrcode(containerId, { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], verbose: false });
+        scanner.current = current;
+        await current.start(deviceId || { facingMode: 'environment' }, {
+          fps: 15,
+          qrbox: (w, h) => {
+            const size = Math.floor(Math.min(w, h) * 0.7);
+            return { width: size, height: size };
+          },
+          aspectRatio: 1,
+        }, async value => {
+          if (canceled()) return;
+          const time = Date.now();
+          if (last.current.value === value && time - last.current.time < SAME_CODE_REARM_MS) {
+            last.current.time = time;
+            return;
+          }
+          if (processing.current || callbacks.current.isProcessing) return;
+          last.current = { value, time };
+          processing.current = true;
+          try { await callbacks.current.onScan(value); }
+          finally { processing.current = false; }
+        }, () => {});
+        if (canceled()) return;
+        setCameraOpen(true);
+        setIsInitializing(false);
+        // Enumeration is optional. A working stream stays usable if it fails.
+        activeDevice.current = current.getRunningTrackSettings().deviceId || deviceId;
+        const inputs = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+        if (!canceled()) setDevices(inputs.filter(d => d.kind === 'videoinput' && d.deviceId).map(d => d.deviceId));
+      } catch (error) {
+        if (canceled()) return;
+        await release();
+        if (canceled()) return;
+        const detail = String(error);
+        const message = /denied|notallowed|permission/i.test(detail)
+          ? 'Camera access is blocked. Allow camera access or enter the code manually.'
+          : /notfound|not found|no camera/i.test(detail)
+            ? 'No camera found. Connect a camera or enter the code manually.'
+            : 'Camera unavailable. Check the connection and camera permissions, or enter the code manually.';
+        setCameraOpen(false);
+        setCameraIssue(message);
+      } finally {
+        if (!canceled()) setIsInitializing(false);
       }
+    });
+    return queue.current;
+  }, [containerId, release]);
 
-      const config = {
-        fps: 15,
-        qrbox: (viewWidth: number, viewHeight: number) => {
-          const min = Math.min(viewWidth, viewHeight);
-          const boxSize = Math.floor(min * 0.7);
-          return { width: boxSize, height: boxSize };
-        },
-        aspectRatio: 1.0,
-      };
-
-      const handleScanSuccess = async (decodedText: string) => {
-        const now = Date.now();
-        console.info(`[Scanner] Detected: ${decodedText}`);
-
-        // Same code still in view (seen recently): refresh the timer and ignore.
-        // It is only accepted again once it has left the camera for a while,
-        // so one presented card can't trigger two transitions (e.g. OUT then IN).
-        const last = lastScanRef.current;
-        if (last?.value === decodedText && now - last.time < SAME_CODE_REARM_MS) {
-          last.time = now;
-          return;
-        }
-
-        if (isProcessingRef.current) {
-          console.warn('[Scanner] Scan ignored: System is currently processing.');
-          return;
-        }
-
-        lastScanRef.current = { value: decodedText, time: now };
-        console.info('[Scanner] Triggering onScan callback...');
-        await onScanRef.current(decodedText);
-        console.info('[Scanner] onScan callback completed.');
-      };
-
-      try {
-        await html5QrCode.start(
-          { facingMode: facingMode },
-          config,
-          handleScanSuccess,
-          () => {}
-        );
-      } catch (startErr: unknown) {
-        const errText = String(startErr).toLowerCase();
-        if (facingMode === 'environment' && (errText.includes('overconstrained') || errText.includes('notfound') || errText.includes('not found') || errText.includes('constraint'))) {
-          console.warn('[Scanner] Environment camera unavailable, falling back to user camera...');
-          facingModeRef.current = 'user';
-          setFacingMode('user');
-          await html5QrCode.start(
-            { facingMode: 'user' },
-            config,
-            handleScanSuccess,
-            () => {}
-          );
-        } else {
-          throw startErr;
-        }
-      }
-
-      setCameraOpen(true);
-      setCameraPermission('granted');
-      setCameraIssue(null);
-    } catch (err: unknown) {
-      const errStr = String(err);
-      const errMessage = (err && typeof err === 'object' && 'message' in err) ? String((err as Record<string, unknown>).message) : '';
-      const errName = (err && typeof err === 'object' && 'name' in err) ? String((err as Record<string, unknown>).name) : '';
-      const fullErrorText = `${errStr} ${errMessage} ${errName}`.toLowerCase();
-
-      const isPermissionError = fullErrorText.includes('permission') || 
-                                fullErrorText.includes('notallowederror') || 
-                                fullErrorText.includes('denied');
-      const isHardwareBusy = fullErrorText.includes('notreadableerror') || 
-                             fullErrorText.includes('readable') ||
-                             fullErrorText.includes('could not start video source') ||
-                             fullErrorText.includes('starting video source failed') ||
-                             fullErrorText.includes('concurrent');
-      const isNotFound = fullErrorText.includes('notfounderror') || 
-                         fullErrorText.includes('devicesnotfound') || 
-                         fullErrorText.includes('devices not found') ||
-                         fullErrorText.includes('no camera') ||
-                         fullErrorText.includes('not found') ||
-                         fullErrorText.includes('requested device not found');
-      const isKnownError = isPermissionError || isHardwareBusy || isNotFound;
-
-      if (isKnownError) {
-        console.warn('[Scanner] Camera start failed (handled):', errMessage || errStr);
-      } else {
-        console.error('Scanner start error:', err);
-      }
-      
-      if (isPermissionError) {
-        setCameraPermission('denied');
-        setCameraIssue('Camera access denied. Please check browser permissions or use Direct Entry.');
-      } else if (isNotFound) {
-        setCameraSupported(false);
-        setCameraIssue('No camera hardware detected. Please use Direct Entry.');
-      } else if (isHardwareBusy) {
-        setCameraIssue('Camera is busy or inaccessible. Please check permissions or use Direct Entry.');
-      } else {
-        setCameraIssue(errMessage || errStr || 'Failed to start camera. Please use Direct Entry.');
-      }
-      
-      void stopCamera();
-    } finally {
-      isInitializingRef.current = false;
-      setIsInitializing(false);
-    }
-  }, [scannerId, stopCamera]);
-
-  const switchCamera = useCallback(async () => {
-    const newMode = facingModeRef.current === 'user' ? 'environment' : 'user';
-    facingModeRef.current = newMode;
-    setFacingMode(newMode);
-
-    if (cameraOpen) {
-      await stopCamera();
-      // Give it a small timeout to ensure the hardware is released.
-      // Pass the mode explicitly so the restart can't use a stale value.
-      setTimeout(() => void startScanner(newMode), 400);
-    }
-  }, [cameraOpen, stopCamera, startScanner]);
-
-  // Lazy support check — only validates API presence (no device enumeration, no dynamic imports)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !navigator.mediaDevices) {
-      setCameraSupported(false);
-      setCameraIssue('Camera API not supported in this browser.');
-      return;
-    }
-
-    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
-      setCameraSupported(false);
-      setCameraIssue('Camera only works on HTTPS or localhost.');
-    }
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        void stopCamera();
-      }
-    };
-  }, [stopCamera]);
-
-  return {
-    cameraOpen,
-    startScanner,
-    stopCamera,
-    isInitializing,
-    cameraSupported,
-    cameraPermission,
-    cameraIssue,
-    clearLastScan,
-    switchCamera,
-    facingMode,
-    hasMultipleCameras: devices.length > 1 || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0),
-    scannerId,
+  const switchCamera = () => {
+    const index = devices.indexOf(activeDevice.current ?? '');
+    if (devices.length > 1) void startScanner(devices[(index + 1) % devices.length]);
   };
+
+  useEffect(() => () => { void stopCamera(); }, [stopCamera]);
+  return { scannerId: containerId, cameraOpen, cameraIssue, isInitializing, startScanner, stopCamera, switchCamera, hasMultipleCameras: devices.length > 1 };
 }

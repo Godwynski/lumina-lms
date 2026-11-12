@@ -44,10 +44,7 @@ export function ScanStep({
         hasMultipleCameras,
     } = useScanner({
         onScan: async (val) => {
-            const success = await onScan(val, false);
-            if (success) {
-                stopCamera();
-            }
+            if (await onScan(val, false)) setManualValue('');
         },
         isProcessing,
         scannerId: 'circulation-scanner'
@@ -57,7 +54,6 @@ export function ScanStep({
         if (!manualValue.trim() || isProcessing) return;
         const success = await onScan(manualValue.trim(), true);
         if (success) {
-            stopCamera();
             setManualValue('');
         }
     };
@@ -70,7 +66,7 @@ export function ScanStep({
                         <ScanLine className="h-4 w-4 text-primary" />
                         {title}
                     </h2>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-tight font-medium">{description}</p>
+                    <p className="text-sm text-muted-foreground">{description}</p>
                 </div>
                 
                 <TooltipProvider>
@@ -123,12 +119,12 @@ export function ScanStep({
                                 {cameraIssue ? (
                                     <>
                                         <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                                        Retry Camera
+                                        Retry camera
                                     </>
                                 ) : (
                                     <>
                                         <Camera className="mr-2 h-3.5 w-3.5" />
-                                        Launch Scanner
+                                        Start camera
                                     </>
                                 )}
                             </Button>
@@ -153,7 +149,7 @@ export function ScanStep({
                                 className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[11px] font-bold uppercase tracking-wider"
                                 onClick={() => stopCamera()}
                             >
-                                Stop
+                                Stop camera
                             </Button>
                         </div>
                     )}
@@ -169,12 +165,13 @@ export function ScanStep({
 
                 <div className="flex flex-col gap-4">
                     <Field className="space-y-2">
-                        <Label className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
+                        <Label htmlFor="circulation-code" className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">
                             {placeholder}
                         </Label>
                         <form onSubmit={(event) => { event.preventDefault(); void handleManualSubmit(); }} className="flex flex-wrap gap-2">
                             <Input
                                 aria-describedby={entryHintId}
+                                id="circulation-code"
                                 value={manualValue}
                                 onChange={(e) => setManualValue(e.target.value.toUpperCase())}
                                 placeholder={placeholder}

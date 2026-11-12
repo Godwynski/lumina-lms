@@ -75,6 +75,9 @@ export function AttendanceClient({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
+  const [lastResult, setLastResult] = useState('');
+  const scannerSession = useRef(0);
+
   const lastScannedValRef = useRef<string | null>(null);
   const lastScanTimeRef = useRef(0);
 
@@ -87,6 +90,7 @@ export function AttendanceClient({
 
   // Process a card scan (manual entry or camera detection)
   const processScan = useCallback(async (scannedValue: string, isManual = false) => {
+    const session = scannerSession.current;
     const clean = scannedValue.trim();
     if (!clean || isProcessing) return;
 
@@ -106,7 +110,11 @@ export function AttendanceClient({
 
       if (result.success) {
         playScanCue('success');
-        toast.success("Transaction recorded", {
+        if (!isManual && session === scannerSession.current) {
+          const time = new Date(result.data.recordedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
+          setLastResult(`${result.data.userName} · ${result.data.description.replace(/ successfully|\.$/g, '')} · ${time}`);
+        }
+        if (isManual) toast.success("Transaction recorded", {
           id: "attendance-toast",
           description: result.data.message,
           icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
@@ -122,10 +130,12 @@ export function AttendanceClient({
         setSystemAllRecords(freshAll);
       } else {
         playScanCue('error');
+        if (!isManual && session === scannerSession.current) setLastResult(result.error);
         toast.error(result.error, { id: "attendance-toast-error" });
       }
     } catch {
       playScanCue('error');
+      if (!isManual && session === scannerSession.current) setLastResult("Could not verify this scan. Check the attendance log before retrying.");
       toast.error("Failed to process attendance transaction.", { id: "attendance-toast-err" });
     } finally {
       setIsProcessing(false);
@@ -409,7 +419,7 @@ export function AttendanceClient({
               disabled={isProcessing}
             >
               <Camera className="w-3.5 h-3.5 text-primary" />
-              <span>Launch Scanner</span>
+              <span>Start camera</span>
             </Button>
           </DialogTrigger>
         </div>
@@ -419,7 +429,14 @@ export function AttendanceClient({
 
   if (isStaff) {
     return (
-      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+      <Dialog open={isScannerOpen} onOpenChange={(open) => {
+        setIsScannerOpen(open);
+        if (!open) {
+          scannerSession.current++;
+          setLastResult('');
+          void stopCamera();
+        }
+      }}>
         <AdminTableShell
           controls={scannerControls}
           pagination={
@@ -472,7 +489,7 @@ export function AttendanceClient({
                   </div>
                 )}
 
-                {/* Inactive State: Launch Scanner or Retry Camera */}
+                {/* Inactive State: Start camera or Retry camera */}
                 {!cameraOpen && !isInitializing && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-200">
                     <QrCode className="h-10 w-10 text-muted-foreground/40 mb-4" />
@@ -486,12 +503,12 @@ export function AttendanceClient({
                       {cameraIssue ? (
                         <>
                           <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                          Retry Camera
+                          Retry camera
                         </>
                       ) : (
                         <>
                           <Camera className="mr-2 h-3.5 w-3.5" />
-                          Launch Scanner
+                          Start camera
                         </>
                       )}
                     </Button>
@@ -520,7 +537,7 @@ export function AttendanceClient({
                       className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[11px] font-bold uppercase tracking-wider"
                       onClick={() => stopCamera()}
                     >
-                      Stop
+                      Stop camera
                     </Button>
                   </div>
                 )}
@@ -535,9 +552,12 @@ export function AttendanceClient({
                 )}
               </div>
 
-              <p className="text-[11px] text-muted-foreground font-medium text-center mt-2">
-                Keep code centered. Camera stays active for continuous scanning.
-              </p>
+              <div role="status" aria-live="polite" className="text-center space-y-1">
+                {lastResult && <p className="font-semibold text-foreground">{lastResult}</p>}
+                <p className="text-sm text-muted-foreground">
+                  {cameraOpen && !isProcessing ? 'Ready for next card' : cameraIssue ? 'Close the scanner to enter a card manually.' : ''}
+                </p>
+              </div>
             </DialogContent>
 
           <p role="status" className="sr-only">

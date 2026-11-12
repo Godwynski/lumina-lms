@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 interface SuccessStepProps {
   title: string;
   message: string;
+  nextLabel: string;
   onReset: () => void;
   reservationReady?: boolean;
   reservedFor?: string;
 }
 
-export function SuccessStep({ title, message, onReset, reservationReady, reservedFor }: SuccessStepProps) {
+export function SuccessStep({ title, message, nextLabel, onReset, reservationReady, reservedFor }: SuccessStepProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 space-y-8">
       <div className="relative">
@@ -45,7 +46,7 @@ export function SuccessStep({ title, message, onReset, reservationReady, reserve
         className="h-11 rounded-xl px-8 bg-primary shadow-lg shadow-primary/20 font-bold text-[11px] uppercase tracking-widest"
       >
         <RefreshCcw className="mr-2 h-3.5 w-3.5" />
-        Process Another
+        {nextLabel}
       </Button>
     </div>
   );

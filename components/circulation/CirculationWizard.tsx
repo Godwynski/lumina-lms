@@ -35,6 +35,7 @@ export function CirculationWizard() {
 
   // View-only step override for going back. The hook derives `reachedStep` from
   // the scanned data, so stepping back never clears the student or the draft.
+  const [session, setSession] = useState(0);
   const reachedStep = currentStep;
   const [viewStep, setViewStep] = useState<number | null>(null);
   const step = isConfirmed || viewStep === null ? reachedStep : Math.min(viewStep, reachedStep);
@@ -45,6 +46,7 @@ export function CirculationWizard() {
   };
   const handleReset = () => {
     setViewStep(null);
+    setSession(n => n + 1);
     resetWizard();
   };
   const handleSwitchMode = (next: typeof mode) => {
@@ -124,7 +126,7 @@ export function CirculationWizard() {
               <span className="text-[11px] font-bold uppercase tracking-wider">Back</span>
             </Button>
           )}
-          <Button
+          {!isConfirmed && (reachedStep > 1 || isProcessing) && <Button
             variant="ghost"
             size="sm"
             className="h-8 gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
@@ -132,8 +134,8 @@ export function CirculationWizard() {
             onClick={handleReset}
           >
             <RefreshCcw className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Reset</span>
-          </Button>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Start over</span>
+          </Button>}
           </div>
         </div>
 
@@ -144,12 +146,13 @@ export function CirculationWizard() {
               message={mode === 'checkout' 
                 ? `The resource has been successfully assigned to ${activeStudent?.fullName}.`
                 : `The resource has been successfully returned.`}
+              nextLabel={mode === 'checkout' ? 'New checkout' : 'New return'}
               onReset={handleReset}
               reservationReady={reservationData.ready}
               reservedFor={reservationData.studentName}
             />
           ) : (step === 1 || (step === 2 && mode === 'checkout')) ? (
-            <div key="scanning-flow">
+            <div key={`${mode}-${session}`}>
               {activeStudent && mode === 'checkout' && (
                 <MemberPreview student={activeStudent} />
               )}
@@ -167,15 +170,15 @@ export function CirculationWizard() {
               <ScanStep 
                 title={
                   step === 1 
-                    ? (mode === 'checkout' ? 'Identify Student' : 'Identify Resource')
-                    : 'Scan Resource'
+                    ? (mode === 'checkout' ? 'Scan student card' : 'Scan book copy')
+                    : 'Scan book copy'
                 }
                 description={
                   step === 1
                     ? (mode === 'checkout' 
                         ? 'Scan student library card or enter number.' 
                         : 'Scan book copy QR code to begin.')
-                    : 'Now scan the book copy QR code.'
+                    : `${activeStudent?.fullName} verified. Scan the QR on the physical copy.`
                 }
                 placeholder={
                   step === 1
@@ -193,21 +196,14 @@ export function CirculationWizard() {
               <ReviewStep 
                 type={mode}
                 studentName={mode === 'checkout' ? activeStudent!.fullName : pendingReturn!.studentName}
-                studentId={mode === 'checkout' ? activeStudent!.studentId : 'N/A'}
+                studentId={mode === 'checkout' ? activeStudent!.studentId : undefined}
+                copyCode={mode === 'checkout' ? pendingCheckout!.bookQr : pendingReturn!.bookQr}
                 bookTitle={mode === 'checkout' ? pendingCheckout!.bookTitle : pendingReturn!.bookTitle}
                 dueDate={mode === 'checkout' ? pendingCheckout!.dueDate : pendingReturn!.dueDate || 'N/A'}
                 borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
               />
               
               <div className="flex flex-wrap gap-3 justify-end pt-6 border-t border-border/20">
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleReset} 
-                    disabled={isProcessing}
-                    className="rounded-xl px-6 h-10 text-[11px] font-bold uppercase tracking-wider"
-                  >
-                    Cancel
-                  </Button>
                   <Button 
                     onClick={confirmAction} 
                     disabled={isProcessing}

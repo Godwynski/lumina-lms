@@ -31,14 +31,14 @@ export interface PendingReturn {
 }
 
 export const CHECKOUT_STEPS = [
-  { id: 1, label: 'Student Identification' },
-  { id: 2, label: 'Resource Verification' },
-  { id: 3, label: 'Final Review' },
+  { id: 1, label: 'Student card' },
+  { id: 2, label: 'Book copy' },
+  { id: 3, label: 'Review checkout' },
 ];
 
 export const RETURN_STEPS = [
-  { id: 1, label: 'Identify Resource' },
-  { id: 2, label: 'Validate Borrow' },
+  { id: 1, label: 'Book copy' },
+  { id: 2, label: 'Review return' },
 ];
 
 /**

@@ -170,6 +170,7 @@ describe('Attendance Server Actions', () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual({
+        recordedAt: expect.any(String),
         status: 'IN',
         message: 'Welcome, John Doe!',
         description: 'Timed in successfully.',
@@ -180,7 +181,7 @@ describe('Attendance Server Actions', () => {
       expect(attendanceBuilder.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           user_id: 'patron-100',
-          check_in_at: expect.any(String),
+          check_in_at: result.data?.recordedAt,
         })
       );
 
@@ -211,6 +212,7 @@ describe('Attendance Server Actions', () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual({
+        recordedAt: expect.any(String),
         status: 'OUT',
         message: 'Goodbye, Jane Smith!',
         description: 'Timed out successfully.',
@@ -220,7 +222,7 @@ describe('Attendance Server Actions', () => {
       const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
       expect(attendanceBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          check_out_at: expect.any(String),
+          check_out_at: result.data?.recordedAt,
         })
       );
       expect(attendanceBuilder.eq).toHaveBeenCalledWith('id', 'att-session-1');
