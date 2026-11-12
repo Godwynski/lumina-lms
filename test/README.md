@@ -6,7 +6,7 @@ This directory houses system-level integration, adversarial concurrency, securit
 
 ## 🏗️ Test Structure
 
-The codebase utilizes a dual-tier testing organization powered by [Vitest](https://vitest.dev/):
+The codebase uses the following test organization powered by [Vitest](https://vitest.dev/):
 
 1. **Unit & Server Action Tests (`lib/**/__tests__/` & colocated `*.test.ts`):**
    - Individual server actions (`lib/actions/__tests__/`): Catalog, Circulation, Dashboard, History, Reservations, Users, Analytics, Attendance.
@@ -23,14 +23,13 @@ The codebase utilizes a dual-tier testing organization powered by [Vitest](https
 
 3. **Mocks & Test Fixtures (`test/mocks/`):**
    - [`supabase.ts`](./mocks/supabase.ts): Hermetic chained Supabase query builder mock supporting filters, joins, pagination, and error injection.
-   - [`query-chaining.test.ts`](./mocks/query-chaining.test.ts) & [`stress.test.ts`](./mocks/stress.test.ts): Mock fidelity validation.
 
 ---
 
 ## 🚀 Running Tests
 
 ```bash
-# Run all test suites (49 files, 1,070+ tests)
+# Run test suites in a checkout without nested worktrees
 npm test
 
 # Run tests in watch mode
@@ -42,3 +41,16 @@ npx vitest run test/actions-circulation-adversarial.test.ts
 # Generate V8 coverage report
 npm run test:coverage
 ```
+
+## Nested worktrees and verification scope
+
+This repository can contain other checkouts under .claude/worktrees. Exclude them when collecting tests for the current checkout.
+
+~~~powershell
+npx vitest run --exclude '**/.claude/**'
+npx vitest run --exclude '**/.claude/**' lib/actions/__tests__/users.test.ts
+npm run typecheck
+npm run lint
+~~~
+
+Use the reported totals and failures from the current run. A targeted suite does not establish full-suite status. Database suites use the test configuration and fixtures in this directory. Inspect setup before running a suite against any external service.

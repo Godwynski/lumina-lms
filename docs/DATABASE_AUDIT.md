@@ -1,4 +1,5 @@
 # DATABASE AUDIT & ARCHITECTURE SPECIFICATION
+> Historical assessment with a 4 November 2026 addendum. Statements labeled current in the original report refer to that addendum. Review schema and migration history for subsequent changes.
 ## Lumina LMS Enterprise Database Hardening & Schema Assurance Report
 
 **Document Version**: 1.0.0-PROD  

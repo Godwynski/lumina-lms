@@ -1,4 +1,5 @@
 # System Audit & Configuration: Client Questionnaire
+> Stakeholder questionnaire with unresolved answers. Questions and suggested policies below are not confirmed requirements.
 
 This document contains required clarifications needed from the client to finalize the system's Audit Logs, Penalties, and Governance modules.
 

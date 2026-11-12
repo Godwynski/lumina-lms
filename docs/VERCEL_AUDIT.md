@@ -1,4 +1,5 @@
 # Vercel Cloud Platform & Next.js Server Architecture Audit Report
+> Historical assessment dated 7 October 2026. Deployment targets, vulnerabilities, test results, and readiness conclusions below have not been revalidated by this documentation cleanup.
 
 **Target Project**: `neurawyn/system`  
 **Repository**: `Godwynski/lumina-lms` (`C:\Users\Godwyn\Documents\Projects\thesis`)  

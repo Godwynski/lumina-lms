@@ -1,6 +1,6 @@
 # Capstone Documentation: Fix List (merged)
 
-Source: capstone-documentation.md. System (code) is the source of truth. Per-part reports: reports/A-E.md.
+Source: capstone-documentation.md. Historical proposals based on the system at review time. Parts A–E are embedded below; separate reports/A-E.md files are absent. See the [audit index](README.md) for later outcomes and provenance.
 
 | Part | High | Med | Low |
 |---|---|---|---|

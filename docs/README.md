@@ -1,20 +1,41 @@
-# Lumina LMS — Documentation Index
+# Documentation index
 
-This directory centralizes institutional documentation, audits, quality assurance checklists, and technical specifications for the Lumina Library Management System.
+Reviewed on 12 November 2026. Maintained guides describe the implementation at their stated revision. Dated assessments and manuscript snapshots retain historical claims and do not establish current release or compliance status.
 
----
+## Current guides
 
-## 📑 Documents & Specifications
+| Document | Audience and purpose |
+|---|---|
+| [Project README](../README.md) | Developers, setup, configuration, and supported commands |
+| [User guide](user-guide.md) | Staff, circulation, gate attendance, and account management |
+| [Testing guide](../test/README.md) | Developers, test locations and reproducible checks |
+| [Accessibility guidance](accessibility.md) | Contributors, keyboard, focus, touch, and assessment boundaries |
 
-| Document | Category | Description |
-| :--- | :--- | :--- |
-| [`accessibility.md`](./accessibility.md) | Quality & UX | Web accessibility standards, WCAG 2.2 compliance notes, and keyboard navigation. |
-| [`CLIENT_QUESTIONS.md`](./CLIENT_QUESTIONS.md) | Stakeholder | Client inquiries, stakeholder requirements, policy clarifications, and institutional rules. |
-| [`DATABASE_AUDIT.md`](./DATABASE_AUDIT.md) | Architecture | PostgreSQL schema audit, foreign key cascades, check constraints, indexes, and RLS policies. |
-| [`DOCUMENTATION_SYSTEM_CROSSCHECK.md`](./DOCUMENTATION_SYSTEM_CROSSCHECK.md) | Verification | Crosscheck verifying alignment between written specifications and implemented code. |
-| [`requirement documentation.md`](./requirement%20documentation.md) | Requirements | Functional and non-functional requirements specification for STI College Alabang. |
-| [`VERCEL_AUDIT.md`](./VERCEL_AUDIT.md) | Deployment & Ops | Vercel platform audit, edge caching headers, route configurations, and build diagnostics. |
+## Requirements and manuscript sources
 
----
+| Document | Status |
+|---|---|
+| [Requirements](requirement%20documentation.md) | Requirements snapshot. Reconcile changes with the manuscript and stakeholder decisions |
+| [Capstone PDF](../Capstone%20documentation.pdf) | Original repository manuscript export |
+| [Manuscript extracts and audit index](doc-audit/README.md) | Provenance, proposed fixes, reported applied edits, and format findings |
+| [Client questions](CLIENT_QUESTIONS.md) | Open stakeholder questions. Unchecked questions are not approved requirements |
 
-*For high-level project overview, quickstart instructions, and test commands, refer to the main [`README.md`](../README.md) at the repository root.*
+## Historical assessments
+
+| Document | Recorded scope |
+|---|---|
+| [Thesis alignment](../THESIS_VS_SYSTEM_ALIGNMENT_AUDIT.md) | 31 October 2026 manuscript/system comparison |
+| [Database audit](DATABASE_AUDIT.md) | 7 October audit with a 4 November addendum |
+| [Deployment audit](VERCEL_AUDIT.md) | 7 October 2026 platform and server assessment |
+| [UI audit](UI_AUDIT_QA.md) | 6 November 2026 findings and regression checklist |
+| [Accessibility assessment](accessibility/2026-11-11-wcag-assessment.md) | 11 November 2026 remediation evidence and coverage limits |
+| [Earlier project overview](archive/project-overview-2026-11-12.md) | Archived 12 November, retains earlier architecture discussion and attribution |
+
+The former index entry for DOCUMENTATION_SYSTEM_CROSSCHECK.md referred to an absent file. The available thesis/system comparison is linked above.
+
+## Work plans
+
+- [Documentation cleanup](superpowers/plans/2026-11-12-documentation-cleanup.md)
+- [Accessibility orchestration](superpowers/plans/2026-11-11-wcag-orchestration.md)
+
+Keep guide updates with the feature that changes their instructions. Preserve assessment dates, evaluated revisions when known, and the difference between proposed, reported applied, and independently verified changes.

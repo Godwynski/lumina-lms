@@ -1,4 +1,5 @@
 # Lumina LMS: Comprehensive Thesis Manuscript vs. Production System Alignment & Discrepancy Audit
+> Historical assessment dated 31 October 2026. Findings and test totals below belong to that assessment. Current source code and maintained guides take precedence for present behavior.
 
 **Audit Date:** October 31, 2026  
 **Target Codebase:** Lumina Library Management System (`C:\Users\Godwyn\Documents\Projects\thesis`)  

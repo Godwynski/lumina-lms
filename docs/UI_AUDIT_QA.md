@@ -1,4 +1,5 @@
 # Lumina LMS — UI Audit and QA Report
+> Historical assessment dated 6 November 2026. Later accessibility and scanner changes may supersede individual findings.
 
 **Audit date:** 2026-11-06 (workspace date)  
 **Scope:** Application-wide UI, interaction logic, accessibility, responsive implementation, feedback states, and consistency.  
