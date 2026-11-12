@@ -18,3 +18,11 @@ it('rejects malformed ISBNs before contacting providers', async () => {
  expect(await lookupISBN('123')).toMatchObject({success:false,reason:'invalid'});
  expect(fetcher).not.toHaveBeenCalled();
 });
+
+it('combines provider metadata including Dewey classification, description and publication year', async () => {
+ vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+  if (String(url).includes('googleapis')) return new Response(JSON.stringify({items:[{volumeInfo:{title:'Example',authors:['Author'],description:'<p>About this book</p>',publishedDate:'2020-03',categories:['Computer Science']}}]}));
+  return new Response(JSON.stringify({'ISBN:9780451524935':{title:'Example',classifications:{dewey_decimal:['005.1']},subjects:[{name:'Programming'}],cover:{large:'https://covers.openlibrary.org/x.jpg'}}}));
+ }));
+ expect(await lookupISBN('9780451524935')).toMatchObject({success:true,book:{title:'Example',description:'About this book',published_year:2020,dewey_decimal:'005.1',tags:expect.arrayContaining(['Computer Science','Programming'])}});
+});

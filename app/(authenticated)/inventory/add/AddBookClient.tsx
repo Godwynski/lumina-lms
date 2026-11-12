@@ -25,6 +25,8 @@ const EMPTY_FORM = {
   cover_url: '',
   copies: 1,
   dewey_decimal: '',
+  description: '',
+  published_year: '',
 };
 
 export function AddBookClient() {
@@ -59,7 +61,9 @@ export function AddBookClient() {
       const book = result.book;
       setFormData(prev => ({ ...prev, isbn: book.isbn, title: book.title,
         author: book.author, cover_url: book.cover_url,
-        tags: book.tags.join(', ') }));
+        tags: book.tags.join(', '), description: book.description,
+        published_year: book.published_year ? String(book.published_year) : '', dewey_decimal: book.dewey_decimal,
+        categoryId: categories.find(category => book.tags.some(tag => tag.split(' / ').some(subject => [category.name, ...category.name.split(/\s*[&/]\s*/)].some(name => subject.trim().toLowerCase() === name.trim().toLowerCase()))))?.id || prev.categoryId }));
       if (book.cover_url) setCoverFile(null);
       toast.success('Book details retrieved. Review them before saving.');
     } catch {
@@ -67,7 +71,7 @@ export function AddBookClient() {
     } finally {
       if (request === lookupRequest.current) setIsbnLoading(false);
     }
-  }, [formData.isbn]);
+  }, [formData.isbn, categories]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -146,6 +150,8 @@ export function AddBookClient() {
           section: formData.section,
           cover_url: finalCoverUrl,
           dewey_decimal: formData.dewey_decimal || null,
+          description: formData.description || null,
+          published_year: formData.published_year ? Number(formData.published_year) : null,
         },
         copiesCount: formData.copies
       });

@@ -17,12 +17,12 @@ describe('fetchImage (C6)', () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '93.184.216.34', family: 4 }] as never);
   });
 
-  it('downloads a public HTTPS image without following redirects', async () => {
+  it('downloads a public HTTPS image using manual redirect validation', async () => {
     fetchMock.mockResolvedValue(imageResponse(10));
     const { buffer, contentType } = await fetchImage('https://example.com/a.png');
     expect(buffer.length).toBe(10);
     expect(contentType).toBe('image/png');
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ redirect: 'error' });
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ redirect: 'manual' });
   });
 
   it.each([
@@ -41,9 +41,21 @@ describe('fetchImage (C6)', () => {
     await expect(fetchImage('https://metadata.evil.test/x')).rejects.toThrow('Restricted');
   });
 
-  it('rejects a redirect', async () => {
-    fetchMock.mockRejectedValue(new TypeError('unexpected redirect'));
-    await expect(fetchImage('https://example.com/a.png')).rejects.toThrow('redirects');
+  it('follows a public HTTPS cover redirect', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'https://covers.example.com/final.jpg' } })).mockResolvedValueOnce(imageResponse(10));
+    expect((await fetchImage('https://example.com/cover')).buffer.length).toBe(10);
+    expect(lookup).toHaveBeenCalledWith('covers.example.com', { all: true });
+  });
+  it.each(['https://127.0.0.1/private', 'http://example.com/insecure'])('rejects unsafe redirect destination %s', async location => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 302, headers: { location } }));
+    await expect(fetchImage('https://example.com/cover')).rejects.toThrow(/Restricted|HTTPS/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it('limits redirect loops', async () => {
+    fetchMock.mockImplementation(async () => new Response(null, { status: 302, headers: { location: '/loop' } }));
+    await expect(fetchImage('https://example.com/cover')).rejects.toThrow('redirects');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    fetchMock.mockReset();
   });
 
   it('rejects non-images and SVG', async () => {

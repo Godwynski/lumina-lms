@@ -1,6 +1,7 @@
 "use client";
 
 import { Label, Field } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookText, MapPin, Layers, Tag, PlusCircle } from "lucide-react";
@@ -16,6 +17,8 @@ interface BookDetailsFormProps {
     tags: string;
     dewey_decimal: string;
     isbn: string;
+    description: string;
+    published_year: string;
   };
   onUpdate: (updates: Partial<BookDetailsFormProps["formData"]>) => void;
   categories: Array<{ id: string; name: string }>;
@@ -63,6 +66,17 @@ export function BookDetailsForm({ formData, onUpdate, categories }: BookDetailsF
             />
           </Field>
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <Field className="space-y-2">
+          <Label>Publication Year</Label>
+          <Input type="number" min="1000" max={new Date().getFullYear() + 1} value={formData.published_year} onChange={event => onUpdate({ published_year: event.target.value })} placeholder="When available from the ISBN lookup" />
+        </Field>
+        <Field className="space-y-2">
+          <Label>Description</Label>
+          <Textarea rows={4} value={formData.description} onChange={event => onUpdate({ description: event.target.value })} placeholder="Book summary or description" />
+        </Field>
       </section>
 
       {/* 2. Cataloging & Classification */}
