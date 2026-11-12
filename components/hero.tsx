@@ -4,14 +4,25 @@ import type { User } from '@supabase/supabase-js';
 import { m } from "framer-motion";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Loader2, ShieldCheck, UserCheck } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
 import { toast } from 'sonner';
 
-export function Hero({ user, role }: { user: User | null; role: string | null }) {
+// Only labels and emails live in the browser. Passwords stay on the server (/api/demo-login).
+const DEMO_BUTTONS = [
+  { label: 'Super Admin', email: 'admin@lumina.test', icon: ShieldCheck },
+  { label: 'Librarian', email: 'librarian@lumina.test', icon: BookOpen },
+  { label: 'Staff', email: 'staff@lumina.test', icon: UserCheck },
+  { label: 'Student', email: 'student@lumina.test', icon: GraduationCap },
+];
+
+export function Hero({ user, role, showDemo = false }: { user: User | null; role: string | null; showDemo?: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleMicrosoftLogin = async () => {
     if (isLoading) return;
@@ -36,6 +47,30 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
     }
   };
 
+  const signInDemo = async (email: string) => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setLoadingEmail(email);
+    try {
+      const res = await fetch('/api/demo-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Demo sign-in is unavailable');
+      }
+      toast.success('Successfully logged in!');
+      router.push('/dashboard');
+      router.refresh();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Demo sign-in failed');
+      setIsLoading(false);
+      setLoadingEmail(null);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -50,7 +85,7 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
   };
 
   return (
-    <m.div 
+    <m.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -94,14 +129,49 @@ export function Hero({ user, role }: { user: User | null; role: string | null })
               onClick={handleMicrosoftLogin}
               disabled={isLoading}
             >
-              {isLoading ? (
+              {isLoading && !loadingEmail ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               ) : (
                 <MicrosoftIcon className="h-5 w-5" />
               )}
-              <span>{isLoading ? "Redirecting..." : "Sign in with Microsoft"}</span>
+              <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
             </Button>
 
+            {showDemo && (
+              <div className="w-full space-y-4 mt-2">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-[11px] font-bold uppercase tracking-widest">
+                    <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  {DEMO_BUTTONS.map((item) => {
+                    const Icon = item.icon;
+                    const isThisLoading = loadingEmail === item.email;
+                    return (
+                      <Button
+                        key={item.email}
+                        type="button"
+                        variant="outline"
+                        className="group h-11 sm:h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-200 flex items-center justify-start px-3.5 sm:px-4 gap-2.5 active:scale-[0.98]"
+                        onClick={() => signInDemo(item.email)}
+                        disabled={isLoading}
+                      >
+                        {isThisLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                        ) : (
+                          <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110" />
+                        )}
+                        <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </m.div>
