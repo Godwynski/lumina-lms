@@ -5,7 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
-import { DEMO_ACCOUNTS, type DemoAccount } from '../lib/demo/config';
+import { DEMO_ACCOUNTS, type DemoAccount } from '../lib/demo/config.ts';
 
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
