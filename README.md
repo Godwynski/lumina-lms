@@ -414,7 +414,7 @@ Demo accounts are off by default. To turn them on:
 1. Set `DEMO_PASSWORD` (at least 12 characters) and `DEMO_MODE=true` in the environment, then redeploy.
 2. Run `npm run demo:on`. This creates the four `@lumina.test` accounts (Super Admin, Librarian, Staff, Student) and shows the Quick Demo Access buttons.
 
-To turn them off, run `npm run demo:off`, which deletes the accounts, and set `DEMO_MODE=false`. Keep `DEMO_MODE=false` on a real site. Only one super admin is allowed, so if a real super admin already exists the demo Super Admin is created as a librarian and the script warns you.
+To turn them off, run `npm run demo:off`, which deletes the accounts, and set `DEMO_MODE=false`. Keep `DEMO_MODE=false` on a real site. Only one super admin is allowed, so `demo:on` moves the role from the real super admin to the demo Super Admin (the real one becomes a librarian), and `demo:off` hands it back.
 
 ---
 
