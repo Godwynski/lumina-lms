@@ -24,8 +24,7 @@ import { RoleBadge } from "@/components/common/RoleBadge";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { UserRole } from "@/lib/auth-helpers";
 import type { User } from "@/lib/types";
-import { getUsers, reactivateUsersBulk } from "@/lib/actions/users";
-import { toast } from "sonner";
+import { getUsers } from "@/lib/actions/users";
 export type { User };
 
 
@@ -49,35 +48,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const pageSize = 12;
 
   const isLibrarian = currentRole === "librarian";
-  const canReactivate = currentRole === "super_admin" || isLibrarian;
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isReactivating, setIsReactivating] = useState(false);
-
-  const toggleSelected = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  // M23: bring students back after the annual reset in one step instead of one by one.
-  const handleReactivate = async () => {
-    setIsReactivating(true);
-    try {
-      const result = await reactivateUsersBulk({ userIds: [...selectedIds] });
-      if (!result.success) throw new Error(result.error);
-      toast.success(`Re-activated ${result.data.reactivatedCount} account(s).`);
-      setSelectedIds(new Set());
-      void loadUsersRef.current();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Re-activation failed");
-    } finally {
-      setIsReactivating(false);
-    }
-  };
-
   const roleFilterLabels: Record<string, string> = {
     all: "All",
     review: "Pending Review",
@@ -104,11 +74,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, activeTab]);
-
-  // Only act on rows the user can see.
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [currentPage, debouncedSearch, activeTab]);
 
   const isInitialMount = React.useRef(true);
   const loadRequestRef = React.useRef(0);
@@ -173,30 +138,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     };
   }, [supabase]);
 
-  const allOnPageSelected = users.length > 0 && users.every((u) => selectedIds.has(u.id));
-  const selectColumn: LuminaColumn<User> = {
-    header: (
-      <input
-        type="checkbox"
-        aria-label="Select all users on this page"
-        className="relative z-10 h-6 w-6 accent-primary"
-        checked={allOnPageSelected}
-        onChange={() => setSelectedIds(allOnPageSelected ? new Set() : new Set(users.map((u) => u.id)))}
-      />
-    ),
-    className: "w-[40px]",
-    cell: (user) => (
-      <input
-        type="checkbox"
-        aria-label={`Select ${user.name}`}
-        className="relative z-10 h-6 w-6 accent-primary"
-        checked={selectedIds.has(user.id)}
-        onChange={() => toggleSelected(user.id)}
-      />
-    ),
-  };
-
-  const baseColumns = useMemo<LuminaColumn<User>[]>(() => [
+  const columns = useMemo<LuminaColumn<User>[]>(() => [
     {
       header: "User",
       cell: (user) => (
@@ -233,7 +175,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
       )
     }
   ], []);
-  const columns = canReactivate ? [selectColumn, ...baseColumns] : baseColumns;
 
   return (
     <>
@@ -294,11 +235,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               </DialogContent>
             </Dialog>
             <div className="flex-1" />
-            {canReactivate && selectedIds.size > 0 && (
-              <Button className="h-9 px-3" onClick={handleReactivate} disabled={isReactivating}>
-                {isReactivating ? "Re-activating..." : `Re-activate selected (${selectedIds.size})`}
-              </Button>
-            )}
           </>
         )}
         pagination={
@@ -312,17 +248,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           ) : null
         }
       >
-        {canReactivate && users.length > 0 && !isLoadingUsers && (
-          <label className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border/50 text-xs font-medium text-muted-foreground">
-            <input
-              type="checkbox"
-              className="h-6 w-6 accent-primary"
-              checked={allOnPageSelected}
-              onChange={() => setSelectedIds(allOnPageSelected ? new Set() : new Set(users.map((u) => u.id)))}
-            />
-            Select all users on this page
-          </label>
-        )}
         <LuminaTable
           data={users}
           columns={columns}
@@ -331,20 +256,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           noBorder
           renderMobileRow={(user) => (
             <div className="flex items-start gap-3">
-              {canReactivate && (
-                <label
-                  className="relative z-10 -m-2 p-2 shrink-0 flex items-center"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="checkbox"
-                    aria-label={`Select ${user.name}`}
-                    className="h-6 w-6 accent-primary"
-                    checked={selectedIds.has(user.id)}
-                    onChange={() => toggleSelected(user.id)}
-                  />
-                </label>
-              )}
               <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
