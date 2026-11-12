@@ -16,7 +16,9 @@
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true NEXT_BUNDLE_ANALYZE=true next build",
     "seed": "ts-node -T scripts/seed.ts",
-    "clean": "ts-node -T scripts/clean.ts"
+    "clean": "ts-node -T scripts/clean.ts",
+    "demo:on": "ts-node -T scripts/demo.ts on",
+    "demo:off": "ts-node -T scripts/demo.ts off"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

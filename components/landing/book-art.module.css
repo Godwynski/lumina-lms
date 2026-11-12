@@ -1,0 +1,32 @@
+/*
+ * Every state of the book is a pure function of --p (0 = closed, 1 = open with the ribbon down).
+ * --p falls back to 1 (the finished still), so no JS, reduced motion and failed scripts all show the open book.
+ * Timeline: cover 0.05-0.25, first page 0.3-0.5, second page 0.5-0.7, ribbon 0.7-1.
+ */
+/* A closed book sits on the right half; slide it so it stays centred until it opens. */
+.shift {
+  transform: translateX(calc((1 - clamp(0, (var(--p, 1) - 0.05) * 5, 1)) * -71px));
+}
+
+/* The curved page block only shows once the cover starts to lift. */
+.spread {
+  opacity: clamp(0, (var(--p, 1) - 0.05) * 12, 1);
+}
+
+/* A leaf turning about the spine: its front narrows to nothing, then its back widens on the left. */
+.front,
+.back {
+  transform-origin: 160px 0;
+}
+.front {
+  transform: scaleX(clamp(0, 1 - (var(--p, 1) - var(--a)) * 10, 1));
+}
+.back {
+  transform: scaleX(clamp(0, (var(--p, 1) - var(--a)) * 10 - 1, 1));
+}
+
+/* pathLength is 1, so the ribbon is drawn out of the spine as the offset falls to 0. */
+.ribbon {
+  stroke-dasharray: 1;
+  stroke-dashoffset: clamp(0, 1 - (var(--p, 1) - 0.7) * 3.4, 1);
+}

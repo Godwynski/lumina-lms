@@ -409,6 +409,13 @@ Open [http://localhost:3000](http://localhost:3000) in your web browser.
 
 Access is through **Sign in with Microsoft** with an `@alabang.sti.edu.ph` account only. There are no shared or demo accounts and no password sign-in. The **first** account to sign up on an empty system becomes the active super admin. Every account after that starts as `student` / `PENDING` until approved by staff.
 
+#### Demo accounts (thesis evaluation only)
+Demo accounts are off by default. To turn them on:
+1. Set `DEMO_PASSWORD` (at least 12 characters) and `DEMO_MODE=true` in the environment, then redeploy.
+2. Run `npm run demo:on`. This creates the four `@lumina.test` accounts (Super Admin, Librarian, Staff, Student) and shows the Quick Demo Access buttons.
+
+To turn them off, run `npm run demo:off`, which deletes the accounts, and set `DEMO_MODE=false`. Keep `DEMO_MODE=false` on a real site. Only one super admin is allowed, so if a real super admin already exists the demo Super Admin is created as a librarian and the script warns you.
+
 ---
 
 ## 11. Environment Configuration Reference
@@ -476,6 +483,7 @@ npx knip
 | `npm run typecheck` | Invokes the TypeScript compiler (`tsc --noEmit`) to verify types |
 | `npm run analyze` | Analyzes client and server bundle sizes via `@next/bundle-analyzer` |
 | `npm run seed` | Seeds the database with categories, books, copies, and test patrons |
+| `npm run demo:on` / `npm run demo:off` | Creates or removes the demo accounts (needs `DEMO_PASSWORD`) |
 | `npm run clean` | Purges transactional test records from the Supabase database |
 
 ---

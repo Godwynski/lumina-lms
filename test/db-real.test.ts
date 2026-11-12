@@ -255,8 +255,24 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     expect((await tryq(`INSERT INTO auth.users(email) VALUES ('random.person@gmail.com')`)).ok).toBe(false);
   });
 
-  it('demo accounts are gone: a @lumina.test sign-up is rejected', async () => {
+  it('demo accounts are off by default: a @lumina.test sign-up is rejected', async () => {
     expect((await tryq(`INSERT INTO auth.users(email) VALUES ('admin@lumina.test')`)).ok).toBe(false);
+  });
+
+  it('a @lumina.test sign-up is accepted only while it is on the demo allowlist', async () => {
+    await q(`INSERT INTO public.demo_accounts(email) VALUES ('student@lumina.test')`);
+    try {
+      expect((await tryq(`INSERT INTO auth.users(email) VALUES ('student@lumina.test')`)).ok).toBe(true);
+    } finally {
+      await q(`DELETE FROM auth.users WHERE email = 'student@lumina.test'`);
+      await q(`DELETE FROM public.demo_accounts WHERE email = 'student@lumina.test'`);
+    }
+    expect((await tryq(`INSERT INTO auth.users(email) VALUES ('student@lumina.test')`)).ok).toBe(false);
+  });
+
+  it('the demo allowlist is not readable or writable by signed-in users', async () => {
+    const r = await as(u.stu, () => tryq(`INSERT INTO public.demo_accounts(email) VALUES ('evil@lumina.test')`));
+    expect(r.ok).toBe(false);
   });
 
   it('the first sign-up becomes the active super admin, the next is a pending student', async () => {
