@@ -41,7 +41,8 @@ export interface BookDetailModalProps {
   bookId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  variant: 'student' | 'super_admin';
+  variant: 'student' | 'super_admin' | 'read_only';
+  onCloseAutoFocus?: (event: Event) => void;
   initialData?: Partial<Book>;
   canManage?: boolean;
   onCancelSuccess?: () => void;
@@ -75,7 +76,9 @@ function StudentModalContent({
   availability,
   onClose,
   onCancelSuccess,
+  readOnly = false,
 }: {
+  readOnly?: boolean;
   book: BookDetail;
   availability: AvailabilityStatus;
   onClose: () => void;
@@ -84,7 +87,8 @@ function StudentModalContent({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [imgSrc, setImgSrc] = useState(book.cover_url || "/images/default-book-cover.png");
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const imgSrc = book.cover_url && failedCover !== book.cover_url ? book.cover_url : "/images/default-book-cover.png";
 
   const isAvailable = book.available_copies > 0;
   const categoryName = getCategoryName(book.categories);
@@ -128,7 +132,7 @@ function StudentModalContent({
             className="object-cover" 
             sizes="96px" 
             unoptimized 
-            onError={() => setImgSrc("/images/default-book-cover.png")}
+            onError={() => setFailedCover(book.cover_url || null)}
           />
           {/* Availability ribbon */}
           <div className={cn(
@@ -170,6 +174,10 @@ function StudentModalContent({
         </div>
       </div>
 
+      {readOnly && <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+        {book.description || 'No description available.'}
+      </p>}
+
       {/* Copy Meter */}
       <div className="rounded-xl border border-border/30 bg-card/20 p-3 backdrop-blur-sm">
         <CopyMeter available={book.available_copies} total={book.total_copies} />
@@ -185,7 +193,7 @@ function StudentModalContent({
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      {!readOnly && <div className="flex flex-wrap items-center gap-2 pt-1">
         <ReserveTitleButton
           bookId={book.id}
           isAvailable={isAvailable}
@@ -210,6 +218,8 @@ function StudentModalContent({
         )}
       </div>
 
+      }
+
       {/* Cancel confirmation dialog */}
       <CancelReservationDialog
         open={cancelDialogOpen}
@@ -225,7 +235,11 @@ function StudentModalContent({
 
 // ─── Main Modal ────────────────────────────────────────────────────────────
 
-export function BookDetailModal({ bookId, open, onOpenChange, variant, initialData, canManage = true, onCancelSuccess }: BookDetailModalProps) {
+export function BookDetailModal(props: BookDetailModalProps) {
+  return <BookDetailModalContent key={`${props.bookId}:${props.variant}`} {...props} />;
+}
+
+function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialData, canManage = true, onCancelSuccess, onCloseAutoFocus }: BookDetailModalProps) {
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +248,7 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
     if (!bookId) return;
     setError(null);
     try {
-      if (variant === 'student') {
+      if (variant !== 'super_admin') {
         const { book, availability } = await getBookPublicDetails(bookId);
         if (!book) {
           setError('Book not found');
@@ -343,20 +357,23 @@ export function BookDetailModal({ bookId, open, onOpenChange, variant, initialDa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus} className={cn(
         "max-h-[90vh] overflow-y-auto custom-scrollbar pt-12",
         variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg"
       )}>
         <DialogHeader className="sr-only">
           <DialogTitle>Book Details</DialogTitle>
-          <DialogDescription>View book information and take actions</DialogDescription>
+          <DialogDescription>View book information</DialogDescription>
         </DialogHeader>
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         {!error && !activeAdminData && !activeStudentData && <ModalSkeleton />}
 
-        {!error && activeStudentData && variant === 'student' && (
+        {!error && activeStudentData && variant !== 'super_admin' && (
           <div>
             <StudentModalContent
+              readOnly={variant === 'read_only'}
               book={activeStudentData.book}
               availability={activeStudentData.availability}
               onClose={() => onOpenChange(false)}

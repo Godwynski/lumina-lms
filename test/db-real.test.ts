@@ -471,6 +471,21 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
   });
 });
 
+describe('Date-scoped analytics', () => {
+  it('counts exactly a Manila day and gives matching hourly detail records', async () => {
+    await q(`INSERT INTO attendance(user_id,check_in_at,check_out_at) VALUES ($1,'2020-01-01T00:30:00+08','2020-01-01T01:00:00+08'),($1,'2020-01-01T08:30:00+08','2020-01-01T09:00:00+08'),($1,'2020-01-02T00:00:00+08','2020-01-02T01:00:00+08')`, [u.stu]);
+    const summary = (await q(`SELECT get_analytics_summary_window('2020-01-01','2020-01-01') AS r`))[0].r;
+    expect(summary.attendanceTrends[0].count).toBe(2);
+    const detail = (await q(`SELECT get_analytics_detail('2020-01-01','2020-01-01','hour','8 AM',1) AS r`))[0].r;
+    expect(detail.total).toBe(1);
+    expect(summary.peakHours.find((h: {hour: string}) => h.hour === '8 AM').count).toBe(detail.total);
+  });
+  it('denies student access to analytics details', async () => {
+    const result = await as(u.stu, () => tryq(`SELECT get_analytics_detail('2020-01-01','2020-01-01','period','',1)`));
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('Broadcast audiences', () => {
   it.each(['students', 'all'])('inserts exactly one notification per intended %s recipient', async (target) => {
     const count = (await q(`SELECT send_bulk_notifications_by_target($1,'Audience check','Message') AS count`, [target]))[0].count;

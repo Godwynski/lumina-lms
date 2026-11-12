@@ -156,7 +156,8 @@ export function AdminManagementContent({
   });
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [coverImgSrc, setCoverImgSrc] = useState(initialBook.cover_url || "/images/default-book-cover.png");
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const coverImgSrc = book.cover_url && failedCover !== book.cover_url ? book.cover_url : "/images/default-book-cover.png";
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => { 
@@ -337,7 +338,7 @@ export function AdminManagementContent({
               fill 
               className="object-cover" 
               unoptimized 
-              onError={() => setCoverImgSrc("/images/default-book-cover.png")}
+              onError={() => setFailedCover(book.cover_url || null)}
             />
           </div>
           <div className="flex-1 min-w-0 flex flex-col py-1">

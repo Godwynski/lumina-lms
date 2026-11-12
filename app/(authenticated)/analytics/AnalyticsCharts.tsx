@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { 
   LineChart, 
   Line, 
@@ -19,38 +18,18 @@ import {
 import type { TrendDataPoint } from '@/lib/actions/analytics';
 import { cn } from '@/lib/utils';
 
-function ChartValues({ title, column, measure, rows }: {
-  title: string;
-  column: string;
-  measure: string;
-  rows: { label: string; count: number }[];
-}) {
-  return (
-    <details className="mt-2 rounded-xl border border-border px-3 text-sm">
-      <summary className="cursor-pointer py-2 font-medium">View {title.toLowerCase()} data</summary>
-      {rows.length ? (
-        <table className="mb-3 w-full text-left">
-          <caption className="sr-only">{title}</caption>
-          <thead><tr><th scope="col">{column}</th><th scope="col">{measure}</th></tr></thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={index} className="border-t border-border">
-                <th scope="row" className="py-1 font-normal">{row.label}</th>
-                <td>{row.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : <p className="pb-3">No data for this period.</p>}
-    </details>
-  );
+function ChartAccess({ rows, onSelect }: { rows: { label: string; count: number }[]; onSelect: (index: number) => void }) {
+  return <div className="sr-only focus-within:not-sr-only flex flex-wrap gap-2" aria-label="Chart data selections">
+    {rows.map((row, index) => <button key={index} type="button" className="rounded border px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ring"
+      onClick={() => onSelect(index)}>{row.label}: {row.count}. View records</button>)}
+  </div>;
 }
 
 interface TrendChartProps {
   data: TrendDataPoint[];
   title: string;
   color: string;
-  href?: string;
+  onSelect?: (point: TrendDataPoint) => void;
 }
 
 interface CustomTooltipProps {
@@ -78,7 +57,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
 
 
-export function TrendChart({ data, title, color, href }: TrendChartProps) {
+export function TrendChart({ data, title, color, onSelect }: TrendChartProps) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -97,17 +76,17 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
   const content = (
     <div className={cn(
       "w-full h-[280px] flex flex-col group/chart border border-border/40 rounded-2xl p-4 bg-muted/[0.02] relative overflow-hidden transition-all duration-300",
-      href && "hover:bg-muted/10 hover:border-primary/20 cursor-pointer active:scale-[0.99]"
+      onSelect && "hover:bg-muted/10 hover:border-primary/20 cursor-pointer active:scale-[0.99]"
     )}>
       {/* Subtle background glow */}
-      {href && <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />}
+      {onSelect && <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />}
       
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
-        {href && (
+        {onSelect && (
           <span className="text-[11px] font-black text-primary group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
             View Details →
           </span>
@@ -118,7 +97,7 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
         <div className={cn("w-full h-full transition-all duration-1000", !hasData && "grayscale")}>
           {mounted && (
             <ResponsiveContainer width="100%" height="100%" debounce={100} minWidth={0} minHeight={0} initialDimension={{ width: 100, height: 100 }}>
-              <LineChart data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart onClick={(state) => { if (state.activeTooltipIndex == null) return; const point = data[Number(state.activeTooltipIndex)]; if (point) onSelect?.(point); }} data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid 
                   strokeDasharray="8 8" 
                   vertical={true} 
@@ -162,14 +141,15 @@ export function TrendChart({ data, title, color, href }: TrendChartProps) {
 
   return (
     <>
-      {href ? <Link href={href} className="block w-full">{content}</Link> : content}
-      <ChartValues title={title} column="Period" measure="Borrows" rows={data} />
+      {content}
+      <ChartAccess rows={data} onSelect={(i) => onSelect?.(data[i])} />
     </>
   );
 }
 
 interface CategoryPieChartProps {
   data: { name: string; value: number }[];
+  onSelect?: (name: string) => void;
   title: string;
 }
 
@@ -183,7 +163,7 @@ const CATEGORY_COLORS = [
   'hsl(var(--primary) / 0.15)'
 ];
 
-export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
+export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProps) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -216,6 +196,7 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
                 innerRadius={60}
                 outerRadius={80}
                 paddingAngle={hasData ? 6 : 0}
+                onClick={(_, index) => { if (hasData) onSelect?.(data[index].name); }}
                 dataKey="value"
                 animationDuration={1000}
                 stroke="none"
@@ -246,25 +227,21 @@ export function CategoryPieChart({ data, title }: CategoryPieChartProps) {
       </div>
 
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2 min-h-[40px] max-h-[70px] overflow-y-auto custom-scrollbar">
-        {hasData ? data.slice(0, 6).map((entry, index) => (
-          <div key={entry.name} className="flex items-center gap-1.5">
+        {hasData ? data.map((entry, index) => (
+          <button type="button" onClick={() => onSelect?.(entry.name)} key={entry.name} className="flex items-center gap-1.5 rounded hover:underline focus-visible:outline-2 focus-visible:outline-ring">
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
             <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[80px]">{entry.name}</span>
             <span className="text-[11px] font-black text-foreground/60">{entry.value}</span>
-          </div>
+          </button>
         )) : (
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground italic">Waiting for activity...</span>
           </div>
         )}
-        {hasData && data.length > 6 && (
-          <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest self-center">
-            +{data.length - 6} more
-          </span>
-        )}
+
       </div>
     </div>
-    <ChartValues title={title} column="Genre" measure="Count" rows={data.map(({ name, value }) => ({ label: name, count: value }))} />
+
     </>
   );
 }
@@ -273,6 +250,7 @@ interface PeakHoursBarChartProps {
   data: { hour: string; count: number }[];
   title: string;
   color: string;
+  onSelect?: (hour: string) => void;
 }
 
 interface CustomBarTooltipProps {
@@ -298,7 +276,7 @@ const CustomBarTooltip = ({ active, payload, label }: CustomBarTooltipProps) => 
   return null;
 };
 
-export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps) {
+export function PeakHoursBarChart({ data, title, color, onSelect }: PeakHoursBarChartProps) {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
@@ -343,7 +321,7 @@ export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps
                   allowDecimals={false}
                 />
                 <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'hsl(var(--primary) / 0.05)' }} />
-                <Bar 
+                <Bar onClick={(entry) => { const hour = entry.payload?.hour; if (typeof hour === 'string') onSelect?.(hour); }} style={{ cursor: "pointer" }}
                   dataKey="count" 
                   fill={color} 
                   radius={[4, 4, 0, 0]}
@@ -355,7 +333,7 @@ export function PeakHoursBarChart({ data, title, color }: PeakHoursBarChartProps
         </div>
       </div>
     </div>
-    <ChartValues title={title} column="Hour" measure="Visits" rows={data.map(({ hour, count }) => ({ label: hour, count }))} />
+    <ChartAccess rows={data.map(({ hour, count }) => ({ label: hour, count }))} onSelect={(i) => onSelect?.(data[i].hour)} />
     </>
   );
 }
