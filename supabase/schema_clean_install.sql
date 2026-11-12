@@ -1301,7 +1301,7 @@ BEGIN
       COALESCE(p_metadata, '{}'::jsonb)
     FROM public.profiles p
     WHERE p_target = 'all'
-       OR (p_target = 'students' AND p.role = 'student')
+       OR (p_target = 'students' AND p.role IN ('student', 'student_assistant'))
     RETURNING id
   )
   SELECT count(*)::integer INTO v_count FROM inserted;

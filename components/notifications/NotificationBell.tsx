@@ -35,7 +35,7 @@ export function NotificationBell() {
 
   return (
     <>
-    <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+    <Dialog open={menuOpen} onOpenChange={(open) => { setMenuOpen(open); if (open) void refresh(); }}>
       <DialogTrigger asChild>
         <Button 
           variant="ghost" 

@@ -470,3 +470,14 @@ describe('real DB: known bugs (it.fails until fixed — flip to it when fixed)',
     expect(left).toEqual([]);
   });
 });
+
+describe('Broadcast audiences', () => {
+  it.each(['students', 'all'])('inserts exactly one notification per intended %s recipient', async (target) => {
+    const count = (await q(`SELECT send_bulk_notifications_by_target($1,'Audience check','Message') AS count`, [target]))[0].count;
+    const expected = (await q(`SELECT count(*)::int AS count FROM profiles WHERE $1='all' OR role IN ('student','student_assistant')`, [target]))[0].count;
+    expect(count).toBe(expected);
+    const rows = await q(`SELECT n.user_id,p.role,count(*)::int AS count FROM notifications n JOIN profiles p ON p.id=n.user_id WHERE n.title='Audience check' GROUP BY n.user_id,p.role`);
+    expect(rows).toHaveLength(expected);
+    expect(rows.every(row => row.count === 1 && (target === 'all' || ['student','student_assistant'].includes(row.role)))).toBe(true);
+  });
+});

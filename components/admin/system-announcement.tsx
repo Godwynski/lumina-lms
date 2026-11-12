@@ -109,6 +109,9 @@ export function SystemAnnouncement({
         throw new Error(data.error || 'Failed to send announcement')
       }
 
+      if (data.success !== true || !Number.isInteger(data.count) || data.count < 1) {
+        throw new Error('Delivery was not confirmed. Your draft has been kept.');
+      }
       handleReset()
       setConfirmOpen(false)
       setSent({ count: typeof data.count === 'number' ? data.count : undefined })
@@ -140,7 +143,7 @@ export function SystemAnnouncement({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs max-w-xs">
-                  Choose who receives this notification: students only, or all accounts including staff and librarians.
+                  Students & Student Assistants excludes admins and librarians. All Users includes every registered account.
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -152,13 +155,13 @@ export function SystemAnnouncement({
                 <SelectItem value="students" className="py-2.5 px-3 text-xs font-medium">
                   <div className="flex items-center gap-2">
                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>Students Only</span>
+                    <span>Students & Student Assistants</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="all" className="py-2.5 px-3 text-xs font-medium">
                   <div className="flex items-center gap-2">
                     <Megaphone className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>All Registered Users (Students, Staff, Faculty)</span>
+                    <span>All Registered Users</span>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -287,7 +290,7 @@ export function SystemAnnouncement({
                 Subject: <span className="font-normal text-muted-foreground">{title}</span>
               </p>
               <p className="font-semibold text-foreground">
-                Audience: <span className="font-normal text-muted-foreground">{target === 'all' ? 'All Users (Everyone)' : 'Students Only'}</span>
+                Audience: <span className="font-normal text-muted-foreground">{target === 'all' ? 'All Users (Everyone)' : 'Students & Student Assistants'}</span>
               </p>
               <p className="text-muted-foreground line-clamp-3 italic pt-1 border-t border-border/30">
                 &ldquo;{content}&rdquo;
