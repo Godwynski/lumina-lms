@@ -8,7 +8,17 @@ const array = (value: unknown): unknown[] => Array.isArray(value) ? value : [];
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof object(value).value === 'string' ? String(object(value).value).trim() : '';
 const strings = (value: unknown) => array(value).map(text).filter(Boolean);
 const names = (value: unknown) => array(value).map(item => text(object(item).name)).filter(Boolean);
-function description(value: unknown): string { return text(value).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim(); }
+function description(value: unknown): string {
+  return text(value)
+    .replace(/<\/?(?:p|div|br|hr)\b[^>]*>/gi, '\n')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1')
+    .replace(/(?:^|\n)\s*[-*_]{3,}\s*(?:also contained in|source|credits?|see also)\s*:[\s\S]*$/i, '')
+    .replace(/(?:^|\n)\s*(?:source|credits?|description (?:from|by)|also contained in|see also)\s*:[\s\S]*$/i, '')
+    .replace(/\s*[-*_]{3,}\s*$/, '')
+    .replace(/\s+[—–-]\s*(?:from\s+)?(?:Wikipedia|Open Library|Goodreads|publisher(?:'s description)?|back cover)\b[\s\S]*$/i, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+}
 function year(value: unknown): number | null {
   const found = text(value).match(/\b(1\d{3}|20\d{2}|21\d{2})\b/);
   const result = found ? Number(found[1]) : null;

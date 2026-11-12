@@ -26,3 +26,14 @@ it('combines provider metadata including Dewey classification, description and p
  }));
  expect(await lookupISBN('9780451524935')).toMatchObject({success:true,book:{title:'Example',description:'About this book',published_year:2020,dewey_decimal:'005.1',tags:expect.arrayContaining(['Computer Science','Programming'])}});
 });
+
+it.each([
+ ['A story about freedom.\n\n----------\nAlso contained in: [Collected novels](https://openlibrary.org/works/OL1W)', 'A story about freedom.'],
+ ['<p>A practical guide.</p><p>Source: Open Library</p>', 'A practical guide.'],
+ ['A thoughtful novel. — From Wikipedia', 'A thoughtful novel.'],
+ ['A novel by George Orwell about truth and power.', 'A novel by George Orwell about truth and power.'],
+])('keeps the synopsis and removes trailing source credits', async (raw, expected) => {
+ vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(JSON.stringify({items:[{volumeInfo:{title:'Book',description:raw}}]}))));
+ const result = await lookupISBN('9780451524935');
+ expect(result.success && result.book.description).toBe(expected);
+});

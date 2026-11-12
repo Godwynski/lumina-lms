@@ -159,6 +159,7 @@ export function AddBookClient() {
       if (!result.success) throw new Error(result.error);
 
       setSaved(true);
+      toast.success('Book added successfully', { description: `${formData.title} has been added to the catalog.` });
       router.refresh();
       router.push('/inventory');
     } catch (err: unknown) {
