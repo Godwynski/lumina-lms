@@ -171,9 +171,6 @@ export default function Home() {
               </div>
             ))}
           </dl>
-          <div className="mx-auto mt-8 max-w-sm">
-            <SignIn />
-          </div>
         </div>
       </section>
       </main>
