@@ -78,8 +78,9 @@ export function AttendanceClient({
   const [lastResult, setLastResult] = useState('');
   const scannerSession = useRef(0);
 
-  const lastScannedValRef = useRef<string | null>(null);
-  const lastScanTimeRef = useRef(0);
+  const [pendingScan, setPendingScan] = useState<string | null>(null);
+  const pendingScanRef = useRef<string | null>(null);
+  const processingRef = useRef(false);
 
   const { playScanCue } = useScanFeedback();
 
@@ -89,23 +90,20 @@ export function AttendanceClient({
   const PAGE_SIZE = 10;
 
   // Process a card scan (manual entry or camera detection)
-  const processScan = useCallback(async (scannedValue: string, isManual = false) => {
+  const processScan = useCallback(async (scannedValue: string, isManual = false, confirmed = false) => {
     const session = scannerSession.current;
     const clean = scannedValue.trim();
-    if (!clean || isProcessing) return;
-
-    const now = Date.now();
-    if (!isManual && lastScannedValRef.current === clean && now - lastScanTimeRef.current < 2500) {
-      return;
-    }
-    lastScannedValRef.current = clean;
-    lastScanTimeRef.current = now;
+    if (!clean || processingRef.current) return;
+    processingRef.current = true;
+    pendingScanRef.current = null;
+    setPendingScan(null);
 
     setIsProcessing(true);
     try {
       const result = await toggleAttendanceByCard({ 
         cardNumber: clean,
-        isManual 
+        isManual,
+        confirmed
       });
 
       if (result.success) {
@@ -138,9 +136,10 @@ export function AttendanceClient({
       if (!isManual && session === scannerSession.current) setLastResult("Could not verify this scan. Check the attendance log before retrying.");
       toast.error("Failed to process attendance transaction.", { id: "attendance-toast-err" });
     } finally {
+      processingRef.current = false;
       setIsProcessing(false);
     }
-  }, [isProcessing, playScanCue]);
+  }, [playScanCue]);
 
   // Unified camera scanner using useScanner
   const {
@@ -154,9 +153,13 @@ export function AttendanceClient({
     scannerId,
   } = useScanner({
     onScan: async (val) => {
-      await processScan(val, false);
+      const value = val.trim();
+      if (!value || pendingScanRef.current || processingRef.current) return;
+      pendingScanRef.current = value;
+      setPendingScan(value);
+      setLastResult('');
     },
-    isProcessing,
+    isProcessing: isProcessing || pendingScan !== null,
     scannerId: 'attendance-kiosk-scanner'
   });
 
@@ -434,6 +437,8 @@ export function AttendanceClient({
         if (!open) {
           scannerSession.current++;
           setLastResult('');
+          pendingScanRef.current = null;
+          setPendingScan(null);
           void stopCamera();
         }
       }}>
@@ -459,7 +464,7 @@ export function AttendanceClient({
                   Gate Attendance Scanner
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Scan student library card or digital QR code to log attendance.
+                  Read a card, then click Register attendance to record Time In or Time Out.
                 </DialogDescription>
               </DialogHeader>
 
@@ -552,10 +557,17 @@ export function AttendanceClient({
                 )}
               </div>
 
+              {pendingScan && <div className="w-full space-y-3 rounded-xl border border-border p-3">
+                <p className="text-center text-sm">Card ready: <span className="font-mono break-all">{pendingScan}</span></p>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" disabled={isProcessing} onClick={() => { pendingScanRef.current = null; setPendingScan(null); }}>Discard</Button>
+                  <Button type="button" className="flex-1" disabled={isProcessing} onClick={() => void processScan(pendingScan, false, true)}>Register attendance</Button>
+                </div>
+              </div>}
               <div role="status" aria-live="polite" className="text-center space-y-1">
                 {lastResult && <p className="font-semibold text-foreground">{lastResult}</p>}
                 <p className="text-sm text-muted-foreground">
-                  {cameraOpen && !isProcessing ? 'Ready for next card' : cameraIssue ? 'Close the scanner to enter a card manually.' : ''}
+                  {pendingScan ? 'Awaiting librarian confirmation' : cameraOpen && !isProcessing ? 'Ready for next card' : cameraIssue ? 'Close the scanner to enter a card manually.' : ''}
                 </p>
               </div>
             </DialogContent>

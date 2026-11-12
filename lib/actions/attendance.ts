@@ -27,9 +27,10 @@ export interface AttendanceRecord {
 export const toggleAttendanceByCard = createSafeAction(
   z.object({ 
     cardNumber: z.string(),
-    isManual: z.boolean().default(false)
+    isManual: z.boolean().default(false),
+    confirmed: z.boolean().default(false)
   }),
-  async ({ cardNumber, isManual }, { supabase }) => {
+  async ({ cardNumber, isManual, confirmed }, { supabase }) => {
     const cleanCardNumber = cardNumber.trim();
     
     // 1. Find user by card number
@@ -97,7 +98,7 @@ export const toggleAttendanceByCard = createSafeAction(
     }
 
     // The gate camera reads the same card several times in a row; don't time out a fresh check-in.
-    if (activeRecord && Date.now() - new Date(activeRecord.check_in_at).getTime() < 60_000) {
+    if (!isManual && !confirmed && activeRecord && Date.now() - new Date(activeRecord.check_in_at).getTime() < 60_000) {
       return {
         status: "IN",
         recordedAt: activeRecord.check_in_at,
@@ -139,7 +140,7 @@ export const toggleAttendanceByCard = createSafeAction(
     } else {
       // A camera scan right after a Time Out is the same card still in view,
       // not a new visit. Don't flip the patron straight back IN.
-      if (!isManual) {
+      if (!isManual && !confirmed) {
         const { data: lastOut } = await supabase
           .from("attendance")
           .select("check_out_at")

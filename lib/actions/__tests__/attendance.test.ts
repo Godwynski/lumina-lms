@@ -197,6 +197,14 @@ describe('Attendance Server Actions', () => {
       expect(revalidatePath).toHaveBeenCalledWith('/dashboard', 'page');
     });
 
+    it.each([{ isManual: true }, { confirmed: true }])('allows an intentional immediate checkout: %j', async (confirmation) => {
+      mockClientHelper.setTableResponse('library_cards', { user_id: 'patron-100', profiles: { full_name: 'Student', status: 'ACTIVE' } });
+      mockClientHelper.setTableResponse('attendance', { id: 'fresh-visit', check_in_at: new Date().toISOString() });
+      const result = await toggleAttendanceByCard({ cardNumber: 'LC-9999', ...confirmation });
+      expect(result.success).toBe(true);
+      expect(result.data?.status).toBe('OUT');
+    });
+
     it('checks out user when an active attendance session is open', async () => {
       // 1. Library card exists
       mockClientHelper.setTableResponse('library_cards', {
