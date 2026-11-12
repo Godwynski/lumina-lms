@@ -1,7 +1,6 @@
 'use client';
 
 import type { User } from '@supabase/supabase-js';
-import { m } from "framer-motion";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, GraduationCap, Loader2, ShieldCheck, UserCheck } from 'lucide-react';
@@ -19,6 +18,7 @@ const DEMO_BUTTONS = [
   { label: 'Student', email: 'student@lumina.test', icon: GraduationCap },
 ];
 
+/** Sign-in actions for the landing page. The headline and copy are static in app/page.tsx. */
 export function Hero({ user, role, showDemo = false }: { user: User | null; role: string | null; showDemo?: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
@@ -71,110 +71,70 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8 } }
-  };
+  if (user) {
+    return (
+      <div className="space-y-3">
+        <Button asChild size="lg" className="h-auto min-h-12 w-full whitespace-normal py-3">
+          <Link href="/dashboard">
+            Go to Dashboard
+            <ArrowRight />
+          </Link>
+        </Button>
+        <p className="break-words text-sm text-muted-foreground">
+          Signed in as {user.user_metadata?.full_name || user.email?.split('@')[0]} with the {role} role.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <m.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-8 sm:py-12 md:py-16"
-    >
-
-      <m.div variants={itemVariants} className="space-y-4 sm:space-y-6 mb-8 sm:mb-10 w-full">
-        <h1 className="text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          {user ? (
-            <>Welcome back, <br className="hidden sm:block"/><span className="text-muted-foreground">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>.</>
-          ) : (
-            <>Intelligent Library Operations for the <span className="text-muted-foreground">Modern Era.</span></>
-          )}
-        </h1>
-        <p className="text-balance text-base text-muted-foreground sm:text-lg md:max-w-2xl mx-auto">
-          {user ? (
-            `You are signed in with the ${role} role and have access to your workspace.`
-          ) : (
-            'Streamline physical and digital resource management with role-based access, smart circulation, and unified identity.'
-          )}
-        </p>
-      </m.div>
-
-      <m.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-center w-full max-w-md">
-        {user ? (
-          <div className="flex justify-center w-full">
-            <Button asChild size="lg" className="rounded-full font-semibold shadow-md px-8 h-12">
-              <Link href="/dashboard">
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+    <div className="space-y-5">
+      <Button
+        type="button"
+        size="lg"
+        className="h-auto min-h-12 w-full gap-3 whitespace-normal py-3 focus-visible:transition-none"
+        onClick={handleMicrosoftLogin}
+        disabled={isLoading}
+      >
+        {isLoading && !loadingEmail ? (
+          <Loader2 className="animate-spin" />
         ) : (
-          <div className="flex flex-col gap-6 items-center w-full">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="h-12 w-full rounded-xl text-sm font-semibold flex items-center justify-center gap-3 border-input bg-background text-foreground hover:bg-muted shadow-sm transition-all"
-              onClick={handleMicrosoftLogin}
-              disabled={isLoading}
-            >
-              {isLoading && !loadingEmail ? (
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              ) : (
-                <MicrosoftIcon className="h-5 w-5" />
-              )}
-              <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
-            </Button>
-
-            {showDemo && (
-              <div className="w-full space-y-4 mt-2">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-[11px] font-bold uppercase tracking-widest">
-                    <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 w-full">
-                  {DEMO_BUTTONS.map((item) => {
-                    const Icon = item.icon;
-                    const isThisLoading = loadingEmail === item.email;
-                    return (
-                      <Button
-                        key={item.email}
-                        type="button"
-                        variant="outline"
-                        className="group h-11 sm:h-12 rounded-xl border border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-all duration-200 flex items-center justify-start px-3.5 sm:px-4 gap-2.5 active:scale-[0.98]"
-                        onClick={() => signInDemo(item.email)}
-                        disabled={isLoading}
-                      >
-                        {isThisLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-                        ) : (
-                          <Icon className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110" />
-                        )}
-                        <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+          <MicrosoftIcon />
         )}
-      </m.div>
-    </m.div>
+        <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
+      </Button>
+
+      {showDemo && (
+        <div className="space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-2xs font-bold uppercase tracking-widest">
+              <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {DEMO_BUTTONS.map((item) => {
+              const Icon = item.icon;
+              const isThisLoading = loadingEmail === item.email;
+              return (
+                <Button
+                  key={item.email}
+                  type="button"
+                  variant="outline"
+                  className="h-11 justify-start gap-2.5 px-3.5 text-2xs font-bold uppercase tracking-wider text-muted-foreground"
+                  onClick={() => signInDemo(item.email)}
+                  disabled={isLoading}
+                >
+                  {isThisLoading ? <Loader2 className="animate-spin" /> : <Icon />}
+                  <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
