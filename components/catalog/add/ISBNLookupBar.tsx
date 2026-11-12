@@ -27,6 +27,8 @@ export function ISBNLookupBar({
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
+            aria-label="ISBN quick lookup"
+            onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); if (!isbnLoading && isbn) onFetchData(); } }}
             type="text" 
             value={isbn}
             onChange={(e) => onIsbnChange(e.target.value.replace(/[^0-9Xx]/g, '').toUpperCase())}
