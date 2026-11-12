@@ -358,7 +358,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onCloseAutoFocus={onCloseAutoFocus} className={cn(
-        "max-h-[90vh] overflow-y-auto custom-scrollbar pt-12",
+        "flex max-h-[90dvh] flex-col overflow-hidden pt-12",
         variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg"
       )}>
         <DialogHeader className="sr-only">
@@ -366,6 +366,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
           <DialogDescription>View book information</DialogDescription>
         </DialogHeader>
 
+        <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         {!error && !activeAdminData && !activeStudentData && <ModalSkeleton />}
@@ -394,6 +395,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
             />
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
