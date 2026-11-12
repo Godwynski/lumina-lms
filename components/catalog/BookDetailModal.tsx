@@ -10,6 +10,8 @@ import {
   Library,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePreferences } from '@/components/providers/PreferencesProvider';
 import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
@@ -240,6 +242,7 @@ export function BookDetailModal(props: BookDetailModalProps) {
 }
 
 function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialData, canManage = true, onCancelSuccess, onCloseAutoFocus }: BookDetailModalProps) {
+  const { role } = usePreferences();
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -367,6 +370,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
         </DialogHeader>
 
         <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+        {role === 'super_admin' && <Link href={`/audit?bookId=${bookId}`} className="mb-4 inline-block text-sm font-semibold text-primary hover:underline" onClick={() => onOpenChange(false)}>View book records</Link>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         {!error && !activeAdminData && !activeStudentData && <ModalSkeleton />}

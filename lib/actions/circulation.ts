@@ -238,7 +238,7 @@ export const checkoutBook = createSafeAction(
         result.borrowing_id || null,
         'checkout',
         `Checked out book '${result.book_title}' to ${result.student_name} (QR: ${bookQr})`,
-        { studentCardQr, bookQr, studentName: result.student_name, bookTitle: result.book_title },
+        { studentCardQr, bookQr, student_user_id: studentUserId, studentName: result.student_name, bookTitle: result.book_title },
         null,
         { status: 'ACTIVE', book_qr: bookQr }
       );
@@ -285,14 +285,16 @@ export const returnBook = createSafeAction(
   async ({ bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
     // Find the current borrower to notify them
     let studentUserId: string | null = null;
+    let returnCopy: { id: string; book_id: string } | null = null;
     if (!previewOnly) {
       const { data: copy } = await supabase
         .from('book_copies')
-        .select('id')
+        .select('id,book_id')
         .eq('qr_string', bookQr.trim())
         .maybeSingle();
       
       if (copy) {
+        returnCopy = copy;
         const { data: record } = await supabase
           .from('borrowing_records')
           .select('user_id')
@@ -321,6 +323,7 @@ export const returnBook = createSafeAction(
 
     const result = (data ?? {}) as {
       ok?: boolean;
+      idempotent?: boolean;
       code?: string;
       message?: string;
       book_title?: string;
@@ -342,17 +345,17 @@ export const returnBook = createSafeAction(
       throw new Error(message);
     }
 
-    if (!previewOnly) {
+    if (!previewOnly && !result.idempotent) {
       logger.info('circulation', 'Return successful', { bookQr, librarianId: staff.id });
       await logAuditActivity(
         String(staff.id),
         'book_copy',
-        null,
+        returnCopy?.id || null,
         'return',
         `Returned book '${result.book_title}' from ${result.student_name} (QR: ${bookQr})${
           result.reservation_ready ? ` — reserved for ${result.reserved_for}` : ''
         }`,
-        { bookQr, studentName: result.student_name, bookTitle: result.book_title, reservationReady: result.reservation_ready },
+        { bookQr, book_id: returnCopy?.book_id, book_copy_id: returnCopy?.id, student_user_id: studentUserId, studentName: result.student_name, bookTitle: result.book_title, reservationReady: result.reservation_ready },
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );

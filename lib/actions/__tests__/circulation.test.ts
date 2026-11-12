@@ -600,7 +600,7 @@ describe('Circulation Server Actions', () => {
 
     it('successfully returns book, notifies student borrower and logs audit trail', async () => {
       // 1. Borrower resolution for notification
-      mockUserClientHelper.setTableResponse('book_copies', { id: 'copy-id-100' });
+      mockUserClientHelper.setTableResponse('book_copies', { id: 'copy-id-100', book_id: 'book-100' });
       mockUserClientHelper.setTableResponse('borrowing_records', { user_id: 'borrower-student-id' });
 
       // 2. RPC response
@@ -641,10 +641,10 @@ describe('Circulation Server Actions', () => {
       expect(logAuditActivity).toHaveBeenCalledWith(
         'staff-1',
         'book_copy',
-        null,
+        'copy-id-100',
         'return',
         expect.stringContaining("Returned book 'Clean Code' from Emily Davis"),
-        expect.anything(),
+        expect.objectContaining({ book_id: 'book-100', book_copy_id: 'copy-id-100', student_user_id: 'borrower-student-id' }),
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );
@@ -655,7 +655,7 @@ describe('Circulation Server Actions', () => {
     });
 
     it('handles reservation hold promotion with hold metadata in audit log', async () => {
-      mockUserClientHelper.setTableResponse('book_copies', { id: 'copy-id-200' });
+      mockUserClientHelper.setTableResponse('book_copies', { id: 'copy-id-200', book_id: 'book-200' });
       mockUserClientHelper.setTableResponse('borrowing_records', { user_id: 'prev-borrower' });
 
       mockAdminClientHelper.setRpcResponse(
@@ -676,13 +676,23 @@ describe('Circulation Server Actions', () => {
       expect(logAuditActivity).toHaveBeenCalledWith(
         'staff-1',
         'book_copy',
-        null,
+        'copy-id-200',
         'return',
         expect.stringContaining('— reserved for Grace Hopper'),
         expect.objectContaining({ reservationReady: true }),
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );
+    });
+
+    it('does not attribute a replayed return or notification to the next borrower', async () => {
+      mockUserClientHelper.setTableResponse('book_copies', { id: 'copy-id-200', book_id: 'book-200' });
+      mockUserClientHelper.setTableResponse('borrowing_records', { user_id: 'next-borrower' });
+      mockAdminClientHelper.setRpcResponse({ ok: true, idempotent: true, book_title: 'Original Book', student_name: 'Original Borrower' }, null, 'process_qr_return');
+      const result = await returnBook({ bookQr: 'BOOK-OS-1', idempotencyKey: '00000000-0000-4000-8000-000000000001' });
+      expect(result.success).toBe(true);
+      expect(logAuditActivity).not.toHaveBeenCalled();
+      expect(sendNotification).not.toHaveBeenCalled();
     });
 
     it('handles NOT_BORROWED error when book is already on shelf', async () => {

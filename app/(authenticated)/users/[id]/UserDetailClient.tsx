@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, startTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
   CheckCircle2, AlertCircle, UserCheck, Archive, Calendar, Key, Hash
@@ -296,6 +297,7 @@ export function UserDetailClient({
                   </AvatarFallback>
                 </Avatar>
                 
+                {isAdmin && <Link href={`/audit?studentId=${initialUser.id}`} className="text-sm font-semibold text-primary hover:underline">View student records</Link>}
                 <div className="w-full space-y-3">
                   <div className="text-center px-1">
                     <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>

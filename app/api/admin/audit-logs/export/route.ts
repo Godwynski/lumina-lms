@@ -1,4 +1,5 @@
-import { sanitizeFilterInput } from "@/lib/utils";
+import { auditLogQuery, parseAuditFilters } from "@/lib/audit-log-query";
+import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { format } from "date-fns";
 import { isAbortError } from "@/lib/error-utils";
@@ -10,38 +11,7 @@ export const GET = withAuthApi(async (request, { supabase }) => {
   await connection();
   try {
     const searchParams = new URL(request.url).searchParams;
-    const entityType = searchParams.get("entityType");
-    const queryParam = searchParams.get("query");
-    const actionType = searchParams.get("actionType");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-    const userId = searchParams.get("userId");
-
-    let searchFilter: string | null = null;
-    if (queryParam) {
-      const safe = sanitizeFilterInput(queryParam);
-
-      // Lookup profiles that match the search query by name or email
-      const { data: matchingProfiles } = await supabase
-        .from("profiles")
-        .select("id")
-        .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
-
-      const profileIds = matchingProfiles?.map(p => p.id) || [];
-
-      const orConditions = [
-        `entity_type.ilike.%${safe}%`,
-        `action.ilike.%${safe}%`,
-        `reason.ilike.%${safe}%`
-      ];
-
-      // Add matching profile IDs to the search if found
-      if (profileIds.length > 0) {
-        orConditions.push(`admin_id.in.(${profileIds.join(',')})`);
-      }
-
-      searchFilter = orConditions.join(',');
-    }
+    parseAuditFilters(searchParams);
 
     // The API returns at most 1,000 rows per request, so page through everything that matches (M8).
     // Dates are whole days in Manila time, like the audit log screen (M9).
@@ -49,19 +19,7 @@ export const GET = withAuthApi(async (request, { supabase }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped Supabase rows, as before
     const logs: any[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      let query = supabase
-        .from("audit_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, from + PAGE_SIZE - 1);
-
-      if (entityType && entityType !== "all") query = query.eq("entity_type", entityType);
-      if (actionType) query = query.eq("action", actionType);
-      if (startDate) query = query.gte("created_at", `${startDate}T00:00:00+08:00`);
-      if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999+08:00`);
-      if (userId) query = query.eq("admin_id", userId);
-      if (searchFilter) query = query.or(searchFilter);
+      const query = auditLogQuery(supabase, searchParams).range(from, from + PAGE_SIZE - 1);
 
       const { data: page, error } = await query;
       if (error) throw error;
@@ -123,6 +81,11 @@ export const GET = withAuthApi(async (request, { supabase }) => {
 
     // Default to CSV
     const headerMap: Record<string, string> = {
+      book_title: "Book",
+      book_isbn: "ISBN",
+      copy_barcode: "Copy barcode",
+      student_name: "Student",
+      student_number: "Student ID",
       created_at: "Timestamp",
       full_name: "Admin Name",
       email: "Email",
@@ -196,6 +159,7 @@ export const GET = withAuthApi(async (request, { supabase }) => {
       },
     });
   } catch (error) {
+    if (error instanceof ZodError) return NextResponse.json({ error: "Invalid audit filters." }, { status: 400 });
     if (isAbortError(error)) {
       return new Response(null, { status: 499 });
     }
