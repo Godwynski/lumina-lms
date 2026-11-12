@@ -5,7 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
-import { DEMO_ACCOUNTS, type DemoAccount } from '../lib/demo/config.ts';
+import { DEMO_ACCOUNTS } from '../lib/demo/config.ts';
 
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: resolve(process.cwd(), '.env') });
@@ -67,10 +67,22 @@ async function demoOn() {
       userId = data.user.id;
     }
 
-    const role = resolveRole(account, existingSuper ?? [], userId);
-    if (role !== account.role) {
-      console.warn(`  ! ${account.email}: a real super admin exists, so this account is "${role}" instead of "${account.role}"`);
+    // Only one super admin is allowed, so the demo admin takes the role from whoever holds it.
+    // The previous holder becomes a librarian and is remembered so demo:off can hand it back.
+    const previousSuper = account.role === 'super_admin' ? (existingSuper ?? []).find((p) => p.id !== userId) : undefined;
+    if (previousSuper) {
+      const { error: transferError } = await supabase.rpc('transfer_super_admin_ownership', {
+        p_current_admin_id: previousSuper.id,
+        p_new_admin_id: userId,
+      });
+      if (transferError) throw new Error(`Failed to move super admin to ${account.email}: ${transferError.message}`);
+      const { error: metaError } = await supabase.auth.admin.updateUserById(userId, {
+        app_metadata: { previous_super_admin_id: previousSuper.id },
+      });
+      if (metaError) throw new Error(`Failed to record the previous super admin: ${metaError.message}`);
+      console.warn(`  ! ${account.email} is now the super admin. The previous super admin is a librarian until demo:off.`);
     }
+    const role = account.role;
 
     const { error: profileError } = await supabase
       .from('profiles')
@@ -90,17 +102,11 @@ async function demoOn() {
   console.info('\nDemo accounts are on. Set DEMO_MODE=true to show the landing-page buttons.');
 }
 
-// The DB allows one super_admin. Keep the demo admin as super_admin only when the slot is free.
-function resolveRole(account: DemoAccount, existingSuper: { id: string }[], userId: string): DemoAccount['role'] {
-  if (account.role !== 'super_admin') return account.role;
-  const takenByOther = existingSuper.some((p) => p.id !== userId);
-  return takenByOther ? 'librarian' : 'super_admin';
-}
-
 async function demoOff() {
   for (const account of DEMO_ACCOUNTS) {
     const userId = await findUserIdByEmail(account.email);
     if (userId) {
+      if (account.role === 'super_admin') await restoreSuperAdmin(userId);
       // Deleting the auth user cascades to profile and library card.
       const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) {
@@ -112,6 +118,32 @@ async function demoOff() {
     console.info(`✔ removed ${account.email}`);
   }
   console.info('\nDemo accounts are off. Sign-up is limited to @alabang.sti.edu.ph again.');
+}
+
+// Hands super admin back to whoever held it before demo:on, if anyone did.
+async function restoreSuperAdmin(demoAdminId: string) {
+  const { data, error } = await supabase.auth.admin.getUserById(demoAdminId);
+  if (error) throw new Error(`Failed to read the demo admin: ${error.message}`);
+  const previousId = data.user?.app_metadata?.previous_super_admin_id as string | undefined;
+  const { data: rows, error: rowsError } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .in('id', [demoAdminId, previousId ?? demoAdminId]);
+  if (rowsError) throw new Error(`Failed to read profiles: ${rowsError.message}`);
+  const demoIsSuper = rows?.some((r) => r.id === demoAdminId && r.role === 'super_admin');
+  if (!demoIsSuper) return; // someone already moved the role elsewhere in the app
+  if (!previousId || !rows?.some((r) => r.id === previousId)) {
+    console.warn('  ! No previous super admin to hand back to: the next person to sign up becomes super admin.');
+    return;
+  }
+  const { error: transferError } = await supabase.rpc('transfer_super_admin_ownership', {
+    p_current_admin_id: demoAdminId,
+    p_new_admin_id: previousId,
+  });
+  if (transferError) {
+    throw new Error(`Failed to hand super admin back: ${transferError.message}. Demo is NOT off; fix this and re-run demo:off.`);
+  }
+  console.info('✔ super admin handed back to the previous holder');
 }
 
 async function main() {
