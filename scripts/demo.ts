@@ -1,7 +1,7 @@
 // Turns demo accounts on or off.
 //   npm run demo:on   -> creates/updates the four demo accounts and allows their sign-up
 //   npm run demo:off  -> deletes the four demo accounts and removes them from the allowlist
-// The landing-page buttons additionally need DEMO_MODE=true (see lib/demo/config.ts).
+// Demo access stays enabled during evaluation (see lib/demo/config.ts).
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
@@ -71,9 +71,17 @@ async function demoOn() {
     const { error: allowError } = await supabase.from('demo_accounts').upsert({ email: account.email });
     if (allowError) throw new Error(`Failed to allow ${account.email}: ${allowError.message}`);
 
-    let userId = await findUserIdByEmail(account.email);
+    const canonicalId = await findUserIdByEmail(account.email);
+    const legacyId = await findUserIdByEmail(account.legacyEmail);
+    if (canonicalId && legacyId && canonicalId !== legacyId) {
+      throw new Error(`Both ${account.email} and ${account.legacyEmail} exist. Resolve the duplicate before provisioning.`);
+    }
+    let userId = canonicalId ?? legacyId;
     if (userId) {
-      const { error } = await supabase.auth.admin.updateUserById(userId, { password, email_confirm: true });
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        email: account.email, password, email_confirm: true, ban_duration: 'none',
+        user_metadata: { full_name: account.fullName },
+      });
       if (error) throw new Error(`Failed to update ${account.email}: ${error.message}`);
     } else {
       const { data, error } = await supabase.auth.admin.createUser({
@@ -105,8 +113,15 @@ async function demoOn() {
 
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ full_name: account.fullName, role, status: 'ACTIVE', onboarding_completed: true })
-      .eq('id', userId);
+      .update({
+        email: account.email, full_name: account.fullName, role,
+        student_id: account.studentId, department: account.department,
+        phone: account.phone, address: account.address, permissions: account.permissions,
+        status: 'ACTIVE', onboarding_completed: true,
+      })
+      .eq('id', userId)
+      .select('id')
+      .single();
     if (profileError) throw new Error(`Failed to update profile for ${account.email}: ${profileError.message}`);
 
     const { error: cardError } = await supabase.from('library_cards').upsert(
@@ -115,15 +130,18 @@ async function demoOn() {
     );
     if (cardError) throw new Error(`Failed to set card for ${account.email}: ${cardError.message}`);
 
+    const { error: legacyAllowError } = await supabase.from('demo_accounts').delete().eq('email', account.legacyEmail);
+    if (legacyAllowError) throw new Error(`Failed to remove legacy allowlist entry: ${legacyAllowError.message}`);
+
     console.info(`✔ ${account.label.padEnd(12)} ${account.email} (${role})`);
   }
 
-  console.info('\nDemo accounts are on. Set DEMO_MODE=true to show the landing-page buttons.');
+  console.info('\nDemo accounts are ready. Quick Demo Access is enabled during evaluation.');
 }
 
 async function demoOff() {
   for (const account of DEMO_ACCOUNTS) {
-    const userId = await findUserIdByEmail(account.email);
+    const userId = await findUserIdByEmail(account.email) ?? await findUserIdByEmail(account.legacyEmail);
     if (userId) {
       if (account.role === 'super_admin') await restoreSuperAdmin(userId);
       // Deleting the auth user cascades to profile and library card.
@@ -132,7 +150,7 @@ async function demoOff() {
         throw new Error(`Failed to delete ${account.email}: ${error.message}. Demo is NOT fully off; fix this and re-run demo:off.`);
       }
     }
-    const { error: allowError } = await supabase.from('demo_accounts').delete().eq('email', account.email);
+    const { error: allowError } = await supabase.from('demo_accounts').delete().in('email', [account.email, account.legacyEmail]);
     if (allowError) throw new Error(`Failed to remove allowlist entry for ${account.email}: ${allowError.message}`);
     console.info(`✔ removed ${account.email}`);
   }
