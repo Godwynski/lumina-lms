@@ -5,6 +5,8 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
+import { appendFileSync, existsSync, readFileSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { DEMO_ACCOUNTS } from '../lib/demo/config.ts';
 
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
@@ -33,12 +35,29 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
   }
 }
 
-async function demoOn() {
-  const password = process.env.DEMO_PASSWORD;
-  if (!password || password.length < 12) {
-    console.error('Set DEMO_PASSWORD in your env (at least 12 characters) before running demo:on');
-    process.exit(1);
+// If DEMO_PASSWORD is not set yet, generate one and save it to .env.local (gitignored),
+// so the user never has to pick or remember it.
+function ensureDemoPassword(): string {
+  const existing = process.env.DEMO_PASSWORD;
+  if (existing) {
+    if (existing.length < 12) {
+      console.error('DEMO_PASSWORD in .env.local must be at least 12 characters');
+      process.exit(1);
+    }
+    return existing;
   }
+  const generated = randomBytes(18).toString('base64url');
+  const envPath = resolve(process.cwd(), '.env.local');
+  const current = existsSync(envPath) ? readFileSync(envPath, 'utf8') : '';
+  const prefix = current === '' || current.endsWith('\n') ? '' : '\n';
+  appendFileSync(envPath, `${prefix}DEMO_PASSWORD=${generated}\n`);
+  process.env.DEMO_PASSWORD = generated;
+  console.info('Generated DEMO_PASSWORD and saved it to .env.local (the demo accounts use it).');
+  return generated;
+}
+
+async function demoOn() {
+  const password = ensureDemoPassword();
 
   // Does a real super admin already exist? Only one is allowed (unique index).
   const { data: existingSuper, error: superError } = await supabase
