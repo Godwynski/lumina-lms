@@ -70,7 +70,7 @@ export const PATCH = withAuthApi(
 
     const nextStudentId = typeof body.student_id === "string" ? body.student_id.trim() : null;
     if (
-      nextStudentId !== null &&
+      body.student_id !== undefined &&
       "student_id" in profile
     ) {
       updates.student_id = nextStudentId || null;
@@ -151,12 +151,12 @@ export const PATCH = withAuthApi(
     }
 
     const nextAddress = typeof body.address === "string" ? body.address.trim() : null;
-    if (nextAddress !== null && "address" in profile) {
+    if (body.address !== undefined && "address" in profile) {
       updates.address = nextAddress || null;
     }
 
     const nextPhone = typeof body.phone === "string" ? body.phone.trim() : null;
-    if (nextPhone !== null && "phone" in profile) {
+    if (body.phone !== undefined && "phone" in profile) {
       updates.phone = nextPhone || null;
     }
 

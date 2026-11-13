@@ -13,10 +13,10 @@ export const UserPatchSchema = z.object({
   role: z.string().optional(),
   status: z.string().optional(),
   department: z.string().trim().optional(),
-  student_id: z.string().trim().optional(),
+  student_id: z.string().trim().nullable().optional(),
   permissions: z.record(z.string(), z.boolean()).or(z.array(z.string())).optional(),
-  address: z.string().trim().optional(),
-  phone: z.string().trim().optional(),
+  address: z.string().trim().nullable().optional(),
+  phone: z.string().trim().nullable().optional(),
 });
 
 export const CategoryCreateSchema = z.object({

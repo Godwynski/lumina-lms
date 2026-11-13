@@ -45,4 +45,27 @@ describe('PATCH /api/users: super admin editing their own account', () => {
     const res = await patch({ role: 'super_admin', status: 'active', phone: '+63 900 000 0001' });
     expect(res.status).toBe(200);
   });
+
+  it.each([
+    { student_id: null, address: null, phone: null },
+    { student_id: '', address: '', phone: '' },
+    {},
+  ])('lets the new admin make the former admin a student with optional fields %o', async (fields) => {
+    const formerAdmin = { ...adminRow, id: 'former-admin', role: 'librarian', student_id: 'FAC-123', address: 'Old address', phone: '09123456789' };
+    const db = createMockSupabaseClient();
+    db.setTableResponse('profiles', formerAdmin);
+    const admin = createMockSupabaseClient();
+    admin.setTableResponse('profiles', { ...formerAdmin, role: 'student', student_id: null, address: null, phone: null });
+    vi.mocked(createAdminClient).mockReturnValue(admin.client as unknown as ReturnType<typeof createAdminClient>);
+    vi.mocked(getMe).mockResolvedValue({
+      user: { id: 'admin-1' }, profile: adminRow, role: 'super_admin', supabase: db.client,
+    } as unknown as Awaited<ReturnType<typeof getMe>>);
+
+    const res = await patch({ id: formerAdmin.id, role: 'student', ...fields });
+
+    expect(res.status).toBe(200);
+    expect(admin.getTableBuilder('profiles').update).toHaveBeenCalledWith({
+      role: 'student', ...('student_id' in fields ? { student_id: null, address: null, phone: null } : {}),
+    });
+  });
 });
