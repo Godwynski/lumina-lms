@@ -5,6 +5,7 @@ import { Hero } from "@/components/hero";
 import { BookArt } from "@/components/landing/book-art";
 import { ScrollProgress } from "@/components/landing/scroll-progress";
 import { hasEnvVars } from "@/lib/utils";
+import { isDemoModeEnabled } from "@/lib/demo/config";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getMe } from "@/lib/auth-helpers";
@@ -19,7 +20,7 @@ export const metadata = {
 
 async function HeroSection() {
   const me = await getMe();
-  return <Hero user={me?.user ?? null} role={me?.role ?? null} />;
+  return <Hero user={me?.user ?? null} role={me?.role ?? null} showDemo={isDemoModeEnabled()} />;
 }
 
 async function AuthRedirect() {
@@ -75,6 +76,7 @@ function SignIn() {
       fallback={
         <>
           <Skeleton className="h-12 w-full rounded-lg" />
+          {isDemoModeEnabled() && <Skeleton className="mt-5 h-[8.25rem] w-full rounded-lg opacity-40" />}
         </>
       }
     >
