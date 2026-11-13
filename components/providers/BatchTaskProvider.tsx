@@ -130,9 +130,8 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
     return () => { clearInterval(timer); window.removeEventListener("focus", resume); };
   }, [hasActiveJobs, hasReadyItems, refreshJobs, wakeWorker]);
 
-  const job = canManageImports ? (jobs.find(candidate => candidate.id === selectedId && (candidate.id !== dismissedId || activeJob(candidate)))
-    || jobs.find(activeJob)
-    || (jobs[0]?.id !== dismissedId ? jobs[0] : undefined)) : undefined;
+  const selectedJob = jobs.find(candidate => candidate.id === selectedId) || jobs.find(activeJob) || jobs[0];
+  const job = canManageImports && selectedJob?.id !== dismissedId ? selectedJob : undefined;
   const items = job?.items || [];
   const processing = !!job && activeJob(job);
   const activeItems = items.filter(isActive);
@@ -150,12 +149,12 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
   }));
 
   const clearTask = useCallback(() => {
-    if (!job || processing) return;
+    if (!job) return;
     try { localStorage.setItem(dismissedKey, job.id); } catch { /* Dismissal still works in this tab. */ }
     setDismissedId(job.id);
     setSelectedId(null);
     setIsExpanded(false);
-  }, [job, processing]);
+  }, [job]);
 
   const submitJob = async (body: { isbns: string[]; requestId: string } | { retryJobId: string }) => {
     if (!canManageImports || submitting.current) return;
@@ -202,7 +201,7 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
                 </span>
                 {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronUp className="h-4 w-4 shrink-0" />}
               </button>
-              {!processing && <button type="button" aria-label="Dismiss completed import" onClick={clearTask} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"><X className="h-4 w-4" /></button>}
+              <button type="button" aria-label={processing ? "Hide import progress" : "Dismiss completed import"} onClick={clearTask} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"><X className="h-4 w-4" /></button>
             </div>
             {processing && <div role="progressbar" aria-label="Import items finished" aria-valuenow={isbnProgress.current} aria-valuemin={0} aria-valuemax={isbnProgress.total} className="h-1 w-full bg-muted"><div className="h-full bg-primary transition-all duration-300" style={{ width: `${Math.max(2, isbnProgress.current / (isbnProgress.total || 1) * 100)}%` }} /></div>}
             {isExpanded && <div className="p-4 border-t border-border/10 space-y-3">
@@ -213,7 +212,7 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
               <ul className="max-h-52 overflow-y-auto space-y-2 text-xs">
                 {isbnLogs.map((log, index) => <li key={items[index].id} className={cn("p-2 rounded-xl break-words", log.status === "success" ? "bg-emerald-500/5 text-emerald-700 dark:text-emerald-400" : log.status === "exists" ? "bg-amber-500/5 text-amber-700 dark:text-amber-400" : log.status === "error" ? "bg-destructive/5 text-destructive" : "bg-muted/40 text-muted-foreground")}>{log.message}</li>)}
               </ul>
-              {warning && <button type="button" disabled={isSubmitting || processing} onClick={() => void submitJob({ retryJobId: job.id })} className="rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-primary">{isSubmitting ? "Queuing retry..." : "Retry failed items"}</button>}
+              {warning && <button type="button" disabled={isSubmitting} onClick={() => void submitJob({ retryJobId: job.id })} className="rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-primary">{isSubmitting ? "Queuing retry..." : "Retry failed items"}</button>}
             </div>}
           </div>
         </aside>

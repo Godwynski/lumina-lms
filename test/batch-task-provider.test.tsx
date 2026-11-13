@@ -71,6 +71,26 @@ it('shows provider waiting time instead of an active spinner and wakes when the 
   expect(wakes()).toBeGreaterThan(before);
 });
 
+it('hides a waiting import across refreshes while the saved job continues', async () => {
+  vi.setSystemTime(new Date('2026-11-13T03:30:00Z'));
+  jobs = [{ id: 'job1', label: 'ISBN import', items: [item, { ...item, id: 'waiting', status: 'retry', next_attempt_at: '2026-11-13T04:06:00Z' }] }];
+  await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Expand import details"]')!.click());
+  expect(Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Retry failed items')).toBeEnabled();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Hide import progress"]')!.click());
+  expect(host.querySelector('aside')).toBeNull();
+  expect(host.querySelector('[data-testid="processing"]')).toHaveTextContent('true');
+  expect(localStorage.getItem('catalog-import-dismissed-job')).toBe('job1');
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+  expect(host.querySelector('aside')).toBeNull();
+  act(() => root.unmount());
+  root = createRoot(host);
+  await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
+  expect(host.querySelector('aside')).toBeNull();
+  expect(host.querySelector('[data-testid="processing"]')).toHaveTextContent('true');
+  expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'DELETE')).toBe(true);
+});
+
 it('sends retries to the server without importing books again in the browser', async () => {
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
   await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Expand import details"]')!.click());
