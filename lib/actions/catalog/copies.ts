@@ -9,6 +9,7 @@ import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { getBookAvailabilityStatus } from '@/lib/actions/reservations';
 import { assertStaffCatalogAccess } from './auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getMe } from '@/lib/auth-helpers';
 
 export interface RawCopy {
   id: string;
@@ -159,10 +160,21 @@ export const updateBookCopyStatus = createSafeAction(
  * Consolidated action for student book detail view.
  */
 export async function getBookPublicDetails(bookId: string) {
-  const [book, availability] = await Promise.all([
+  let [book, availability] = await Promise.all([
     getPublicBookById(bookId),
     getBookAvailabilityStatus(bookId),
   ]);
+  // Staff history may reference archived titles excluded from the public catalog.
+  if (!book) {
+    const me = await getMe();
+    if (me?.isStaff) {
+      const { data, error } = await me.supabase.from('books')
+        .select('id, title, author, isbn, description, category_id, tags, section, location, cover_url, total_copies, available_copies, categories(name)')
+        .eq('id', bookId).maybeSingle();
+      if (error) throw new Error(error.message);
+      book = data;
+    }
+  }
   return { book: book as Book, availability };
 }
 

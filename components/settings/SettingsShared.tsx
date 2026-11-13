@@ -115,7 +115,11 @@ export function RunMaintenanceTool() {
       const res = await fetch("/api/notifications/maintenance", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("Maintenance complete.");
+      if (data.errors?.length) {
+        toast.error(`Dispatch completed with errors: ${data.errors.join(" ")}`);
+      } else {
+        toast.success(`Dispatch complete: ${data.remindersSent} reminders and ${data.overdueTagged} overdue notices processed.`);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {

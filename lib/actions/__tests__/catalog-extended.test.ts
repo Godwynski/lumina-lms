@@ -687,6 +687,28 @@ describe('Catalog Extended Server Actions', () => {
   });
 
   describe('getBookPublicDetails', () => {
+    it.each(['librarian', 'student_assistant'] as const)('allows %s to read archived book information without management data', async (role) => {
+      vi.mocked(getMe).mockResolvedValue(mockStaffUser(role) as unknown as Awaited<ReturnType<typeof getMe>>);
+      vi.mocked(getPublicBookById).mockResolvedValue(null);
+      const archivedBook = { id: 'archived-book', title: 'Archived Book', is_active: false };
+      mockClientHelper.setTableResponse('books', archivedBook);
+
+      const result = await getBookPublicDetails('archived-book');
+
+      expect(result.book).toEqual(archivedBook);
+      expect(mockClientHelper.getTableBuilder('books').eq).toHaveBeenCalledWith('id', 'archived-book');
+      expect(mockClientHelper.from).not.toHaveBeenCalledWith('reservations');
+    });
+
+    it('does not expose archived titles to a student through the public detail action', async () => {
+      vi.mocked(getMe).mockResolvedValue(mockStudentUser() as unknown as Awaited<ReturnType<typeof getMe>>);
+      vi.mocked(getPublicBookById).mockResolvedValue(null);
+      mockClientHelper.setTableResponse('books', { id: 'archived-book', is_active: false });
+
+      expect((await getBookPublicDetails('archived-book')).book).toBeNull();
+      expect(mockClientHelper.from).not.toHaveBeenCalledWith('books');
+    });
+
     it('returns book and availability concurrently', async () => {
       const mockBook = { id: 'book-pub-1', title: 'Calculus' };
       const mockAvailability = {

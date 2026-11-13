@@ -35,8 +35,8 @@ describe('Notifications Service & Maintenance Tasks', () => {
     vi.mocked(createAdminClient).mockReturnValue(
       mockAdminHelper.client as unknown as ReturnType<typeof createAdminClient>
     );
-    vi.mocked(sendOverdueEmail).mockResolvedValue(undefined as unknown as Awaited<ReturnType<typeof sendOverdueEmail>>);
-    vi.mocked(sendDueSoonEmail).mockResolvedValue(undefined as unknown as Awaited<ReturnType<typeof sendDueSoonEmail>>);
+    vi.mocked(sendOverdueEmail).mockResolvedValue({ success: true, messageId: 'test' });
+    vi.mocked(sendDueSoonEmail).mockResolvedValue({ success: true, messageId: 'test' });
   });
 
   describe('runMaintenanceTasks', () => {
@@ -99,6 +99,21 @@ describe('Notifications Service & Maintenance Tasks', () => {
       expect(borrowBuilder.update).toHaveBeenCalledWith({ reminder_sent: true });
     });
 
+    it('reports a failed reminder email and leaves it eligible for retry', async () => {
+      mockAdminHelper.setTableResponse('system_settings', [{ key: 'due_soon_reminder_days', value: '2' }]);
+      mockAdminHelper.setTableResponse('borrowing_records', [{
+        id: 'borrow-failed', user_id: 'user-1', status: 'ACTIVE', reminder_sent: false,
+        due_date: new Date(Date.now() + 86400000).toISOString(),
+        profiles: { email: 'student@school.edu', full_name: 'Student' },
+        book_copy: { book_id: 'book-1', book: { title: 'Book' } },
+      }]);
+      mockAdminHelper.setTableResponse('reservations', []);
+      vi.mocked(sendDueSoonEmail).mockResolvedValue({ success: false, error: 'SMTP unavailable' });
+      const results = await runMaintenanceTasks();
+      expect(results.errors.some(e => e.includes('email'))).toBe(true);
+      expect(mockAdminHelper.getTableBuilder('borrowing_records').update).not.toHaveBeenCalledWith({ reminder_sent: true });
+    });
+
     it('transitions active overdue borrowings to OVERDUE status and sends urgent notices', async () => {
       const now = new Date();
       const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
@@ -156,6 +171,26 @@ describe('Notifications Service & Maintenance Tasks', () => {
           overdueDays: expect.any(Number),
         })
       );
+    });
+
+    it('releases the overdue notification claim when email delivery fails', async () => {
+      mockAdminHelper.setTableResponse('system_settings', []);
+      mockAdminHelper.setTableResponse('borrowing_records', [{
+        id: 'borrow-overdue-failed', user_id: 'user-1', status: 'ACTIVE', overdue_notified: false,
+        due_date: new Date(Date.now() - 86400000).toISOString(), reminder_sent: true,
+        profiles: { full_name: 'Student', email: 'student@school.edu' },
+        book_copy: { book_id: 'book-1', book: { title: 'Book', author: null, cover_url: null } },
+      }]);
+      mockAdminHelper.setTableResponse('reservations', []);
+      vi.mocked(sendOverdueEmail).mockResolvedValue({ success: false, error: 'SMTP unavailable' });
+
+      const results = await runMaintenanceTasks();
+
+      expect(results.overdueTagged).toBe(0);
+      expect(results.errors).toContain('Overdue email failed; the notification will be retried.');
+      expect(mockAdminHelper.getTableBuilder('borrowing_records').update).toHaveBeenCalledWith({
+        overdue_notified: false, updated_at: expect.any(String),
+      });
     });
 
     it('does not re-tag or re-notify borrowings that are already in OVERDUE status', async () => {
