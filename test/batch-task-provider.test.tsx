@@ -56,6 +56,21 @@ it('polls an unfinished job and stops polling once it finishes', async () => {
 
 
 
+it('shows provider waiting time instead of an active spinner and wakes when the retry is due', async () => {
+  vi.setSystemTime(new Date('2026-11-13T03:30:00Z'));
+  jobs = [{ id: 'job1', label: 'ISBN import', items: [{ ...item, status: 'retry', next_attempt_at: '2026-11-13T03:30:06Z', cover_status: 'complete' }] }];
+  await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
+  expect(host.textContent).toContain('Waiting for provider');
+  expect(host.textContent).toContain('Manila time');
+  expect(host.querySelector('.animate-spin')).toBeNull();
+  const wakes = () => fetchMock.mock.calls.filter(([url]) => url === '/api/catalog/import-jobs/process').length;
+  const before = wakes();
+  await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+  expect(host.textContent).not.toContain('Waiting for provider');
+  expect(host.textContent).toContain('Catalog import in progress');
+  expect(wakes()).toBeGreaterThan(before);
+});
+
 it('sends retries to the server without importing books again in the browser', async () => {
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
   await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Expand import details"]')!.click());

@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback, startTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, AlertCircle, X, ChevronUp, ChevronDown, ListPlus } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Clock, X, ChevronUp, ChevronDown, ListPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 
@@ -50,6 +50,7 @@ export function useBatchTask() {
 }
 
 export function BatchTaskProvider({ children }: { children: ReactNode }) {
+  const [now, setNow] = useState(Date.now);
   const router = useRouter();
   const { role, profile } = usePreferences();
   const canManageImports = (role === "super_admin" || role === "librarian")
@@ -119,20 +120,24 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
   }, [refreshJobs, canManageImports]);
 
   const hasActiveJobs = canManageImports && jobs.some(activeJob);
+  const hasReadyItems = canManageImports && jobs.some(job => job.items.some(item => item.status === "queued" || item.status === "retry" && new Date(item.next_attempt_at || 0).getTime() <= now));
   useEffect(() => {
     if (!hasActiveJobs) return;
     void wakeWorker();
-    const timer = setInterval(() => { void refreshJobs(); }, 3000);
+    const timer = setInterval(() => { setNow(Date.now()); void refreshJobs(); }, 3000);
     const resume = () => { void refreshJobs(); void wakeWorker(); };
     window.addEventListener("focus", resume);
     return () => { clearInterval(timer); window.removeEventListener("focus", resume); };
-  }, [hasActiveJobs, refreshJobs, wakeWorker]);
+  }, [hasActiveJobs, hasReadyItems, refreshJobs, wakeWorker]);
 
   const job = canManageImports ? (jobs.find(candidate => candidate.id === selectedId && (candidate.id !== dismissedId || activeJob(candidate)))
     || jobs.find(activeJob)
     || (jobs[0]?.id !== dismissedId ? jobs[0] : undefined)) : undefined;
   const items = job?.items || [];
   const processing = !!job && activeJob(job);
+  const activeItems = items.filter(isActive);
+  const waiting = activeItems.length > 0 && activeItems.every(item => item.status === "retry" && new Date(item.next_attempt_at || 0).getTime() > now);
+  const nextRetry = waiting ? new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Math.min(...activeItems.map(item => new Date(item.next_attempt_at!).getTime()))) : null;
   const completeCount = items.filter(item => item.status === "complete" && !needsReview(item)).length;
   const reviewCount = items.filter(needsReview).length;
   const failedCount = items.filter(item => item.status === "failed").length;
@@ -189,11 +194,11 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
             <div className="p-4 flex items-center justify-between gap-3">
               <button type="button" aria-label={isExpanded ? "Collapse import details" : "Expand import details"} aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-3 text-left min-w-0 flex-1 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                 <span className={cn("h-10 w-10 rounded-2xl flex items-center justify-center shrink-0", processing ? "bg-primary/10 text-primary" : warning ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400")}>
-                  {processing ? <Loader2 className="h-5 w-5 animate-spin" /> : warning ? <AlertCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                  {waiting ? <Clock className="h-5 w-5" /> : processing ? <Loader2 className="h-5 w-5 animate-spin" /> : warning ? <AlertCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold">{processing ? "Catalog import in progress" : warning ? "Catalog import needs attention" : "Catalog import complete"}</span>
-                  <span role="status" className="block text-xs text-muted-foreground mt-0.5">{processing ? `${isbnProgress.current} of ${isbnProgress.total} finished` : `${completeCount} complete · ${reviewCount} need review · ${failedCount} failed`}</span>
+                  <span className="block text-sm font-bold">{waiting ? "Waiting for provider" : processing ? "Catalog import in progress" : warning ? "Catalog import needs attention" : "Catalog import complete"}</span>
+                  <span role="status" className="block text-xs text-muted-foreground mt-0.5">{waiting ? `Next retry: ${nextRetry} · Manila time` : processing ? `${isbnProgress.current} of ${isbnProgress.total} finished` : `${completeCount} complete · ${reviewCount} need review · ${failedCount} failed`}</span>
                 </span>
                 {isExpanded ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronUp className="h-4 w-4 shrink-0" />}
               </button>
