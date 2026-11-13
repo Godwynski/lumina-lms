@@ -2,7 +2,8 @@ export interface ISBNBook {
   isbn: string; title: string; author: string; cover_url: string; tags: string[];
   description: string; published_year: number | null; dewey_decimal: string;
 }
-type LookupResult = { success: true; book: ISBNBook } | { success: false; reason: 'invalid' | 'not_found' | 'unavailable'; error: string };
+export type LookupResult = { success: true; book: ISBNBook; transient?: boolean; retryAfterMs?: number; covers?: string[] }
+  | { success: false; reason: 'invalid' | 'not_found' | 'unavailable'; error: string; retryAfterMs?: number };
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const array = (value: unknown): unknown[] => Array.isArray(value) ? value : [];
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof object(value).value === 'string' ? String(object(value).value).trim() : '';
@@ -27,16 +28,36 @@ function year(value: unknown): number | null {
 function coverUrl(value: unknown): string {
   try { const url = new URL(text(value)); if (!['http:', 'https:'].includes(url.protocol)) return ''; url.protocol = 'https:'; return url.toString(); } catch { return ''; }
 }
+function isbn13(value: string): string {
+  const isbn = value.replace(/[\s-]/g, '').toUpperCase();
+  if (!/^\d{9}[\dX]$/.test(isbn)) return isbn;
+  const prefix = `978${isbn.slice(0, 9)}`;
+  const sum = [...prefix].reduce((total, digit, index) => total + Number(digit) * (index % 2 ? 3 : 1), 0);
+  return `${prefix}${(10 - sum % 10) % 10}`;
+}
 export async function lookupISBN(input: string): Promise<LookupResult> {
   const isbn = input.replace(/[\s-]/g, '').toUpperCase();
   if (!/^(?:\d{9}[\dX]|\d{13})$/.test(isbn)) return { success: false, reason: 'invalid', error: 'Enter a complete ISBN-10 or ISBN-13.' };
   let unavailable = false;
+  let transient = false;
+  let retryAfterMs: number | undefined;
   const read = async (url: string) => {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(3000), cache: 'no-store' });
-      if (!response.ok) { unavailable = true; return {}; }
+      if (!response.ok) {
+        unavailable ||= response.status !== 404;
+        if (response.status === 429 || response.status >= 500) {
+          transient = true;
+          const retryAfter = response.headers.get('retry-after')?.trim();
+          if (retryAfter) {
+            const delay = /^\d+(?:\.\d+)?$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
+            if (Number.isFinite(delay)) retryAfterMs = Math.max(retryAfterMs ?? 0, delay, 0);
+          }
+        }
+        return {};
+      }
       return object(await response.json());
-    } catch { unavailable = true; return {}; }
+    } catch { unavailable = true; transient = true; return {}; }
   };
   const googleUrl = new URL('https://www.googleapis.com/books/v1/volumes');
   googleUrl.searchParams.set('q', `isbn:${isbn}`);
@@ -44,12 +65,21 @@ export async function lookupISBN(input: string): Promise<LookupResult> {
   const [google, library] = await Promise.all([
     read(googleUrl.toString()), read(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`),
   ]);
-  const g = object(object(array(google.items)[0]).volumeInfo);
+  const g = array(google.items).map(item => object(object(item).volumeInfo)).find(info => {
+    const identifiers = array(info.industryIdentifiers).map(item => text(object(item).identifier)).filter(Boolean);
+    // Older provider responses may omit identifiers entirely.
+    return !identifiers.length || identifiers.some(identifier => isbn13(identifier) === isbn13(isbn));
+  }) ?? {};
   const o = object(library[`ISBN:${isbn}`]);
-  const googleImages = object(g.imageLinks), covers = object(o.cover);
+  const googleImages = object(g.imageLinks), libraryCovers = object(o.cover);
+  const covers = [...new Set([
+    googleImages.extraLarge, googleImages.large, googleImages.medium, googleImages.thumbnail, googleImages.smallThumbnail,
+    libraryCovers.large, libraryCovers.medium, libraryCovers.small,
+    `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`,
+  ].map(coverUrl).filter(Boolean))];
   const book: ISBNBook = {
     isbn, title: text(g.title) || text(o.title), author: strings(g.authors).join(', ') || names(o.authors).join(', '),
-    cover_url: coverUrl(googleImages.extraLarge || googleImages.large || googleImages.thumbnail || googleImages.smallThumbnail) || coverUrl(covers.large || covers.medium || covers.small) || `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`,
+    cover_url: covers[0],
     tags: [...new Set([...strings(g.categories), ...names(o.subjects)])],
     description: description(g.description) || description(o.description) || description(o.notes),
     published_year: year(g.publishedDate) || year(o.publish_date),
@@ -77,8 +107,9 @@ export async function lookupISBN(input: string): Promise<LookupResult> {
       book.author = authors.map(a => text(a.name)).filter(Boolean).join(', ');
     }
   }
-  if (book.title) return { success: true, book };
+  const retry = retryAfterMs === undefined ? {} : { retryAfterMs };
+  if (book.title) return { success: true, book, covers, ...(transient ? { transient: true, ...retry } : {}) };
   return unavailable
-    ? { success: false, reason: 'unavailable', error: 'Online book lookup is temporarily unavailable. Retry shortly or enter the details manually.' }
+    ? { success: false, reason: 'unavailable', error: 'Online book lookup is temporarily unavailable. Retry shortly or enter the details manually.', ...retry }
     : { success: false, reason: 'not_found', error: 'No online details found for this ISBN. You can enter the book manually.' };
 }

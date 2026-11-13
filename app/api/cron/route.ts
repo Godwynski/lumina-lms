@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { runMaintenanceTasks } from '@/lib/notifications';
 import { safeCompare } from '@/lib/server-utils';
+import { scheduleCatalogImport } from '@/lib/catalog-import-scheduler';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 10; // 10s maximum execution ceiling on Vercel Hobby plan (expandable to 60s on Pro)
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   // Vercel Cron sends an Authorization header with a Bearer token matching CRON_SECRET
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    scheduleCatalogImport();
     const results = await runMaintenanceTasks();
     return NextResponse.json({ success: true, results });
   } catch (error: unknown) {

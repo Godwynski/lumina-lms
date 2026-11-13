@@ -1,8 +1,9 @@
 'use server';
 
-import { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { fetchImage } from '@/lib/fetch-image';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { enqueueCatalogEnrichment, type EnrichmentBook } from '@/lib/catalog-import-worker';
+import { scheduleCatalogImport } from '@/lib/catalog-import-scheduler';
 import { logAuditActivity } from '@/lib/audit';
 import { revalidateTag } from 'next/cache';
 import { assertStaffCatalogAccess } from './auth';
@@ -33,54 +34,6 @@ export interface GoogleOrOpenLibraryBookDetails {
   description: string | null;
   dewey_decimal: string | null;
   tags: string[];
-}
-
-/**
- * Downloads a remote book cover image, converts it to WebP format, and uploads to Supabase storage.
- */
-async function uploadCoverFromUrl(supabase: SupabaseClient, url: string): Promise<string | null> {
-  if (!url) return null;
-  try {
-    let { buffer } = await fetchImage(url);
-
-    // Convert to WebP using Sharp (dynamically imported to prevent serverless module resolution issues)
-    try {
-      const sharp = (await import("sharp")).default;
-      buffer = await sharp(buffer)
-        .webp({ quality: 85 })
-        .toBuffer();
-    } catch (err) {
-      logger.error('catalog', 'Sharp conversion failed, uploading raw buffer', { error: err });
-    }
-
-    const crypto = await import("crypto");
-    const uuid = crypto.randomUUID();
-    const filename = `${uuid}.webp`;
-
-    const { error: uploadError } = await supabase
-      .storage
-      .from('book-covers')
-      .upload(filename, buffer, {
-        contentType: "image/webp",
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (uploadError) {
-      logger.error('catalog', `Supabase cover upload failed: ${uploadError.message}`);
-      return null;
-    }
-
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('book-covers')
-      .getPublicUrl(filename);
-
-    return publicUrl;
-  } catch (error) {
-    logger.error('catalog', `Failed to upload cover from URL: ${url}`, { error });
-    return null;
-  }
 }
 
 /**
@@ -126,11 +79,11 @@ export async function batchImportBooks(
   }
 
   // Every existing book, page by page, so the duplicate check also sees books past the first 1,000.
-  const existingBooks: { id: string; isbn: string | null; title: string | null; author: string | null }[] = [];
+  const existingBooks: { id: string; isbn: string | null; title: string | null; author: string | null; cover_url?: string | null }[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('books')
-      .select('id, isbn, title, author')
+      .select('id, isbn, title, author, cover_url')
       .range(from, from + PAGE_SIZE - 1);
     if (error) {
       throw new Error(`Failed to perform duplicate check database prep: ${error.message}`);
@@ -162,6 +115,8 @@ export async function batchImportBooks(
   let duplicateCount = 0;
   const newBooks: { row: string; key: string; copies: number; insert: Record<string, unknown> }[] = [];
   const copiesForExisting: { book_id: string; status: string }[] = [];
+  const enrichmentBooks = new Map<string, EnrichmentBook>();
+  const existingById = new Map(existingBooks.map(book => [book.id, book]));
 
   for (let i = 0; i < books.length; i++) {
     const row = books[i];
@@ -185,6 +140,15 @@ export async function batchImportBooks(
 
     const match = (cleanIsbn ? isbnMap.get(cleanIsbn) : undefined) ?? titleAuthorMap.get(key);
     if (match !== undefined) {
+      if (typeof match === 'string') {
+        const existing = existingById.get(match);
+        enrichmentBooks.set(match, {
+          id: match, isbn: existing?.isbn || isbn || null, title: existing?.title || title,
+          cover_url: row.cover_url || enrichmentBooks.get(match)?.cover_url || existing?.cover_url || null,
+        });
+      } else if (row.cover_url && !newBooks[match].insert.cover_url) {
+        newBooks[match].insert.cover_url = row.cover_url;
+      }
       duplicateCount++;
       const reason = cleanIsbn && isbnMap.has(cleanIsbn) ? `matching ISBN (${isbn})` : `matching Title & Author ("${title}" by ${author})`;
       if (!options.addCopiesToDuplicates || copies === 0) {
@@ -245,7 +209,7 @@ export async function batchImportBooks(
     const { data: inserted, error: insertError } = await supabase
       .from('books')
       .insert(newBooks.map(b => b.insert))
-      .select('id, title, author');
+      .select('id, title, author, isbn, cover_url');
     if (insertError) throw new Error(`Import failed, no books were added: ${insertError.message}`);
 
     const idByKey = new Map((inserted ?? []).map((b: { id: string; title: string; author: string }) => [titleKey(b.title, b.author), b.id]));
@@ -253,6 +217,7 @@ export async function batchImportBooks(
       const id = idByKey.get(b.key);
       if (!id) continue;
       importedCount++;
+      enrichmentBooks.set(id, { id, isbn: b.insert.isbn as string | null, title: String(b.insert.title), cover_url: b.insert.cover_url as string | null });
       for (let c = 0; c < b.copies; c++) copyRows.push({ book_id: id, status: 'AVAILABLE' });
       logs.push(`[${b.row}] Imported "${b.insert.title}" by ${b.insert.author} (${b.copies} copies).`);
     }
@@ -279,6 +244,19 @@ export async function batchImportBooks(
     { rows: books.length, imported: importedCount, copiesAdded: copiesAddedCount, duplicates: duplicateCount, addCopiesToDuplicates: Boolean(options.addCopiesToDuplicates) }
   );
 
+  let enrichmentJobId: string | undefined;
+  if (enrichmentBooks.size) {
+    try {
+      enrichmentJobId = await enqueueCatalogEnrichment([...enrichmentBooks.values()], authData?.user?.id || null) || undefined;
+      if (enrichmentJobId) scheduleCatalogImport();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown queue error';
+      logs.push(`Books saved, but metadata and cover enrichment could not be started: ${message}`);
+      logger.warn('catalog', 'Batch import enrichment could not be started', { error });
+    }
+  }
+
+  revalidateTag('public-books', 'max');
   revalidateTag('catalog', 'max');
   revalidateTag('books', 'max');
 
@@ -287,183 +265,31 @@ export async function batchImportBooks(
     imported: importedCount,
     copiesAdded: copiesAddedCount,
     duplicates: duplicateCount,
+    ...(enrichmentJobId ? { enrichmentJobId } : {}),
     logs
   };
 }
 
-/**
- * Searches a single ISBN from Google Books and Open Library.
- * If found, downloads and compresses its cover, inserts the book, creates 1 copy, and returns details.
- */
+/** Queues a single ISBN import; metadata, cover and inventory writes run in the durable worker. */
 export async function lookupAndImportISBN(isbn: string) {
   const supabase = await assertStaffCatalogAccess();
-  const cleanIsbn = isbn.trim().replace(/[- ]/g, '');
-
-  if (!cleanIsbn) {
+  const cleanIsbn = isbn.replace(/[\s-]/g, '').toUpperCase();
+  if (!/^(?:\d{9}[\dX]|\d{13})$/.test(cleanIsbn)) {
     return { success: false, isbn, error: 'Invalid ISBN number provided' };
   }
 
-  // 1. Check if ISBN already exists in the database
-  const { data: existingBook, error: checkError } = await supabase
-    .from('books')
-    .select('id, title, author')
-    .eq('isbn', cleanIsbn)
-    .maybeSingle();
-
-  if (checkError) {
-    return { success: false, isbn, error: `Database duplicate lookup failed: ${checkError.message}` };
-  }
-
-  if (existingBook) {
-    // If the book already exists, just add 1 copy
-    const { error: copyError } = await supabase
-      .from('book_copies')
-      .insert([{ book_id: existingBook.id, status: 'AVAILABLE' }]);
-
-    if (copyError) {
-      return { success: false, isbn, error: `Book already exists, but failed to create new copy: ${copyError.message}` };
-    }
-
-    revalidateTag('catalog', 'max');
-    revalidateTag('books', 'max');
-
-    return { 
-      success: true, 
-      isbn, 
-      status: 'exists', 
-      bookId: existingBook.id, 
-      title: existingBook.title, 
-      author: existingBook.author,
-      message: `Book already exists ("${existingBook.title}"). Added 1 new copy to inventory.`
-    };
-  }
-
-  // 2. Fetch from Google Books API
-  let bookDetails: GoogleOrOpenLibraryBookDetails | null = null;
-  let externalCoverUrl: string | null = null;
-  let categoryName: string | null = null;
-
+  const jobId = crypto.randomUUID();
   try {
-    const googleBooksRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
-    if (googleBooksRes.ok) {
-      const data = await googleBooksRes.json();
-      if (data.items && data.items.length > 0) {
-        const info = data.items[0].volumeInfo;
-        bookDetails = {
-          title: info.title,
-          author: info.authors ? info.authors.join(', ') : 'Unknown Author',
-          publisher: info.publisher || null,
-          published_year: info.publishedDate ? parseInt(info.publishedDate.split('-')[0], 10) : null,
-          description: info.description || null,
-          dewey_decimal: info.industryIdentifiers?.find((id: { type: string; identifier: string }) => id.type === 'OTHER')?.identifier || null,
-          tags: info.categories || []
-        };
-        categoryName = info.categories && info.categories.length > 0 ? info.categories[0] : null;
-        if (info.imageLinks) {
-          externalCoverUrl = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || null;
-        }
-      }
-    }
-  } catch (err) {
-    logger.warn('catalog', `Google Books API check failed for ISBN: ${cleanIsbn}`, { error: err });
+    const { data: authData } = await supabase.auth.getUser();
+    const { error } = await createAdminClient().rpc('catalog_import_enqueue', {
+      p_job: jobId, p_actor: authData?.user?.id || null, p_label: 'ISBN import',
+      p_items: [{ mode: 'create', isbn: cleanIsbn, requested_copies: 1 }],
+    });
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    return { success: false, isbn: cleanIsbn, error: `Could not queue ISBN import: ${error instanceof Error ? error.message : 'Unknown queue error'}` };
   }
-
-  // 3. Fallback to Open Library API
-  if (!bookDetails) {
-    try {
-      const openLibRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
-      if (openLibRes.ok) {
-        const data = await openLibRes.json();
-        const bookKey = `ISBN:${cleanIsbn}`;
-        if (data[bookKey]) {
-          const info = data[bookKey];
-          bookDetails = {
-            title: info.title,
-            author: info.authors ? (info.authors as Array<{ name: string }>).map((a) => a.name).join(', ') : 'Unknown Author',
-            publisher: info.publishers ? (info.publishers as Array<{ name: string }>).map((p) => p.name).join(', ') : null,
-            published_year: info.published_date ? parseInt(info.published_date.split(' ').pop() || '', 10) : null,
-            description: info.notes || null,
-            dewey_decimal: null,
-            tags: info.subjects ? (info.subjects as Array<{ name: string }>).map((s) => s.name) : []
-          };
-          if (info.subjects && info.subjects.length > 0) {
-            categoryName = info.subjects[0].name;
-          }
-          if (info.cover) {
-            externalCoverUrl = info.cover.large || info.cover.medium || info.cover.small || null;
-          }
-        }
-      }
-    } catch (err) {
-      logger.warn('catalog', `Open Library API check failed for ISBN: ${cleanIsbn}`, { error: err });
-    }
-  }
-
-  if (!bookDetails) {
-    return { success: false, isbn, error: 'Book metadata not found in any public APIs' };
-  }
-
-  // 4. Resolve or create category
-  let categoryId: string | null = null;
-  if (categoryName) {
-    try {
-      categoryId = await getOrCreateCategoryByName(supabase, categoryName);
-    } catch (catErr) {
-      logger.error('catalog', `Failed to create category during ISBN import: ${categoryName}`, { error: catErr });
-    }
-  }
-
-  // 5. Ingest cover image into Supabase Storage
-  let finalCoverUrl: string | null = null;
-  if (externalCoverUrl) {
-    finalCoverUrl = await uploadCoverFromUrl(supabase, externalCoverUrl);
-  }
-
-  // 6. Insert book record
-  const bookInsert = {
-    title: bookDetails.title,
-    author: bookDetails.author,
-    isbn: cleanIsbn,
-    category_id: categoryId,
-    description: bookDetails.description,
-    published_year: bookDetails.published_year,
-    cover_url: finalCoverUrl,
-    tags: bookDetails.tags,
-    dewey_decimal: bookDetails.dewey_decimal,
-    is_active: true
-  };
-
-  const { data: newBook, error: insertError } = await supabase
-    .from('books')
-    .insert([bookInsert])
-    .select()
-    .single();
-
-  if (insertError) {
-    return { success: false, isbn, error: `Failed to insert new book record: ${insertError.message}` };
-  }
-
-  // 7. Create 1 copy
-  const { error: copyError } = await supabase
-    .from('book_copies')
-    .insert([{ book_id: newBook.id, status: 'AVAILABLE' }]);
-
-  if (copyError) {
-    // Soft roll-back
-    await supabase.from('books').delete().eq('id', newBook.id);
-    return { success: false, isbn, error: `Book record was created, but copy generation failed: ${copyError.message}. Rolled back.` };
-  }
-
-  revalidateTag('catalog', 'max');
-  revalidateTag('books', 'max');
-
-  return {
-    success: true,
-    isbn,
-    status: 'imported',
-    bookId: newBook.id,
-    title: newBook.title,
-    author: newBook.author,
-    message: `Successfully imported "${newBook.title}" by ${newBook.author} with 1 copy.`
-  };
+  try { scheduleCatalogImport(); }
+  catch (error) { logger.warn('catalog', 'Saved ISBN import could not be started', { error }); }
+  return { success: true, status: 'queued', isbn: cleanIsbn, jobId, message: 'ISBN import queued. Metadata and cover progress can be reviewed in batch tasks.' };
 }

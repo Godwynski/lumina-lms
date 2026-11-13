@@ -26,6 +26,16 @@ describe('fetchImage (C6)', () => {
   });
 
   it.each([
+    ['45', 45000],
+    [new Date(2030, 0, 1).toUTCString(), new Date(2030, 0, 1).getTime() - new Date(2029, 11, 31, 23, 59).getTime()],
+  ])('exposes HTTP status and Retry-After %s to import retries', async (retryAfter, delay) => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(new Date(2029, 11, 31, 23, 59).getTime());
+    fetchMock.mockResolvedValueOnce(new Response(null, {status:429,headers:{'retry-after':retryAfter}}));
+    await expect(fetchImage('https://example.com/cover')).rejects.toMatchObject({status:429,retryAfterMs:delay});
+    clock.mockRestore();
+  });
+
+  it.each([
     ['http://example.com/a.png', 'HTTPS'],
     ['https://127.0.0.1/a.png', 'Restricted'],
     ['https://[::1]/a.png', 'Restricted'],

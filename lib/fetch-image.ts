@@ -20,7 +20,11 @@ function isBlockedAddress(address: string) {
 }
 
 /** Thrown with a message that is safe to show to the user. */
-export class ImageFetchError extends Error {}
+export class ImageFetchError extends Error {
+  constructor(message: string, public readonly status?: number, public readonly retryAfterMs?: number) {
+    super(message);
+  }
+}
 
 /**
  * Downloads a remote image for server-side processing. Only public HTTPS hosts, up to three validated redirects,
@@ -50,7 +54,12 @@ export async function fetchImage(url: string): Promise<{ buffer: Buffer; content
     try { currentUrl = new URL(location, parsed).toString(); }
     catch { throw new ImageFetchError("Invalid image redirect URL."); }
   }
-  if (!res.ok || !res.body) throw new ImageFetchError(`Could not download the image (HTTP ${res.status}).`);
+  if (!res.ok || !res.body) {
+    const retryAfter = res.headers.get("retry-after")?.trim();
+    const delay = retryAfter ? (/^\d+(?:\.\d+)?$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now()) : NaN;
+    await res.body?.cancel();
+    throw new ImageFetchError(`Could not download the image (HTTP ${res.status}).`, res.status, Number.isFinite(delay) ? Math.max(0, delay) : undefined);
+  }
 
   const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   // SVG is excluded: it can carry scripts and is parsed by librsvg inside sharp.

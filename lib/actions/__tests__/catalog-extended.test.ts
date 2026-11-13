@@ -11,6 +11,9 @@ import { getPublicBookById } from '../public-catalog';
 import { getBookAvailabilityStatus } from '../reservations';
 import { getMe } from '@/lib/auth-helpers';
 import { revalidateTag } from 'next/cache';
+import { enqueueCatalogEnrichment } from '@/lib/catalog-import-worker';
+import { scheduleCatalogImport } from '@/lib/catalog-import-scheduler';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/mocks/supabase';
 import type { ProfileData, UserRole } from '@/lib/types';
 
@@ -45,12 +48,9 @@ vi.mock('../reservations', () => ({
   getBookAvailabilityStatus: vi.fn(),
 }));
 
-vi.mock('sharp', () => ({
-  default: vi.fn(() => ({
-    webp: vi.fn().mockReturnThis(),
-    toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake-webp-bytes')),
-  })),
-}));
+vi.mock('@/lib/catalog-import-worker', () => ({ enqueueCatalogEnrichment: vi.fn() }));
+vi.mock('@/lib/catalog-import-scheduler', () => ({ scheduleCatalogImport: vi.fn() }));
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: vi.fn() }));
 
 describe('Catalog Extended Server Actions', () => {
   let mockClientHelper: MockSupabaseClientHelper;
@@ -108,6 +108,9 @@ describe('Catalog Extended Server Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockClientHelper = createMockSupabaseClient();
+    vi.mocked(createAdminClient).mockReturnValue(mockClientHelper.client as unknown as ReturnType<typeof createAdminClient>);
+    vi.mocked(enqueueCatalogEnrichment).mockReset().mockResolvedValue('enrichment-job');
+    mockClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'staff-1' } }, error: null });
     vi.mocked(getMe).mockResolvedValue(
       mockStaffUser() as unknown as Awaited<ReturnType<typeof getMe>>
     );
@@ -165,6 +168,34 @@ describe('Catalog Extended Server Actions', () => {
   });
 
   describe('batchImportBooks', () => {
+    it('enqueues all involved saved books once without adding copies for duplicates', async () => {
+      mockClientHelper.setTableResponse('books', [{ id: 'existing', isbn: '9780201633610', title: 'Existing', author: 'Author', cover_url: null }]);
+      const booksBuilder = mockClientHelper.getTableBuilder('books');
+      booksBuilder.insert.mockReturnValueOnce({ select: vi.fn().mockResolvedValueOnce({ data: [{ id: 'new', title: 'New', author: 'Author', isbn: null }], error: null }) } as unknown as ReturnType<typeof booksBuilder.insert>);
+      const result = await batchImportBooks([
+        { title: 'Existing', author: 'Author', isbn: '9780201633610', cover_url: 'https://covers.test/existing.jpg', stock: 4 },
+        { title: 'Existing', author: 'Author', isbn: '9780201633610', stock: 4 },
+        { title: 'New', author: 'Author', cover_url: 'https://covers.test/new.jpg', stock: 2 },
+      ]);
+      expect(result).toMatchObject({ success: true, imported: 1, copiesAdded: 2, duplicates: 2, enrichmentJobId: 'enrichment-job' });
+      expect(enqueueCatalogEnrichment).toHaveBeenCalledWith([
+        { id: 'existing', isbn: '9780201633610', title: 'Existing', cover_url: 'https://covers.test/existing.jpg' },
+        { id: 'new', isbn: null, title: 'New', cover_url: 'https://covers.test/new.jpg' },
+      ], 'staff-1');
+      expect(scheduleCatalogImport).toHaveBeenCalledOnce();
+      expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
+    });
+
+    it('keeps saved rows successful and reports an enrichment enqueue failure', async () => {
+      mockClientHelper.setTableResponse('books', [{ id: 'existing', isbn: null, title: 'Existing', author: 'Author' }]);
+      vi.mocked(enqueueCatalogEnrichment).mockRejectedValueOnce(new Error('Queue unavailable'));
+      const result = await batchImportBooks([{ title: 'Existing', author: 'Author' }]);
+      expect(result.success).toBe(true);
+      expect(result.logs.join(' ')).toContain('Queue unavailable');
+      expect(result.enrichmentJobId).toBeUndefined();
+      expect(scheduleCatalogImport).not.toHaveBeenCalled();
+    });
+
     it('skips duplicate by matching ISBN by default and adds copies when addCopiesToDuplicates is true', async () => {
       const existingBooks = [
         { id: 'existing-book-1', isbn: '9780131103627', title: 'The C Programming Language', author: 'Dennis Ritchie' },
@@ -382,223 +413,29 @@ describe('Catalog Extended Server Actions', () => {
   });
 
   describe('lookupAndImportISBN', () => {
-    it('returns error if ISBN is empty or whitespace', async () => {
-      const result = await lookupAndImportISBN('   ');
-      expect(result).toEqual({
-        success: false,
-        isbn: '   ',
-        error: 'Invalid ISBN number provided',
-      });
+    it.each(['   ', '123', '978BADISBN0000'])('rejects malformed ISBN %s without enqueuing', async isbn => {
+      expect(await lookupAndImportISBN(isbn)).toEqual({ success: false, isbn, error: 'Invalid ISBN number provided' });
+      expect(mockClientHelper.rpc).not.toHaveBeenCalled();
+      expect(scheduleCatalogImport).not.toHaveBeenCalled();
     });
 
-    it('adds copy if book with ISBN already exists in the database', async () => {
-      const existingBook = {
-        id: 'existing-book-1',
-        title: 'Design Patterns',
-        author: 'Gang of Four',
-      };
-      mockClientHelper.setTableResponse('books', existingBook);
-
+    it('queues one requested copy without fetching metadata or changing inventory inline', async () => {
+      const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
       const result = await lookupAndImportISBN('978-0201633610');
-
-      expect(result).toEqual({
-        success: true,
-        isbn: '978-0201633610',
-        status: 'exists',
-        bookId: 'existing-book-1',
-        title: 'Design Patterns',
-        author: 'Gang of Four',
-        message: expect.stringContaining('Book already exists'),
+      expect(result).toMatchObject({ success: true, status: 'queued', isbn: '9780201633610', jobId: expect.any(String) });
+      expect(mockClientHelper.rpc).toHaveBeenCalledWith('catalog_import_enqueue', {
+        p_job: result.jobId, p_actor: 'staff-1', p_label: expect.any(String),
+        p_items: [{ mode: 'create', isbn: '9780201633610', requested_copies: 1 }],
       });
-
-      const copyBuilder = mockClientHelper.getTableBuilder('book_copies');
-      expect(copyBuilder.insert).toHaveBeenCalledWith([
-        { book_id: 'existing-book-1', status: 'AVAILABLE' },
-      ]);
-      expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
+      expect(scheduleCatalogImport).toHaveBeenCalledOnce();
+      expect(mockClientHelper.from).not.toHaveBeenCalled();
+      expect(fetcher).not.toHaveBeenCalled();
     });
 
-    it('fetches metadata from Google Books when not in database, creates book and copy', async () => {
-      // Books table has no existing book with this ISBN
-      mockClientHelper.setTableResponse('books', null);
-
-      const mockGoogleResponse = {
-        items: [
-          {
-            volumeInfo: {
-              title: 'Refactoring Ruby Edition',
-              authors: ['Jay Fields', 'Martin Fowler'],
-              publisher: 'Addison-Wesley',
-              publishedDate: '2009-10-15',
-              description: 'Refactoring principles in Ruby',
-              categories: ['Programming'],
-              imageLinks: {
-                thumbnail: 'http://books.google.com/ruby.jpg',
-              },
-            },
-          },
-        ],
-      };
-
-      vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-        if (url.includes('googleapis.com')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => mockGoogleResponse,
-          });
-        }
-        if (url.startsWith('http://books.google.com/ruby.jpg')) {
-          return Promise.resolve({
-            ok: true,
-            arrayBuffer: async () => new ArrayBuffer(8),
-          });
-        }
-        return Promise.reject(new Error('Unknown url'));
-      }));
-
-      // Mock category lookup
-      mockClientHelper.setTableResponse('categories', { id: 'cat-prog' });
-
-      // Mock book insertion
-      const booksBuilder = mockClientHelper.getTableBuilder('books');
-      booksBuilder.single.mockResolvedValueOnce({
-        data: {
-          id: 'imported-book-id',
-          title: 'Refactoring Ruby Edition',
-          author: 'Jay Fields, Martin Fowler',
-        },
-        error: null,
-      });
-
-      const result = await lookupAndImportISBN('9780321984135');
-
-      expect(result).toEqual({
-        success: true,
-        isbn: '9780321984135',
-        status: 'imported',
-        bookId: 'imported-book-id',
-        title: 'Refactoring Ruby Edition',
-        author: 'Jay Fields, Martin Fowler',
-        message: expect.stringContaining('Successfully imported'),
-      });
-      expect(revalidateTag).toHaveBeenCalledWith('catalog', 'max');
-    });
-
-    it('falls back to Open Library API if Google Books yields no items', async () => {
-      mockClientHelper.setTableResponse('books', null);
-
-      const mockOpenLibResponse = {
-        'ISBN:9781449331818': {
-          title: 'Learning JavaScript Design Patterns',
-          authors: [{ name: 'Addy Osmani' }],
-          publishers: [{ name: "O'Reilly Media" }],
-          published_date: '2012',
-          notes: 'A JavaScript patterns guide',
-          subjects: [{ name: 'JavaScript' }],
-        },
-      };
-
-      vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-        if (url.includes('googleapis.com')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({ items: [] }),
-          });
-        }
-        if (url.includes('openlibrary.org')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => mockOpenLibResponse,
-          });
-        }
-        return Promise.reject(new Error('Unknown url'));
-      }));
-
-      mockClientHelper.setTableResponse('categories', { id: 'cat-js' });
-      const booksBuilder = mockClientHelper.getTableBuilder('books');
-      booksBuilder.single.mockResolvedValueOnce({
-        data: {
-          id: 'openlib-book-id',
-          title: 'Learning JavaScript Design Patterns',
-          author: 'Addy Osmani',
-        },
-        error: null,
-      });
-
-      const result = await lookupAndImportISBN('9781449331818');
-
-      expect(result.success).toBe(true);
-      expect(result.status).toBe('imported');
-      expect(result.title).toBe('Learning JavaScript Design Patterns');
-      expect(result.author).toBe('Addy Osmani');
-    });
-
-    it('returns error if neither Google Books nor Open Library finds the ISBN', async () => {
-      mockClientHelper.setTableResponse('books', null);
-
-      vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-        if (url.includes('googleapis.com')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({ items: [] }),
-          });
-        }
-        if (url.includes('openlibrary.org')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({}),
-          });
-        }
-        return Promise.reject(new Error('Network error'));
-      }));
-
-      const result = await lookupAndImportISBN('0000000000000');
-
-      expect(result).toEqual({
-        success: false,
-        isbn: '0000000000000',
-        error: 'Book metadata not found in any public APIs',
-      });
-    });
-
-    it('rolls back newly inserted book if copy creation fails', async () => {
-      mockClientHelper.setTableResponse('books', null);
-
-      vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-        if (url.includes('googleapis.com')) {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({
-              items: [
-                {
-                  volumeInfo: {
-                    title: 'Failure Test Book',
-                    authors: ['Tester'],
-                  },
-                },
-              ],
-            }),
-          });
-        }
-        return Promise.reject(new Error('Error'));
-      }));
-
-      const booksBuilder = mockClientHelper.getTableBuilder('books');
-      booksBuilder.single.mockResolvedValueOnce({
-        data: { id: 'temp-book-id', title: 'Failure Test Book', author: 'Tester' },
-        error: null,
-      });
-
-      // Cause book_copies insert to fail
-      mockClientHelper.setTableResponse('book_copies', null, { message: 'Copy insert failed' });
-
-      const result = await lookupAndImportISBN('9789999999999');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Rolled back');
-      // Verifies delete was called to rollback
-      expect(booksBuilder.delete).toHaveBeenCalled();
-      expect(booksBuilder.eq).toHaveBeenCalledWith('id', 'temp-book-id');
+    it('returns enqueue failures without claiming the import succeeded', async () => {
+      mockClientHelper.setRpcResponse(null, { message: 'Queue unavailable' });
+      expect(await lookupAndImportISBN('9780201633610')).toMatchObject({ success: false, error: expect.stringContaining('Queue unavailable') });
+      expect(scheduleCatalogImport).not.toHaveBeenCalled();
     });
   });
 

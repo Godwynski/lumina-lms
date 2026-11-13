@@ -1,3 +1,5 @@
+import { scheduleCatalogImport } from '@/lib/catalog-import-scheduler';
+vi.mock('@/lib/catalog-import-scheduler', () => ({ scheduleCatalogImport: vi.fn() }));
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '@/app/api/cron/route';
 import { runMaintenanceTasks } from '@/lib/notifications';
@@ -135,6 +137,7 @@ describe('Cron Route & Timing-Safe Comparison Adversarial Verification', () => {
       expect(data.success).toBe(true);
       expect(data.results).toEqual(mockResults);
       expect(runMaintenanceTasks).toHaveBeenCalledTimes(1);
+      expect(scheduleCatalogImport).toHaveBeenCalledTimes(1);
     });
 
     it('returns 500 when runMaintenanceTasks throws an unexpected error', async () => {

@@ -1,3 +1,5 @@
+import { scheduleCatalogImport } from '@/lib/catalog-import-scheduler';
+vi.mock('@/lib/catalog-import-scheduler', () => ({ scheduleCatalogImport: vi.fn() }));
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as cronRoute from '@/app/api/cron/route';
 import { GET } from '@/app/api/cron/route';
@@ -26,8 +28,8 @@ describe('Challenger 1 Adversarial Suite: Cron & Crypto Hardening', () => {
       expect(cronRoute.dynamic).toBe('force-dynamic');
     });
 
-    it('exports maxDuration set to 10', () => {
-      expect(cronRoute.maxDuration).toBe(10);
+    it('allows sufficient time for queued import recovery', () => {
+      expect(cronRoute.maxDuration).toBe(60);
     });
   });
 
@@ -149,6 +151,7 @@ describe('Challenger 1 Adversarial Suite: Cron & Crypto Hardening', () => {
       const data = await res.json();
       expect(data).toEqual({ success: true, results: mockResult });
       expect(runMaintenanceTasks).toHaveBeenCalledTimes(1);
+      expect(scheduleCatalogImport).toHaveBeenCalledTimes(1);
     });
 
     it('masks database connection errors and passwords in 500 response', async () => {
