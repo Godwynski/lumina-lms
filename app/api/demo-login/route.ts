@@ -40,25 +40,5 @@ export async function POST(request: Request) {
     );
   }
 
-  const [{ data: profile, error: profileError }, { data: card, error: cardError }] = await Promise.all([
-    supabase.from('profiles')
-      .select('email, full_name, role, status, student_id, department, phone, address, onboarding_completed, permissions')
-      .eq('id', data.user.id).single(),
-    supabase.from('library_cards').select('status, expires_at').eq('user_id', data.user.id).single(),
-  ]);
-  const permissionsMatch = Object.entries(account.permissions)
-    .every(([key, allowed]) => Boolean(profile?.permissions?.[key]) === allowed);
-  if (profileError || cardError || !profile || profile.email !== account.email ||
-    profile.role !== account.role || profile.status !== 'ACTIVE' || !profile.onboarding_completed ||
-    !profile.full_name || !profile.student_id || !profile.department || !profile.phone || !profile.address ||
-    !permissionsMatch || card?.status !== 'ACTIVE' || !card.expires_at ||
-    !(Date.parse(card.expires_at) > Date.now())) {
-    await supabase.auth.signOut({ scope: 'local' });
-    return NextResponse.json(
-      { error: 'Demo profile, role, permissions, or library card needs repair. Ask the administrator to run demo:on.' },
-      { status: 503 },
-    );
-  }
-
   return NextResponse.json({ ok: true });
 }

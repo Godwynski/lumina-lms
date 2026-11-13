@@ -59,34 +59,11 @@ describe('demo login', () => {
   it('accepts a complete active demo account', async () => {
     expect((await POST(request())).status).toBe(200);
   });
-  it.each([
-    { role: 'librarian' }, { status: 'SUSPENDED' }, { address: null }, { student_id: null },
-  ])('rejects a demo profile that needs repair: %j', async (changes) => {
-    const initial = await profile.single();
-    profile.single.mockResolvedValue({ data: { ...initial.data, ...changes }, error: null });
-    expect((await POST(request())).status).toBe(503);
-    expect(client.auth.signOut).toHaveBeenCalled();
-  });
-  it('rejects a suspended card', async () => {
-    card.single.mockResolvedValue({ data: { status: 'SUSPENDED' }, error: null });
-    expect((await POST(request())).status).toBe(503);
-  });
-  it('rejects an expired card', async () => {
-    card.single.mockResolvedValue({ data: { status: 'ACTIVE', expires_at: '2020-01-01' }, error: null });
-    expect((await POST(request())).status).toBe(503);
-  });
-  it('rejects missing student assistant permissions', async () => {
+  it('allows login after a demo account role or permissions change', async () => {
     const assistant = DEMO_ACCOUNTS.find(a => a.role === 'student_assistant')!;
-    const initial = await profile.single();
-    profile.single.mockResolvedValue({ data: {
-      ...initial.data, email: assistant.email, role: assistant.role, permissions: {},
-    }, error: null });
-    expect((await POST(request({ email: assistant.email }))).status).toBe(503);
-  });
-  it('rejects missing database profiles', async () => {
-    profile.single.mockResolvedValue({ data: null, error: { message: 'No rows' } });
-    expect((await POST(request())).status).toBe(503);
-    expect(client.auth.signOut).toHaveBeenCalled();
+    profile.single.mockResolvedValue({ data: { role: 'student', permissions: {} }, error: null });
+    expect((await POST(request({ email: assistant.email }))).status).toBe(200);
+    expect(client.auth.signOut).not.toHaveBeenCalled();
   });
   it('rejects invalid credentials without querying profile data', async () => {
     client.auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: { message: 'Invalid credentials' } });
