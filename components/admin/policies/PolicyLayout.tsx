@@ -18,7 +18,7 @@ import {
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 import { cn } from "@/lib/utils";
 import { PolicyCommitModal } from "../PolicyCommitModal";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CategoryManagement } from "../CategoryManagement";
 import { PolicySimulationPanel } from "../PolicySimulationPanel";
 import { PolicyField } from "./PolicyField";
@@ -540,7 +540,6 @@ export function PolicyLayout({
       />
       <Dialog open={pendingCategory !== null} onOpenChange={(open) => { if (!open) setPendingCategory(null); }}>
         <DialogContent className="sm:max-w-[400px] border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
-          <DialogTitle className="sr-only">Unsaved changes</DialogTitle>
           <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
               <div className="h-11 w-11 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/10">
@@ -550,18 +549,18 @@ export function PolicyLayout({
                 Unsaved Changes
               </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold tracking-tight text-foreground">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="text-lg font-bold tracking-tight text-foreground">
                 {activeCategory === "broadcasts" && isAnnouncementDirty
                   ? "Unsaved Announcement Draft"
                   : "Unsaved Policy Changes"}
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground leading-relaxed font-medium">
                 {activeCategory === "broadcasts" && isAnnouncementDirty
                   ? "You have unsent announcement text in the broadcast fields. Moving to another section will discard your draft. Do you want to proceed?"
                   : "You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?"}
-              </p>
-            </div>
+              </DialogDescription>
+            </DialogHeader>
           </div>
 
           <div className="p-6 pt-0 flex gap-3">

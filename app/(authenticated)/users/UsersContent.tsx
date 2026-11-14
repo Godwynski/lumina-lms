@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -215,6 +216,9 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               <DialogContent className="sm:max-w-[400px]">
                 <DialogHeader>
                   <DialogTitle>Filter Users</DialogTitle>
+                  <DialogDescription>
+                    Filter the user directory by role, pending review, or archive status.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-2 py-4">
                   {visibleTabs.map((tab) => (

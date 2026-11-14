@@ -676,6 +676,21 @@ describe('Catalog & Books Server Actions', () => {
         holdExpiresAt: '2026-12-02T00:00:00Z',
         reservationId: 'res-1',
       });
+
+      // Archived book is hidden for students, visible to staff via fallback query, and propagates DB error
+      safeClientHelper.setTableResponse('books', null, null);
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      const studentArchived = await getBookPublicDetails('book-archived');
+      expect(studentArchived.book).toBeNull();
+
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+      const archivedBook = { id: 'book-archived', title: 'Archived Title' };
+      serverClientHelper.setTableResponse('books', archivedBook, null);
+      const staffArchived = await getBookPublicDetails('book-archived');
+      expect(staffArchived.book).toEqual(archivedBook);
+
+      serverClientHelper.setTableResponse('books', null, { message: 'Archived lookup error' });
+      await expect(getBookPublicDetails('book-archived')).rejects.toThrow('Archived lookup error');
     });
 
     it('getBookAdminDetails enforces staff access and normalizes active reservations onto copies', async () => {

@@ -296,6 +296,14 @@ describe('lib/notifications', () => {
       success: false,
       error: 'Bulk failed',
     });
+
+    mockCreateAdminClient.mockImplementationOnce(() => {
+      throw new Error('Admin client init error');
+    });
+    expect(await sendBulkNotifications(['u1'], { title: 'A', content: 'B' })).toEqual({
+      success: false,
+      error: 'Admin client init error',
+    });
     vi.restoreAllMocks();
   });
 
@@ -405,6 +413,152 @@ describe('lib/notifications', () => {
     expect(summary.reservationsExpired).toBe(0);
     expect(summary.errors.length).toBe(4);
     expect(summary.errors[3]).toContain('attendance rpc failed');
+  });
+
+  it('runMaintenanceTasks rolls back overdue_notified when email fails or notification throws, and skips already-claimed rows', async () => {
+    const dueSoonRow = {
+      id: 'br-due-fail',
+      user_id: 'u-due',
+      due_date: new Date(Date.now() + 12 * 3600 * 1000).toISOString(),
+      status: 'ACTIVE',
+      reminder_sent: false,
+      profiles: { full_name: 'Student One', email: 's1@sti.edu.ph' },
+      book_copy: { book_id: 'b1', book: { title: 'Clean Code', author: 'Robert Martin', cover_url: null } },
+    };
+
+    const overdueEmailFailRow = {
+      id: 'br-ov-email-fail',
+      user_id: 'u-ov-1',
+      due_date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      status: 'ACTIVE',
+      reminder_sent: true,
+      overdue_notified: false,
+      profiles: { full_name: 'Student Two', email: 's2@sti.edu.ph' },
+      book_copy: { book_id: 'b2', book: { title: 'Dune', author: 'Frank Herbert', cover_url: null } },
+    };
+
+    const overdueThrowRow = {
+      id: 'br-ov-throw',
+      user_id: 'u-ov-2',
+      due_date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      status: 'ACTIVE',
+      reminder_sent: true,
+      overdue_notified: false,
+      profiles: { full_name: 'Student Three', email: null },
+      book_copy: { book_id: 'b3', book: { title: 'SICP', author: null, cover_url: null } },
+    };
+
+    const overdueUnclaimedRow = {
+      id: 'br-ov-unclaimed',
+      user_id: 'u-ov-3',
+      due_date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      status: 'ACTIVE',
+      reminder_sent: true,
+      overdue_notified: false,
+      profiles: null,
+      book_copy: null,
+    };
+
+    const overdueAlreadyNotifiedRow = {
+      id: 'br-ov-done',
+      user_id: 'u-ov-4',
+      due_date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+      status: 'OVERDUE',
+      reminder_sent: true,
+      overdue_notified: true,
+      profiles: null,
+      book_copy: null,
+    };
+
+    const updatePayloads: Array<{ payload: Record<string, unknown>; id?: string }> = [];
+    let pendingPayload: Record<string, unknown> | null = null;
+    let borrowingSelectCall = 0;
+    let claimCount = 0;
+
+    const borrowingBuilder: Record<string, unknown> = {
+      select: vi.fn().mockImplementation(() => borrowingBuilder),
+      update: vi.fn().mockImplementation((p: Record<string, unknown>) => {
+        pendingPayload = p;
+        return borrowingBuilder;
+      }),
+      eq: vi.fn().mockImplementation((col: string, val: string) => {
+        if (col === 'id' && pendingPayload) {
+          updatePayloads.push({ payload: pendingPayload, id: val });
+          pendingPayload = null;
+        }
+        return borrowingBuilder;
+      }),
+      in: vi.fn().mockImplementation(() => borrowingBuilder),
+      lte: vi.fn().mockImplementation(() => borrowingBuilder),
+      gt: vi.fn().mockImplementation(() => borrowingBuilder),
+      lt: vi.fn().mockImplementation(() => borrowingBuilder),
+      maybeSingle: vi.fn().mockImplementation(async () => {
+        claimCount += 1;
+        if (claimCount === 1) return { data: { id: 'br-ov-email-fail' }, error: null };
+        if (claimCount === 2) return { data: { id: 'br-ov-throw' }, error: null };
+        return { data: null, error: null };
+      }),
+      then: (onfulfilled: (v: { data: unknown; error: unknown }) => unknown) => {
+        borrowingSelectCall++;
+        if (borrowingSelectCall === 1) {
+          return Promise.resolve({ data: [dueSoonRow], error: null }).then(onfulfilled);
+        }
+        if (borrowingSelectCall === 2) {
+          return Promise.resolve({
+            data: [overdueEmailFailRow, overdueThrowRow, overdueUnclaimedRow, overdueAlreadyNotifiedRow],
+            error: null,
+          }).then(onfulfilled);
+        }
+        return Promise.resolve({ data: null, error: null }).then(onfulfilled);
+      },
+    };
+
+    let notifInsertCount = 0;
+    const notificationsBuilder = {
+      insert: vi.fn().mockImplementation(async () => {
+        notifInsertCount += 1;
+        // 1st: dueSoon ok, 2nd: overdueEmailFail ok, 3rd: overdueThrow throws
+        if (notifInsertCount === 3) {
+          throw new Error('Notification insert crashed');
+        }
+        return { error: null };
+      }),
+    };
+
+    const settingsBuilder = createMockSupabaseClient().getTableBuilder('system_settings');
+    settingsBuilder.setResolveValue([]);
+    const reservationsBuilder = createMockSupabaseClient().getTableBuilder('reservations');
+    reservationsBuilder.setResolveValue([]);
+
+    const adminClient = {
+      from: vi.fn((table: string) => {
+        if (table === 'system_settings') return settingsBuilder;
+        if (table === 'borrowing_records') return borrowingBuilder;
+        if (table === 'reservations') return reservationsBuilder;
+        if (table === 'notifications') return notificationsBuilder;
+        return createMockSupabaseClient().getTableBuilder(table);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+
+    mockCreateAdminClient.mockReturnValue(adminClient);
+    mockSendMail.mockRejectedValue(new Error('SMTP timeout'));
+    const consoleErrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const summary = await runMaintenanceTasks();
+
+    expect(summary.remindersSent).toBe(0);
+    expect(summary.overdueTagged).toBe(0);
+    expect(summary.errors).toContain('Due-soon email failed; the reminder will be retried.');
+    expect(summary.errors).toContain('Overdue email failed; the notification will be retried.');
+    expect(summary.errors).toHaveLength(2);
+    expect(
+      updatePayloads.some((u) => u.id === 'br-ov-email-fail' && u.payload.overdue_notified === false)
+    ).toBe(true);
+    expect(
+      updatePayloads.some((u) => u.id === 'br-ov-throw' && u.payload.overdue_notified === false)
+    ).toBe(true);
+    consoleErrSpy.mockRestore();
   });
 });
 
@@ -657,5 +811,151 @@ describe('lib/library-card-assets and lib/library-card-assets.server', () => {
     mockCreateAdminClient.mockReturnValue(missingAdmin.client);
 
     await expect(ensureStaticLibraryCardAssets({ userId: 'missing' })).rejects.toThrow('Profile not found');
+  });
+
+  it('ensureStaticLibraryCardAssets migrates legacy card photos, fetches external avatars, and handles storage/card errors', async () => {
+    const originalFetch = globalThis.fetch;
+
+    // 1. Legacy library-cards photo is downloaded via admin storage and moved to avatars bucket
+    const legacyAdmin = createMockSupabaseClient();
+    legacyAdmin.setTableResponse('profiles', {
+      id: 'user-legacy',
+      email: 'legacy@alabang.sti.edu.ph',
+      student_id: 'FAC-LEGACY',
+      avatar_url: 'https://proj.supabase.co/storage/v1/object/public/library-cards/user-legacy/card.webp?v=1',
+      role: 'librarian',
+      status: 'ACTIVE',
+    });
+    legacyAdmin.setTableResponse('library_cards', { card_number: 'LIB-2026-LEG1' });
+    const legacyBucket = {
+      list: vi.fn().mockResolvedValue({ data: [{ name: 'qr_LIB-2026-LEG1.png' }], error: null }),
+      download: vi.fn().mockResolvedValue({ data: new Blob([Buffer.from('legacy-bytes')]), error: null }),
+      upload: vi.fn().mockResolvedValue({ data: { path: 'ok' }, error: null }),
+      getPublicUrl: vi.fn().mockReturnValue({
+        data: { publicUrl: 'https://proj.supabase.co/storage/v1/object/public/avatars/user-legacy/card.webp' },
+      }),
+      createSignedUrl: vi.fn().mockResolvedValue({
+        data: { signedUrl: 'https://proj.supabase.co/signed/leg.png' },
+        error: null,
+      }),
+    };
+    legacyAdmin.client.storage = {
+      getBucket: vi.fn().mockResolvedValue({ data: { name: 'library-cards' }, error: null }),
+      from: vi.fn().mockReturnValue(legacyBucket),
+    };
+    mockCreateAdminClient.mockReturnValue(legacyAdmin.client);
+
+    const legacyRes = await ensureStaticLibraryCardAssets({ userId: 'user-legacy' });
+    expect(legacyBucket.download).toHaveBeenCalledWith('user-legacy/card.webp');
+    expect(legacyRes.profileExists).toBe(true);
+    expect(legacyAdmin.getTableBuilder('profiles').update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        avatar_url: expect.stringContaining('/storage/v1/object/public/avatars/user-legacy/card.webp?v='),
+      })
+    );
+
+    // 2. External avatar URL fails gracefully when fetch rejects, leaving profileExists false
+    const extAdmin = createMockSupabaseClient();
+    extAdmin.setTableResponse('profiles', {
+      id: 'user-ext',
+      email: 'ext.20240001@alabang.sti.edu.ph',
+      student_id: 'STU-20240001',
+      avatar_url: null,
+      role: 'student',
+      status: 'ACTIVE',
+    });
+    extAdmin.setTableResponse('library_cards', { card_number: 'LIB-2026-EXT1' });
+    extAdmin.client.storage = legacyAdmin.client.storage;
+    mockCreateAdminClient.mockReturnValue(extAdmin.client);
+    mockLookup.mockResolvedValueOnce([]);
+
+    const extRes = await ensureStaticLibraryCardAssets({
+      userId: 'user-ext',
+      fallbackAvatarUrl: 'https://nonexistent.example/avatar.jpg',
+    });
+    expect(extRes.profileExists).toBe(false);
+    expect(extRes.qrUrl).toBe('https://proj.supabase.co/signed/leg.png');
+
+    // 3. External avatar URL succeeds via fetchImage -> sharp -> avatars upload
+    mockLookup.mockResolvedValueOnce([{ address: '93.184.216.34' }]);
+    globalThis.fetch = vi.fn().mockResolvedValueOnce(
+      new Response(new Uint8Array([137, 80, 78, 71]), {
+        status: 200,
+        headers: { 'content-type': 'image/png' },
+      })
+    );
+    const extOkRes = await ensureStaticLibraryCardAssets({
+      userId: 'user-ext',
+      fallbackAvatarUrl: 'https://cdn.example.com/avatar.png',
+    });
+    expect(extOkRes.profileExists).toBe(true);
+    globalThis.fetch = originalFetch;
+
+    // 4. library_cards insert error & createSignedUrl error throw
+    const cardErrAdmin = createMockSupabaseClient();
+    cardErrAdmin.setTableResponse('profiles', {
+      id: 'user-c-err',
+      email: 'c@alabang.sti.edu.ph',
+      student_id: 'FAC-C',
+      avatar_url: null,
+      role: 'librarian',
+      status: 'ACTIVE',
+    });
+    cardErrAdmin.setTableResponse('library_cards', null, { message: 'card insert failed' });
+    cardErrAdmin.client.storage = legacyAdmin.client.storage;
+    mockCreateAdminClient.mockReturnValue(cardErrAdmin.client);
+    await expect(ensureStaticLibraryCardAssets({ userId: 'user-c-err' })).rejects.toEqual({
+      message: 'card insert failed',
+    });
+
+    // 5. Fresh module instance tests ensureBucketExists error branches & QR/signedUrl errors
+    vi.resetModules();
+    const freshMod = await import('@/lib/library-card-assets.server');
+
+    const bucket500Admin = createMockSupabaseClient();
+    bucket500Admin.client.storage = {
+      getBucket: vi.fn().mockResolvedValue({ data: null, error: { statusCode: 500, message: 'Storage 500' } }),
+      from: vi.fn(),
+    };
+    mockCreateAdminClient.mockReturnValue(bucket500Admin.client);
+    await expect(freshMod.ensureStaticLibraryCardAssets({ userId: 'u-1' })).rejects.toEqual({
+      statusCode: 500,
+      message: 'Storage 500',
+    });
+
+    const createErrAdmin = createMockSupabaseClient();
+    createErrAdmin.client.storage = {
+      getBucket: vi.fn().mockResolvedValue({ data: null, error: { statusCode: 404, message: 'not found' } }),
+      createBucket: vi.fn().mockResolvedValue({ data: null, error: { message: 'Quota exceeded' } }),
+      from: vi.fn(),
+    };
+    mockCreateAdminClient.mockReturnValue(createErrAdmin.client);
+    await expect(freshMod.ensureStaticLibraryCardAssets({ userId: 'u-1' })).rejects.toEqual({
+      message: 'Quota exceeded',
+    });
+
+    const signErrAdmin = createMockSupabaseClient();
+    signErrAdmin.setTableResponse('profiles', {
+      id: 'user-sign-err',
+      email: 's@alabang.sti.edu.ph',
+      student_id: 'FAC-S',
+      avatar_url: null,
+      role: 'librarian',
+      status: 'ACTIVE',
+    });
+    signErrAdmin.setTableResponse('library_cards', { card_number: 'LIB-2026-SIGN' });
+    signErrAdmin.client.storage = {
+      getBucket: vi.fn().mockResolvedValue({ data: null, error: { statusCode: 404, message: 'not found' } }),
+      createBucket: vi.fn().mockResolvedValue({ data: null, error: { message: 'Bucket already exists' } }),
+      from: vi.fn().mockReturnValue({
+        list: vi.fn().mockResolvedValue({ data: [], error: null }),
+        upload: vi.fn().mockResolvedValue({ data: null, error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: { message: 'Sign failed' } }),
+      }),
+    };
+    mockCreateAdminClient.mockReturnValue(signErrAdmin.client);
+    await expect(freshMod.ensureStaticLibraryCardAssets({ userId: 'user-sign-err' })).rejects.toEqual({
+      message: 'Sign failed',
+    });
   });
 });

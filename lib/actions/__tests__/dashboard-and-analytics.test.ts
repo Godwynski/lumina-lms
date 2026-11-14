@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 import { getDashboardStats, getBookCopyTitle } from '@/lib/actions/dashboard';
-import { getAnalyticsSummary } from '@/lib/actions/analytics';
+import { getAnalyticsSummary, getAnalyticsDetail } from '@/lib/actions/analytics';
 
 function queueTableBuilders(
   helper: MockSupabaseClientHelper,
@@ -293,6 +293,111 @@ describe('Dashboard & Analytics Server Actions', () => {
 
       serverClientHelper.setRpcResponse(null, { message: 'Analytics RPC timeout' }, 'get_analytics_summary');
       await expect(getAnalyticsSummary('7d')).rejects.toThrow('Analytics RPC timeout');
+    });
+
+    it('validates custom date windows and calls get_analytics_summary_window when dates are supplied', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'lib-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null);
+
+      await expect(
+        getAnalyticsSummary('30d', { from: '2026-05-10', to: '2026-05-01' })
+      ).rejects.toThrow('Choose valid dates within one year.');
+
+      await expect(
+        getAnalyticsSummary('30d', { from: '2025-01-01', to: '2026-06-01' })
+      ).rejects.toThrow('Choose valid dates within one year.');
+
+      serverClientHelper.setRpcResponse(
+        {
+          attendanceTrends: [{ label: 'May 1', count: 8 }],
+          borrowingTrends: [{ label: 'May 1', count: 3 }],
+          categoryDistribution: [],
+          peakHours: [],
+          popularBooks: [],
+        },
+        null,
+        'get_analytics_summary_window'
+      );
+
+      const windowed = await getAnalyticsSummary('30d', { from: '2026-05-01', to: '2026-05-07' });
+      expect(serverClientHelper.rpc).toHaveBeenCalledWith('get_analytics_summary_window', {
+        p_from: '2026-05-01',
+        p_to: '2026-05-07',
+      });
+      expect(windowed.attendanceTrends).toEqual([{ label: 'May 1', count: 8 }]);
+    });
+  });
+
+  describe('getAnalyticsDetail (lib/actions/analytics.ts)', () => {
+    const validSelection = {
+      kind: 'genre' as const,
+      key: 'Computer Science',
+      title: 'Computer Science',
+      from: '2026-05-01',
+      to: '2026-05-07',
+    };
+
+    it('enforces authentication and staff role authorization', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+      await expect(getAnalyticsDetail(validSelection)).rejects.toThrow('Unauthorized');
+
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'student', status: 'ACTIVE' }, null);
+      await expect(getAnalyticsDetail(validSelection)).rejects.toThrow('Forbidden');
+
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'sa-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' }, null);
+      await expect(getAnalyticsDetail(validSelection)).rejects.toThrow('Forbidden');
+    });
+
+    it('validates date range, page integer >= 1, and selection kind', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'lib-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null);
+
+      await expect(
+        getAnalyticsDetail({ ...validSelection, from: '2026-05-10', to: '2026-05-01' })
+      ).rejects.toThrow('Invalid selection');
+      await expect(getAnalyticsDetail(validSelection, 0)).rejects.toThrow('Invalid selection');
+      await expect(getAnalyticsDetail(validSelection, 1.5)).rejects.toThrow('Invalid selection');
+      await expect(
+        getAnalyticsDetail({ ...validSelection, kind: 'unknown' as never }, 1)
+      ).rejects.toThrow('Invalid selection');
+    });
+
+    it('queries get_analytics_detail RPC and returns paginated rows or throws RPC error', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'admin-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { id: 'admin-1', role: 'super_admin', status: 'ACTIVE' }, null);
+
+      const expected = {
+        rows: [
+          {
+            id: 'row-1',
+            occurred_at: '2026-05-02T10:00:00Z',
+            borrower_id: 'u-1',
+            borrower_name: 'Maria Clara',
+            email: 'maria@alabang.sti.edu.ph',
+            student_id: 'STU-20240001',
+            book_id: 'b-1',
+            book_title: 'Clean Code',
+            status: 'ACTIVE',
+          },
+        ],
+        total: 1,
+      };
+      serverClientHelper.setRpcResponse(expected, null, 'get_analytics_detail');
+
+      const result = await getAnalyticsDetail(validSelection, 2);
+      expect(serverClientHelper.rpc).toHaveBeenCalledWith('get_analytics_detail', {
+        p_from: '2026-05-01',
+        p_to: '2026-05-07',
+        p_kind: 'genre',
+        p_key: 'Computer Science',
+        p_page: 2,
+      });
+      expect(result).toEqual(expected);
+
+      serverClientHelper.setRpcResponse(null, { message: 'Detail RPC error' }, 'get_analytics_detail');
+      await expect(getAnalyticsDetail(validSelection, 1)).rejects.toThrow('Detail RPC error');
     });
   });
 });

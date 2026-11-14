@@ -915,5 +915,105 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       expect(errRes.status).toBe(400);
       expect((await errRes.json()).code).toBe("DATABASE_ERROR");
     });
+
+    it("handles target lookup failure, no-op updates, extended field updates, transfer errors, and card sync warnings", async () => {
+      setupAuth(supabase, "super_admin", "ACTIVE", "adm-1");
+      const profilesBuilder = supabase.getTableBuilder("profiles");
+      const fullProfile = {
+        id: "stu-2",
+        full_name: "Student Two",
+        email: "stu2@alabang.sti.edu.ph",
+        role: "student",
+        status: "ACTIVE",
+        department: "BSCS",
+        student_id: "STU-2",
+        address: "123 St",
+        phone: "09170000000",
+        permissions: {},
+      };
+
+      // 1. Target profile query error -> 400 DATABASE_ERROR
+      profilesBuilder.single
+        .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
+        .mockResolvedValueOnce({ data: null, error: { message: "Target missing" } });
+      const lookupErr = await usersPatch(
+        new Request("http://localhost/api/users", {
+          method: "PATCH",
+          body: JSON.stringify({ id: "missing", name: "Nobody" }),
+        })
+      );
+      expect(lookupErr.status).toBe(400);
+      expect((await lookupErr.json()).code).toBe("DATABASE_ERROR");
+
+      // 2. Empty updates -> returns existing profile immediately without admin update
+      profilesBuilder.single
+        .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
+        .mockResolvedValueOnce({ data: fullProfile, error: null });
+      const noopRes = await usersPatch(
+        new Request("http://localhost/api/users", {
+          method: "PATCH",
+          body: JSON.stringify({ id: "stu-2" }),
+        })
+      );
+      expect(noopRes.status).toBe(200);
+      expect(adminSupabase.from).not.toHaveBeenCalledWith("profiles");
+
+      // 3. Updates student_id, email, department, permissions, address, phone + logs cardSyncError without failing
+      profilesBuilder.single
+        .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
+        .mockResolvedValueOnce({ data: fullProfile, error: null });
+      const updatedExtended = {
+        ...fullProfile,
+        email: "new.stu2@alabang.sti.edu.ph",
+        student_id: null,
+        department: "General",
+        address: null,
+        phone: "09998887777",
+        status: "ACTIVE",
+      };
+      adminSupabase.setTableResponse("profiles", updatedExtended, null);
+      adminSupabase.setTableResponse("library_cards", null, { message: "Card sync failed" });
+
+      const extRes = await usersPatch(
+        new Request("http://localhost/api/users", {
+          method: "PATCH",
+          body: JSON.stringify({
+            id: "stu-2",
+            student_id: "   ",
+            email: "  NEW.STU2@ALABANG.STI.EDU.PH ",
+            department: "  ",
+            permissions: { manage_attendance: false },
+            address: " ",
+            phone: " 09998887777 ",
+            status: "active",
+          }),
+        })
+      );
+      expect(extRes.status).toBe(200);
+      expect(adminSupabase.getTableBuilder("profiles").update).toHaveBeenCalledWith({
+        student_id: null,
+        email: "new.stu2@alabang.sti.edu.ph",
+        department: "General",
+        permissions: { manage_attendance: false },
+        address: null,
+        phone: "09998887777",
+        status: "ACTIVE",
+      });
+
+      // 4. Transfer ownership RPC failure -> 400 DATABASE_ERROR
+      profilesBuilder.single
+        .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "lib-9", role: "librarian", status: "ACTIVE" }, error: null });
+      adminSupabase.setRpcResponse(null, { message: "Transfer blocked" }, "transfer_super_admin_ownership");
+
+      const transferErrRes = await usersPatch(
+        new Request("http://localhost/api/users", {
+          method: "PATCH",
+          body: JSON.stringify({ id: "lib-9", role: "super_admin" }),
+        })
+      );
+      expect(transferErrRes.status).toBe(400);
+      expect((await transferErrRes.json()).error).toBe("Transfer blocked");
+    });
   });
 });

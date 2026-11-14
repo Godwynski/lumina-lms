@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -285,9 +286,9 @@ export function SupportFAQManager({
                   {editingIndex !== null ? "Edit FAQ" : "Add FAQ"}
                 </DialogTitle>
                 <div className="flex items-center gap-2">
-                  <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">
+                  <DialogDescription className="text-[11px] text-muted-foreground font-bold uppercase tracking-widest">
                     Knowledge Base Entry
-                  </p>
+                  </DialogDescription>
                 </div>
               </div>
             </div>

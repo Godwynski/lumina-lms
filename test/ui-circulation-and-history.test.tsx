@@ -63,6 +63,48 @@ vi.mock('@/lib/actions/history', () => ({
   settleBorrowingFine: (...args: unknown[]) => mockSettleBorrowingFine(...args),
 }));
 
+const mockGetBookAvailabilityStatus = vi.fn();
+const mockCancelReservation = vi.fn();
+vi.mock('@/lib/actions/reservations', () => ({
+  getBookAvailabilityStatus: (...args: unknown[]) => mockGetBookAvailabilityStatus(...args),
+  cancelReservation: (...args: unknown[]) => mockCancelReservation(...args),
+}));
+
+const mockGetBookPublicDetails = vi.fn();
+vi.mock('@/lib/actions/catalog', () => ({
+  getBookPublicDetails: (...args: unknown[]) => mockGetBookPublicDetails(...args),
+}));
+
+const mockScannerStart = vi.fn();
+const mockScannerStop = vi.fn();
+const mockScannerClear = vi.fn();
+const mockGetRunningTrackSettings = vi.fn();
+let capturedQrSuccessCallback: ((text: string) => void | Promise<void>) | null = null;
+
+vi.mock('html5-qrcode', () => ({
+  Html5QrcodeSupportedFormats: { QR_CODE: 0 },
+  Html5Qrcode: class MockHtml5Qrcode {
+    isScanning = true;
+    start(
+      _cam: unknown,
+      _cfg: unknown,
+      onSuccess: (text: string) => void | Promise<void>
+    ) {
+      capturedQrSuccessCallback = onSuccess;
+      return mockScannerStart(_cam, _cfg);
+    }
+    stop() {
+      return mockScannerStop();
+    }
+    clear() {
+      return mockScannerClear();
+    }
+    getRunningTrackSettings() {
+      return mockGetRunningTrackSettings();
+    }
+  },
+}));
+
 const mockCreateClient = vi.fn();
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockCreateClient(),
@@ -74,6 +116,7 @@ import { MemberPreview } from '@/components/circulation/MemberPreview';
 import { CirculationStepper } from '@/components/circulation/CirculationStepper';
 import { ScanStep } from '@/components/circulation/steps/ScanStep';
 import { SuccessStep } from '@/components/circulation/steps/SuccessStep';
+import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
 import DigitalCard from '@/components/library/DigitalCard';
 import HistoryContent from '@/app/(authenticated)/history/HistoryContent';
 import type { BorrowingRecord } from '@/lib/actions/history';
@@ -94,6 +137,17 @@ describe('Circulation & History UI Components', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearchParamsString = '';
+    capturedQrSuccessCallback = null;
+    mockScannerStart.mockResolvedValue(undefined);
+    mockScannerStop.mockResolvedValue(undefined);
+    mockGetRunningTrackSettings.mockReturnValue({ deviceId: 'cam-1' });
+    mockGetBookAvailabilityStatus.mockResolvedValue({
+      hasReservation: false,
+      isReady: false,
+      queuePosition: null,
+      holdExpiresAt: null,
+      nextAvailableDate: null,
+    });
     mockCreateClient.mockReturnValue({
       channel: vi.fn().mockReturnValue({
         on: vi.fn().mockReturnThis(),
@@ -105,6 +159,7 @@ describe('Circulation & History UI Components', () => {
 
   afterEach(() => {
     cleanupClients();
+    vi.unstubAllGlobals();
   });
 
   describe('ReviewStep', () => {
@@ -330,6 +385,69 @@ describe('Circulation & History UI Components', () => {
 
       expect(container).toHaveTextContent('Checkout Complete');
     });
+
+    it('supports Back navigation, Continue from MemberPreview, stepper step clicks, mode switching, and Start over reset', async () => {
+      mockResolveScan.mockResolvedValueOnce({
+        success: true,
+        data: {
+          type: 'student',
+          data: {
+            cardNumber: 'CARD-777',
+            fullName: 'Melchora Aquino',
+            studentId: '2026-777',
+            status: 'ACTIVE',
+          },
+        },
+      });
+      mockCheckoutBook.mockResolvedValueOnce({
+        success: true,
+        data: {
+          book_title: 'El Filibusterismo',
+          due_date: '2026-12-15T00:00:00Z',
+        },
+      });
+
+      const { container } = await renderClient(<CirculationWizard />);
+
+      // Scan student -> reaches Step 2
+      const input = container.querySelector('#circulation-code') as HTMLInputElement;
+      await typeIntoInput(input, 'CARD-777');
+      await submitForm(input.closest('form'));
+      expect(container).toHaveTextContent('Melchora Aquino');
+      expect(container).toHaveTextContent('Scan book copy');
+
+      // Click Back -> goes to Step 1 reviewingStudent state with Continue button
+      await clickElement(findButtonByText(container, 'Back'));
+      expect(container).toHaveTextContent('Continue');
+      expect(container.querySelector('#circulation-code')).toBeNull();
+
+      // Click Continue -> returns to Step 2
+      await clickElement(findButtonByText(container, 'Continue'));
+      expect(container).toHaveTextContent('Scan book copy');
+
+      // Scan book -> reaches Step 3 (Review Checkout)
+      const bookInput = container.querySelector('#circulation-code') as HTMLInputElement;
+      await typeIntoInput(bookInput, 'BK-FILI');
+      await submitForm(bookInput.closest('form'));
+      expect(container).toHaveTextContent('Review Checkout');
+
+      // Click Step 1 in stepper -> returns to Step 1 reviewingStudent
+      await clickElement(container.querySelector('button[aria-label="Go to step 1: Student card"]'));
+      expect(container).toHaveTextContent('Continue');
+
+      // Click Start over -> resets wizard back to clean Step 1
+      await clickElement(findButtonByText(container, 'Start over'));
+      expect(container).toHaveTextContent('Scan student card');
+      expect(container).not.toHaveTextContent('Melchora Aquino');
+
+      // Switch mode to Return and back to Checkout
+      await clickElement(findButtonByExactText(container, 'Return'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('?mode=return');
+      expect(container).toHaveTextContent('Scan book copy');
+
+      await clickElement(findButtonByExactText(container, 'Checkout'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('?mode=checkout');
+    });
   });
 
   describe('HistoryContent', () => {
@@ -533,6 +651,103 @@ describe('Circulation & History UI Components', () => {
       });
       expect(mockRouterRefresh).toHaveBeenCalled();
     });
+
+    it('handles dialog Cancel, settle failure toast, borrower & book detail modals, and Clear All Filters', async () => {
+      mockGetBookPublicDetails.mockResolvedValue({
+        book: {
+          id: 'book-1',
+          title: 'Pragmatic Programmer',
+          author: 'Hunt & Thomas',
+          isbn: '9780201616224',
+          cover_url: null,
+          section: 'CS',
+          location: 'Shelf 1',
+          description: 'Classic book',
+          available_copies: 1,
+          total_copies: 1,
+          categories: { name: 'CS' },
+          tags: [],
+          dewey_decimal: '005.1',
+        },
+        availability: {
+          nextAvailableDate: null,
+          hasReservation: false,
+          isReady: false,
+          queuePosition: null,
+          holdExpiresAt: null,
+          reservationId: null,
+        },
+      });
+
+      const unreturnedRecord = makeRecord({
+        id: 'rec-cancel-1',
+        returned_at: null,
+        fine_amount: 45,
+        fine_settled_at: null,
+      });
+      const returnedUnpaid = makeRecord({
+        id: 'rec-cancel-2',
+        returned_at: '2026-10-20T08:00:00Z',
+        fine_amount: 20,
+        fine_settled_at: null,
+      });
+
+      const handle = await renderHistory({
+        records: [unreturnedRecord, returnedUnpaid],
+        userRole: 'librarian',
+      });
+
+      // Cancel Return & Penalty Settlement dialog
+      await clickElement(findButtonByText(handle.container, 'Return / Settle'));
+      expect(document.body).toHaveTextContent('Return & Penalty Settlement');
+      await clickElement(findButtonByText(document.body, 'Cancel'));
+      expect(document.body).not.toHaveTextContent('Return & Penalty Settlement');
+
+      // Cancel Confirm Penalty Settlement dialog + error path on settle
+      await clickElement(findButtonByExactText(handle.container, 'Settle'));
+      expect(document.body).toHaveTextContent('Confirm Penalty Settlement');
+      await clickElement(findButtonByText(document.body, 'Cancel'));
+      expect(document.body).not.toHaveTextContent('Confirm Penalty Settlement');
+
+      mockSettleBorrowingFine.mockResolvedValueOnce({ success: false, error: 'Already settled' });
+      await clickElement(findButtonByExactText(handle.container, 'Settle'));
+      await clickElement(findButtonByText(document.body, 'Confirm Settle'));
+      expect(mockToastError).toHaveBeenCalledWith('Already settled');
+
+      // Open BookDetailModal (read_only) from book title button
+      const bookBtn = handle.container.querySelector('button[aria-label="View book details: Pragmatic Programmer"]');
+      await clickElement(bookBtn);
+      await act(async () => { await Promise.resolve(); });
+      expect(mockGetBookPublicDetails).toHaveBeenCalledWith('book-1');
+      expect(document.body).toHaveTextContent('Classic book');
+      await clickElement(findButtonByExactText(document.body, 'Close'));
+
+      // Open BorrowerDetailsModal from borrower button
+      const borrowerBtn = handle.container.querySelector('button[aria-label="View borrower: Maria Clara"]');
+      await clickElement(borrowerBtn);
+      expect(document.body).toHaveTextContent('2024-0001');
+      expect(document.body.querySelector('a[href="/users/user-1"]')).toBeInTheDocument();
+      await clickElement(findButtonByExactText(document.body, 'Close'));
+
+      // Empty state Clear All Filters
+      const emptyPromise = Promise.resolve({ records: [], totalCount: 0 });
+      await act(async () => {
+        await handle.rerender(
+          <Suspense fallback={<div>Loading...</div>}>
+            <HistoryContent
+              historyPromise={emptyPromise}
+              page={1}
+              statusFilter="OVERDUE"
+              searchQuery="missing"
+              userRole="librarian"
+            />
+          </Suspense>
+        );
+      });
+      await act(async () => { await emptyPromise; });
+      await clickElement(findButtonByText(handle.container, 'Clear All Filters'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('/history?page=1', { scroll: false });
+    });
   });
 
   describe('Circulation Supporting Components & DigitalCard', () => {
@@ -601,6 +816,157 @@ describe('Circulation & History UI Components', () => {
       await submitForm(input.closest('form'));
       expect(onScan).toHaveBeenCalledWith('CARD-ABC', true);
       expect(input.value).toBe('');
+    });
+
+    it('ScanStep handles camera unavailable error, camera open/scan/switch/stop, and processing state', async () => {
+      const onScan = vi.fn().mockResolvedValue(true);
+
+      // 1. Camera unavailable (no navigator.mediaDevices)
+      vi.stubGlobal('navigator', { ...navigator, mediaDevices: undefined });
+      const handle = await renderClient(
+        <ScanStep
+          title="Scan book copy"
+          description="Scan book QR."
+          placeholder="Enter Book QR"
+          onScan={onScan}
+          isProcessing={false}
+          actionLabel="Verify"
+        />
+      );
+
+      await clickElement(findButtonByText(handle.container, 'Start camera'));
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+      expect(handle.container.querySelector('[role="alert"]')).toHaveTextContent('Camera unavailable');
+      expect(findButtonByText(handle.container, 'Retry camera')).toBeDefined();
+
+      // 2. Camera available with 2 devices -> open, decode callback, switch camera, stop camera
+      const enumerateDevices = vi.fn().mockResolvedValue([
+        { kind: 'videoinput', deviceId: 'cam-1' },
+        { kind: 'videoinput', deviceId: 'cam-2' },
+      ]);
+      vi.stubGlobal('navigator', { ...navigator, mediaDevices: { enumerateDevices } });
+
+      const input = handle.container.querySelector('#circulation-code') as HTMLInputElement;
+      await typeIntoInput(input, 'DRAFT');
+
+      await clickElement(findButtonByText(handle.container, 'Retry camera'));
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+
+      expect(mockScannerStart).toHaveBeenCalled();
+      const switchBtn = handle.container.querySelector('button[aria-label="Switch camera"]') as HTMLButtonElement;
+      expect(switchBtn.className).not.toContain('invisible');
+      expect(findButtonByText(handle.container, 'Stop camera')).toBeDefined();
+
+      // Trigger scanned QR value from html5-qrcode callback -> clears manual input
+      await act(async () => {
+        await capturedQrSuccessCallback?.('QR-CAMERA-1');
+      });
+      expect(onScan).toHaveBeenCalledWith('QR-CAMERA-1', false);
+      expect(input.value).toBe('');
+
+      // Switch camera to cam-2
+      await clickElement(switchBtn);
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+      expect(mockScannerStart).toHaveBeenLastCalledWith('cam-2', expect.anything());
+
+      // Stop camera
+      await clickElement(findButtonByText(handle.container, 'Stop camera'));
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+      expect(mockScannerStop).toHaveBeenCalled();
+      expect(findButtonByText(handle.container, 'Start camera')).toBeDefined();
+
+      // 3. Processing state displays status spinner and disables submit
+      await handle.rerender(
+        <ScanStep
+          title="Scan book copy"
+          description="Scan book QR."
+          placeholder="Enter Book QR"
+          onScan={onScan}
+          isProcessing={true}
+          actionLabel="Verify"
+        />
+      );
+      expect(handle.container.querySelector('[role="status"]')).toHaveTextContent('Verifying entry…');
+      expect(findButtonByText(handle.container, 'Verifying…')).toBeDisabled();
+    });
+
+    it('ReserveTitleButton self-hydrates, handles available/queued/ready states, and surfaces API errors', async () => {
+      mockGetBookAvailabilityStatus.mockResolvedValueOnce({
+        hasReservation: false,
+        isReady: false,
+        queuePosition: null,
+        holdExpiresAt: null,
+        nextAvailableDate: null,
+      });
+
+      const fetchSpy = vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, message: 'Limit reached' }), { status: 400 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, queue_position: 2 }), { status: 200 }));
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const onReserveSuccess = vi.fn();
+      const handle = await renderClient(
+        <ReserveTitleButton
+          bookId="book-reserve-1"
+          isAvailable={true}
+          onReserveSuccess={onReserveSuccess}
+        />
+      );
+      await act(async () => { await Promise.resolve(); });
+      expect(mockGetBookAvailabilityStatus).toHaveBeenCalledWith('book-reserve-1');
+      expect(handle.container).toHaveTextContent('Reserve for Pickup');
+
+      // Error response shows toast.error
+      await clickElement(findButtonByText(handle.container, 'Reserve for Pickup'));
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+      expect(mockToastError).toHaveBeenCalledWith('Limit reached');
+
+      // Success response refreshes status and calls onReserveSuccess
+      mockGetBookAvailabilityStatus.mockResolvedValueOnce({
+        hasReservation: true,
+        isReady: false,
+        queuePosition: 2,
+        holdExpiresAt: null,
+        nextAvailableDate: null,
+      });
+      await clickElement(findButtonByText(handle.container, 'Reserve for Pickup'));
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+      expect(mockToastSuccess).toHaveBeenCalledWith('Reserved! You are at position 2 in the queue.');
+      expect(onReserveSuccess).toHaveBeenCalledWith(2, 'ACTIVE', null);
+      expect(handle.container).toHaveTextContent('Your Reserve');
+
+      // Unavailable queued vs Ready states
+      await handle.rerender(
+        <ReserveTitleButton
+          bookId="book-reserve-2"
+          isAvailable={false}
+          hasExistingReservation={false}
+        />
+      );
+      expect(handle.container).toHaveTextContent('Reserve to Borrow');
+
+      await handle.rerender(
+        <ReserveTitleButton
+          bookId="book-reserve-2"
+          isAvailable={false}
+          hasExistingReservation={true}
+          isReady={true}
+          holdExpiresAt="2026-12-20T00:00:00Z"
+        />
+      );
+      expect(handle.container).toHaveTextContent('Ready (Until');
+
+      await handle.rerender(
+        <ReserveTitleButton
+          bookId="book-reserve-2"
+          isAvailable={false}
+          hasExistingReservation={true}
+          isReady={true}
+          holdExpiresAt={null}
+        />
+      );
+      expect(handle.container).toHaveTextContent('Ready for Pickup');
     });
 
     it('renders SuccessStep with reservation hold banner and reset action', async () => {

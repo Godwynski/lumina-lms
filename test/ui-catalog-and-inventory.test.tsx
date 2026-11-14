@@ -70,6 +70,7 @@ const mockGetCategories = vi.fn();
 const mockGetBooksForExport = vi.fn();
 const mockBatchImportBooks = vi.fn();
 const mockLookupAndImportISBN = vi.fn();
+const mockCreateBook = vi.fn();
 
 vi.mock('@/lib/actions/catalog', () => ({
   updateBookCopyStatus: (...args: unknown[]) => mockUpdateBookCopyStatus(...args),
@@ -83,6 +84,12 @@ vi.mock('@/lib/actions/catalog', () => ({
   getBooksForExport: (...args: unknown[]) => mockGetBooksForExport(...args),
   batchImportBooks: (...args: unknown[]) => mockBatchImportBooks(...args),
   lookupAndImportISBN: (...args: unknown[]) => mockLookupAndImportISBN(...args),
+  createBook: (...args: unknown[]) => mockCreateBook(...args),
+}));
+
+const mockFetchISBNDetails = vi.fn();
+vi.mock('@/lib/actions/isbn-lookup', () => ({
+  fetchISBNDetails: (...args: unknown[]) => mockFetchISBNDetails(...args),
 }));
 
 const mockCancelReservation = vi.fn();
@@ -138,6 +145,7 @@ import { QRPrinterModal } from '@/components/qr-printer-modal';
 import { ISBNLookupBar } from '@/components/catalog/add/ISBNLookupBar';
 import { CoverUploader } from '@/components/catalog/add/CoverUploader';
 import { BookDetailsForm } from '@/components/catalog/add/BookDetailsForm';
+import { AddBookClient } from '@/app/(authenticated)/inventory/add/AddBookClient';
 import { AdminManagementContent } from '@/components/catalog/AdminManagementContent';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { ModernBookCard } from '@/components/inventory/ModernBookCard';
@@ -526,6 +534,10 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       const fetchBtn = findButtonByText(handle.container, 'Fetch Data')!;
       expect(fetchBtn).toBeDisabled();
 
+      // Enter key when empty does not trigger fetch
+      await pressKey(input, 'Enter');
+      expect(onFetchData).not.toHaveBeenCalled();
+
       await typeIntoInput(input, '978-013-235088x');
       expect(onIsbnChange).toHaveBeenCalledWith('978013235088X');
 
@@ -542,6 +554,13 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       await clickElement(enabledBtn);
       expect(onFetchData).toHaveBeenCalledTimes(1);
 
+      // Enter key with valid ISBN triggers fetch; non-Enter does not
+      const activeInput = handle.container.querySelector('input') as HTMLInputElement;
+      await pressKey(activeInput, 'Tab');
+      expect(onFetchData).toHaveBeenCalledTimes(1);
+      await pressKey(activeInput, 'Enter');
+      expect(onFetchData).toHaveBeenCalledTimes(2);
+
       await handle.rerender(
         <ISBNLookupBar
           isbn="978013235088X"
@@ -552,9 +571,13 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       );
       const loadingBtn = findButtonByText(handle.container, 'Searching...')!;
       expect(loadingBtn).toBeDisabled();
+
+      // Enter key while loading is ignored
+      await pressKey(handle.container.querySelector('input')!, 'Enter');
+      expect(onFetchData).toHaveBeenCalledTimes(2);
     });
 
-    it('CoverUploader displays preview URLs and invokes onCoverSelected when file is chosen', async () => {
+    it('CoverUploader displays preview URLs, handles image errors & buttons, and invokes onCoverSelected when file is chosen', async () => {
       const onCoverSelected = vi.fn();
       const handle = await renderClient(
         <CoverUploader coverPreviewUrl={null} coverUrl="" onCoverSelected={onCoverSelected} />
@@ -575,7 +598,26 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(img).toHaveAttribute('src', 'blob:preview-1');
       expect(handle.container).toHaveTextContent('Change Image');
 
+      // Image load error falls back to default cover
+      await act(async () => {
+        img.dispatchEvent(new Event('error'));
+      });
+      expect(img).toHaveAttribute('src', '/images/default-book-cover.png');
+
+      // Clicking overlay button and "Upload File" button both forward click to #file-upload
       const fileInput = handle.container.querySelector('#file-upload') as HTMLInputElement;
+      const inputClickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
+      await clickElement(findButtonByText(handle.container, 'Change Image'));
+      await clickElement(findButtonByText(handle.container, 'Upload File'));
+      expect(inputClickSpy).toHaveBeenCalledTimes(2);
+
+      // Empty files change does not invoke callback
+      await act(async () => {
+        Object.defineProperty(fileInput, 'files', { value: [], configurable: true });
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(onCoverSelected).not.toHaveBeenCalled();
+
       const file = new File(['img-bytes'], 'cover.png', { type: 'image/png' });
       await act(async () => {
         Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
@@ -653,6 +695,172 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(updates).toContainEqual({ location: 'Row 4' });
       expect(updates).toContainEqual({ copies: 5 });
       expect(updates).toContainEqual({ categoryId: 'cat-2' });
+    });
+  });
+
+  describe('AddBookClient', () => {
+    it('matches categories on ISBN lookup, handles lookup exceptions/stale requests, and uploads HTTP cover URLs', async () => {
+      mockFetchISBNDetails.mockResolvedValueOnce({
+        success: true,
+        book: {
+          isbn: '9780134494166',
+          title: 'Clean Architecture',
+          author: 'Robert C. Martin',
+          cover_url: 'https://covers.example.com/clean.jpg',
+          tags: ['Computer Science / Software Engineering'],
+          description: 'Architecture guide',
+          published_year: 2017,
+          dewey_decimal: '005.1',
+        },
+      });
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ cover_url: '/storage/clean.webp' }), { status: 200 })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      mockCreateBook.mockResolvedValueOnce({ success: true });
+
+      const { container } = await renderClient(<AddBookClient />);
+      await flushPromises();
+
+      const isbnInput = container.querySelector('input[placeholder="Enter ISBN-10 or ISBN-13"]') as HTMLInputElement;
+      await typeIntoInput(isbnInput, '9780134494166');
+      await clickElement(findButtonByText(container, 'Fetch Data'));
+      await flushPromises();
+
+      expect(mockToastSuccess).toHaveBeenCalledWith('Book details retrieved. Review them before saving.');
+      expect(container).toHaveTextContent('Computer Science');
+
+      // Submit uploads external cover URL via /api/upload before calling createBook
+      await submitForm(container.querySelector('form'));
+      await flushPromises();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/upload',
+        expect.objectContaining({ method: 'POST', body: expect.any(FormData) })
+      );
+      expect(mockCreateBook).toHaveBeenCalledWith({
+        bookData: expect.objectContaining({
+          title: 'Clean Architecture',
+          category_id: 'cat-1',
+          cover_url: '/storage/clean.webp',
+        }),
+        copiesCount: 1,
+      });
+      expect(mockRouterPush).toHaveBeenCalledWith('/inventory');
+
+      // Lookup rejection displays error toast; stale lookup ignored when ISBN changes mid-flight
+      mockFetchISBNDetails.mockRejectedValueOnce(new Error('API timeout'));
+      await clickElement(findButtonByText(container, 'Fetch Data'));
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Could not retrieve book details. Retry or enter them manually.'
+      );
+
+      let resolveStale!: (val: unknown) => void;
+      mockFetchISBNDetails.mockImplementationOnce(
+        () => new Promise((resolve) => { resolveStale = resolve; })
+      );
+      await clickElement(findButtonByText(container, 'Fetch Data'));
+      await typeIntoInput(isbnInput, '9780132350884');
+      await act(async () => {
+        resolveStale({
+          success: true,
+          book: {
+            isbn: '000',
+            title: 'Stale Title',
+            author: 'Stale Author',
+            cover_url: '',
+            tags: [],
+            description: '',
+            published_year: null,
+            dewey_decimal: '',
+          },
+        });
+      });
+      expect((container.querySelector('input[placeholder="e.g. Clean Code"]') as HTMLInputElement).value).toBe('Clean Architecture');
+    });
+
+    it('compresses and uploads selected cover file, handles upload/create errors, and survives category load failure', async () => {
+      const consoleErrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockGetCategories.mockRejectedValueOnce(new Error('DB offline'));
+      const createObjectURLSpy = vi.fn(() => 'blob:local-cover');
+      const revokeObjectURLSpy = vi.fn();
+      vi.stubGlobal('URL', { ...URL, createObjectURL: createObjectURLSpy, revokeObjectURL: revokeObjectURLSpy });
+
+      class MockImage {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        width = 800;
+        height = 1200;
+        set src(_v: string) {
+          queueMicrotask(() => this.onload?.());
+        }
+      }
+      vi.stubGlobal('Image', MockImage);
+
+      const mockCtx = {
+        imageSmoothingEnabled: false,
+        imageSmoothingQuality: 'low',
+        drawImage: vi.fn(),
+      };
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+        mockCtx as unknown as CanvasRenderingContext2D
+      );
+      vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => {
+        cb(new Blob(['webp-bytes'], { type: 'image/webp' }));
+      });
+
+      const fetchSpy = vi
+        .fn()
+        .mockResolvedValueOnce(new Response('Payload Too Large', { status: 413 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Invalid image' }), { status: 400 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ cover_url: '/storage/uploaded.webp' }), { status: 200 }));
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const handle = await renderClient(<AddBookClient />);
+      await flushPromises();
+
+      const titleInput = handle.container.querySelector('input[placeholder="e.g. Clean Code"]') as HTMLInputElement;
+      const authorInput = handle.container.querySelector('input[placeholder="e.g. Robert C. Martin"]') as HTMLInputElement;
+      const sectionInput = handle.container.querySelector('input[placeholder="e.g. CS Reference"]') as HTMLInputElement;
+      const locationInput = handle.container.querySelector('input[placeholder="e.g. Shelf A-5"]') as HTMLInputElement;
+      await typeIntoInput(titleInput, 'SICP');
+      await typeIntoInput(authorInput, 'Abelson & Sussman');
+      await typeIntoInput(sectionInput, 'CS');
+      await typeIntoInput(locationInput, 'Shelf B');
+
+      // Select local cover file
+      const fileInput = handle.container.querySelector('#file-upload') as HTMLInputElement;
+      const coverFile = new File(['raw-png'], 'sicp.png', { type: 'image/png' });
+      await act(async () => {
+        Object.defineProperty(fileInput, 'files', { value: [coverFile], configurable: true });
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await flushPromises();
+      expect(createObjectURLSpy).toHaveBeenCalledWith(coverFile);
+
+      // 413 invalid JSON error
+      await submitForm(handle.container.querySelector('form'));
+      await flushPromises(20);
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Image is too large. Even after compression, it exceeds the 5MB server limit.'
+      );
+
+      // 400 JSON error
+      await submitForm(handle.container.querySelector('form'));
+      await flushPromises(20);
+      expect(mockToastError).toHaveBeenCalledWith('Invalid image');
+
+      // Upload succeeds, createBook returns { success: false }
+      mockCreateBook.mockResolvedValueOnce({ success: false, error: 'Duplicate catalog entry' });
+      await submitForm(handle.container.querySelector('form'));
+      await flushPromises(20);
+      expect(mockToastError).toHaveBeenCalledWith('Duplicate catalog entry');
+      expect(mockRouterPush).not.toHaveBeenCalled();
+
+      handle.unmount();
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:local-cover');
+      consoleErrSpy.mockRestore();
     });
   });
 
@@ -917,6 +1125,113 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       await flushPromises();
       expect(mockGetBookAdminDetails).toHaveBeenCalledWith('book-1');
       expect(document.body).toHaveTextContent('Inventory Assets');
+    });
+
+    it('renders read_only description, super_admin audit link, cover error fallback, cancel error, and realtime refresh', async () => {
+      const realtimeHandlers: Array<() => void> = [];
+      const rtChannel = {
+        on: vi.fn().mockImplementation((_t: string, _f: unknown, cb: () => void) => {
+          realtimeHandlers.push(cb);
+          return rtChannel;
+        }),
+        subscribe: vi.fn().mockReturnThis(),
+      };
+      mockCreateClient.mockReturnValue({
+        channel: vi.fn().mockReturnValue(rtChannel),
+        removeChannel: removeChannelMock,
+      });
+
+      const bookDetail: BookDetail = {
+        id: 'book-ro',
+        title: 'Domain-Driven Design',
+        author: 'Eric Evans',
+        isbn: null,
+        cover_url: 'https://example.com/broken.jpg',
+        section: null,
+        location: null,
+        description: 'Strategic design patterns.',
+        available_copies: 1,
+        total_copies: 1,
+        categories: null,
+        tags: [],
+        dewey_decimal: null,
+      };
+      mockGetBookPublicDetails.mockResolvedValue({
+        book: bookDetail,
+        availability: {
+          nextAvailableDate: null,
+          hasReservation: true,
+          isReady: false,
+          queuePosition: 2,
+          holdExpiresAt: null,
+          reservationId: 'res-fail',
+        },
+      });
+
+      const onOpenChange = vi.fn();
+      const handle = await renderClient(
+        <PreferencesProvider
+          initialPreferences={{ theme: 'light' }}
+          initialRole="super_admin"
+        >
+          <BookDetailModal
+            bookId="book-ro"
+            open={true}
+            onOpenChange={onOpenChange}
+            variant="read_only"
+          />
+        </PreferencesProvider>
+      );
+      await flushPromises();
+
+      expect(document.body).toHaveTextContent('Strategic design patterns.');
+      const auditLink = document.body.querySelector('a[href="/audit?bookId=book-ro"]') as HTMLAnchorElement;
+      expect(auditLink).toBeInTheDocument();
+      auditLink.addEventListener('click', (e) => e.preventDefault(), { once: true });
+      await clickElement(auditLink);
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+
+      const coverImg = document.body.querySelector('img[alt="Domain-Driven Design"]') as HTMLImageElement;
+      await act(async () => {
+        coverImg.dispatchEvent(new Event('error'));
+      });
+      expect(coverImg).toHaveAttribute('src', '/images/default-book-cover.png');
+
+      // Realtime callback triggers debounced fetchData
+      const initialCalls = mockGetBookPublicDetails.mock.calls.length;
+      await act(async () => {
+        realtimeHandlers[0]?.();
+      });
+      await flushPromises(550);
+      expect(mockGetBookPublicDetails.mock.calls.length).toBeGreaterThan(initialCalls);
+
+      // Student variant cancel failure + fetch rejection
+      mockCancelReservation.mockRejectedValueOnce(new Error('Cancel failed'));
+      await handle.rerender(
+        <BookDetailModal
+          bookId="book-ro"
+          open={true}
+          onOpenChange={onOpenChange}
+          variant="student"
+        />
+      );
+      await flushPromises();
+      await clickElement(findButtonByText(document.body, 'Cancel')!);
+      await clickElement(findButtonByText(document.body, 'Yes, Cancel')!);
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith('Cancel failed');
+
+      mockGetBookPublicDetails.mockRejectedValueOnce(new Error('Server unavailable'));
+      await handle.rerender(
+        <BookDetailModal
+          bookId="book-err"
+          open={true}
+          onOpenChange={onOpenChange}
+          variant="student"
+        />
+      );
+      await flushPromises();
+      expect(document.body.querySelector('[role="alert"]')).toHaveTextContent('Server unavailable');
     });
   });
 
@@ -1270,6 +1585,152 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       const { container } = await renderInventory({ canManage: false });
       expect(container.querySelector('button[aria-label="Batch operations"]')).not.toBeInTheDocument();
       expect(container.querySelector('a[href="/inventory/add"]')).not.toBeInTheDocument();
+    });
+
+    it('covers CSV import, duplicate copies toggle, validation errors, sorting, category toggles, and export error/ZIP branches', async () => {
+      const realtimeHandlers: Array<() => void> = [];
+      const rtChannel = {
+        on: vi.fn().mockImplementation((_t: string, _f: unknown, cb: () => void) => {
+          realtimeHandlers.push(cb);
+          return rtChannel;
+        }),
+        subscribe: vi.fn().mockReturnThis(),
+      };
+      mockCreateClient.mockReturnValue({
+        channel: vi.fn().mockReturnValue(rtChannel),
+        removeChannel: removeChannelMock,
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ jobs: [] }), { status: 200 }))
+      );
+      mockSearchParamsString = 'q=clean&categoryId=cat-1';
+
+      const { container } = await renderInventory({ books: [], totalItems: 0 });
+      await flushPromises();
+
+      // Realtime refresh triggers router.refresh()
+      await act(async () => {
+        realtimeHandlers[0]?.();
+      });
+      expect(mockRouterRefresh).toHaveBeenCalled();
+
+      // Debounced search + "Searching..." indicator when typed query differs from urlQuery
+      const searchInput = container.querySelector('input[aria-label="Search inventory"]') as HTMLInputElement;
+      await typeIntoInput(searchInput, 'design');
+      expect(container).toHaveTextContent('Searching...');
+      await flushPromises(350);
+      expect(mockRouterReplace).toHaveBeenCalledWith('?q=design&categoryId=cat-1', { scroll: false });
+
+      // Filter sheet: Sort select (includes Best Match when q is present) + category toggle + All Items
+      await clickElement(container.querySelector('button[aria-label^="Filters"]'));
+      await selectRadixOption(document.body.querySelector('button[aria-label="Sorting order"]'), 'Title A-Z');
+      expect(mockRouterReplace).toHaveBeenCalledWith(expect.stringContaining('sort=title_asc'), { scroll: false });
+
+      await clickElement(findButtonByText(document.body, 'Computer Science'));
+      expect(mockRouterReplace).toHaveBeenCalledWith(expect.not.stringContaining('categoryId='), { scroll: false });
+      await clickElement(findButtonByText(document.body, 'All Items'));
+      expect(mockRouterReplace).toHaveBeenCalled();
+      await clickElement(findButtonByText(document.body, 'Apply Filters'));
+      await flushPromises();
+
+      // Open Batch Operations modal
+      await clickElement(container.querySelector('button[aria-label="Batch operations"]'));
+      const uploadFile = async (file: File) => {
+        const input = document.body.querySelector('input[aria-label="Choose JSON, CSV or Excel file"]') as HTMLInputElement;
+        await act(async () => {
+          Object.defineProperty(input, 'files', { value: [file], configurable: true });
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        await flushPromises(50);
+      };
+
+      // Unsupported extension
+      await uploadFile(new File(['hello'], 'notes.txt', { type: 'text/plain' }));
+      expect(mockToastError).toHaveBeenCalledWith('Unsupported file format.');
+
+      // Empty JSON array
+      await uploadFile(new File(['[]'], 'empty.json', { type: 'application/json' }));
+      expect(mockToastError).toHaveBeenCalledWith('The file appears to be empty.');
+
+      // Missing title/author rows
+      await uploadFile(new File([JSON.stringify([{ isbn: '123' }])], 'no-title.json', { type: 'application/json' }));
+      expect(mockToastError).toHaveBeenCalledWith('No rows with both a title and an author were found.');
+
+      // Invalid JSON syntax
+      await uploadFile(new File(['{bad-json'], 'broken.json', { type: 'application/json' }));
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining('Error reading file:'));
+
+      // Valid CSV import with Remove File and addCopiesToDuplicates toggle
+      const csvText = 'Title,Author,ISBN,Copies\nRefactoring,Martin Fowler,9780201485677,3\n';
+      const csvFile = new File([csvText], 'books.csv', { type: 'text/csv' });
+      // Ensure File.arrayBuffer / FileReader reads CSV buffer cleanly
+      await uploadFile(csvFile);
+      expect(document.body).toHaveTextContent('Dry-Run Preview Summary');
+
+      await clickElement(findButtonByText(document.body, 'Remove File'));
+      expect(document.body).not.toHaveTextContent('Dry-Run Preview Summary');
+
+      await uploadFile(csvFile);
+      const dupCheckbox = document.body.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      await clickElement(dupCheckbox);
+      expect(dupCheckbox.checked).toBe(true);
+
+      mockBatchImportBooks.mockResolvedValueOnce({ success: false });
+      await clickElement(findButtonByText(document.body, 'Commit & Import to Catalog'));
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith('Batch import failed.');
+
+      mockBatchImportBooks.mockRejectedValueOnce(new Error('Import crash'));
+      await clickElement(findButtonByText(document.body, 'Commit & Import to Catalog'));
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith('Import failed: Import crash');
+
+      // ISBN Fallback validation branches (empty / > 500)
+      await clickElement(findButtonByText(document.body, 'ISBN Fallback'));
+      const isbnTextarea = document.body.querySelector('#inventory-isbns') as HTMLTextAreaElement;
+      await typeIntoInput(isbnTextarea, ' , \n ');
+      await clickElement(findButtonByText(document.body, 'Queue ISBN Import'));
+      expect(mockToastError).toHaveBeenCalledWith('Please enter at least one valid ISBN.');
+
+      const over500 = Array.from({ length: 501 }, (_, i) => `978000000${String(i).padStart(4, '0')}`).join('\n');
+      await typeIntoInput(isbnTextarea, over500);
+      await clickElement(findButtonByText(document.body, 'Queue ISBN Import'));
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Enter at most 500 ISBN entries per import. Split larger lists into separate imports.'
+      );
+
+      // Export error paths + ZIP covers export
+      await clickElement(findButtonByText(document.body, 'Export Data'));
+      mockGetBooksForExport.mockRejectedValue(new Error('Export DB down'));
+      await clickElement(findButtonByText(document.body, 'Spreadsheet'));
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith('Excel export failed: Export DB down');
+
+      await clickElement(findButtonByText(document.body, 'Text CSV'));
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith('CSV export failed: Export DB down');
+
+      await clickElement(findButtonByText(document.body, 'JSON Data'));
+      await flushPromises();
+      expect(mockToastError).toHaveBeenCalledWith('JSON export failed: Export DB down');
+
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        configurable: true,
+        value: { href: '' },
+      });
+      await clickElement(findButtonByText(document.body, 'Covers ZIP'));
+      expect((window.location as unknown as { href: string }).href).toBe('/api/catalog/export/covers');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Generating ZIP archive... Your download will begin shortly!'
+      );
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        configurable: true,
+        value: originalLocation,
+      });
     });
   });
 

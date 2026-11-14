@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import * as React from 'react';
 import { Suspense, act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -234,6 +235,14 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockCreateClient(),
 }));
 
+const mockToPng = vi.hoisted(() => vi.fn());
+vi.mock('html-to-image', () => ({
+  toPng: mockToPng,
+}));
+const nodeRequire = createRequire(import.meta.url);
+const cjsHtmlToImage = nodeRequire('html-to-image') as { toPng: (...args: unknown[]) => Promise<string> };
+cjsHtmlToImage.toPng = (...args: unknown[]) => mockToPng(...args);
+
 // ---------------------------------------------------------------------------
 // Real component imports
 // ---------------------------------------------------------------------------
@@ -356,6 +365,10 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
 import { FieldControlIdContext } from '@/components/ui/field-context';
+import { CompactPagination } from '@/components/ui/compact-pagination';
+import { BorrowerDetailsModal } from '@/components/common/BorrowerDetailsModal';
+import DigitalCard from '@/components/library/DigitalCard';
+import MyCardContainer from '@/components/library/MyCardContainer';
 import type { BorrowingRecord } from '@/lib/actions/history';
 import type { Category, ProfileData, Reservation } from '@/lib/types';
 
@@ -1050,6 +1063,134 @@ describe('Dashboard Components', () => {
     expect(container.textContent).toContain('No Digital Card Available');
   });
 
+  it('DashboardClient triggers debouncedRefresh on realtime events, falls back on malformed FAQ JSON & cover error, and opens ActivitySection book modal', async () => {
+    const consoleErrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetBookPublicDetails.mockResolvedValue({
+      book: {
+        id: 'book-res-1',
+        title: 'Clean Code',
+        author: 'Robert Martin',
+        isbn: '9780132350884',
+        cover_url: 'https://example.com/bad-cover.jpg',
+        section: 'CS',
+        location: 'Shelf 1',
+        available_copies: 1,
+        total_copies: 1,
+        categories: { name: 'CS' },
+        tags: [],
+        dewey_decimal: '005.1',
+      },
+      availability: {
+        nextAvailableDate: null,
+        hasReservation: true,
+        isReady: false,
+        queuePosition: 1,
+        holdExpiresAt: null,
+        reservationId: 'res-1',
+      },
+    });
+
+    const stats = {
+      activeBorrows: 1,
+      pendingApprovals: 0,
+      myActiveBorrows: 1,
+      recentBooks: [
+        {
+          id: 'book-recent-1',
+          title: 'Broken Cover Book',
+          author: 'Author X',
+          cover_url: 'https://example.com/broken.jpg',
+          created_at: '2026-11-10T00:00:00Z',
+        },
+      ],
+      activeBorrowsList: [],
+      attendanceToday: 1,
+      totalBooks: 10,
+      totalUsers: 5,
+      overdueBorrows: 0,
+      readyHolds: 0,
+    };
+
+    const reservations: Reservation[] = [
+      {
+        id: 'res-open',
+        status: 'ACTIVE',
+        queue_position: 2,
+        hold_expires_at: null,
+        books: { id: 'book-res-1', title: 'Clean Code', cover_url: null },
+      },
+    ];
+
+    const { container, rerender } = await renderClient(
+      <Suspense fallback={<div>Suspending</div>}>
+        <DashboardClient
+          user={makeUser()}
+          role="student"
+          statsPromise={Promise.resolve(stats)}
+          profilePromise={Promise.resolve({ data: makeProfile({ role: 'student' }) })}
+          cardPromise={Promise.resolve({ data: null })}
+          faqPromise={Promise.resolve({
+            data: [{ key: 'student_faq_list', value: '{not-valid-json' }],
+          })}
+          reservationsPromise={Promise.resolve(reservations)}
+          inventoryBooksPromise={Promise.resolve({ data: [], count: 0 })}
+          inventoryCategoriesPromise={Promise.resolve([] as Category[])}
+          attendanceLogs={[]}
+        />
+      </Suspense>
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Malformed FAQ JSON falls back to DEFAULT_STUDENT_FAQS
+    expect(consoleErrSpy).toHaveBeenCalled();
+    expect(container.textContent).toContain('Support & FAQs');
+
+    // Clicking book in ActivitySection opens BookDetailModal (lines 667-668)
+    const openResBtn = container.querySelector('button[aria-label="Open details for Clean Code"]');
+    await clickElement(openResBtn);
+    expect(mockGetBookPublicDetails).toHaveBeenCalledWith('book-res-1');
+
+    // Realtime callbacks trigger debouncedRefresh -> router.refresh()
+    const dashChannel = registeredChannels.find((c) => c.name.startsWith('dashboard-user-1'));
+    expect(dashChannel).toBeDefined();
+    await act(async () => {
+      dashChannel?.handlers.forEach((h) => h.callback({ new: {} }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 550));
+    });
+    expect(mockRouterRefresh).toHaveBeenCalled();
+
+    // Staff recent book image error fallback
+    await rerender(
+      <Suspense fallback={<div>Suspending</div>}>
+        <DashboardClient
+          user={makeUser()}
+          role="librarian"
+          statsPromise={Promise.resolve(stats)}
+          profilePromise={Promise.resolve({ data: makeProfile({ role: 'librarian' }) })}
+          cardPromise={Promise.resolve({ data: null })}
+          faqPromise={Promise.resolve({ data: null })}
+          reservationsPromise={Promise.resolve([])}
+          inventoryBooksPromise={Promise.resolve({ data: [], count: 0 })}
+          inventoryCategoriesPromise={Promise.resolve([] as Category[])}
+          attendanceLogs={[]}
+        />
+      </Suspense>
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const recentImg = container.querySelector('img[src="https://example.com/broken.jpg"]') as HTMLImageElement;
+    await act(async () => {
+      recentImg.dispatchEvent(new Event('error'));
+    });
+    expect(recentImg.getAttribute('src')).toBe('/images/default-book-cover.png');
+    consoleErrSpy.mockRestore();
+  });
+
   it('DashboardContent returns null when unauthenticated and renders DashboardClient when authenticated', async () => {
     mockGetMe.mockResolvedValueOnce(null);
     const unauthEl = await DashboardContent({ searchParams: Promise.resolve({}) });
@@ -1188,6 +1329,38 @@ describe('Layout Components', () => {
       </PreferencesProvider>
     );
     expect(container.querySelector('h1')?.textContent).toBe('Attendance Logs');
+
+    // parentSegment === 'history' with view=logs as librarian -> back link Borrowing Logs
+    mockPathname = '/history/entry-1';
+    mockSearchParamsString = 'view=logs';
+    await rerender(
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="librarian">
+        <BreadcrumbNav />
+      </PreferencesProvider>
+    );
+    expect(container.querySelector('h1')?.textContent).toBe('Entry 1');
+    expect(container.querySelector('a[href="/history"]')?.textContent).toContain('Borrowing Logs');
+
+    // parentSegment === 'attendance' without view=logs as student -> back link My Attendance
+    mockPathname = '/attendance/123e4567-e89b-12d3-a456-426614174000';
+    mockSearchParamsString = '';
+    await rerender(
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+        <BreadcrumbNav />
+      </PreferencesProvider>
+    );
+    expect(container.querySelector('h1')?.textContent).toBe('Details');
+    expect(container.querySelector('a[href="/attendance"]')?.textContent).toContain('My Attendance');
+
+    // Root UUID segment -> Details
+    mockPathname = '/123e4567-e89b-12d3-a456-426614174000';
+    await rerender(
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+        <BreadcrumbNav />
+      </PreferencesProvider>
+    );
+    expect(container.querySelector('h1')?.textContent).toBe('Details');
+    expect(container.querySelector('a')).toBeNull();
   });
 
   it('Logo renders system SVG with calculated size + 16 padding', async () => {
@@ -1364,6 +1537,115 @@ describe('Layout Components', () => {
     expect(document.body.textContent).toContain('Log out?');
     const cancelDialogBtn = findButtonByText(document.body, 'Cancel');
     await clickElement(cancelDialogBtn);
+  });
+
+  it('ProtectedNav supports student_assistant split history/attendance links, prefetching, mobile close, and logout confirmation', async () => {
+    const sb = makeSupabaseMock();
+    mockCreateClient.mockReturnValue(sb);
+
+    mockPathname = '/history';
+    mockSearchParamsString = 'view=logs';
+    const { container, rerender } = await renderClient(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="student_assistant"
+        initialProfile={makeProfile({
+          role: 'student_assistant',
+          status: 'ACTIVE',
+          permissions: {
+            manage_circulation: true,
+            manage_attendance: true,
+            view_admin_dashboard: true,
+          },
+        })}
+      >
+        <SidebarProvider>
+          <ProtectedNav
+            user={makeUser({
+              email: 'helper@alabang.sti.edu.ph',
+              user_metadata: {},
+            })}
+          />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+
+    expect(container.textContent).toContain('My Borrowing');
+    expect(container.textContent).toContain('Borrowing Logs');
+    expect(container.textContent).toContain('My Attendance');
+    expect(container.textContent).toContain('Attendance Logs');
+    const logsLink = container.querySelector('a[href="/history?view=logs"]') as HTMLAnchorElement;
+    expect(logsLink.getAttribute('aria-current')).toBe('page');
+
+    // Hover triggers router.prefetch on logo and nav links
+    const logoLink = container.querySelector('a[href="/dashboard"]') as HTMLAnchorElement;
+    await act(async () => {
+      logoLink.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      logsLink.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    });
+    expect(mockRouterPrefetch).toHaveBeenCalledWith('/dashboard');
+    expect(mockRouterPrefetch).toHaveBeenCalledWith('/history?view=logs');
+
+    // Open dropdown, hover My Profile to prefetch, then confirm Log out
+    const accountTrigger = findButtonByText(container, 'Ada Lovelace');
+    await openRadixPopup(accountTrigger!);
+    const profileLink = document.body.querySelector('a[href="/profile"]') as HTMLAnchorElement;
+    await act(async () => {
+      profileLink.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    });
+    expect(mockRouterPrefetch).toHaveBeenCalledWith('/profile');
+
+    const logoutMenuItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
+      (el) => el.textContent?.includes('Log out')
+    ) as HTMLElement;
+    await clickElement(logoutMenuItem);
+
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: { href: '/history' },
+    });
+
+    const confirmLogout = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Log out'
+    );
+    await clickElement(confirmLogout);
+    expect(sb.auth.signOut).toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Logging out...');
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 550));
+    });
+    expect((window.location as unknown as { href: string }).href).toBe('/');
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: originalLocation,
+    });
+
+    // Inactive student_assistant with null profile falls back to email prefix + single history/attendance links
+    mockPathname = '/attendance';
+    mockSearchParamsString = '';
+    await rerender(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="student_assistant"
+        initialProfile={null}
+      >
+        <SidebarProvider>
+          <ProtectedNav
+            user={makeUser({
+              email: 'fallback@alabang.sti.edu.ph',
+              user_metadata: {},
+            })}
+          />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    expect(container.textContent).toContain('fallback');
+    expect(container.textContent).not.toContain('Borrowing Logs');
+    expect(container.textContent).not.toContain('Attendance Logs');
   });
 
   it('UserNav displays user info, role badge, opens profile/logout menu, and calls signOut on confirm', async () => {
@@ -2365,5 +2647,220 @@ describe('UI Primitives', () => {
     );
     await clickElement(findButtonByText(container, 'Reload'));
     expect(onAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ===========================================================================
+// 4. Library Card, Pagination & Borrower Modal Components
+// ===========================================================================
+describe('Library Card, Pagination & Borrower Modal Components', () => {
+  it('DigitalCard renders dynamic academicYear, avatarUrl, suspended/expired badges, exportMode, and back fallbacks', async () => {
+    const { container, rerender } = await renderClient(
+      <DigitalCard
+        fullName="Emilio Jacinto"
+        studentId="2026-0011"
+        cardNumber="LIB-0011"
+        department="BS Information Technology"
+        status="suspended"
+        expiryDate="2027-06-30"
+        avatarUrl="/images/avatar.png"
+        qrUrl="https://example.com/qr.png"
+      />
+    );
+
+    expect(container.textContent).toContain('suspended');
+    expect(container.querySelector('img[src="/images/avatar.png"]')).not.toBeNull();
+    expect(container.textContent).toMatch(/\d{4} - \d{4}/);
+
+    await rerender(
+      <DigitalCard
+        fullName="Emilio Jacinto"
+        studentId="2026-0011"
+        cardNumber="LIB-0011"
+        department="BS Information Technology"
+        status="expired"
+        expiryDate="2027-06-30"
+        exportMode={true}
+      />
+    );
+    expect(container.textContent).toContain('expired');
+
+    await rerender(
+      <DigitalCard
+        fullName="Emilio Jacinto"
+        studentId="2026-0011"
+        cardNumber="LIB-0011"
+        department="BS Information Technology"
+        status="active"
+        expiryDate="2027-06-30"
+        side="back"
+        exportMode={true}
+      />
+    );
+    expect(container.textContent).toContain('N/A');
+    expect(container.textContent).toContain('Librarian');
+  });
+
+  it('MyCardContainer handles dashboard Back/Front flip & QR modal and surfaces export failures cleanly', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          qr_url: '',
+          profile_url: '',
+          qr_exists: false,
+          profile_exists: false,
+          ready: false,
+        }),
+      })
+    );
+
+    const baseData = {
+      fullName: 'Teresa Magbanua',
+      studentId: '2026-0042',
+      cardNumber: 'LIB-2026-0042',
+      department: 'BS Computer Science',
+      status: 'active' as const,
+      expiryDate: '2027-06-30',
+      avatarUrl: null,
+      qrUrl: 'https://example.com/qr.png',
+    };
+
+    const { container, rerender } = await renderClient(
+      <MyCardContainer initialData={baseData} variant="dashboard" />
+    );
+    await act(async () => { await Promise.resolve(); });
+
+    // Flip Back -> Front on dashboard variant
+    await clickElement(findButtonByText(container, 'Back'));
+    expect(findButtonByText(container, 'Front')).toBeDefined();
+    await clickElement(findButtonByText(container, 'Front'));
+    expect(findButtonByText(container, 'Back')).toBeDefined();
+
+    // Open QR dialog from dashboard variant
+    await clickElement(container.querySelector('button[aria-label="Expand QR code"]'));
+    expect(document.body.textContent).toContain('Library Card QR');
+    expect(document.body.textContent).toContain('LIB-2026-0042');
+
+    // Page variant: canvas getContext null -> triggers export error toasts
+    mockToPng.mockResolvedValue('data:image/png;base64,CARD');
+    class MockImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_v: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', MockImage);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+
+    await rerender(<MyCardContainer initialData={baseData} variant="page" />);
+    await act(async () => { await Promise.resolve(); });
+
+    await clickElement(findButtonByText(container, 'Export front + back'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't export your card. Check your connection and try again."
+    );
+
+    await clickElement(findButtonByText(container, 'Wallet preset'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't export the wallet card. Check your connection and try again."
+    );
+  });
+
+  it('CompactPagination handles page changes, pageSizeOptions selection, and zero-item boundary', async () => {
+    const onPageChange = vi.fn();
+    const onPageSizeChange = vi.fn();
+
+    const { container, rerender } = await renderClient(
+      <CompactPagination
+        page={2}
+        totalItems={45}
+        pageSize={10}
+        onPageChange={onPageChange}
+        pageSizeOptions={[10, 20, 50]}
+        onPageSizeChange={onPageSizeChange}
+        variant="default"
+      />
+    );
+
+    expect(container.textContent).toContain('Showing 11-20 of 45');
+    expect(container.querySelector('[role="status"]')?.getAttribute('aria-label')).toBe('Page 2 of 5');
+
+    await clickElement(container.querySelector('button[aria-label="Previous page"]'));
+    expect(onPageChange).toHaveBeenCalledWith(1);
+
+    await clickElement(container.querySelector('button[aria-label="Next page"]'));
+    expect(onPageChange).toHaveBeenCalledWith(3);
+
+    // Change page size via Select
+    const sizeTrigger = container.querySelector('button[aria-label="Items per page"]') as HTMLElement;
+    await pressKey(sizeTrigger, 'Enter');
+    const opt20 = Array.from(document.body.querySelectorAll('[role="option"]')).find(
+      (el) => el.textContent?.trim() === '20'
+    ) as HTMLElement;
+    await clickElement(opt20);
+    expect(onPageSizeChange).toHaveBeenCalledWith(20);
+
+    // Zero items disables both arrows
+    await rerender(
+      <CompactPagination
+        page={1}
+        totalItems={0}
+        pageSize={10}
+        onPageChange={onPageChange}
+        variant="ghost"
+      />
+    );
+    expect(container.textContent).toContain('Showing 0-0 of 0');
+    expect((container.querySelector('button[aria-label="Previous page"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((container.querySelector('button[aria-label="Next page"]') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('BorrowerDetailsModal handles closed/empty, canOpenProfile true/false, fallback fields, and close callback', async () => {
+    const onClose = vi.fn();
+    const { rerender } = await renderClient(
+      <BorrowerDetailsModal borrower={null} onClose={onClose} canOpenProfile={false} />
+    );
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    // Missing details & canOpenProfile=false
+    await rerender(
+      <BorrowerDetailsModal
+        borrower={{ id: 'u-2', full_name: null, email: null, student_id: null }}
+        onClose={onClose}
+        canOpenProfile={false}
+      />
+    );
+    expect(document.body.textContent).toContain('Borrower details');
+    expect(document.body.textContent).toContain('Not provided');
+    expect(document.body.querySelector('a[href="/users/u-2"]')).toBeNull();
+
+    // Populated details & canOpenProfile=true + close button
+    await rerender(
+      <BorrowerDetailsModal
+        borrower={{
+          id: 'u-2',
+          full_name: 'Marcelo H. del Pilar',
+          email: 'marcelo@sti.edu.ph',
+          student_id: '2026-888',
+        }}
+        onClose={onClose}
+        canOpenProfile={true}
+      />
+    );
+    expect(document.body.textContent).toContain('Marcelo H. del Pilar');
+    expect(document.body.textContent).toContain('2026-888');
+    expect(document.body.textContent).toContain('marcelo@sti.edu.ph');
+    expect(document.body.querySelector('a[href="/users/u-2"]')).not.toBeNull();
+
+    const closeBtn = Array.from(document.body.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Close'
+    );
+    await clickElement(closeBtn);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

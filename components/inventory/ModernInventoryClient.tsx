@@ -85,6 +85,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -775,6 +776,9 @@ export function ModernInventoryClient({
                       <FileSpreadsheet className="h-5 w-5 text-primary" />
                       Batch Catalog Operations
                     </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">
+                      Import spreadsheet or JSON book records, queue ISBN lookups, or export catalog data.
+                    </DialogDescription>
                   </DialogHeader>
                   
                   {/* Beautiful Glassmorphic Tab Selectors */}

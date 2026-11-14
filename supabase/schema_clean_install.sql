@@ -222,6 +222,91 @@ CREATE TABLE IF NOT EXISTS public.ui_preferences (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Catalog Import Queue Tables
+CREATE TABLE IF NOT EXISTS public.catalog_import_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    label TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.catalog_import_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_id UUID NOT NULL REFERENCES public.catalog_import_jobs(id) ON DELETE CASCADE,
+    isbn TEXT,
+    book_id UUID REFERENCES public.books(id) ON DELETE SET NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('create', 'enrich')),
+    requested_copies INTEGER NOT NULL DEFAULT 1 CHECK (requested_copies BETWEEN 0 AND 50),
+    copies_applied BOOLEAN NOT NULL DEFAULT false,
+    status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'processing', 'retry', 'complete', 'review', 'failed')),
+    metadata_status TEXT NOT NULL DEFAULT 'pending' CHECK (metadata_status IN ('pending', 'complete', 'missing')),
+    cover_status TEXT NOT NULL DEFAULT 'pending' CHECK (cover_status IN ('pending', 'complete', 'missing')),
+    covers JSONB NOT NULL DEFAULT '[]',
+    cover_source TEXT,
+    title TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 4),
+    lease UUID,
+    lease_until TIMESTAMPTZ,
+    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Audit Log Records View (security_invoker preserves audit_logs RLS & role restrictions)
+CREATE OR REPLACE VIEW public.audit_log_records WITH (security_invoker = true) AS
+WITH linked AS (
+  SELECT a.*, COALESCE(
+      CASE WHEN a.entity_type IN ('book', 'books') THEN a.entity_id::text END,
+      a.details->>'book_id', a.new_value->>'book_id', a.old_value->>'book_id',
+      r.book_id::text, c.book_id::text
+    ) AS subject_book_id,
+    COALESCE(
+      CASE WHEN a.entity_type IN ('profile', 'profiles') THEN a.entity_id::text END,
+      a.details->>'student_user_id', a.details->>'targetUserId',
+      a.new_value->>'user_id', a.old_value->>'user_id',
+      loan.user_id::text, r.user_id::text, card.user_id::text, legacy_return.user_id::text
+    ) AS subject_student_id,
+    COALESCE(c.id::text, a.details->>'book_copy_id', a.new_value->>'book_copy_id', a.old_value->>'book_copy_id') AS subject_copy_id,
+    COALESCE(c.qr_string, a.details->>'bookQr', a.new_value->>'qr_string', a.old_value->>'qr_string') AS copy_barcode,
+    c.accession_number AS copy_accession
+  FROM public.audit_logs a
+  LEFT JOIN public.borrowing_records loan ON a.entity_type IN ('borrowing_record', 'borrowing_records') AND loan.id = a.entity_id
+  LEFT JOIN public.reservations r ON a.entity_type IN ('reservation', 'reservations') AND r.id = a.entity_id
+  LEFT JOIN public.library_cards card ON
+    (a.entity_type IN ('library_card', 'library_cards') AND card.id = a.entity_id)
+    OR card.card_number = a.details->>'studentCardQr'
+  LEFT JOIN public.book_copies c ON c.id::text = COALESCE(
+    CASE WHEN a.entity_type IN ('book_copy', 'book_copies') THEN a.entity_id::text END,
+    loan.book_copy_id::text, r.copy_id::text, a.details->>'book_copy_id',
+    a.new_value->>'book_copy_id', a.old_value->>'book_copy_id'
+  ) OR (a.entity_id IS NULL AND c.qr_string = a.details->>'bookQr')
+  LEFT JOIN LATERAL (
+    SELECT br.user_id FROM public.borrowing_records br
+    WHERE a.action = 'return' AND a.entity_id IS NULL AND br.book_copy_id = c.id
+      AND br.returned_at BETWEEN a.created_at - INTERVAL '5 minutes' AND a.created_at + INTERVAL '5 minutes'
+      AND NOT EXISTS (
+        SELECT 1 FROM public.borrowing_records other
+        WHERE other.id <> br.id AND other.book_copy_id = c.id
+          AND other.returned_at BETWEEN a.created_at - INTERVAL '5 minutes' AND a.created_at + INTERVAL '5 minutes'
+      )
+  ) legacy_return ON true
+)
+SELECT linked.*,
+  COALESCE(b.title, linked.details->>'bookTitle', linked.details->>'book_title',
+    CASE WHEN linked.entity_type IN ('book', 'books') THEN COALESCE(linked.new_value->>'title', linked.old_value->>'title') END) AS book_title,
+  b.isbn AS book_isbn,
+  COALESCE(p.full_name, linked.details->>'studentName', linked.details->>'student_name',
+    CASE WHEN linked.entity_type IN ('profile', 'profiles') THEN COALESCE(linked.new_value->>'full_name', linked.old_value->>'full_name') END) AS student_name,
+  p.student_id AS student_number,
+  p.email AS student_email,
+  actor.full_name AS actor_name,
+  actor.email AS actor_email
+FROM linked
+LEFT JOIN public.books b ON b.id::text = linked.subject_book_id
+LEFT JOIN public.profiles p ON p.id::text = linked.subject_student_id
+LEFT JOIN public.profiles actor ON actor.id = linked.admin_id;
+
+GRANT SELECT ON public.audit_log_records TO authenticated;
 
 
 -- 5. INDEXES & VECTOR OPTIMIZATIONS
@@ -245,6 +330,8 @@ CREATE INDEX IF NOT EXISTS system_settings_updated_by_idx ON public.system_setti
 CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS attendance_user_id_idx ON public.attendance(user_id);
 CREATE INDEX IF NOT EXISTS audit_logs_admin_id_idx ON public.audit_logs(admin_id);
+CREATE INDEX IF NOT EXISTS catalog_import_items_book_id_idx ON public.catalog_import_items(book_id);
+CREATE INDEX IF NOT EXISTS catalog_import_jobs_created_by_idx ON public.catalog_import_jobs(created_by);
 
 -- High-Frequency Composite & Partial Indexes
 CREATE INDEX IF NOT EXISTS borrowing_records_user_status_idx ON public.borrowing_records(user_id, status);
@@ -257,6 +344,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS attendance_user_active_idx ON public.attendanc
 CREATE INDEX IF NOT EXISTS attendance_checkout_cron_idx ON public.attendance(check_in_at) WHERE check_out_at IS NULL;
 CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON public.notifications(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS notifications_unread_idx ON public.notifications(user_id) WHERE is_read = false;
+CREATE INDEX IF NOT EXISTS catalog_import_items_pending ON public.catalog_import_items(next_attempt_at, created_at) WHERE status IN ('queued', 'retry', 'processing');
+CREATE INDEX IF NOT EXISTS catalog_import_items_job ON public.catalog_import_items(job_id);
 
 -- 6. TRIGGER & HELPER FUNCTIONS
 
@@ -1390,12 +1479,172 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.catalog_import_enqueue(p_job uuid, p_actor uuid, p_label text, p_items jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) NOT BETWEEN 1 AND 500 THEN
+    RAISE EXCEPTION 'Import requires 1–500 items';
+  END IF;
+  INSERT INTO public.catalog_import_jobs(id, created_by, label)
+  VALUES (p_job, p_actor, p_label)
+  ON CONFLICT (id) DO NOTHING;
+  IF NOT FOUND THEN
+    IF NOT EXISTS (SELECT 1 FROM public.catalog_import_jobs WHERE id = p_job AND created_by IS NOT DISTINCT FROM p_actor) THEN
+      RAISE EXCEPTION 'Import request belongs to another user';
+    END IF;
+    RETURN p_job;
+  END IF;
+  INSERT INTO public.catalog_import_items(job_id, isbn, book_id, mode, requested_copies, copies_applied, cover_source, title)
+  SELECT p_job, x->>'isbn', NULLIF(x->>'book_id', '')::uuid, x->>'mode', COALESCE((x->>'requested_copies')::integer, 0),
+    x->>'mode' = 'enrich', x->>'cover_source', x->>'title'
+  FROM jsonb_array_elements(p_items) x;
+  RETURN p_job;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.catalog_import_claim()
+RETURNS SETOF public.catalog_import_items
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  slots integer;
+BEGIN
+  PERFORM pg_advisory_xact_lock(80431192);
+  UPDATE public.catalog_import_items
+  SET status = 'failed', error = 'Worker interrupted repeatedly. Retry this item.', lease = NULL, lease_until = NULL
+  WHERE status = 'processing' AND lease_until < NOW() AND attempts >= 4;
+
+  SELECT greatest(0, 2 - count(*))::integer INTO slots
+  FROM public.catalog_import_items
+  WHERE status = 'processing' AND lease_until > NOW();
+
+  RETURN QUERY
+  UPDATE public.catalog_import_items i
+  SET status = 'processing', attempts = i.attempts + 1, lease = gen_random_uuid(), lease_until = NOW() + INTERVAL '120 seconds'
+  WHERE i.id IN (
+    SELECT id FROM public.catalog_import_items
+    WHERE attempts < 4
+      AND ((status IN ('queued', 'retry') AND next_attempt_at <= NOW()) OR (status = 'processing' AND lease_until < NOW()))
+    ORDER BY next_attempt_at, created_at
+    FOR UPDATE SKIP LOCKED
+    LIMIT slots
+  )
+  RETURNING i.*;
+END;
+$$;
+
+-- Book and copies are committed together; replaying a cover never adds copies again.
+CREATE OR REPLACE FUNCTION public.catalog_import_apply_book(p_item uuid, p_lease uuid, p_data jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  i public.catalog_import_items;
+  target uuid;
+BEGIN
+  SELECT * INTO i FROM public.catalog_import_items WHERE id = p_item FOR UPDATE;
+  IF i.lease IS DISTINCT FROM p_lease OR i.status <> 'processing' THEN
+    RAISE EXCEPTION 'Import lease expired';
+  END IF;
+  target := i.book_id;
+  IF target IS NULL AND i.mode = 'enrich' THEN
+    RAISE EXCEPTION 'Original book no longer exists';
+  END IF;
+  IF target IS NULL THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended('catalog-isbn-' || i.isbn, 0));
+    SELECT id INTO target FROM public.books WHERE regexp_replace(isbn, '[[:space:]-]', '', 'g') = i.isbn LIMIT 1 FOR UPDATE;
+    IF target IS NULL THEN
+      IF NULLIF(p_data->>'title', '') IS NULL THEN
+        RETURN NULL;
+      END IF;
+      INSERT INTO public.books(title, author, isbn, is_active)
+      VALUES (p_data->>'title', COALESCE(p_data->>'author', ''), i.isbn, true)
+      RETURNING id INTO target;
+    END IF;
+  END IF;
+  UPDATE public.books SET
+    title = COALESCE(NULLIF(title, ''), p_data->>'title', ''),
+    author = COALESCE(NULLIF(author, ''), p_data->>'author', ''),
+    description = COALESCE(NULLIF(description, ''), NULLIF(p_data->>'description', '')),
+    dewey_decimal = COALESCE(NULLIF(dewey_decimal, ''), NULLIF(p_data->>'dewey_decimal', '')),
+    published_year = COALESCE(published_year, NULLIF(p_data->>'published_year', '')::integer),
+    tags = CASE WHEN COALESCE(cardinality(tags), 0) > 0 THEN tags ELSE ARRAY(SELECT jsonb_array_elements_text(COALESCE(p_data->'tags', '[]'))) END,
+    updated_at = NOW()
+  WHERE id = target;
+  IF NOT i.copies_applied AND i.mode = 'create' THEN
+    INSERT INTO public.book_copies(book_id, status)
+    SELECT target, 'AVAILABLE' FROM generate_series(1, i.requested_copies);
+  END IF;
+  UPDATE public.catalog_import_items
+  SET book_id = target, copies_applied = true, title = (SELECT title FROM public.books WHERE id = target)
+  WHERE id = i.id;
+  RETURN target;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.catalog_import_finish(
+  p_item uuid,
+  p_lease uuid,
+  p_status text,
+  p_metadata text,
+  p_cover text,
+  p_error text,
+  p_covers jsonb,
+  p_delay_ms integer,
+  p_cover_url text DEFAULT NULL,
+  p_expected_cover text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  i public.catalog_import_items;
+BEGIN
+  SELECT * INTO i FROM public.catalog_import_items WHERE id = p_item FOR UPDATE;
+  IF i.lease IS DISTINCT FROM p_lease OR i.status <> 'processing' THEN
+    RETURN false;
+  END IF;
+  IF p_cover_url IS NOT NULL THEN
+    UPDATE public.books
+    SET cover_url = p_cover_url, updated_at = NOW()
+    WHERE id = i.book_id AND cover_url IS NOT DISTINCT FROM p_expected_cover;
+    IF NOT FOUND THEN
+      p_status := 'review';
+      p_error := 'Cover changed during import; kept the newer value.';
+    END IF;
+  END IF;
+  UPDATE public.catalog_import_items SET
+    status = p_status,
+    metadata_status = p_metadata,
+    cover_status = p_cover,
+    error = p_error,
+    covers = p_covers,
+    next_attempt_at = NOW() + make_interval(secs => greatest(0, p_delay_ms) / 1000.0),
+    lease = NULL,
+    lease_until = NULL
+  WHERE id = i.id;
+  RETURN true;
+END;
+$$;
+
 -- 9. ROW LEVEL SECURITY (RLS) ACTIVATION
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.book_copies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.borrowing_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.catalog_import_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.catalog_import_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.checkout_idempotency ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.library_cards ENABLE ROW LEVEL SECURITY;
@@ -1413,13 +1662,9 @@ CREATE POLICY "Staff can insert attendance" ON public.attendance
   FOR INSERT TO authenticated
   WITH CHECK (public.is_staff());
 
-CREATE POLICY "Staff can view all attendance" ON public.attendance
+CREATE POLICY "Attendance select policy" ON public.attendance
   FOR SELECT TO authenticated
-  USING (public.is_staff());
-
-CREATE POLICY "Users can view own attendance" ON public.attendance
-  FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+  USING (public.is_staff() OR (SELECT auth.uid()) = user_id);
 
 CREATE POLICY "Staff can update attendance" ON public.attendance
   FOR UPDATE TO authenticated
@@ -1459,13 +1704,24 @@ CREATE POLICY "Staff can insert books" ON public.books
   FOR INSERT TO authenticated
   WITH CHECK (public.is_staff());
 
-CREATE POLICY "Active books are viewable by everyone" ON public.books
+-- Inline the active-staff check instead of calling public.is_staff() because
+-- EXECUTE on is_staff() is revoked from anon; referencing it in a TO public
+-- policy raises permission-denied errors on anonymous catalog queries.
+CREATE POLICY "Books select policy" ON public.books
   FOR SELECT TO public
-  USING (is_active = true);
-
-CREATE POLICY "Staff can view all books" ON public.books
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
+  USING (
+    is_active = true
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+        AND status = 'ACTIVE'
+        AND role IN (
+          'super_admin'::public.user_role,
+          'librarian'::public.user_role,
+          'student_assistant'::public.user_role
+        )
+    )
+  );
 
 CREATE POLICY "Staff can update books" ON public.books
   FOR UPDATE TO authenticated
@@ -1477,13 +1733,38 @@ CREATE POLICY "Librarians can insert borrowing records" ON public.borrowing_reco
   FOR INSERT TO authenticated
   WITH CHECK (public.is_manager());
 
-CREATE POLICY "Staff can view all borrowing records" ON public.borrowing_records
+CREATE POLICY "Borrowing records select policy" ON public.borrowing_records
   FOR SELECT TO authenticated
-  USING (public.is_staff());
+  USING (public.is_staff() OR (SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Users can view own borrowing records" ON public.borrowing_records
+-- catalog_import_jobs & catalog_import_items Policies
+CREATE POLICY "import_staff_read" ON public.catalog_import_jobs
   FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+        AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+        AND status = 'ACTIVE'
+    )
+  );
+
+CREATE POLICY "import_staff_read" ON public.catalog_import_items
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+        AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+        AND status = 'ACTIVE'
+    )
+  );
+
+-- demo_accounts Policies (explicit deny-all; table is managed solely via service_role / SECURITY DEFINER)
+CREATE POLICY "Deny direct access to demo accounts" ON public.demo_accounts
+  FOR ALL TO public
+  USING (false)
+  WITH CHECK (false);
 
 CREATE POLICY "Librarians can update borrowing records" ON public.borrowing_records
   FOR UPDATE TO authenticated
@@ -1515,13 +1796,9 @@ CREATE POLICY "Staff can manage checkout idempotency" ON public.checkout_idempot
   WITH CHECK (public.is_staff());
 
 -- library_cards Policies
-CREATE POLICY "Users can view own library card" ON public.library_cards
+CREATE POLICY "Library cards select policy" ON public.library_cards
   FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
-
-CREATE POLICY "Staff can view all library cards" ON public.library_cards
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
+  USING (public.is_staff() OR (SELECT auth.uid()) = user_id);
 
 -- notifications Policies
 CREATE POLICY "Users can view own notifications" ON public.notifications
@@ -1536,49 +1813,31 @@ CREATE POLICY "Users can update own notifications" ON public.notifications
 -- profiles Policies
 CREATE POLICY "Users can view own profile, staff can view all" ON public.profiles
   FOR SELECT TO authenticated
-  -- No sub-select here: the update policies below query profiles, which would make it policy recursion
-  USING (id = auth.uid() OR public.is_staff());
+  USING ((id = (SELECT auth.uid())) OR public.is_staff());
 
-CREATE POLICY "Users can update own profile" ON public.profiles
+-- Use public.is_manager() (SECURITY DEFINER) so updating profiles never recurses into SELECT policies.
+CREATE POLICY "Profiles update policy" ON public.profiles
   FOR UPDATE TO authenticated
-  USING ((SELECT auth.uid()) = id)
-  WITH CHECK (
-    (SELECT auth.uid()) = id
-    AND role = (SELECT p.role FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
-    AND status = (SELECT p.status FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
-    AND permissions IS NOT DISTINCT FROM (SELECT p.permissions FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
-  );
-
-CREATE POLICY "Admins can update profiles" ON public.profiles
-  FOR UPDATE TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = (SELECT auth.uid())
-      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = (SELECT auth.uid())
-      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
-    )
-  );
+  USING (((SELECT auth.uid()) = id) OR public.is_manager())
+  WITH CHECK (((SELECT auth.uid()) = id) OR public.is_manager());
 
 -- reservations Policies
-CREATE POLICY "Users can view own reservations" ON public.reservations
+CREATE POLICY "Reservations select policy" ON public.reservations
   FOR SELECT TO authenticated
-  USING ((SELECT auth.uid()) = user_id);
+  USING (public.is_staff() OR (SELECT auth.uid()) = user_id);
 
-CREATE POLICY "Staff can view all reservations" ON public.reservations
-  FOR SELECT TO authenticated
-  USING (public.is_staff());
+CREATE POLICY "Librarians can insert reservations" ON public.reservations
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_manager());
 
-CREATE POLICY "Librarians can manage reservations" ON public.reservations
-  FOR ALL TO authenticated
+CREATE POLICY "Librarians can update reservations" ON public.reservations
+  FOR UPDATE TO authenticated
   USING (public.is_manager())
   WITH CHECK (public.is_manager());
+
+CREATE POLICY "Librarians can delete reservations" ON public.reservations
+  FOR DELETE TO authenticated
+  USING (public.is_manager());
 
 -- return_idempotency Policies
 CREATE POLICY "Staff can manage return idempotency" ON public.return_idempotency
@@ -1591,8 +1850,18 @@ CREATE POLICY "System settings are viewable by everyone" ON public.system_settin
   FOR SELECT TO public
   USING (true);
 
-CREATE POLICY "Admins can manage system settings" ON public.system_settings
-  FOR ALL TO authenticated
+CREATE POLICY "Admins can insert system settings" ON public.system_settings
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+    )
+  );
+
+CREATE POLICY "Admins can update system settings" ON public.system_settings
+  FOR UPDATE TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
@@ -1601,6 +1870,16 @@ CREATE POLICY "Admins can manage system settings" ON public.system_settings
     )
   )
   WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+      AND role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)
+    )
+  );
+
+CREATE POLICY "Admins can delete system settings" ON public.system_settings
+  FOR DELETE TO authenticated
+  USING (
     EXISTS (
       SELECT 1 FROM public.profiles
       WHERE id = (SELECT auth.uid())
@@ -1664,6 +1943,14 @@ GRANT EXECUTE ON FUNCTION public.send_bulk_notifications_by_target(text, text, t
 
 REVOKE EXECUTE ON FUNCTION public.reactivate_users_bulk(uuid[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.reactivate_users_bulk(uuid[]) TO authenticated, service_role;
+
+-- Catalog import queue tables and worker RPCs
+REVOKE ALL ON public.catalog_import_jobs, public.catalog_import_items FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.catalog_import_jobs, public.catalog_import_items TO authenticated;
+GRANT ALL ON public.catalog_import_jobs, public.catalog_import_items TO service_role;
+
+REVOKE EXECUTE ON FUNCTION public.catalog_import_enqueue(uuid, uuid, text, jsonb), public.catalog_import_claim(), public.catalog_import_apply_book(uuid, uuid, jsonb), public.catalog_import_finish(uuid, uuid, text, text, text, text, jsonb, integer, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.catalog_import_enqueue(uuid, uuid, text, jsonb), public.catalog_import_claim(), public.catalog_import_apply_book(uuid, uuid, jsonb), public.catalog_import_finish(uuid, uuid, text, text, text, text, jsonb, integer, text, text) TO service_role;
 
 -- 12. DEFAULT SYSTEM SETTINGS SEED VALUES
 INSERT INTO public.system_settings (key, value, description, data_type) VALUES

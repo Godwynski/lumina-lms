@@ -92,22 +92,71 @@ vi.mock('@/lib/supabase/server', () => ({
 
 const mockGetMe = vi.fn();
 const mockGetPreferences = vi.fn();
+const mockGetUserRole = vi.fn(async () => 'super_admin');
 vi.mock('@/lib/auth-helpers', () => ({
   getMe: () => mockGetMe(),
   getPreferences: () => mockGetPreferences(),
-  getUserRole: async () => 'super_admin',
+  getUserRole: () => mockGetUserRole(),
 }));
 
 const mockGetPublicBookById = vi.fn();
+const mockGetPublicBooksCached = vi.fn();
+const mockGetCategoriesCached = vi.fn();
 vi.mock('@/lib/actions/public-catalog', () => ({
   getPublicBookById: (...args: unknown[]) => mockGetPublicBookById(...args),
-  getPublicBooksCached: vi.fn(),
-  getCategoriesCached: vi.fn(),
+  getPublicBooksCached: (...args: unknown[]) => mockGetPublicBooksCached(...args),
+  getCategoriesCached: (...args: unknown[]) => mockGetCategoriesCached(...args),
 }));
 
 const mockGetAnalyticsSummary = vi.fn();
+const mockGetAnalyticsDetail = vi.fn();
 vi.mock('@/lib/actions/analytics', () => ({
   getAnalyticsSummary: (...args: unknown[]) => mockGetAnalyticsSummary(...args),
+  getAnalyticsDetail: (...args: unknown[]) => mockGetAnalyticsDetail(...args),
+}));
+
+const mockGetAttendanceHistory = vi.fn();
+const mockToggleAttendanceByCard = vi.fn();
+vi.mock('@/lib/actions/attendance', () => ({
+  getAttendanceHistory: (...args: unknown[]) => mockGetAttendanceHistory(...args),
+  toggleAttendanceByCard: (...args: unknown[]) => mockToggleAttendanceByCard(...args),
+}));
+
+const mockPlayScanCue = vi.fn();
+vi.mock('@/hooks/use-scan-feedback', () => ({
+  useScanFeedback: () => ({ playScanCue: mockPlayScanCue }),
+}));
+
+const mockScannerStart = vi.fn();
+const mockScannerStop = vi.fn();
+const mockScannerSwitch = vi.fn();
+const mockScannerRef: {
+  onScan: (value: string) => Promise<void>;
+  cameraOpen: boolean;
+  isInitializing: boolean;
+  cameraIssue: string | null;
+  hasMultipleCameras: boolean;
+} = {
+  onScan: async () => {},
+  cameraOpen: false,
+  isInitializing: false,
+  cameraIssue: null,
+  hasMultipleCameras: false,
+};
+vi.mock('@/hooks/use-scanner', () => ({
+  useScanner: (options: { onScan: (value: string) => Promise<void>; scannerId?: string }) => {
+    mockScannerRef.onScan = options.onScan;
+    return {
+      cameraOpen: mockScannerRef.cameraOpen,
+      startScanner: mockScannerStart,
+      stopCamera: mockScannerStop,
+      isInitializing: mockScannerRef.isInitializing,
+      cameraIssue: mockScannerRef.cameraIssue,
+      switchCamera: mockScannerSwitch,
+      hasMultipleCameras: mockScannerRef.hasMultipleCameras,
+      scannerId: options.scannerId || 'attendance-kiosk-scanner',
+    };
+  },
 }));
 
 const mockCreateBook = vi.fn();
@@ -132,11 +181,12 @@ vi.mock('@/lib/actions/isbn-lookup', () => ({
 const mockReserveTitle = vi.fn();
 const mockCancelReservation = vi.fn();
 const mockGetBookAvailabilityStatus = vi.fn();
+const mockGetMyReservations = vi.fn().mockResolvedValue([]);
 vi.mock('@/lib/actions/reservations', () => ({
   reserveTitle: (...args: unknown[]) => mockReserveTitle(...args),
   cancelReservation: (...args: unknown[]) => mockCancelReservation(...args),
   getBookAvailabilityStatus: (...args: unknown[]) => mockGetBookAvailabilityStatus(...args),
-  getMyReservations: vi.fn().mockResolvedValue([]),
+  getMyReservations: (...args: unknown[]) => mockGetMyReservations(...args),
 }));
 
 const mockGetUsers = vi.fn();
@@ -155,8 +205,20 @@ vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="recharts-responsive">{children}</div>
   ),
-  LineChart: ({ data, children }: { data?: unknown[]; children?: React.ReactNode }) => (
-    <div data-testid="recharts-line-chart" data-points={data?.length ?? 0}>
+  LineChart: ({
+    data,
+    onClick,
+    children,
+  }: {
+    data?: unknown[];
+    onClick?: (state: { activeTooltipIndex?: number | null }) => void;
+    children?: React.ReactNode;
+  }) => (
+    <div
+      data-testid="recharts-line-chart"
+      data-points={data?.length ?? 0}
+      onClick={() => onClick?.({ activeTooltipIndex: 0 })}
+    >
       {children}
     </div>
   ),
@@ -166,11 +228,20 @@ vi.mock('recharts', () => ({
   PieChart: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="recharts-pie-chart">{children}</div>
   ),
-  Pie: ({ data, children }: { data?: Array<{ name: string; value: number }>; children?: React.ReactNode }) => (
+  Pie: ({
+    data,
+    onClick,
+    children,
+  }: {
+    data?: Array<{ name: string; value: number }>;
+    onClick?: (entry: unknown, index: number) => void;
+    children?: React.ReactNode;
+  }) => (
     <div
       data-testid="recharts-pie"
       data-items={data?.length ?? 0}
       data-first-name={data?.[0]?.name ?? ''}
+      onClick={() => onClick?.(data?.[0], 0)}
     >
       {children}
     </div>
@@ -181,11 +252,32 @@ vi.mock('recharts', () => ({
       {children}
     </div>
   ),
-  Bar: ({ fill }: { fill?: string }) => <div data-testid="recharts-bar" data-fill={fill} />,
+  Bar: ({
+    fill,
+    onClick,
+  }: {
+    fill?: string;
+    onClick?: (entry: { payload?: { hour?: string } }) => void;
+  }) => (
+    <div
+      data-testid="recharts-bar"
+      data-fill={fill}
+      onClick={() => onClick?.({ payload: { hour: '10:00' } })}
+    />
+  ),
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
-  Tooltip: () => null,
+  Tooltip: ({ content }: { content?: React.ReactElement }) =>
+    content && React.isValidElement(content) ? (
+      <div data-testid="recharts-tooltip">
+        {React.cloneElement(content as React.ReactElement<Record<string, unknown>>, {
+          active: true,
+          payload: [{ value: 5, stroke: '#111' }],
+          label: 'Mon',
+        })}
+      </div>
+    ) : null,
 }));
 
 // ─── Polyfills for jsdom ────────────────────────────────────────────────────
@@ -214,9 +306,24 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   });
 }
 
+if (typeof Element !== 'undefined') {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => {};
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => {};
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
+}
+
 // ─── Imports Under Test ─────────────────────────────────────────────────────
 
-import { useSWRConfig } from 'swr';
+import { SWRConfig, useSWRConfig } from 'swr';
 import RootError from '@/app/error';
 import RootNotFound from '@/app/not-found';
 import sitemap from '@/app/sitemap';
@@ -232,6 +339,13 @@ import {
   ChartSkeleton,
 } from '@/app/(authenticated)/analytics/AnalyticsCharts';
 import { AnalyticsClient } from '@/app/(authenticated)/analytics/AnalyticsClient';
+import { AnalyticsDetailModal } from '@/app/(authenticated)/analytics/AnalyticsDetailModal';
+import AttendancePage, { AttendanceSkeleton } from '@/app/(authenticated)/attendance/page';
+import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
+import AuditPage, { AuditSkeleton } from '@/app/(authenticated)/audit/page';
+import StudentCatalogPage, { CatalogSkeletonView } from '@/app/(authenticated)/student-catalog/page';
+import StudentBookDetailPage, { BookDetailSkeleton } from '@/app/(authenticated)/student-catalog/[id]/page';
+import UsersPage, { UsersSkeleton } from '@/app/(authenticated)/users/page';
 import { CatalogContent, CatalogSkeleton } from '@/app/(authenticated)/inventory/CatalogContent';
 import { AddBookClient } from '@/app/(authenticated)/inventory/add/AddBookClient';
 import { StudentCatalogClient } from '@/app/(authenticated)/student-catalog/StudentCatalogClient';
@@ -269,6 +383,7 @@ import SecurityLoading from '@/app/(authenticated)/security/loading';
 
 import type { Book, Category, User } from '@/lib/types';
 import type { AnalyticsSummary } from '@/lib/actions/analytics';
+import type { AttendanceRecord } from '@/lib/actions/attendance';
 import type { BookDetail, AvailabilityStatus } from '@/components/catalog/types';
 
 function findButtonByText(root: ParentNode, text: string): HTMLButtonElement | undefined {
@@ -283,6 +398,13 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
     vi.unstubAllEnvs();
     mockSearchParams = new URLSearchParams('');
     mockPathname = '/dashboard';
+    mockGetUserRole.mockResolvedValue('super_admin');
+    mockGetMyReservations.mockResolvedValue([]);
+    mockGetAttendanceHistory.mockResolvedValue([]);
+    mockScannerRef.cameraOpen = false;
+    mockScannerRef.isInitializing = false;
+    mockScannerRef.cameraIssue = null;
+    mockScannerRef.hasMultipleCameras = false;
 
     mockChannelSubscribe.mockImplementation(() => ({ unsubscribe: vi.fn() }));
     mockChannelOn.mockReturnThis();
@@ -307,7 +429,9 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
   afterEach(() => {
     cleanupClients();
+    vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 
@@ -1243,6 +1367,918 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       } else {
         expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
       }
+    });
+  });
+
+  // ─── 8. Authenticated SSR Pages ───────────────────────────────────────────
+
+  describe('Authenticated SSR Pages (attendance, audit, student-catalog, users)', () => {
+    it('AttendancePage redirects unauthenticated users, isolates student personal logs, and enables staff/SA system logs', async () => {
+      const skel = await renderClient(<AttendanceSkeleton />);
+      expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+      cleanupClients();
+
+      // 1. Unauthenticated -> redirect('/')
+      mockGetMe.mockResolvedValueOnce(null);
+      await expect(
+        AttendancePage({ searchParams: Promise.resolve({}) })
+      ).rejects.toThrow('NEXT_REDIRECT:/');
+
+      // 2. Student -> personal logs only
+      mockGetMe.mockResolvedValueOnce({
+        user: { id: 'stu-1' },
+        role: 'student',
+        isDeactivatedSA: false,
+        hasPermission: () => false,
+      });
+      mockGetAttendanceHistory.mockResolvedValueOnce([]);
+      const studentEl = await AttendancePage({ searchParams: Promise.resolve({ view: 'logs' }) });
+      const studentRender = await renderClient(studentEl);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockGetAttendanceHistory).toHaveBeenCalledTimes(1);
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith('stu-1');
+      expect(studentRender.container).toHaveTextContent('All-Time History');
+      cleanupClients();
+
+      // 3. Librarian -> system logs (today + all + personal)
+      vi.clearAllMocks();
+      mockGetMe.mockResolvedValueOnce({
+        user: { id: 'lib-1' },
+        role: 'librarian',
+        isDeactivatedSA: false,
+        hasPermission: (p: string) => p === 'manage_attendance',
+      });
+      mockGetAttendanceHistory.mockResolvedValue([]);
+      const staffEl = await AttendancePage({ searchParams: Promise.resolve({}) });
+      const staffRender = await renderClient(staffEl);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, { range: 'today' });
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, { range: 'all', limit: 300 });
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith('lib-1');
+      expect(staffRender.container).toHaveTextContent('Today');
+      expect(staffRender.container).toHaveTextContent('All History');
+      cleanupClients();
+
+      // 4. Student assistant with manage_attendance & view=logs vs deactivated SA
+      vi.clearAllMocks();
+      mockGetMe.mockResolvedValueOnce({
+        user: { id: 'sa-1' },
+        role: 'student_assistant',
+        isDeactivatedSA: false,
+        hasPermission: (p: string) => p === 'manage_attendance',
+      });
+      mockGetAttendanceHistory.mockResolvedValue([]);
+      const saEl = await AttendancePage({ searchParams: Promise.resolve({ view: 'logs' }) });
+      const saRender = await renderClient(saEl);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(saRender.container).toHaveTextContent('All History');
+      cleanupClients();
+
+      vi.clearAllMocks();
+      mockGetMe.mockResolvedValueOnce({
+        user: { id: 'sa-2' },
+        role: 'student_assistant',
+        isDeactivatedSA: true,
+        hasPermission: () => true,
+      });
+      mockGetAttendanceHistory.mockResolvedValue([]);
+      const deactivatedEl = await AttendancePage({ searchParams: Promise.resolve({ view: 'logs' }) });
+      const deactivatedRender = await renderClient(deactivatedEl);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(deactivatedRender.container).toHaveTextContent('All-Time History');
+    });
+
+    it('AuditPage redirects non-super_admin and renders AuditLogClient for super_admin', async () => {
+      const skel = await renderClient(<AuditSkeleton />);
+      expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+      cleanupClients();
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Non-super_admin redirects to /dashboard?error=unauthorized
+      mockGetUserRole.mockResolvedValueOnce('librarian');
+      const gateEl = AuditPage();
+      const gateSuspense = (gateEl.props as { children: React.ReactElement }).children;
+      const gateChild = (gateSuspense.props as { children: React.ReactElement }).children;
+      const GateFn = gateChild.type as () => Promise<React.ReactElement>;
+      await expect(GateFn()).rejects.toThrow('NEXT_REDIRECT:/dashboard?error=unauthorized');
+
+      // super_admin renders AuditLogClient
+      mockGetUserRole.mockResolvedValueOnce('super_admin');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({ logs: [], total: 0 }),
+        })
+      );
+      const adminGateResult = await GateFn();
+      const { container } = await renderClient(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          {adminGateResult}
+        </SWRConfig>
+      );
+      await vi.waitFor(() => {
+        expect(container).toHaveTextContent('0 matching records');
+      });
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('StudentCatalogPage resolves searchParams, defaults sortBy, and passes props to StudentCatalogClient', async () => {
+      const skel = await renderClient(<CatalogSkeletonView />);
+      expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+      cleanupClients();
+
+      mockGetPublicBooksCached.mockResolvedValue({ books: [], total: 0, hasMore: false });
+      mockGetCategoriesCached.mockResolvedValue([{ id: 'cat-1', name: 'Science' }]);
+      mockGetMyReservations.mockResolvedValue([]);
+
+      // Default params -> sortBy 'newest'
+      const pageEl1 = StudentCatalogPage({ searchParams: Promise.resolve({}) });
+      const suspense1 = (pageEl1.props as { children: React.ReactElement }).children;
+      const loaderEl1 = (suspense1.props as { children: React.ReactElement }).children;
+      const Loader1 = loaderEl1.type as (p: { searchParams: Promise<Record<string, string>> }) => Promise<React.ReactElement>;
+      const clientEl1 = await Loader1({ searchParams: Promise.resolve({}) });
+      expect(mockGetPublicBooksCached).toHaveBeenCalledWith('', '', '', false, 1, 16, 'newest');
+      const r1 = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>{clientEl1}</Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(r1.container).toHaveTextContent('No matching books found');
+      cleanupClients();
+
+      // Search query -> sortBy 'relevance', plus category, available, page
+      vi.clearAllMocks();
+      mockGetPublicBooksCached.mockResolvedValue({ books: [], total: 0, hasMore: false });
+      mockGetCategoriesCached.mockResolvedValue([]);
+      mockGetMyReservations.mockResolvedValue([]);
+      await Loader1({
+        searchParams: Promise.resolve({
+          q: 'clean',
+          category: 'cat-1',
+          available: 'true',
+          page: '2',
+        }),
+      });
+      expect(mockGetPublicBooksCached).toHaveBeenCalledWith(
+        'clean',
+        'cat-1',
+        '',
+        true,
+        2,
+        16,
+        'relevance'
+      );
+
+      // Explicit sort overrides default
+      await Loader1({
+        searchParams: Promise.resolve({ q: 'clean', sort: 'title' }),
+      });
+      expect(mockGetPublicBooksCached).toHaveBeenCalledWith(
+        'clean',
+        '',
+        '',
+        false,
+        1,
+        16,
+        'title'
+      );
+    });
+
+    it('StudentBookDetailPage renders Resource Explorer shell and forwards book/availability promises', async () => {
+      const skel = await renderClient(<BookDetailSkeleton />);
+      expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+      cleanupClients();
+
+      const book: BookDetail = {
+        id: 'sb-42',
+        title: 'The Pragmatic Programmer',
+        author: 'Andy Hunt',
+        isbn: '9780135957059',
+        available_copies: 2,
+        total_copies: 3,
+        section: 'CS',
+        location: 'Floor 1',
+        cover_url: null,
+        categories: { name: 'Software' },
+        tags: [],
+      };
+      mockGetPublicBookById.mockResolvedValueOnce(book);
+      mockGetBookAvailabilityStatus.mockResolvedValueOnce({
+        hasReservation: false,
+        isReady: false,
+        queuePosition: null,
+        holdExpiresAt: null,
+        nextAvailableDate: null,
+        reservationId: null,
+      });
+
+      const pageEl = StudentBookDetailPage({ params: Promise.resolve({ id: 'sb-42' }) });
+      const suspenseEl = (pageEl.props as { children: React.ReactElement }).children;
+      const loaderEl = (suspenseEl.props as { children: React.ReactElement }).children;
+      const LoaderFn = loaderEl.type as (p: { params: Promise<{ id: string }> }) => Promise<React.ReactElement>;
+      const detailClientEl = await LoaderFn({ params: Promise.resolve({ id: 'sb-42' }) });
+
+      expect(mockGetPublicBookById).toHaveBeenCalledWith('sb-42');
+      expect(mockGetBookAvailabilityStatus).toHaveBeenCalledWith('sb-42');
+
+      const { container } = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>{detailClientEl}</Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(container).toHaveTextContent('The Pragmatic Programmer');
+      expect(container).toHaveTextContent('Andy Hunt');
+    });
+
+    it('UsersPage redirects unauthenticated/non-staff users and loads directory for super_admin', async () => {
+      const skel = await renderClient(<UsersSkeleton />);
+      expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+      cleanupClients();
+
+      // 1. Unauthenticated -> redirect('/')
+      mockGetMe.mockResolvedValueOnce(null);
+      const unauthEl = UsersPage();
+      const unauthSuspense = (unauthEl.props as { children: React.ReactElement }).children;
+      const unauthWrapper = (unauthSuspense.props as { children: React.ReactElement }).children;
+      const unauthPromise = (unauthWrapper.props as { usersPromise: Promise<unknown> }).usersPromise;
+      await expect(unauthPromise).rejects.toThrow('NEXT_REDIRECT:/');
+
+      // 2. Student -> redirect('/dashboard')
+      mockGetMe.mockResolvedValueOnce({ role: 'student' });
+      const studentEl = UsersPage();
+      const studentSuspense = (studentEl.props as { children: React.ReactElement }).children;
+      const studentWrapper = (studentSuspense.props as { children: React.ReactElement }).children;
+      const studentPromise = (studentWrapper.props as { usersPromise: Promise<unknown> }).usersPromise;
+      await expect(studentPromise).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      // 3. Super admin -> calls getUsers and renders UsersContent
+      mockGetMe.mockResolvedValueOnce({ role: 'super_admin' });
+      mockGetUsers.mockResolvedValueOnce({
+        users: [
+          {
+            id: 'u-10',
+            name: 'Ana Reyes',
+            email: 'ana@alabang.sti.edu.ph',
+            role: 'student',
+            status: 'ACTIVE',
+            department: 'BSIT',
+            student_id: '2025-0010',
+            avatarUrl: null,
+            address: null,
+            phone: null,
+            joined: '2026-01-01',
+            updatedAt: '2026-01-01',
+          },
+        ],
+        total: 1,
+      });
+
+      const adminEl = UsersPage();
+      const adminRender = await renderClient(adminEl);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(mockGetUsers).toHaveBeenCalledWith({ tab: 'all', page: 1, pageSize: 12 });
+      expect(adminRender.container).toHaveTextContent('Ana Reyes');
+    });
+  });
+
+  // ─── 9. Analytics Charts Clicks, Custom Date Range & Detail Modal ─────────
+
+  describe('AnalyticsCharts, AnalyticsClient Custom Dates & AnalyticsDetailModal', () => {
+    it('invokes chart onSelect callbacks when clicking LineChart, Pie, and Bar elements', async () => {
+      const onTrendSelect = vi.fn();
+      const onCategorySelect = vi.fn();
+      const onBarSelect = vi.fn();
+
+      const { container } = await renderClient(
+        <div>
+          <TrendChart
+            title="Circulation"
+            color="#111"
+            onSelect={onTrendSelect}
+            data={[{ label: 'Mon', count: 5, from: '2026-11-01', to: '2026-11-01' }]}
+          />
+          <CategoryPieChart
+            title="Genres"
+            onSelect={onCategorySelect}
+            data={[{ name: 'History', value: 3 }]}
+          />
+          <PeakHoursBarChart
+            title="Hours"
+            color="#333"
+            onSelect={onBarSelect}
+            data={[{ hour: '10:00', count: 8 }]}
+          />
+        </div>
+      );
+
+      await clickElement(container.querySelector('[data-testid="recharts-line-chart"]'));
+      expect(onTrendSelect).toHaveBeenCalledWith({
+        label: 'Mon',
+        count: 5,
+        from: '2026-11-01',
+        to: '2026-11-01',
+      });
+
+      await clickElement(container.querySelector('[data-testid="recharts-pie"]'));
+      expect(onCategorySelect).toHaveBeenCalledWith('History');
+
+      await clickElement(container.querySelector('[data-testid="recharts-bar"]'));
+      expect(onBarSelect).toHaveBeenCalledWith('10:00');
+
+      expect(container).toHaveTextContent('units');
+      expect(container).toHaveTextContent('visits');
+    });
+
+    it('validates custom date form, resets custom range, opens AnalyticsDetailModal from charts, and refreshes on realtime', async () => {
+      const summary: AnalyticsSummary = {
+        borrowingTrends: [{ label: 'Nov 1', count: 5, from: '2026-11-01', to: '2026-11-01' }],
+        attendanceTrends: [{ label: 'Nov 1', count: 10 }],
+        categoryDistribution: [{ name: 'Fiction', value: 5 }],
+        peakHours: [{ hour: '10:00', count: 8 }],
+        popularBooks: [],
+      };
+      mockGetAnalyticsSummary.mockResolvedValue(summary);
+      mockGetAnalyticsDetail.mockResolvedValue({ rows: [], total: 0 });
+
+      const statsPromise = Promise.resolve({
+        activeBorrows: 4,
+        pendingApprovals: 1,
+        myActiveBorrows: 0,
+        recentBooks: [],
+        attendanceToday: 12,
+        totalBooks: 100,
+        totalUsers: 50,
+      });
+
+      const { container } = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <AnalyticsClient statsPromise={statsPromise} role="super_admin" />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open custom date form and test invalid date order
+      const details = container.querySelector('details') as HTMLDetailsElement;
+      details.open = true;
+      const fromInput = details.querySelector('input[name="from"]') as HTMLInputElement;
+      const toInput = details.querySelector('input[name="to"]') as HTMLInputElement;
+
+      await typeIntoInput(fromInput, '2026-11-10');
+      await typeIntoInput(toInput, '2026-11-05');
+      await submitForm(details.querySelector('form'));
+      expect(container.querySelector('[role="alert"]')).toHaveTextContent(
+        'Choose valid dates in order, within one year.'
+      );
+
+      // Submit valid custom date range
+      await typeIntoInput(fromInput, '2026-11-01');
+      await typeIntoInput(toInput, '2026-11-10');
+      await submitForm(details.querySelector('form'));
+      expect(container).toHaveTextContent('2026-11-01 – 2026-11-10');
+      expect(mockGetAnalyticsSummary).toHaveBeenCalledWith('30d', {
+        from: '2026-11-01',
+        to: '2026-11-10',
+      });
+
+      // Reset custom range
+      await clickElement(findButtonByText(container, 'Reset'));
+      expect(container).not.toHaveTextContent('2026-11-01 – 2026-11-10');
+
+      // Clicking peak hours bar opens AnalyticsDetailModal
+      await clickElement(container.querySelector('[data-testid="recharts-bar"]'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(document.body).toHaveTextContent('Visits at 10:00');
+      expect(mockGetAnalyticsDetail).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'hour', key: '10:00' }),
+        1
+      );
+
+      // Trigger realtime callback with fake timers
+      vi.useFakeTimers();
+      const realtimeHandler = mockChannelOn.mock.calls.find(
+        ([event]) => event === 'postgres_changes'
+      )?.[2] as (() => void) | undefined;
+      expect(realtimeHandler).toBeDefined();
+      const beforeCount = mockGetAnalyticsSummary.mock.calls.length;
+      await act(async () => {
+        realtimeHandler?.();
+        vi.advanceTimersByTime(550);
+      });
+      vi.useRealTimers();
+      expect(mockGetAnalyticsSummary.mock.calls.length).toBeGreaterThan(beforeCount);
+    });
+
+    it('AnalyticsDetailModal handles loading, error retry, empty state, book/borrower drilldown, and pagination', async () => {
+      const onClose = vi.fn();
+      const selection = {
+        kind: 'genre' as const,
+        key: 'Fiction',
+        title: 'Fiction borrowings',
+        from: '2026-11-01',
+        to: '2026-11-14',
+      };
+
+      // 1. Rejection -> error alert + Retry
+      mockGetAnalyticsDetail.mockRejectedValueOnce(new Error('Network down'));
+      await renderClient(<AnalyticsDetailModal selection={selection} onClose={onClose} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(document.body.querySelector('[role="alert"]')).toHaveTextContent(
+        'Records could not be loaded.'
+      );
+
+      // 2. Retry succeeds with 25 records (page 1 has book + borrower and visit-only row)
+      mockGetAnalyticsDetail.mockResolvedValueOnce({
+        total: 25,
+        rows: [
+          {
+            id: 'r-1',
+            occurred_at: '2026-11-10T09:00:00Z',
+            borrower_id: 'stu-1',
+            borrower_name: 'Maria Clara',
+            email: 'maria@alabang.sti.edu.ph',
+            student_id: '2024-0001',
+            book_id: 'book-1',
+            book_title: 'Noli Me Tangere',
+            status: 'CHECKED_OUT',
+          },
+          {
+            id: 'r-2',
+            occurred_at: '2026-11-10T10:00:00Z',
+            borrower_id: null,
+            borrower_name: null,
+            email: null,
+            student_id: null,
+            book_id: null,
+            book_title: null,
+            status: 'VISIT_COMPLETED',
+          },
+        ],
+      });
+      mockGetBookPublicDetails.mockResolvedValueOnce({
+        book: {
+          id: 'book-1',
+          title: 'Noli Me Tangere',
+          author: 'Jose Rizal',
+          isbn: '9780143039693',
+          available_copies: 1,
+          total_copies: 2,
+          categories: { name: 'Fiction' },
+          tags: [],
+        },
+        availability: {
+          hasReservation: false,
+          isReady: false,
+          queuePosition: null,
+          holdExpiresAt: null,
+          nextAvailableDate: null,
+          reservationId: null,
+        },
+      });
+
+      await clickElement(findButtonByText(document.body, 'Retry'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(document.body).toHaveTextContent('25 records');
+      expect(document.body).toHaveTextContent('Noli Me Tangere');
+      expect(document.body).toHaveTextContent('Library visit');
+      expect(document.body).toHaveTextContent('Unavailable borrower');
+      expect(document.body).toHaveTextContent('Page 1 of 2');
+
+      // Open borrower modal
+      await clickElement(findButtonByText(document.body, 'Maria Clara'));
+      expect(document.body).toHaveTextContent('maria@alabang.sti.edu.ph');
+
+      // Open book modal (read_only -> getBookPublicDetails)
+      await clickElement(findButtonByText(document.body, 'Noli Me Tangere'));
+      expect(mockGetBookPublicDetails).toHaveBeenCalledWith('book-1');
+
+      // Paginate to Next page (returns empty rows) and then Previous page
+      mockGetAnalyticsDetail.mockResolvedValueOnce({ total: 25, rows: [] });
+      await clickElement(document.body.querySelector('button[aria-label="Next page"]'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockGetAnalyticsDetail).toHaveBeenLastCalledWith(selection, 2);
+      expect(document.body).toHaveTextContent('No records for this selection.');
+      expect(document.body).toHaveTextContent('Page 2 of 2');
+
+      mockGetAnalyticsDetail.mockResolvedValueOnce({ total: 25, rows: [] });
+      await clickElement(document.body.querySelector('button[aria-label="Previous page"]'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockGetAnalyticsDetail).toHaveBeenLastCalledWith(selection, 1);
+    });
+  });
+
+  // ─── 10. AttendanceClient Staff & Personal Views ──────────────────────────
+
+  describe('AttendanceClient', () => {
+    const makeRecord = (
+      id: string,
+      name: string,
+      studentId: string,
+      checkedOut = false
+    ): AttendanceRecord => ({
+      id,
+      user_id: `u-${id}`,
+      check_in_at: '2026-11-14T08:00:00.000Z',
+      check_out_at: checkedOut ? '2026-11-14T10:00:00.000Z' : null,
+      profiles: {
+        full_name: name,
+        student_id: studentId,
+      },
+    });
+
+    it('renders staff Today/All History tabs, search, manual check-in/out, load older, and camera modal flows', async () => {
+      const todayRecords = [
+        makeRecord('1', 'Juan Dela Cruz', '2024-0001', false),
+        makeRecord('2', 'Maria Santos', '2024-0002', true),
+      ];
+      // 300 records so allWindowFull === true -> shows "Load older records"
+      const allRecords = Array.from({ length: 300 }, (_, i) =>
+        makeRecord(`a-${i}`, `Patron ${i}`, `2024-${1000 + i}`, i % 2 === 0)
+      );
+
+      mockGetAttendanceHistory.mockImplementation(
+        async (_uid?: string, opts?: { range?: string }) =>
+          opts?.range === 'all' ? allRecords : todayRecords
+      );
+
+      const { container } = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <AttendanceClient
+            systemTodayPromise={Promise.resolve(todayRecords)}
+            systemAllPromise={Promise.resolve(allRecords)}
+            personalHistoryPromise={Promise.resolve([])}
+            isStaff={true}
+            userId="staff-1"
+          />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(container).toHaveTextContent('Juan Dela Cruz');
+      expect(container).toHaveTextContent('Still in library');
+      expect(container).toHaveTextContent('1 active');
+      expect(container).toHaveTextContent('1 completed');
+
+      // Filter Today tab by search
+      const searchInput = container.querySelector(
+        'input[aria-label="Search attendance by patron name or ID"]'
+      ) as HTMLInputElement;
+      await typeIntoInput(searchInput, 'Maria');
+      expect(container).toHaveTextContent('Maria Santos');
+      expect(container).not.toHaveTextContent('Juan Dela Cruz');
+      await typeIntoInput(searchInput, '');
+
+      // Manual card entry: success IN, error result, and rejection
+      mockToggleAttendanceByCard.mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'IN',
+          userName: 'Pedro Reyes',
+          recordedAt: '2026-11-14T09:00:00.000Z',
+          message: 'Checked in Pedro Reyes',
+          description: 'Timed in successfully.',
+        },
+      });
+      const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
+      await typeIntoInput(cardInput, 'LC-9001');
+      await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
+      expect(mockToggleAttendanceByCard).toHaveBeenCalledWith({
+        cardNumber: 'LC-9001',
+        isManual: true,
+        confirmed: false,
+      });
+      expect(mockPlayScanCue).toHaveBeenCalledWith('success');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Transaction recorded',
+        expect.objectContaining({ description: 'Checked in Pedro Reyes' })
+      );
+      expect(cardInput.value).toBe('');
+
+      mockToggleAttendanceByCard.mockResolvedValueOnce({
+        success: false,
+        error: 'Unknown card ID',
+      });
+      await typeIntoInput(cardInput, 'BAD-CARD');
+      await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
+      expect(mockPlayScanCue).toHaveBeenCalledWith('error');
+      expect(mockToastError).toHaveBeenCalledWith('Unknown card ID', {
+        id: 'attendance-toast-error',
+      });
+
+      mockToggleAttendanceByCard.mockRejectedValueOnce(new Error('Network error'));
+      await typeIntoInput(cardInput, 'ERR-CARD');
+      await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
+      expect(mockToastError).toHaveBeenCalledWith('Failed to process attendance transaction.', {
+        id: 'attendance-toast-err',
+      });
+
+      // Switch to All History tab -> Load older records + server-side debounced search
+      await clickElement(findButtonByText(container, 'All History'));
+      expect(container).toHaveTextContent('Showing the latest 300 records.');
+
+      mockGetAttendanceHistory.mockResolvedValueOnce([...allRecords, makeRecord('older-1', 'Older User', '2020-0001', true)]);
+      await clickElement(findButtonByText(container, 'Load older records'));
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, { range: 'all', limit: 600 });
+
+      vi.useFakeTimers();
+      mockGetAttendanceHistory.mockResolvedValueOnce([makeRecord('s-1', 'Searched User', '2024-7777', true)]);
+      await typeIntoInput(searchInput, 'Searched');
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      vi.useRealTimers();
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, {
+        range: 'all',
+        limit: 600,
+        search: 'Searched',
+      });
+      expect(container).toHaveTextContent('Searched User');
+
+      // Open camera scanner modal -> Discard & Register attendance + cameraIssue/cameraOpen states
+      mockScannerRef.cameraIssue = 'Camera permission denied';
+      await clickElement(container.querySelector('button[aria-haspopup="dialog"]'));
+      expect(document.body).toHaveTextContent('Gate Attendance Scanner');
+      expect(document.body).toHaveTextContent('Camera permission denied');
+      await clickElement(findButtonByText(document.body, 'Retry camera'));
+      expect(mockScannerStart).toHaveBeenCalled();
+
+      // Scan a card -> Discard it -> Scan again -> Register attendance
+      await act(async () => {
+        await mockScannerRef.onScan('LC-SCAN-1');
+      });
+      expect(document.body).toHaveTextContent('LC-SCAN-1');
+      await clickElement(findButtonByText(document.body, 'Discard'));
+      expect(document.body).not.toHaveTextContent('LC-SCAN-1');
+
+      await act(async () => {
+        await mockScannerRef.onScan('LC-SCAN-2');
+      });
+      mockToggleAttendanceByCard.mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'OUT',
+          userName: 'Elena Cruz',
+          recordedAt: '2026-11-14T11:30:00.000Z',
+          message: 'Checked out Elena Cruz',
+          description: 'Timed out successfully.',
+        },
+      });
+      await clickElement(findButtonByText(document.body, 'Register attendance'));
+      expect(mockToggleAttendanceByCard).toHaveBeenCalledWith({
+        cardNumber: 'LC-SCAN-2',
+        isManual: false,
+        confirmed: true,
+      });
+      expect(document.body).toHaveTextContent('Elena Cruz');
+
+      // Trigger realtime update
+      const realtimeCb = mockChannelOn.mock.calls.find(
+        ([event]) => event === 'postgres_changes'
+      )?.[2] as (() => Promise<void>) | undefined;
+      await act(async () => {
+        await realtimeCb?.();
+      });
+      expect(mockGetAttendanceHistory).toHaveBeenCalled();
+    });
+
+    it('renders camera controls when cameraOpen is true and renders student personal AttendanceClient view', async () => {
+      mockScannerRef.cameraOpen = true;
+      mockScannerRef.hasMultipleCameras = true;
+
+      const staffRender = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <AttendanceClient
+            systemTodayPromise={Promise.resolve([])}
+            systemAllPromise={Promise.resolve([])}
+            personalHistoryPromise={Promise.resolve([])}
+            isStaff={true}
+            userId="staff-2"
+          />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      await clickElement(staffRender.container.querySelector('button[aria-haspopup="dialog"]'));
+      await clickElement(document.body.querySelector('button[aria-label="Switch camera"]'));
+      expect(mockScannerSwitch).toHaveBeenCalledTimes(1);
+      await clickElement(findButtonByText(document.body, 'Stop camera'));
+      expect(mockScannerStop).toHaveBeenCalled();
+      cleanupClients();
+
+      // Personal student view with pagination & records
+      const personalRecords = Array.from({ length: 12 }, (_, i) =>
+        makeRecord(`p-${i}`, 'Student Self', '2024-0001', i > 0)
+      );
+      const personalRender = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <AttendanceClient
+            personalHistoryPromise={Promise.resolve(personalRecords)}
+            isStaff={false}
+            userId="stu-99"
+          />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(personalRender.container).toHaveTextContent('All-Time History');
+      expect(personalRender.container).toHaveTextContent('Still in library');
+      expect(personalRender.container).toHaveTextContent('Showing 1-10 of 12');
+
+      // Trigger personal realtime refresh (latest subscription belongs to personalRender)
+      const realtimeCb = mockChannelOn.mock.calls
+        .filter(([event]) => event === 'postgres_changes')
+        .at(-1)?.[2] as (() => Promise<void>) | undefined;
+      mockGetAttendanceHistory.mockResolvedValueOnce(personalRecords.slice(0, 1));
+      await act(async () => {
+        await realtimeCb?.();
+      });
+      expect(mockGetAttendanceHistory).toHaveBeenCalledWith('stu-99');
+    });
+  });
+
+  // ─── 11. StudentCatalogClient & StudentBookDetailClient Uncovered Paths ───
+
+  describe('StudentCatalogClient & StudentBookDetailClient Edge Paths', () => {
+    it('supports debounced typing, clear search button, category dropdown toggle/clear, Reset button, and realtime refresh', async () => {
+      const books: Book[] = [
+        {
+          id: 'sb-2',
+          title: 'Pragmatic Thinking',
+          author: 'Andy Hunt',
+          isbn: '9781934356050',
+          available_copies: 1,
+          total_copies: 1,
+          tags: [],
+          section: 'CS',
+          location: 'Floor 1',
+          is_active: true,
+        },
+      ];
+      const categories: Category[] = [
+        { id: 'cat-1', name: 'Computer Science' },
+        { id: 'cat-2', name: 'Literature' },
+      ];
+
+      mockSearchParams = new URLSearchParams('category=cat-1');
+      const { container } = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <StudentCatalogClient
+            booksPromise={Promise.resolve({ books, total: 20, hasMore: true })}
+            categoriesPromise={Promise.resolve(categories)}
+            reservationsPromise={Promise.resolve([])}
+            initialFilters={{
+              q: '',
+              categoryId: 'cat-1',
+              availableOnly: false,
+              page: 1,
+              sortBy: 'newest',
+            }}
+          />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Category label displays single selected category name
+      expect(container).toHaveTextContent('Computer Science');
+
+      // Debounced search typing -> calls router.replace
+      vi.useFakeTimers();
+      const searchInput = container.querySelector('input[aria-label="Search the catalog"]') as HTMLInputElement;
+      await typeIntoInput(searchInput, 'Pragmatic');
+      await act(async () => {
+        vi.advanceTimersByTime(350);
+      });
+      vi.useRealTimers();
+      expect(mockRouterReplace).toHaveBeenCalledWith('?category=cat-1&q=Pragmatic', { scroll: false });
+
+      // Clear search (X button)
+      await clickElement(container.querySelector('button[aria-label="Clear search"]'));
+      expect(searchInput.value).toBe('');
+
+      // Reset button clears active filters
+      await clickElement(findButtonByText(container, 'Reset'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('?', { scroll: false });
+
+      // Realtime subscription triggers router.refresh after debounce
+      vi.useFakeTimers();
+      const realtimeCb = mockChannelOn.mock.calls.find(
+        ([event]) => event === 'postgres_changes'
+      )?.[2] as (() => void) | undefined;
+      await act(async () => {
+        realtimeCb?.();
+        vi.advanceTimersByTime(550);
+      });
+      vi.useRealTimers();
+      expect(mockRouterRefresh).toHaveBeenCalled();
+    });
+
+    it('StudentBookDetailClient renders queue badge, nextAvailableDate hint, image fallback, and cancel error toast', async () => {
+      const book: BookDetail = {
+        id: 'sb-12',
+        title: 'Operating Systems',
+        author: 'Silberschatz',
+        isbn: '9781118063330',
+        available_copies: 0,
+        total_copies: 1,
+        section: 'Tech',
+        location: 'Floor 3',
+        cover_url: 'https://example.com/broken.jpg',
+        categories: { name: 'Systems' },
+        tags: ['OS'],
+      };
+      const availability: AvailabilityStatus = {
+        hasReservation: false,
+        reservationId: null,
+        isReady: false,
+        queuePosition: null,
+        holdExpiresAt: null,
+        nextAvailableDate: '2026-11-25T12:00:00Z',
+      };
+
+      const { container } = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <StudentBookDetailClient
+            id="sb-12"
+            bookPromise={Promise.resolve(book)}
+            availabilityPromise={Promise.resolve(availability)}
+          />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(container).toHaveTextContent('A copy is expected to be returned by');
+
+      // Cover image onError falls back to default cover
+      const img = container.querySelector('img') as HTMLImageElement;
+      expect(img.getAttribute('src')).toBe('https://example.com/broken.jpg');
+      await act(async () => {
+        img.dispatchEvent(new Event('error'));
+      });
+      expect(img.getAttribute('src')).toBe('/images/default-book-cover.png');
+
+      // Queue reservation state + cancel error toast
+      cleanupClients();
+      mockCancelReservation.mockRejectedValueOnce(new Error('Cancel failed'));
+      const queuedRender = await renderClient(
+        <Suspense fallback={<div>Loading</div>}>
+          <StudentBookDetailClient
+            id="sb-13"
+            bookPromise={Promise.resolve(book)}
+            availabilityPromise={Promise.resolve({
+              hasReservation: true,
+              reservationId: 'res-13',
+              isReady: false,
+              queuePosition: 3,
+              holdExpiresAt: null,
+              nextAvailableDate: null,
+            })}
+          />
+        </Suspense>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(queuedRender.container).toHaveTextContent('Queue #3');
+
+      await clickElement(findButtonByText(queuedRender.container, 'Cancel Reservation'));
+      await clickElement(findButtonByText(document.body, 'Yes, Cancel'));
+      expect(mockToastError).toHaveBeenCalledWith('Cancel failed', { id: 'reservation-toast' });
     });
   });
 });

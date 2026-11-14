@@ -148,7 +148,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     if (db) await db.close();
   });
 
-  it('creates all 15 public tables and required columns on borrowing_records', async () => {
+  it('creates all 17 public tables, audit_log_records view, FK indexes, and required columns on borrowing_records', async () => {
     const tablesRes = await db.query<{ tablename: string }>(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
     );
@@ -159,6 +159,8 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       'book_copies',
       'books',
       'borrowing_records',
+      'catalog_import_items',
+      'catalog_import_jobs',
       'categories',
       'checkout_idempotency',
       'demo_accounts',
@@ -169,6 +171,22 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       'return_idempotency',
       'system_settings',
       'ui_preferences',
+    ]);
+
+    const viewRes = await db.query<{ viewname: string }>(
+      `SELECT viewname FROM pg_views WHERE schemaname = 'public' AND viewname = 'audit_log_records'`
+    );
+    expect(viewRes.rows.map((r) => r.viewname)).toEqual(['audit_log_records']);
+
+    const idxRes = await db.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes
+       WHERE schemaname = 'public'
+         AND indexname IN ('catalog_import_items_book_id_idx', 'catalog_import_jobs_created_by_idx')
+       ORDER BY indexname`
+    );
+    expect(idxRes.rows.map((r) => r.indexname)).toEqual([
+      'catalog_import_items_book_id_idx',
+      'catalog_import_jobs_created_by_idx',
     ]);
 
     const colRes = await db.query<{ column_name: string; data_type: string; numeric_precision: number | null; numeric_scale: number | null }>(
@@ -637,7 +655,39 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     await expectRoleFailure(db, 'anon', null, `SELECT public.annual_student_reset()`);
     await expectRoleFailure(db, 'anon', null, `SELECT public.get_analytics_summary('7d')`);
     await expectRoleFailure(db, 'anon', null, `SELECT * FROM public.demo_accounts`);
+    await expectRoleFailure(db, 'anon', null, `INSERT INTO public.demo_accounts (email) VALUES ('anon@example.com')`);
     await expectRoleFailure(db, 'authenticated', superAdminId, `SELECT * FROM public.demo_accounts`);
+    await expectRoleFailure(db, 'authenticated', superAdminId, `INSERT INTO public.demo_accounts (email) VALUES ('admin@example.com')`);
+    await expectRoleFailure(db, 'authenticated', superAdminId, `UPDATE public.demo_accounts SET email = 'x@example.com'`);
+    await expectRoleFailure(db, 'authenticated', superAdminId, `DELETE FROM public.demo_accounts`);
+
+    // Verify demo_accounts has the explicit deny-all RLS policy and blocks reads/writes even if table privileges existed
+    const demoPolicies = await db.query<{ policyname: string; cmd: string; qual: string; with_check: string }>(
+      `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = 'demo_accounts'`
+    );
+    expect(demoPolicies.rows).toEqual([
+      {
+        policyname: 'Deny direct access to demo accounts',
+        cmd: 'ALL',
+        qual: 'false',
+        with_check: 'false',
+      },
+    ]);
+
+    await expect(
+      db.transaction(async (tx) => {
+        await tx.exec(`INSERT INTO public.demo_accounts (email) VALUES ('seed@example.com')`);
+        await tx.exec(`GRANT ALL ON public.demo_accounts TO anon, authenticated`);
+        await tx.exec(`SET LOCAL ROLE authenticated`);
+        await tx.query(`SELECT set_config('request.jwt.claim.sub', $1, true)`, [superAdminId]);
+        const visible = await tx.query(`SELECT email FROM public.demo_accounts`);
+        expect(visible.rows).toHaveLength(0);
+        await expect(
+          tx.query(`INSERT INTO public.demo_accounts (email) VALUES ('blocked@example.com')`)
+        ).rejects.toThrow();
+        throw new Error('rollback-demo-probe');
+      })
+    ).rejects.toThrow('rollback-demo-probe');
   });
 
   it('enforces profiles RLS and fn_guard_profile_updates across all roles', async () => {
@@ -695,8 +745,19 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
   });
 
   it('enforces books, book_copies, and categories RLS across all roles', async () => {
-    // anon & student see active books only, all book_copies, all categories; cannot write
-    for (const [role, uid] of [['anon', null], ['authenticated', student1Id]] as const) {
+    const bookSelectPolicies = await db.query<{ policyname: string }>(
+      `SELECT policyname FROM pg_policies
+       WHERE schemaname = 'public' AND tablename = 'books' AND cmd = 'SELECT'
+       ORDER BY policyname`
+    );
+    expect(bookSelectPolicies.rows.map((r) => r.policyname)).toEqual(['Books select policy']);
+
+    // anon, student, & pending librarian see active books only, all book_copies, all categories; cannot write
+    for (const [role, uid] of [
+      ['anon', null],
+      ['authenticated', student1Id],
+      ['authenticated', pendingLibrarianId],
+    ] as const) {
       const booksRes = await withRole(db, role, uid, (tx) => tx.query<{ id: string }>(`SELECT id FROM public.books`));
       expect(booksRes.rows.map((r) => r.id)).toEqual([activeBookId]);
 
@@ -751,6 +812,18 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
   });
 
   it('enforces borrowing_records and reservations RLS across all roles', async () => {
+    const resPolicies = await db.query<{ policyname: string; cmd: string }>(
+      `SELECT policyname, cmd FROM pg_policies
+       WHERE schemaname = 'public' AND tablename = 'reservations'
+       ORDER BY cmd, policyname`
+    );
+    expect(resPolicies.rows).toEqual([
+      { policyname: 'Librarians can delete reservations', cmd: 'DELETE' },
+      { policyname: 'Librarians can insert reservations', cmd: 'INSERT' },
+      { policyname: 'Reservations select policy', cmd: 'SELECT' },
+      { policyname: 'Librarians can update reservations', cmd: 'UPDATE' },
+    ]);
+
     // anon sees 0 rows
     expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT id FROM public.borrowing_records`))).rows).toHaveLength(0);
     expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT id FROM public.reservations`))).rows).toHaveLength(0);
@@ -796,8 +869,16 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       `INSERT INTO public.reservations (user_id, book_id, queue_position) VALUES ($1, $2, 3)`,
       [student1Id, inactiveBookId]
     );
+    const saUpdRes = await withRole(db, 'authenticated', saId, (tx) =>
+      tx.query(`UPDATE public.reservations SET status = 'CANCELLED' WHERE id = $1 RETURNING id`, [student1ResId])
+    );
+    expect(saUpdRes.rows).toHaveLength(0);
+    const saDelRes = await withRole(db, 'authenticated', saId, (tx) =>
+      tx.query(`DELETE FROM public.reservations WHERE id = $1 RETURNING id`, [student1ResId])
+    );
+    expect(saDelRes.rows).toHaveLength(0);
 
-    // librarian & super_admin can insert/update borrowing_records & manage reservations
+    // librarian & super_admin can insert/update borrowing_records & insert/update/delete reservations
     const libBorrow = await withRole(db, 'authenticated', librarianId, (tx) =>
       tx.query<{ id: string }>(
         `INSERT INTO public.borrowing_records (user_id, book_copy_id, due_date, status)
@@ -812,13 +893,21 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     const libRes = await withRole(db, 'authenticated', librarianId, (tx) =>
       tx.query<{ id: string }>(
         `INSERT INTO public.reservations (user_id, book_id, queue_position, status)
-         VALUES ($1, $2, 1, 'CANCELLED') RETURNING id`,
+         VALUES ($1, $2, 1, 'ACTIVE') RETURNING id`,
         [student2Id, inactiveBookId]
       )
     );
-    await withRole(db, 'authenticated', superAdminId, (tx) =>
-      tx.query(`DELETE FROM public.reservations WHERE id = $1`, [libRes.rows[0].id])
+    const libUpdRes = await withRole(db, 'authenticated', librarianId, (tx) =>
+      tx.query<{ status: string }>(
+        `UPDATE public.reservations SET status = 'CANCELLED' WHERE id = $1 RETURNING status`,
+        [libRes.rows[0].id]
+      )
     );
+    expect(libUpdRes.rows[0]?.status).toBe('CANCELLED');
+    const delRes = await withRole(db, 'authenticated', superAdminId, (tx) =>
+      tx.query<{ id: string }>(`DELETE FROM public.reservations WHERE id = $1 RETURNING id`, [libRes.rows[0].id])
+    );
+    expect(delRes.rows.map((r) => r.id)).toEqual([libRes.rows[0].id]);
 
     // clean up test borrow row
     await db.query(`DELETE FROM public.borrowing_records WHERE id = $1`, [libBorrow.rows[0].id]);

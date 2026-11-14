@@ -62,14 +62,24 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockCreateClient(),
 }));
 
+const mockGetBookPublicDetails = vi.fn();
+vi.mock('@/lib/actions/catalog', () => ({
+  getBookPublicDetails: (...args: unknown[]) => mockGetBookPublicDetails(...args),
+  getBookAdminDetails: vi.fn(),
+  getCategories: vi.fn(),
+}));
+
 import { IdentityListManager } from '@/components/admin/policies/IdentityListManager';
 import { SupportFAQManager } from '@/components/admin/policies/SupportFAQManager';
+import { PolicyField } from '@/components/admin/policies/PolicyField';
 import { PolicyLayout } from '@/components/admin/policies/PolicyLayout';
 import { PolicyCommitModal } from '@/components/admin/PolicyCommitModal';
 import { PolicySimulationPanel } from '@/components/admin/PolicySimulationPanel';
 import { AuditLogClient } from '@/components/admin/AuditLogClient';
 import { AuditLogExportImportModal } from '@/components/admin/AuditLogExportImportModal';
+import { AuditSubjectFilter, AuditSubjectChip } from '@/components/admin/AuditSubjectFilter';
 import { CategoryManagement } from '@/components/admin/CategoryManagement';
+import { CategoryDialog } from '@/components/admin/categories/CategoryDialog';
 import { CategoryItem } from '@/components/admin/categories/CategoryItem';
 import { SystemAnnouncement } from '@/components/admin/system-announcement';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -83,8 +93,19 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
-if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = function scrollIntoView() {};
+if (typeof Element !== 'undefined') {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => {};
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => {};
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
 }
 
 function findButtonByText(root: ParentNode, text: string): HTMLButtonElement | undefined {
@@ -1178,6 +1199,485 @@ describe('Admin & Policies UI Components', () => {
         'Delivery was not confirmed. Your draft has been kept.'
       );
       expect(onClearDraft).not.toHaveBeenCalled();
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 10. Coverage Expansion: Audit Export/Import, AuditLogClient, AuditSubjectFilter,
+  //     PolicyField, PolicyLayout, CategoryDialog & CategoryItem
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('Uncovered Admin & Policies Branches', () => {
+    it('AuditLogExportImportModal parses CSV with Excel/Unix/ISO dates, handles drag-drop, empty/malformed files, and import API errors', async () => {
+      const fetchMock = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: 'Import rejected by server' }),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      const onClose = vi.fn();
+
+      await renderClient(
+        <AuditLogExportImportModal
+          isOpen={true}
+          onClose={onClose}
+          currentFilters={{
+            actionType: 'update',
+            endDate: '2026-11-14',
+            bookId: 'b-1',
+            studentId: 's-1',
+            copyId: 'c-1',
+            userId: 'u-1',
+          }}
+        />
+      );
+
+      // Export tab filter indicators and format switches + column checkbox toggle
+      expect(document.body).toHaveTextContent('Action: update');
+      expect(document.body).toHaveTextContent('... to 2026-11-14');
+      expect(document.body).toHaveTextContent('Selected book, student, copy, and staff filters are included.');
+
+      await clickElement(findButtonByText(document.body, 'Excel XLSX'));
+      expect(findButtonByText(document.body, 'Excel XLSX')).toHaveAttribute('aria-pressed', 'true');
+      await clickElement(findButtonByText(document.body, 'Spreadsheet CSV'));
+      expect(findButtonByText(document.body, 'Spreadsheet CSV')).toHaveAttribute('aria-pressed', 'true');
+
+      const firstCheckbox = document.body.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      await clickElement(firstCheckbox);
+      expect(document.body).toHaveTextContent('Customize Columns (14 / 15)');
+
+      // Switch to Import tab
+      await clickElement(findButtonByText(document.body, 'Restoration & Import'));
+
+      // 1. Empty JSON array via drag & drop onto the drop zone containing the file input
+      const emptyFile = new File(['[]'], 'empty.json', { type: 'application/json' });
+      const dropZone = document.body.querySelector('input[type="file"]')?.parentElement as HTMLElement;
+      await act(async () => {
+        const dragOverEvent = new Event('dragover', { bubbles: true, cancelable: true });
+        dropZone.dispatchEvent(dragOverEvent);
+        const dropEvent = new Event('drop', { bubbles: true, cancelable: true });
+        Object.defineProperty(dropEvent, 'dataTransfer', { value: { files: [emptyFile] } });
+        dropZone.dispatchEvent(dropEvent);
+        await new Promise((r) => setTimeout(r, 40));
+      });
+      expect(mockToastError).toHaveBeenCalledWith('The file is empty.');
+
+      // 2. Malformed JSON
+      const badJson = new File(['{bad json'], 'broken.json', { type: 'application/json' });
+      const fileInput1 = document.body.querySelector('input[type="file"]') as HTMLInputElement;
+      await act(async () => {
+        Object.defineProperty(fileInput1, 'files', { value: [badJson], configurable: true });
+        fileInput1.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 40));
+      });
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining('File parsing error:'));
+
+      // 3. Valid CSV with Excel serial date, Unix seconds, Unix ms, and JSON cells
+      const csvRows = [
+        'Timestamp,Entity,Action,Reason,Old Value,New Value,Details',
+        '46161.5,book,create,Excel serial date,"{""a"":1}","{""a"":2}","{""note"":""ok""}"',
+        '1779321600,profile,update,Unix seconds,,,',
+        '1779321600000,book_copy,archive,Unix ms,,,',
+      ].join('\n');
+      const csvFile = new File([csvRows], 'backup.csv', { type: 'text/csv' });
+      const fileInput2 = document.body.querySelector('input[type="file"]') as HTMLInputElement;
+      await act(async () => {
+        Object.defineProperty(fileInput2, 'files', { value: [csvFile], configurable: true });
+        fileInput2.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 60));
+      });
+      expect(document.body).toHaveTextContent('backup.csv');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Successfully parsed 3 audit records.');
+
+      // Commit restoration -> server returns 400/500 -> toast error
+      await clickElement(findButtonByText(document.body, 'Commit Restoration'));
+      expect(mockToastError).toHaveBeenCalledWith('Import rejected by server');
+
+      // Cancel calls onClose
+      await clickElement(findButtonByText(document.body, 'Cancel'));
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('AuditLogClient renders creation/deletion DataDiffs, string details, subject links, quick dates, chips, and generic error', async () => {
+      mockGetBookPublicDetails.mockResolvedValue({
+        book: {
+          id: 'book-42',
+          title: 'Clean Architecture',
+          author: 'Uncle Bob',
+          isbn: '9780134494166',
+          available_copies: 1,
+          total_copies: 1,
+          categories: { name: 'CS' },
+          tags: [],
+        },
+        availability: {
+          hasReservation: false,
+          isReady: false,
+          queuePosition: null,
+          holdExpiresAt: null,
+          nextAvailableDate: null,
+          reservationId: null,
+        },
+      });
+
+      const logs = [
+        {
+          id: 'log-create',
+          admin_id: 'admin-1',
+          entity_type: 'book',
+          entity_id: 'book-42',
+          action: 'create',
+          reason: null,
+          details: JSON.stringify({ added: ['TagA'], source: 'import' }),
+          old_value: null,
+          new_value: { title: 'Clean Architecture', active: true, tags: ['Arch'], meta: { a: 1, b: 2, c: 3 } },
+          created_at: '2026-11-14T01:00:00.000Z',
+          subject_book_id: 'book-42',
+          subject_student_id: 'stu-7',
+          book_title: 'Clean Architecture',
+          student_name: 'Pedro Penduko',
+          student_number: '2024-0007',
+          copy_barcode: 'BC-42',
+          copy_accession: 'ACC-42',
+          profiles: { full_name: null, email: 'admin@lumina.edu', role: 'super_admin' },
+        },
+        {
+          id: 'log-delete',
+          admin_id: 'admin-1',
+          entity_type: 'category',
+          entity_id: 'cat-9',
+          action: 'delete',
+          reason: 'Cleanup',
+          details: null,
+          old_value: { name: 'Obsolete', items: [] },
+          new_value: null,
+          created_at: '2026-11-14T02:00:00.000Z',
+          profiles: null,
+        },
+      ];
+
+      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/api/admin/audit-logs/options')) {
+          return new Response(
+            JSON.stringify({
+              options: [{ id: 'book-42', label: 'Clean Architecture', description: 'ISBN 9780134494166' }],
+            }),
+            { status: 200 }
+          );
+        }
+        return new Response(JSON.stringify({ logs, total: 2 }), { status: 200 });
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      window.history.replaceState(
+        null,
+        '',
+        '/?bookId=book-42&studentId=stu-7&copyId=copy-1&userId=u-1&query=clean&entityType=book&actionType=create&startDate=2026-11-01&endDate=2026-11-14'
+      );
+
+      const handle = await renderClient(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <AuditLogClient />
+        </SWRConfig>
+      );
+      await vi.waitFor(() => {
+        expect(handle.container).toHaveTextContent('Clean Architecture');
+      });
+
+      expect(handle.container).toHaveTextContent('admin@lumina.edu');
+      expect(handle.container).toHaveTextContent('System');
+      expect(handle.container).toHaveTextContent('Pedro Penduko · 2024-0007');
+      expect(handle.container).toHaveTextContent('BC-42 · ACC-42');
+      expect(handle.container).toHaveTextContent('No reason');
+
+      // Expand first row via table row click
+      const rows = handle.container.querySelectorAll('tbody tr');
+      await clickElement(rows[0]);
+      expect(handle.container).toHaveTextContent('TagA');
+      expect(handle.container).toHaveTextContent('Yes');
+
+      // Expand second row (deletion state)
+      await clickElement(handle.container.querySelectorAll('button[aria-label^="View details"]')[0]);
+      expect(handle.container).toHaveTextContent('Obsolete');
+      expect(handle.container).toHaveTextContent('Empty');
+
+      // Click book title in table body opens BookDetailModal
+      await clickElement(findButtonByText(handle.container.querySelector('tbody')!, 'Clean Architecture'));
+      expect(mockGetBookPublicDetails).toHaveBeenCalledWith('book-42');
+
+      // Open Advanced Filters modal -> quick date buttons + start > end validation
+      await clickElement(findButtonByText(handle.container, 'Filters'));
+      await clickElement(findButtonByText(document.body, 'Today'));
+      await clickElement(findButtonByText(document.body, 'Last 7 days'));
+      await clickElement(findButtonByText(document.body, 'This month'));
+
+      const startInput = document.body.querySelector('#audit-start-date') as HTMLInputElement;
+      await typeIntoInput(startInput, '2026-12-31');
+      expect(mockToastError).toHaveBeenCalledWith('Start date cannot be after end date');
+
+      await clickElement(findButtonByText(document.body, 'Done'));
+
+      // Remove an active filter chip
+      const removeSearchChip = handle.container.querySelector(
+        'button[aria-label="Remove search filter"]'
+      );
+      await clickElement(removeSearchChip);
+      expect(handle.container.querySelector('button[aria-label="Remove search filter"]')).toBeNull();
+
+      cleanupClients();
+
+      // Generic 500 error triggers error toast
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Database offline' }),
+        })
+      );
+      await renderClient(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <AuditLogClient />
+        </SWRConfig>
+      );
+      await vi.waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith('Database offline');
+      });
+    });
+
+    it('AuditSubjectFilter opens, searches with debounce, selects/clears option, handles Escape & error, and AuditSubjectChip removes', async () => {
+      const onChange = vi.fn();
+      const onRemove = vi.fn();
+
+      const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('query=fail')) {
+          return new Response(JSON.stringify({}), { status: 500 });
+        }
+        return new Response(
+          JSON.stringify({
+            options: [
+              { id: 'stu-1', label: 'Juan Dela Cruz', description: '2024-0001 · BSCS' },
+            ],
+          }),
+          { status: 200 }
+        );
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const handle = await renderClient(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <div>
+            <AuditSubjectChip
+              kind="student"
+              label="Student"
+              value="stu-1"
+              onRemove={onRemove}
+            />
+            <AuditSubjectFilter
+              kind="student"
+              label="Student"
+              value="stu-1"
+              onChange={onChange}
+            />
+          </div>
+        </SWRConfig>
+      );
+
+      await vi.waitFor(() => {
+        expect(handle.container).toHaveTextContent('Juan Dela Cruz · 2024-0001');
+      });
+
+      await clickElement(handle.container.querySelector('button[aria-label="Remove student filter"]'));
+      expect(onRemove).toHaveBeenCalledTimes(1);
+
+      // Open details dropdown
+      const details = handle.container.querySelector('details') as HTMLDetailsElement;
+      await act(async () => {
+        details.open = true;
+        details.dispatchEvent(new Event('toggle'));
+      });
+      await vi.waitFor(() => {
+        expect(handle.container).toHaveTextContent('2024-0001 · BSCS');
+      });
+
+      // Select option inside details dropdown
+      await clickElement(findButtonByText(details, 'Juan Dela Cruz'));
+      expect(onChange).toHaveBeenCalledWith({
+        id: 'stu-1',
+        label: 'Juan Dela Cruz',
+        description: '2024-0001 · BSCS',
+      });
+
+      // Reopen, search with debounced failure query, then clear selection
+      await act(async () => {
+        details.open = true;
+        details.dispatchEvent(new Event('toggle'));
+      });
+      const searchInput = handle.container.querySelector(
+        'input[aria-label="Search student"]'
+      ) as HTMLInputElement;
+      vi.useFakeTimers();
+      await typeIntoInput(searchInput, 'fail');
+      await act(async () => {
+        vi.advanceTimersByTime(300);
+      });
+      vi.useRealTimers();
+      await vi.waitFor(() => {
+        expect(handle.container.querySelector('[role="alert"]')).toHaveTextContent(
+          'Could not load choices. Reopen to retry.'
+        );
+      });
+
+      await clickElement(findButtonByText(handle.container, 'Clear student selection'));
+      expect(onChange).toHaveBeenCalledWith(null);
+
+      // Escape key closes details
+      await act(async () => {
+        details.open = true;
+        details.dispatchEvent(new Event('toggle'));
+      });
+      await pressKey(details, 'Escape');
+      expect(details.open).toBe(false);
+    });
+
+    it('PolicyField renders slider, Modified badge, and onBlur cleanup; PolicyLayout handles broadcast discard, server conflict keep, and commit failure', async () => {
+      const onChange = vi.fn();
+      const fieldHandle = await renderClient(
+        <TooltipProvider>
+          <div>
+            <PolicyField
+              policyKey="due_soon_reminder_days"
+              value="3"
+              initialValue="1"
+              onChange={onChange}
+              disabled={false}
+              loading={false}
+            />
+            <PolicyField
+              policyKey="loan_period_days"
+              value="14"
+              initialValue="14"
+              onChange={onChange}
+              onInvalidChange={vi.fn()}
+              disabled={false}
+              loading={false}
+            />
+          </div>
+        </TooltipProvider>
+      );
+
+      expect(fieldHandle.container).toHaveTextContent('Modified');
+      expect(fieldHandle.container).toHaveTextContent('3');
+
+      const numInput = fieldHandle.container.querySelector(
+        'input[aria-label="Borrowing Duration (days)"]'
+      ) as HTMLInputElement;
+      await typeIntoInput(numInput, '20');
+      await act(async () => {
+        numInput.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+      });
+      expect(onChange).toHaveBeenCalledWith('20');
+      cleanupClients();
+
+      // PolicyLayout: broadcasts unsaved draft Discard & Move, server conflict "Use their value", and failed commit
+      const fetchMock = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: 'Save failed' }),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const layoutHandle = await renderClient(
+        <PolicyLayout
+          settings={[{ id: 's1', key: 'loan_period_days', value: '14', description: '', updated_at: '' }]}
+          canEdit={true}
+          role="super_admin"
+          categoriesPromise={Promise.resolve([{ id: 'c1', name: 'Fiction', slug: 'fiction', is_active: true }])}
+        />
+      );
+
+      // Switch to Broadcasts, type announcement draft, then try switching to Support -> Discard & Move
+      await clickElement(findButtonByText(layoutHandle.container, 'Broadcasts'));
+      const subjectInput = layoutHandle.container.querySelector(
+        'input[placeholder="e.g. Scheduled Library Maintenance This Weekend"]'
+      ) as HTMLInputElement;
+      await typeIntoInput(subjectInput, 'Maintenance');
+      expect(layoutHandle.container).toHaveTextContent('Unsaved Draft');
+
+      await clickElement(findButtonByText(layoutHandle.container, 'Support'));
+      expect(document.body).toHaveTextContent('Unsaved Announcement Draft');
+      await clickElement(findButtonByText(document.body, 'Discard & Move'));
+      expect(mockToastSuccess).toHaveBeenCalledWith('Changes discarded');
+
+      // Go back to Circulation, edit loan_period_days, simulate conflict, choose "Use their value"
+      await clickElement(findButtonByText(layoutHandle.container, 'Circulation'));
+      const loanInput = layoutHandle.container.querySelector(
+        'input[aria-label="Borrowing Duration (days)"]'
+      ) as HTMLInputElement;
+      await typeIntoInput(loanInput, '25');
+
+      await layoutHandle.rerender(
+        <PolicyLayout
+          settings={[{ id: 's1', key: 'loan_period_days', value: '10', description: '', updated_at: '' }]}
+          canEdit={true}
+          role="super_admin"
+          categoriesPromise={Promise.resolve([{ id: 'c1', name: 'Fiction', slug: 'fiction', is_active: true }])}
+        />
+      );
+      await clickElement(findButtonByText(layoutHandle.container, 'Use their value'));
+      expect(layoutHandle.container.querySelector('[role="alert"]')).toBeNull();
+      expect(layoutHandle.container).not.toHaveTextContent('unsaved changes');
+
+      // Make another edit and test failed commit toast
+      await typeIntoInput(loanInput, '28');
+      await clickElement(findButtonByText(layoutHandle.container, 'Review Changes'));
+      await typeIntoInput(document.body.querySelector('textarea') as HTMLTextAreaElement, 'Test commit failure reason');
+      await clickElement(findButtonByText(document.body, 'Confirm & Commit'));
+      expect(mockToastError).toHaveBeenCalledWith('Failed to save some settings');
+    });
+
+    it('CategoryDialog and CategoryItem cover error toast, manual slug editing, validation limits, and bulk inputs', async () => {
+      const onDraftChange = vi.fn();
+      const itemHandle = await renderClient(
+        <CategoryItem
+          category={{ id: 'c1', name: 'Fiction', slug: 'fiction', description: 'Desc', is_active: true }}
+          draftCategory={{ id: 'c1', name: 'Fiction', slug: 'fiction', description: 'Desc', is_active: true }}
+          isBulkEditing={true}
+          isChanged={true}
+          onDraftChange={onDraftChange}
+        />
+      );
+
+      const bulkSlug = itemHandle.container.querySelector('input[placeholder="slug-identifier"]') as HTMLInputElement;
+      const bulkDesc = itemHandle.container.querySelector('input[placeholder="Optional description"]') as HTMLInputElement;
+      await typeIntoInput(bulkSlug, 'new-fiction');
+      await typeIntoInput(bulkDesc, 'Updated desc');
+      expect(onDraftChange).toHaveBeenCalledWith('slug', 'new-fiction');
+      expect(onDraftChange).toHaveBeenCalledWith('description', 'Updated desc');
+      expect(itemHandle.container).toHaveTextContent('Modified');
+      cleanupClients();
+
+      const onOpenChange = vi.fn();
+      const setFormData = vi.fn();
+      await renderClient(
+        <CategoryDialog
+          isOpen={true}
+          onOpenChange={onOpenChange}
+          editingId={null}
+          formData={{ name: 'Sci Fi', slug: 'sci-fi', description: 'Space' }}
+          setFormData={setFormData}
+          onSave={vi.fn()}
+          loading={false}
+          error="Duplicate slug"
+        />
+      );
+      expect(mockToastError).toHaveBeenCalledWith('Duplicate slug');
+
+      const slugInput = document.body.querySelector('#slug') as HTMLInputElement;
+      await typeIntoInput(slugInput, 'Science Fiction!');
+      expect(setFormData).toHaveBeenCalled();
+
+      await clickElement(findButtonByText(document.body, 'Cancel'));
+      expect(onOpenChange).toHaveBeenCalledWith(false);
     });
   });
 });

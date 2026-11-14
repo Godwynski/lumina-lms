@@ -397,6 +397,69 @@ describe('attendance server actions', () => {
         error: 'An active attendance session is already in progress for this card.',
       });
     });
+
+    it('surfaces database errors during card, profile, active session, checkout update, and non-duplicate insert', async () => {
+      // 1. Card query DB error
+      supaMock.setTableResponse('library_cards', null, { message: 'card db down' });
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1' })).toEqual({
+        success: false,
+        error: 'Database error while checking library card.',
+      });
+
+      // 2. Profile fallback DB error
+      supaMock.setTableResponse('library_cards', null, null);
+      supaMock.setTableResponse('profiles', null, { message: 'profile db down' });
+      expect(await toggleAttendanceByCard({ cardNumber: '2024-1' })).toEqual({
+        success: false,
+        error: 'Database error while checking student ID.',
+      });
+
+      // 3. Active session query DB error
+      supaMock.setTableResponse('library_cards', {
+        user_id: 'patron-1',
+        profiles: { full_name: 'Maria Clara', status: 'ACTIVE' },
+      });
+      supaMock.setTableResponse('attendance', null, { message: 'active query error' });
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1' })).toEqual({
+        success: false,
+        error: 'Database error while checking active sessions.',
+      });
+
+      // 4. Time Out update DB error
+      const activeOpen = createMockQueryBuilder({
+        id: 'att-open',
+        check_in_at: '2026-06-15T01:00:00Z',
+      });
+      const outUpdateErr = createMockQueryBuilder(null, { message: 'update failed' });
+      let outCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          outCalls += 1;
+          return outCalls === 1 ? activeOpen : outUpdateErr;
+        }
+        return supaMock.getTableBuilder(table);
+      });
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1', isManual: true })).toEqual({
+        success: false,
+        error: 'Failed to register Time Out.',
+      });
+
+      // 5. Time In generic insert DB error
+      const activeNone = createMockQueryBuilder(null);
+      const inInsertErr = createMockQueryBuilder(null, { code: '42501', message: 'rls blocked' });
+      let inCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          inCalls += 1;
+          return inCalls === 1 ? activeNone : inInsertErr;
+        }
+        return supaMock.getTableBuilder(table);
+      });
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1', isManual: true })).toEqual({
+        success: false,
+        error: 'Failed to register Time In.',
+      });
+    });
   });
 
   describe('getAttendanceHistory', () => {
@@ -511,6 +574,89 @@ describe('attendance server actions', () => {
       supaMock.setTableResponse('attendance', null, { message: 'DB read error' });
       await expect(getAttendanceHistory(undefined, { limit: 5 })).rejects.toEqual({
         message: 'DB read error',
+      });
+    });
+
+    it('supports staff limit without search, staff today pagination, explicit userId for staff, and unpaginated user pagination', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-15T17:00:00Z'));
+
+      // 1. Staff limit without search + range: all -> uses left-join profiles(...) and no gte
+      supaMock.setTableResponse('attendance', [
+        {
+          id: 'att-staff-1',
+          check_in_at: '2026-06-15T08:00:00Z',
+          check_out_at: null,
+          user_id: 'u-1',
+          profiles: { full_name: 'Ana', student_id: '2024-001' },
+        },
+      ]);
+      const staffNoSearch = await getAttendanceHistory(undefined, { range: 'all', limit: 10 });
+      expect(supaMock.getTableBuilder('attendance').select).toHaveBeenCalledWith(
+        'id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)'
+      );
+      expect(supaMock.getTableBuilder('attendance').gte).not.toHaveBeenCalled();
+      expect(staffNoSearch).toHaveLength(1);
+
+      // 2. Staff default (today, no limit) -> applies Manila gte filter during pagination
+      const todayBuilder = createMockQueryBuilder([
+        {
+          id: 'att-today-1',
+          check_in_at: '2026-06-16T00:05:00+08:00',
+          check_out_at: null,
+          user_id: 'u-2',
+          profiles: [{ full_name: 'Ben', student_id: '2024-002' }],
+        },
+      ]);
+      supaMock.from.mockImplementation((table: string) =>
+        table === 'attendance' ? todayBuilder : supaMock.getTableBuilder(table)
+      );
+      const todayRows = await getAttendanceHistory();
+      expect(todayBuilder.gte).toHaveBeenCalledWith('check_in_at', '2026-06-16T00:00:00+08:00');
+      expect(todayRows[0].profiles).toEqual({ full_name: 'Ben', student_id: '2024-002' });
+
+      // 3. Staff querying specific userId without limit -> paginates user records across batches
+      const userBatch1 = Array.from({ length: 1000 }, (_, i) => ({
+        id: `u-att-${i}`,
+        check_in_at: '2026-06-15T00:00:00Z',
+        check_out_at: null,
+        user_id: 'target-user',
+        profiles: [{ full_name: 'Target', student_id: '2024-099' }],
+      }));
+      const userBatch2 = [
+        {
+          id: 'u-att-1000',
+          check_in_at: '2026-06-14T00:00:00Z',
+          check_out_at: null,
+          user_id: 'target-user',
+          profiles: { full_name: 'Target', student_id: '2024-099' },
+        },
+      ];
+      const uBuilder1 = createMockQueryBuilder(userBatch1);
+      const uBuilder2 = createMockQueryBuilder(userBatch2);
+      let uCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          uCalls += 1;
+          return uCalls === 1 ? uBuilder1 : uBuilder2;
+        }
+        return supaMock.getTableBuilder(table);
+      });
+      const targetUserRows = await getAttendanceHistory('target-user');
+      expect(uBuilder1.eq).toHaveBeenCalledWith('user_id', 'target-user');
+      expect(uBuilder1.range).toHaveBeenCalledWith(0, 999);
+      expect(uBuilder2.range).toHaveBeenCalledWith(1000, 1999);
+      expect(targetUserRows).toHaveLength(1001);
+      expect(targetUserRows[0].profiles).toEqual({ full_name: 'Target', student_id: '2024-099' });
+
+      // 4. Pagination error propagation
+      supaMock.from.mockImplementation((table: string) =>
+        table === 'attendance'
+          ? createMockQueryBuilder(null, { message: 'User pagination error' })
+          : supaMock.getTableBuilder(table)
+      );
+      await expect(getAttendanceHistory('target-user')).rejects.toEqual({
+        message: 'User pagination error',
       });
     });
   });

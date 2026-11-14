@@ -867,6 +867,102 @@ describe("Admin API Route Handlers", () => {
       );
     });
 
+    it("POST handles array diff audit messages (added, removed, modified), JSON object formatting, and custom reason", async () => {
+      setupAuth(supabase, "super_admin", "ACTIVE", "admin-1");
+      const settingsBuilder = adminSupabase.getTableBuilder("system_settings");
+
+      // 1. Existing JSON array with items added -> auditDetails + "(1 added)"
+      settingsBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: "set-arr", key: "academic_programs", value: JSON.stringify(["BSCS", "BSIT"]) },
+        error: null,
+      });
+      settingsBuilder.single.mockResolvedValueOnce({
+        data: { id: "set-arr", key: "academic_programs", value: JSON.stringify(["BSCS", "BSIT", "BSIS"]) },
+        error: null,
+      });
+      const addRes = await policySettingsPost(
+        new Request("http://localhost/api/admin/policy-settings", {
+          method: "POST",
+          body: JSON.stringify({ key: "academic_programs", value: JSON.stringify(["BSCS", "BSIT", "BSIS"]) }),
+        })
+      );
+      expect(addRes.status).toBe(200);
+      expect(adminSupabase.getTableBuilder("audit_logs").insert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          reason: "Updated academic_programs to a list of 3 items (1 added)",
+          details: { added: ["BSIS"], removed: [] },
+        })
+      );
+
+      // 2. Existing JSON array with items removed -> "(1 removed)"
+      settingsBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: "set-arr", key: "academic_programs", value: JSON.stringify(["BSCS", "BSIT"]) },
+        error: null,
+      });
+      settingsBuilder.single.mockResolvedValueOnce({
+        data: { id: "set-arr", key: "academic_programs", value: JSON.stringify(["BSCS"]) },
+        error: null,
+      });
+      await policySettingsPost(
+        new Request("http://localhost/api/admin/policy-settings", {
+          method: "POST",
+          body: JSON.stringify({ key: "academic_programs", value: JSON.stringify(["BSCS"]) }),
+        })
+      );
+      expect(adminSupabase.getTableBuilder("audit_logs").insert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          reason: "Updated academic_programs to a list of 1 items (1 removed)",
+          details: { added: [], removed: ["BSIT"] },
+        })
+      );
+
+      // 3. Existing JSON array with equal length modified -> "(modified)"
+      settingsBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: "set-arr", key: "academic_programs", value: JSON.stringify(["BSCS", "BSIT"]) },
+        error: null,
+      });
+      settingsBuilder.single.mockResolvedValueOnce({
+        data: { id: "set-arr", key: "academic_programs", value: JSON.stringify(["BSCS", "BSIS"]) },
+        error: null,
+      });
+      await policySettingsPost(
+        new Request("http://localhost/api/admin/policy-settings", {
+          method: "POST",
+          body: JSON.stringify({ key: "academic_programs", value: JSON.stringify(["BSCS", "BSIS"]) }),
+        })
+      );
+      expect(adminSupabase.getTableBuilder("audit_logs").insert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          reason: "Updated academic_programs to a list of 2 items (modified)",
+        })
+      );
+
+      // 4. JSON object value -> "a configuration object"
+      settingsBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: "set-faq", key: "student_faq_list", value: "not-json" },
+        error: null,
+      });
+      settingsBuilder.single.mockResolvedValueOnce({
+        data: { id: "set-faq", key: "student_faq_list", value: JSON.stringify({ mode: "compact" }) },
+        error: null,
+      });
+      await policySettingsPost(
+        new Request("http://localhost/api/admin/policy-settings", {
+          method: "POST",
+          body: JSON.stringify({
+            key: "student_faq_list",
+            value: JSON.stringify({ mode: "compact" }),
+            description: "Custom description",
+          }),
+        })
+      );
+      expect(adminSupabase.getTableBuilder("audit_logs").insert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          reason: "Updated student_faq_list to a configuration object",
+        })
+      );
+    });
+
     it("POST returns 500 when admin DB mutation fails", async () => {
       setupAuth(supabase, "super_admin");
       const settingsBuilder = adminSupabase.getTableBuilder("system_settings");
