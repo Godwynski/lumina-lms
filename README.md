@@ -42,7 +42,7 @@ Open [localhost:3000](http://localhost:3000). Camera access requires HTTPS or lo
 | NEXT_PUBLIC_SITE_URL | Canonical URL used in generated links |
 | NEXT_PUBLIC_CARD_ASSET_BUCKET, NEXT_PUBLIC_SHOW_CARD_ASSET_REFRESH | Library-card storage and optional refresh control |
 | SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM | Outgoing mail configuration |
-| DEMO_MODE, DEMO_PASSWORD | Optional evaluation accounts |
+| DEMO_PASSWORD | Evaluation account password |
 
 Keep privileged keys and passwords in environment configuration. Refer to the template for example values. Set SMTP_PORT explicitly for your provider. The mail implementation falls back to 465 when it is unset.
 
@@ -50,9 +50,18 @@ Keep privileged keys and passwords in environment configuration. Refer to the te
 
 Normal access uses Microsoft sign-in with an institutional account. Account activation and assigned permissions determine which features are available. Initial account provisioning is defined in the database schema.
 
-Evaluation accounts are supported by [demo configuration](lib/demo/config.ts), the [demo login route](app/api/demo-login/route.ts), and [scripts/demo.ts](scripts/demo.ts). Set DEMO_MODE=true in the application environment and use npm run demo:on to provision the accounts. The script creates a password in local environment configuration if one is missing. Configure the same DEMO_PASSWORD in the deployed environment when evaluating a deployment.
+Evaluation accounts are supported by [demo configuration](lib/demo/config.ts), the [demo login route](app/api/demo-login/route.ts), and [scripts/demo.ts](scripts/demo.ts). Quick Demo Access stays enabled during thesis evaluation, even if DEMO_MODE is unset or false. Use npm run demo:on to provision the accounts. The script creates a password in local environment configuration if one is missing. Configure the same DEMO_PASSWORD in the deployed environment when evaluating a deployment.
 
-Provisioning may transfer the super-admin role from the existing administrator to the demo administrator. npm run demo:off removes demo accounts and restores the recorded administrator. These commands change authentication and profile data. Keep DEMO_MODE=false for ordinary institutional operation.
+| Role | Demo email | School ID |
+|---|---|---|
+| Super Admin | demo.aquino@alabang.sti.edu.ph | FAC-DEMO.AQUINO |
+| Librarian | demo.galang@alabang.sti.edu.ph | FAC-DEMO.GALANG |
+| Student Assistant | demo.marasigan.20230148@alabang.sti.edu.ph | STU-20230148 |
+| Student | demo.bautista.20220271@alabang.sti.edu.ph | STU-20220271 |
+
+These are synthetic application accounts for Quick Demo Access, with password authentication through Supabase; they are not Microsoft accounts or email inboxes. All four use the server's DEMO_PASSWORD from `.env.local`. [Demo account fixtures](lib/demo/accounts.ts) define complete names, departments, phones, addresses, IDs, and role permissions. Provisioning migrates the old `@lumina.test` accounts in place, preserving their user IDs and history, and resets profiles and cards to ACTIVE. Re-run `npm run demo:on` to restore demo data after evaluation changes. Demo login uses the current saved profile and permissions; normal account-status and role restrictions still apply.
+
+Provisioning may transfer the super-admin role from the existing administrator to the demo administrator. npm run demo:off removes demo accounts and restores the recorded administrator, but does not hide the evaluation buttons. These commands change authentication and profile data. Before ordinary institutional operation, disable demo access in `lib/demo/config.ts` and remove the demo accounts.
 
 ## Development commands
 

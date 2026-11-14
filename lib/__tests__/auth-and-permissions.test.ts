@@ -366,6 +366,33 @@ describe('lib/demo/config and lib/demo/accounts', () => {
 
     expect(findDemoAccount('unknown@example.com')).toBeUndefined();
   });
+
+  it('uses school emails and complete biodata with IDs matching the email convention', () => {
+    for (const account of DEMO_ACCOUNTS) {
+      expect(account.email).toMatch(/@alabang\.sti\.edu\.ph$/);
+      const data = account as unknown as Record<string, unknown>;
+      for (const key of ['fullName', 'studentId', 'department', 'phone', 'address', 'cardNumber']) {
+        expect(data[key], `${account.role}: ${key}`).toBeTruthy();
+      }
+      const local = account.email.split('@')[0];
+      const digits = local.match(/\d{6,}/)?.[0];
+      expect(data.studentId).toBe(digits ? `STU-${digits}` : `FAC-${local.toUpperCase()}`);
+      expect(account.cardNumber).not.toBe(data.studentId);
+    }
+  });
+
+  it('gives the student assistant the permissions required by staff navigation', () => {
+    const account = DEMO_ACCOUNTS.find((a) => a.role === 'student_assistant')!;
+    for (const permissionKey of ['manage_circulation', 'manage_attendance', 'view_admin_dashboard'] as const) {
+      expect(
+        hasPermission(
+          account.role,
+          { href: '/', label: 'Staff', minRole: 'student_assistant', permissionKey },
+          { status: 'ACTIVE', permissions: account.permissions }
+        )
+      ).toBe(true);
+    }
+  });
 });
 
 describe('proxy.ts', () => {
