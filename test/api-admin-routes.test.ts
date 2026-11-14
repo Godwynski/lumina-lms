@@ -189,7 +189,7 @@ describe("Admin API Route Handlers", () => {
         { id: "log-1", admin_id: "admin-1", entity_type: "book", action: "created", created_at: "2026-01-01T10:00:00Z" },
         { id: "log-2", admin_id: null, entity_type: "system", action: "annual_reset", created_at: "2026-01-01T09:00:00Z" },
       ];
-      supabase.setTableResponse("audit_logs", logs, null, 2);
+      supabase.setTableResponse("audit_log_records", logs, null, 2);
 
       const profilesLookupBuilder = createMockQueryBuilder([
         { id: "admin-1", full_name: "Alice Admin", email: "alice@alabang.sti.edu.ph", role: "super_admin" },
@@ -218,32 +218,26 @@ describe("Admin API Route Handlers", () => {
         expect.objectContaining({ full_name: "Alice Admin" })
       );
       expect(body.logs[1].profiles).toBeNull();
-      expect(supabase.getTableBuilder("audit_logs").range).toHaveBeenCalledWith(5, 14);
+      expect(supabase.getTableBuilder("audit_log_records").range).toHaveBeenCalledWith(5, 14);
     });
 
-    it("applies entityType, actionType, date range, userId, and sanitized search query filters", async () => {
+    it("applies entityType, actionType, date range, subject/user UUIDs, and escaped search query filters", async () => {
       setupAuth(supabase, "super_admin");
-      supabase.setTableResponse("audit_logs", [], null, 0);
+      supabase.setTableResponse("audit_log_records", [], null, 0);
 
-      const searchProfilesBuilder = createMockQueryBuilder([{ id: "u-99" }]);
-      const getMeProfileBuilder = supabase.getTableBuilder("profiles");
-      supabase.from.mockImplementation((table: string) => {
-        if (table === "profiles") {
-          return supabase.from.mock.calls.filter((c) => c[0] === "profiles").length === 1
-            ? getMeProfileBuilder
-            : searchProfilesBuilder;
-        }
-        return supabase.getTableBuilder(table);
-      });
+      const userId = "11111111-1111-4111-8111-111111111111";
+      const bookId = "22222222-2222-4222-8222-222222222222";
+      const studentId = "33333333-3333-4333-8333-333333333333";
+      const copyId = "44444444-4444-4444-8444-444444444444";
 
       const res = await auditLogsGet(
         new NextRequest(
-          "http://localhost/api/admin/audit-logs?entityType=policy&actionType=update&startDate=2026-01-01&endDate=2026-01-31&userId=u-99&query=al(ice):*"
+          `http://localhost/api/admin/audit-logs?entityType=policy&actionType=update&startDate=2026-01-01&endDate=2026-01-31&userId=${userId}&bookId=${bookId}&studentId=${studentId}&copyId=${copyId}&query=${encodeURIComponent("al(ice):_50%")}`
         )
       );
 
       expect(res.status).toBe(200);
-      const auditBuilder = supabase.getTableBuilder("audit_logs");
+      const auditBuilder = supabase.getTableBuilder("audit_log_records");
       expect(auditBuilder.in).toHaveBeenCalledWith("entity_type", [
         "policy",
         "settings",
@@ -260,15 +254,49 @@ describe("Admin API Route Handlers", () => {
         "created_at",
         "2026-01-31T23:59:59.999+08:00"
       );
-      expect(auditBuilder.eq).toHaveBeenCalledWith("admin_id", "u-99");
-      expect(auditBuilder.or).toHaveBeenCalledWith(
-        "entity_type.ilike.%alice%,action.ilike.%alice%,reason.ilike.%alice%,admin_id.in.(u-99)"
+      expect(auditBuilder.eq).toHaveBeenCalledWith("subject_book_id", bookId);
+      expect(auditBuilder.eq).toHaveBeenCalledWith("subject_student_id", studentId);
+      expect(auditBuilder.eq).toHaveBeenCalledWith("subject_copy_id", copyId);
+      expect(auditBuilder.eq).toHaveBeenCalledWith("admin_id", userId);
+
+      const expectedPattern = JSON.stringify("%al(ice):\\_50\\%%");
+      const expectedSearchOr = [
+        "entity_type",
+        "action",
+        "reason",
+        "actor_name",
+        "actor_email",
+        "book_title",
+        "book_isbn",
+        "copy_barcode",
+        "copy_accession",
+        "student_name",
+        "student_number",
+        "student_email",
+      ]
+        .map((field) => `${field}.ilike.${expectedPattern}`)
+        .join(",");
+      expect(auditBuilder.or).toHaveBeenCalledWith(expectedSearchOr);
+    });
+
+    it("returns 400 on invalid audit filter parameters", async () => {
+      setupAuth(supabase, "super_admin");
+
+      const badUuidRes = await auditLogsGet(
+        new NextRequest("http://localhost/api/admin/audit-logs?userId=not-a-uuid")
       );
+      expect(badUuidRes.status).toBe(400);
+      expect(await badUuidRes.json()).toEqual({ error: "Invalid audit filters." });
+
+      const badDatesRes = await auditLogsGet(
+        new NextRequest("http://localhost/api/admin/audit-logs?startDate=2026-02-01&endDate=2026-01-01")
+      );
+      expect(badDatesRes.status).toBe(400);
     });
 
     it("returns 500 on database error and 499 on AbortError", async () => {
       setupAuth(supabase, "super_admin");
-      supabase.setTableResponse("audit_logs", null, { message: "Query failed" });
+      supabase.setTableResponse("audit_log_records", null, { message: "Query failed" });
 
       const errRes = await auditLogsGet(
         new NextRequest("http://localhost/api/admin/audit-logs")
@@ -277,7 +305,7 @@ describe("Admin API Route Handlers", () => {
 
       const abortErr = new Error("Aborted");
       abortErr.name = "AbortError";
-      supabase.setTableResponse("audit_logs", null, abortErr);
+      supabase.setTableResponse("audit_log_records", null, abortErr);
       const abortRes = await auditLogsGet(
         new NextRequest("http://localhost/api/admin/audit-logs")
       );
@@ -298,9 +326,9 @@ describe("Admin API Route Handlers", () => {
       ).toBe(403);
     });
 
-    it("exports CSV with formula-injection neutralization and Manila timestamps", async () => {
+    it("exports CSV with formula-injection neutralization, subject columns, and Manila timestamps", async () => {
       setupAuth(supabase, "super_admin");
-      supabase.setTableResponse("audit_logs", [
+      supabase.setTableResponse("audit_log_records", [
         {
           id: "l1",
           admin_id: "u1",
@@ -308,6 +336,11 @@ describe("Admin API Route Handlers", () => {
           entity_type: "book",
           action: "create",
           reason: "=CMD('calc'), \"quoted\"",
+          book_title: "Clean Code",
+          book_isbn: "9780132350884",
+          copy_barcode: "BC-001",
+          student_name: "Jane Doe",
+          student_number: "2026-0001",
           old_value: null,
           new_value: { title: "Test" },
           details: null,
@@ -340,11 +373,21 @@ describe("Admin API Route Handlers", () => {
       expect(text).toContain("2026-03-01 08:00:00");
       // Formula prefix '=' neutralized with leading single quote and CSV-escaped
       expect(text).toContain("\"'=CMD('calc'), \"\"quoted\"\"\"");
+
+      const customColsRes = await auditLogsExportGet(
+        new NextRequest(
+          "http://localhost/api/admin/audit-logs/export?format=csv&columns=book_title,book_isbn,copy_barcode,student_name,student_number"
+        )
+      );
+      const customColsText = await customColsRes.text();
+      expect(customColsRes.status).toBe(200);
+      expect(customColsText).toContain("Book,ISBN,Copy barcode,Student,Student ID");
+      expect(customColsText).toContain("Clean Code,9780132350884,BC-001,Jane Doe,2026-0001");
     });
 
     it("exports JSON and XLSX formats", async () => {
       setupAuth(supabase, "super_admin");
-      supabase.setTableResponse("audit_logs", [
+      supabase.setTableResponse("audit_log_records", [
         {
           id: "l1",
           admin_id: "u1",
@@ -392,14 +435,27 @@ describe("Admin API Route Handlers", () => {
       expect(wb.SheetNames).toContain("Audit Logs");
     });
 
-    it("returns 500 when Supabase query fails", async () => {
+    it("returns 400 on invalid filters, 500 on query error, and 499 on AbortError", async () => {
       setupAuth(supabase, "super_admin");
-      supabase.setTableResponse("audit_logs", null, { message: "Export query failed" });
 
+      const badRes = await auditLogsExportGet(
+        new NextRequest("http://localhost/api/admin/audit-logs/export?bookId=bad-id")
+      );
+      expect(badRes.status).toBe(400);
+
+      supabase.setTableResponse("audit_log_records", null, { message: "Export query failed" });
       const res = await auditLogsExportGet(
         new NextRequest("http://localhost/api/admin/audit-logs/export")
       );
       expect(res.status).toBe(500);
+
+      const abortErr = new Error("Aborted");
+      abortErr.name = "AbortError";
+      supabase.setTableResponse("audit_log_records", null, abortErr);
+      const abortRes = await auditLogsExportGet(
+        new NextRequest("http://localhost/api/admin/audit-logs/export")
+      );
+      expect(abortRes.status).toBe(499);
     });
   });
 

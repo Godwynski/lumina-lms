@@ -15,14 +15,15 @@ import {
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const mockRouterRefresh = vi.fn();
+const mockRouter = {
+  push: mockRouterPush,
+  replace: mockRouterReplace,
+  refresh: mockRouterRefresh,
+};
 let mockSearchParamsString = '';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-    replace: mockRouterReplace,
-    refresh: mockRouterRefresh,
-  }),
+  useRouter: () => mockRouter,
   useSearchParams: () => new URLSearchParams(mockSearchParamsString),
 }));
 
@@ -124,6 +125,7 @@ vi.mock('xlsx', async (importOriginal) => {
 
 import { AnimationProvider } from '@/components/providers/animation-provider';
 import { BatchTaskProvider } from '@/components/providers/BatchTaskProvider';
+import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
 import { CopyMeter } from '@/components/catalog/CopyMeter';
 import { MetaTile } from '@/components/catalog/MetaTile';
 import { StatusBanner } from '@/components/catalog/StatusBanner';
@@ -143,7 +145,7 @@ import { StudentBookCard } from '@/components/library/StudentBookCard';
 import { InventoryGrid } from '@/components/inventory/InventoryGrid';
 import { ModernInventoryClient } from '@/components/inventory/ModernInventoryClient';
 import MyCardContainer from '@/components/library/MyCardContainer';
-import type { Book, BookCopyWithReservation, Category, Reservation } from '@/lib/types';
+import type { Book, BookCopyWithReservation, Category, ProfileData, Reservation } from '@/lib/types';
 import type { BookDetail, AvailabilityStatus } from '@/components/catalog/types';
 import { BookOpen } from 'lucide-react';
 
@@ -595,6 +597,8 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
           tags: '',
           dewey_decimal: '',
           isbn: '',
+          description: '',
+          published_year: '',
         });
         return (
           <BookDetailsForm
@@ -615,15 +619,19 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
 
       const titleInput = container.querySelector('input[placeholder="e.g. Clean Code"]') as HTMLInputElement;
       const authorInput = container.querySelector('input[placeholder="e.g. Robert C. Martin"]') as HTMLInputElement;
+      const publishedYearInput = container.querySelector('input[placeholder="When available from the ISBN lookup"]') as HTMLInputElement;
+      const descriptionInput = container.querySelector('textarea[placeholder="Book summary or description"]') as HTMLTextAreaElement;
       const ddcInput = container.querySelector('input[placeholder="e.g. 621.389"]') as HTMLInputElement;
       const isbnInput = container.querySelector('input[placeholder="9780132350884"]') as HTMLInputElement;
       const tagsInput = container.querySelector('input[placeholder="Programming, Best Practices, Engineering"]') as HTMLInputElement;
       const sectionInput = container.querySelector('input[placeholder="e.g. CS Reference"]') as HTMLInputElement;
       const locationInput = container.querySelector('input[placeholder="e.g. Shelf A-5"]') as HTMLInputElement;
-      const copiesInput = container.querySelector('input[type="number"]') as HTMLInputElement;
+      const copiesInput = container.querySelector('input[max="100"]') as HTMLInputElement;
 
       await typeIntoInput(titleInput, 'Domain-Driven Design');
       await typeIntoInput(authorInput, 'Eric Evans');
+      await typeIntoInput(publishedYearInput, '2003');
+      await typeIntoInput(descriptionInput, 'Tackling complexity in the heart of software.');
       await typeIntoInput(ddcInput, '005.12');
       await typeIntoInput(isbnInput, '978-0321125215x');
       await typeIntoInput(tagsInput, 'DDD, Architecture');
@@ -636,6 +644,8 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
 
       expect(updates).toContainEqual({ title: 'Domain-Driven Design' });
       expect(updates).toContainEqual({ author: 'Eric Evans' });
+      expect(updates).toContainEqual({ published_year: '2003' });
+      expect(updates).toContainEqual({ description: 'Tackling complexity in the heart of software.' });
       expect(updates).toContainEqual({ dewey_decimal: '005.12' });
       expect(updates).toContainEqual({ isbn: '9780321125215X' });
       expect(updates).toContainEqual({ tags: 'DDD, Architecture' });
@@ -1028,23 +1038,52 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       { id: 'cat-2', name: 'History' },
     ];
 
+    function makeStaffProfile(role: 'librarian' | 'student'): ProfileData {
+      return {
+        id: 'staff-1',
+        full_name: 'Librarian User',
+        email: 'lib@alabang.sti.edu.ph',
+        role,
+        status: 'ACTIVE',
+        student_id: null,
+        department: 'Library',
+        avatar_url: null,
+        address: null,
+        phone: null,
+        updated_at: '2026-01-01T00:00:00Z',
+        permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true },
+      };
+    }
+
     function renderInventory(props: Partial<React.ComponentProps<typeof ModernInventoryClient>> = {}) {
+      const canManage = props.canManage ?? true;
+      const role = canManage ? 'librarian' : 'student';
       return renderClient(
         <AnimationProvider>
-          <BatchTaskProvider>
-            <ModernInventoryClient
-              books={[makeBook()]}
-              totalItems={24}
-              categories={categories}
-              canManage={true}
-              {...props}
-            />
-          </BatchTaskProvider>
+          <PreferencesProvider
+            initialPreferences={{ theme: 'light' }}
+            initialRole={role}
+            initialProfile={makeStaffProfile(role)}
+          >
+            <BatchTaskProvider>
+              <ModernInventoryClient
+                books={[makeBook()]}
+                totalItems={24}
+                categories={categories}
+                canManage={true}
+                {...props}
+              />
+            </BatchTaskProvider>
+          </PreferencesProvider>
         </AnimationProvider>
       );
     }
 
     it('handles search submit, clear search, filter sheet toggles, reset all, and pagination', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ jobs: [] }), { status: 200 }))
+      );
       const { container } = await renderInventory();
 
       const searchInput = container.querySelector('input[aria-label="Search inventory"]') as HTMLInputElement;
@@ -1081,18 +1120,66 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       vi.stubGlobal('URL', { ...URL, createObjectURL: createObjectURLSpy });
       const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
+      let queuedJobs: Array<{
+        id: string;
+        label: string;
+        created_at: string;
+        items: Array<{
+          id: string;
+          isbn: string | null;
+          book_id: string | null;
+          status: 'queued' | 'processing' | 'retry' | 'complete' | 'review' | 'failed';
+          metadata_status: 'pending' | 'complete' | 'missing';
+          cover_status: 'pending' | 'complete' | 'missing';
+          title: string | null;
+          attempts: number;
+          error: string | null;
+          next_attempt_at: string | null;
+        }>;
+      }> = [];
+
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === '/api/catalog/import-jobs' && init?.method === 'POST') {
+          queuedJobs = [
+            {
+              id: 'job-1',
+              label: 'ISBN import',
+              created_at: '2026-11-14T00:00:00Z',
+              items: [
+                {
+                  id: 'item-1',
+                  isbn: '9780135957059',
+                  book_id: 'book-pragmatic',
+                  status: 'complete',
+                  metadata_status: 'complete',
+                  cover_status: 'complete',
+                  title: 'The Pragmatic Programmer',
+                  attempts: 1,
+                  error: null,
+                  next_attempt_at: null,
+                },
+              ],
+            },
+          ];
+          return new Response(JSON.stringify({ jobId: 'job-1' }), { status: 200 });
+        }
+        if (url === '/api/catalog/import-jobs/process') {
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
+        if (url === '/api/catalog/import-jobs') {
+          return new Response(JSON.stringify({ jobs: queuedJobs }), { status: 200 });
+        }
+        return new Response(JSON.stringify({}), { status: 200 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+
       mockBatchImportBooks.mockResolvedValue({
         success: true,
         imported: 1,
         copiesAdded: 2,
         duplicates: 0,
         logs: ['Imported Clean Code'],
-      });
-      mockLookupAndImportISBN.mockResolvedValue({
-        success: true,
-        status: 'created',
-        title: 'The Pragmatic Programmer',
-        author: 'Andy Hunt',
       });
       mockGetBooksForExport.mockResolvedValue([
         {
@@ -1114,6 +1201,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       ]);
 
       const { container } = await renderInventory();
+      await flushPromises();
       await clickElement(container.querySelector('button[aria-label="Batch operations"]'));
       expect(document.body).toHaveTextContent('Batch Catalog Operations');
 
@@ -1138,16 +1226,24 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         [expect.objectContaining({ title: 'Clean Code', author: 'Robert C. Martin', stock: 2 })],
         { addCopiesToDuplicates: false }
       );
-      expect(document.body).toHaveTextContent('Spreadsheet Import Successful!');
+      expect(document.body).toHaveTextContent('Catalog Rows Imported');
 
-      // Tab 2: ISBN Fallback
+      // Tab 2: ISBN Fallback (queues job via BatchTaskProvider)
       await clickElement(findButtonByText(document.body, 'ISBN Fallback'));
       const isbnTextarea = document.body.querySelector('#inventory-isbns') as HTMLTextAreaElement;
       await typeIntoInput(isbnTextarea, '978-0135957059');
-      await clickElement(findButtonByText(document.body, 'Start Sequential Auto-Lookup'));
+      await clickElement(findButtonByText(document.body, 'Queue ISBN Import'));
       await flushPromises();
-      expect(mockLookupAndImportISBN).toHaveBeenCalledWith('9780135957059');
-      expect(document.body).toHaveTextContent('Real-time Terminal Logs');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/catalog/import-jobs',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"9780135957059"'),
+        })
+      );
+      expect(fetchSpy).toHaveBeenCalledWith('/api/catalog/import-jobs/process', expect.objectContaining({ method: 'POST' }));
+      expect(document.body).toHaveTextContent('Import item status');
+      expect(document.body).toHaveTextContent('9780135957059 — The Pragmatic Programmer: complete.');
 
       // Tab 3: Export Data
       await clickElement(findButtonByText(document.body, 'Export Data'));

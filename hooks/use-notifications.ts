@@ -140,7 +140,7 @@ export function useNotifications() {
           (payload) => {
             if (!active) return
             const newNotification = payload.new as Notification
-            setNotifications(prev => [newNotification, ...prev])
+            setNotifications(prev => prev.some(n => n.id === newNotification.id) ? prev : [newNotification, ...prev])
             
             // Show toast (deduplicated by notification ID)
             toast.info(newNotification.title, {
@@ -163,13 +163,27 @@ export function useNotifications() {
             setNotifications(prev => prev.map(n => n.id === updated.id ? updated : n))
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          // Reload after joining/rejoining to recover messages missed while disconnected.
+          if (active && status === 'SUBSCRIBED') void fetchNotifications(user.id);
+        })
     }
 
     setupNotifications()
+    const refreshVisible = () => {
+      if (active && document.visibilityState === 'visible' && userIdRef.current) {
+        void fetchNotifications(userIdRef.current);
+      }
+    };
+    window.addEventListener('focus', refreshVisible);
+    window.addEventListener('online', refreshVisible);
+    document.addEventListener('visibilitychange', refreshVisible);
 
     return () => {
       active = false
+      window.removeEventListener('focus', refreshVisible);
+      window.removeEventListener('online', refreshVisible);
+      document.removeEventListener('visibilitychange', refreshVisible);
       if (channel) {
         supabase.removeChannel(channel)
       }

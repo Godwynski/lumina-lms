@@ -17,6 +17,9 @@ assertSafeTarget(supabaseUrl);
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+// `--core` seeds categories, books and copies only. Users come from `npm run demo:on`.
+const CORE = process.argv.includes('--core');
+
 // Define all profiles/users in the database
 export const profileIds = {
   godwynStudent: 'f1d742df-ca66-4ac8-a4e2-7369c1dc4460', // Godwyn Neri (STU-376375)
@@ -35,7 +38,7 @@ async function seed() {
   // --- Clean-up Phase ---
   console.info('🧹 Cleaning up database tables in dependency order...');
   
-  for (const table of [
+  for (const table of CORE ? ['book_copies', 'books', 'categories'] : [
     'ui_preferences',
     'audit_logs', 'notifications', 'attendance', 'reservations', 'borrowing_records',
     'checkout_idempotency', 'return_idempotency', 'library_cards', 'book_copies', 'books', 'categories',
@@ -87,7 +90,7 @@ async function seed() {
     { id: profileIds.baybayLibrarian, full_name: 'Baybay, John Renaund', department: 'College of Information Technology', phone: '+63 900 000 0008', address: 'Alabang, Muntinlupa City', status: 'ACTIVE', onboarding_completed: true },
   ];
 
-  for (const prof of userProfileUpdates) {
+  for (const prof of CORE ? [] : userProfileUpdates) {
     await supabase.from('profiles').update(prof).eq('id', prof.id);
   }
   console.info('✅ Profiles sanitized and organized');
@@ -1515,6 +1518,11 @@ const booksToSeed = [
     if (bookObj) {
       bookCopiesMap[bookObj.title].push(copy);
     }
+  }
+
+  if (CORE) {
+    console.info('✨ Core seed finished: categories, books and copies only.');
+    return;
   }
 
   // 5. Seed Library Cards for ALL Users

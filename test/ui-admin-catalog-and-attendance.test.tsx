@@ -167,6 +167,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(mockToggleAttendanceByCard).toHaveBeenCalledWith({
         cardNumber: 'LIB-1001',
         isManual: true,
+        confirmed: false,
       });
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Transaction recorded',

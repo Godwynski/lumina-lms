@@ -70,7 +70,7 @@ export function AdminTableShell({
       {feedback}
 
       {controls && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/5 p-2 rounded-3xl border border-border/5 backdrop-blur-[2px]">
+        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/5 p-2 rounded-3xl border border-border/5 backdrop-blur-[2px]">
           {controls}
         </div>
       )}

@@ -238,7 +238,7 @@ export const checkoutBook = createSafeAction(
         result.borrowing_id || null,
         'checkout',
         `Checked out book '${result.book_title}' to ${result.student_name} (QR: ${bookQr})`,
-        { studentCardQr, bookQr, studentName: result.student_name, bookTitle: result.book_title },
+        { studentCardQr, bookQr, student_user_id: studentUserId, studentName: result.student_name, bookTitle: result.book_title },
         null,
         { status: 'ACTIVE', book_qr: bookQr }
       );
@@ -286,14 +286,16 @@ export const returnBook = createSafeAction(
   async ({ bookQr, idempotencyKey, previewOnly, isManual, settleFine }, { supabase, profile: staff }) => {
     // Find the current borrower to notify them
     let studentUserId: string | null = null;
+    let returnCopy: { id: string; book_id: string } | null = null;
     if (!previewOnly) {
       const { data: copy } = await supabase
         .from('book_copies')
-        .select('id')
+        .select('id,book_id')
         .eq('qr_string', bookQr.trim())
         .maybeSingle();
       
       if (copy) {
+        returnCopy = copy;
         const { data: record } = await supabase
           .from('borrowing_records')
           .select('user_id')
@@ -322,6 +324,7 @@ export const returnBook = createSafeAction(
 
     const result = (data ?? {}) as {
       ok?: boolean;
+      idempotent?: boolean;
       code?: string;
       message?: string;
       borrowing_id?: string;
@@ -346,7 +349,7 @@ export const returnBook = createSafeAction(
       throw new Error(message);
     }
 
-    if (!previewOnly) {
+    if (!previewOnly && !result.idempotent) {
       const fineAmount = Number(result.fine_amount ?? 0);
       if (settleFine && result.borrowing_id && fineAmount > 0) {
         const settledAt = new Date().toISOString();
@@ -363,12 +366,22 @@ export const returnBook = createSafeAction(
       await logAuditActivity(
         String(staff.id),
         'book_copy',
-        null,
+        returnCopy?.id || null,
         'return',
         `Returned book '${result.book_title}' from ${result.student_name} (QR: ${bookQr})${
           result.reservation_ready ? ` — reserved for ${result.reserved_for}` : ''
         }${settleFine && fineAmount > 0 ? ` — settled PHP ${fineAmount.toFixed(2)} fine` : ''}`,
-        { bookQr, studentName: result.student_name, bookTitle: result.book_title, reservationReady: result.reservation_ready, fineAmount, fineSettled: settleFine && fineAmount > 0 },
+        {
+          bookQr,
+          book_id: returnCopy?.book_id,
+          book_copy_id: returnCopy?.id,
+          student_user_id: studentUserId,
+          studentName: result.student_name,
+          bookTitle: result.book_title,
+          reservationReady: result.reservation_ready,
+          fineAmount,
+          fineSettled: settleFine && fineAmount > 0,
+        },
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );

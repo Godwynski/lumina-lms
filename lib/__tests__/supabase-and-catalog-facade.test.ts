@@ -13,6 +13,7 @@ const mockCookiesFn = vi.fn();
 const mockRevalidateTag = vi.fn();
 const mockRevalidatePath = vi.fn();
 const mockLogAuditActivity = vi.fn().mockResolvedValue(undefined);
+const mockScheduleCatalogImport = vi.fn();
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: (...args: unknown[]) => mockCreateSupabaseJsClient(...args),
@@ -35,6 +36,10 @@ vi.mock('next/cache', () => ({
 
 vi.mock('@/lib/audit', () => ({
   logAuditActivity: (...args: unknown[]) => mockLogAuditActivity(...args),
+}));
+
+vi.mock('@/lib/catalog-import-scheduler', () => ({
+  scheduleCatalogImport: (...args: unknown[]) => mockScheduleCatalogImport(...args),
 }));
 
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -673,21 +678,31 @@ describe('lib/actions/catalog facade', () => {
       error: 'Invalid ISBN number provided',
     });
 
-    // lookupAndImportISBN: existing book adds 1 copy
-    serverHelper.setTableResponse(
-      'books',
-      { id: 'book-1', title: 'Clean Code', author: 'Robert Martin' },
-      null
-    );
-    serverHelper.setTableResponse('book_copies', null, null);
-    const existingIsbnResult = await catalogFacade.lookupAndImportISBN('978-0-13-235088-4');
-    expect(existingIsbnResult).toMatchObject({
+    // lookupAndImportISBN: valid ISBN queues catalog_import_jobs and schedules worker
+    adminHelper.setRpcResponse(null, null, 'catalog_import_enqueue');
+    const queuedIsbnResult = await catalogFacade.lookupAndImportISBN('978-0-13-235088-4');
+    expect(queuedIsbnResult).toEqual({
       success: true,
-      isbn: '978-0-13-235088-4',
-      status: 'exists',
-      bookId: 'book-1',
-      title: 'Clean Code',
-      author: 'Robert Martin',
+      status: 'queued',
+      isbn: '9780132350884',
+      jobId: expect.any(String),
+      message: 'ISBN import queued. Metadata and cover progress can be reviewed in batch tasks.',
+    });
+    expect(adminHelper.rpc).toHaveBeenCalledWith('catalog_import_enqueue', {
+      p_job: queuedIsbnResult.jobId,
+      p_actor: 'staff-user-1',
+      p_label: 'ISBN import',
+      p_items: [{ mode: 'create', isbn: '9780132350884', requested_copies: 1 }],
+    });
+    expect(mockScheduleCatalogImport).toHaveBeenCalled();
+
+    // lookupAndImportISBN: enqueue RPC error returns failure
+    adminHelper.setRpcResponse(null, { message: 'Queue unavailable' }, 'catalog_import_enqueue');
+    const failedQueueResult = await catalogFacade.lookupAndImportISBN('978-0-13-235088-4');
+    expect(failedQueueResult).toEqual({
+      success: false,
+      isbn: '9780132350884',
+      error: 'Could not queue ISBN import: Queue unavailable',
     });
 
     // Type export sanity check

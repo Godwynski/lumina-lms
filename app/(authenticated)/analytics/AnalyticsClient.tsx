@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, BookOpen, Library, UserCircle2 } from 'lucide-react';
 import { TrendChart, CategoryPieChart, PeakHoursBarChart, ChartSkeleton } from './AnalyticsCharts';
-import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange } from '@/lib/actions/analytics';
+import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange, type AnalyticsSelection } from '@/lib/actions/analytics';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
+import { analyticsDates, validateDates, type AnalyticsDates } from '@/lib/analytics-dates';
+import { AnalyticsDetailModal } from './AnalyticsDetailModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -35,7 +37,16 @@ const RANGES: { label: string; value: AnalyticsRange }[] = [
 export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   const router = useRouter();
   const stats = use(statsPromise);
-  const [range, setRange] = useState<AnalyticsRange>('30d');
+  const [range, setRange] = useState<AnalyticsRange | 'custom'>('30d');
+  const [dates, setDates] = useState<AnalyticsDates>(() => analyticsDates('30d'));
+  const [loadedDates, setLoadedDates] = useState(dates);
+  const [draft, setDraft] = useState(dates);
+  const [dateError, setDateError] = useState('');
+  const customRef = useRef<HTMLDetailsElement>(null);
+  const [selection, setSelection] = useState<AnalyticsSelection | null>(null);
+  const applyDates = (next: AnalyticsDates, preset: AnalyticsRange | 'custom') => {
+    setDates(next); setRange(preset); setSelection(null);
+  };
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [isPending, startTransition] = useTransition();
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
@@ -51,9 +62,10 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
     setIsLoadingSummary(true);
     setSummaryError(null);
     try {
-      const data = await getAnalyticsSummary(range);
+      const data = await getAnalyticsSummary(range === 'custom' ? '30d' : range, dates);
       if (requestId !== summaryRequestRef.current) return;
       setSummary(data);
+      setLoadedDates(dates);
     } catch {
       if (requestId !== summaryRequestRef.current) return;
       setSummaryError("Analytics data couldn't be loaded.");
@@ -61,7 +73,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
     } finally {
       if (requestId === summaryRequestRef.current) setIsLoadingSummary(false);
     }
-  }, [range]);
+  }, [range, dates]);
 
   useEffect(() => {
     startTransition(() => {
@@ -108,7 +120,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
               key={r.value}
               type="button"
               aria-pressed={range === r.value}
-              onClick={() => setRange(r.value)}
+              onClick={() => applyDates(analyticsDates(r.value), r.value)}
               className={cn(
                 "px-4 py-1.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all",
                 range === r.value 
@@ -119,8 +131,28 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
               {r.label}
             </button>
           ))}
+          <details ref={customRef} className="relative">
+            <summary className={cn("list-none cursor-pointer rounded-lg px-4 py-1.5 text-[11px] font-bold", range === 'custom' ? 'bg-foreground text-background' : 'text-muted-foreground')}>Custom</summary>
+            <form className="absolute right-0 top-full z-30 mt-2 w-64 space-y-3 rounded-xl border border-border bg-background p-4 shadow-lg"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                const chosen = { from: String(form.get('from')), to: String(form.get('to')) };
+                if (!validateDates(chosen)) { setDateError('Choose valid dates in order, within one year.'); return; }
+                setDateError(''); setDraft(chosen); applyDates(chosen, 'custom'); if (customRef.current) customRef.current.open = false;
+              }}>
+              <label className="block text-xs">From<input type="date" name="from" required value={draft.from} onChange={e => setDraft({ ...draft, from: e.target.value })} className="mt-1 block w-full rounded-md border border-border bg-background p-2 text-sm" /></label>
+              <label className="block text-xs">To<input type="date" name="to" required min={draft.from} value={draft.to} onChange={e => setDraft({ ...draft, to: e.target.value })} className="mt-1 block w-full rounded-md border border-border bg-background p-2 text-sm" /></label>
+              {dateError && <p role="alert" className="text-xs text-destructive">{dateError}</p>}
+              <button type="submit" className="w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">Apply</button>
+            </form>
+          </details>
         </div>
       </div>
+      {range === 'custom' && <div className="flex justify-end gap-3 text-xs text-muted-foreground">
+        <span>{dates.from} – {dates.to}</span>
+        <button type="button" className="underline underline-offset-4" onClick={() => applyDates(analyticsDates('30d'), '30d')}>Reset</button>
+      </div>}
 
       {/* Main Stats Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -194,7 +226,8 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
           ) : (
             <PeakHoursBarChart 
               data={summary.peakHours} 
-              title="Peak Visiting Hours" 
+              title="Peak Visiting Hours"
+              onSelect={(hour) => setSelection({ kind: 'hour', key: hour, title: `Visits at ${hour}`, ...loadedDates })}
               color="hsl(var(--primary))" 
             />
           )}
@@ -213,7 +246,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
               data={summary.borrowingTrends} 
               title="Circulation Trends" 
               color="hsl(var(--primary))" 
-              href="/history"
+              onSelect={(point) => { if (point.from && point.to) setSelection({ kind: 'period', key: '', title: `Borrowings · ${point.label}`, from: point.from, to: point.to }); }}
             />
           )}
           {(isPending || isLoadingSummary) && summary && (
@@ -229,7 +262,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
         {/* Pie Chart */}
         <div className="lg:col-span-5 flex flex-col">
           {summary ? (
-            <CategoryPieChart data={summary.categoryDistribution} title="Genre Popularity" />
+            <CategoryPieChart data={summary.categoryDistribution} title="Genre Popularity" onSelect={(name) => setSelection({ kind: 'genre', key: name, title: `${name} borrowings`, ...loadedDates })} />
           ) : (
             <div className="w-full h-[280px] flex flex-col animate-pulse border border-border/40 rounded-2xl p-4 bg-muted/[0.02]">
               <div className="w-24 h-3 bg-muted/20 rounded mb-8" />
@@ -309,6 +342,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
       </section>
       </>
       )}
+      {selection && <AnalyticsDetailModal key={JSON.stringify(selection)} selection={selection} onClose={() => setSelection(null)} />}
       {selectedBookId && (
         <BookDetailModal
           bookId={selectedBookId}

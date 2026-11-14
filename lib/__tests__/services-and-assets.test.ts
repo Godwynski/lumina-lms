@@ -453,12 +453,31 @@ describe('lib/fetch-image', () => {
 
     globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('AbortError'));
     await expect(fetchImage('https://cdn.example.com/pic.png')).rejects.toThrow(
-      'Could not download the image (redirects are not followed).'
+      'Could not download the image. The image host may be unavailable or timed out.'
     );
 
-    globalThis.fetch = vi.fn().mockResolvedValueOnce(new Response('not found', { status: 404 }));
-    await expect(fetchImage('https://cdn.example.com/pic.png')).rejects.toThrow(
-      'Could not download the image (HTTP 404).'
+    globalThis.fetch = vi.fn().mockResolvedValueOnce(
+      new Response('not found', { status: 404, headers: { 'retry-after': '30' } })
+    );
+    await expect(fetchImage('https://cdn.example.com/pic.png')).rejects.toMatchObject({
+      message: 'Could not download the image (HTTP 404).',
+      status: 404,
+      retryAfterMs: 30_000,
+    });
+
+    // Validated redirects up to 3 hops, rejecting private redirect targets and >3 redirects
+    globalThis.fetch = vi.fn().mockResolvedValueOnce(
+      new Response(null, { status: 302, headers: { location: 'https://127.0.0.1/secret.png' } })
+    );
+    await expect(fetchImage('https://cdn.example.com/redirect.png')).rejects.toThrow(
+      'Restricted remote image host.'
+    );
+
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(null, { status: 302, headers: { location: 'https://cdn.example.com/next.png' } })
+    );
+    await expect(fetchImage('https://cdn.example.com/loop.png')).rejects.toThrow(
+      'Image has too many redirects.'
     );
 
     globalThis.fetch = vi.fn().mockResolvedValueOnce(

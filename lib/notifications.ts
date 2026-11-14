@@ -97,12 +97,16 @@ export async function runMaintenanceTasks() {
       if (success) {
         // Send Email Notification if email exists
         if (record.profiles?.email) {
-          await sendDueSoonEmail({
+          const email = await sendDueSoonEmail({
             to: record.profiles.email,
             userName: record.profiles.full_name || 'Valued Member',
             bookTitle: book?.title || 'Borrowed Book',
             dueDate: dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' }),
           });
+          if (!email.success) {
+            results.errors.push('Due-soon email failed; the reminder will be retried.');
+            return;
+          }
         }
 
         await supabaseAdmin
@@ -190,13 +194,20 @@ export async function runMaintenanceTasks() {
           }
 
           if (record.profiles?.email) {
-            await sendOverdueEmail({
+            const email = await sendOverdueEmail({
               to: record.profiles.email,
               userName: record.profiles.full_name || 'Valued Member',
               bookTitle: book?.title || 'Borrowed Book',
               dueDate: dueDate.toLocaleDateString('en-US', { timeZone: 'Asia/Manila' }),
               overdueDays,
             });
+            if (!email.success) {
+              await supabaseAdmin.from('borrowing_records')
+                .update({ overdue_notified: false, updated_at: new Date().toISOString() })
+                .eq('id', record.id);
+              results.errors.push('Overdue email failed; the notification will be retried.');
+              return;
+            }
           }
 
           results.overdueTagged++;

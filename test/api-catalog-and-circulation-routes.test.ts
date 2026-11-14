@@ -454,7 +454,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       ).toBe(400);
     });
 
-    it("broadcasts via RPC for target='all' (no duplicate sender copy) and target='students' (with sender copy)", async () => {
+    it("broadcasts via RPC for target='all' and target='students' without duplicate sender copy", async () => {
       setupAuth(supabase, "super_admin", "ACTIVE", VALID_USER_UUID);
       supabase.setRpcResponse(42, null, "send_bulk_notifications_by_target");
 
@@ -466,6 +466,14 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       );
       expect(allRes.status).toBe(200);
       expect(await allRes.json()).toEqual({ success: true, count: 42 });
+      expect(supabase.rpc).toHaveBeenCalledWith("send_bulk_notifications_by_target", {
+        p_target: "all",
+        p_title: "Holiday",
+        p_content: "Library closed",
+        p_type: "SYSTEM",
+        p_priority: "high",
+        p_metadata: {},
+      });
       expect(mockSendNotification).not.toHaveBeenCalled();
 
       supabase.setRpcResponse(30, null, "send_bulk_notifications_by_target");
@@ -476,13 +484,16 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         })
       );
       expect(studentsRes.status).toBe(200);
-      expect(mockSendNotification).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: VALID_USER_UUID,
-          title: "Exam Week",
-          metadata: expect.objectContaining({ sent_by_you: true }),
-        })
-      );
+      expect(await studentsRes.json()).toEqual({ success: true, count: 30 });
+      expect(supabase.rpc).toHaveBeenCalledWith("send_bulk_notifications_by_target", {
+        p_target: "students",
+        p_title: "Exam Week",
+        p_content: "Extended hours",
+        p_type: "SYSTEM",
+        p_priority: "high",
+        p_metadata: {},
+      });
+      expect(mockSendNotification).not.toHaveBeenCalled();
     });
 
     it("handles zero RPC recipients (400), RPC errors (500), and explicit userIds bulk send", async () => {
@@ -517,11 +528,12 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         })
       );
       expect(userIdsRes.status).toBe(200);
+      expect(await userIdsRes.json()).toEqual({ success: true, count: 1 });
       expect(mockSendBulkNotifications).toHaveBeenCalledWith(
         [OTHER_USER_UUID],
         expect.objectContaining({ title: "Direct Notice" })
       );
-      expect(mockSendNotification).toHaveBeenCalledTimes(1);
+      expect(mockSendNotification).not.toHaveBeenCalled();
 
       mockSendBulkNotifications.mockResolvedValueOnce({ success: false, error: "Insert failed" });
       const failSendRes = await bulkNotificationsPost(

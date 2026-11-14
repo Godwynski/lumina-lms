@@ -2,6 +2,7 @@ export interface BookDetail {
   id: string;
   title: string;
   author: string;
+  description?: string | null;
   isbn: string | null;
   cover_url: string | null;
   section: string | null;

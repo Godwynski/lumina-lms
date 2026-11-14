@@ -20,35 +20,46 @@ function isBlockedAddress(address: string) {
 }
 
 /** Thrown with a message that is safe to show to the user. */
-export class ImageFetchError extends Error {}
+export class ImageFetchError extends Error {
+  constructor(message: string, public readonly status?: number, public readonly retryAfterMs?: number) {
+    super(message);
+  }
+}
 
 /**
- * Downloads a remote image for server-side processing. Only public HTTPS hosts, no redirects,
+ * Downloads a remote image for server-side processing. Only public HTTPS hosts, up to three validated redirects,
  * raster images only, at most 5 MB (checked while streaming, so a huge body is never buffered).
  */
 export async function fetchImage(url: string): Promise<{ buffer: Buffer; contentType: string }> {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new ImageFetchError("Invalid image URL.");
+  let currentUrl = url;
+  let res!: Response;
+  const signal = AbortSignal.timeout(10_000);
+  for (let redirects = 0; ; redirects++) {
+    let parsed: URL;
+    try { parsed = new URL(currentUrl); } catch { throw new ImageFetchError("Invalid image URL."); }
+    if (parsed.protocol !== "https:") throw new ImageFetchError("Only HTTPS image URLs are allowed.");
+    if (parsed.username || parsed.password) throw new ImageFetchError("Image URLs cannot contain credentials.");
+    const host = parsed.hostname.replace(/^\[|\]$/g, "");
+    const addresses = isIP(host) ? [{ address: host }] : await lookup(host, { all: true }).catch(() => []);
+    if (!addresses.length) throw new ImageFetchError("Image host could not be found.");
+    if (addresses.some(a => isBlockedAddress(a.address))) throw new ImageFetchError("Restricted remote image host.");
+    // shortcut: DNS is resolved again by fetch; pin validated addresses if accepting untrusted DNS hosts becomes necessary.
+    try { res = await fetch(parsed, { redirect: "manual", signal }); }
+    catch { throw new ImageFetchError("Could not download the image. The image host may be unavailable or timed out."); }
+    if (![301, 302, 303, 307, 308].includes(res.status)) break;
+    await res.body?.cancel();
+    if (redirects >= 3) throw new ImageFetchError("Image has too many redirects.");
+    const location = res.headers.get("location");
+    if (!location) throw new ImageFetchError("Image redirect has no destination.");
+    try { currentUrl = new URL(location, parsed).toString(); }
+    catch { throw new ImageFetchError("Invalid image redirect URL."); }
   }
-  if (parsed.protocol !== "https:") throw new ImageFetchError("Only HTTPS image URLs are allowed.");
-
-  const host = parsed.hostname.replace(/^\[|\]$/g, "");
-  const addresses = isIP(host) ? [{ address: host }] : await lookup(host, { all: true }).catch(() => []);
-  if (addresses.length === 0) throw new ImageFetchError("Image host could not be found.");
-  if (addresses.some((a) => isBlockedAddress(a.address))) throw new ImageFetchError("Restricted remote image host.");
-  // shortcut: fetch resolves the name again, so a DNS-rebinding host could still swap in a private IP
-  // between the check and the request. Pin the checked IP with a custom dispatcher if that ever matters.
-
-  let res: Response;
-  try {
-    res = await fetch(parsed, { redirect: "error", signal: AbortSignal.timeout(10_000) });
-  } catch {
-    throw new ImageFetchError("Could not download the image (redirects are not followed).");
+  if (!res.ok || !res.body) {
+    const retryAfter = res.headers.get("retry-after")?.trim();
+    const delay = retryAfter ? (/^\d+(?:\.\d+)?$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now()) : NaN;
+    await res.body?.cancel();
+    throw new ImageFetchError(`Could not download the image (HTTP ${res.status}).`, res.status, Number.isFinite(delay) ? Math.max(0, delay) : undefined);
   }
-  if (!res.ok || !res.body) throw new ImageFetchError(`Could not download the image (HTTP ${res.status}).`);
 
   const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
   // SVG is excluded: it can carry scripts and is parsed by librsvg inside sharp.

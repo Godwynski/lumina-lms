@@ -379,6 +379,7 @@ describe('circulation server actions', () => {
         {
           studentCardQr: 'LIB-1001',
           bookQr: 'COPY-001',
+          student_user_id: 'student-1',
           studentName: 'Maria Clara',
           bookTitle: 'Clean Code',
         },
@@ -486,7 +487,7 @@ describe('circulation server actions', () => {
     });
 
     it('commits return with settleFine: false, handles reservation_ready, and revalidates /circulation and /history', async () => {
-      supaMock.setTableResponse('book_copies', { id: 'copy-1' });
+      supaMock.setTableResponse('book_copies', { id: 'copy-1', book_id: 'book-1' });
       supaMock.setTableResponse('borrowing_records', { user_id: 'student-1' });
 
       adminMock.setRpcResponse(
@@ -521,11 +522,14 @@ describe('circulation server actions', () => {
       expect(mockLogAuditActivity).toHaveBeenCalledWith(
         'staff-1',
         'book_copy',
-        null,
+        'copy-1',
         'return',
         "Returned book 'Clean Code' from Maria Clara (QR: COPY-001) — reserved for Juan Dela Cruz",
         {
           bookQr: 'COPY-001',
+          book_id: 'book-1',
+          book_copy_id: 'copy-1',
+          student_user_id: 'student-1',
           studentName: 'Maria Clara',
           bookTitle: 'Clean Code',
           reservationReady: true,
@@ -549,7 +553,7 @@ describe('circulation server actions', () => {
     });
 
     it('updates fine_settled_at and audit trail when settleFine: true and fine_amount > 0', async () => {
-      supaMock.setTableResponse('book_copies', { id: 'copy-1' });
+      supaMock.setTableResponse('book_copies', { id: 'copy-1', book_id: 'book-2' });
       supaMock.setTableResponse('borrowing_records', { user_id: 'student-1' });
       adminMock.setTableResponse('borrowing_records', null, null);
 
@@ -582,16 +586,48 @@ describe('circulation server actions', () => {
       expect(mockLogAuditActivity).toHaveBeenCalledWith(
         'staff-1',
         'book_copy',
-        null,
+        'copy-1',
         'return',
         "Returned book 'Design Patterns' from Maria Clara (QR: COPY-002) — settled PHP 25.00 fine",
         expect.objectContaining({
+          book_id: 'book-2',
+          book_copy_id: 'copy-1',
+          student_user_id: 'student-1',
           fineAmount: 25,
           fineSettled: true,
         }),
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );
+    });
+
+    it('does not log audit, notify, or settle again on an idempotent replayed return', async () => {
+      supaMock.setTableResponse('book_copies', { id: 'copy-2', book_id: 'book-2' });
+      supaMock.setTableResponse('borrowing_records', { user_id: 'next-borrower' });
+      adminMock.setRpcResponse(
+        {
+          ok: true,
+          idempotent: true,
+          borrowing_id: 'borrow-2',
+          book_title: 'Design Patterns',
+          student_name: 'Maria Clara',
+          fine_amount: 25,
+        },
+        null,
+        'process_qr_return'
+      );
+
+      const res = await returnBook({
+        bookQr: 'COPY-002',
+        idempotencyKey: '00000000-0000-4000-8000-000000000001',
+        settleFine: true,
+      });
+
+      expect(res.success).toBe(true);
+      expect(adminMock.from).not.toHaveBeenCalledWith('borrowing_records');
+      expect(mockLogAuditActivity).not.toHaveBeenCalled();
+      expect(mockSendNotification).not.toHaveBeenCalled();
+      expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
 
     it('fails if settling fine update errors after return RPC succeeds', async () => {

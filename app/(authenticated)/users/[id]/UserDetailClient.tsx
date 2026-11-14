@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, startTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
   CheckCircle2, AlertCircle, UserCheck, Archive, Calendar, Key, Hash
@@ -27,6 +28,30 @@ import { mapProfileToUser } from "@/lib/utils/mappers";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { User } from "@/lib/types";
 
+function profileForm(user: User) {
+  return {
+    name: user.name || "",
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    department: user.department || "",
+    student_id: user.student_id || "",
+    address: user.address || "",
+    phone: user.phone || "",
+    permissions: user.permissions || {},
+  };
+}
+type ProfileForm = ReturnType<typeof profileForm>;
+function sameField(key: keyof ProfileForm, left: ProfileForm, right: ProfileForm) {
+  if (key === "permissions") {
+    return [...new Set([...Object.keys(left.permissions), ...Object.keys(right.permissions)])]
+      .every(permission => !!left.permissions[permission] === !!right.permissions[permission]);
+  }
+  const normalize = (value: string) => key === "status" ? value.trim().toUpperCase() : key === "department" ? value.trim() || "General" : value.trim();
+  return normalize(left[key]) === normalize(right[key]);
+}
+const formKeys = ["name", "email", "role", "status", "department", "student_id", "address", "phone", "permissions"] as const;
+
 export function UserDetailClient({
   initialUser,
   currentRole
@@ -36,6 +61,21 @@ export function UserDetailClient({
 }) {
   const router = useRouter();
   const [user, setUser] = useState<User>(initialUser);
+  const [form, setForm] = useState(() => profileForm(initialUser));
+  const savedUserRef = useRef(initialUser);
+  const receiveUser = useCallback((nextUser: User, submitted?: ProfileForm) => {
+    const previous = submitted || profileForm(savedUserRef.current);
+    const incoming = profileForm(nextUser);
+    const changedUser = savedUserRef.current.id !== nextUser.id;
+    savedUserRef.current = nextUser;
+    setUser(nextUser);
+    // Preserve local edits while refreshing fields the user has not changed.
+    setForm(current => changedUser ? incoming : Object.fromEntries(formKeys.map(key => [
+      key, sameField(key, current, previous) ? incoming[key] : current[key],
+    ])) as ProfileForm);
+  }, []);
+
+  useEffect(() => { receiveUser(initialUser); }, [initialUser, receiveUser]);
   const [isSaving, setIsSaving] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
@@ -66,19 +106,7 @@ export function UserDetailClient({
           if (payload.eventType === "UPDATE") {
             const updatedRow = payload.new as Record<string, unknown>;
             const mapped = mapProfileToUser(updatedRow);
-            setUser(prev => ({
-              ...prev,
-              name: mapped.name,
-              avatarUrl: mapped.avatarUrl,
-              role: mapped.role,
-              status: mapped.status,
-              department: mapped.department,
-              student_id: mapped.student_id,
-              address: mapped.address,
-              phone: mapped.phone,
-              updatedAt: mapped.updatedAt,
-              permissions: mapped.permissions,
-            }));
+            receiveUser({ ...savedUserRef.current, ...mapped, library_card: savedUserRef.current.library_card });
           }
           debouncedRefresh();
         }
@@ -109,7 +137,7 @@ export function UserDetailClient({
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
-  }, [initialUser.id, supabase, debouncedRefresh]);
+  }, [initialUser.id, supabase, debouncedRefresh, receiveUser]);
 
   // Modals
   const [permissionsOpen, setPermissionsOpen] = useState(false);
@@ -123,30 +151,13 @@ export function UserDetailClient({
   const isTargetLibrarian = initialUser.role === "librarian";
   const isReadOnly = isLibrarian && (isTargetAdmin || isTargetLibrarian);
 
-  const [form, setForm] = useState({
-    name: initialUser.name,
-    email: initialUser.email,
-    role: initialUser.role,
-    status: initialUser.status,
-    department: initialUser.department,
-    student_id: initialUser.student_id || "",
-    address: initialUser.address || "",
-    phone: initialUser.phone || "",
-    permissions: initialUser.permissions || {},
-  });
-
-  const isDirty =
-    form.name.trim() !== (initialUser.name || "").trim() ||
-    form.role !== initialUser.role ||
-    form.status.toUpperCase() !== (initialUser.status || "").toUpperCase() ||
-    form.department.trim() !== (initialUser.department || "").trim() ||
-    form.address.trim() !== (initialUser.address || "").trim() ||
-    form.phone.trim() !== (initialUser.phone || "").trim() ||
-    JSON.stringify(form.permissions) !== JSON.stringify(initialUser.permissions || {});
+  const savedForm = profileForm(user);
+  const isDirty = formKeys.some(key => !sameField(key, form, savedForm));
 
   const needsVerification = form.role === "student" && form.status.toUpperCase() === "ACTIVE" && user.status.toUpperCase() === "PENDING";
 
   const handleUpdateProfile = async () => {
+    if (!isDirty || isSaving) return;
     setIsSaving(true);
 
     try {
@@ -159,9 +170,9 @@ export function UserDetailClient({
           role: form.role,
           status: form.status.trim().toUpperCase(),
           department: form.department.trim() || "General",
-          student_id: form.student_id.trim() || null,
-          address: form.address.trim() || null,
-          phone: form.phone.trim() || null,
+          student_id: form.student_id.trim(),
+          address: form.address.trim(),
+          phone: form.phone.trim(),
           permissions: form.permissions,
         }),
       });
@@ -169,32 +180,7 @@ export function UserDetailClient({
       const result = await response.json();
       if (!result.ok) throw new Error(result.message || "Failed to update profile");
 
-      const updated = result.user;
-      const nextUser = {
-        ...user,
-        name: updated.name,
-        email: updated.email,
-        role: updated.role,
-        status: updated.status,
-        department: updated.department,
-        student_id: updated.student_id,
-        address: form.address,
-        phone: form.phone,
-        permissions: form.permissions,
-      };
-
-      setUser(nextUser);
-      setForm({
-        name: updated.name,
-        email: updated.email,
-        role: updated.role,
-        status: updated.status,
-        department: updated.department,
-        student_id: updated.student_id || "",
-        address: form.address,
-        phone: form.phone,
-        permissions: form.permissions,
-      });
+      receiveUser({ ...user, ...result.user, library_card: user.library_card }, form);
       toast.success("Account updated successfully");
       startTransition(() => {
         router.refresh();
@@ -219,9 +205,9 @@ export function UserDetailClient({
           role: form.role,
           status: "ACTIVE", // Force Active
           department: form.department.trim() || "General",
-          student_id: form.student_id.trim() || null,
-          address: form.address.trim() || null,
-          phone: form.phone.trim() || null,
+          student_id: form.student_id.trim(),
+          address: form.address.trim(),
+          phone: form.phone.trim(),
           permissions: form.permissions,
         }),
       });
@@ -229,21 +215,7 @@ export function UserDetailClient({
       const result = await response.json();
       if (!result.ok) throw new Error(result.message || "Failed to approve account");
 
-      const updated = result.user;
-      const nextUser = {
-        ...user,
-        name: updated.name,
-        role: updated.role,
-        status: updated.status,
-        department: updated.department,
-        student_id: updated.student_id,
-        address: form.address,
-        phone: form.phone,
-        permissions: form.permissions,
-      };
-
-      setUser(nextUser);
-      setForm(prev => ({ ...prev, status: updated.status }));
+      receiveUser({ ...user, ...result.user, library_card: user.library_card }, form);
       setVerificationOpen(false);
       toast.success("Identity verified and account activated!");
       startTransition(() => {
@@ -296,6 +268,7 @@ export function UserDetailClient({
                   </AvatarFallback>
                 </Avatar>
                 
+                {isAdmin && <Link href={`/audit?studentId=${initialUser.id}`} className="text-sm font-semibold text-primary hover:underline">View student records</Link>}
                 <div className="w-full space-y-3">
                   <div className="text-center px-1">
                     <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
@@ -488,9 +461,9 @@ export function UserDetailClient({
                 <UserCheck className="h-4 w-4 text-primary" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-foreground">Pending Changes</p>
+                <p className="text-xs font-bold text-foreground">{isDirty ? "Pending Changes" : "No Unsaved Changes"}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Update role to <span className="text-foreground font-medium">{form.role}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
+                  Role <span className="text-foreground font-medium">{form.role}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
                 </p>
               </div>
             </div>
@@ -534,8 +507,8 @@ export function UserDetailClient({
               },
               { 
                 key: "view_admin_dashboard", 
-                label: "Administrative Dashboard", 
-                desc: "Allows access to administrative widgets, total active checkout statistics, student directory summaries, and general system analytics." 
+                label: "Inventory",
+                desc: "Allows access to the inventory catalog to view library books, stock, and availability."
               },
             ].map(p => (
               <div

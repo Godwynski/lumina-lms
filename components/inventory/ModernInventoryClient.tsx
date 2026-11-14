@@ -156,7 +156,7 @@ export function ModernInventoryClient({
 
   // ISBN Fallback States
   const [isbnInput, setIsbnInput] = useState("");
-  const { isISBNProcessing, isbnProgress, isbnLogs, startISBNLookup } = useBatchTask();
+  const { isISBNProcessing, isbnProgress, isbnLogs, startISBNLookup, refreshJobs } = useBatchTask();
 
   // Export States
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
@@ -278,6 +278,8 @@ export function ModernInventoryClient({
           logs: res.logs || []
         });
         toast.success(`Import complete! Created ${res.imported} books, added ${res.copiesAdded} copies.`);
+        const enrichmentJobId = "enrichmentJobId" in res && typeof res.enrichmentJobId === "string" ? res.enrichmentJobId : undefined;
+        await refreshJobs(enrichmentJobId);
         startTransition(() => {
           router.refresh();
         });
@@ -292,7 +294,7 @@ export function ModernInventoryClient({
     }
   };
 
-  // Process sequential ISBN lookup using global provider
+  // Queue a durable ISBN import using the global provider
   const handleStartISBNLookup = () => {
     const rawList = isbnInput
       .split(/[\n,]/)
@@ -304,7 +306,11 @@ export function ModernInventoryClient({
       return;
     }
 
-    startISBNLookup(rawList);
+    if (rawList.length > 500) {
+      toast.error("Enter at most 500 ISBN entries per import. Split larger lists into separate imports.");
+      return;
+    }
+    void startISBNLookup(rawList);
   };
 
   // Helper to map dynamic book columns
@@ -904,7 +910,7 @@ export function ModernInventoryClient({
                         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
                           <div className="flex items-center gap-2 text-emerald-500 font-bold text-sm">
                             <CheckCircle2 className="h-5 w-5" />
-                            Spreadsheet Import Successful!
+                            Catalog Rows Imported
                           </div>
                           <div className="grid grid-cols-3 gap-3 text-center py-2 bg-emerald-500/10 rounded-xl">
                             <div>
@@ -945,7 +951,7 @@ export function ModernInventoryClient({
                           disabled={isISBNProcessing}
                           className="h-32 w-full rounded-2xl border border-border/20 bg-muted/5 p-4 text-xs font-medium focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground/30 font-mono resize-none"
                         />
-                        <span className="text-[11px] text-muted-foreground ml-1 block">One ISBN code per line. We will lookup metadata, download optimized covers, and catalog them.</span>
+                        <span className="text-[11px] text-muted-foreground ml-1 block">One ISBN per line, up to 500 entries. Imports continue when you close this tab. Duplicate ISBNs add copies; missing metadata or covers are flagged for review.</span>
                       </div>
 
                       {isISBNProcessing && (
@@ -953,7 +959,7 @@ export function ModernInventoryClient({
                           <div className="flex justify-between items-center text-xs font-bold">
                             <span className="flex items-center gap-2 text-primary">
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              Searching API Catalog: {isbnProgress.currentIsbn}
+                              Queued import: {isbnProgress.currentIsbn || "Preparing..."}
                             </span>
                             <span>{isbnProgress.current} / {isbnProgress.total}</span>
                           </div>
@@ -961,7 +967,7 @@ export function ModernInventoryClient({
                           <div className="h-2 w-full bg-muted rounded-full overflow-hidden relative">
                             <div 
                               className="h-full bg-gradient-to-r from-primary to-indigo-500 transition-all duration-300 rounded-full"
-                              style={{ width: `${(isbnProgress.current / isbnProgress.total) * 100}%` }}
+                              style={{ width: `${(isbnProgress.current / (isbnProgress.total || 1)) * 100}%` }}
                             />
                           </div>
                         </div>
@@ -975,16 +981,16 @@ export function ModernInventoryClient({
                         {isISBNProcessing ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Looking up ISBNs ({isbnProgress.current} of {isbnProgress.total})...
+                            Importing ({isbnProgress.current} of {isbnProgress.total})...
                           </>
                         ) : (
-                          "Start Sequential Auto-Lookup"
+                          "Queue ISBN Import"
                         )}
                       </Button>
 
                       {isbnLogs.length > 0 && (
                         <div className="flex-1 min-h-[140px] flex flex-col">
-                          <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground mb-1 ml-1">Real-time Terminal Logs</div>
+                          <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground mb-1 ml-1">Import item status</div>
                           <div className="flex-1 bg-black/40 border border-border/10 rounded-2xl p-3 font-mono text-[11px] space-y-1.5 overflow-y-auto max-h-36 custom-scrollbar">
                             {isbnLogs.map((log, idx) => (
                               <div 
@@ -993,7 +999,8 @@ export function ModernInventoryClient({
                                   "py-0.5 border-b border-white/5",
                                   log.status === "success" && "text-emerald-400",
                                   log.status === "exists" && "text-amber-400",
-                                  log.status === "error" && "text-red-400"
+                                  log.status === "error" && "text-red-400",
+                                  log.status === "pending" && "text-muted-foreground"
                                 )}
                               >
                                 {log.message}

@@ -1236,7 +1236,7 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
     );
     expect(emptyReactivate.rows[0].cnt).toBe(0);
 
-    // send_bulk_notifications_by_target: SA rejected; manager sends to students or all
+    // send_bulk_notifications_by_target: SA rejected; manager sends to students (student + student_assistant) or all
     await expect(
       withRole(db, 'authenticated', sa.id, (tx) =>
         tx.query(`SELECT public.send_bulk_notifications_by_target('students', 'Hi', 'Body')`)
@@ -1248,7 +1248,14 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
         `SELECT public.send_bulk_notifications_by_target('students', 'Term Start', 'Welcome back') AS cnt`
       )
     );
-    expect(sentStudents.rows[0].cnt).toBe(3);
+    expect(sentStudents.rows[0].cnt).toBe(4); // student1, student2, pendingStudent, and student_assistant (sa)
+
+    const studentNotifUsers = await db.query<{ user_id: string }>(
+      `SELECT user_id FROM public.notifications WHERE title = 'Term Start' ORDER BY user_id`
+    );
+    expect(studentNotifUsers.rows.map((r) => r.user_id)).toEqual(
+      [student1.id, student2.id, pendingStudent.id, sa.id].sort()
+    );
 
     const sentAll = await withRole(db, 'authenticated', admin.id, (tx) =>
       tx.query<{ cnt: number }>(

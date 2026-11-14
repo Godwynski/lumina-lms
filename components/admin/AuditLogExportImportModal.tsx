@@ -36,6 +36,10 @@ interface AuditLogExportImportModalProps {
     actionType?: string;
     startDate?: string;
     endDate?: string;
+    bookId?: string;
+    studentId?: string;
+    copyId?: string;
+    userId?: string;
   };
 }
 
@@ -52,6 +56,11 @@ interface ParsedAuditLog {
 }
 
 const AVAILABLE_COLUMNS = [
+  { id: "book_title", label: "Book", desc: "Book involved in the record" },
+  { id: "book_isbn", label: "ISBN", desc: "Book identifier" },
+  { id: "copy_barcode", label: "Copy barcode", desc: "Physical copy involved" },
+  { id: "student_name", label: "Student", desc: "Student involved, independently of the staff actor" },
+  { id: "student_number", label: "Student ID", desc: "School student identifier" },
   { id: "created_at", label: "Timestamp", desc: "Date and time of the event" },
   { id: "full_name", label: "Admin Name", desc: "Full name of performing admin" },
   { id: "email", label: "Admin Email", desc: "Email of performing admin" },
@@ -174,6 +183,10 @@ export function AuditLogExportImportModal({
           }),
         ...(currentFilters.startDate && { startDate: currentFilters.startDate }),
         ...(currentFilters.endDate && { endDate: currentFilters.endDate }),
+        ...(currentFilters.bookId && { bookId: currentFilters.bookId }),
+        ...(currentFilters.studentId && { studentId: currentFilters.studentId }),
+        ...(currentFilters.copyId && { copyId: currentFilters.copyId }),
+        ...(currentFilters.userId && { userId: currentFilters.userId }),
       });
 
       // We trigger browser download using a direct window open or anchor click
@@ -590,7 +603,8 @@ export function AuditLogExportImportModal({
                     {currentFilters.startDate || "..."} to {currentFilters.endDate || "..."}
                   </span>
                 ) : null}
-                {!currentFilters.query && (!currentFilters.entityType || currentFilters.entityType === "all") && (!currentFilters.actionType || currentFilters.actionType === "all") && !currentFilters.startDate && !currentFilters.endDate ? (
+                {(currentFilters.bookId || currentFilters.studentId || currentFilters.copyId || currentFilters.userId) && <span>Selected book, student, copy, and staff filters are included.</span>}
+                {!currentFilters.bookId && !currentFilters.studentId && !currentFilters.copyId && !currentFilters.userId && !currentFilters.query && (!currentFilters.entityType || currentFilters.entityType === "all") && (!currentFilters.actionType || currentFilters.actionType === "all") && !currentFilters.startDate && !currentFilters.endDate ? (
                   <span className="italic text-muted-foreground">No active filters (downloading entire logs history)</span>
                 ) : null}
               </div>

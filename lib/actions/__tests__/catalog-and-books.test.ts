@@ -5,6 +5,7 @@ const mockRevalidateTag = vi.fn();
 const mockRevalidatePath = vi.fn();
 const mockLogAuditActivity = vi.fn().mockResolvedValue(undefined);
 const mockFetchImage = vi.fn();
+const mockScheduleCatalogImport = vi.fn();
 const mockSharpToBuffer = vi.fn().mockResolvedValue(Buffer.from('webp-data'));
 const mockSharp = vi.fn((..._args: unknown[]) => ({ webp: vi.fn(() => ({ toBuffer: mockSharpToBuffer })) }));
 
@@ -35,6 +36,10 @@ vi.mock('@/lib/fetch-image', () => ({
   fetchImage: (...args: unknown[]) => mockFetchImage(...args),
 }));
 
+vi.mock('@/lib/catalog-import-scheduler', () => ({
+  scheduleCatalogImport: (...args: unknown[]) => mockScheduleCatalogImport(...args),
+}));
+
 vi.mock('sharp', () => ({
   default: (...args: unknown[]) => mockSharp(...args),
 }));
@@ -45,6 +50,7 @@ import { getCategories, getOrCreateCategoryByName } from '@/lib/actions/catalog/
 import { getBooks, createBook, updateBook, softDeleteBook, restoreBook } from '@/lib/actions/catalog/books';
 import { addBookCopies, updateBookCopyStatus, getBookPublicDetails, getBookAdminDetails } from '@/lib/actions/catalog/copies';
 import { getBooksForExport, batchImportBooks, lookupAndImportISBN } from '@/lib/actions/catalog/import-export';
+import { fetchISBNDetails } from '@/lib/actions/isbn-lookup';
 import { getPublicBooksCached, getPublicBookById, getCategoriesCached } from '@/lib/actions/public-catalog';
 import * as catalogFacade from '@/lib/actions/catalog';
 
@@ -819,7 +825,16 @@ describe('Catalog & Books Server Actions', () => {
       expect(res.logs.some((l) => l.includes('Failed to add 2 copies: Copy DB error'))).toBe(true);
     });
 
-    it('lookupAndImportISBN validates ISBN, adds copy if ISBN exists, and falls back from Google Books to Open Library', async () => {
+    it('lookupAndImportISBN enforces staff access, validates ISBN format, and queues catalog_import_jobs', async () => {
+      // RBAC: students and student_assistants are rejected
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      await expect(lookupAndImportISBN('9780131103627')).rejects.toThrow('Unauthorized');
+
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      await expect(lookupAndImportISBN('9780131103627')).rejects.toThrow(
+        'Access denied: Inventory management is restricted to authorized staff roles.'
+      );
+
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
 
       expect(await lookupAndImportISBN('   ')).toEqual({
@@ -827,96 +842,132 @@ describe('Catalog & Books Server Actions', () => {
         isbn: '   ',
         error: 'Invalid ISBN number provided',
       });
+      expect(await lookupAndImportISBN('978-123')).toEqual({
+        success: false,
+        isbn: '978-123',
+        error: 'Invalid ISBN number provided',
+      });
+      expect(adminClientHelper.rpc).not.toHaveBeenCalled();
+      expect(mockScheduleCatalogImport).not.toHaveBeenCalled();
 
-      // Existing ISBN adds 1 copy
-      serverClientHelper.setTableResponse('books', { id: 'b-ex', title: 'Existing', author: 'Auth' }, null);
-      serverClientHelper.setTableResponse('book_copies', null, null);
-      const existsRes = await lookupAndImportISBN('978-0-13-110362-7');
-      expect(existsRes).toMatchObject({ success: true, status: 'exists', bookId: 'b-ex' });
+      // Valid ISBN-13 queues catalog_import_enqueue and schedules background worker
+      adminClientHelper.setRpcResponse(null, null, 'catalog_import_enqueue');
+      const queued13 = await lookupAndImportISBN('978-0-13-110362-7');
+      expect(queued13).toEqual({
+        success: true,
+        status: 'queued',
+        isbn: '9780131103627',
+        jobId: expect.any(String),
+        message: 'ISBN import queued. Metadata and cover progress can be reviewed in batch tasks.',
+      });
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('catalog_import_enqueue', {
+        p_job: queued13.jobId,
+        p_actor: 'lib-1',
+        p_label: 'ISBN import',
+        p_items: [{ mode: 'create', isbn: '9780131103627', requested_copies: 1 }],
+      });
+      expect(mockScheduleCatalogImport).toHaveBeenCalledTimes(1);
 
-      // Google Books fails -> Open Library succeeds + cover upload
+      // Valid ISBN-10 with lowercase check digit 'x' normalizes to uppercase 'X'
+      const queued10 = await lookupAndImportISBN('0-8044-2957-x');
+      expect(queued10).toMatchObject({
+        success: true,
+        status: 'queued',
+        isbn: '080442957X',
+      });
+      expect(adminClientHelper.rpc).toHaveBeenLastCalledWith('catalog_import_enqueue', {
+        p_job: queued10.jobId,
+        p_actor: 'lib-1',
+        p_label: 'ISBN import',
+        p_items: [{ mode: 'create', isbn: '080442957X', requested_copies: 1 }],
+      });
+      expect(mockScheduleCatalogImport).toHaveBeenCalledTimes(2);
+    });
+
+    it('lookupAndImportISBN returns error when enqueue fails and remains resilient if scheduler throws', async () => {
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+
+      adminClientHelper.setRpcResponse(null, { message: 'Queue RPC failed' }, 'catalog_import_enqueue');
+      const failRes = await lookupAndImportISBN('0000000000');
+      expect(failRes).toEqual({
+        success: false,
+        isbn: '0000000000',
+        error: 'Could not queue ISBN import: Queue RPC failed',
+      });
+      expect(mockScheduleCatalogImport).not.toHaveBeenCalled();
+
+      // If scheduler fails after enqueue succeeded, job remains queued without failing the action
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      adminClientHelper.setRpcResponse(null, null, 'catalog_import_enqueue');
+      mockScheduleCatalogImport.mockImplementationOnce(() => {
+        throw new Error('after() unavailable');
+      });
+
+      const resilientRes = await lookupAndImportISBN('1234567890');
+      expect(resilientRes).toEqual({
+        success: true,
+        status: 'queued',
+        isbn: '1234567890',
+        jobId: expect.any(String),
+        message: 'ISBN import queued. Metadata and cover progress can be reviewed in batch tasks.',
+      });
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('fetchISBNDetails enforces staff access and delegates to lookupISBN', async () => {
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      await expect(fetchISBNDetails('9780131103627')).rejects.toThrow('Unauthorized');
+
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      await expect(fetchISBNDetails('9780131103627')).rejects.toThrow(
+        'Access denied: Inventory management is restricted to authorized staff roles.'
+      );
+
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
       const fetchMock = vi.mocked(fetch);
       fetchMock
-        .mockResolvedValueOnce(new Response(null, { status: 500 })) // Google Books
         .mockResolvedValueOnce(
           new Response(
             JSON.stringify({
-              'ISBN:0131103628': {
-                title: 'The C Programming Language',
-                authors: [{ name: 'Kernighan' }, { name: 'Ritchie' }],
-                publishers: [{ name: 'Prentice Hall' }],
-                published_date: '1988',
-                subjects: [{ name: 'Programming' }],
-                cover: { large: 'https://covers.openlibrary.org/b/id/1-L.jpg' },
+              items: [
+                {
+                  volumeInfo: {
+                    title: 'The C Programming Language',
+                    authors: ['Brian W. Kernighan', 'Dennis M. Ritchie'],
+                    publishedDate: '1988',
+                    categories: ['Computers'],
+                    industryIdentifiers: [{ type: 'ISBN_13', identifier: '9780131103627' }],
+                  },
+                },
+              ],
+            }),
+            { status: 200 }
+          )
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              'ISBN:9780131103627': {
+                description: 'Classic systems programming reference.',
+                classifications: { dewey_decimal: ['005.13/3'] },
               },
             }),
             { status: 200 }
           )
         );
-      mockFetchImage.mockResolvedValueOnce({ buffer: Buffer.from('jpg'), contentType: 'image/jpeg' });
 
-      queueTableBuilders(serverClientHelper, 'books', [
-        createMockQueryBuilder(null, null), // duplicate check -> not found
-        createMockQueryBuilder({ id: 'b-new', title: 'The C Programming Language', author: 'Kernighan, Ritchie' }, null),
-      ]);
-      queueTableBuilders(serverClientHelper, 'categories', [
-        createMockQueryBuilder(null, null),
-        createMockQueryBuilder({ id: 'cat-prog' }, null),
-      ]);
-      serverClientHelper.setTableResponse('book_copies', null, null);
-
-      const importedRes = await lookupAndImportISBN('0-13-110362-8');
-      expect(importedRes).toMatchObject({
+      const details = await fetchISBNDetails('978-0-13-110362-7');
+      expect(details).toMatchObject({
         success: true,
-        status: 'imported',
-        bookId: 'b-new',
-        title: 'The C Programming Language',
-        author: 'Kernighan, Ritchie',
+        book: {
+          isbn: '9780131103627',
+          title: 'The C Programming Language',
+          author: 'Brian W. Kernighan, Dennis M. Ritchie',
+          published_year: 1988,
+          dewey_decimal: '005.13/3',
+        },
       });
-      warnSpy.mockRestore();
-    });
-
-    it('lookupAndImportISBN returns error when both APIs miss and rolls back book if copy insert fails', async () => {
-      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
-      const fetchMock = vi.mocked(fetch);
-      fetchMock
-        .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
-      serverClientHelper.setTableResponse('books', null, null);
-
-      const notFoundRes = await lookupAndImportISBN('0000000000');
-      expect(notFoundRes).toEqual({
-        success: false,
-        isbn: '0000000000',
-        error: 'Book metadata not found in any public APIs',
-      });
-
-      // Google Books succeeds, copy insert fails -> rollback delete
-      fetchMock.mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            items: [{ volumeInfo: { title: 'Rollback Book', authors: ['Author'] } }],
-          }),
-          { status: 200 }
-        )
-      );
-      const deleteBuilder = createMockQueryBuilder(null, null);
-      queueTableBuilders(serverClientHelper, 'books', [
-        createMockQueryBuilder(null, null),
-        createMockQueryBuilder({ id: 'b-rb', title: 'Rollback Book', author: 'Author' }, null),
-        deleteBuilder,
-      ]);
-      serverClientHelper.setTableResponse('book_copies', null, { message: 'copy fail' });
-
-      const rollbackRes = await lookupAndImportISBN('1234567890');
-      expect(rollbackRes).toEqual({
-        success: false,
-        isbn: '1234567890',
-        error: 'Book record was created, but copy generation failed: copy fail. Rolled back.',
-      });
-      expect(deleteBuilder.delete).toHaveBeenCalled();
-      expect(deleteBuilder.eq).toHaveBeenCalledWith('id', 'b-rb');
     });
   });
 

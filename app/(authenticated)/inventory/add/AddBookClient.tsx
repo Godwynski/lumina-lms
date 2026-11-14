@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchISBNDetails } from '@/lib/actions/isbn-lookup';
 import { createBook, getCategories } from '@/lib/actions/catalog';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,11 +25,14 @@ const EMPTY_FORM = {
   cover_url: '',
   copies: 1,
   dewey_decimal: '',
+  description: '',
+  published_year: '',
 };
 
 export function AddBookClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const lookupRequest = useRef(0);
   const [isbnLoading, setIsbnLoading] = useState(false);
   
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -48,67 +52,26 @@ export function AddBookClient() {
     const sourceIsbn = (isbnCandidate ?? formData.isbn).trim();
     if (!sourceIsbn) return;
     
+    const request = ++lookupRequest.current;
     setIsbnLoading(true);
-    
     try {
-      const cleanIsbn = sourceIsbn.replace(/[- ]/g, '').toUpperCase();
-      let bookFound = false;
-
-      // 1. Try Google Books API First
-      try {
-        const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
-        const googleData = await googleRes.json();
-
-        if (googleData.items && googleData.items.length > 0) {
-          const info = googleData.items[0].volumeInfo;
-          setFormData(prev => {
-            const rawCoverUrl = info.imageLinks?.extraLarge || info.imageLinks?.large || info.imageLinks?.thumbnail || prev.cover_url;
-            const secureCoverUrl = rawCoverUrl ? rawCoverUrl.replace('http://', 'https://') : '';
-            return {
-              ...prev,
-              title: info.title || prev.title,
-              author: info.authors ? info.authors.join(', ') : prev.author,
-              cover_url: secureCoverUrl,
-              tags: info.categories ? info.categories.join(', ') : prev.tags,
-            };
-          });
-          bookFound = true;
-        }
-      } catch (e) {
-        console.error("Google Books API error:", e);
-      }
-
-      // 2. Fallback to Open Library
-      if (!bookFound) {
-        const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
-        const olData = await olRes.json();
-        const bookData = olData[`ISBN:${cleanIsbn}`];
-        
-        if (bookData) {
-          setFormData(prev => {
-            const rawCoverUrl = bookData.cover?.large || bookData.cover?.medium || prev.cover_url;
-            const secureCoverUrl = rawCoverUrl ? rawCoverUrl.replace('http://', 'https://') : '';
-            return {
-              ...prev,
-              title: bookData.title || prev.title,
-              author: bookData.authors?.[0]?.name || prev.author,
-              cover_url: secureCoverUrl,
-              tags: bookData.subjects ? bookData.subjects.slice(0, 5).map((s: { name: string }) => s.name).join(', ') : prev.tags,
-            };
-          });
-          bookFound = true;
-        }
-      }
-
-      if (!bookFound) {
-        toast.error('Book not found in any database. Please enter details manually.');
-      }
+      const result = await fetchISBNDetails(sourceIsbn);
+      if (request !== lookupRequest.current) return;
+      if (!result.success) { toast.error(result.error); return; }
+      const book = result.book;
+      setFormData(prev => ({ ...prev, isbn: book.isbn, title: book.title,
+        author: book.author, cover_url: book.cover_url,
+        tags: book.tags.join(', '), description: book.description,
+        published_year: book.published_year ? String(book.published_year) : '', dewey_decimal: book.dewey_decimal,
+        categoryId: categories.find(category => book.tags.some(tag => tag.split(' / ').some(subject => [category.name, ...category.name.split(/\s*[&/]\s*/)].some(name => subject.trim().toLowerCase() === name.trim().toLowerCase()))))?.id || prev.categoryId }));
+      if (book.cover_url) setCoverFile(null);
+      toast.success('Book details retrieved. Review them before saving.');
     } catch {
-      toast.error('Failed to fetch book data. Please check your connection.');
+      if (request === lookupRequest.current) toast.error('Could not retrieve book details. Retry or enter them manually.');
     } finally {
-      setIsbnLoading(false);
+      if (request === lookupRequest.current) setIsbnLoading(false);
     }
-  }, [formData.isbn]);
+  }, [formData.isbn, categories]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -187,6 +150,8 @@ export function AddBookClient() {
           section: formData.section,
           cover_url: finalCoverUrl,
           dewey_decimal: formData.dewey_decimal || null,
+          description: formData.description || null,
+          published_year: formData.published_year ? Number(formData.published_year) : null,
         },
         copiesCount: formData.copies
       });
@@ -194,6 +159,7 @@ export function AddBookClient() {
       if (!result.success) throw new Error(result.error);
 
       setSaved(true);
+      toast.success('Book added successfully', { description: `${formData.title} has been added to the catalog.` });
       router.refresh();
       router.push('/inventory');
     } catch (err: unknown) {
@@ -205,6 +171,7 @@ export function AddBookClient() {
   };
 
   const updateFormData = (updates: Partial<typeof formData>) => {
+    if (updates.isbn !== undefined) { lookupRequest.current++; setIsbnLoading(false); }
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
@@ -231,7 +198,7 @@ export function AddBookClient() {
             <div className="flex gap-3 pt-6 border-t border-border/30 mt-8">
               <Button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || isbnLoading}
                 className="h-11 flex-1 rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90"
               >
                 {loading ? 'Processing...' : (

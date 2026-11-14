@@ -201,6 +201,39 @@ describe('attendance server actions', () => {
       });
     });
 
+    it.each([{ isManual: true }, { confirmed: true }])(
+      'allows an intentional immediate checkout when confirmation flag %j is passed',
+      async (confirmation) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-06-15T05:00:30Z'));
+
+        supaMock.setTableResponse('library_cards', {
+          user_id: 'patron-100',
+          profiles: { full_name: 'Student', status: 'ACTIVE' },
+        });
+        const activeCheck = createMockQueryBuilder({
+          id: 'fresh-visit',
+          check_in_at: '2026-06-15T05:00:00Z',
+        });
+        const updateBuilder = createMockQueryBuilder(null);
+        let attCalls = 0;
+        supaMock.from.mockImplementation((table: string) => {
+          if (table === 'attendance') {
+            attCalls += 1;
+            return attCalls === 1 ? activeCheck : updateBuilder;
+          }
+          return supaMock.getTableBuilder(table);
+        });
+
+        const result = await toggleAttendanceByCard({ cardNumber: 'LC-9999', ...confirmation });
+        expect(result.success).toBe(true);
+        expect(result.data?.status).toBe('OUT');
+        expect(updateBuilder.update).toHaveBeenCalledWith({
+          check_out_at: '2026-06-15T05:00:30.000Z',
+        });
+      }
+    );
+
     it('falls back to student_id lookup and checks out an existing open session (>= 60s old)', async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date('2026-06-15T05:00:00Z'));

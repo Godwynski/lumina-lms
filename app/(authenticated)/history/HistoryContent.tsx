@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, use, useEffect, useTransition, useCallback } from "react";
+import { useState, use, useEffect, useTransition, useCallback, useRef } from "react";
 import Image from "next/image";
+import { BookDetailModal } from "@/components/catalog/BookDetailModal";
+import { BorrowerDetailsModal } from "@/components/common/BorrowerDetailsModal";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -79,6 +81,13 @@ export default function HistoryContent({
   userRole,
 }: HistoryContentProps) {
   const { records, totalCount } = use(historyPromise);
+  const [selectedBook, setSelectedBook] = useState<BorrowingRecord["books"]>(null);
+  const [selectedBorrower, setSelectedBorrower] = useState<BorrowingRecord["profiles"]>(null);
+  const detailTrigger = useRef<HTMLButtonElement | null>(null);
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    detailTrigger.current?.focus();
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -203,9 +212,12 @@ export default function HistoryContent({
             header: "Borrower",
             accessor: (record: BorrowingRecord) => (
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-foreground">
-                  {record.profiles?.full_name || "Unknown User"}
-                </span>
+                {record.profiles ? <button type="button"
+                  aria-label={`View borrower: ${record.profiles.full_name || "Unknown User"}`}
+                  className="w-fit text-left text-xs font-bold text-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                  onClick={(event) => { detailTrigger.current = event.currentTarget; setSelectedBorrower(record.profiles); }}>
+                  {record.profiles.full_name || "Unknown User"}
+                </button> : <span className="text-xs font-bold">Unknown User</span>}
                 <span className="text-[11px] text-muted-foreground uppercase tracking-tighter">
                   {record.profiles?.student_id ||
                     record.profiles?.email?.split("@")[0] ||
@@ -219,7 +231,10 @@ export default function HistoryContent({
     {
       header: "Resource",
       accessor: (record) => (
-        <div className="flex items-center gap-3">
+        <button type="button" disabled={!record.books?.id}
+          aria-label={`View book details: ${record.books?.title || "Unknown Title"}`}
+          onClick={(event) => { detailTrigger.current = event.currentTarget; setSelectedBook(record.books); }}
+          className="group flex max-w-full items-center gap-3 rounded-md text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:no-underline">
           <HistoryBookCover coverUrl={record.books?.cover_url} title={record.books?.title} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
@@ -234,7 +249,7 @@ export default function HistoryContent({
               {record.books?.author || "Internal Entity"}
             </p>
           </div>
-        </div>
+        </button>
       ),
       mobileMain: true,
     },
@@ -383,6 +398,7 @@ export default function HistoryContent({
   );
 
   return (
+    <>
     <AdminTableShell
       controls={filterControls}
       pagination={
@@ -506,5 +522,11 @@ export default function HistoryContent({
         </DialogContent>
       </Dialog>
     </AdminTableShell>
+    {selectedBook && <BookDetailModal key={selectedBook.id} bookId={selectedBook.id}
+      open variant="read_only" onOpenChange={(open) => { if (!open) setSelectedBook(null); }}
+      onCloseAutoFocus={restoreFocus} />}
+    <BorrowerDetailsModal borrower={selectedBorrower} onClose={() => setSelectedBorrower(null)}
+      canOpenProfile={userRole === 'super_admin' || userRole === 'librarian'} onCloseAutoFocus={restoreFocus} />
+    </>
   );
 }

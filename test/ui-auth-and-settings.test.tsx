@@ -624,7 +624,7 @@ describe('Auth & Settings UI Components', () => {
     it('RunMaintenanceTool dispatches POST /api/notifications/maintenance and toasts outcome', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
-        json: async () => ({}),
+        json: async () => ({ remindersSent: 3, overdueTagged: 2 }),
       } as Response);
 
       const { container } = await renderClient(<RunMaintenanceTool />);
@@ -632,7 +632,16 @@ describe('Auth & Settings UI Components', () => {
       await clickElement(runBtn);
 
       expect(fetchSpy).toHaveBeenCalledWith('/api/notifications/maintenance', { method: 'POST' });
-      expect(mockToastSuccess).toHaveBeenCalledWith('Maintenance complete.');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Dispatch complete: 3 reminders and 2 overdue notices processed.'
+      );
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ remindersSent: 1, overdueTagged: 0, errors: ['Mail timeout'] }),
+      } as Response);
+      await clickElement(runBtn);
+      expect(mockToastError).toHaveBeenCalledWith('Dispatch completed with errors: Mail timeout');
 
       fetchSpy.mockResolvedValueOnce({
         ok: false,
@@ -796,7 +805,9 @@ describe('Auth & Settings UI Components', () => {
         const getPublicUrlMock = vi.fn().mockReturnValue({
           data: { publicUrl: 'https://placeholder.supabase.co/storage/v1/object/public/avatars/user-1/new.jpg' },
         });
-        const listMock = vi.fn().mockResolvedValue({ data: [{ name: 'old.jpg' }] });
+        const listMock = vi.fn().mockResolvedValue({
+          data: [{ name: '1700000000000.jpg' }, { name: 'card.webp' }],
+        });
         const removeMock = vi.fn().mockResolvedValue({ error: null });
 
         mockCreateBrowserClient.mockReturnValue({
@@ -874,7 +885,7 @@ describe('Auth & Settings UI Components', () => {
         expect(mockUpdateAvatarUrl).toHaveBeenCalledWith(
           'https://placeholder.supabase.co/storage/v1/object/public/avatars/user-1/new.jpg'
         );
-        expect(removeMock).toHaveBeenCalledWith(['user-1/old.jpg']);
+        expect(removeMock).toHaveBeenCalledWith(['user-1/1700000000000.jpg']);
         expect(mockToastSuccess).toHaveBeenCalledWith('Profile picture updated.');
 
         // 3. Upload failure surfaces toast.error and skips updateAvatarUrl

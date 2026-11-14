@@ -15,6 +15,11 @@ import {
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const mockRouterRefresh = vi.fn();
+const mockRouter = {
+  push: mockRouterPush,
+  replace: mockRouterReplace,
+  refresh: mockRouterRefresh,
+};
 const mockRedirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT:${url}`);
 });
@@ -22,11 +27,7 @@ let mockSearchParams = new URLSearchParams('');
 let mockPathname = '/dashboard';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-    replace: mockRouterReplace,
-    refresh: mockRouterRefresh,
-  }),
+  useRouter: () => mockRouter,
   useSearchParams: () => mockSearchParams,
   usePathname: () => mockPathname,
   redirect: (url: string) => mockRedirect(url),
@@ -121,6 +122,11 @@ vi.mock('@/lib/actions/catalog', () => ({
   lookupAndImportISBN: vi.fn(),
   getBookAdminDetails: (...args: unknown[]) => mockGetBookAdminDetails(...args),
   getBookPublicDetails: (...args: unknown[]) => mockGetBookPublicDetails(...args),
+}));
+
+const mockFetchISBNDetails = vi.fn();
+vi.mock('@/lib/actions/isbn-lookup', () => ({
+  fetchISBNDetails: (...args: unknown[]) => mockFetchISBNDetails(...args),
 }));
 
 const mockReserveTitle = vi.fn();
@@ -497,12 +503,16 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
   describe('AnalyticsCharts & AnalyticsClient', () => {
     it('renders TrendChart, CategoryPieChart, PeakHoursBarChart, and ChartSkeleton for data & empty states', async () => {
+      const onTrendSelect = vi.fn();
+      const onCategorySelect = vi.fn();
+      const onBarSelect = vi.fn();
+
       const { container } = await renderClient(
         <div>
           <TrendChart
             title="Circulation Trends"
             color="#111"
-            href="/history"
+            onSelect={onTrendSelect}
             data={[
               { label: 'Mon', count: 4 },
               { label: 'Tue', count: 7 },
@@ -511,6 +521,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
           <TrendChart title="Empty Trend" color="#222" data={[]} />
           <CategoryPieChart
             title="Genre Popularity"
+            onSelect={onCategorySelect}
             data={[
               { name: 'Sci-Fi', value: 10 },
               { name: 'History', value: 5 },
@@ -525,20 +536,30 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
           <PeakHoursBarChart
             title="Peak Visiting Hours"
             color="#333"
+            onSelect={onBarSelect}
             data={[{ hour: '09:00', count: 12 }]}
           />
           <ChartSkeleton title="Loading Chart" />
         </div>
       );
 
-      expect(container.querySelector('a[href="/history"]')).toHaveTextContent('View Details');
-      expect(container).toHaveTextContent('Mon');
-      expect(container).toHaveTextContent('No data for this period.');
+      expect(container).toHaveTextContent('View Details');
+      expect(container).toHaveTextContent('Mon: 4. View records');
       expect(container).toHaveTextContent('24'); // Total across 7 genres
-      expect(container).toHaveTextContent('+1 more');
+      expect(container).toHaveTextContent('Sci-Fi');
+      expect(container).toHaveTextContent('Music');
       expect(container).toHaveTextContent('Waiting for activity...');
-      expect(container).toHaveTextContent('09:00');
+      expect(container).toHaveTextContent('09:00: 12. View records');
       expect(container).toHaveTextContent('Loading Chart');
+
+      await clickElement(findButtonByText(container, 'Mon: 4. View records'));
+      expect(onTrendSelect).toHaveBeenCalledWith({ label: 'Mon', count: 4 });
+
+      await clickElement(findButtonByText(container, 'Sci-Fi'));
+      expect(onCategorySelect).toHaveBeenCalledWith('Sci-Fi');
+
+      await clickElement(findButtonByText(container, '09:00: 12. View records'));
+      expect(onBarSelect).toHaveBeenCalledWith('09:00');
 
       const lineCharts = container.querySelectorAll('[data-testid="recharts-line-chart"]');
       expect(lineCharts[0]).toHaveAttribute('data-points', '2');
@@ -564,9 +585,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       };
       mockGetAnalyticsSummary
         .mockResolvedValueOnce(summary30)
-        .mockResolvedValueOnce(summary7)
-        .mockRejectedValueOnce(new Error('Network down'))
-        .mockResolvedValueOnce(summary30);
+        .mockResolvedValueOnce(summary7);
 
       mockGetBookAdminDetails.mockResolvedValue({
         book: {
@@ -606,7 +625,10 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent('520');
       expect(container).toHaveTextContent('180');
       expect(container).toHaveTextContent('Dune');
-      expect(mockGetAnalyticsSummary).toHaveBeenCalledWith('30d');
+      expect(mockGetAnalyticsSummary).toHaveBeenCalledWith(
+        '30d',
+        expect.objectContaining({ from: expect.any(String), to: expect.any(String) })
+      );
 
       // Open book modal from High Demand Catalog
       await clickElement(findButtonByText(container, 'Dune'));
@@ -615,7 +637,10 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       // Switch range to 7 Days
       const btn7d = findButtonByText(container, '7 Days');
       await clickElement(btn7d);
-      expect(mockGetAnalyticsSummary).toHaveBeenCalledWith('7d');
+      expect(mockGetAnalyticsSummary).toHaveBeenCalledWith(
+        '7d',
+        expect.objectContaining({ from: expect.any(String), to: expect.any(String) })
+      );
       expect(btn7d).toHaveAttribute('aria-pressed', 'true');
       expect(container).toHaveTextContent('No circulation data recorded');
 
@@ -691,24 +716,20 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent('Martin Kleppmann');
     });
 
-    it('handles ISBN lookup (Google Books, Open Library fallback, not found) and book creation in AddBookClient', async () => {
-      const fetchMock = vi.spyOn(globalThis, 'fetch');
-
-      // 1. Google Books returns empty -> Open Library succeeds
-      fetchMock
-        .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
-        .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({
-              'ISBN:9780132350884': {
-                title: 'Clean Code',
-                authors: [{ name: 'Robert C. Martin' }],
-                subjects: [{ name: 'Software' }, { name: 'Agile' }],
-              },
-            }),
-            { status: 200 }
-          )
-        );
+    it('handles ISBN lookup via fetchISBNDetails (success, not found) and book creation in AddBookClient', async () => {
+      mockFetchISBNDetails.mockResolvedValueOnce({
+        success: true,
+        book: {
+          isbn: '9780132350884',
+          title: 'Clean Code',
+          author: 'Robert C. Martin',
+          cover_url: '',
+          tags: ['Software', 'Agile'],
+          description: 'A handbook of agile software craftsmanship.',
+          published_year: 2008,
+          dewey_decimal: '005.1',
+        },
+      });
 
       const { container } = await renderClient(<AddBookClient />);
       await act(async () => {
@@ -720,15 +741,19 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await typeIntoInput(isbnInput, '9780132350884');
       await clickElement(findButtonByText(container, 'Fetch Data'));
 
+      expect(mockFetchISBNDetails).toHaveBeenCalledWith('9780132350884');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Book details retrieved. Review them before saving.');
+
       const titleInput = container.querySelector('input[placeholder="e.g. Clean Code"]') as HTMLInputElement;
       const authorInput = container.querySelector('input[placeholder="e.g. Robert C. Martin"]') as HTMLInputElement;
       expect(titleInput.value).toBe('Clean Code');
       expect(authorInput.value).toBe('Robert C. Martin');
 
-      // 2. Not found in either DB triggers toast.error
-      fetchMock
-        .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }));
+      // 2. Not found triggers toast.error
+      mockFetchISBNDetails.mockResolvedValueOnce({
+        success: false,
+        error: 'Book not found in any database. Please enter details manually.',
+      });
       await clickElement(findButtonByText(container, 'Fetch Data'));
       expect(mockToastError).toHaveBeenCalledWith(
         'Book not found in any database. Please enter details manually.'
@@ -744,6 +769,9 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
           author: 'Robert C. Martin',
           isbn: '9780132350884',
           tags: ['Software', 'Agile'],
+          description: 'A handbook of agile software craftsmanship.',
+          published_year: 2008,
+          dewey_decimal: '005.1',
         }),
         copiesCount: 1,
       });

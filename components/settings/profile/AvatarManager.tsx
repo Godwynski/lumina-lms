@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +18,7 @@ interface AvatarManagerProps {
 }
 
 export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps) {
+  const router = useRouter();
   const [isUploading, setIsUploading] = useState(false);
   const [tempImage, setTempImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,17 +78,19 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
       // 3. Update Profile Table
       await updateAvatarUrl(publicUrl);
 
-      // 4. Only now delete the old files, so a failed upload keeps the current photo
+      // Keep card.webp: the server saves the processed profile picture there.
       const { data: existingFiles } = await supabase.storage
         .from("avatars")
         .list(user.id);
       const filesToRemove = (existingFiles ?? [])
+        .filter((f) => /^\d+\.jpg$/.test(f.name))
         .map((f) => `${user.id}/${f.name}`)
         .filter((p) => p !== filePath);
       if (filesToRemove.length > 0) {
         await supabase.storage.from("avatars").remove(filesToRemove);
       }
 
+      router.refresh();
       toast.success("Profile picture updated.");
     } catch (error: unknown) {
       console.error("Upload error:", error);

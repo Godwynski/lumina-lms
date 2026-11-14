@@ -15,13 +15,33 @@ const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const mockRouterRefresh = vi.fn();
 
+function useReactiveSearchParams() {
+  const [search, setSearch] = React.useState(() =>
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
+  React.useEffect(() => {
+    const origReplace = window.history.replaceState.bind(window.history);
+    const notify = () => setSearch(window.location.search);
+    window.history.replaceState = (...args) => {
+      origReplace(...args);
+      notify();
+    };
+    window.addEventListener('popstate', notify);
+    return () => {
+      window.history.replaceState = origReplace;
+      window.removeEventListener('popstate', notify);
+    };
+  }, []);
+  return React.useMemo(() => new URLSearchParams(search), [search]);
+}
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
     refresh: mockRouterRefresh,
   }),
-  useSearchParams: () => new URLSearchParams(''),
+  useSearchParams: () => useReactiveSearchParams(),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -87,6 +107,7 @@ describe('Admin & Policies UI Components', () => {
 
   afterEach(() => {
     cleanupClients();
+    window.history.replaceState(null, '', '/');
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -730,7 +751,7 @@ describe('Admin & Policies UI Components', () => {
 
       vi.useFakeTimers();
       const searchInput = handle.container.querySelector(
-        'input[placeholder="Search name, action, or reason..."]'
+        'input[placeholder="Search records, names, or actions…"]'
       ) as HTMLInputElement;
       await typeIntoInput(searchInput, 'catalog');
       await act(async () => {
@@ -738,9 +759,11 @@ describe('Admin & Policies UI Components', () => {
       });
       vi.useRealTimers();
 
-      expect(
-        fetchMock.mock.calls.some(([url]) => String(url).includes('query=catalog'))
-      ).toBe(true);
+      await vi.waitFor(() => {
+        expect(
+          fetchMock.mock.calls.some(([url]) => String(url).includes('query=catalog'))
+        ).toBe(true);
+      });
 
       // Open Advanced Filters modal and validate date bounds
       await clickElement(findButtonByText(handle.container, 'Filters'));
@@ -754,11 +777,11 @@ describe('Admin & Policies UI Components', () => {
       expect(mockToastError).toHaveBeenCalledWith('End date cannot be before start date');
 
       await typeIntoInput(endInput, '2026-11-14');
-      await clickElement(findButtonByText(document.body, 'Apply & Close'));
 
-      // Clear all filters
-      await clickElement(findButtonByText(handle.container, 'Clear'));
+      // Clear all filters via modal Clear all button, then close modal
+      await clickElement(findButtonByText(document.body, 'Clear all'));
       expect(mockToastSuccess).toHaveBeenCalledWith('All filters cleared');
+      await clickElement(findButtonByText(document.body, 'Done'));
 
       // Open Export / Import modal
       await clickElement(findButtonByText(handle.container, 'Export / Import'));
@@ -783,7 +806,9 @@ describe('Admin & Policies UI Components', () => {
 
       expect(document.body).toHaveTextContent('Audit Log Operations');
       expect(document.body).toHaveTextContent('Search: "book"');
-      expect(document.body).toHaveTextContent('Customize Columns (10 / 10)');
+      expect(document.body).toHaveTextContent('Customize Columns (15 / 15)');
+      expect(document.body).toHaveTextContent('Copy barcode');
+      expect(document.body).toHaveTextContent('Student ID');
 
       // Switch format to Developer JSON
       await clickElement(findButtonByText(document.body, 'Developer JSON'));
@@ -793,11 +818,11 @@ describe('Admin & Policies UI Components', () => {
       await clickElement(
         Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent === 'Clear')
       );
-      expect(document.body).toHaveTextContent('Customize Columns (0 / 10)');
+      expect(document.body).toHaveTextContent('Customize Columns (0 / 15)');
       expect(findButtonByText(document.body, 'Download Backup File')).toBeDisabled();
 
       await clickElement(findButtonByText(document.body, 'Select All'));
-      expect(document.body).toHaveTextContent('Customize Columns (10 / 10)');
+      expect(document.body).toHaveTextContent('Customize Columns (15 / 15)');
 
       const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
       vi.useFakeTimers();
@@ -1049,7 +1074,7 @@ describe('Admin & Policies UI Components', () => {
     it('validates fields, discards draft, confirms broadcast, and displays recipient count', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ count: 42 }),
+        json: async () => ({ success: true, count: 42 }),
       });
       vi.stubGlobal('fetch', fetchMock);
 
@@ -1081,7 +1106,7 @@ describe('Admin & Policies UI Components', () => {
       await clickElement(sendBtn);
       expect(document.body).toHaveTextContent('Confirm Announcement Broadcast');
       expect(document.body).toHaveTextContent('Library Hours');
-      expect(document.body).toHaveTextContent('Students Only');
+      expect(document.body).toHaveTextContent('Students & Student Assistants');
 
       await clickElement(findButtonByText(document.body, 'Confirm & Send'));
 
@@ -1107,13 +1132,17 @@ describe('Admin & Policies UI Components', () => {
     });
 
     it('supports controlled draft props and shows toast error on API failure', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
           ok: false,
           json: async () => ({ error: 'Broadcast service unavailable' }),
         })
-      );
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: false, count: 0 }),
+        });
+      vi.stubGlobal('fetch', fetchMock);
 
       const onDraftChange = vi.fn();
       const onClearDraft = vi.fn();
@@ -1141,6 +1170,13 @@ describe('Admin & Policies UI Components', () => {
       await clickElement(findButtonByText(document.body, 'Confirm & Send'));
 
       expect(mockToastError).toHaveBeenCalledWith('Broadcast service unavailable');
+      expect(onClearDraft).not.toHaveBeenCalled();
+
+      // Unconfirmed delivery keeps draft and surfaces error toast
+      await clickElement(findButtonByText(document.body, 'Confirm & Send'));
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Delivery was not confirmed. Your draft has been kept.'
+      );
       expect(onClearDraft).not.toHaveBeenCalled();
     });
   });

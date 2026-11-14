@@ -1,7 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import useSWR from "swr";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { AuditSubjectFilter, AuditSubjectChip } from "./AuditSubjectFilter";
+import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,10 +29,8 @@ import {
   Search, 
   Download, 
   Filter, 
-  RotateCcw,
   ChevronRight,
   SlidersHorizontal,
-  Calendar,
   X
 } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
@@ -83,6 +85,14 @@ interface AuditLog {
   old_value: Record<string, unknown> | null;
   new_value: Record<string, unknown> | null;
   created_at: string;
+  subject_book_id?: string | null;
+  subject_student_id?: string | null;
+  subject_copy_id?: string | null;
+  book_title?: string | null;
+  student_name?: string | null;
+  student_number?: string | null;
+  copy_barcode?: string | null;
+  copy_accession?: string | null;
   profiles: {
     full_name: string | null;
     email: string | null;
@@ -384,16 +394,36 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
 // --- Main Component ---
 
 export function AuditLogClient() {
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [entityType, setEntityType] = useState<string>("all");
-  const [actionType, setActionType] = useState<string>("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const urlFilters = useSearchParams();
+  const updateFilters = useCallback((changes: Record<string, string>) => {
+    const params = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value && value !== "all") params.set(key, value); else params.delete(key);
+    }
+    if (!("page" in changes)) params.delete("page");
+    window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
+  }, []);
+  const page = Math.max(1, Math.floor(Number(urlFilters.get("page"))) || 1);
+  const setPage = (value: number) => updateFilters({ page: value === 1 ? "" : String(value) });
+  const [search, setSearch] = useState(urlFilters.get("query") || "");
+  const debouncedSearch = urlFilters.get("query") || "";
+  const setDebouncedSearch = useCallback((query: string) => updateFilters({ query }), [updateFilters]);
+  const entityType = urlFilters.get("entityType") || "all";
+  const setEntityType = (entityType: string) => updateFilters({ entityType });
+  const actionType = urlFilters.get("actionType") || "all";
+  const setActionType = (actionType: string) => updateFilters({ actionType });
+  const startDate = urlFilters.get("startDate") || "";
+  const setStartDate = (startDate: string) => updateFilters({ startDate });
+  const endDate = urlFilters.get("endDate") || "";
+  const setEndDate = (endDate: string) => updateFilters({ endDate });
+  const bookId = urlFilters.get("bookId") || "";
+  const studentId = urlFilters.get("studentId") || "";
+  const copyId = urlFilters.get("copyId") || "";
+  const userId = urlFilters.get("userId") || "";
+  const [detailBookId, setDetailBookId] = useState<string | null>(null);
 
   const handleStartDateChange = (val: string) => {
-    if (endDate && val > endDate) {
+    if (val && endDate && val > endDate) {
       toast.error("Start date cannot be after end date");
       return;
     }
@@ -402,7 +432,7 @@ export function AuditLogClient() {
   };
 
   const handleEndDateChange = (val: string) => {
-    if (startDate && val < startDate) {
+    if (val && startDate && val < startDate) {
       toast.error("End date cannot be before start date");
       return;
     }
@@ -410,33 +440,21 @@ export function AuditLogClient() {
     setPage(1);
   };
 
-    const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const handleClearAllFilters = () => {
     setSearch("");
-    setDebouncedSearch("");
-    setEntityType("all");
-    setActionType("all");
-    setStartDate("");
-    setEndDate("");
-    setPage(1);
+    updateFilters({ query: "", entityType: "", actionType: "", startDate: "", endDate: "", bookId: "", studentId: "", copyId: "", userId: "", page: "" });
     toast.success("All filters cleared");
-    void mutate();
   };
 
-  const activeAdvancedFilterCount = useMemo(() => {
-    let count = 0;
-    if (actionType !== "all") count++;
-    if (startDate) count++;
-    if (endDate) count++;
-    return count;
-  }, [actionType, startDate, endDate]);
+  const activeAdvancedFilterCount = [bookId, studentId, copyId, userId, entityType !== "all", actionType !== "all", startDate || endDate].filter(Boolean).length;
 
   const hasAnyFilterActive = useMemo(() => {
-    return !!(search || entityType !== "all" || actionType !== "all" || startDate || endDate);
-  }, [search, entityType, actionType, startDate, endDate]);
+    return !!(bookId || studentId || copyId || userId || search || entityType !== "all" || actionType !== "all" || startDate || endDate);
+  }, [search, entityType, actionType, startDate, endDate, bookId, studentId, copyId, userId]);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
 
   const pageSize = 20; // Increased page size for dense table
@@ -444,11 +462,12 @@ export function AuditLogClient() {
   // Debounce search effect
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
+      if (search !== (new URLSearchParams(window.location.search).get("query") || "")) setDebouncedSearch(search);
     }, 400);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, setDebouncedSearch]);
+
+  useEffect(() => { setSearch(debouncedSearch); }, [debouncedSearch]);
 
   const queryParams = useMemo(() => {
     const params = new URLSearchParams({
@@ -459,16 +478,20 @@ export function AuditLogClient() {
       ...(actionType !== "all" && { actionType }),
       ...(startDate && { startDate }),
       ...(endDate && { endDate }),
+      ...(bookId && { bookId }),
+      ...(studentId && { studentId }),
+      ...(copyId && { copyId }),
+      ...(userId && { userId }),
     });
     return params.toString();
-  }, [page, debouncedSearch, entityType, actionType, startDate, endDate]);
+  }, [page, debouncedSearch, entityType, actionType, startDate, endDate, bookId, studentId, copyId, userId]);
 
-  const { data, error, mutate, isValidating } = useSWR<{
+  const { data, error, mutate } = useSWR<{
     logs: AuditLog[];
     total: number;
   }>(`/api/admin/audit-logs?${queryParams}`, fetcher, {
     revalidateOnFocus: false,
-    keepPreviousData: true,
+    keepPreviousData: false,
   });
 
   useEffect(() => {
@@ -491,7 +514,8 @@ export function AuditLogClient() {
             <div className="relative flex-1 w-full lg:max-w-xs xl:max-w-sm 2xl:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
               <Input 
-                placeholder="Search name, action, or reason..." 
+                aria-label="Search audit records"
+                placeholder="Search records, names, or actions…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 pr-8 h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
@@ -509,37 +533,6 @@ export function AuditLogClient() {
             </div>
             
             <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-              <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
-                <SelectTrigger aria-label="Filter by entity type" className="flex-1 sm:flex-initial sm:w-[160px] h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5 transition-all">
-                  <div className="flex items-center gap-2 truncate">
-                    <Filter className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                    <SelectValue placeholder="All Entities" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-border/40 max-h-[360px]">
-                  {ENTITY_GROUPS.map((group) => (
-                    <SelectGroup key={group.name}>
-                      <SelectLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 py-1.5">
-                        {group.name}
-                      </SelectLabel>
-                      {group.items.map((item) => (
-                        <SelectItem 
-                          key={item.value} 
-                          value={item.value} 
-                          title={item.tooltip}
-                          className="py-2 px-3 cursor-pointer hover:bg-muted/40 transition-colors"
-                        >
-                          <div className="flex flex-col text-left">
-                            <span className="font-semibold text-xs text-foreground">{item.label}</span>
-                            <span className="text-[11px] text-muted-foreground truncate">{item.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
-
               {/* Advanced Filters Trigger Button (Opens Modal) */}
               <Button
                 variant={activeAdvancedFilterCount > 0 ? "secondary" : "outline"}
@@ -561,21 +554,6 @@ export function AuditLogClient() {
                 )}
               </Button>
 
-              {/* Clear Filters (replaces old Refresh button) */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearAllFilters}
-                className={cn(
-                  "h-10 rounded-2xl bg-background text-[11px] font-bold uppercase tracking-wider px-3.5 border border-border/20 hover:bg-muted transition-all flex items-center gap-1.5",
-                  !hasAnyFilterActive && "text-muted-foreground"
-                )}
-                title="Clear all filters, dates, actions, and search keywords"
-              >
-                <RotateCcw className={cn("h-3.5 w-3.5", isValidating && "animate-spin")} />
-                <span>Clear</span>
-              </Button>
-
               <Button
                 variant="default"
                 size="sm"
@@ -587,6 +565,14 @@ export function AuditLogClient() {
               </Button>
             </div>
           </div>
+          {hasAnyFilterActive && <div className="flex flex-wrap gap-2" aria-label="Active audit filters">
+            {bookId && <AuditSubjectChip kind="book" label="Book" value={bookId} onRemove={() => updateFilters({ bookId: "", copyId: "" })} />}
+            {studentId && <AuditSubjectChip kind="student" label="Student" value={studentId} onRemove={() => updateFilters({ studentId: "" })} />}
+            {copyId && <AuditSubjectChip kind="copy" label="Copy" value={copyId} bookId={bookId} onRemove={() => updateFilters({ copyId: "" })} />}
+            {userId && <AuditSubjectChip kind="actor" label="Performed by" value={userId} onRemove={() => updateFilters({ userId: "" })} />}
+            {[["query", debouncedSearch, "Search"], ["entityType", entityType === "all" ? "" : entityType, "Entity"], ["actionType", actionType === "all" ? "" : actionType, "Action"], ["startDate", startDate, "From"], ["endDate", endDate, "To"]].filter(([, value]) => value).map(([key, value, label]) => <button type="button" key={key} className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted" aria-label={`Remove ${label.toLowerCase()} filter`} onClick={() => { updateFilters({ [key]: "" }); if (key === "query") setSearch(""); }}>{label}: {value.replaceAll("_", " ")} <span aria-hidden="true">×</span></button>)}
+          </div>}
+          <p role="status" className="text-xs text-muted-foreground">{error ? "Unable to load records. Adjust the filters or reload to retry." : data ? `${data.total.toLocaleString()} matching records` : "Loading records…"}</p>
         </div>
       }
       pagination={
@@ -624,14 +610,14 @@ export function AuditLogClient() {
         )}
 
         {data?.logs && data.logs.length > 0 && (
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-border/20 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
                   <th className="p-3 font-bold w-48">Timestamp (Manila, UTC+8)</th>
-                  <th className="p-3 font-bold w-48">Admin</th>
+                  <th className="p-3 font-bold w-48">Performed by</th>
                   <th className="p-3 font-bold">Action</th>
-                  <th className="p-3 font-bold">Entity</th>
-                  <th className="p-3 font-bold w-1/3">Reason</th>
+                  <th className="p-3 font-bold min-w-60">Book / student / copy</th>
+                  <th className="p-3 font-bold">Reason</th>
                   <th className="p-3 font-bold text-center">Diff</th>
                 </tr>
               </thead>
@@ -673,7 +659,12 @@ export function AuditLogClient() {
                           </Badge>
                         </td>
                         <td className="p-3 font-medium text-muted-foreground">
-                          {log.entity_type.replace(/_/g, " ")}
+                          <div className="space-y-1 max-w-64">
+                            {log.subject_book_id ? <button type="button" className="block text-left font-semibold text-primary hover:underline" onClick={event => { event.stopPropagation(); setDetailBookId(log.subject_book_id!); }}>{log.book_title || "View book"}</button> : log.book_title && <span className="block">{log.book_title}</span>}
+                            {log.subject_student_id ? <Link className="block text-primary hover:underline" href={`/users/${log.subject_student_id}`} onClick={event => event.stopPropagation()}>{log.student_name || "View student"}{log.student_number ? ` · ${log.student_number}` : ""}</Link> : log.student_name && <span className="block">{log.student_name}</span>}
+                            {log.copy_barcode && <span className="block text-xs">{log.copy_barcode}{log.copy_accession ? ` · ${log.copy_accession}` : ""}</span>}
+                            <span className="block text-xs">{log.entity_type.replace(/_/g, " ")}</span>
+                          </div>
                         </td>
                         <td className="p-3">
                           <span className="truncate block max-w-[250px] font-medium" title={log.reason || ""}>
@@ -787,23 +778,28 @@ export function AuditLogClient() {
       </div>
     </AdminTableShell>
     <Dialog open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
-        <DialogContent className="max-w-lg rounded-3xl p-6 sm:p-7 border border-border/40 shadow-2xl">
-          <DialogHeader className="space-y-1.5 pb-2 border-b border-border/10">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-primary" />
-              <DialogTitle className="text-base font-bold text-foreground">Advanced Audit Filters</DialogTitle>
-            </div>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Narrow down system activity logs by action category, entity type, and date timeframe.
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="flex max-h-[min(85dvh,760px)] flex-col gap-0 overflow-hidden rounded-2xl border-border/40 p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-border/30 px-5 py-5 pr-12 sm:px-6">
+          <DialogTitle className="text-lg font-semibold">Advanced Audit Filters</DialogTitle>
+          <DialogDescription className="text-sm">Combine filters to find a precise history. Results update automatically.</DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-4 py-3">
-            {/* Action Type Filter */}
-            <div className="space-y-1.5">
-              <label id="audit-action-type-label" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Action Type
-              </label>
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+          <section className="space-y-3" aria-labelledby="audit-subject-heading">
+            <h3 id="audit-subject-heading" className="text-sm font-semibold">Book and student</h3>
+            <div className="grid items-start gap-3 sm:grid-cols-2">
+              <AuditSubjectFilter kind="book" label="Book" value={bookId} onChange={option => updateFilters({ bookId: option?.id || "", copyId: "" })} />
+              <AuditSubjectFilter kind="student" label="Student" value={studentId} onChange={option => updateFilters({ studentId: option?.id || "" })} />
+            </div>
+            {bookId && <AuditSubjectFilter kind="copy" label="Copy" value={copyId} bookId={bookId} onChange={option => updateFilters({ copyId: option?.id || "" })} />}
+            <p className="text-xs text-muted-foreground">Student means the person involved in the record, including transactions processed by staff. Book history includes all copies unless you select one.</p>
+          </section>
+
+          <section className="space-y-3" aria-labelledby="audit-activity-heading">
+            <h3 id="audit-activity-heading" className="text-sm font-semibold">Activity</h3>
+            <div className="grid items-start gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label id="audit-action-type-label" className="text-xs text-muted-foreground">Action</label>
               <Select value={actionType} onValueChange={(v) => { setActionType(v); setPage(1); }}>
                 <SelectTrigger aria-labelledby="audit-action-type-label" className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
                   <div className="flex items-center gap-2 truncate">
@@ -827,46 +823,9 @@ export function AuditLogClient() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Date Range Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label htmlFor="audit-start-date" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3 text-muted-foreground/60" aria-hidden="true" />
-                  Start Date
-                </label>
-                <Input
-                  id="audit-start-date"
-                  type="date"
-                  value={startDate}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium"
-                />
               </div>
-
               <div className="space-y-1.5">
-                <label htmlFor="audit-end-date" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3 text-muted-foreground/60" aria-hidden="true" />
-                  End Date
-                </label>
-                <Input
-                  id="audit-end-date"
-                  type="date"
-                  value={endDate}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                  className="h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Entity Quick Select inside Modal as well */}
-            <div className="space-y-1.5">
-              <label id="audit-entity-type-label" className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Entity Type
-              </label>
+                <label id="audit-entity-type-label" className="text-xs text-muted-foreground">Entity type</label>
               <Select value={entityType} onValueChange={(v) => { setEntityType(v); setPage(1); }}>
                 <SelectTrigger aria-labelledby="audit-entity-type-label" className="w-full h-11 border border-border/30 bg-muted/10 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary/5">
                   <div className="flex items-center gap-2 truncate">
@@ -897,46 +856,47 @@ export function AuditLogClient() {
                   ))}
                 </SelectContent>
               </Select>
+              </div>
             </div>
+            <AuditSubjectFilter kind="actor" label="Performed by" value={userId} onChange={option => updateFilters({ userId: option?.id || "" })} />
+            <p className="text-xs text-muted-foreground">Optionally limit records to the staff member who processed them.</p>
+          </section>
 
-            {/* Results summary indicator */}
-            <div className="p-3 rounded-2xl bg-muted/20 border border-border/20 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground font-medium">Matching records found:</span>
-              <span className="font-bold text-foreground">
-                {data ? `${data.total.toLocaleString()} records` : "Loading..."}
-              </span>
+          <section className="space-y-3" aria-labelledby="audit-date-heading">
+            <h3 id="audit-date-heading" className="text-sm font-semibold">Date range <span className="font-normal text-muted-foreground">· Manila time</span></h3>
+            <div className="flex flex-wrap gap-2" aria-label="Quick date ranges">
+              {([['Today', 0], ['Last 7 days', 6], ['This month', -1]] as const).map(([label, days]) => <Button key={label} type="button" variant="outline" size="sm" onClick={() => {
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+                const start = new Date(`${today}T12:00:00+08:00`);
+                if (days === -1) start.setUTCDate(1); else start.setUTCDate(start.getUTCDate() - days);
+                updateFilters({ startDate: start.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), endDate: today });
+              }}>{label}</Button>)}
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="min-w-0 space-y-1.5">
+                <label htmlFor="audit-start-date" className="text-xs text-muted-foreground">From</label>
+                <Input id="audit-start-date" type="date" value={startDate} max={endDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })} onChange={event => handleStartDateChange(event.target.value)} className="min-w-0" />
+              </div>
+              <div className="min-w-0 space-y-1.5">
+                <label htmlFor="audit-end-date" className="text-xs text-muted-foreground">To</label>
+                <Input id="audit-end-date" type="date" value={endDate} min={startDate || undefined} max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })} onChange={event => handleEndDateChange(event.target.value)} className="min-w-0" />
+              </div>
+            </div>
+          </section>
+          {(bookId || studentId) && <p className="text-xs text-muted-foreground">Older entries without identifiable book or student references may be missing from this filtered history.</p>}
+        </div>
+
+        <DialogFooter className="shrink-0 flex-row items-center justify-between border-t border-border/30 bg-muted/10 px-5 py-4 sm:justify-between sm:px-6">
+          <Button type="button" variant="ghost" size="sm" onClick={handleClearAllFilters} disabled={!hasAnyFilterActive}>Clear all</Button>
+          <div className="flex items-center gap-3">
+            <span role="status" className="text-xs text-muted-foreground">{error ? "Could not load results" : data ? `${data.total.toLocaleString()} matching records` : "Updating…"}</span>
+            <Button type="button" size="sm" onClick={() => setShowAdvancedFilters(false)}>Done</Button>
           </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
-          <DialogFooter className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-border/10">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setActionType("all");
-                setStartDate("");
-                setEndDate("");
-                setEntityType("all");
-                setPage(1);
-              }}
-              className="w-full sm:w-auto h-10 rounded-xl text-xs text-muted-foreground hover:text-foreground"
-            >
-              Reset Filters
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={() => setShowAdvancedFilters(false)}
-              className="w-full sm:w-auto h-10 rounded-xl text-xs font-semibold px-5"
-            >
-              Apply & Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
+      {detailBookId && <BookDetailModal bookId={detailBookId} open onOpenChange={open => { if (!open) setDetailBookId(null); }} variant="read_only" />}
       <AuditLogExportImportModal
       isOpen={isExportImportOpen}
       onClose={() => setIsExportImportOpen(false)}
@@ -947,6 +907,10 @@ export function AuditLogClient() {
         actionType,
         startDate,
         endDate,
+        bookId,
+        studentId,
+        copyId,
+        userId,
       }}
     />
   </>

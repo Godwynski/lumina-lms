@@ -123,16 +123,17 @@ const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const mockRouterRefresh = vi.fn();
 const mockRouterPrefetch = vi.fn();
+const mockRouter = {
+  push: mockRouterPush,
+  replace: mockRouterReplace,
+  refresh: mockRouterRefresh,
+  prefetch: mockRouterPrefetch,
+};
 let mockPathname = '/dashboard';
 let mockSearchParamsString = '';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-    replace: mockRouterReplace,
-    refresh: mockRouterRefresh,
-    prefetch: mockRouterPrefetch,
-  }),
+  useRouter: () => mockRouter,
   usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(mockSearchParamsString),
 }));
@@ -173,11 +174,13 @@ vi.mock('next/image', () => ({
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 const mockToastInfo = vi.fn();
+const mockToastWarning = vi.fn();
 vi.mock('sonner', () => ({
   toast: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
     info: (...args: unknown[]) => mockToastInfo(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
   },
 }));
 
@@ -766,55 +769,60 @@ describe('Dashboard Components', () => {
 
   it('LiveActivityTicker listens to realtime inserts, caps at 3 items, dismisses on click and auto-dismisses', async () => {
     vi.useFakeTimers();
-    mockGetBookCopyTitle.mockResolvedValue('Clean Architecture');
+    try {
+      mockGetBookCopyTitle.mockResolvedValue('Clean Architecture');
 
-    const { container } = await renderClient(<LiveActivityTicker />);
-    expect(container.innerHTML).toBe('');
+      const { container } = await renderClient(<LiveActivityTicker />);
+      expect(container.innerHTML).toBe('');
 
-    const tickerChannel = registeredChannels.find((c) => c.name === 'live-tickers');
-    expect(tickerChannel).toBeDefined();
+      const tickerChannel = registeredChannels.find((c) => c.name === 'live-tickers');
+      expect(tickerChannel).toBeDefined();
 
-    const borrowHandler = tickerChannel?.handlers.find(
-      (h) => h.table === 'borrowing_records'
-    )?.callback;
-    const bookHandler = tickerChannel?.handlers.find(
-      (h) => h.table === 'books'
-    )?.callback;
+      const borrowHandler = tickerChannel?.handlers.find(
+        (h) => h.table === 'borrowing_records'
+      )?.callback;
+      const bookHandler = tickerChannel?.handlers.find(
+        (h) => h.table === 'books'
+      )?.callback;
 
-    // Missing book_copy_id is ignored
-    await act(async () => {
-      await borrowHandler?.({ new: { id: 'ev-skip' } });
-    });
-    expect(mockGetBookCopyTitle).not.toHaveBeenCalled();
-
-    // Borrow insert + Return insert + 2 Book inserts -> max 3 items
-    await act(async () => {
-      await borrowHandler?.({
-        new: { id: 'ev-1', book_copy_id: 'copy-1', status: 'BORROWED' },
+      // Missing book_copy_id is ignored
+      await act(async () => {
+        await borrowHandler?.({ new: { id: 'ev-skip' } });
       });
-      await borrowHandler?.({
-        new: { id: 'ev-2', book_copy_id: 'copy-2', status: 'RETURNED' },
+      expect(mockGetBookCopyTitle).not.toHaveBeenCalled();
+
+      // Borrow insert + Return insert + 2 Book inserts -> max 3 items
+      await act(async () => {
+        await borrowHandler?.({
+          new: { id: 'ev-1', book_copy_id: 'copy-1', status: 'BORROWED' },
+        });
+        await borrowHandler?.({
+          new: { id: 'ev-2', book_copy_id: 'copy-2', status: 'RETURNED' },
+        });
+        bookHandler?.({ new: { id: 'ev-3', title: 'Structure & Interpretation' } });
+        bookHandler?.({ new: { id: 'ev-4', title: 'Compilers' } });
       });
-      bookHandler?.({ new: { id: 'ev-3', title: 'Structure & Interpretation' } });
-      bookHandler?.({ new: { id: 'ev-4', title: 'Compilers' } });
-    });
 
-    expect(container.textContent).toContain('Compilers');
-    expect(container.textContent).toContain('Structure & Interpretation');
-    expect(container.textContent).toContain('Return Confirmed');
-    // 4th oldest ('ev-1' Borrow Processed) dropped by slice(0, 3)
-    expect(container.textContent).not.toContain('Borrow Processed');
+      expect(container.textContent).toContain('Compilers');
+      expect(container.textContent).toContain('Structure & Interpretation');
+      expect(container.textContent).toContain('Return Confirmed');
+      // 4th oldest ('ev-1' Borrow Processed) dropped by slice(0, 3)
+      expect(container.textContent).not.toContain('Borrow Processed');
 
-    // Manual dismiss removes one
-    const closeBtn = container.querySelector('button[aria-label="Close notification"]');
-    await clickElement(closeBtn);
-    expect(container.textContent).not.toContain('Compilers');
+      // Manual dismiss removes one
+      const closeBtn = container.querySelector('button[aria-label="Close notification"]');
+      await clickElement(closeBtn);
+      expect(container.textContent).not.toContain('Compilers');
 
-    // Auto-dismiss after 8s clears remaining
-    await act(async () => {
-      vi.advanceTimersByTime(8100);
-    });
-    expect(container.innerHTML).toBe('');
+      // Auto-dismiss after 8s clears remaining
+      await act(async () => {
+        vi.advanceTimersByTime(8100);
+      });
+      expect(container.innerHTML).toBe('');
+    } finally {
+      cleanupClients();
+      vi.useRealTimers();
+    }
   });
 
   it('DashboardClient renders staff dashboard for super_admin vs librarian, Action Center states, and BookDetailModal trigger', async () => {
@@ -1547,11 +1555,11 @@ describe('Notification Components', () => {
     await clickElement(expandLink);
   });
 
-  it('NotificationBell displays error state and retries fetch on Retry click', async () => {
+  it('NotificationBell displays error state, retries fetch on Retry click, and refreshes on focus/visibilitychange', async () => {
     const errSb = makeSupabaseMock({ notifError: { message: 'DB unavailable' } });
     mockCreateClient.mockReturnValue(errSb);
 
-    const { container } = await renderClient(<NotificationBell />);
+    const { container, unmount } = await renderClient(<NotificationBell />);
     await act(async () => {
       await Promise.resolve();
     });
@@ -1571,6 +1579,26 @@ describe('Notification Components', () => {
       await Promise.resolve();
     });
     expect(document.body.textContent).toContain('Restored Alert');
+
+    // Window focus refreshes notifications when document is visible
+    const callsBeforeFocus = (errSb.from as ReturnType<typeof vi.fn>).mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+    expect((errSb.from as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(
+      callsBeforeFocus
+    );
+
+    // Cleanup removes event listeners on unmount
+    unmount();
+    const callsAfterUnmount = (errSb.from as ReturnType<typeof vi.fn>).mock.calls.length;
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+    expect((errSb.from as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterUnmount);
   });
 });
 
@@ -1591,7 +1619,7 @@ describe('Provider Components', () => {
     );
   });
 
-  it('BatchTaskProvider throws outside provider and manages ISBN batch lookup, logs, toggle, and clear', async () => {
+  it('BatchTaskProvider throws outside provider and manages queued ISBN import polling, logs, and dismiss', async () => {
     function BadConsumer() {
       useBatchTask();
       return null;
@@ -1602,24 +1630,6 @@ describe('Provider Components', () => {
     );
     consoleErrSpy.mockRestore();
 
-    mockLookupAndImportISBN
-      .mockResolvedValueOnce({
-        success: true,
-        status: 'imported',
-        title: 'Dune',
-        author: 'Frank Herbert',
-      })
-      .mockResolvedValueOnce({
-        success: true,
-        status: 'exists',
-        title: 'Foundation',
-      })
-      .mockResolvedValueOnce({
-        success: false,
-        error: 'Not found',
-      })
-      .mockRejectedValueOnce(new Error('Timeout'));
-
     function BatchTester() {
       const { isISBNProcessing, isbnLogs, startISBNLookup } = useBatchTask();
       return (
@@ -1628,7 +1638,13 @@ describe('Provider Components', () => {
           <span data-testid="log-count">{isbnLogs.length}</span>
           <button
             type="button"
-            onClick={() => startISBNLookup(['111', '222', '333', '444'])}
+            onClick={() => startISBNLookup([])}
+          >
+            Start Empty
+          </button>
+          <button
+            type="button"
+            onClick={() => startISBNLookup(['111', '222', '333'])}
           >
             Start Batch
           </button>
@@ -1636,43 +1652,175 @@ describe('Provider Components', () => {
       );
     }
 
-    vi.useFakeTimers();
-    const { container } = await renderClient(
-      <BatchTaskProvider>
-        <BatchTester />
-      </BatchTaskProvider>
+    // Non-staff role does not fetch import jobs or start lookups
+    const nonStaffRender = await renderClient(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="student"
+        initialProfile={makeProfile({ role: 'student' })}
+      >
+        <BatchTaskProvider>
+          <BatchTester />
+        </BatchTaskProvider>
+      </PreferencesProvider>
     );
+    await clickElement(findButtonByText(nonStaffRender.container, 'Start Batch'));
+    expect(fetchSpy).not.toHaveBeenCalledWith('/api/catalog/import-jobs', expect.anything());
+    cleanupClients();
 
-    await clickElement(findButtonByText(container, 'Start Batch'));
-    // Advance past the 500ms inter-batch sleep
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(600);
+    // Staff role manages queued import jobs + 3s interval polling
+    let phase: 'empty' | 'active' | 'done' = 'empty';
+    const activeJob = {
+      id: 'job-1',
+      label: 'Batch ISBN import',
+      created_at: '2026-11-14T00:00:00Z',
+      items: [
+        {
+          id: 'it-1',
+          isbn: '111',
+          book_id: null,
+          status: 'processing',
+          metadata_status: 'pending',
+          cover_status: 'pending',
+          title: null,
+          attempts: 1,
+          error: null,
+          next_attempt_at: null,
+        },
+        {
+          id: 'it-2',
+          isbn: '222',
+          book_id: null,
+          status: 'queued',
+          metadata_status: 'pending',
+          cover_status: 'pending',
+          title: null,
+          attempts: 0,
+          error: null,
+          next_attempt_at: null,
+        },
+      ],
+    };
+    const finishedJob = {
+      id: 'job-1',
+      label: 'Batch ISBN import',
+      created_at: '2026-11-14T00:00:00Z',
+      items: [
+        {
+          id: 'it-1',
+          isbn: '111',
+          book_id: 'book-1',
+          status: 'complete',
+          metadata_status: 'complete',
+          cover_status: 'complete',
+          title: 'Dune',
+          attempts: 1,
+          error: null,
+          next_attempt_at: null,
+        },
+        {
+          id: 'it-2',
+          isbn: '222',
+          book_id: 'book-2',
+          status: 'review',
+          metadata_status: 'missing',
+          cover_status: 'complete',
+          title: 'Foundation',
+          attempts: 1,
+          error: null,
+          next_attempt_at: null,
+        },
+        {
+          id: 'it-3',
+          isbn: '333',
+          book_id: null,
+          status: 'failed',
+          metadata_status: 'missing',
+          cover_status: 'missing',
+          title: null,
+          attempts: 3,
+          error: 'Not found',
+          next_attempt_at: null,
+        },
+      ],
+    };
+
+    fetchSpy.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url === '/api/catalog/import-jobs' && init?.method === 'POST') {
+        phase = 'active';
+        return { ok: true, json: async () => ({ jobId: 'job-1' }) };
+      }
+      if (url === '/api/catalog/import-jobs/process') {
+        return { ok: true, json: async () => ({ ok: true }) };
+      }
+      if (url === '/api/catalog/import-jobs') {
+        return {
+          ok: true,
+          json: async () => ({
+            jobs: phase === 'empty' ? [] : phase === 'active' ? [activeJob] : [finishedJob],
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({ preferences: { theme: 'light' } }) };
     });
 
-    expect(container.querySelector('[data-testid="processing"]')?.textContent).toBe('false');
-    expect(container.querySelector('[data-testid="log-count"]')?.textContent).toBe('4');
-    expect(container.textContent).toContain('Batch Lookup Complete');
-    expect(container.textContent).toContain('1 Added');
-    expect(container.textContent).toContain('1 Exists');
-    expect(container.textContent).toContain('2 Failed');
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      'ISBN background import sequence completed!'
-    );
-    expect(mockRouterRefresh).toHaveBeenCalled();
+    vi.useFakeTimers();
+    try {
+      const { container } = await renderClient(
+        <PreferencesProvider
+          initialPreferences={{ theme: 'light' }}
+          initialRole="librarian"
+          initialProfile={makeProfile({ role: 'librarian', status: 'ACTIVE' })}
+        >
+          <BatchTaskProvider>
+            <BatchTester />
+          </BatchTaskProvider>
+        </PreferencesProvider>
+      );
 
-    // Expand logs drawer by clicking header
-    const headerBar = container.querySelector('.cursor-pointer');
-    await clickElement(headerBar);
-    expect(container.textContent).toContain('[IMPORTED] "Dune" by Frank Herbert');
-    expect(container.textContent).toContain('[RESOLVED] "Foundation" already in catalog.');
-    expect(container.textContent).toContain('[FAILED] ISBN 333: Not found');
-    expect(container.textContent).toContain('[ERROR] ISBN 444: Timeout');
+      // Empty ISBN list shows validation error
+      await clickElement(findButtonByText(container, 'Start Empty'));
+      expect(mockToastError).toHaveBeenCalledWith('Enter between 1 and 500 ISBN entries per import.');
 
-    // Clear task via close button (last button inside floating bar)
-    const buttons = Array.from(container.querySelectorAll('button'));
-    const clearBtn = buttons[buttons.length - 1];
-    await clickElement(clearBtn);
-    expect(container.textContent).not.toContain('Batch Lookup Complete');
+      // Submit batch job
+      await clickElement(findButtonByText(container, 'Start Batch'));
+      expect(mockToastInfo).toHaveBeenCalledWith(
+        'Import saved to the queue. You can close this tab while it runs.'
+      );
+      expect(container.querySelector('[data-testid="processing"]')?.textContent).toBe('true');
+      expect(container.textContent).toContain('Catalog import in progress');
+      expect(container.textContent).toContain('0 of 2 finished');
+
+      // Advance 3s interval poll -> job completes with attention warning
+      phase = 'done';
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+
+      expect(container.querySelector('[data-testid="processing"]')?.textContent).toBe('false');
+      expect(container.querySelector('[data-testid="log-count"]')?.textContent).toBe('3');
+      expect(container.textContent).toContain('Catalog import needs attention');
+      expect(container.textContent).toContain('1 complete · 1 need review · 1 failed');
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Catalog import finished with items needing attention. Review metadata and covers.'
+      );
+      expect(mockRouterRefresh).toHaveBeenCalled();
+
+      // Expand details drawer
+      await clickElement(container.querySelector('button[aria-label="Expand import details"]'));
+      expect(container.textContent).toContain('111 — Dune: complete. Metadata: complete. Cover: complete.');
+      expect(container.textContent).toContain('222 — Foundation: review. Metadata: missing. Cover: complete.');
+      expect(container.textContent).toContain('333: failed. Metadata: missing. Cover: missing. Not found');
+      expect(findButtonByText(container, 'Retry failed items')).toBeDefined();
+
+      // Dismiss completed import banner
+      await clickElement(container.querySelector('button[aria-label="Dismiss completed import"]'));
+      expect(container.textContent).not.toContain('Catalog import needs attention');
+    } finally {
+      cleanupClients();
+      vi.useRealTimers();
+    }
   });
 
   it('PreferencesProvider loads from Promise/fetch, updates preferences optimistically, computes currentMode, and handles realtime profile updates', async () => {

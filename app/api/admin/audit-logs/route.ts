@@ -1,4 +1,5 @@
-import { sanitizeFilterInput } from "@/lib/utils";
+import { auditLogQuery, parseAuditFilters } from "@/lib/audit-log-query";
+import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { connection } from "next/server";
 import { isAbortError } from "@/lib/error-utils";
@@ -8,82 +9,8 @@ export const GET = withAuthApi(async (request, { supabase }) => {
   await connection();
   try {
     const searchParams = new URL(request.url).searchParams;
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
-    const entityType = searchParams.get("entityType");
-    const queryParam = searchParams.get("query");
-    const actionType = searchParams.get("actionType");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-    const userId = searchParams.get("userId");
-
-    let query = supabase
-      .from("audit_logs")
-      .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (entityType && entityType !== "all") {
-      if (entityType === "book") {
-        query = query.in("entity_type", ["book", "books"]);
-      } else if (entityType === "borrowing_record") {
-        query = query.in("entity_type", ["borrowing_record", "borrowing_records"]);
-      } else if (entityType === "library_card") {
-        query = query.in("entity_type", ["library_card", "library_cards"]);
-      } else if (entityType === "policy" || entityType === "settings") {
-        query = query.in("entity_type", ["policy", "settings", "system_settings"]);
-      } else {
-        query = query.eq("entity_type", entityType);
-      }
-    }
-
-    if (actionType && actionType !== "all") {
-      if (actionType === "create") {
-        query = query.or("action.ilike.create%,action.ilike.insert%,action.ilike.%created");
-      } else if (actionType === "update") {
-        query = query.or("action.ilike.update%,action.ilike.%updated");
-      } else if (actionType === "archive") {
-        query = query.or("action.ilike.archive%,action.ilike.%archived,action.ilike.delete%");
-      } else if (actionType === "checkout") {
-        query = query.ilike("action", "%checkout%");
-      } else if (actionType === "return") {
-        query = query.ilike("action", "%return%");
-      } else if (actionType === "issuance") {
-        query = query.ilike("action", "%issuan%");
-      } else if (actionType === "login") {
-        query = query.or("action.ilike.login%,action.ilike.%onboarding%,action.ilike.%role%");
-      } else {
-        query = query.ilike("action", `%${actionType}%`);
-      }
-    }
-    if (startDate) query = query.gte("created_at", `${startDate}T00:00:00+08:00`);
-    if (endDate) query = query.lte("created_at", `${endDate}T23:59:59.999+08:00`);
-    if (userId) query = query.eq("admin_id", userId);
-    
-    if (queryParam) {
-      const safe = sanitizeFilterInput(queryParam);
-      
-      // Lookup profiles that match the search query by name or email
-      const { data: matchingProfiles } = await supabase
-        .from("profiles")
-        .select("id")
-        .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`);
-      
-      const profileIds = matchingProfiles?.map(p => p.id) || [];
-      
-      let orConditions = [
-        `entity_type.ilike.%${safe}%`,
-        `action.ilike.%${safe}%`,
-        `reason.ilike.%${safe}%`
-      ];
-
-      // Add matching profile IDs to the search if found
-      if (profileIds.length > 0) {
-        orConditions.push(`admin_id.in.(${profileIds.join(',')})`);
-      }
-      
-      query = query.or(orConditions.join(','));
-    }
+    const { limit, offset } = parseAuditFilters(searchParams);
+    const query = auditLogQuery(supabase, searchParams, true).range(offset, offset + limit - 1);
 
     const { data: logs, error, count } = await query;
 
@@ -115,6 +42,7 @@ export const GET = withAuthApi(async (request, { supabase }) => {
     });
 
   } catch (error) {
+    if (error instanceof ZodError) return NextResponse.json({ error: "Invalid audit filters." }, { status: 400 });
     if (isAbortError(error)) {
       return new Response(null, { status: 499 }); // Client Closed Request
     }
