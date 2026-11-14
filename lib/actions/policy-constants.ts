@@ -35,6 +35,15 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     icon: "BookCopy",
     validation: { min: 1, max: 20, type: "number" }
   },
+  overdue_fine_per_day: {
+    value: "5",
+    label: "Daily Overdue Fine",
+    description: "The penalty amount in PHP charged per day after a borrowed book passes its due date.",
+    example: "Example: 5 PHP per day.",
+    category: "circulation",
+    icon: "Clock",
+    validation: { min: 0, max: 500, type: "number" }
+  },
   hold_expiry_days: { 
     value: "7", 
     label: "Pickup Hold Window",

@@ -4,10 +4,20 @@ import { useState, use, useEffect, useTransition, useCallback } from "react";
 import Image from "next/image";
 import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDisplayDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BorrowingRecord } from "@/lib/actions/history";
+import { BorrowingRecord, settleBorrowingFine } from "@/lib/actions/history";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { type UserRole } from "@/lib/auth-helpers";
@@ -72,6 +82,8 @@ export default function HistoryContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [settlingId, setSettlingId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ record: BorrowingRecord } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Keep local search in sync if URL query changes externally
@@ -151,12 +163,38 @@ export default function HistoryContent({
     );
   };
 
+  const handleSettle = async (
+    recordId: string,
+    mode: "settle" | "return_and_settle" | "return_only" = "settle"
+  ) => {
+    setSettlingId(recordId);
+    try {
+      const res = await settleBorrowingFine({ recordId, mode });
+      if (!res.success) {
+        toast.error(res.error || "Failed to process overdue action");
+        return;
+      }
+      toast.success(
+        mode === "return_only"
+          ? "Book returned (penalty marked unpaid)"
+          : mode === "return_and_settle"
+            ? "Book returned and overdue penalty settled"
+            : "Overdue penalty settled"
+      );
+      setPendingAction(null);
+      startTransition(() => {
+        router.refresh();
+      });
+    } finally {
+      setSettlingId(null);
+    }
+  };
+
   const viewParam = searchParams.get("view");
   const isPrivileged =
-    (userRole === "super_admin" ||
-      userRole === "librarian" ||
-      userRole === "student_assistant") &&
-    viewParam === "logs";
+    userRole === "super_admin" ||
+    userRole === "librarian" ||
+    (userRole === "student_assistant" && viewParam === "logs");
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged
@@ -238,6 +276,67 @@ export default function HistoryContent({
         return <StatusBadge status={overdue ? "OVERDUE" : record.status} />;
       },
     },
+    ...(statusFilter === "ACTIVE"
+      ? []
+      : [
+          {
+            header: "Penalty",
+            accessor: (record: BorrowingRecord) => {
+              const fine = Number(record.fine_amount ?? 0);
+              if (fine <= 0) {
+                return <span className="text-[11px] font-bold text-muted-foreground">—</span>;
+              }
+              if (record.fine_settled_at) {
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground tabular-nums">
+                      ₱{fine.toFixed(2)}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                      Settled
+                    </span>
+                  </div>
+                );
+              }
+              const isUnreturned = !record.returned_at;
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-destructive tabular-nums">
+                    ₱{fine.toFixed(2)}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+                      isUnreturned
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-red-200 bg-red-50 text-red-700"
+                    )}
+                  >
+                    {isUnreturned ? "Accruing" : "Unpaid"}
+                  </span>
+                  {isPrivileged && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={settlingId === record.id}
+                      onClick={() => setPendingAction({ record })}
+                      className="h-7 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-wider"
+                    >
+                      {settlingId === record.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : isUnreturned ? (
+                        "Return / Settle"
+                      ) : (
+                        "Settle"
+                      )}
+                    </Button>
+                  )}
+                </div>
+              );
+            },
+          },
+        ]),
   ];
 
   const filterControls = (
@@ -263,7 +362,7 @@ export default function HistoryContent({
         )}
       </form>
       <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
-        {(["all", "ACTIVE", "RETURNED", "OVERDUE"] as const).map((status) => (
+        {(["all", "ACTIVE", "OVERDUE", "RETURNED", "SETTLED"] as const).map((status) => (
           <button
             key={status}
             type="button"
@@ -320,6 +419,92 @@ export default function HistoryContent({
           },
         }}
       />
+
+      <Dialog
+        open={Boolean(pendingAction)}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+      >
+        <DialogContent>
+          {pendingAction && !pendingAction.record.returned_at ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Return &amp; Penalty Settlement</DialogTitle>
+                <DialogDescription>
+                  <span className="font-semibold text-foreground">
+                    {pendingAction.record.books?.title || "This book"}
+                  </span>{" "}
+                  is still checked out with an accruing penalty of{" "}
+                  <span className="font-bold text-destructive tabular-nums">
+                    ₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)}
+                  </span>
+                  . Return the copy first, then settle now or mark it unpaid to pay later.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={settlingId === pendingAction.record.id}
+                  onClick={() => setPendingAction(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={settlingId === pendingAction.record.id}
+                  onClick={() => handleSettle(pendingAction.record.id, "return_only")}
+                >
+                  Return Only (Pay Later)
+                </Button>
+                <Button
+                  type="button"
+                  disabled={settlingId === pendingAction.record.id}
+                  onClick={() => handleSettle(pendingAction.record.id, "return_and_settle")}
+                >
+                  Return &amp; Settle (₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)})
+                </Button>
+              </DialogFooter>
+            </>
+          ) : pendingAction ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Confirm Penalty Settlement</DialogTitle>
+                <DialogDescription>
+                  Mark the overdue penalty of{" "}
+                  <span className="font-bold text-destructive tabular-nums">
+                    ₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)}
+                  </span>{" "}
+                  for{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingAction.record.books?.title || "this book"}
+                  </span>{" "}
+                  as paid?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={settlingId === pendingAction.record.id}
+                  onClick={() => setPendingAction(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={settlingId === pendingAction.record.id}
+                  onClick={() => handleSettle(pendingAction.record.id, "settle")}
+                >
+                  Confirm Settle (₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)})
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </AdminTableShell>
   );
 }

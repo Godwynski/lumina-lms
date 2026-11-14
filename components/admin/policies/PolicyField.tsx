@@ -70,7 +70,13 @@ export function PolicyField({
   const isCorePolicy = config.category === "circulation" || config.category === "reservations";
   const isSlider = !isCorePolicy && validation?.type === "number" && validation?.max !== undefined && validation.max <= 50;
   const isDays = policyKey.includes("days") || policyKey.includes("period");
-  const unit = isDays ? "Days" : isCorePolicy && validation?.type === "number" ? "Books" : null;
+  const unit = isDays
+    ? "Days"
+    : policyKey.includes("fine")
+      ? "PHP / Day"
+      : isCorePolicy && validation?.type === "number"
+        ? "Books"
+        : null;
   const isToggle = config.value === "true" || config.value === "false" || policyKey.includes("enable") || policyKey.includes("required");
   const isSupportFAQ = policyKey === "support_faqs" || policyKey === "student_faq_list";
   const isIdentityList = (config.category === "identity" || policyKey.includes("list") || policyKey.includes("identities") || (value || config.value).startsWith("[")) && !isSupportFAQ;

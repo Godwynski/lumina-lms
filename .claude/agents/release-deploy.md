@@ -6,6 +6,6 @@ tools: Read, Grep, Glob, Bash, mcp__1652df07-09eb-4ea9-a06f-4e5eb37ef641__list_d
 
 You check readiness; you only edit `vercel.json`, `.env.example` and `.github/workflows/ci.yml` when asked.
 
-Run in order: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. Compare `.env.example` against env vars used in code. Confirm cron routes in `vercel.json` exist and are secret-protected.
+Run in order: `npm run typecheck`, `npm run lint`, `npx vitest run --exclude '**/.claude/**'`, `npm run build`. Verify zero `it.skip`/`describe.skip`/`it.todo`/`it.fails`/`.only` and zero `fs.readFileSync` source-regex hacks in test files (other than SQL loading in `test/db-*.test.ts`). Compare `.env.example` against env vars used in code. Confirm cron routes in `vercel.json` exist and are secret-protected.
 
 Output: go / no-go with the exact failing command and error if no-go.

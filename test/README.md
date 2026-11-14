@@ -1,56 +1,41 @@
-# Lumina LMS — Testing Suite Architecture
+# Lumina LMS — Zero-Cheat Behavioral Test Suite
 
-This directory houses system-level integration, adversarial concurrency, security (RLS), and invariant verification test suites for Lumina LMS.
+All tests execute real production code against real Postgres (PGlite), mocked Supabase/Next boundaries, API route handlers, or jsdom React 19 renders. See `AGENTS.md` and `.agents/rules/testing-and-verification.md` for mandatory rules.
 
----
+## Suite Layout
 
-## 🏗️ Test Structure
+1. **Real Postgres Schema, RLS, Triggers & RPCs (`test/`):**
+   - `test/db-schema-and-rls.test.ts` — Schema defaults, triggers (`handle_new_user`, `sync_book_available_copies`), helper functions, and per-role RLS enforcement (`anon`, `student`, `student_assistant`, `librarian`, `super_admin`, `service_role`).
+   - `test/db-rpcs-and-triggers.test.ts` — `process_qr_checkout`, `process_qr_return`, `get_borrowing_history_v2`, reservation promotion, catalog RPCs, expiry, and annual reset.
+2. **Core Utilities, Auth, Permissions & Services (`lib/__tests__/`):**
+   - `lib/__tests__/utils-and-mappers.test.ts`
+   - `lib/__tests__/auth-and-permissions.test.ts` (including `proxy.ts`)
+   - `lib/__tests__/api-and-error-utils.test.ts`
+   - `lib/__tests__/services-and-assets.test.ts`
+3. **Server Actions (`lib/actions/__tests__/`):**
+   - `lib/actions/__tests__/circulation.test.ts`
+   - `lib/actions/__tests__/history.test.ts`
+   - `lib/actions/__tests__/reservations.test.ts`
+   - `lib/actions/__tests__/attendance.test.ts`
+   - `lib/actions/__tests__/catalog-and-books.test.ts`
+   - `lib/actions/__tests__/users-and-profile.test.ts`
+   - `lib/actions/__tests__/dashboard-and-analytics.test.ts`
+4. **API Route Handlers & Auth Routes (`test/`):**
+   - `test/api-admin-routes.test.ts`
+   - `test/api-catalog-and-circulation-routes.test.ts`
+   - `test/api-auth-and-user-routes.test.ts`
+5. **Custom Hooks & React 19 UI Components (`test/`):**
+   - `test/hooks.test.tsx`
+   - `test/ui-circulation-and-history.test.tsx`
+   - `test/ui-admin-catalog-and-attendance.test.tsx`
+6. **Helpers & Mocks:**
+   - `test/setup.ts` — Environment defaults and `@testing-library/jest-dom`.
+   - `test/mocks/supabase.ts` — Chained Supabase query/RPC mock.
+   - `test/helpers/render.tsx` — React 19 `createRoot` + `act` DOM test helpers.
 
-The codebase uses the following test organization powered by [Vitest](https://vitest.dev/):
+## Running Verification
 
-1. **Unit & Server Action Tests (`lib/**/__tests__/` & colocated `*.test.ts`):**
-   - Individual server actions (`lib/actions/__tests__/`): Catalog, Circulation, Dashboard, History, Reservations, Users, Analytics, Attendance.
-   - Core utility libraries (`lib/__tests__/`, `lib/api-utils.test.ts`, `lib/auth-helpers.test.ts`, etc.): Session resolution, error serialization, token validation.
-   - Route handlers (`app/api/**/__tests__/`): Admin endpoints and webhooks.
-
-2. **Integration & Adversarial Suites (`test/`):**
-   - **Circulation & Concurrency:** [`actions-circulation-adversarial.test.ts`](./actions-circulation-adversarial.test.ts), [`circulation-reservations-adversarial.test.ts`](./circulation-reservations-adversarial.test.ts)
-   - **Real database (RLS, triggers, SQL functions):** [`db-real.test.ts`](./db-real.test.ts) runs `supabase/schema_clean_install.sql` in real Postgres (PGlite, no Docker). Known bugs are `it.fails` until fixed.
-   - **Security:** [`challenger-m2-it2-security.test.ts`](./challenger-m2-it2-security.test.ts)
-   - **Navigation & Loading States:** [`navigation-and-loading-states.test.ts`](./navigation-and-loading-states.test.ts)
-   - **Realtime & Freshness:** [`realtime-invariants-and-freshness.test.ts`](./realtime-invariants-and-freshness.test.ts)
-   - **Role-Based Access Control:** [`role-by-role-execution.test.ts`](./role-by-role-execution.test.ts), [`with-auth-api-adversarial.test.ts`](./with-auth-api-adversarial.test.ts)
-
-3. **Mocks & Test Fixtures (`test/mocks/`):**
-   - [`supabase.ts`](./mocks/supabase.ts): Hermetic chained Supabase query builder mock supporting filters, joins, pagination, and error injection.
-
----
-
-## 🚀 Running Tests
-
-```bash
-# Run test suites in a checkout without nested worktrees
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run a specific test suite
-npx vitest run test/actions-circulation-adversarial.test.ts
-
-# Generate V8 coverage report
-npm run test:coverage
-```
-
-## Nested worktrees and verification scope
-
-This repository can contain other checkouts under .claude/worktrees. Exclude them when collecting tests for the current checkout.
-
-~~~powershell
+```powershell
 npx vitest run --exclude '**/.claude/**'
-npx vitest run --exclude '**/.claude/**' lib/actions/__tests__/users.test.ts
 npm run typecheck
-npm run lint
-~~~
-
-Use the reported totals and failures from the current run. A targeted suite does not establish full-suite status. Database suites use the test configuration and fixtures in this directory. Inspect setup before running a suite against any external service.
+```

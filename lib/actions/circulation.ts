@@ -280,9 +280,10 @@ export const returnBook = createSafeAction(
     bookQr: z.string().min(1),
     idempotencyKey: z.string().optional(),
     previewOnly: z.boolean().optional().default(false),
-    isManual: z.boolean().default(false)
+    isManual: z.boolean().default(false),
+    settleFine: z.boolean().optional().default(false),
   }),
-  async ({ bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
+  async ({ bookQr, idempotencyKey, previewOnly, isManual, settleFine }, { supabase, profile: staff }) => {
     // Find the current borrower to notify them
     let studentUserId: string | null = null;
     if (!previewOnly) {
@@ -323,12 +324,15 @@ export const returnBook = createSafeAction(
       ok?: boolean;
       code?: string;
       message?: string;
+      borrowing_id?: string;
       book_title?: string;
       student_name?: string;
       reservation_ready?: boolean;
       reserved_for?: string;
       borrowed_at?: string;
       due_date?: string;
+      fine_amount?: number | string;
+      overdue_days?: number;
     };
 
     if (!result.ok) {
@@ -343,6 +347,18 @@ export const returnBook = createSafeAction(
     }
 
     if (!previewOnly) {
+      const fineAmount = Number(result.fine_amount ?? 0);
+      if (settleFine && result.borrowing_id && fineAmount > 0) {
+        const settledAt = new Date().toISOString();
+        const { error: settleError } = await admin
+          .from('borrowing_records')
+          .update({ fine_settled_at: settledAt, updated_at: settledAt })
+          .eq('id', result.borrowing_id);
+        if (settleError) {
+          throw new Error(settleError.message || 'Book returned, but failed to settle overdue fine.');
+        }
+      }
+
       logger.info('circulation', 'Return successful', { bookQr, librarianId: staff.id });
       await logAuditActivity(
         String(staff.id),
@@ -351,8 +367,8 @@ export const returnBook = createSafeAction(
         'return',
         `Returned book '${result.book_title}' from ${result.student_name} (QR: ${bookQr})${
           result.reservation_ready ? ` — reserved for ${result.reserved_for}` : ''
-        }`,
-        { bookQr, studentName: result.student_name, bookTitle: result.book_title, reservationReady: result.reservation_ready },
+        }${settleFine && fineAmount > 0 ? ` — settled PHP ${fineAmount.toFixed(2)} fine` : ''}`,
+        { bookQr, studentName: result.student_name, bookTitle: result.book_title, reservationReady: result.reservation_ready, fineAmount, fineSettled: settleFine && fineAmount > 0 },
         { status: 'BORROWED' },
         { status: 'RETURNED' }
       );
@@ -373,6 +389,7 @@ export const returnBook = createSafeAction(
       }
 
       revalidatePath('/circulation', 'page');
+      revalidatePath('/history');
       revalidateTag('catalog', 'max');
       revalidateTag('public-books', 'max');
     }

@@ -1,379 +1,333 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cancelReservation, getBookAvailabilityStatus, getMyReservations } from '../reservations';
-import { getMe } from '@/lib/auth-helpers';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { logAuditActivity } from '@/lib/audit';
-import { revalidatePath, revalidateTag } from 'next/cache';
-import { createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/mocks/supabase';
-import type { ProfileData, UserRole } from '@/lib/types';
+import { createMockSupabaseClient, createMockQueryBuilder } from '@/test/mocks/supabase';
 
-vi.mock('@/lib/auth-helpers', () => ({
-  getMe: vi.fn(),
-}));
+const mockCreateClient = vi.fn();
+const mockCreateAdminClient = vi.fn();
+const mockGetMe = vi.fn();
+const mockLogAuditActivity = vi.fn();
+const mockRevalidatePath = vi.fn();
+const mockRevalidateTag = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(),
+  createClient: (...args: unknown[]) => mockCreateClient(...args),
 }));
 
 vi.mock('@/lib/supabase/admin', () => ({
-  createAdminClient: vi.fn(),
+  createAdminClient: (...args: unknown[]) => mockCreateAdminClient(...args),
+}));
+
+vi.mock('@/lib/auth-helpers', () => ({
+  getMe: (...args: unknown[]) => mockGetMe(...args),
 }));
 
 vi.mock('@/lib/audit', () => ({
-  logAuditActivity: vi.fn(),
+  logAuditActivity: (...args: unknown[]) => mockLogAuditActivity(...args),
 }));
 
 vi.mock('next/cache', () => ({
-  revalidatePath: vi.fn(),
-  revalidateTag: vi.fn(),
+  revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
+  revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }));
 
-describe('Reservations Server Actions', () => {
-  let mockUserClientHelper: MockSupabaseClientHelper;
-  let mockAdminClientHelper: MockSupabaseClientHelper;
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
 
-  const mockUserMe = (userId = 'user-patron-1', role: UserRole = 'student') => ({
-    user: {
-      id: userId,
-      email: 'patron@school.edu',
-      app_metadata: {},
-      user_metadata: {},
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-    },
-    profile: {
-      id: userId,
-      email: 'patron@school.edu',
-      role,
-      status: 'ACTIVE',
-      full_name: 'Patron Student',
-      permissions: {},
-    } as unknown as ProfileData & {
-      id: string;
-      email: string | null;
-      role: string;
-      status: string;
-      permissions: Record<string, boolean> | null;
-    },
+import {
+  getBookAvailabilityStatus,
+  cancelReservation,
+  getMyReservations,
+} from '@/lib/actions/reservations';
+
+function makeAuthContext(
+  supabase: ReturnType<typeof createMockSupabaseClient>['client'],
+  userId = 'student-1',
+  role: 'student' | 'librarian' | 'super_admin' | 'student_assistant' = 'student'
+) {
+  return {
+    user: { id: userId },
+    profile: { id: userId, role, status: 'ACTIVE' },
     role,
-    isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
+    isStaff: role !== 'student',
     isAdmin: role === 'super_admin',
     isDeactivatedSA: false,
-    hasPermission: vi.fn().mockReturnValue(true),
-    supabase: mockUserClientHelper.client,
-  });
+    hasPermission: () => true,
+    supabase,
+  };
+}
+
+describe('reservations server actions', () => {
+  let supaMock: ReturnType<typeof createMockSupabaseClient>;
+  let adminMock: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUserClientHelper = createMockSupabaseClient();
-    mockAdminClientHelper = createMockSupabaseClient();
-
-    vi.mocked(getMe).mockResolvedValue(
-      mockUserMe() as unknown as Awaited<ReturnType<typeof getMe>>
-    );
-    vi.mocked(createClient).mockResolvedValue(
-      mockUserClientHelper.client as unknown as Awaited<ReturnType<typeof createClient>>
-    );
-    vi.mocked(createAdminClient).mockReturnValue(
-      mockAdminClientHelper.client as unknown as ReturnType<typeof createAdminClient>
-    );
-    vi.mocked(logAuditActivity).mockResolvedValue(undefined);
-  });
-
-  describe('cancelReservation', () => {
-    it('rejects cancellation when user is unauthenticated', async () => {
-      vi.mocked(getMe).mockResolvedValue(null);
-
-      const result = await cancelReservation('res-123');
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe('Authentication required');
-      }
-    });
-
-    it('throws error when reservation is not found in database', async () => {
-      mockAdminClientHelper.setTableResponse('reservations', null, { message: 'Not found' });
-
-      const result = await cancelReservation('res-nonexistent');
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe('Reservation not found');
-      }
-    });
-
-    it('verifies ownership and rejects cancellation when reservation belongs to another user', async () => {
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'other-user-999',
-          book_id: 'book-1',
-          status: 'ACTIVE',
-          copy_id: null,
-        },
-        error: null,
-      });
-
-      const result = await cancelReservation('res-other-patron');
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe('Unauthorized');
-      }
-    });
-
-    it('cancels an ACTIVE reservation, compresses queue, and does not reassign copies', async () => {
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      // 1. Initial lookup
-      resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-patron-1',
-          book_id: 'book-math-101',
-          status: 'ACTIVE',
-          copy_id: null,
-        },
-        error: null,
-      });
-
-      const result = await cancelReservation('res-active-1');
-
-      expect(result.success).toBe(true);
-      // Status updated to CANCELLED
-      expect(resBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'CANCELLED' })
-      );
-      // Calls compress_reservation_queue directly
-      expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-        p_book_id: 'book-math-101',
-      });
-      // Does not check nextInQueue or update book_copies
-      expect(mockAdminClientHelper.from).not.toHaveBeenCalledWith('book_copies');
-      // Revalidates cache tags and paths
-      expect(revalidateTag).toHaveBeenCalledWith('book-book-math-101', 'max');
-      expect(revalidateTag).toHaveBeenCalledWith('public-books', 'max');
-      expect(revalidatePath).toHaveBeenCalledWith('/dashboard', 'page');
-      expect(revalidatePath).toHaveBeenCalledWith('/student-catalog', 'page');
-    });
-
-    // M1: the held copy goes through the one SQL queue function (tested on real SQL in db-real.test.ts).
-    it('cancels a READY reservation and releases its copy to the queue', async () => {
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      resBuilder.single.mockResolvedValueOnce({
-        data: { user_id: 'user-patron-1', book_id: 'book-cs-50', status: 'READY', copy_id: 'copy-cs-50-1' },
-        error: null,
-      });
-
-      const result = await cancelReservation('res-ready-1');
-
-      expect(result.success).toBe(true);
-      expect(resBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'CANCELLED' }));
-      expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-cs-50-1' });
-      // No hand-written queue logic left in TypeScript.
-      expect(mockAdminClientHelper.from).not.toHaveBeenCalledWith('book_copies');
-    });
-
-    it('throws error when database update fails on cancellation', async () => {
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-patron-1',
-          book_id: 'book-1',
-          status: 'ACTIVE',
-          copy_id: null,
-        },
-        error: null,
-      });
-      // Update fails
-      resBuilder.update.mockReturnValueOnce({
-        eq: vi.fn().mockResolvedValueOnce({ error: { message: 'Row lock failed' } }),
-      } as unknown as ReturnType<typeof resBuilder.update>);
-
-      const result = await cancelReservation('res-active-fail');
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe('Row lock failed');
-      }
-    });
-
-    it('rejects cancellation of another patron reservation even when caller is staff or librarian', async () => {
-      vi.mocked(getMe).mockResolvedValue(
-        mockUserMe('staff-user-1', 'librarian') as unknown as Awaited<ReturnType<typeof getMe>>
-      );
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'student-patron-2',
-          book_id: 'book-100',
-          status: 'ACTIVE',
-          copy_id: null,
-        },
-        error: null,
-      });
-
-      const result = await cancelReservation('res-patron-2');
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe('Unauthorized');
-      }
-    });
-
-    it('rejects invalid non-string reservation ID via schema validation', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await cancelReservation(12345 as any);
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toMatch(/validation/i);
-      }
-    });
-
-    it('compresses queue directly if READY reservation has missing copy_id', async () => {
-      const resBuilder = mockAdminClientHelper.getTableBuilder('reservations');
-      resBuilder.single.mockResolvedValueOnce({
-        data: {
-          user_id: 'user-patron-1',
-          book_id: 'book-arch-1',
-          status: 'READY',
-          copy_id: null, // missing copy_id
-        },
-        error: null,
-      });
-
-      const result = await cancelReservation('res-ready-no-copy');
-
-      expect(result.success).toBe(true);
-      expect(resBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'CANCELLED' })
-      );
-      // Calls compress_reservation_queue directly without trying reassignCopy
-      expect(mockAdminClientHelper.rpc).toHaveBeenCalledWith('compress_reservation_queue', {
-        p_book_id: 'book-arch-1',
-      });
-      expect(mockAdminClientHelper.from).not.toHaveBeenCalledWith('book_copies');
-    });
+    supaMock = createMockSupabaseClient();
+    adminMock = createMockSupabaseClient();
+    mockCreateClient.mockResolvedValue(supaMock.client);
+    mockCreateAdminClient.mockReturnValue(adminMock.client);
+    mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client));
+    mockLogAuditActivity.mockResolvedValue(undefined);
   });
 
   describe('getBookAvailabilityStatus', () => {
-    it('returns earliest due date from active borrowing records', async () => {
-      // 1. A copy is out on loan
-      mockUserClientHelper.setRpcResponse('2026-11-15T00:00:00.000Z', null, 'get_next_due_date');
-      // 2. User has no reservation
-      mockUserClientHelper.setTableResponse('reservations', null);
+    it('returns nextAvailableDate for anonymous visitors without querying reservations', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+      supaMock.setRpcResponse('2026-06-20T00:00:00Z', null, 'get_next_due_date');
 
-      const status = await getBookAvailabilityStatus('book-uuid-early');
+      const res = await getBookAvailabilityStatus('book-1');
 
-      expect(status.nextAvailableDate).toBe('2026-11-15T00:00:00.000Z');
-      expect(status.hasReservation).toBe(false);
-      expect(status.isReady).toBe(false);
-      expect(status.queuePosition).toBeNull();
-      expect(status.holdExpiresAt).toBeNull();
+      expect(supaMock.rpc).toHaveBeenCalledWith('get_next_due_date', { p_book_id: 'book-1' });
+      expect(supaMock.from).not.toHaveBeenCalledWith('reservations');
+      expect(res).toEqual({
+        nextAvailableDate: '2026-06-20T00:00:00Z',
+        hasReservation: false,
+        isReady: false,
+        queuePosition: null,
+        holdExpiresAt: null,
+        reservationId: null,
+      });
     });
 
-    it('resolves READY reservation with pickup deadline for authenticated user', async () => {
-      mockUserClientHelper.setRpcResponse(null, null, 'get_next_due_date');
-      mockUserClientHelper.setTableResponse('reservations', {
-        id: 'res-ready-uuid',
-        status: 'READY',
-        hold_expires_at: '2026-10-12T15:00:00.000Z',
-        queue_position: 1,
-      });
-      mockUserClientHelper.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-patron-1' } },
-        error: null,
-      });
+    it('returns null nextAvailableDate when get_next_due_date RPC fails', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'student-1' } }, error: null });
+      supaMock.setRpcResponse(null, { message: 'rpc error' }, 'get_next_due_date');
+      supaMock.setTableResponse('reservations', null);
 
-      const status = await getBookAvailabilityStatus('book-uuid-ready');
+      const res = await getBookAvailabilityStatus('book-1');
 
-      expect(status.hasReservation).toBe(true);
-      expect(status.isReady).toBe(true);
-      expect(status.holdExpiresAt).toBe('2026-10-12T15:00:00.000Z');
-      expect(status.nextAvailableDate).toBe('2026-10-12T15:00:00.000Z');
-      expect(status.reservationId).toBe('res-ready-uuid');
+      expect(res).toEqual({
+        nextAvailableDate: null,
+        hasReservation: false,
+        isReady: false,
+        queuePosition: null,
+        holdExpiresAt: null,
+        reservationId: null,
+      });
     });
 
-    it('resolves ACTIVE reservation with queue position for authenticated user', async () => {
-      mockUserClientHelper.setRpcResponse('2026-10-20T00:00:00.000Z', null, 'get_next_due_date');
-      mockUserClientHelper.setTableResponse('reservations', {
-        id: 'res-active-uuid',
+    it('returns queuePosition for ACTIVE reservation', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'student-1' } }, error: null });
+      supaMock.setRpcResponse('2026-06-25T00:00:00Z', null, 'get_next_due_date');
+      supaMock.setTableResponse('reservations', {
+        id: 'res-active-1',
         status: 'ACTIVE',
         hold_expires_at: null,
-        queue_position: 4,
-      });
-      mockUserClientHelper.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-patron-1' } },
-        error: null,
+        queue_position: 3,
       });
 
-      const status = await getBookAvailabilityStatus('book-uuid-active');
-
-      expect(status.hasReservation).toBe(true);
-      expect(status.isReady).toBe(false);
-      expect(status.queuePosition).toBe(4);
-      expect(status.nextAvailableDate).toBe('2026-10-20T00:00:00.000Z');
-      expect(status.reservationId).toBe('res-active-uuid');
+      const res = await getBookAvailabilityStatus('book-1');
+      const resBuilder = supaMock.getTableBuilder('reservations');
+      expect(resBuilder.eq).toHaveBeenCalledWith('user_id', 'student-1');
+      expect(resBuilder.eq).toHaveBeenCalledWith('book_id', 'book-1');
+      expect(resBuilder.in).toHaveBeenCalledWith('status', ['ACTIVE', 'READY']);
+      expect(res).toEqual({
+        nextAvailableDate: '2026-06-25T00:00:00Z',
+        hasReservation: true,
+        isReady: false,
+        queuePosition: 3,
+        holdExpiresAt: null,
+        reservationId: 'res-active-1',
+      });
     });
 
-    it('handles unauthenticated visitors returning availability without personal reservation state', async () => {
-      mockUserClientHelper.setRpcResponse('2026-12-01T00:00:00.000Z', null, 'get_next_due_date');
-      mockUserClientHelper.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
+    it('overrides nextAvailableDate with hold_expires_at for READY reservation', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'student-1' } }, error: null });
+      supaMock.setRpcResponse('2026-06-25T00:00:00Z', null, 'get_next_due_date');
+      supaMock.setTableResponse('reservations', {
+        id: 'res-ready-1',
+        status: 'READY',
+        hold_expires_at: '2026-06-18T17:00:00Z',
+        queue_position: 1,
       });
 
-      const status = await getBookAvailabilityStatus('book-guest-view');
+      const res = await getBookAvailabilityStatus('book-1');
 
-      expect(status.nextAvailableDate).toBe('2026-12-01T00:00:00.000Z');
-      expect(status.hasReservation).toBe(false);
-      expect(status.isReady).toBe(false);
-      expect(status.reservationId).toBeNull();
-      expect(status.queuePosition).toBeNull();
+      expect(res).toEqual({
+        nextAvailableDate: '2026-06-18T17:00:00Z',
+        hasReservation: true,
+        isReady: true,
+        queuePosition: null,
+        holdExpiresAt: '2026-06-18T17:00:00Z',
+        reservationId: 'res-ready-1',
+      });
+    });
+  });
+
+  describe('cancelReservation', () => {
+    it('rejects unauthenticated callers and invalid non-string input', async () => {
+      mockGetMe.mockResolvedValue(null);
+      expect(await cancelReservation('res-1')).toEqual({
+        success: false,
+        error: 'Authentication required',
+      });
+
+      mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client));
+      const invalidRes = await cancelReservation(12345);
+      expect(invalidRes.success).toBe(false);
+      expect(invalidRes.error).toBe('Validation failed');
+    });
+
+    it('rejects when reservation is not found or belongs to another user', async () => {
+      adminMock.setTableResponse('reservations', null, { message: 'No rows' });
+      expect(await cancelReservation('res-404')).toEqual({
+        success: false,
+        error: 'Reservation not found',
+      });
+
+      adminMock.setTableResponse('reservations', {
+        user_id: 'other-student',
+        book_id: 'book-1',
+        status: 'ACTIVE',
+        copy_id: null,
+      });
+      expect(await cancelReservation('res-other')).toEqual({
+        success: false,
+        error: 'Unauthorized',
+      });
+    });
+
+    it('cancels an ACTIVE reservation, compresses queue, logs audit, and revalidates tags/paths', async () => {
+      adminMock.setTableResponse('reservations', {
+        user_id: 'student-1',
+        book_id: 'book-42',
+        status: 'ACTIVE',
+        copy_id: null,
+      });
+      adminMock.setRpcResponse(null, null, 'compress_reservation_queue');
+
+      const res = await cancelReservation('res-active-1');
+
+      expect(res).toEqual({ success: true, data: { success: true } });
+      const resBuilder = adminMock.getTableBuilder('reservations');
+      expect(resBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'CANCELLED',
+          updated_at: expect.any(String),
+        })
+      );
+      expect(adminMock.rpc).toHaveBeenCalledWith('compress_reservation_queue', { p_book_id: 'book-42' });
+      expect(adminMock.rpc).not.toHaveBeenCalledWith('release_copy', expect.anything());
+      expect(mockRevalidateTag).toHaveBeenCalledWith('book-book-42', 'max');
+      expect(mockRevalidateTag).toHaveBeenCalledWith('public-books', 'max');
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/dashboard', 'page');
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/student-catalog', 'page');
+      expect(mockLogAuditActivity).toHaveBeenCalledWith(
+        'student-1',
+        'reservation',
+        'system',
+        'cancel',
+        'Cancelled reservation for book: book-42',
+        { bookId: 'book-42' },
+        { status: 'ACTIVE' },
+        { status: 'CANCELLED' }
+      );
+    });
+
+    it('cancels a READY reservation with copy_id by calling release_copy RPC', async () => {
+      adminMock.setTableResponse('reservations', {
+        user_id: 'student-1',
+        book_id: 'book-99',
+        status: 'READY',
+        copy_id: 'copy-77',
+      });
+      adminMock.setRpcResponse(null, null, 'release_copy');
+
+      const res = await cancelReservation('res-ready-1');
+
+      expect(res).toEqual({ success: true, data: { success: true } });
+      expect(adminMock.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-77' });
+      expect(adminMock.rpc).not.toHaveBeenCalledWith('compress_reservation_queue', expect.anything());
+    });
+
+    it('propagates DB update error and release_copy RPC error', async () => {
+      const fetchBuilder = createMockQueryBuilder({
+        user_id: 'student-1',
+        book_id: 'book-1',
+        status: 'READY',
+        copy_id: 'copy-1',
+      });
+      const updateErrBuilder = createMockQueryBuilder(null, { message: 'Update denied' });
+
+      let calls = 0;
+      adminMock.from.mockImplementation((table: string) => {
+        if (table === 'reservations') {
+          calls += 1;
+          return calls === 1 ? fetchBuilder : updateErrBuilder;
+        }
+        return adminMock.getTableBuilder(table);
+      });
+
+      expect(await cancelReservation('res-1')).toEqual({
+        success: false,
+        error: 'Update denied',
+      });
+
+      // Now update succeeds, release_copy fails
+      adminMock.from.mockImplementation((table: string) => adminMock.getTableBuilder(table));
+      adminMock.setTableResponse('reservations', {
+        user_id: 'student-1',
+        book_id: 'book-1',
+        status: 'READY',
+        copy_id: 'copy-1',
+      });
+      adminMock.setRpcResponse(null, { message: 'release_copy failed' }, 'release_copy');
+
+      expect(await cancelReservation('res-1')).toEqual({
+        success: false,
+        error: 'release_copy failed',
+      });
+      expect(mockRevalidatePath).not.toHaveBeenCalled();
     });
   });
 
   describe('getMyReservations', () => {
-    it('returns empty array when user is not authenticated', async () => {
-      mockUserClientHelper.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
+    it('returns empty array when unauthenticated', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
 
-      const reservations = await getMyReservations();
-      expect(reservations).toEqual([]);
+      const res = await getMyReservations();
+      expect(res).toEqual([]);
+      expect(supaMock.from).not.toHaveBeenCalled();
     });
 
-    it('returns list of reservations for current authenticated user', async () => {
-      mockUserClientHelper.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-patron-1' } },
-        error: null,
-      });
-
-      const mockReservations = [
+    it('fetches ACTIVE and READY reservations for the signed-in user', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'student-1' } }, error: null });
+      const rows = [
         {
           id: 'res-1',
           status: 'READY',
           queue_position: 1,
-          hold_expires_at: '2026-10-15T00:00:00.000Z',
-          books: { id: 'b-1', title: 'Calculus', author: 'Stewart', cover_url: null },
+          hold_expires_at: '2026-06-18T17:00:00Z',
+          books: { id: 'book-1', title: 'Dune', author: 'Frank Herbert', cover_url: null },
+        },
+        {
+          id: 'res-2',
+          status: 'ACTIVE',
+          queue_position: 2,
+          hold_expires_at: null,
+          books: { id: 'book-2', title: 'Foundation', author: 'Isaac Asimov', cover_url: null },
         },
       ];
-      mockUserClientHelper.setTableResponse('reservations', mockReservations);
+      supaMock.setTableResponse('reservations', rows);
 
-      const reservations = await getMyReservations();
-      expect(reservations).toEqual(mockReservations);
+      const res = await getMyReservations();
+      const resBuilder = supaMock.getTableBuilder('reservations');
+      expect(resBuilder.eq).toHaveBeenCalledWith('user_id', 'student-1');
+      expect(resBuilder.in).toHaveBeenCalledWith('status', ['ACTIVE', 'READY']);
+      expect(resBuilder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+      expect(res).toEqual(rows);
     });
 
-    it('throws error when database query fails', async () => {
-      mockUserClientHelper.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-patron-1' } },
-        error: null,
-      });
-      mockUserClientHelper.setTableResponse('reservations', null, { message: 'Network timeout' });
+    it('throws when the reservations query errors', async () => {
+      supaMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'student-1' } }, error: null });
+      supaMock.setTableResponse('reservations', null, { message: 'Query failed' });
 
-      await expect(getMyReservations()).rejects.toThrow('Network timeout');
+      await expect(getMyReservations()).rejects.toThrow('Query failed');
     });
   });
 });

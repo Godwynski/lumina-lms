@@ -17,6 +17,8 @@ interface ReviewStepProps {
   bookTitle: string;
   dueDate: string;
   borrowedAt?: string;
+  fineAmount?: number;
+  overdueDays?: number;
 }
 
 export function ReviewStep({ 
@@ -26,7 +28,9 @@ export function ReviewStep({
   copyCode,
   bookTitle, 
   dueDate, 
-  borrowedAt 
+  borrowedAt,
+  fineAmount,
+  overdueDays,
 }: ReviewStepProps) {
   const isCheckout = type === 'checkout';
 
@@ -100,6 +104,15 @@ export function ReviewStep({
           </div>
         </div>
       </div>
+
+      {type === 'return' && (fineAmount ?? 0) > 0 && (
+        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-start gap-3">
+          <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+          <p className="text-[11px] text-destructive font-bold leading-normal uppercase tracking-tight">
+            Overdue Penalty: ₱{Number(fineAmount).toFixed(2)} ({overdueDays || 1} day(s) overdue)
+          </p>
+        </div>
+      )}
 
       <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-3 flex items-start gap-3">
          <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />

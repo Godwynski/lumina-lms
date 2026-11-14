@@ -21,6 +21,7 @@ export function useLogout() {
       // Use window.location.href for a clean redirected state
       // This is often more reliable than router.push when session state 
       // is being cleared across the whole app.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/";
     } catch (error) {
       console.error("Error during logout:", error);

@@ -23,7 +23,7 @@ export async function generateMetadata({
                              !!me.profile?.permissions?.manage_circulation && 
                              me.profile?.status?.toUpperCase() === 'ACTIVE';
 
-  const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
+  const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
 
   return {
     title: `${showAllLogs ? "Borrowing Logs" : "My Borrowing"}`,
@@ -66,7 +66,7 @@ async function HistoryPageContent({
                              !!me.profile?.permissions?.manage_circulation && 
                              me.profile?.status?.toUpperCase() === 'ACTIVE';
 
-  const showAllLogs = (isStaff || hasCirculationPerm) && view === "logs";
+  const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
   const userId = showAllLogs ? null : me.user.id;
 
   const historyPromise = getBorrowingHistory(userId, page, 10, status, q);

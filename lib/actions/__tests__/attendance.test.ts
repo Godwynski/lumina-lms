@@ -1,454 +1,484 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { toggleAttendanceByCard, getAttendanceHistory } from '../attendance';
-import { getMe } from '@/lib/auth-helpers';
-import { sendNotification } from '@/lib/notifications';
-import { revalidatePath } from 'next/cache';
-import { createMockSupabaseClient, type MockSupabaseClientHelper } from '@/test/mocks/supabase';
-import type { ProfileData, UserRole } from '@/lib/types';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createMockSupabaseClient, createMockQueryBuilder } from '@/test/mocks/supabase';
+
+const mockGetMe = vi.fn();
+const mockSendNotification = vi.fn();
+const mockRevalidatePath = vi.fn();
 
 vi.mock('@/lib/auth-helpers', () => ({
-  getMe: vi.fn(),
+  getMe: (...args: unknown[]) => mockGetMe(...args),
 }));
 
 vi.mock('@/lib/notifications', () => ({
-  sendNotification: vi.fn(),
+  sendNotification: (...args: unknown[]) => mockSendNotification(...args),
 }));
 
 vi.mock('next/cache', () => ({
-  revalidatePath: vi.fn(),
-}));
-
-vi.mock('@/lib/audit', () => ({
-  logAuditActivity: vi.fn(),
+  revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }));
 
 vi.mock('@/lib/logger', () => ({
   logger: {
-    error: vi.fn(),
-    warn: vi.fn(),
     info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
     debug: vi.fn(),
   },
 }));
 
-describe('Attendance Server Actions', () => {
-  let mockClientHelper: MockSupabaseClientHelper;
+import { toggleAttendanceByCard, getAttendanceHistory } from '@/lib/actions/attendance';
 
-  const mockStaffUser = (
-    role: UserRole = 'librarian',
-    id = 'staff-user-1',
-    permissions: Record<string, boolean> = { manage_attendance: true }
-  ) => ({
-    user: {
-      id,
-      email: 'staff@school.edu',
-      app_metadata: {},
-      user_metadata: {},
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-    },
+function makeAuthContext(
+  supabase: ReturnType<typeof createMockSupabaseClient>['client'],
+  overrides: {
+    id?: string;
+    role?: 'super_admin' | 'librarian' | 'student_assistant' | 'student';
+    status?: string;
+    isDeactivatedSA?: boolean;
+    manageAttendance?: boolean;
+  } = {}
+) {
+  const role = overrides.role ?? 'librarian';
+  const id = overrides.id ?? 'staff-1';
+  const isDeactivatedSA = overrides.isDeactivatedSA ?? false;
+  const status = overrides.status ?? (isDeactivatedSA ? 'DEACTIVATED' : 'ACTIVE');
+  const manageAttendance =
+    overrides.manageAttendance ?? (role === 'super_admin' || role === 'librarian' || role === 'student_assistant');
+
+  return {
+    user: { id },
     profile: {
       id,
-      email: 'staff@school.edu',
       role,
-      status: 'ACTIVE',
-      full_name: 'Library Staff',
-      permissions,
-    } as unknown as ProfileData,
-    role,
-    isStaff: true,
-    isAdmin: role === 'super_admin',
-    isDeactivatedSA: false,
-    hasPermission: vi.fn((perm: string) => Boolean(permissions[perm])),
-    supabase: mockClientHelper.client,
-  });
-
-  const mockStudentUser = (id = 'student-user-1') => ({
-    user: {
-      id,
-      email: 'student@school.edu',
-      app_metadata: {},
-      user_metadata: {},
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
+      status,
+      permissions: { manage_attendance: manageAttendance },
     },
-    profile: {
-      id,
-      email: 'student@school.edu',
-      role: 'student' as UserRole,
-      status: 'ACTIVE',
-      full_name: 'Student User',
-      permissions: {},
-    } as unknown as ProfileData,
-    role: 'student' as UserRole,
-    isStaff: false,
-    isAdmin: false,
-    isDeactivatedSA: false,
-    hasPermission: vi.fn().mockReturnValue(false),
-    supabase: mockClientHelper.client,
-  });
+    role,
+    isStaff: role !== 'student',
+    isAdmin: role === 'super_admin',
+    isDeactivatedSA,
+    hasPermission: (perm: string) => {
+      if (role === 'super_admin' || role === 'librarian') return true;
+      return perm === 'manage_attendance' ? manageAttendance : false;
+    },
+    supabase,
+  };
+}
+
+describe('attendance server actions', () => {
+  let supaMock: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockClientHelper = createMockSupabaseClient();
-    vi.mocked(getMe).mockResolvedValue(
-      mockStaffUser() as unknown as Awaited<ReturnType<typeof getMe>>
-    );
-    vi.mocked(sendNotification).mockResolvedValue({ success: true });
+    supaMock = createMockSupabaseClient();
+    mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client));
+    mockSendNotification.mockResolvedValue(undefined);
   });
 
-  describe('toggleAttendanceByCard', () => {
-    it('rejects unauthenticated callers', async () => {
-      vi.mocked(getMe).mockResolvedValue(null);
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-123' });
-
-      expect(result).toEqual({
+  describe('toggleAttendanceByCard RBAC', () => {
+    it('rejects unauthenticated callers, students, deactivated SAs, and SAs without manage_attendance', async () => {
+      mockGetMe.mockResolvedValue(null);
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1' })).toEqual({
         success: false,
         error: 'Authentication required',
       });
-    });
 
-    it('rejects unauthorized roles like student', async () => {
-      vi.mocked(getMe).mockResolvedValue(
-        mockStudentUser() as unknown as Awaited<ReturnType<typeof getMe>>
-      );
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-123' });
-
-      expect(result).toEqual({
+      mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client, { role: 'student' }));
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1' })).toEqual({
         success: false,
         error: 'Unauthorized access',
       });
-    });
 
-    it('rejects deactivated student assistant accounts', async () => {
-      const deactivatedSA = {
-        ...mockStaffUser('student_assistant'),
-        isDeactivatedSA: true,
-      };
-      vi.mocked(getMe).mockResolvedValue(
-        deactivatedSA as unknown as Awaited<ReturnType<typeof getMe>>
+      mockGetMe.mockResolvedValue(
+        makeAuthContext(supaMock.client, { role: 'student_assistant', isDeactivatedSA: true })
       );
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-123' });
-
-      expect(result).toEqual({
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1' })).toEqual({
         success: false,
         error: 'Access denied: Staff account is currently deactivated.',
       });
-    });
 
-    it('rejects student assistant missing manage_attendance permission', async () => {
-      const saWithoutPerm = {
-        ...mockStaffUser('student_assistant', 'sa-1', { manage_attendance: false }),
-        hasPermission: vi.fn().mockReturnValue(false),
-      };
-      vi.mocked(getMe).mockResolvedValue(
-        saWithoutPerm as unknown as Awaited<ReturnType<typeof getMe>>
+      mockGetMe.mockResolvedValue(
+        makeAuthContext(supaMock.client, {
+          role: 'student_assistant',
+          isDeactivatedSA: false,
+          manageAttendance: false,
+        })
       );
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-123' });
-
-      expect(result).toEqual({
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1' })).toEqual({
         success: false,
         error: 'Access denied: Missing required permission.',
       });
     });
 
-    it('checks in user when no active attendance session exists', async () => {
-      // 1. Library card exists
-      mockClientHelper.setTableResponse('library_cards', {
-        user_id: 'patron-100',
-        profiles: { full_name: 'John Doe', status: 'ACTIVE' },
-      });
+    it('allows active student assistant with manage_attendance permission', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-15T03:00:00Z'));
 
-      // 2. Active attendance session does not exist
-      mockClientHelper.setTableResponse('attendance', null);
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'LC-9999' });
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({
-        recordedAt: expect.any(String),
-        status: 'IN',
-        message: 'Welcome, John Doe!',
-        description: 'Timed in successfully.',
-        userName: 'John Doe',
-      });
-
-      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
-      expect(attendanceBuilder.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: 'patron-100',
-          check_in_at: result.data?.recordedAt,
+      mockGetMe.mockResolvedValue(
+        makeAuthContext(supaMock.client, {
+          role: 'student_assistant',
+          manageAttendance: true,
         })
       );
+      supaMock.setTableResponse('library_cards', {
+        user_id: 'patron-1',
+        profiles: { full_name: 'Ana Santos', status: 'ACTIVE' },
+      });
 
-      expect(sendNotification).toHaveBeenCalledWith(
+      const activeCheck = createMockQueryBuilder(null);
+      const lastOutCheck = createMockQueryBuilder(null);
+      const insertBuilder = createMockQueryBuilder(null);
+      let attCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          attCalls += 1;
+          if (attCalls === 1) return activeCheck;
+          if (attCalls === 2) return lastOutCheck;
+          return insertBuilder;
+        }
+        return supaMock.getTableBuilder(table);
+      });
+
+      const res = await toggleAttendanceByCard({ cardNumber: 'LIB-001' });
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe('IN');
+    });
+  });
+
+  describe('toggleAttendanceByCard behavior', () => {
+    it('checks in a patron by library card, notifies, and revalidates paths', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-15T02:30:00Z'));
+
+      supaMock.setTableResponse('library_cards', {
+        user_id: 'patron-1',
+        profiles: { full_name: 'Maria Clara', status: 'ACTIVE' },
+      });
+
+      const activeCheck = createMockQueryBuilder(null);
+      const lastOutCheck = createMockQueryBuilder(null);
+      const insertBuilder = createMockQueryBuilder(null);
+      let attCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          attCalls += 1;
+          if (attCalls === 1) return activeCheck;
+          if (attCalls === 2) return lastOutCheck;
+          return insertBuilder;
+        }
+        return supaMock.getTableBuilder(table);
+      });
+
+      const res = await toggleAttendanceByCard({ cardNumber: '  LIB-1001  ' });
+
+      expect(supaMock.getTableBuilder('library_cards').eq).toHaveBeenCalledWith('card_number', 'LIB-1001');
+      expect(insertBuilder.insert).toHaveBeenCalledWith({
+        user_id: 'patron-1',
+        check_in_at: '2026-06-15T02:30:00.000Z',
+      });
+      expect(mockSendNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'patron-100',
+          userId: 'patron-1',
           title: 'Attendance: Time In',
           type: 'SYSTEM',
         })
       );
-
-      expect(revalidatePath).toHaveBeenCalledWith('/attendance', 'page');
-      expect(revalidatePath).toHaveBeenCalledWith('/dashboard', 'page');
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/attendance', 'page');
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/dashboard', 'page');
+      expect(res).toEqual({
+        success: true,
+        data: {
+          status: 'IN',
+          recordedAt: '2026-06-15T02:30:00.000Z',
+          message: 'Welcome, Maria Clara!',
+          description: 'Timed in successfully.',
+          userName: 'Maria Clara',
+        },
+      });
     });
 
-    it('checks out user when an active attendance session is open', async () => {
-      // 1. Library card exists
-      mockClientHelper.setTableResponse('library_cards', {
-        user_id: 'patron-100',
-        profiles: [{ full_name: 'Jane Smith', status: 'ACTIVE' }],
+    it('falls back to student_id lookup and checks out an existing open session (>= 60s old)', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-15T05:00:00Z'));
+
+      supaMock.setTableResponse('library_cards', null);
+      supaMock.setTableResponse('profiles', {
+        id: 'patron-2',
+        full_name: 'Jose Rizal',
+        status: 'ACTIVE',
       });
 
-      // 2. Open attendance record exists
-      const openRecord = { id: 'att-session-1', check_in_at: '2026-10-06T08:00:00Z' };
-      mockClientHelper.setTableResponse('attendance', openRecord);
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'LC-9999' });
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({
-        recordedAt: expect.any(String),
-        status: 'OUT',
-        message: 'Goodbye, Jane Smith!',
-        description: 'Timed out successfully.',
-        userName: 'Jane Smith',
+      const activeCheck = createMockQueryBuilder({
+        id: 'att-open-1',
+        check_in_at: '2026-06-15T04:00:00Z', // 1 hour ago
+      });
+      const updateBuilder = createMockQueryBuilder(null);
+      let attCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          attCalls += 1;
+          return attCalls === 1 ? activeCheck : updateBuilder;
+        }
+        return supaMock.getTableBuilder(table);
       });
 
-      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
-      expect(attendanceBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          check_out_at: result.data?.recordedAt,
-        })
-      );
-      expect(attendanceBuilder.eq).toHaveBeenCalledWith('id', 'att-session-1');
+      const res = await toggleAttendanceByCard({ cardNumber: '2024-0002' });
 
-      expect(sendNotification).toHaveBeenCalledWith(
+      expect(supaMock.getTableBuilder('profiles').eq).toHaveBeenCalledWith('student_id', '2024-0002');
+      expect(updateBuilder.update).toHaveBeenCalledWith({
+        check_out_at: '2026-06-15T05:00:00.000Z',
+      });
+      expect(updateBuilder.eq).toHaveBeenCalledWith('id', 'att-open-1');
+      expect(mockSendNotification).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'patron-100',
+          userId: 'patron-2',
           title: 'Attendance: Time Out',
-          type: 'SYSTEM',
         })
       );
+      expect(res).toEqual({
+        success: true,
+        data: {
+          status: 'OUT',
+          recordedAt: '2026-06-15T05:00:00.000Z',
+          message: 'Goodbye, Jose Rizal!',
+          description: 'Timed out successfully.',
+          userName: 'Jose Rizal',
+        },
+      });
     });
 
-    it('falls back to student ID lookup when card is not found', async () => {
-      // Library card returns null
-      mockClientHelper.setTableResponse('library_cards', null);
+    it('debounces rapid camera scan within 60s of check-in or check-out, unless isManual is true', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-15T05:00:30Z'));
 
-      // Profiles table finds student by student_id
-      mockClientHelper.setTableResponse('profiles', {
-        id: 'patron-200',
-        full_name: 'Bob Ross',
-        status: 'ACTIVE',
+      supaMock.setTableResponse('library_cards', {
+        user_id: 'patron-1',
+        profiles: [{ full_name: 'Maria Clara', status: 'ACTIVE' }],
       });
 
-      // No open attendance session
-      mockClientHelper.setTableResponse('attendance', null);
+      // Rapid scan 30s after check-in -> stays IN without updating DB
+      supaMock.setTableResponse('attendance', {
+        id: 'att-1',
+        check_in_at: '2026-06-15T05:00:00Z',
+      });
 
-      const result = await toggleAttendanceByCard({ cardNumber: '2023-00123' });
+      const rapidInRes = await toggleAttendanceByCard({ cardNumber: 'LIB-1001', isManual: false });
+      expect(rapidInRes).toEqual({
+        success: true,
+        data: {
+          status: 'IN',
+          recordedAt: '2026-06-15T05:00:00Z',
+          message: 'Already timed in, Maria Clara.',
+          description: 'Already timed in.',
+          userName: 'Maria Clara',
+        },
+      });
+      expect(mockSendNotification).not.toHaveBeenCalled();
 
-      expect(result.success).toBe(true);
-      expect(result.data?.userName).toBe('Bob Ross');
-      expect(result.data?.status).toBe('IN');
+      // Rapid camera scan 30s after check-out -> stays OUT without inserting
+      const activeNull = createMockQueryBuilder(null);
+      const recentOut = createMockQueryBuilder({ check_out_at: '2026-06-15T05:00:00Z' });
+      let calls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          calls += 1;
+          return calls === 1 ? activeNull : recentOut;
+        }
+        return supaMock.getTableBuilder(table);
+      });
 
-      const profilesBuilder = mockClientHelper.getTableBuilder('profiles');
-      expect(profilesBuilder.eq).toHaveBeenCalledWith('student_id', '2023-00123');
+      const rapidOutRes = await toggleAttendanceByCard({ cardNumber: 'LIB-1001', isManual: false });
+      expect(rapidOutRes).toEqual({
+        success: true,
+        data: {
+          status: 'OUT',
+          recordedAt: '2026-06-15T05:00:00Z',
+          message: 'Already timed out, Maria Clara.',
+          description: 'Already timed out.',
+          userName: 'Maria Clara',
+        },
+      });
+
+      // Manual check-in right after check-out bypasses lastOut debounce
+      const manualActiveNull = createMockQueryBuilder(null);
+      const manualInsert = createMockQueryBuilder(null);
+      let manualCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          manualCalls += 1;
+          return manualCalls === 1 ? manualActiveNull : manualInsert;
+        }
+        return supaMock.getTableBuilder(table);
+      });
+
+      const manualInRes = await toggleAttendanceByCard({ cardNumber: 'LIB-1001', isManual: true });
+      expect(manualInRes.success).toBe(true);
+      expect(manualInRes.data?.status).toBe('IN');
+      expect(manualInsert.insert).toHaveBeenCalledTimes(1);
     });
 
-    it('rejects with descriptive message when identifier is not found (card and student_id fail)', async () => {
-      mockClientHelper.setTableResponse('library_cards', null);
-      mockClientHelper.setTableResponse('profiles', null);
+    it('rejects unrecognized identifiers, inactive profiles, and duplicate active session DB errors', async () => {
+      supaMock.setTableResponse('library_cards', null);
+      supaMock.setTableResponse('profiles', null);
 
-      // Scanner scan (isManual: false)
-      const scanResult = await toggleAttendanceByCard({ cardNumber: 'UNKNOWN-ID', isManual: false });
-      expect(scanResult.success).toBe(false);
-      expect(scanResult.error).toContain('Invalid or inactive library card');
+      expect(await toggleAttendanceByCard({ cardNumber: 'BAD-QR', isManual: false })).toEqual({
+        success: false,
+        error: 'Invalid or inactive library card. Please ensure the card is activated in the system.',
+      });
+      expect(await toggleAttendanceByCard({ cardNumber: 'BAD-ID', isManual: true })).toEqual({
+        success: false,
+        error: 'The identifier is not recognized by the system. Please ensure the user has an active account.',
+      });
 
-      // Manual entry (isManual: true)
-      const manualResult = await toggleAttendanceByCard({ cardNumber: 'UNKNOWN-ID', isManual: true });
-      expect(manualResult.success).toBe(false);
-      expect(manualResult.error).toContain('The identifier is not recognized by the system');
-    });
-
-    it('rejects attendance toggle when patron account is inactive or suspended', async () => {
-      mockClientHelper.setTableResponse('library_cards', {
+      supaMock.setTableResponse('library_cards', {
         user_id: 'patron-suspended',
-        profiles: { full_name: 'Suspended Patron', status: 'SUSPENDED' },
+        profiles: { full_name: 'Suspended User', status: 'SUSPENDED' },
+      });
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-SUSP' })).toEqual({
+        success: false,
+        error: 'User account is suspended. Attendance restricted.',
       });
 
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-SUSPENDED' });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('User account is suspended. Attendance restricted.');
-    });
-
-    it('handles database error when querying library cards', async () => {
-      mockClientHelper.setTableResponse('library_cards', null, { message: 'DB connection failure' });
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-ERROR' });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Database error while checking library card.');
-    });
-
-    it('handles database error when registering Time In', async () => {
-      mockClientHelper.setTableResponse('library_cards', {
-        user_id: 'patron-100',
-        profiles: { full_name: 'John Doe', status: 'ACTIVE' },
+      // Duplicate key 23505 on insert
+      supaMock.setTableResponse('library_cards', {
+        user_id: 'patron-1',
+        profiles: { full_name: 'Maria Clara', status: 'ACTIVE' },
+      });
+      const activeNull = createMockQueryBuilder(null);
+      const insertDupErr = createMockQueryBuilder(null, { code: '23505', message: 'duplicate key' });
+      let calls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          calls += 1;
+          return calls === 1 ? activeNull : insertDupErr;
+        }
+        return supaMock.getTableBuilder(table);
       });
 
-      // No active session, but insert fails
-      const attBuilder = mockClientHelper.getTableBuilder('attendance');
-      attBuilder.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-      attBuilder.insert.mockImplementationOnce(() => ({
-        error: { message: 'Insert constraint error' },
-      }));
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-100' });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Failed to register Time In.');
-    });
-
-    it('returns friendly error when a duplicate active attendance session is detected', async () => {
-      mockClientHelper.setTableResponse('library_cards', {
-        user_id: 'user-double-tap',
-        status: 'ACTIVE',
-        profiles: { full_name: 'Bob', status: 'ACTIVE' },
+      expect(await toggleAttendanceByCard({ cardNumber: 'LIB-1001', isManual: true })).toEqual({
+        success: false,
+        error: 'An active attendance session is already in progress for this card.',
       });
-      mockClientHelper.setTableResponse('attendance', null);
-
-      const attBuilder = mockClientHelper.getTableBuilder('attendance');
-      attBuilder.insert.mockImplementationOnce(() => ({
-        error: { code: '23505', message: 'duplicate key value violates unique constraint "attendance_user_active_idx"' },
-      }));
-
-      const result = await toggleAttendanceByCard({ cardNumber: 'CARD-DOUBLE' });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('An active attendance session is already in progress for this card.');
     });
   });
 
   describe('getAttendanceHistory', () => {
-    it('throws Unauthorized when caller is not authenticated', async () => {
-      vi.mocked(getMe).mockResolvedValue(null);
-
+    it('throws Unauthorized when unauthenticated and Forbidden when a student queries another user', async () => {
+      mockGetMe.mockResolvedValue(null);
       await expect(getAttendanceHistory()).rejects.toThrow('Unauthorized');
+
+      mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client, { id: 'student-1', role: 'student' }));
+      await expect(getAttendanceHistory('student-2')).rejects.toThrow('Forbidden');
     });
 
-    it('retrieves all of today records when staff user does not pass a userId', async () => {
-      const todayRecords = [
+    it('returns staff today records with sanitized search and limit, unwrapping array profiles', async () => {
+      vi.useFakeTimers();
+      // 2026-06-15T17:00:00Z = 2026-06-16 01:00:00 Asia/Manila -> Manila date is 2026-06-16
+      vi.setSystemTime(new Date('2026-06-15T17:00:00Z'));
+
+      supaMock.setTableResponse('attendance', [
         {
           id: 'att-1',
-          check_in_at: '2026-10-06T09:00:00Z',
-          check_out_at: '2026-10-06T11:00:00Z',
-          user_id: 'u-1',
-          profiles: { full_name: 'Alice' },
-        },
-        {
-          id: 'att-2',
-          check_in_at: '2026-10-06T08:30:00Z',
+          check_in_at: '2026-06-16T00:10:00+08:00',
           check_out_at: null,
-          user_id: 'u-2',
-          profiles: [{ full_name: 'Bob' }], // Array profile test
+          user_id: 'patron-1',
+          notes: null,
+          profiles: [{ full_name: 'Maria Clara', student_id: '2024-0001' }],
         },
-      ];
-      mockClientHelper.setTableResponse('attendance', todayRecords);
+      ]);
 
-      const result = await getAttendanceHistory();
+      const res = await getAttendanceHistory(undefined, {
+        range: 'today',
+        limit: 20,
+        search: 'Maria,():*\\',
+      });
 
-      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
-      expect(attendanceBuilder.gte).toHaveBeenCalledWith('check_in_at', expect.any(String));
-      expect(attendanceBuilder.order).toHaveBeenCalledWith('check_in_at', { ascending: false });
-
-      expect(result).toEqual([
-        { ...todayRecords[0], profiles: { full_name: 'Alice' } },
-        { ...todayRecords[1], profiles: { full_name: 'Bob' } },
+      const attBuilder = supaMock.getTableBuilder('attendance');
+      expect(attBuilder.select).toHaveBeenCalledWith(
+        'id, check_in_at, check_out_at, user_id, notes, profiles!inner(full_name, student_id)'
+      );
+      expect(attBuilder.gte).toHaveBeenCalledWith('check_in_at', '2026-06-16T00:00:00+08:00');
+      expect(attBuilder.or).toHaveBeenCalledWith(
+        'full_name.ilike.%Maria%,student_id.ilike.%Maria%',
+        { referencedTable: 'profiles' }
+      );
+      expect(attBuilder.limit).toHaveBeenCalledWith(20);
+      expect(res).toEqual([
+        {
+          id: 'att-1',
+          check_in_at: '2026-06-16T00:10:00+08:00',
+          check_out_at: null,
+          user_id: 'patron-1',
+          notes: null,
+          profiles: { full_name: 'Maria Clara', student_id: '2024-0001' },
+        },
       ]);
     });
 
-    it('retrieves all historical records when range is set to all', async () => {
-      const allRecords = [
+    it('paginates staff range all records when limit is omitted', async () => {
+      const batch1 = Array.from({ length: 1000 }, (_, i) => ({
+        id: `att-${i}`,
+        check_in_at: '2026-06-15T00:00:00Z',
+        check_out_at: null,
+        user_id: 'patron-1',
+        profiles: { full_name: 'Patron', student_id: '2024-0001' },
+      }));
+      const batch2 = [
         {
-          id: 'att-1',
-          check_in_at: '2026-10-01T09:00:00Z',
-          check_out_at: '2026-10-01T11:00:00Z',
-          user_id: 'u-1',
-          profiles: { full_name: 'Alice' },
-        },
-      ];
-      mockClientHelper.setTableResponse('attendance', allRecords);
-
-      const result = await getAttendanceHistory(undefined, { range: 'all' });
-
-      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
-      expect(attendanceBuilder.gte).not.toHaveBeenCalled();
-      expect(attendanceBuilder.order).toHaveBeenCalledWith('check_in_at', { ascending: false });
-      expect(result).toEqual(allRecords);
-    });
-
-    it('retrieves targeted user attendance history for staff caller', async () => {
-      const userRecords = [
-        {
-          id: 'att-3',
-          check_in_at: '2026-10-05T08:00:00Z',
-          check_out_at: '2026-10-05T10:00:00Z',
-          user_id: 'target-student-id',
-          profiles: { full_name: 'Charlie' },
-        },
-      ];
-      mockClientHelper.setTableResponse('attendance', userRecords);
-
-      const result = await getAttendanceHistory('target-student-id');
-
-      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
-      expect(attendanceBuilder.eq).toHaveBeenCalledWith('user_id', 'target-student-id');
-      expect(result).toEqual(userRecords);
-    });
-
-    it('allows student to query their own attendance history', async () => {
-      const student = mockStudentUser('my-student-id');
-      vi.mocked(getMe).mockResolvedValue(
-        student as unknown as Awaited<ReturnType<typeof getMe>>
-      );
-
-      const myRecords = [
-        {
-          id: 'att-4',
-          check_in_at: '2026-10-06T10:00:00Z',
+          id: 'att-1000',
+          check_in_at: '2026-06-14T00:00:00Z',
           check_out_at: null,
-          user_id: 'my-student-id',
-          profiles: { full_name: 'Student User' },
+          user_id: 'patron-1',
+          profiles: { full_name: 'Patron', student_id: '2024-0001' },
         },
       ];
-      mockClientHelper.setTableResponse('attendance', myRecords);
 
-      const result = await getAttendanceHistory();
+      const builder1 = createMockQueryBuilder(batch1);
+      const builder2 = createMockQueryBuilder(batch2);
+      let calls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table === 'attendance') {
+          calls += 1;
+          return calls === 1 ? builder1 : builder2;
+        }
+        return supaMock.getTableBuilder(table);
+      });
 
-      const attendanceBuilder = mockClientHelper.getTableBuilder('attendance');
-      expect(attendanceBuilder.eq).toHaveBeenCalledWith('user_id', 'my-student-id');
-      expect(result).toEqual(myRecords);
+      const res = await getAttendanceHistory(undefined, { range: 'all' });
+
+      expect(builder1.gte).not.toHaveBeenCalled();
+      expect(builder1.range).toHaveBeenCalledWith(0, 999);
+      expect(builder2.range).toHaveBeenCalledWith(1000, 1999);
+      expect(res).toHaveLength(1001);
     });
 
-    it('rejects student attempting to view another user attendance history with Forbidden', async () => {
-      const student = mockStudentUser('my-student-id');
-      vi.mocked(getMe).mockResolvedValue(
-        student as unknown as Awaited<ReturnType<typeof getMe>>
-      );
+    it('returns own attendance history for a student without staff privileges and propagates DB errors', async () => {
+      mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client, { id: 'student-1', role: 'student' }));
+      supaMock.setTableResponse('attendance', [
+        {
+          id: 'att-own-1',
+          check_in_at: '2026-06-15T01:00:00Z',
+          check_out_at: '2026-06-15T03:00:00Z',
+          user_id: 'student-1',
+          notes: null,
+          profiles: { full_name: 'Student One', student_id: '2024-0100' },
+        },
+      ]);
 
-      await expect(getAttendanceHistory('other-student-id')).rejects.toThrow('Forbidden');
-    });
+      const ownRes = await getAttendanceHistory(undefined, { limit: 5 });
+      const attBuilder = supaMock.getTableBuilder('attendance');
+      expect(attBuilder.eq).toHaveBeenCalledWith('user_id', 'student-1');
+      expect(attBuilder.limit).toHaveBeenCalledWith(5);
+      expect(ownRes).toHaveLength(1);
 
-    it('throws error when database query fails during history lookup', async () => {
-      mockClientHelper.setTableResponse('attendance', null, { message: 'Database read error' });
-
-      await expect(getAttendanceHistory()).rejects.toThrow('Database read error');
+      supaMock.setTableResponse('attendance', null, { message: 'DB read error' });
+      await expect(getAttendanceHistory(undefined, { limit: 5 })).rejects.toEqual({
+        message: 'DB read error',
+      });
     });
   });
 });

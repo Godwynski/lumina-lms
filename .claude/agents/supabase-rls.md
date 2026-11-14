@@ -11,4 +11,5 @@ Rules:
 - Every new table gets RLS enabled with explicit policies per role.
 - Every migration gets a matching rollback in `supabase/rollback/`.
 - Avoid policy recursion on `profiles` (see migration 20261104140000).
+- Every schema, migration, RLS policy, trigger, or RPC change MUST sync `supabase/schema_clean_install.sql` and add/update real PGlite Postgres tests in `test/db-schema-and-rls.test.ts` or `test/db-rpcs-and-triggers.test.ts` (never use `it.skip`/`it.fails`), then run `npx vitest run test/db-*.test.ts`.
 - Never run destructive SQL against a remote project without the user's yes.

@@ -4,8 +4,7 @@ import { findDemoAccount, isDemoModeEnabled } from '@/lib/demo/config';
 
 export const dynamic = 'force-dynamic';
 
-// Signs a demo account in server-side. Returns 404 unless DEMO_MODE=true,
-// so the password never reaches the browser and the route behaves as absent when demo is off.
+// Signs a demo account in server-side so the password never reaches the browser.
 export async function POST(request: Request) {
   if (!isDemoModeEnabled()) {
     return new NextResponse(null, { status: 404 });
@@ -15,6 +14,10 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
@@ -29,8 +32,8 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email: account.email, password });
-  if (error) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: account.email, password });
+  if (error || !data.user) {
     return NextResponse.json(
       { error: 'Demo account is not set up. Ask the administrator to run demo:on.' },
       { status: 401 },

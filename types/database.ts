@@ -112,6 +112,8 @@ export interface BorrowingRecordsRow {
   returned_by: string | null;
   reminder_sent: boolean;
   overdue_notified: boolean;
+  fine_amount: number | null;
+  fine_settled_at: string | null;
   created_at: string;
   updated_at: string;
 }

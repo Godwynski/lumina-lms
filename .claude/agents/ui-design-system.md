@@ -10,4 +10,5 @@ Rules:
 - Reuse Radix/shadcn primitives in `components/ui` before adding new ones.
 - Follow `docs/accessibility.md`: labels, focus states, contrast, keyboard use.
 - Check light and dark mode and a ~375px viewport.
+- Every component change (major or minor) MUST include/update real DOM rendering & interaction tests in `test/ui-*.test.tsx` using `test/helpers/render.tsx` (`createRoot` + `act`; never `fs.readFileSync` source-regex checks, never `it.skip`/`it.fails`), and pass `npx vitest run --exclude '**/.claude/**'` + `npm run typecheck`.
 - No new dependencies without saying why.

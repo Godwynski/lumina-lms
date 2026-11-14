@@ -9,6 +9,7 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     globals: true,
     testTimeout: 15000,
+    exclude: ['**/node_modules/**', '**/.next/**', '**/.claude/**'],
   },
   resolve: {
     alias: {

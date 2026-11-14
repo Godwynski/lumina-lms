@@ -27,6 +27,8 @@ export interface PendingReturn {
   studentName: string;
   dueDate?: string;
   borrowedAt?: string;
+  fineAmount?: number;
+  overdueDays?: number;
   idempotencyKey: string;
 }
 
@@ -153,6 +155,8 @@ export function useCirculationWizard() {
              studentName: result.data.student_name!,
              dueDate: formatDate(result.data.due_date),
              borrowedAt: formatDate(result.data.borrowed_at),
+             fineAmount: Number(result.data.fine_amount ?? 0),
+             overdueDays: Number(result.data.overdue_days ?? 0),
              idempotencyKey: crypto.randomUUID(),
           });
           playScanCue('success');
@@ -175,7 +179,7 @@ export function useCirculationWizard() {
     }
   };
 
-  const confirmAction = async () => {
+  const confirmAction = async (settleFine: boolean = false) => {
     const gen = generationRef.current;
     const isStale = () => gen !== generationRef.current;
     setIsProcessing(true);
@@ -206,6 +210,7 @@ export function useCirculationWizard() {
           idempotencyKey: pendingReturn.idempotencyKey,
           previewOnly: false,
           isManual: true,
+          settleFine,
         });
         if (isStale()) return;
 

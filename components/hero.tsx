@@ -9,14 +9,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
 import { toast } from 'sonner';
+import { DEMO_ACCOUNTS } from '@/lib/demo/accounts';
 
 // Only labels and emails live in the browser. Passwords stay on the server (/api/demo-login).
-const DEMO_BUTTONS = [
-  { label: 'Super Admin', email: 'admin@lumina.test', icon: ShieldCheck },
-  { label: 'Librarian', email: 'librarian@lumina.test', icon: BookOpen },
-  { label: 'Staff', email: 'staff@lumina.test', icon: UserCheck },
-  { label: 'Student', email: 'student@lumina.test', icon: GraduationCap },
-];
+const DEMO_ICONS = { super_admin: ShieldCheck, librarian: BookOpen, student_assistant: UserCheck, student: GraduationCap };
+const DEMO_BUTTONS = DEMO_ACCOUNTS.map(({ label, email, role }) => ({ label, email, icon: DEMO_ICONS[role] }));
 
 /** Sign-in actions for the landing page. The headline and copy are static in app/page.tsx. */
 export function Hero({ user, role, showDemo = false }: { user: User | null; role: string | null; showDemo?: boolean }) {

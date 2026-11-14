@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { CirculationStepper } from './CirculationStepper';
 import { ScanStep } from './steps/ScanStep';
 import { ReviewStep } from './steps/ReviewStep';
@@ -76,6 +84,16 @@ export function CirculationWizard() {
   const stageLabel = isConfirmed
     ? (mode === 'checkout' ? 'Checkout complete' : 'Return complete')
     : `Step ${step} of ${steps.length}: ${steps[step - 1].label}`;
+
+  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+
+  const handleConfirmClick = () => {
+    if (mode === 'return' && (pendingReturn?.fineAmount ?? 0) > 0) {
+      setIsSettleModalOpen(true);
+      return;
+    }
+    void confirmAction(false);
+  };
 
   return (
     <div className="w-full space-y-6 pb-12">
@@ -201,17 +219,57 @@ export function CirculationWizard() {
                 bookTitle={mode === 'checkout' ? pendingCheckout!.bookTitle : pendingReturn!.bookTitle}
                 dueDate={mode === 'checkout' ? pendingCheckout!.dueDate : pendingReturn!.dueDate || 'N/A'}
                 borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
+                fineAmount={mode === 'return' ? pendingReturn?.fineAmount : undefined}
+                overdueDays={mode === 'return' ? pendingReturn?.overdueDays : undefined}
               />
               
               <div className="flex flex-wrap gap-3 justify-end pt-6 border-t border-border/20">
                   <Button 
-                    onClick={confirmAction} 
+                    onClick={handleConfirmClick} 
                     disabled={isProcessing}
                     className="rounded-xl px-8 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
                   >
                     {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
                   </Button>
               </div>
+
+              <Dialog open={isSettleModalOpen} onOpenChange={setIsSettleModalOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Overdue Penalty Settlement</DialogTitle>
+                    <DialogDescription>
+                      This book is {pendingReturn?.overdueDays || 1} day(s) overdue with a penalty of{' '}
+                      <span className="font-bold text-destructive tabular-nums">
+                        ₱{Number(pendingReturn?.fineAmount ?? 0).toFixed(2)}
+                      </span>
+                      . Collect payment now or mark it unpaid to settle later from Borrowing Logs.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="gap-2 sm:gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isProcessing}
+                      onClick={() => {
+                        setIsSettleModalOpen(false);
+                        void confirmAction(false);
+                      }}
+                    >
+                      Return Only (Pay Later)
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => {
+                        setIsSettleModalOpen(false);
+                        void confirmAction(true);
+                      }}
+                    >
+                      Return &amp; Settle (₱{Number(pendingReturn?.fineAmount ?? 0).toFixed(2)})
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </section>

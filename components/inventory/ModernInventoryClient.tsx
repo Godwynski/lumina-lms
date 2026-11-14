@@ -438,6 +438,7 @@ export function ModernInventoryClient({
   const handleExportCoversZip = async () => {
     setIsExportingZip(true);
     try {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/api/catalog/export/covers";
       toast.success("Generating ZIP archive... Your download will begin shortly!");
     } catch (err: unknown) {
