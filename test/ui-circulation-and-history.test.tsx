@@ -59,8 +59,21 @@ vi.mock('@/lib/actions/circulation', () => ({
 }));
 
 const mockSettleBorrowingFine = vi.fn();
+const mockExportBorrowingHistory = vi.fn();
 vi.mock('@/lib/actions/history', () => ({
   settleBorrowingFine: (...args: unknown[]) => mockSettleBorrowingFine(...args),
+  exportBorrowingHistory: (...args: unknown[]) => mockExportBorrowingHistory(...args),
+}));
+
+const mockXlsxWriteFile = vi.fn();
+const mockXlsxJsonToSheet = vi.fn((_rows?: unknown[]) => ({}));
+vi.mock('xlsx', () => ({
+  utils: {
+    json_to_sheet: (rows: unknown[]) => mockXlsxJsonToSheet(rows),
+    book_new: () => ({}),
+    book_append_sheet: vi.fn(),
+  },
+  writeFile: (...args: unknown[]) => mockXlsxWriteFile(...args),
 }));
 
 const mockGetBookAvailabilityStatus = vi.fn();
@@ -220,7 +233,7 @@ describe('Circulation & History UI Components', () => {
   });
 
   describe('CirculationWizard', () => {
-    it('opens Overdue Penalty Settlement dialog when returning overdue copy (fineAmount > 0) and supports Return Only vs Return & Settle', async () => {
+    it('opens Overdue Penalty Settlement dialog when returning overdue copy (fineAmount > 0) and supports Return Only vs Mark as Paid vs Mark as Condoned', async () => {
       mockSearchParamsString = 'mode=return';
       mockReturnBook.mockResolvedValueOnce({
         success: true,
@@ -251,9 +264,16 @@ describe('Circulation & History UI Components', () => {
 
       expect(document.body).toHaveTextContent('Overdue Penalty Settlement');
       const returnOnlyBtn = findButtonByText(document.body, 'Return Only (Pay Later)');
-      const returnAndSettleBtn = findButtonByText(document.body, 'Return & Settle');
+      const paidBtn = findButtonByText(document.body, 'Mark as Paid');
+      const condonedBtn = findButtonByText(document.body, 'Mark as Condoned');
       expect(returnOnlyBtn).toBeDefined();
-      expect(returnAndSettleBtn).toBeDefined();
+      expect(paidBtn).toBeDefined();
+      expect(condonedBtn).toBeDefined();
+
+      // Clicking Mark as Condoned without remarks shows validation error and stays open
+      await clickElement(condonedBtn);
+      expect(document.body.querySelector('[role="alert"]')).toHaveTextContent('at least 5 characters');
+      expect(mockReturnBook).toHaveBeenCalledTimes(1);
 
       // Test Return Only (Pay Later) -> settleFine: false
       mockReturnBook.mockResolvedValueOnce({
@@ -272,7 +292,7 @@ describe('Circulation & History UI Components', () => {
       expect(container).toHaveTextContent('Return Complete');
     });
 
-    it('calls returnBook with settleFine: true when Return & Settle is chosen in the modal', async () => {
+    it('calls returnBook with settleFine: true, resolution, and remarks when Mark as Paid or Mark as Condoned is chosen in the modal', async () => {
       mockSearchParamsString = 'mode=return';
       mockReturnBook.mockResolvedValueOnce({
         success: true,
@@ -294,11 +314,14 @@ describe('Circulation & History UI Components', () => {
       await clickElement(findButtonByText(container, 'Confirm Return'));
       expect(document.body).toHaveTextContent('Overdue Penalty Settlement');
 
+      const remarksBox = document.body.querySelector('textarea') as HTMLTextAreaElement;
+      await typeIntoInput(remarksBox, 'Library closed for holiday');
+
       mockReturnBook.mockResolvedValueOnce({
         success: true,
         data: { reservation_ready: true, reserved_for: 'Luz Mercado' },
       });
-      await clickElement(findButtonByText(document.body, 'Return & Settle'));
+      await clickElement(findButtonByText(document.body, 'Mark as Condoned'));
 
       expect(mockReturnBook).toHaveBeenLastCalledWith({
         bookQr: 'BOOK-QR-88',
@@ -306,6 +329,8 @@ describe('Circulation & History UI Components', () => {
         previewOnly: false,
         isManual: true,
         settleFine: true,
+        resolution: 'CONDONED',
+        remarks: 'Library closed for holiday',
       });
       expect(container).toHaveTextContent('Return Complete');
       expect(container).toHaveTextContent('Luz Mercado');
@@ -414,7 +439,7 @@ describe('Circulation & History UI Components', () => {
       await typeIntoInput(input, 'CARD-777');
       await submitForm(input.closest('form'));
       expect(container).toHaveTextContent('Melchora Aquino');
-      expect(container).toHaveTextContent('Scan book copy');
+      expect(container).toHaveTextContent('Scan item');
 
       // Click Back -> goes to Step 1 reviewingStudent state with Continue button
       await clickElement(findButtonByText(container, 'Back'));
@@ -423,30 +448,130 @@ describe('Circulation & History UI Components', () => {
 
       // Click Continue -> returns to Step 2
       await clickElement(findButtonByText(container, 'Continue'));
-      expect(container).toHaveTextContent('Scan book copy');
+      expect(container).toHaveTextContent('Scan item');
 
       // Scan book -> reaches Step 3 (Review Checkout)
       const bookInput = container.querySelector('#circulation-code') as HTMLInputElement;
       await typeIntoInput(bookInput, 'BK-FILI');
       await submitForm(bookInput.closest('form'));
       expect(container).toHaveTextContent('Review Checkout');
+      expect(container).toHaveTextContent('Book / Item');
+      expect(container).toHaveTextContent('Patron ID');
 
       // Click Step 1 in stepper -> returns to Step 1 reviewingStudent
-      await clickElement(container.querySelector('button[aria-label="Go to step 1: Student card"]'));
+      await clickElement(container.querySelector('button[aria-label="Go to step 1: Library card"]'));
       expect(container).toHaveTextContent('Continue');
 
       // Click Start over -> resets wizard back to clean Step 1
       await clickElement(findButtonByText(container, 'Start over'));
-      expect(container).toHaveTextContent('Scan student card');
+      expect(container).toHaveTextContent('Scan library card');
       expect(container).not.toHaveTextContent('Melchora Aquino');
 
       // Switch mode to Return and back to Checkout
       await clickElement(findButtonByExactText(container, 'Return'));
       expect(mockRouterReplace).toHaveBeenCalledWith('?mode=return');
-      expect(container).toHaveTextContent('Scan book copy');
+      expect(container).toHaveTextContent('Scan item');
 
       await clickElement(findButtonByExactText(container, 'Checkout'));
       expect(mockRouterReplace).toHaveBeenCalledWith('?mode=checkout');
+    });
+
+    it('shows borrowing block panel at step 1 after card scan: library_staff sees only Start over', async () => {
+      mockResolveScan.mockResolvedValueOnce({
+        success: true,
+        data: {
+          type: 'student',
+          data: {
+            cardNumber: 'CARD-BLOCK-1',
+            fullName: 'Andres Bonifacio',
+            studentId: '2026-101',
+            status: 'ACTIVE',
+            block: { overdueCount: 2, receivableTotal: 25 },
+          },
+        },
+      });
+
+      const { container } = await renderClient(<CirculationWizard userRole="library_staff" />);
+      const input = container.querySelector('#circulation-code') as HTMLInputElement;
+      await typeIntoInput(input, 'CARD-BLOCK-1');
+      await submitForm(input.closest('form'));
+
+      expect(container).toHaveTextContent('Andres Bonifacio');
+      expect(container).toHaveTextContent('Borrowing Restricted');
+      expect(container).toHaveTextContent('2');
+      expect(container).toHaveTextContent('₱25.00');
+      // Still at step 1 (no book scan input)
+      expect(container.querySelector('#circulation-code')).toBeNull();
+      expect(findButtonByText(container, 'Start over')).toBeDefined();
+      expect(findButtonByText(container, 'Override')).toBeUndefined();
+      expect(findButtonByText(container, 'Continue')).toBeUndefined();
+
+      await clickElement(findButtonByText(container, 'Start over'));
+      expect(container).toHaveTextContent('Scan library card');
+      expect(container).not.toHaveTextContent('Andres Bonifacio');
+    });
+
+    it('allows librarian to override block at step 1, validates short reason, and forwards reason to checkoutBook', async () => {
+      mockResolveScan.mockResolvedValueOnce({
+        success: true,
+        data: {
+          type: 'student',
+          data: {
+            cardNumber: 'CARD-BLOCK-2',
+            fullName: 'Apolinario Mabini',
+            studentId: '2026-102',
+            status: 'ACTIVE',
+            block: { overdueCount: 1, receivableTotal: 15 },
+          },
+        },
+      });
+
+      const { container } = await renderClient(<CirculationWizard userRole="librarian" />);
+      const input = container.querySelector('#circulation-code') as HTMLInputElement;
+      await typeIntoInput(input, 'CARD-BLOCK-2');
+      await submitForm(input.closest('form'));
+
+      expect(container).toHaveTextContent('Borrowing Restricted');
+      expect(container).toHaveTextContent('₱15.00');
+
+      await clickElement(findButtonByText(container, 'Override'));
+      const reasonTextarea = container.querySelector('textarea') as HTMLTextAreaElement;
+      expect(reasonTextarea).toBeTruthy();
+
+      // Short reason rejected inline and stays at step 1
+      await typeIntoInput(reasonTextarea, 'too short');
+      await clickElement(findButtonByText(container, 'Continue'));
+      expect(container).toHaveTextContent('Override reason must be between 10 and 300 characters.');
+      expect(container.querySelector('#circulation-code')).toBeNull();
+
+      // Valid reason advances to step 2 (Scan item)
+      await typeIntoInput(reasonTextarea, 'Librarian approved override for clearance');
+      await clickElement(findButtonByText(container, 'Continue'));
+      expect(container).toHaveTextContent('Scan item');
+      expect(container).toHaveTextContent('Override active');
+
+      // Scan book copy -> step 3 -> confirm checkout
+      mockCheckoutBook.mockResolvedValueOnce({
+        success: true,
+        data: { book_title: 'Clean Architecture', due_date: '2026-12-20T00:00:00Z' },
+      });
+      const bookInput = container.querySelector('#circulation-code') as HTMLInputElement;
+      await typeIntoInput(bookInput, 'BK-CA-1');
+      await submitForm(bookInput.closest('form'));
+
+      expect(container).toHaveTextContent('Review Checkout');
+      mockCheckoutBook.mockResolvedValueOnce({ success: true, data: {} });
+      await clickElement(findButtonByText(container, 'Confirm Checkout'));
+
+      expect(mockCheckoutBook).toHaveBeenLastCalledWith({
+        studentCardQr: 'CARD-BLOCK-2',
+        bookQr: 'BK-CA-1',
+        idempotencyKey: expect.any(String),
+        previewOnly: false,
+        isManual: true,
+        overrideReason: 'Librarian approved override for clearance',
+      });
+      expect(container).toHaveTextContent('Checkout Complete');
     });
   });
 
@@ -481,7 +606,8 @@ describe('Circulation & History UI Components', () => {
     async function renderHistory(props: {
       records: BorrowingRecord[];
       statusFilter?: string;
-      userRole?: 'librarian' | 'student';
+      resolutionFilter?: string;
+      userRole?: 'librarian' | 'patron';
       totalCount?: number;
     }) {
       const historyPromise = Promise.resolve({
@@ -497,6 +623,7 @@ describe('Circulation & History UI Components', () => {
               historyPromise={historyPromise}
               page={1}
               statusFilter={props.statusFilter ?? 'all'}
+              resolutionFilter={props.resolutionFilter}
               searchQuery=""
               userRole={props.userRole ?? 'librarian'}
             />
@@ -510,10 +637,10 @@ describe('Circulation & History UI Components', () => {
       return handle;
     }
 
-    it('renders all 5 filter tabs and triggers router.replace on tab click', async () => {
+    it('renders all 5 filter tabs (including Settlements) and triggers router.replace keeping status=SETTLED', async () => {
       const { container } = await renderHistory({ records: [makeRecord()] });
 
-      const tabButtons = ['All', 'active', 'overdue', 'returned', 'settled'];
+      const tabButtons = ['All', 'Active', 'Overdue', 'Returned', 'Settlements'];
       for (const label of tabButtons) {
         const btn = Array.from(container.querySelectorAll('button')).find(
           (b) => b.textContent?.trim() === label
@@ -521,16 +648,12 @@ describe('Circulation & History UI Components', () => {
         expect(btn).toBeDefined();
       }
 
-      const overdueTab = Array.from(container.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'overdue'
-      );
+      const overdueTab = findButtonByExactText(container, 'Overdue');
       await clickElement(overdueTab);
       expect(mockRouterReplace).toHaveBeenCalledWith('/history?status=OVERDUE&page=1', { scroll: false });
 
-      const settledTab = Array.from(container.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'settled'
-      );
-      await clickElement(settledTab);
+      const settlementsTab = findButtonByExactText(container, 'Settlements');
+      await clickElement(settlementsTab);
       expect(mockRouterReplace).toHaveBeenCalledWith('/history?status=SETTLED&page=1', { scroll: false });
     });
 
@@ -546,11 +669,11 @@ describe('Circulation & History UI Components', () => {
       expect(headers).toContain('Status');
     });
 
-    it('shows Accruing badge + Return / Settle dialog for unreturned overdue loans with return_only and return_and_settle', async () => {
+    it('shows Receivable badge + Return & Penalty Settlement dialog for unreturned overdue loans with Mark as Paid, Mark as Condoned, and Return Only', async () => {
       const record = makeRecord({ id: 'rec-accruing', returned_at: null, fine_amount: 50, fine_settled_at: null });
       const { container } = await renderHistory({ records: [record] });
 
-      expect(container).toHaveTextContent('Accruing');
+      expect(container).toHaveTextContent('Receivable');
       expect(container).toHaveTextContent('₱50.00');
 
       const actionBtn = findButtonByText(container, 'Return / Settle');
@@ -568,18 +691,19 @@ describe('Circulation & History UI Components', () => {
       });
       expect(mockRouterRefresh).toHaveBeenCalled();
 
-      // Re-open dialog and test return_and_settle
+      // Re-open dialog and test Mark as Paid (return_and_settle)
       await clickElement(findButtonByText(container, 'Return / Settle'));
       mockSettleBorrowingFine.mockResolvedValueOnce({ success: true, data: {} });
-      await clickElement(findButtonByText(document.body, 'Return & Settle'));
+      await clickElement(findButtonByText(document.body, 'Mark as Paid'));
       expect(mockSettleBorrowingFine).toHaveBeenCalledWith({
         recordId: 'rec-accruing',
         mode: 'return_and_settle',
+        resolution: 'PAID',
       });
       expect(mockRouterRefresh).toHaveBeenCalledTimes(2);
     });
 
-    it('shows Unpaid badge + Settle dialog for returned late unpaid loans and calls settle mode', async () => {
+    it('shows Receivable badge + settlement dialog with Paid / Condoned validation on click for returned unpaid loans', async () => {
       const record = makeRecord({
         id: 'rec-unpaid',
         status: 'OVERDUE',
@@ -589,23 +713,118 @@ describe('Circulation & History UI Components', () => {
       });
       const { container } = await renderHistory({ records: [record] });
 
-      expect(container).toHaveTextContent('Unpaid');
+      expect(container).toHaveTextContent('Receivable');
       expect(container).toHaveTextContent('₱25.00');
 
-      await clickElement(findButtonByExactText(container, 'Settle'));
-      expect(document.body).toHaveTextContent('Confirm Penalty Settlement');
+      // Clicking the row opens the settlement dialog
+      const row = container.querySelector('tbody tr');
+      expect(row).not.toBeNull();
+      await clickElement(row);
+      expect(document.body).toHaveTextContent('Penalty Settlement');
 
+      // Condoned without >= 5 chars remarks shows error and does not call action
+      await clickElement(findButtonByText(document.body, 'Mark as Condoned'));
+      expect(document.body.querySelector('[role="alert"]')).toHaveTextContent('at least 5 characters');
+      expect(mockSettleBorrowingFine).not.toHaveBeenCalled();
+
+      // Enter >= 5 chars remarks and click Mark as Condoned
+      const remarksBox = document.body.querySelector('textarea') as HTMLTextAreaElement;
+      await typeIntoInput(remarksBox, 'Waived for medical reason');
       mockSettleBorrowingFine.mockResolvedValueOnce({ success: true, data: {} });
-      await clickElement(findButtonByText(document.body, 'Confirm Settle'));
+      await clickElement(findButtonByText(document.body, 'Mark as Condoned'));
 
       expect(mockSettleBorrowingFine).toHaveBeenCalledWith({
         recordId: 'rec-unpaid',
         mode: 'settle',
+        resolution: 'CONDONED',
+        remarks: 'Waived for medical reason',
       });
       expect(mockRouterRefresh).toHaveBeenCalled();
     });
 
-    it('shows Settled badge when fine_settled_at is set, hides action buttons for student role, and refreshes on realtime callback', async () => {
+    it('renders Settlements filter (All / Paid / Condoned), columns, and read-only view for students', async () => {
+      const paidRecord = makeRecord({
+        id: 'rec-paid',
+        status: 'RETURNED',
+        returned_at: '2026-10-20T08:00:00Z',
+        fine_amount: 30,
+        fine_settled_at: '2026-10-21T08:00:00Z',
+        fine_resolution: 'PAID',
+        fine_remarks: 'Official receipt 0042',
+      });
+      const condonedRecord = makeRecord({
+        id: 'rec-condoned',
+        status: 'RETURNED',
+        returned_at: '2026-10-22T08:00:00Z',
+        fine_amount: 15,
+        fine_settled_at: '2026-10-23T08:00:00Z',
+        fine_resolution: 'CONDONED',
+        fine_remarks: 'Approved by head librarian',
+      });
+
+      const { container } = await renderHistory({
+        records: [paidRecord, condonedRecord],
+        statusFilter: 'SETTLED',
+        resolutionFilter: 'all',
+        userRole: 'patron',
+      });
+
+      const headers = Array.from(container.querySelectorAll('th')).map((th) => th.textContent?.trim());
+      expect(headers).toEqual(['Resource', 'Fine Amount', 'Resolution', 'Remarks', 'Settled Date']);
+      expect(container).toHaveTextContent('Official receipt 0042');
+      expect(container).toHaveTextContent('Approved by head librarian');
+      expect(container).toHaveTextContent('Paid');
+      expect(container).toHaveTextContent('Condoned');
+      expect(container.querySelector('textarea')).toBeNull();
+      expect(findButtonByExactText(container, 'Settle')).toBeUndefined();
+
+      // Clicking Paid / Condoned filter buttons updates URL resolution param
+      const group = container.querySelector('[role="group"][aria-label="Filter settlements by resolution"]')!;
+      await clickElement(findButtonByExactText(group, 'Paid'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('/history?status=SETTLED&resolution=PAID&page=1', { scroll: false });
+
+      await clickElement(findButtonByExactText(group, 'Condoned'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('/history?status=SETTLED&resolution=CONDONED&page=1', { scroll: false });
+    });
+
+    it('renders Export (.xlsx) and Print buttons on Overdue and Settlements tabs and exports all filtered rows', async () => {
+      const printSpy = vi.fn();
+      vi.stubGlobal('print', printSpy);
+
+      const overdueRecord = makeRecord({ id: 'rec-exp-1', fine_amount: 35, fine_settled_at: null });
+      mockExportBorrowingHistory.mockResolvedValueOnce({
+        success: true,
+        data: { records: [overdueRecord], totalCount: 25 },
+      });
+
+      const { container } = await renderHistory({
+        records: [overdueRecord],
+        statusFilter: 'OVERDUE',
+        userRole: 'librarian',
+        totalCount: 25,
+      });
+
+      const exportBtn = findButtonByText(container, 'Export (.xlsx)');
+      const printBtn = findButtonByText(container, 'Print');
+      expect(exportBtn).toBeDefined();
+      expect(printBtn).toBeDefined();
+
+      await clickElement(printBtn);
+      expect(printSpy).toHaveBeenCalledTimes(1);
+
+      await clickElement(exportBtn);
+      await act(async () => { await Promise.resolve(); });
+      expect(mockExportBorrowingHistory).toHaveBeenCalledWith({
+        status: 'OVERDUE',
+        resolution: 'all',
+        search: '',
+        scope: 'logs',
+      });
+      expect(mockXlsxJsonToSheet).toHaveBeenCalled();
+      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_overdue_receivables.xlsx');
+    });
+
+    it('shows Paid/Condoned badge when fine_settled_at is set, hides action buttons for student role, and refreshes on realtime callback', async () => {
       const realtimeCallbacks: Array<() => void> = [];
       const mockChannel = {
         on: vi.fn().mockImplementation((_evt: string, _filter: unknown, cb: () => void) => {
@@ -625,6 +844,7 @@ describe('Circulation & History UI Components', () => {
         returned_at: '2026-10-20T08:00:00Z',
         fine_amount: 30,
         fine_settled_at: '2026-10-21T08:00:00Z',
+        fine_resolution: 'PAID',
       });
       const unpaidRecord = makeRecord({
         id: 'rec-student-unpaid',
@@ -636,11 +856,11 @@ describe('Circulation & History UI Components', () => {
 
       const { container } = await renderHistory({
         records: [settledRecord, unpaidRecord],
-        userRole: 'student',
+        userRole: 'patron',
       });
 
-      expect(container).toHaveTextContent('Settled');
-      expect(container).toHaveTextContent('Unpaid');
+      expect(container).toHaveTextContent('Paid');
+      expect(container).toHaveTextContent('Receivable');
       expect(findButtonByExactText(container, 'Settle')).toBeUndefined();
       expect(findButtonByExactText(container, 'Return / Settle')).toBeUndefined();
 
@@ -703,15 +923,15 @@ describe('Circulation & History UI Components', () => {
       await clickElement(findButtonByText(document.body, 'Cancel'));
       expect(document.body).not.toHaveTextContent('Return & Penalty Settlement');
 
-      // Cancel Confirm Penalty Settlement dialog + error path on settle
+      // Cancel Penalty Settlement dialog + error path on settle
       await clickElement(findButtonByExactText(handle.container, 'Settle'));
-      expect(document.body).toHaveTextContent('Confirm Penalty Settlement');
+      expect(document.body).toHaveTextContent('Penalty Settlement');
       await clickElement(findButtonByText(document.body, 'Cancel'));
-      expect(document.body).not.toHaveTextContent('Confirm Penalty Settlement');
+      expect(document.body).not.toHaveTextContent('Penalty Settlement');
 
       mockSettleBorrowingFine.mockResolvedValueOnce({ success: false, error: 'Already settled' });
       await clickElement(findButtonByExactText(handle.container, 'Settle'));
-      await clickElement(findButtonByText(document.body, 'Confirm Settle'));
+      await clickElement(findButtonByText(document.body, 'Mark as Paid'));
       expect(mockToastError).toHaveBeenCalledWith('Already settled');
 
       // Open BookDetailModal (read_only) from book title button
@@ -766,6 +986,41 @@ describe('Circulation & History UI Components', () => {
       expect(container).toHaveTextContent('Gabriela Silang');
       expect(container).toHaveTextContent('2026-0099');
       expect(container).toHaveTextContent('ACTIVE');
+    });
+
+    it('renders MemberPreview blocking summary and override reason when blocked', async () => {
+      const { container, rerender } = await renderClient(
+        <MemberPreview
+          student={{
+            cardNumber: 'LIB-2026',
+            fullName: 'Gabriela Silang',
+            studentId: '2026-0099',
+            status: 'ACTIVE',
+            block: { overdueCount: 2, receivableTotal: 45 },
+          }}
+        />
+      );
+
+      expect(container).toHaveTextContent('Borrowing Restricted');
+      expect(container).toHaveTextContent('Overdue books');
+      expect(container).toHaveTextContent('2');
+      expect(container).toHaveTextContent('₱45.00');
+
+      await rerender(
+        <MemberPreview
+          student={{
+            cardNumber: 'LIB-2026',
+            fullName: 'Gabriela Silang',
+            studentId: '2026-0099',
+            status: 'ACTIVE',
+            block: { overdueCount: 2, receivableTotal: 45 },
+          }}
+          overrideReason="Approved by head librarian"
+        />
+      );
+
+      expect(container).toHaveTextContent('Borrowing Block Overridden');
+      expect(container).toHaveTextContent('Approved by head librarian');
     });
 
     it('renders CirculationStepper with aria-current and handles step clicks up to reachedStep', async () => {

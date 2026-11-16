@@ -8,6 +8,7 @@ import { sanitizeFilterInput } from "@/lib/utils";
 import { isAbortError } from "../error-utils";
 import { createSafeAction } from "./action-utils";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { computeOverdueFine } from "@/lib/fines";
 
 type BookInfo = {
   id: string;
@@ -17,6 +18,7 @@ type BookInfo = {
 };
 
 export type BorrowStatus = "ACTIVE" | "RETURNED" | "OVERDUE";
+export type FineResolution = "PAID" | "CONDONED";
 
 export type BorrowingRecord = {
   id: string;
@@ -29,6 +31,9 @@ export type BorrowingRecord = {
   copy_qr?: string | null;
   fine_amount?: number;
   fine_settled_at?: string | null;
+  fine_resolution?: FineResolution | null;
+  fine_remarks?: string | null;
+  fine_settled_by?: string | null;
 
   books: BookInfo | null;
   profiles: {
@@ -49,6 +54,9 @@ interface HistoryRpcRow {
   returned_at: string | null;
   fine_amount?: number | string | null;
   fine_settled_at?: string | null;
+  fine_resolution?: FineResolution | null;
+  fine_remarks?: string | null;
+  fine_settled_by?: string | null;
   copy_qr?: string | null;
   total_count?: number | string;
   book_id?: string | null;
@@ -61,38 +69,14 @@ interface HistoryRpcRow {
   profile_student_id?: string | null;
 }
 
-function manilaDateDayNumber(value: string | number | Date): number {
-  const formatted = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Manila",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value));
-  const [y, m, d] = formatted.split("-").map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
-}
-
-function computeOverdueFine(
-  record: { due_date: string; returned_at: string | null; status?: string; fine_amount?: number | string | null },
-  fineRate = 5
-): number {
-  if (record.fine_amount != null) return Number(record.fine_amount);
-  if (record.returned_at != null) return 0;
-  const dueMs = new Date(record.due_date).getTime();
-  if (Number.isNaN(dueMs)) return 0;
-  const now = Date.now();
-  if (now <= dueMs && record.status?.toUpperCase() !== "OVERDUE") return 0;
-  const days = Math.max(1, manilaDateDayNumber(now) - manilaDateDayNumber(dueMs));
-  return Number((days * fineRate).toFixed(2));
-}
-
 export async function getBorrowingHistory(
   userId: string | null,
   page: number = 1,
   pageSize: number = 10,
   statusFilter?: string,
   searchQuery?: string,
-  preFetchedSupabase?: SupabaseClient
+  preFetchedSupabase?: SupabaseClient,
+  resolutionFilter?: string
 ) {
   const supabase = preFetchedSupabase || await createClient();
 
@@ -100,13 +84,17 @@ export async function getBorrowingHistory(
   if (typeof supabase.rpc === 'function') {
     try {
       const sanitized = searchQuery ? sanitizeFilterInput(searchQuery) : '';
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_borrowing_history_v2', {
+      const rpcParams: Record<string, unknown> = {
         p_user_id: userId,
         p_page: page,
         p_page_size: pageSize,
         p_status: statusFilter && statusFilter !== 'all' ? statusFilter : null,
         p_search: sanitized || null,
-      });
+      };
+      if (resolutionFilter && resolutionFilter !== 'all') {
+        rpcParams.p_resolution = resolutionFilter.toUpperCase();
+      }
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_borrowing_history_v2', rpcParams);
 
       if (!rpcError && Array.isArray(rpcData)) {
         const totalCount = rpcData.length > 0 ? Number(rpcData[0].total_count) : 0;
@@ -121,6 +109,9 @@ export async function getBorrowingHistory(
           copy_qr: row.copy_qr ?? null,
           fine_amount: computeOverdueFine(row),
           fine_settled_at: row.fine_settled_at ?? null,
+          fine_resolution: row.fine_resolution ?? null,
+          fine_remarks: row.fine_remarks ?? null,
+          fine_settled_by: row.fine_settled_by ?? null,
           books: row.book_id ? {
             id: row.book_id,
             title: row.book_title || 'Unknown Title',
@@ -152,7 +143,7 @@ export async function getBorrowingHistory(
   let query = supabase
     .from("borrowing_records")
     .select(`
-      id, book_copy_id, user_id, status, borrowed_at, due_date, returned_at, fine_amount, fine_settled_at,
+      id, book_copy_id, user_id, status, borrowed_at, due_date, returned_at, fine_amount, fine_settled_at, fine_resolution, fine_remarks, fine_settled_by,
       book_copies!inner (
         qr_string,
         books!inner (
@@ -169,8 +160,19 @@ export async function getBorrowingHistory(
   }
 
   if (statusFilter && statusFilter !== "all") {
-    // Normalize to uppercase to match BorrowStatus enum in Postgres
-    query = query.eq("status", statusFilter.toUpperCase());
+    const upperStatus = statusFilter.toUpperCase();
+    if (upperStatus === "SETTLED") {
+      query = query.not("fine_settled_at", "is", null).gt("fine_amount", 0);
+    } else if (upperStatus === "CURRENT") {
+      query = query.or("status.in.(ACTIVE,OVERDUE),and(status.eq.RETURNED,fine_amount.gt.0,fine_settled_at.is.null)");
+    } else {
+      // Normalize to uppercase to match BorrowStatus enum in Postgres
+      query = query.eq("status", upperStatus);
+    }
+  }
+
+  if (resolutionFilter && resolutionFilter !== "all") {
+    query = query.eq("fine_resolution", resolutionFilter.toUpperCase());
   }
 
   if (searchQuery) {
@@ -240,6 +242,9 @@ export async function getBorrowingHistory(
       fine_amount: (record.fine_amount as number | string | null | undefined) ?? null,
     }),
     fine_settled_at: (record.fine_settled_at as string | null | undefined) ?? null,
+    fine_resolution: (record.fine_resolution as FineResolution | null | undefined) ?? null,
+    fine_remarks: (record.fine_remarks as string | null | undefined) ?? null,
+    fine_settled_by: (record.fine_settled_by as string | null | undefined) ?? null,
 
     books: (record.book_copies as { books: BookInfo } | null)?.books || null,
     profiles: record.profiles as BorrowingRecord["profiles"],
@@ -252,14 +257,68 @@ export async function getBorrowingHistory(
 }
 
 /**
- * Snapshots and settles an overdue fine on a borrowing record.
+ * Fetches all filtered borrowing history rows (not just one page) for xlsx export.
+ * Enforces caller scoping so patrons can export only their own history.
+ */
+export const exportBorrowingHistory = createSafeAction(
+  z.object({
+    status: z.string().optional().default("all"),
+    resolution: z.string().optional().default("all"),
+    search: z.string().optional().default(""),
+    scope: z.enum(["logs", "personal"]).optional().default("personal"),
+  }),
+  async ({ status, resolution, search, scope }, { userId, supabase, profile, role }) => {
+    const isPrivileged =
+      role === "super_admin" ||
+      role === "librarian" ||
+      (role === "library_staff" &&
+        !!profile?.permissions?.manage_circulation &&
+        profile?.status?.toUpperCase() === "ACTIVE");
+
+    const targetUserId = scope === "logs" && isPrivileged ? null : userId;
+    const pageSize = 1000;
+    const first = await getBorrowingHistory(targetUserId, 1, pageSize, status, search, supabase, resolution);
+    const allRecords = [...first.records];
+    const totalPages = Math.ceil(first.totalCount / pageSize);
+    for (let p = 2; p <= totalPages; p++) {
+      const next = await getBorrowingHistory(targetUserId, p, pageSize, status, search, supabase, resolution);
+      allRecords.push(...next.records);
+    }
+
+    return {
+      records: allRecords,
+      totalCount: first.totalCount,
+    };
+  },
+  {
+    allowedRoles: ["super_admin", "librarian", "library_staff", "patron"],
+  }
+);
+
+/**
+ * Snapshots and settles an overdue fine on a borrowing record as PAID or CONDONED.
  */
 export const settleBorrowingFine = createSafeAction(
-  z.object({
-    recordId: z.string().uuid(),
-    mode: z.enum(["settle", "return_and_settle", "return_only"]).optional().default("settle"),
-  }),
-  async ({ recordId, mode }, { userId }) => {
+  z
+    .object({
+      recordId: z.string().uuid(),
+      mode: z.enum(["settle", "return_and_settle", "return_only"]).optional().default("settle"),
+      resolution: z.enum(["PAID", "CONDONED"]).optional().default("PAID"),
+      remarks: z.string().trim().max(500).optional().nullable(),
+    })
+    .superRefine((val, ctx) => {
+      if (val.mode !== "return_only" && val.resolution === "CONDONED") {
+        const trimmed = (val.remarks ?? "").trim();
+        if (trimmed.length < 5) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["remarks"],
+            message: "Remarks of at least 5 characters are required when condoning a fine.",
+          });
+        }
+      }
+    }),
+  async ({ recordId, mode, resolution, remarks }, { userId }) => {
     const admin = createAdminClient();
     const { data: record, error: fetchError } = await admin
       .from("borrowing_records")
@@ -319,6 +378,7 @@ export const settleBorrowingFine = createSafeAction(
     if (mode === "return_only") {
       revalidatePath("/history");
       revalidatePath("/circulation");
+      revalidatePath("/dashboard");
       return [
         { id: recordId, fine_amount: snapshotFine ?? 0, fine_settled_at: null as string | null },
         { entityId: recordId, reason: `Returned overdue book with unpaid fine (PHP ${snapshotFine ?? 0})` },
@@ -343,29 +403,59 @@ export const settleBorrowingFine = createSafeAction(
     }
 
     const settledAt = new Date().toISOString();
+    const trimmedRemarks = remarks?.trim() || null;
     const { error: updateError } = await admin
       .from("borrowing_records")
       .update({
         fine_amount: finalFine,
         fine_settled_at: settledAt,
+        fine_resolution: resolution,
+        fine_remarks: trimmedRemarks,
+        fine_settled_by: userId,
         updated_at: settledAt,
       })
-      .eq("id", recordId);
+      .eq("id", recordId)
+      .is("fine_settled_at", null);
 
     if (updateError) throw new Error(updateError.message);
 
     revalidatePath("/history");
     revalidatePath("/circulation");
+    revalidatePath("/dashboard");
+
+    const resolutionLabel = resolution === "CONDONED" ? "Condoned" : "Paid";
+    const remarkSuffix = trimmedRemarks ? ` — Remarks: ${trimmedRemarks}` : "";
 
     return [
-      { id: recordId, fine_amount: finalFine, fine_settled_at: settledAt },
-      { entityId: recordId, reason: `Settled overdue fine (PHP ${finalFine})` },
+      {
+        id: recordId,
+        fine_amount: finalFine,
+        fine_settled_at: settledAt,
+        fine_resolution: resolution,
+        fine_remarks: trimmedRemarks,
+        fine_settled_by: userId,
+      },
+      { entityId: recordId, reason: `${resolutionLabel} overdue fine (PHP ${finalFine.toFixed(2)})${remarkSuffix}` },
     ];
   },
   {
-    allowedRoles: ["super_admin", "librarian", "student_assistant"],
+    allowedRoles: ["super_admin", "librarian", "library_staff"],
     allowedPermissions: ["manage_circulation"],
     auditAction: "settle_fine",
     auditEntity: "borrowing_record",
+  }
+);
+
+export const getUserBorrowingHistory = createSafeAction(
+  z.object({
+    userId: z.string().min(1),
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(1).max(50).default(10),
+  }),
+  async ({ userId, page, pageSize }, { supabase }) => {
+    return getBorrowingHistory(userId, page, pageSize, "all", undefined, supabase);
+  },
+  {
+    allowedRoles: ["super_admin", "librarian"],
   }
 );

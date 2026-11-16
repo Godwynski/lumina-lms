@@ -7,7 +7,7 @@ import { connection } from "next/server";
 import * as XLSX from "xlsx";
 import { withAuthApi } from "@/lib/api-utils";
 
-export const GET = withAuthApi(async (request, { supabase }) => {
+export const GET = withAuthApi(async (request, { supabase, role }) => {
   await connection();
   try {
     const searchParams = new URL(request.url).searchParams;
@@ -34,13 +34,18 @@ export const GET = withAuthApi(async (request, { supabase }) => {
     if (adminIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name, email, role")
         .in("id", adminIds);
       
       profiles?.forEach(p => profilesMap.set(p.id, p));
     }
 
-    const logsWithProfiles = (logs || []).map(log => ({
+    const visibleLogs =
+      role === "librarian"
+        ? (logs || []).filter(log => !log.admin_id || profilesMap.get(log.admin_id)?.role !== "super_admin")
+        : (logs || []);
+
+    const logsWithProfiles = visibleLogs.map(log => ({
       ...log,
       profiles: profilesMap.get(log.admin_id) || null
     }));
@@ -85,7 +90,7 @@ export const GET = withAuthApi(async (request, { supabase }) => {
       book_isbn: "ISBN",
       copy_barcode: "Copy barcode",
       student_name: "Student",
-      student_number: "Student ID",
+      student_number: "Patron ID",
       created_at: "Timestamp",
       full_name: "Admin Name",
       email: "Email",
@@ -169,4 +174,4 @@ export const GET = withAuthApi(async (request, { supabase }) => {
       { status: 500 }
     );
   }
-}, { allowedRoles: ["super_admin"] });
+}, { allowedRoles: ["super_admin", "librarian"] });

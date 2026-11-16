@@ -12,6 +12,7 @@ interface PersonalInfoFormProps {
     student_id: string | null;
     email: string | null;
     status: string;
+    patron_type?: string | null;
   };
   addressValue: string;
   phoneValue: string;
@@ -59,7 +60,7 @@ export function PersonalInfoForm({
         {/* Info: ID / Email / Status row */}
         <div className="grid gap-5 sm:grid-cols-3">
           <div className="space-y-2">
-            <InfoLabel tooltip="Official identification number verified by the school administration.">Student ID</InfoLabel>
+            <InfoLabel tooltip="Official identification number verified by the school administration.">Patron ID</InfoLabel>
             <div className="min-h-11 py-2.5 rounded-xl bg-primary/5 border border-primary/10 px-4 flex items-center text-sm font-mono font-bold text-primary shadow-sm overflow-hidden">
               <span className="w-full [overflow-wrap:anywhere]">{initialProfile.student_id || "NOT-ASSIGNED"}</span>
             </div>
@@ -101,7 +102,7 @@ export function PersonalInfoForm({
         </div>
 
         {/* Info: Academic Program (students only) */}
-        {role === 'student' && (
+        {role === 'patron' && initialProfile.patron_type !== 'faculty' && (
           <div className="space-y-2">
             <InfoLabel tooltip="The college degree program or course currently recorded on your student profile.">Academic Program</InfoLabel>
             <div className="min-h-11 py-2.5 rounded-xl bg-muted/20 border border-border/40 px-4 flex items-center text-sm font-bold text-foreground/80 shadow-sm overflow-hidden">

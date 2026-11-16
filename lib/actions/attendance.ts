@@ -6,6 +6,8 @@ import { createSafeAction } from "./action-utils";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { sendNotification } from "@/lib/notifications";
+import { isValidPolicyValue } from "./policy-constants";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface AttendanceRecord {
   id: string;
@@ -19,20 +21,82 @@ export interface AttendanceRecord {
   };
 }
 
+export type AttendanceActionStatus = "IN" | "OUT" | "ALREADY_IN" | "NOT_CHECKED_IN";
+export type AttendanceActionOutcome =
+  | "CHECKED_IN"
+  | "UPDATED"
+  | "ALREADY_IN"
+  | "CHECKED_OUT"
+  | "NOT_CHECKED_IN";
+
+export interface AttendanceActionResult {
+  status: AttendanceActionStatus;
+  outcome: AttendanceActionOutcome;
+  recordedAt: string | null;
+  message: string;
+  description: string;
+  userName: string;
+  userId: string;
+}
+
+const RECENT_CHECKIN_WINDOW_MS = 60_000;
+const DEFAULT_CLOSING_TIME = "17:00";
+const STALE_CHECKOUT_NOTES = "No Log Out";
+
+function getManilaDateString(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+async function getLibraryClosingTime(supabase: SupabaseClient): Promise<string> {
+  const { data, error } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", "library_closing_time")
+    .maybeSingle();
+
+  const raw = typeof data?.value === "string" ? data.value.trim() : "";
+  if (!error && raw && isValidPolicyValue("library_closing_time", raw)) {
+    return raw;
+  }
+  return DEFAULT_CLOSING_TIME;
+}
+
 /**
- * Toggles attendance for a user based on their library card number.
- * If there's an open record (check_out_at is null), it logs them out.
- * Otherwise, it creates a new check-in record.
+ * Determines whether an open attendance session is stale (from an earlier Manila day
+ * or past that day's closing time) and computes GREATEST(check_in_at, closing_time).
  */
-export const toggleAttendanceByCard = createSafeAction(
-  z.object({ 
+function computeStaleAttendanceState(
+  checkInIso: string,
+  nowMs: number,
+  closingTimeHHMM: string
+): { isStale: boolean; staleCheckOutAt: string } {
+  const checkInDate = new Date(checkInIso);
+  const checkInManilaDate = getManilaDateString(checkInDate);
+  const nowManilaDate = getManilaDateString(new Date(nowMs));
+  const closingAtMs = new Date(`${checkInManilaDate}T${closingTimeHHMM}:00+08:00`).getTime();
+  const staleCheckOutAt = new Date(Math.max(checkInDate.getTime(), closingAtMs)).toISOString();
+  const isStale = checkInManilaDate < nowManilaDate || nowMs > closingAtMs;
+  return { isStale, staleCheckOutAt };
+}
+
+/**
+ * Records an explicit check-in or check-out for a patron by library card or student ID.
+ * Identical rules apply for QR camera scans and manual entries.
+ */
+export const recordAttendanceByCard = createSafeAction(
+  z.object({
     cardNumber: z.string(),
+    mode: z.enum(["in", "out"]),
     isManual: z.boolean().default(false),
-    confirmed: z.boolean().default(false)
   }),
-  async ({ cardNumber, isManual, confirmed }, { supabase }) => {
+  async ({ cardNumber, mode, isManual }, { supabase }): Promise<AttendanceActionResult> => {
     const cleanCardNumber = cardNumber.trim();
-    
+
     // 1. Find user by card number
     const { data: card, error: cardError } = await supabase
       .from("library_cards")
@@ -56,7 +120,7 @@ export const toggleAttendanceByCard = createSafeAction(
         .select("id, full_name, status")
         .eq("student_id", cleanCardNumber)
         .maybeSingle();
-      
+
       if (profileError) {
         logger.error("Attendance", "Failed to query profile by student ID", { studentId: cleanCardNumber }, profileError);
         throw new Error("Database error while checking student ID.");
@@ -68,16 +132,16 @@ export const toggleAttendanceByCard = createSafeAction(
           : "Invalid or inactive library card. Please ensure the card is activated in the system.";
         throw new Error(errorMessage);
       }
-      
+
       userId = profileData.id;
       profile = profileData;
     } else {
       userId = card.user_id;
       profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
     }
-    
-    if (profile?.status?.toUpperCase() !== 'ACTIVE') {
-      throw new Error(`User account is ${profile?.status?.toLowerCase() || 'inactive'}. Attendance restricted.`);
+
+    if (profile?.status?.toUpperCase() !== "ACTIVE") {
+      throw new Error(`User account is ${profile?.status?.toLowerCase() || "inactive"}. Attendance restricted.`);
     }
 
     const fullName = profile?.full_name || "User";
@@ -97,109 +161,177 @@ export const toggleAttendanceByCard = createSafeAction(
       throw new Error("Database error while checking active sessions.");
     }
 
-    // The gate camera reads the same card several times in a row; don't time out a fresh check-in.
-    if (!isManual && !confirmed && activeRecord && Date.now() - new Date(activeRecord.check_in_at).getTime() < 60_000) {
-      return {
-        status: "IN",
-        recordedAt: activeRecord.check_in_at,
-        message: `Already timed in, ${fullName}.`,
-        description: "Already timed in.",
-        userName: fullName
-      };
-    }
+    const nowMs = Date.now();
+    const recordedAt = new Date(nowMs).toISOString();
+    const staleState = activeRecord
+      ? computeStaleAttendanceState(
+          activeRecord.check_in_at,
+          nowMs,
+          await getLibraryClosingTime(supabase)
+        )
+      : null;
 
-    const recordedAt = new Date().toISOString();
-    if (activeRecord) {
-      // LOG OUT
-      const { error: outError } = await supabase
-        .from("attendance")
-        .update({ check_out_at: recordedAt })
-        .eq("id", activeRecord.id);
-
-      if (outError) throw new Error("Failed to register Time Out.");
-
-      // Notify the user
-      await sendNotification({
-        userId,
-        title: "Attendance: Time Out",
-        content: `You have successfully recorded your Time Out at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })}.`,
-        type: "SYSTEM",
-        priority: "medium"
-      });
-
-      revalidatePath("/attendance", "page");
-      revalidatePath("/dashboard", "page");
-      
-      return { 
-        status: "OUT",
-        recordedAt,
-        message: `Goodbye, ${fullName}!`,
-        description: "Timed out successfully.",
-        userName: fullName
-      };
-    } else {
-      // A camera scan right after a Time Out is the same card still in view,
-      // not a new visit. Don't flip the patron straight back IN.
-      if (!isManual && !confirmed) {
-        const { data: lastOut } = await supabase
+    if (mode === "in") {
+      if (activeRecord && staleState?.isStale) {
+        const { error: closeStaleError } = await supabase
           .from("attendance")
-          .select("check_out_at")
-          .eq("user_id", userId)
-          .not("check_out_at", "is", null)
-          .order("check_out_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .update({
+            check_out_at: staleState.staleCheckOutAt,
+            notes: STALE_CHECKOUT_NOTES,
+          })
+          .eq("id", activeRecord.id);
 
-        if (lastOut?.check_out_at && Date.now() - new Date(lastOut.check_out_at).getTime() < 60_000) {
+        if (closeStaleError) {
+          throw new Error("Failed to close previous attendance session.");
+        }
+      } else if (activeRecord) {
+        const ageMs = nowMs - new Date(activeRecord.check_in_at).getTime();
+        if (ageMs < RECENT_CHECKIN_WINDOW_MS) {
+          const { error: updateError } = await supabase
+            .from("attendance")
+            .update({ check_in_at: recordedAt })
+            .eq("id", activeRecord.id);
+
+          if (updateError) throw new Error("Failed to update Time In.");
+
+          revalidatePath("/attendance", "page");
+          revalidatePath("/dashboard", "page");
+
           return {
-            status: "OUT",
-            recordedAt: lastOut.check_out_at,
-            message: `Already timed out, ${fullName}.`,
-            description: "Already timed out.",
-            userName: fullName
+            status: "IN",
+            outcome: "UPDATED",
+            recordedAt,
+            message: `Check-in updated for ${fullName}.`,
+            description: "Check-in time updated.",
+            userName: fullName,
+            userId,
           };
         }
+
+        return {
+          status: "ALREADY_IN",
+          outcome: "ALREADY_IN",
+          recordedAt: activeRecord.check_in_at,
+          message: "You are already checked in",
+          description: `${fullName} is already checked in.`,
+          userName: fullName,
+          userId,
+        };
       }
 
-      // LOG IN
       const { error: inError } = await supabase
         .from("attendance")
         .insert({
           user_id: userId,
-          check_in_at: recordedAt
+          check_in_at: recordedAt,
         });
 
       if (inError) {
-        if (inError.code === '23505' || inError.message?.includes('duplicate key') || inError.message?.includes('attendance_user_active_idx')) {
+        if (inError.code === "23505" || inError.message?.includes("duplicate key") || inError.message?.includes("attendance_user_active_idx")) {
           throw new Error("An active attendance session is already in progress for this card.");
         }
         throw new Error("Failed to register Time In.");
       }
 
-      // Notify the user
       await sendNotification({
         userId,
         title: "Attendance: Time In",
-        content: `You have successfully recorded your Time In at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })}.`,
+        content: `You have successfully recorded your Time In at ${new Date(nowMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Manila" })}.`,
         type: "SYSTEM",
-        priority: "medium"
+        priority: "medium",
       });
 
       revalidatePath("/attendance", "page");
       revalidatePath("/dashboard", "page");
-      
-      return { 
+
+      return {
         status: "IN",
+        outcome: "CHECKED_IN",
         recordedAt,
         message: `Welcome, ${fullName}!`,
         description: "Timed in successfully.",
-        userName: fullName
+        userName: fullName,
+        userId,
       };
     }
+
+    // mode === "out"
+    if (!activeRecord) {
+      return {
+        status: "NOT_CHECKED_IN",
+        outcome: "NOT_CHECKED_IN",
+        recordedAt: null,
+        message: `${fullName} is not currently checked in.`,
+        description: "No active check-in session found.",
+        userName: fullName,
+        userId,
+      };
+    }
+
+    if (staleState?.isStale) {
+      const { error: outError } = await supabase
+        .from("attendance")
+        .update({
+          check_out_at: staleState.staleCheckOutAt,
+          notes: STALE_CHECKOUT_NOTES,
+        })
+        .eq("id", activeRecord.id);
+
+      if (outError) throw new Error("Failed to register Time Out.");
+
+      await sendNotification({
+        userId,
+        title: "Attendance: Time Out",
+        content: `Your previous attendance session was closed as No Log Out at ${new Date(staleState.staleCheckOutAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Manila" })}.`,
+        type: "SYSTEM",
+        priority: "medium",
+      });
+
+      revalidatePath("/attendance", "page");
+      revalidatePath("/dashboard", "page");
+
+      return {
+        status: "OUT",
+        outcome: "CHECKED_OUT",
+        recordedAt: staleState.staleCheckOutAt,
+        message: `Previous check-in for ${fullName} closed as No Log Out.`,
+        description: "Closed previous session as No Log Out.",
+        userName: fullName,
+        userId,
+      };
+    }
+
+    const { error: outError } = await supabase
+      .from("attendance")
+      .update({ check_out_at: recordedAt })
+      .eq("id", activeRecord.id);
+
+    if (outError) throw new Error("Failed to register Time Out.");
+
+    await sendNotification({
+      userId,
+      title: "Attendance: Time Out",
+      content: `You have successfully recorded your Time Out at ${new Date(nowMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Manila" })}.`,
+      type: "SYSTEM",
+      priority: "medium",
+    });
+
+    revalidatePath("/attendance", "page");
+    revalidatePath("/dashboard", "page");
+
+    return {
+      status: "OUT",
+      outcome: "CHECKED_OUT",
+      recordedAt,
+      message: `Goodbye, ${fullName}!`,
+      description: "Timed out successfully.",
+      userName: fullName,
+      userId,
+    };
   },
-  { 
-    allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
-    allowedPermissions: ['manage_attendance']
+  {
+    allowedRoles: ["super_admin", "librarian", "library_staff"],
+    allowedPermissions: ["manage_attendance"],
   }
 );
 
@@ -216,7 +348,7 @@ export async function getAttendanceHistory(
   
   const isStaff = me.role === 'super_admin' || 
                   me.role === 'librarian' || 
-                  (me.role === 'student_assistant' && 
+                  (me.role === 'library_staff' && 
                    me.profile?.status?.toUpperCase() === 'ACTIVE' &&
                    me.profile.permissions?.manage_attendance);
 

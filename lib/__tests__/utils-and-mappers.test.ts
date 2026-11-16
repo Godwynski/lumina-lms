@@ -136,6 +136,7 @@ describe('lib/utils/mappers', () => {
       email: 'maria.clara@alabang.sti.edu.ph',
       avatarUrl: 'https://cdn.example.com/avatar.webp',
       role: 'librarian',
+      patron_type: 'student',
       status: 'ACTIVE',
       department: 'Library Services',
       joined: new Date('2025-08-10T00:00:00.000Z').toLocaleDateString('en-US', {
@@ -165,7 +166,7 @@ describe('lib/utils/mappers', () => {
     expect(user.id).toBe('');
     expect(user.name).toBe('Juan  Dela Cruz');
     expect(user.avatarUrl).toBeNull();
-    expect(user.role).toBe('student');
+    expect(user.role).toBe('patron');
     expect(user.status).toBe('ACTIVE');
     expect(user.department).toBe('General');
     expect(user.joined).toBe('Unknown');

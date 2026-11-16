@@ -5,7 +5,7 @@ import HistoryContent from '@/app/(authenticated)/history/HistoryContent';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }), useSearchParams: () => new URLSearchParams('view=logs') }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ channel: () => ({ on() { return this; }, subscribe() { return this; } }), removeChannel: vi.fn() }) }));
 vi.mock('@/components/catalog/BookDetailModal', () => ({ BookDetailModal: (p: { bookId: string; variant: string }) => <div data-testid="book-modal">{p.bookId}:{p.variant}</div> }));
-it.each(['librarian', 'student_assistant'] as const)('opens details with borrower links appropriate for %s', async (role) => {
+it.each(['librarian', 'library_staff'] as const)('opens details with borrower links appropriate for %s', async (role) => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   const el = document.body.appendChild(document.createElement('div'));
   const root = createRoot(el);

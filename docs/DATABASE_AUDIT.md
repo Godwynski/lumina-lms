@@ -136,7 +136,7 @@ _Rewritten 2026-11-04 to match `supabase/schema_clean_install.sql` after audit p
 
 RLS is enabled on all 14 public tables. Two helper functions carry most policies:
 
-- `public.is_staff()`: the caller is an ACTIVE `super_admin`, `librarian` or `student_assistant`.
+- `public.is_staff()`: the caller is an ACTIVE `super_admin`, `librarian` or `library_staff`.
 - `public.is_manager()`: the caller is an ACTIVE `super_admin` or `librarian`.
 
 The server also uses the service-role key (which bypasses RLS) for a few admin jobs: invites, cron maintenance, `release_copy`, the QR checkout/return functions and annual reset. Those paths check the caller's role in the app first (`withAuthApi({ allowedRoles })` or the server action's own check), so their safety depends on that code, not on RLS.

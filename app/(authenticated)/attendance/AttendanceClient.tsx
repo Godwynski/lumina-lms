@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
-import { toggleAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
+import { recordAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -16,7 +16,10 @@ import {
   RefreshCcw, 
   RefreshCw,
   QrCode,
-  Search
+  Search,
+  AlertTriangle,
+  Check,
+  Download
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -38,6 +41,27 @@ import {
 import type { AttendanceRecord } from "@/lib/actions/attendance";
 
 const ALL_HISTORY_STEP = 300;
+
+export function buildAttendanceExportRows(records: AttendanceRecord[]) {
+  return records.map((record) => {
+    const isNoLogOut = record.notes === "No Log Out";
+    return {
+      Patron: record.profiles?.full_name || "Patron",
+      "Patron ID": record.profiles?.student_id || "—",
+      Date: format(new Date(record.check_in_at), "yyyy-MM-dd"),
+      "Check In": format(new Date(record.check_in_at), "hh:mm a"),
+      "Check Out": record.check_out_at
+        ? format(new Date(record.check_out_at), "hh:mm a")
+        : "Still in library",
+      Status: isNoLogOut
+        ? "No Log Out"
+        : record.check_out_at
+          ? "Completed"
+          : "Active",
+      Notes: record.notes || "",
+    };
+  });
+}
 
 export function AttendanceClient({ 
   systemTodayPromise,
@@ -72,6 +96,16 @@ export function AttendanceClient({
   const [isSearchingAll, setIsSearchingAll] = useState(false);
   const searchRequestRef = useRef(0);
   const [cardNumber, setCardNumber] = useState("");
+  const [mode, setMode] = useState<"in" | "out">("in");
+  const [blockedCheckIns, setBlockedCheckIns] = useState<
+    Array<{ userId: string; userName: string; identifiers: string[] }>
+  >([]);
+  const [alreadyInWarning, setAlreadyInWarning] = useState<{
+    userId: string;
+    userName: string;
+    message: string;
+  } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
@@ -89,57 +123,152 @@ export function AttendanceClient({
   const [personalPage, setPersonalPage] = useState(1);
   const PAGE_SIZE = 10;
 
+  const isIdentifierBlockedForCheckIn = useCallback(
+    (raw: string) => {
+      const norm = raw.trim().toLowerCase();
+      if (!norm) return false;
+      return blockedCheckIns.some((entry) => entry.identifiers.includes(norm));
+    },
+    [blockedCheckIns]
+  );
+
+  const isManualCheckInBlocked = mode === "in" && isIdentifierBlockedForCheckIn(cardNumber);
+  const isPendingScanCheckInBlocked =
+    mode === "in" && pendingScan !== null && isIdentifierBlockedForCheckIn(pendingScan);
+
+  // Clear ALREADY_IN block automatically if today's logs show the patron checked out
+  useEffect(() => {
+    if (blockedCheckIns.length === 0 || systemTodayRecords.length === 0) return;
+    const checkedOutUserIds = new Set<string>();
+    for (const entry of blockedCheckIns) {
+      const hasOpen = systemTodayRecords.some(
+        (r) => r.user_id === entry.userId && r.check_out_at === null
+      );
+      const hasClosed = systemTodayRecords.some(
+        (r) => r.user_id === entry.userId && r.check_out_at !== null
+      );
+      if (!hasOpen && hasClosed) {
+        checkedOutUserIds.add(entry.userId);
+      }
+    }
+    if (checkedOutUserIds.size > 0) {
+      setBlockedCheckIns((prev) => prev.filter((e) => !checkedOutUserIds.has(e.userId)));
+      setAlreadyInWarning((prev) => (prev && checkedOutUserIds.has(prev.userId) ? null : prev));
+    }
+  }, [systemTodayRecords, blockedCheckIns]);
+
   // Process a card scan (manual entry or camera detection)
-  const processScan = useCallback(async (scannedValue: string, isManual = false, confirmed = false) => {
+  const processScan = useCallback(async (scannedValue: string, isManual = false, activeMode: "in" | "out" = mode) => {
     const session = scannerSession.current;
     const clean = scannedValue.trim();
     if (!clean || processingRef.current) return;
+    if (activeMode === "in" && isIdentifierBlockedForCheckIn(clean)) return;
+
     processingRef.current = true;
-    pendingScanRef.current = null;
-    setPendingScan(null);
+    const wasPending = pendingScanRef.current === clean;
+    if (!isManual) {
+      pendingScanRef.current = null;
+      setPendingScan(null);
+    }
 
     setIsProcessing(true);
     try {
-      const result = await toggleAttendanceByCard({ 
+      const result = await recordAttendanceByCard({
         cardNumber: clean,
+        mode: activeMode,
         isManual,
-        confirmed
       });
 
       if (result.success) {
-        playScanCue('success');
-        if (!isManual && session === scannerSession.current) {
-          const time = new Date(result.data.recordedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
-          setLastResult(`${result.data.userName} · ${result.data.description.replace(/ successfully|\.$/g, '')} · ${time}`);
+        const { status, outcome, message, description, userName, userId: targetUserId, recordedAt } = result.data;
+        const normClean = clean.toLowerCase();
+
+        if (status === "ALREADY_IN") {
+          playScanCue("error");
+          const matchingRecord = systemTodayRecords.find((r) => r.user_id === targetUserId);
+          const extraId = matchingRecord?.profiles?.student_id?.trim().toLowerCase();
+          const newIdentifiers = Array.from(new Set([normClean, ...(extraId ? [extraId] : [])]));
+
+          setBlockedCheckIns((prev) => {
+            const existing = prev.find((e) => e.userId === targetUserId);
+            if (existing) {
+              return prev.map((e) =>
+                e.userId === targetUserId
+                  ? { ...e, identifiers: Array.from(new Set([...e.identifiers, ...newIdentifiers])) }
+                  : e
+              );
+            }
+            return [...prev, { userId: targetUserId, userName, identifiers: newIdentifiers }];
+          });
+          setAlreadyInWarning({ userId: targetUserId, userName, message });
+          if (!isManual && wasPending) {
+            pendingScanRef.current = clean;
+            setPendingScan(clean);
+          }
+          if (!isManual && session === scannerSession.current) {
+            setLastResult(message);
+          }
+          toast.error(message, { id: "attendance-toast-error", description });
+          return;
         }
-        if (isManual) toast.success("Transaction recorded", {
-          id: "attendance-toast",
-          description: result.data.message,
-          icon: result.data.status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />
-        });
-        if (isManual) setCardNumber("");
+
+        if (status === "NOT_CHECKED_IN") {
+          playScanCue("error");
+          if (!isManual && session === scannerSession.current) {
+            setLastResult(message);
+          }
+          toast.error(message, { id: "attendance-toast-error", description });
+          return;
+        }
+
+        playScanCue("success");
+        if (status === "OUT") {
+          setBlockedCheckIns((prev) =>
+            prev.filter((e) => e.userId !== targetUserId && !e.identifiers.includes(normClean))
+          );
+          setAlreadyInWarning((prev) => (prev && prev.userId === targetUserId ? null : prev));
+        } else if (status === "IN") {
+          setAlreadyInWarning((prev) => (prev && prev.userId === targetUserId ? null : prev));
+        }
+
+        if (!isManual && session === scannerSession.current && recordedAt) {
+          const time = new Date(recordedAt).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: "Asia/Manila",
+          });
+          setLastResult(`${userName} · ${description.replace(/ successfully|\.$/g, "")} · ${time}`);
+        }
+        if (isManual) {
+          toast.success(outcome === "UPDATED" ? "Check-in updated" : "Transaction recorded", {
+            id: "attendance-toast",
+            description: message,
+            icon: status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />,
+          });
+          setCardNumber("");
+        }
 
         // Instantly refresh records so local state updates immediately without waiting for websocket
         const [freshToday, freshAll] = await Promise.all([
-          getAttendanceHistory(undefined, { range: 'today' }),
-          getAttendanceHistory(undefined, { range: 'all', limit: allLimitRef.current })
+          getAttendanceHistory(undefined, { range: "today" }),
+          getAttendanceHistory(undefined, { range: "all", limit: allLimitRef.current }),
         ]);
         setSystemTodayRecords(freshToday);
         setSystemAllRecords(freshAll);
       } else {
-        playScanCue('error');
+        playScanCue("error");
         if (!isManual && session === scannerSession.current) setLastResult(result.error);
         toast.error(result.error, { id: "attendance-toast-error" });
       }
     } catch {
-      playScanCue('error');
+      playScanCue("error");
       if (!isManual && session === scannerSession.current) setLastResult("Could not verify this scan. Check the attendance log before retrying.");
       toast.error("Failed to process attendance transaction.", { id: "attendance-toast-err" });
     } finally {
       processingRef.current = false;
       setIsProcessing(false);
     }
-  }, [playScanCue]);
+  }, [mode, isIdentifierBlockedForCheckIn, playScanCue, systemTodayRecords]);
 
   // Unified camera scanner using useScanner
   const {
@@ -165,8 +294,8 @@ export function AttendanceClient({
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cardNumber.trim()) return;
-    void processScan(cardNumber.trim(), true);
+    if (!cardNumber.trim() || isManualCheckInBlocked) return;
+    void processScan(cardNumber.trim(), true, mode);
   };
 
   // Realtime subscription to refresh attendance logs across tabs automatically
@@ -343,6 +472,24 @@ export function AttendanceClient({
     return personalRecords.slice(start, start + PAGE_SIZE);
   }, [personalRecords, activePersonalPage]);
 
+  const handleExport = async () => {
+    if (filteredStaffRecords.length === 0 || isExporting) return;
+    setIsExporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const rows = buildAttendanceExportRows(filteredStaffRecords);
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Logs");
+      XLSX.writeFile(workbook, "lumina_attendance_logs.xlsx");
+      toast.success(`Exported ${rows.length} attendance record(s).`);
+    } catch {
+      toast.error("Failed to export attendance logs.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const scannerControls = (
     <div className="flex flex-col gap-3 w-full">
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full">
@@ -411,11 +558,70 @@ export function AttendanceClient({
               className="h-8 pl-8 pr-2.5 text-xs bg-background/50 rounded-lg border-border/20"
             />
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 border-border/30 hover:bg-muted/40"
+            disabled={isExporting || filteredStaffRecords.length === 0}
+            onClick={() => void handleExport()}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{isExporting ? "Exporting..." : "Export (.xlsx)"}</span>
+          </Button>
         </div>
 
-        {/* Right: Manual Input Form + Scanner Button */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
+        {/* Right: Mode Selector + Manual Input Form + Scanner Button */}
+        <div className="flex items-end gap-2 flex-wrap">
+          <div
+            role="group"
+            aria-label="Attendance mode"
+            className="inline-flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/20"
+          >
+            <button
+              type="button"
+              onClick={() => setMode("in")}
+              aria-pressed={mode === "in"}
+              className={cn(
+                "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+                mode === "in"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
+                  : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              <LogIn className="w-3.5 h-3.5 shrink-0" />
+              <span>Check-In</span>
+              {mode === "in" && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
+                  <Check className="w-2.5 h-2.5" aria-hidden="true" />
+                  Active
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("out")}
+              aria-pressed={mode === "out"}
+              className={cn(
+                "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+                mode === "out"
+                  ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
+                  : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              <span>Check-Out</span>
+              {mode === "out" && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
+                  <Check className="w-2.5 h-2.5" aria-hidden="true" />
+                  Active
+                </span>
+              )}
+            </button>
+          </div>
+
+          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-end gap-1.5 flex-1 sm:flex-none">
             <div className="relative flex-1 sm:w-44">
               <label htmlFor="attendance-card-id" className="block text-xs font-medium">Card ID or student number</label>
               <div className="relative">
@@ -431,13 +637,18 @@ export function AttendanceClient({
                 />
               </div>
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               size="sm"
-              disabled={isProcessing || !cardNumber.trim()}
-              className="h-8 px-3 font-semibold text-xs rounded-lg shrink-0"
+              disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
+              className={cn(
+                "h-8 px-3 font-semibold text-xs rounded-lg shrink-0",
+                mode === "in"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-orange-600 hover:bg-orange-700 text-white"
+              )}
             >
-              {isProcessing ? "Recording…" : "Log"}
+              {isProcessing ? "Recording…" : mode === "in" ? "Check-In" : "Check-Out"}
             </Button>
           </form>
 
@@ -454,6 +665,31 @@ export function AttendanceClient({
           </DialogTrigger>
         </div>
       </div>
+
+      {alreadyInWarning && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+            <span>
+              <strong>{alreadyInWarning.message}</strong> — {alreadyInWarning.userName} must check out before checking in again.
+            </span>
+          </div>
+          {mode === "in" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-amber-500/40 hover:bg-amber-500/20"
+              onClick={() => setMode("out")}
+            >
+              Switch to Check-Out
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -491,9 +727,54 @@ export function AttendanceClient({
                   Gate Attendance Scanner
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Read a card, then click Register attendance to record Time In or Time Out.
+                  Active mode: {mode === "in" ? "Check-In" : "Check-Out"}. Read a card, then confirm below.
                 </DialogDescription>
               </DialogHeader>
+
+              <div
+                role="group"
+                aria-label="Scanner attendance mode"
+                className="inline-flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/20"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMode("in")}
+                  aria-pressed={mode === "in"}
+                  className={cn(
+                    "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+                    mode === "in"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
+                      : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
+                  )}
+                >
+                  <LogIn className="w-3.5 h-3.5 shrink-0" />
+                  <span>Check-In</span>
+                  {mode === "in" && (
+                    <span className="text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
+                      Active
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("out")}
+                  aria-pressed={mode === "out"}
+                  className={cn(
+                    "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+                    mode === "out"
+                      ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
+                      : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
+                  )}
+                >
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
+                  <span>Check-Out</span>
+                  {mode === "out" && (
+                    <span className="text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
+                      Active
+                    </span>
+                  )}
+                </button>
+              </div>
 
               <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/15 bg-muted/20 shadow-inner my-2">
                 <div 
@@ -586,9 +867,26 @@ export function AttendanceClient({
 
               {pendingScan && <div className="w-full space-y-3 rounded-xl border border-border p-3">
                 <p className="text-center text-sm">Card ready: <span className="font-mono break-all">{pendingScan}</span></p>
+                {isPendingScanCheckInBlocked && alreadyInWarning && (
+                  <p role="alert" className="text-center text-xs font-medium text-amber-700 dark:text-amber-300">
+                    {alreadyInWarning.message} — switch to Check-Out to log out.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" disabled={isProcessing} onClick={() => { pendingScanRef.current = null; setPendingScan(null); }}>Discard</Button>
-                  <Button type="button" className="flex-1" disabled={isProcessing} onClick={() => void processScan(pendingScan, false, true)}>Register attendance</Button>
+                  <Button
+                    type="button"
+                    className={cn(
+                      "flex-1",
+                      mode === "in"
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        : "bg-orange-600 hover:bg-orange-700 text-white"
+                    )}
+                    disabled={isProcessing || isPendingScanCheckInBlocked}
+                    onClick={() => void processScan(pendingScan, false, mode)}
+                  >
+                    {mode === "in" ? "Register Check-In" : "Register Check-Out"}
+                  </Button>
                 </div>
               </div>}
               <div role="status" aria-live="polite" className="text-center space-y-1">
@@ -729,13 +1027,14 @@ function AttendanceTable({
       },
       {
         header: "Check Out",
-        className: "w-[170px]",
+        className: "w-[210px]",
         cell: (record) => (
-          <div className="flex items-center gap-1.5 text-xs font-medium">
+          <div className="flex items-center gap-1.5 flex-wrap text-xs font-medium">
             {record.check_out_at ? (
               <>
                 <LogOut className="w-3.5 h-3.5 text-orange-500/80 shrink-0" />
                 <span>{format(new Date(record.check_out_at), "hh:mm a")}</span>
+                {record.notes === "No Log Out" && <NoLogOutBadge />}
               </>
             ) : (
               <StillInLibraryBadge />
@@ -799,10 +1098,13 @@ function AttendanceTable({
           </div>
           <div className="flex flex-col items-end gap-1.5">
             {record.check_out_at ? (
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
-                <LogOut className="w-2.5 h-2.5 text-orange-500" />
-                Out: {format(new Date(record.check_out_at), "hh:mm a")}
-              </div>
+              <>
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+                  <LogOut className="w-2.5 h-2.5 text-orange-500" />
+                  Out: {format(new Date(record.check_out_at), "hh:mm a")}
+                </div>
+                {record.notes === "No Log Out" && <NoLogOutBadge />}
+              </>
             ) : (
               <StillInLibraryBadge />
             )}
@@ -810,6 +1112,14 @@ function AttendanceTable({
         </div>
       )}
     />
+  );
+}
+
+function NoLogOutBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider text-[11px] bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
+      No Log Out
+    </span>
   );
 }
 

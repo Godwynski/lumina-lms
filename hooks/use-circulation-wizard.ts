@@ -7,7 +7,7 @@ import { resolveScan, checkoutBook, returnBook } from '@/lib/actions/circulation
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useScanFeedback } from './use-scan-feedback';
-import type { ActiveStudent } from '@/components/circulation/MemberPreview';
+import { hasBorrowingBlock, type ActiveStudent } from '@/components/circulation/MemberPreview';
 
 // The RPCs return ISO timestamps; the review step shows them as-is.
 const formatDate = (iso?: string) => (iso ? format(new Date(iso), 'MMM dd, yyyy') : undefined);
@@ -33,13 +33,13 @@ export interface PendingReturn {
 }
 
 export const CHECKOUT_STEPS = [
-  { id: 1, label: 'Student card' },
-  { id: 2, label: 'Book copy' },
+  { id: 1, label: 'Library card' },
+  { id: 2, label: 'Book / Item' },
   { id: 3, label: 'Review checkout' },
 ];
 
 export const RETURN_STEPS = [
-  { id: 1, label: 'Book copy' },
+  { id: 1, label: 'Book / Item' },
   { id: 2, label: 'Review return' },
 ];
 
@@ -54,6 +54,7 @@ export function useCirculationWizard() {
 
   const [mode, setMode] = useState<FlowMode>(initialMode);
   const [activeStudent, setActiveStudent] = useState<ActiveStudent | null>(null);
+  const [overrideReason, setOverrideReason] = useState<string | null>(null);
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
   const [pendingReturn, setPendingReturn] = useState<PendingReturn | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -66,28 +67,43 @@ export function useCirculationWizard() {
 
   const { playScanCue } = useScanFeedback();
 
+  const isBlocked = hasBorrowingBlock(activeStudent?.block);
+  const isBlockedPendingOverride = mode === 'checkout' && !!activeStudent && isBlocked && !overrideReason;
+
   const currentStep = useMemo(() => {
     if (isConfirmed) return 4;
     if (mode === 'checkout') {
       if (!activeStudent) return 1;
+      if (isBlockedPendingOverride) return 1;
       if (!pendingCheckout) return 2;
       return 3;
     } else {
       if (!pendingReturn) return 1;
       return 2;
     }
-  }, [mode, activeStudent, pendingCheckout, pendingReturn, isConfirmed]);
+  }, [mode, activeStudent, isBlockedPendingOverride, pendingCheckout, pendingReturn, isConfirmed]);
 
   const steps = mode === 'checkout' ? CHECKOUT_STEPS : RETURN_STEPS;
 
   const handleReset = useCallback(() => {
     generationRef.current++;
     setActiveStudent(null);
+    setOverrideReason(null);
     setPendingCheckout(null);
     setPendingReturn(null);
     setIsProcessing(false);
     setIsConfirmed(false);
     setReservationData({ ready: false });
+  }, []);
+
+  const applyOverride = useCallback((reason: string): boolean => {
+    const trimmed = reason.trim();
+    if (trimmed.length < 10 || trimmed.length > 300) {
+      toast.error('Override reason must be between 10 and 300 characters.');
+      return false;
+    }
+    setOverrideReason(trimmed);
+    return true;
   }, []);
 
   const switchMode = useCallback((newMode: FlowMode) => {
@@ -111,12 +127,19 @@ export function useCirculationWizard() {
           if (isStale()) return false;
           
           if (result.success && result.data.type === 'student') {
-            setActiveStudent(result.data.data as ActiveStudent);
-            toast.success('Student verified. Please scan the book copy.');
-            playScanCue('success');
+            const student = result.data.data as ActiveStudent;
+            setActiveStudent(student);
+            setOverrideReason(null);
+            if (hasBorrowingBlock(student.block)) {
+              toast.error('Patron has overdue books or unpaid fines. Borrowing is blocked.');
+              playScanCue('error');
+            } else {
+              toast.success('Patron verified. Please scan the item.');
+              playScanCue('success');
+            }
             return true;
           } else {
-            toast.error(result.error || 'Invalid student card.');
+            toast.error(result.error || 'Invalid library card.');
             playScanCue('error');
             return false;
           }
@@ -179,7 +202,11 @@ export function useCirculationWizard() {
     }
   };
 
-  const confirmAction = async (settleFine: boolean = false) => {
+  const confirmAction = async (
+    settleFine: boolean = false,
+    resolution?: 'PAID' | 'CONDONED',
+    remarks?: string
+  ) => {
     const gen = generationRef.current;
     const isStale = () => gen !== generationRef.current;
     setIsProcessing(true);
@@ -187,13 +214,24 @@ export function useCirculationWizard() {
 
     try {
       if (mode === 'checkout' && activeStudent && pendingCheckout) {
-        const result = await checkoutBook({
+        const checkoutPayload: {
+          studentCardQr: string;
+          bookQr: string;
+          idempotencyKey: string;
+          previewOnly: boolean;
+          isManual: boolean;
+          overrideReason?: string;
+        } = {
           studentCardQr: activeStudent.cardNumber,
           bookQr: pendingCheckout.bookQr,
           idempotencyKey: pendingCheckout.idempotencyKey,
           previewOnly: false,
           isManual: true,
-        });
+        };
+        if (overrideReason) {
+          checkoutPayload.overrideReason = overrideReason;
+        }
+        const result = await checkoutBook(checkoutPayload);
         if (isStale()) return;
 
         if (result.success) {
@@ -205,13 +243,28 @@ export function useCirculationWizard() {
           toast.error(result.error || 'Failed to confirm checkout.');
         }
       } else if (mode === 'return' && pendingReturn) {
-        const result = await returnBook({
+        const returnPayload: {
+          bookQr: string;
+          idempotencyKey: string;
+          previewOnly: boolean;
+          isManual: boolean;
+          settleFine: boolean;
+          resolution?: 'PAID' | 'CONDONED';
+          remarks?: string;
+        } = {
           bookQr: pendingReturn.bookQr,
           idempotencyKey: pendingReturn.idempotencyKey,
           previewOnly: false,
           isManual: true,
           settleFine,
-        });
+        };
+        if (settleFine && resolution !== undefined) {
+          returnPayload.resolution = resolution;
+          if (remarks !== undefined && remarks.trim() !== '') {
+            returnPayload.remarks = remarks.trim();
+          }
+        }
+        const result = await returnBook(returnPayload);
         if (isStale()) return;
 
         if (result.success) {
@@ -241,6 +294,9 @@ export function useCirculationWizard() {
     steps,
     currentStep,
     activeStudent,
+    overrideReason,
+    isBlocked,
+    isBlockedPendingOverride,
     pendingCheckout,
     pendingReturn,
     isProcessing,
@@ -249,6 +305,7 @@ export function useCirculationWizard() {
     reservationData,
     switchMode,
     handleReset,
+    applyOverride,
     processScan,
     confirmAction,
   };

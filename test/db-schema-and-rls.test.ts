@@ -24,6 +24,7 @@ const SUPABASE_PRELUDE = `
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email text UNIQUE,
     raw_user_meta_data jsonb DEFAULT '{}'::jsonb,
+    raw_app_meta_data jsonb DEFAULT '{}'::jsonb,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
   );
@@ -148,17 +149,19 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     if (db) await db.close();
   });
 
-  it('creates all 17 public tables, audit_log_records view, FK indexes, and required columns on borrowing_records', async () => {
+  it('creates all 19 public tables, audit_log_records view, FK indexes, and required columns on borrowing_records', async () => {
     const tablesRes = await db.query<{ tablename: string }>(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
     );
     const tables = tablesRes.rows.map((r) => r.tablename);
     expect(tables).toEqual([
       'attendance',
+      'attendance_archive',
       'audit_logs',
       'book_copies',
       'books',
       'borrowing_records',
+      'borrowing_records_archive',
       'catalog_import_items',
       'catalog_import_jobs',
       'categories',
@@ -202,6 +205,9 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       numeric_scale: 2,
     });
     expect(cols.get('fine_settled_at')?.data_type).toBe('timestamp with time zone');
+    expect(cols.get('fine_resolution')?.data_type).toBe('text');
+    expect(cols.get('fine_remarks')?.data_type).toBe('text');
+    expect(cols.get('fine_settled_by')?.data_type).toBe('uuid');
     expect(cols.has('reminder_sent')).toBe(true);
     expect(cols.has('overdue_notified')).toBe(true);
     expect(cols.has('processed_by')).toBe(true);
@@ -219,7 +225,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
        ORDER BY t.typname`
     );
     const enums = new Map(enumRes.rows.map((r) => [r.typname, r.labels]));
-    expect(enums.get('user_role')).toEqual(['super_admin', 'librarian', 'student', 'student_assistant']);
+    expect(enums.get('user_role')).toEqual(['super_admin', 'librarian', 'patron', 'library_staff']);
     expect(enums.get('BorrowStatus')).toEqual(['ACTIVE', 'RETURNED', 'OVERDUE', 'LOST']);
     expect(enums.get('ReservationStatus')).toEqual(['ACTIVE', 'READY', 'FULFILLED', 'CANCELLED', 'EXPIRED']);
   });
@@ -234,6 +240,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     expect(settings.get('loan_period_days')).toMatchObject({ value: '14', data_type: 'number' });
     expect(settings.get('hold_expiry_days')).toMatchObject({ value: '3', data_type: 'number' });
     expect(settings.get('overdue_fine_per_day')).toMatchObject({ value: '5', data_type: 'number' });
+    expect(settings.get('library_closing_time')).toMatchObject({ value: '17:00', data_type: 'string' });
 
     for (const row of res.rows) {
       expect(isValidPolicyValue(row.key, row.value)).toBe(true);
@@ -250,6 +257,12 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     expect(isValidPolicyValue('overdue_fine_per_day', '0')).toBe(true);
     expect(isValidPolicyValue('overdue_fine_per_day', '500')).toBe(true);
     expect(isValidPolicyValue('overdue_fine_per_day', '501')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '00:00')).toBe(true);
+    expect(isValidPolicyValue('library_closing_time', '23:59')).toBe(true);
+    expect(isValidPolicyValue('library_closing_time', '24:00')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '17:60')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '5:00')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '5 PM')).toBe(false);
   });
 
   it('enforces table check constraints, unique indexes, and foreign key restrictions', async () => {
@@ -394,7 +407,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       [secondId]
     );
     expect(secondProfile.rows[0]).toEqual({
-      role: 'student',
+      role: 'patron',
       status: 'PENDING',
       student_id: 'STU-202401',
     });
@@ -416,10 +429,32 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       [demoId]
     );
     expect(demoProfile.rows[0]).toEqual({
-      role: 'student',
+      role: 'patron',
       status: 'PENDING',
       student_id: null,
     });
+
+    // 5. Sign-up + profile library card trigger provisions a library_cards row for every role (firstId covers super_admin), and patron_type rejects invalid values
+    const adminCard = await db.query<{ card_number: string }>(
+      `SELECT card_number FROM public.library_cards WHERE user_id = $1`,
+      [firstId]
+    );
+    expect(adminCard.rows).toHaveLength(1);
+    for (const [idx, roleName] of (['librarian', 'library_staff', 'patron'] as const).entries()) {
+      const email = `wp4card${idx + 1}.2026${idx}@alabang.sti.edu.ph`;
+      const uid = await insertAuthUser(db, { email, fullName: `Role ${roleName}` });
+      await db.query(`UPDATE public.profiles SET role = $1::public.user_role, status = 'ACTIVE' WHERE id = $2`, [roleName, uid]);
+      const cardRes = await db.query<{ card_number: string }>(
+        `SELECT card_number FROM public.library_cards WHERE user_id = $1`,
+        [uid]
+      );
+      expect(cardRes.rows).toHaveLength(1);
+      expect(cardRes.rows[0].card_number).toMatch(/^LIB-\d{4}-[A-F0-9]{8}$/);
+    }
+
+    await expect(
+      db.query(`UPDATE public.profiles SET patron_type = 'guest' WHERE id = $1`, [demoId])
+    ).rejects.toThrow();
   });
 
   it('fn_sync_book_counts updates total_copies and available_copies on insert, status update, book move, and delete', async () => {
@@ -517,7 +552,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     pendingLibrarianId = await insertAuthUser(db, { email: 'pending.lib@alabang.sti.edu.ph', fullName: 'Pending Lib' });
 
     await db.query(`UPDATE public.profiles SET role = 'librarian', status = 'ACTIVE' WHERE id = $1`, [librarianId]);
-    await db.query(`UPDATE public.profiles SET role = 'student_assistant', status = 'ACTIVE' WHERE id = $1`, [saId]);
+    await db.query(`UPDATE public.profiles SET role = 'library_staff', status = 'ACTIVE' WHERE id = $1`, [saId]);
     await db.query(`UPDATE public.profiles SET status = 'ACTIVE' WHERE id IN ($1, $2)`, [student1Id, student2Id]);
     await db.query(`UPDATE public.profiles SET role = 'librarian', status = 'PENDING' WHERE id = $1`, [pendingLibrarianId]);
     await db.query(`UPDATE public.library_cards SET status = 'ACTIVE' WHERE user_id IN ($1, $2, $3, $4)`, [
@@ -618,7 +653,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     if (db) await db.close();
   });
 
-  it('evaluates is_staff() and is_manager() accurately across anon, student, pending staff, student_assistant, librarian, and super_admin', async () => {
+  it('evaluates is_staff() and is_manager() accurately across anon, student, pending staff, library_staff, librarian, and super_admin', async () => {
     await expectRoleFailure(db, 'anon', null, `SELECT public.is_staff()`);
     await expectRoleFailure(db, 'anon', null, `SELECT public.is_manager()`);
 
@@ -715,7 +750,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     );
     expect(s1UpdateOther.rows).toHaveLength(0);
 
-    // student_assistant sees all profiles, cannot update others
+    // library_staff sees all profiles, cannot update others
     const saViewAll = await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.profiles`));
     expect(saViewAll.rows).toHaveLength(6);
     const saUpdateOther = await withRole(db, 'authenticated', saId, (tx) =>
@@ -780,7 +815,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       expect(noUpdCat.rows).toHaveLength(0);
     }
 
-    // student_assistant sees inactive books too, but CANNOT insert/update/delete books, categories, or book_copies
+    // library_staff sees inactive books too, but CANNOT insert/update/delete books, categories, or book_copies
     const saBooks = await withRole(db, 'authenticated', saId, (tx) => tx.query<{ id: string }>(`SELECT id FROM public.books`));
     expect(saBooks.rows).toHaveLength(2);
 
@@ -872,6 +907,22 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       `INSERT INTO public.borrowing_records (user_id, book_copy_id, due_date) VALUES ($1, $2, NOW() + interval '1 day')`,
       [student1Id, copyAvailableId]
     );
+    // Student cannot update fine columns on their own borrowing record
+    const stuUpdFine = await withRole(db, 'authenticated', student1Id, (tx) =>
+      tx.query(
+        `UPDATE public.borrowing_records
+         SET fine_amount = 0, fine_settled_at = NOW(), fine_resolution = 'CONDONED', fine_remarks = 'Self waived', fine_settled_by = $2
+         WHERE id = $1
+         RETURNING id`,
+        [student1BorrowId, student1Id]
+      )
+    );
+    expect(stuUpdFine.rows).toHaveLength(0);
+    const fineCheck = await db.query<{ fine_settled_at: string | null; fine_resolution: string | null }>(
+      `SELECT fine_settled_at::text, fine_resolution FROM public.borrowing_records WHERE id = $1`,
+      [student1BorrowId]
+    );
+    expect(fineCheck.rows[0]).toEqual({ fine_settled_at: null, fine_resolution: null });
     await expectRoleFailure(
       db,
       'authenticated',
@@ -880,7 +931,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       [student1Id, inactiveBookId]
     );
 
-    // student_assistant sees all rows, CANNOT insert or update directly
+    // library_staff sees all rows, CANNOT insert or update directly
     const saBorrows = await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.borrowing_records`));
     expect(saBorrows.rows).toHaveLength(2);
     const saRes = await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.reservations`));
@@ -984,13 +1035,15 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       [student1Id]
     );
 
-    // audit_logs: anon, student, pending staff & student_assistant see 0 rows; librarian & super_admin see all; nobody in authenticated can insert directly; service_role can insert
+    // audit_logs & audit_log_records: anon, student, pending staff & library_staff see 0 rows;
+    // librarian sees non-super_admin & system (NULL actor) rows only; super_admin sees all; nobody in authenticated can insert directly; service_role can insert
     expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
     expect((await withRole(db, 'authenticated', student1Id, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
     expect((await withRole(db, 'authenticated', pendingLibrarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
     expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
     expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_log_records`))).rows).toHaveLength(0);
-    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(1);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_log_records`))).rows).toHaveLength(0);
     expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(1);
     await expectRoleFailure(
       db,
@@ -1001,8 +1054,15 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     await withRole(db, 'service_role', null, (tx) =>
       tx.query(`INSERT INTO public.audit_logs (entity_type, action) VALUES ('book', 'srv')`)
     );
+    await withRole(db, 'service_role', null, (tx) =>
+      tx.query(`INSERT INTO public.audit_logs (admin_id, entity_type, action) VALUES ($1, 'book', 'lib_op')`, [librarianId])
+    );
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query<{ action: string }>(`SELECT action FROM public.audit_logs ORDER BY action`))).rows.map((r) => r.action)).toEqual(['lib_op', 'srv']);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query<{ action: string }>(`SELECT action FROM public.audit_log_records ORDER BY action`))).rows.map((r) => r.action)).toEqual(['lib_op', 'srv']);
+    expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(3);
+    expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_log_records`))).rows).toHaveLength(3);
 
-    // system_settings: everyone reads; anon/student/student_assistant cannot write; librarian & super_admin can write
+    // system_settings: everyone reads; anon/student/library_staff cannot write; librarian & super_admin can write
     expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT key FROM public.system_settings`))).rows.length).toBeGreaterThanOrEqual(4);
     await expectRoleFailure(db, 'anon', null, `INSERT INTO public.system_settings (key, value) VALUES ('blocked', '1')`);
     await expectRoleFailure(db, 'authenticated', student1Id, `INSERT INTO public.system_settings (key, value) VALUES ('blocked', '1')`);
@@ -1094,7 +1154,15 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     expect(s1CardsStorage.rows.map((r) => r.name)).toEqual([`${student1Id}/card.png`]);
   });
 
-  it('applies rollback and migration 20261116141500 cleanly and enforces tightened manager-only policies', async () => {
+  it('applies rollback and migration 20261116141500 & 20261116170000 cleanly and enforces WP4 patron_type, library cards, and audit RLS', async () => {
+    const wp4RollbackSql = fs.readFileSync(
+      path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_wp4_roles_inventory_cards_audit.sql'),
+      'utf8'
+    );
+    const wp4MigrationSql = fs.readFileSync(
+      path.resolve(process.cwd(), 'supabase/migrations/20261116170000_wp4_roles_inventory_cards_audit.sql'),
+      'utf8'
+    );
     const rollbackSql = fs.readFileSync(
       path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_tighten_audit_and_catalog_rls.sql'),
       'utf8'
@@ -1104,13 +1172,143 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       'utf8'
     );
 
+    const wp9RollbackSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8');
+    const wp9MigrationSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8');
+    await db.exec(wp9RollbackSql);
+    await db.exec(wp4RollbackSql);
     await db.exec(rollbackSql);
-    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(2);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(3);
 
     await db.exec(migrationSql);
     expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
     await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.books (title, author) VALUES ('Blocked', 'SA')`);
     await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.categories (name, slug) VALUES ('Blocked', 'blocked')`);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(3);
+
+    // Re-apply WP4 migration and verify patron_type, library_cards backfill/trigger, and scoped audit RLS
+    await db.exec(wp4MigrationSql);
     expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(2);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_log_records`))).rows).toHaveLength(2);
+    expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(3);
+
+    // patron_type defaults to 'student', accepts 'faculty', rejects invalid
+    const pTypeRes = await db.query<{ patron_type: string }>(`SELECT patron_type FROM public.profiles WHERE id = $1`, [student1Id]);
+    expect(pTypeRes.rows[0].patron_type).toBe('student');
+    await db.query(`UPDATE public.profiles SET patron_type = 'faculty' WHERE id = $1`, [student2Id]);
+    await expect(
+      db.query(`UPDATE public.profiles SET patron_type = 'visitor' WHERE id = $1`, [student2Id])
+    ).rejects.toThrow();
+
+    // Every role has a library_cards row
+    const cardCounts = await db.query<{ cnt: string }>(
+      `SELECT count(*)::text AS cnt
+       FROM public.profiles p
+       JOIN public.library_cards lc ON lc.user_id = p.id`
+    );
+    const profileCounts = await db.query<{ cnt: string }>(`SELECT count(*)::text AS cnt FROM public.profiles`);
+    expect(cardCounts.rows[0].cnt).toBe(profileCounts.rows[0].cnt);
+
+    // Delete librarian card & backfill via migration -> recreates active card for active librarian
+    await db.query(`DELETE FROM public.library_cards WHERE user_id = $1`, [librarianId]);
+    await db.exec(wp4MigrationSql);
+    const libCard = await db.query<{ status: string }>(`SELECT status FROM public.library_cards WHERE user_id = $1`, [librarianId]);
+    expect(libCard.rows[0]?.status).toBe('ACTIVE');
+    await db.exec(wp9MigrationSql);
+  });
+
+  it('migrates existing role values and metadata, preserves permissions, and rolls back', async () => {
+    const rollback = fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8');
+    const migration = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8');
+    await db.exec(rollback);
+    await db.query(`UPDATE auth.users SET raw_app_meta_data = '{"role":"student","keep":true}', raw_user_meta_data = '{"role":"student_assistant","keep":true}' WHERE id = $1`, [student1Id]);
+    const before = await db.query<{ role: string }>(`SELECT role::text FROM public.profiles WHERE id IN ($1, $2, $3, $4) ORDER BY role`, [superAdminId, librarianId, saId, student1Id]);
+    expect(before.rows.map(r => r.role)).toEqual(['librarian', 'student', 'student_assistant', 'super_admin']);
+    await db.exec(migration);
+    const migrated = await db.query<{ role: string }>(`SELECT role::text FROM public.profiles WHERE id IN ($1, $2, $3, $4) ORDER BY role`, [superAdminId, librarianId, saId, student1Id]);
+    expect(migrated.rows.map(r => r.role)).toEqual(['librarian', 'library_staff', 'patron', 'super_admin']);
+    const meta = await db.query<{ app: unknown; usr: unknown }>(`SELECT raw_app_meta_data AS app, raw_user_meta_data AS usr FROM auth.users WHERE id = $1`, [student1Id]);
+    expect(meta.rows[0]).toEqual({ app: { role: 'patron', keep: true }, usr: { role: 'library_staff', keep: true } });
+    for (const [id, staff] of [[superAdminId, true], [librarianId, true], [saId, true], [student1Id, false]] as const) {
+      const result = await withRole(db, 'authenticated', id, tx => tx.query<{ staff: boolean }>(`SELECT public.is_staff() AS staff`));
+      expect(result.rows[0].staff).toBe(staff);
+    }
+    const freshId = await insertAuthUser(db, { email: 'wp9.new@alabang.sti.edu.ph', fullName: 'New Patron' });
+    expect((await db.query<{ role: string }>(`SELECT role::text FROM public.profiles WHERE id = $1`, [freshId])).rows[0].role).toBe('patron');
+    await db.exec(rollback);
+    const restored = await db.query<{ role: string; app: string; usr: string }>(`SELECT p.role::text, u.raw_app_meta_data->>'role' AS app, u.raw_user_meta_data->>'role' AS usr FROM public.profiles p JOIN auth.users u ON u.id = p.id WHERE p.id = $1`, [student1Id]);
+    expect(restored.rows[0]).toEqual({ role: 'student', app: 'student', usr: 'student_assistant' });
+    await db.exec(migration);
+  });
+
+  it('enforces super_admin read-only RLS on archive tables and applies WP6 rollback/migration cleanly', async () => {
+    const wp6RollbackSql = fs.readFileSync(
+      path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_wp6_archive_old_logs.sql'),
+      'utf8'
+    );
+    const wp6MigrationSql = fs.readFileSync(
+      path.resolve(process.cwd(), 'supabase/migrations/20261116190000_wp6_archive_old_logs.sql'),
+      'utf8'
+    );
+
+    // Seed one archive row in each table as service_role/superuser
+    await db.query(
+      `INSERT INTO public.borrowing_records_archive (
+         id, user_id, book_copy_id, borrowed_at, due_date, returned_at, status,
+         fine_amount, fine_settled_at, fine_resolution, fine_remarks, fine_settled_by
+       ) VALUES (
+         gen_random_uuid(), $1, gen_random_uuid(), '2024-01-01T00:00:00Z', '2024-01-15T00:00:00Z',
+         '2024-01-16T00:00:00Z', 'RETURNED', 10, '2024-01-16T01:00:00Z',
+         'CONDONED', 'Waived at graduation', $2
+       )`,
+      [student1Id, superAdminId]
+    );
+    await db.query(
+      `INSERT INTO public.attendance_archive (id, user_id, check_in_at, check_out_at, notes)
+       VALUES (gen_random_uuid(), $1, '2024-01-01T08:00:00+08', '2024-01-01T17:00:00+08', 'No Log Out')`,
+      [student1Id]
+    );
+
+    // Only active super_admin can SELECT archive tables (anon lacks table privilege)
+    await expectRoleFailure(db, 'anon', null, `SELECT id FROM public.borrowing_records_archive`);
+    expect((await withRole(db, 'authenticated', student1Id, (tx) => tx.query(`SELECT id FROM public.borrowing_records_archive`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.borrowing_records_archive`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.borrowing_records_archive`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT fine_resolution, fine_remarks FROM public.borrowing_records_archive`))).rows).toEqual([
+      { fine_resolution: 'CONDONED', fine_remarks: 'Waived at graduation' },
+    ]);
+
+    await expectRoleFailure(db, 'anon', null, `SELECT id FROM public.attendance_archive`);
+    expect((await withRole(db, 'authenticated', student1Id, (tx) => tx.query(`SELECT id FROM public.attendance_archive`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.attendance_archive`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.attendance_archive`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT notes FROM public.attendance_archive`))).rows).toEqual([
+      { notes: 'No Log Out' },
+    ]);
+
+    // Read-only even for super_admin via authenticated role
+    await expectRoleFailure(
+      db,
+      'authenticated',
+      superAdminId,
+      `INSERT INTO public.attendance_archive (id, user_id) VALUES (gen_random_uuid(), '${student1Id}')`
+    );
+    await expectRoleFailure(db, 'authenticated', superAdminId, `DELETE FROM public.attendance_archive`);
+    await expectRoleFailure(db, 'authenticated', superAdminId, `DELETE FROM public.borrowing_records_archive`);
+
+    // Rollback + re-apply migration cleanly
+    await db.exec(wp6RollbackSql);
+    const afterUndo = await db.query<{ tablename: string }>(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('borrowing_records_archive', 'attendance_archive')`
+    );
+    expect(afterUndo.rows).toHaveLength(0);
+
+    await db.exec(wp6MigrationSql);
+    const afterReapply = await db.query<{ tablename: string }>(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('borrowing_records_archive', 'attendance_archive') ORDER BY tablename`
+    );
+    expect(afterReapply.rows.map((r) => r.tablename)).toEqual([
+      'attendance_archive',
+      'borrowing_records_archive',
+    ]);
   });
 });

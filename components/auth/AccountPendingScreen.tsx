@@ -24,6 +24,7 @@ interface AccountPendingScreenProps {
     address?: string | null;
     phone?: string | null;
     department?: string | null;
+    patron_type?: string | null;
   };
   isStudent: boolean;
 }
@@ -39,7 +40,7 @@ export function AccountPendingScreen({
     !profile?.onboarding_completed || 
     !profile?.address || 
     !profile?.phone || 
-    !profile?.department
+    (profile?.patron_type !== "faculty" && !profile?.department)
   );
 
   if (needsOnboarding || isEditing) {

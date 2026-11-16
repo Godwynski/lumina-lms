@@ -79,7 +79,7 @@ import { POST as uploadPost } from "@/app/api/upload/route";
 import { PATCH as usersPatch } from "@/app/api/users/route";
 import { ImageFetchError } from "@/lib/fetch-image";
 
-type AuthRole = "super_admin" | "librarian" | "student_assistant" | "student";
+type AuthRole = "super_admin" | "librarian" | "library_staff" | "patron";
 
 // Valid 1x1 transparent PNG (67 bytes) so sharp executes real WebP conversion.
 const TINY_PNG_BUFFER = Buffer.from(
@@ -374,14 +374,14 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         (await assetsStatusGet(new Request("http://localhost/api/my-card/assets-status"))).status
       ).toBe(401);
 
-      setupAuth(supabase, "student", "ARCHIVED");
+      setupAuth(supabase, "patron", "ARCHIVED");
       expect(
         (await assetsRefreshPost(new Request("http://localhost/api/my-card/assets-refresh", { method: "POST" }))).status
       ).toBe(403);
     });
 
     it("POST /assets-refresh forces QR regeneration and handles thrown errors", async () => {
-      setupAuth(supabase, "student", "ACTIVE", "stu-1", {
+      setupAuth(supabase, "patron", "ACTIVE", "stu-1", {
         avatar_url: "https://example.com/avatar.jpg",
       });
       mockEnsureStaticLibraryCardAssets.mockResolvedValueOnce({
@@ -412,7 +412,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
     });
 
     it("GET /assets-status returns readiness flags and 400 when student ID cannot be resolved", async () => {
-      setupAuth(supabase, "student", "ACTIVE", "", {
+      setupAuth(supabase, "patron", "ACTIVE", "", {
         email: null,
         student_id: null,
       });
@@ -422,7 +422,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       expect(missingRes.status).toBe(400);
       expect((await missingRes.json()).code).toBe("STUDENT_ID_MISSING");
 
-      setupAuth(supabase, "student", "ACTIVE", "stu-1", {
+      setupAuth(supabase, "patron", "ACTIVE", "stu-1", {
         student_id: "STU-20230001",
         avatar_url: "https://proj.supabase.co/storage/v1/object/public/avatars/stu-1/card.webp?v=1",
       });
@@ -468,7 +468,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
     });
 
     it("GET returns existing preferences, defaults to {}, and returns 500 on DB error", async () => {
-      setupAuth(supabase, "student", "ACTIVE", "u-1");
+      setupAuth(supabase, "patron", "ACTIVE", "u-1");
 
       supabase.setTableResponse("ui_preferences", { preferences: { sidebarCollapsed: true } });
       const okRes = await uiPreferencesGet(new Request("http://localhost/api/ui-preferences"));
@@ -486,7 +486,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
     });
 
     it("PATCH validates JSON/payload, deep-merges readProgress, upserts, and handles DB error", async () => {
-      setupAuth(supabase, "student", "ACTIVE", "u-1");
+      setupAuth(supabase, "patron", "ACTIVE", "u-1");
 
       expect(
         (
@@ -554,12 +554,12 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         (await uploadPost(new Request("http://localhost/api/upload", { method: "POST" }))).status
       ).toBe(401);
 
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       expect(
         (await uploadPost(new Request("http://localhost/api/upload", { method: "POST" }))).status
       ).toBe(403);
 
-      setupAuth(supabase, "student_assistant", "SUSPENDED");
+      setupAuth(supabase, "library_staff", "SUSPENDED");
       expect(
         (await uploadPost(new Request("http://localhost/api/upload", { method: "POST" }))).status
       ).toBe(403);
@@ -618,7 +618,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
     });
 
     it("converts uploaded PNG to WebP, uploads to book-covers bucket, and handles remote + storage errors", async () => {
-      setupAuth(supabase, "student_assistant", "ACTIVE");
+      setupAuth(supabase, "library_staff", "ACTIVE");
 
       const validForm = new FormData();
       validForm.append("file", new File([TINY_PNG_BUFFER], "cover.png", { type: "image/png" }));
@@ -684,7 +684,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         ).status
       ).toBe(401);
 
-      setupAuth(supabase, "student_assistant");
+      setupAuth(supabase, "library_staff");
       expect(
         (
           await usersPatch(
@@ -770,7 +770,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           error: null,
         })
         .mockResolvedValueOnce({
-          data: { id: "stu-1", role: "student", status: "ACTIVE", full_name: "Stu" },
+          data: { id: "stu-1", role: "patron", status: "ACTIVE", full_name: "Stu" },
           error: null,
         });
       expect(
@@ -778,7 +778,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           await usersPatch(
             new Request("http://localhost/api/users", {
               method: "PATCH",
-              body: JSON.stringify({ id: "stu-1", role: "student_assistant" }),
+              body: JSON.stringify({ id: "stu-1", role: "library_staff" }),
             })
           )
         ).status
@@ -791,7 +791,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           error: null,
         })
         .mockResolvedValueOnce({
-          data: { id: "stu-1", role: "student", status: "ACTIVE", full_name: "Stu" },
+          data: { id: "stu-1", role: "patron", status: "ACTIVE", full_name: "Stu" },
           error: null,
         });
       expect(
@@ -823,6 +823,35 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         })
       );
       expect(selfDemote.status).toBe(403);
+
+      // Librarian cannot modify permissions (including manage_inventory) on a library_staff account
+      setupAuth(supabase, "librarian", "ACTIVE", "lib-1");
+      profilesBuilder.single
+        .mockResolvedValueOnce({
+          data: { id: "lib-1", role: "librarian", status: "ACTIVE" },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: { id: "staff-1", role: "library_staff", status: "ACTIVE", permissions: {} },
+          error: null,
+        });
+      const libPermRes = await usersPatch(
+        new Request("http://localhost/api/users", {
+          method: "PATCH",
+          body: JSON.stringify({ id: "staff-1", permissions: { manage_inventory: true } }),
+        })
+      );
+      expect(libPermRes.status).toBe(403);
+
+      // Invalid patron_type rejected with 400
+      setupAuth(supabase, "super_admin", "ACTIVE", "adm-1");
+      const badPatronTypeRes = await usersPatch(
+        new Request("http://localhost/api/users", {
+          method: "PATCH",
+          body: JSON.stringify({ id: "stu-1", patron_type: "visitor" }),
+        })
+      );
+      expect(badPatronTypeRes.status).toBe(400);
     });
 
     it("updates profile, syncs library_cards status, transfers ownership, and handles DB errors", async () => {
@@ -832,7 +861,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         id: "stu-1",
         full_name: "Old Name",
         email: "stu@alabang.sti.edu.ph",
-        role: "student",
+        role: "patron",
         status: "ACTIVE",
         department: "General",
         student_id: "STU-1",
@@ -923,7 +952,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         id: "stu-2",
         full_name: "Student Two",
         email: "stu2@alabang.sti.edu.ph",
-        role: "student",
+        role: "patron",
         status: "ACTIVE",
         department: "BSCS",
         student_id: "STU-2",

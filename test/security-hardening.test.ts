@@ -69,7 +69,7 @@ import { withAuthApi, apiSuccess } from "@/lib/api-utils";
 import { createSafeAction } from "@/lib/actions/action-utils";
 import { assertRole } from "@/lib/auth-helpers";
 
-type AuthRole = "super_admin" | "librarian" | "student_assistant" | "student";
+type AuthRole = "super_admin" | "librarian" | "library_staff" | "patron";
 
 function setupAuth(
   supabase: MockSupabaseClientHelper,
@@ -148,7 +148,7 @@ describe("Security Hardening Verification", () => {
       const profilesBuilder = supabase.getTableBuilder("profiles");
       profilesBuilder.single
         .mockResolvedValueOnce({ data: { id: "lib-1", role: "librarian", status: "ACTIVE" }, error: null })
-        .mockResolvedValueOnce({ data: { id: "sa-1", role: "student_assistant", status: "ACTIVE" }, error: null });
+        .mockResolvedValueOnce({ data: { id: "sa-1", role: "library_staff", status: "ACTIVE" }, error: null });
 
       const res = await usersPatch(
         new Request("http://localhost/api/users", {
@@ -167,7 +167,7 @@ describe("Security Hardening Verification", () => {
       // Unknown key
       profilesBuilder.single
         .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
-        .mockResolvedValueOnce({ data: { id: "sa-1", role: "student_assistant", status: "ACTIVE" }, error: null });
+        .mockResolvedValueOnce({ data: { id: "sa-1", role: "library_staff", status: "ACTIVE" }, error: null });
       const unknownKeyRes = await usersPatch(
         new Request("http://localhost/api/users", {
           method: "PATCH",
@@ -179,7 +179,7 @@ describe("Security Hardening Verification", () => {
       // Array permissions
       profilesBuilder.single
         .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
-        .mockResolvedValueOnce({ data: { id: "sa-1", role: "student_assistant", status: "ACTIVE" }, error: null });
+        .mockResolvedValueOnce({ data: { id: "sa-1", role: "library_staff", status: "ACTIVE" }, error: null });
       const arrayRes = await usersPatch(
         new Request("http://localhost/api/users", {
           method: "PATCH",
@@ -201,7 +201,7 @@ describe("Security Hardening Verification", () => {
     it("allows super_admin to update known boolean UserPermissions flags", async () => {
       setupAuth(supabase, "super_admin", "ACTIVE", "adm-1");
       const profilesBuilder = supabase.getTableBuilder("profiles");
-      const target = { id: "sa-1", role: "student_assistant", status: "ACTIVE", permissions: {} };
+      const target = { id: "sa-1", role: "library_staff", status: "ACTIVE", permissions: {} };
       const updated = {
         ...target,
         permissions: { manage_circulation: true, manage_attendance: false, view_admin_dashboard: true },
@@ -236,7 +236,7 @@ describe("Security Hardening Verification", () => {
       ["super_admin", "SUSPENDED"],
       ["super_admin", "PENDING"],
       ["super_admin", "INACTIVE"],
-      ["student_assistant", "SUSPENDED"],
+      ["library_staff", "SUSPENDED"],
     ] as const)(
       "blocks %s with status %s on requireStaff and staff-only allowedRoles in withAuthApi",
       async (role, status) => {
@@ -245,7 +245,7 @@ describe("Security Hardening Verification", () => {
         expect((await staffReqHandler(new Request("http://localhost/api/test"))).status).toBe(403);
 
         const staffRolesHandler = withAuthApi(async () => apiSuccess({ ok: true }), {
-          allowedRoles: ["super_admin", "librarian", "student_assistant"],
+          allowedRoles: ["super_admin", "librarian", "library_staff"],
         });
         setupAuth(supabase, role, status);
         expect((await staffRolesHandler(new Request("http://localhost/api/test"))).status).toBe(403);
@@ -260,12 +260,12 @@ describe("Security Hardening Verification", () => {
       expect((await staffHandler(new Request("http://localhost/api/test"))).status).toBe(200);
 
       const studentHandler = withAuthApi(async () => apiSuccess({ ok: true }), {
-        allowedRoles: ["student"],
+        allowedRoles: ["patron"],
       });
-      setupAuth(supabase, "student", "PENDING");
+      setupAuth(supabase, "patron", "PENDING");
       expect((await studentHandler(new Request("http://localhost/api/test"))).status).toBe(200);
 
-      setupAuth(supabase, "student", "ARCHIVED");
+      setupAuth(supabase, "patron", "ARCHIVED");
       expect((await studentHandler(new Request("http://localhost/api/test"))).status).toBe(403);
     });
 
@@ -301,9 +301,9 @@ describe("Security Hardening Verification", () => {
       expect(await staffAction({ x: 1 })).toEqual({ success: true, data: { x: 1 } });
 
       const studentAction = createSafeAction(z.object({ x: z.number() }), async (v) => v, {
-        allowedRoles: ["student", "student_assistant"],
+        allowedRoles: ["patron", "library_staff"],
       });
-      setupAuth(supabase, "student", "PENDING");
+      setupAuth(supabase, "patron", "PENDING");
       expect(await studentAction({ x: 2 })).toEqual({ success: true, data: { x: 2 } });
     });
   });
@@ -364,7 +364,7 @@ describe("Security Hardening Verification", () => {
     });
 
     it("rejects unknown keys, invalid values, oversized payloads, and >200 readProgress entries in ui-preferences", async () => {
-      setupAuth(supabase, "student", "ACTIVE");
+      setupAuth(supabase, "patron", "ACTIVE");
 
       const unknownKeyRes = await uiPreferencesPatch(
         new Request("http://localhost/api/ui-preferences", {

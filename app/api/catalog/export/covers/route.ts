@@ -75,4 +75,4 @@ export const GET = withAuthApi(async (_req, { supabase }) => {
     console.error("Failed to generate covers ZIP:", err);
     return NextResponse.json({ error: "Failed to export book covers" }, { status: 500 });
   }
-}, { allowedRoles: ["super_admin", "librarian", "student_assistant"] });
+}, { allowedRoles: ["super_admin", "librarian", "library_staff"], allowedPermissions: ["manage_inventory"] });

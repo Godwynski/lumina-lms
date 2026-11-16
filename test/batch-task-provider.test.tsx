@@ -106,7 +106,7 @@ it('queues duplicate entries intact with a request id', async () => {
   expect(JSON.parse(call![1].body)).toEqual({ isbns: ['9780743273565', '9780743273565'], requestId: expect.any(String) });
 });
 
-it.each(['student', 'student_assistant'])('does not fetch, poll, or submit imports for %s', async role => {
+it.each(['patron', 'library_staff'])('does not fetch, poll, or submit imports for %s', async role => {
   preferences.role = role;
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
   await act(async () => Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Start test')!.click());
@@ -119,7 +119,7 @@ it('clears cached staff jobs and stops polling after demotion', async () => {
   jobs = [{ id: 'job1', label: 'ISBN import', items: [{ ...item, status: 'queued' }] }];
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
   expect(host.querySelector('aside')).not.toBeNull();
-  preferences.role = 'student';
+  preferences.role = 'patron';
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
   const count = fetchMock.mock.calls.length;
   await act(async () => { window.dispatchEvent(new Event('focus')); await vi.advanceTimersByTimeAsync(6000); });
@@ -137,7 +137,7 @@ it('ignores a staff request that finishes after demotion', async () => {
   let finish: (value: unknown) => void = () => {};
   fetchMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
-  preferences.role = 'student';
+  preferences.role = 'patron';
   await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
   await act(async () => finish({ ok: true, json: async () => ({ jobs }) }));
   expect(host.querySelector('aside')).toBeNull();

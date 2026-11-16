@@ -40,7 +40,14 @@ export const POST = withAuthApi(
     }
 
     if (!isValidPolicyValue(key, value)) {
-      return apiError("Invalid policy value", "BAD_REQUEST", 400);
+      const validationType = DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.validation?.type;
+      return apiError(
+        validationType === "time"
+          ? "Invalid time format. Expected 24-hour HH:MM."
+          : "Invalid policy value",
+        "BAD_REQUEST",
+        400
+      );
     }
 
     const { createAdminClient } = await import("@/lib/supabase/admin");

@@ -9,41 +9,99 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { sendNotification } from '@/lib/notifications';
 import { format } from 'date-fns';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { computeOverdueFine } from '@/lib/fines';
+
+export interface BorrowingBlock {
+  overdueCount: number;
+  receivableTotal: number;
+}
 
 /**
- * Checks if a user is eligible to borrow books.
- * Blocks if profile status is not ACTIVE or if they have OVERDUE books.
+ * Computes borrowing eligibility metrics (overdue loans & unsettled receivable fines)
+ * without throwing for overdue/fine blocks. Still throws if profile is missing/inactive.
  */
-async function checkUserBorrowingEligibility(supabase: SupabaseClient, userId: string) {
-  // 1. Check profile status
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('status, full_name')
-    .eq('id', userId)
-    .single();
+async function checkUserBorrowingEligibility(
+  supabase: SupabaseClient,
+  userId: string,
+  options: { skipProfileCheck?: boolean } = {}
+): Promise<BorrowingBlock> {
+  if (!options.skipProfileCheck) {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('status, full_name')
+      .eq('id', userId)
+      .single();
 
-  if (profileError || !profile) {
-    throw new Error('User profile not found.');
+    if (profileError || !profile) {
+      throw new Error('User profile not found.');
+    }
+
+    if (profile.status?.toUpperCase() !== 'ACTIVE') {
+      throw new Error(`Account is ${profile.status?.toLowerCase() || 'inactive'}. Borrowing is restricted.`);
+    }
   }
 
-  if (profile.status?.toUpperCase() !== 'ACTIVE') {
-    throw new Error(`Account is ${profile.status?.toLowerCase() || 'inactive'}. Borrowing is restricted.`);
+  const [{ data: records, error: recordsError }, { data: setting }] = await Promise.all([
+    supabase
+      .from('borrowing_records')
+      .select('id, status, due_date, returned_at, fine_amount, fine_settled_at')
+      .eq('user_id', userId)
+      .or('status.in.(ACTIVE,OVERDUE),fine_settled_at.is.null'),
+    supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'overdue_fine_per_day')
+      .maybeSingle(),
+  ]);
+
+  if (recordsError) {
+    throw new Error('Failed to verify borrowing history.');
   }
 
-  // 2. Check for overdue books
-  const { count, error: overdueError } = await supabase
-    .from('borrowing_records')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('status', 'OVERDUE');
+  const parsedRate = setting?.value != null && setting.value !== '' ? Number(setting.value) : 5;
+  const fineRate = Number.isNaN(parsedRate) ? 5 : parsedRate;
+  const nowMs = Date.now();
 
-  if (overdueError) throw new Error('Failed to verify borrowing history.');
+  let overdueCount = 0;
+  let receivableTotal = 0;
 
-  if (count && count > 0) {
-    throw new Error(`User has ${count} overdue book(s). Please return them before borrowing more.`);
+  for (const row of records ?? []) {
+    const status = String(row.status ?? '').toUpperCase();
+    const dueMs = new Date(row.due_date).getTime();
+    const isOverdue =
+      status === 'OVERDUE' ||
+      (status === 'ACTIVE' && !Number.isNaN(dueMs) && dueMs < nowMs);
+    if (isOverdue) {
+      overdueCount += 1;
+    }
+
+    if (row.fine_settled_at == null && (row.fine_amount != null || status === 'ACTIVE' || status === 'OVERDUE')) {
+      const fine = computeOverdueFine(
+        {
+          due_date: row.due_date,
+          returned_at: row.returned_at ?? null,
+          status: row.status,
+          fine_amount: row.fine_amount,
+        },
+        fineRate
+      );
+      if (fine > 0) {
+        receivableTotal = Number((receivableTotal + fine).toFixed(2));
+      }
+    }
   }
 
-  return profile;
+  return { overdueCount, receivableTotal };
+}
+
+function formatBlockErrorMessage(block: BorrowingBlock): string {
+  if (block.overdueCount > 0 && block.receivableTotal > 0) {
+    return `User has ${block.overdueCount} overdue book(s) and ₱${block.receivableTotal.toFixed(2)} in unpaid fines. Please settle them before borrowing more.`;
+  }
+  if (block.overdueCount > 0) {
+    return `User has ${block.overdueCount} overdue book(s). Please return them before borrowing more.`;
+  }
+  return `User has ₱${block.receivableTotal.toFixed(2)} in unpaid fines. Please settle them before borrowing more.`;
 }
 
 /**
@@ -55,7 +113,7 @@ export const resolveScan = createSafeAction(
     expectedType: z.enum(['auto', 'student', 'book']).default('auto'),
     isManual: z.boolean().default(false)
   }),
-  async ({ scanValue, expectedType, isManual }, { supabase }) => {
+  async ({ scanValue, expectedType, isManual }, { supabase, userId: staffUserId }) => {
     const value = scanValue.trim();
 
     // 1. Try resolving as Library Card (Student)
@@ -101,6 +159,10 @@ export const resolveScan = createSafeAction(
       }
 
       if (card) {
+        if (card.user_id === staffUserId) {
+          throw new Error('You cannot check out a book to yourself. Another staff member must process your checkout.');
+        }
+
         // Validation logic
         if (card.status?.toUpperCase() !== 'ACTIVE') {
           throw new Error('Library card is not active.');
@@ -108,8 +170,12 @@ export const resolveScan = createSafeAction(
 
         const profile = Array.isArray(card.profiles) ? card.profiles[0] : card.profiles;
         if (profile?.status?.toUpperCase() !== 'ACTIVE') {
-          throw new Error(`Student account is ${profile?.status?.toLowerCase() || 'inactive'}.`);
+          throw new Error(`Patron account is ${profile?.status?.toLowerCase() || 'inactive'}.`);
         }
+
+        const block = await checkUserBorrowingEligibility(supabase, card.user_id, {
+          skipProfileCheck: true,
+        });
 
         return {
           type: 'student',
@@ -117,8 +183,9 @@ export const resolveScan = createSafeAction(
             cardNumber: card.card_number,
             status: card.status,
             userId: card.user_id,
-            fullName: profile?.full_name ?? 'Student',
+            fullName: profile?.full_name ?? 'Patron',
             studentId: profile?.student_id ?? 'N/A',
+            block,
           }
         };
       }
@@ -163,7 +230,7 @@ export const resolveScan = createSafeAction(
 
     throw new Error(errorMessage);
   },
-  { allowedRoles: ['super_admin', 'librarian', 'student_assistant'], allowedPermissions: ['manage_circulation'] }
+  { allowedRoles: ['super_admin', 'librarian', 'library_staff'], allowedPermissions: ['manage_circulation'] }
 );
 
 /**
@@ -175,12 +242,28 @@ export const checkoutBook = createSafeAction(
     bookQr: z.string().min(1),
     idempotencyKey: z.string().optional(),
     previewOnly: z.boolean().optional().default(false),
-    isManual: z.boolean().default(false)
+    isManual: z.boolean().default(false),
+    overrideReason: z
+      .string()
+      .trim()
+      .min(10, 'Override reason must be at least 10 characters.')
+      .max(300, 'Override reason must be 300 characters or fewer.')
+      .optional()
+      .nullable(),
   }),
-  async ({ studentCardQr, bookQr, idempotencyKey, previewOnly, isManual }, { supabase, profile: staff }) => {
-    // 1. Pre-validation: Eligibility Check (only if not preview)
+  async ({ studentCardQr, bookQr, idempotencyKey, previewOnly, isManual, overrideReason }, { supabase, profile: staff, role: staffRole }) => {
+    const trimmedOverride = overrideReason?.trim() || null;
+
+    // 1. Pre-validation: Eligibility & Override Check (only if not preview)
     let studentUserId: string | null = null;
+    let eligibility: BorrowingBlock = { overdueCount: 0, receivableTotal: 0 };
+    let isBlocked = false;
+
     if (!previewOnly) {
+       if (trimmedOverride && staffRole !== 'librarian' && staffRole !== 'super_admin') {
+         throw new Error('Only librarians and super admins can override borrowing blocks.');
+       }
+
        // First resolve the student to get user_id
        const { data: card } = await supabase
          .from('library_cards')
@@ -189,8 +272,15 @@ export const checkoutBook = createSafeAction(
          .single();
        
        if (card) {
+         if (card.user_id === String(staff.id)) {
+           throw new Error('You cannot check out a book to yourself. Another staff member must process your checkout.');
+         }
          studentUserId = card.user_id;
-         await checkUserBorrowingEligibility(supabase, card.user_id);
+         eligibility = await checkUserBorrowingEligibility(supabase, card.user_id);
+         isBlocked = eligibility.overdueCount > 0 || eligibility.receivableTotal > 0;
+         if (isBlocked && !trimmedOverride) {
+           throw new Error(formatBlockErrorMessage(eligibility));
+         }
        }
     }
 
@@ -243,6 +333,31 @@ export const checkoutBook = createSafeAction(
         { status: 'ACTIVE', book_qr: bookQr }
       );
 
+      if (isBlocked && trimmedOverride) {
+        await logAuditActivity(
+          String(staff.id),
+          'borrowing_record',
+          result.borrowing_id || null,
+          'checkout_override',
+          trimmedOverride,
+          {
+            studentCardQr,
+            bookQr,
+            student_user_id: studentUserId,
+            studentName: result.student_name,
+            bookTitle: result.book_title,
+            overdueCount: eligibility.overdueCount,
+            receivableTotal: eligibility.receivableTotal,
+          },
+          {
+            blocked: true,
+            overdueCount: eligibility.overdueCount,
+            receivableTotal: eligibility.receivableTotal,
+          },
+          { overridden: true, reason: trimmedOverride }
+        );
+      }
+
       // Notify the student
       if (studentUserId) {
         await sendNotification({
@@ -267,7 +382,7 @@ export const checkoutBook = createSafeAction(
     return result;
   },
   { 
-    allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
+    allowedRoles: ['super_admin', 'librarian', 'library_staff'],
     allowedPermissions: ['manage_circulation']
   }
 );
@@ -276,14 +391,29 @@ export const checkoutBook = createSafeAction(
  * Processes a book return.
  */
 export const returnBook = createSafeAction(
-  z.object({
-    bookQr: z.string().min(1),
-    idempotencyKey: z.string().optional(),
-    previewOnly: z.boolean().optional().default(false),
-    isManual: z.boolean().default(false),
-    settleFine: z.boolean().optional().default(false),
-  }),
-  async ({ bookQr, idempotencyKey, previewOnly, isManual, settleFine }, { supabase, profile: staff }) => {
+  z
+    .object({
+      bookQr: z.string().min(1),
+      idempotencyKey: z.string().optional(),
+      previewOnly: z.boolean().optional().default(false),
+      isManual: z.boolean().default(false),
+      settleFine: z.boolean().optional().default(false),
+      resolution: z.enum(['PAID', 'CONDONED']).optional().default('PAID'),
+      remarks: z.string().trim().max(500).optional().nullable(),
+    })
+    .superRefine((val, ctx) => {
+      if (!val.previewOnly && val.settleFine && val.resolution === 'CONDONED') {
+        const trimmed = (val.remarks ?? '').trim();
+        if (trimmed.length < 5) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['remarks'],
+            message: 'Remarks of at least 5 characters are required when condoning a fine.',
+          });
+        }
+      }
+    }),
+  async ({ bookQr, idempotencyKey, previewOnly, isManual, settleFine, resolution, remarks }, { supabase, profile: staff }) => {
     // Find the current borrower to notify them
     let studentUserId: string | null = null;
     let returnCopy: { id: string; book_id: string } | null = null;
@@ -351,16 +481,31 @@ export const returnBook = createSafeAction(
 
     if (!previewOnly && !result.idempotent) {
       const fineAmount = Number(result.fine_amount ?? 0);
-      if (settleFine && result.borrowing_id && fineAmount > 0) {
+      const trimmedRemarks = remarks?.trim() || null;
+      const settledDuringReturn = settleFine && Boolean(result.borrowing_id) && fineAmount > 0;
+      if (settledDuringReturn) {
         const settledAt = new Date().toISOString();
         const { error: settleError } = await admin
           .from('borrowing_records')
-          .update({ fine_settled_at: settledAt, updated_at: settledAt })
-          .eq('id', result.borrowing_id);
+          .update({
+            fine_settled_at: settledAt,
+            fine_resolution: resolution,
+            fine_remarks: trimmedRemarks,
+            fine_settled_by: staff.id,
+            updated_at: settledAt,
+          })
+          .eq('id', result.borrowing_id!)
+          .is('fine_settled_at', null);
         if (settleError) {
           throw new Error(settleError.message || 'Book returned, but failed to settle overdue fine.');
         }
       }
+
+      const resolutionLabel = resolution === 'CONDONED' ? 'Condoned' : 'Paid';
+      const remarkSuffix = trimmedRemarks ? ` — Remarks: ${trimmedRemarks}` : '';
+      const fineAuditSuffix = settledDuringReturn
+        ? ` — ${resolutionLabel} PHP ${fineAmount.toFixed(2)} fine${remarkSuffix}`
+        : '';
 
       logger.info('circulation', 'Return successful', { bookQr, librarianId: staff.id });
       await logAuditActivity(
@@ -370,7 +515,7 @@ export const returnBook = createSafeAction(
         'return',
         `Returned book '${result.book_title}' from ${result.student_name} (QR: ${bookQr})${
           result.reservation_ready ? ` — reserved for ${result.reserved_for}` : ''
-        }${settleFine && fineAmount > 0 ? ` — settled PHP ${fineAmount.toFixed(2)} fine` : ''}`,
+        }${fineAuditSuffix}`,
         {
           bookQr,
           book_id: returnCopy?.book_id,
@@ -380,7 +525,10 @@ export const returnBook = createSafeAction(
           bookTitle: result.book_title,
           reservationReady: result.reservation_ready,
           fineAmount,
-          fineSettled: settleFine && fineAmount > 0,
+          fineSettled: settledDuringReturn,
+          ...(settledDuringReturn
+            ? { fineResolution: resolution, fineRemarks: trimmedRemarks }
+            : {}),
         },
         { status: 'BORROWED' },
         { status: 'RETURNED' }
@@ -403,6 +551,7 @@ export const returnBook = createSafeAction(
 
       revalidatePath('/circulation', 'page');
       revalidatePath('/history');
+      revalidatePath('/dashboard');
       revalidateTag('catalog', 'max');
       revalidateTag('public-books', 'max');
     }
@@ -410,7 +559,7 @@ export const returnBook = createSafeAction(
     return result;
   },
   { 
-    allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
+    allowedRoles: ['super_admin', 'librarian', 'library_staff'],
     allowedPermissions: ['manage_circulation']
   }
 );

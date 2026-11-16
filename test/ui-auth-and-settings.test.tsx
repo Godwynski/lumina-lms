@@ -74,9 +74,11 @@ import { SettingsShell } from '@/components/settings/SettingsShell';
 import {
   Section,
   AnnualResetTool,
+  ArchiveLogsTool,
   RunMaintenanceTool,
   TestEmailTool,
 } from '@/components/settings/SettingsShared';
+import { getSchoolYearCutoffOptions } from '@/lib/archive';
 import { ImageCropper } from '@/components/settings/profile/ImageCropper';
 import { AvatarManager } from '@/components/settings/profile/AvatarManager';
 import { PersonalInfoForm } from '@/components/settings/profile/PersonalInfoForm';
@@ -390,6 +392,7 @@ describe('Auth & Settings UI Components', () => {
       expect(mockSubmitOnboarding).toHaveBeenCalledWith({
         address: '123 Rizal St',
         phone: '09171234567',
+        patron_type: 'student',
         department: 'BS Computer Science',
       });
       expect(mockToastSuccess).toHaveBeenCalledWith('Profile submitted successfully!');
@@ -430,9 +433,41 @@ describe('Auth & Settings UI Components', () => {
       expect(mockSubmitOnboarding).toHaveBeenCalledWith({
         address: '45 Mabini Ave',
         phone: '09181112222',
+        patron_type: 'student',
         department: 'BS Information Technology',
       });
       expect(mockToastError).toHaveBeenCalledWith('Network unavailable');
+    });
+
+    it('hides Academic Program when Faculty is selected and submits without department', async () => {
+      const { container } = await renderClient(<OnboardingForm />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      await typeIntoInput(container.querySelector('#address') as HTMLInputElement, '10 Faculty Row');
+      await typeIntoInput(container.querySelector('#phone') as HTMLInputElement, '09170002222');
+
+      const typeTrigger = container.querySelector('#patron_type') as HTMLButtonElement;
+      await clickElement(typeTrigger);
+      if (typeTrigger.getAttribute('aria-expanded') !== 'true') {
+        await pressKey(typeTrigger, 'Enter');
+      }
+      const facultyOpt = Array.from(document.body.querySelectorAll('[role="option"]')).find((el) =>
+        el.textContent?.trim() === 'Faculty'
+      );
+      expect(facultyOpt).toBeDefined();
+      await clickElement(facultyOpt);
+
+      expect(container.querySelector('#program')).toBeNull();
+      await submitForm(container.querySelector('form'));
+
+      expect(mockSubmitOnboarding).toHaveBeenCalledWith({
+        address: '10 Faculty Row',
+        phone: '09170002222',
+        patron_type: 'faculty',
+        department: undefined,
+      });
     });
   });
 
@@ -619,6 +654,110 @@ describe('Auth & Settings UI Components', () => {
       } as Response);
       await clickElement(resetBtn);
       expect(mockToastError).toHaveBeenCalledWith('Forbidden');
+    });
+
+    it('ArchiveLogsTool requires cutoff -> counts -> backup download before enabling Archive confirm dialog', async () => {
+      const [firstOption, secondOption] = getSchoolYearCutoffOptions();
+      const createObjectUrlSpy = vi
+        .spyOn(URL, 'createObjectURL')
+        .mockReturnValue('blob:archive-test');
+      const revokeObjectUrlSpy = vi
+        .spyOn(URL, 'revokeObjectURL')
+        .mockImplementation(() => {});
+      const anchorClickSpy = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => {});
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url.includes('preview=true')) {
+          return {
+            ok: true,
+            json: async () => ({
+              ok: true,
+              before: url.includes(secondOption.value) ? secondOption.value : firstOption.value,
+              borrowingCount: 3,
+              attendanceCount: 5,
+              totalCount: 8,
+            }),
+          } as Response;
+        }
+        if (init?.method === 'POST') {
+          return {
+            ok: true,
+            json: async () => ({
+              ok: true,
+              before: secondOption.value,
+              borrowingCount: 3,
+              attendanceCount: 5,
+              totalCount: 8,
+            }),
+          } as Response;
+        }
+        return {
+          ok: true,
+          blob: async () => new Blob(['xlsx-bytes']),
+        } as Response;
+      });
+
+      const { container } = await renderClient(<ArchiveLogsTool />);
+      const downloadBtn = findButtonByText(container, 'Download backup')!;
+      const archiveBtn = findButtonByText(container, 'Archive')!;
+
+      // Initially disabled with no cutoff picked
+      expect(downloadBtn).toBeDisabled();
+      expect(archiveBtn).toBeDisabled();
+
+      // Pick first school-year cutoff -> shows counts, enables Download backup, keeps Archive disabled
+      await clickElement(findButtonByText(container, firstOption.label)!);
+      expect(container).toHaveTextContent(`Eligible records before ${firstOption.value}: 8`);
+      expect(container).toHaveTextContent('3 borrowing record(s) · 5 attendance log(s)');
+      expect(downloadBtn).not.toBeDisabled();
+      expect(archiveBtn).toBeDisabled();
+
+      // Download backup -> enables Archive
+      await clickElement(downloadBtn);
+      expect(createObjectUrlSpy).toHaveBeenCalled();
+      expect(anchorClickSpy).toHaveBeenCalled();
+      expect(revokeObjectUrlSpy).toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalledWith('Backup downloaded.');
+      expect(archiveBtn).not.toBeDisabled();
+
+      // Switching cutoff resets backup download requirement
+      await clickElement(findButtonByText(container, secondOption.label)!);
+      expect(archiveBtn).toBeDisabled();
+
+      // Download for second cutoff, then open confirm dialog and confirm archive
+      await clickElement(downloadBtn);
+      expect(archiveBtn).not.toBeDisabled();
+      await clickElement(archiveBtn);
+      expect(document.body).toHaveTextContent('Confirm Record Archive');
+      expect(document.body).toHaveTextContent(secondOption.value);
+
+      const confirmBtn = findButtonByText(document.body, 'Confirm Archive')!;
+      await clickElement(confirmBtn);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/admin/archive',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ before: secondOption.value }),
+        })
+      );
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Archived 3 borrowing record(s) and 5 attendance log(s).'
+      );
+
+      // Recent (< 1 year) cutoff rejected inline
+      const dateInput = container.querySelector('input[type="date"]') as HTMLInputElement;
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+      await typeIntoInput(dateInput, today);
+      expect(container.querySelector('[role="alert"]')).toHaveTextContent('at least 1 year old');
+      expect(downloadBtn).toBeDisabled();
+      expect(archiveBtn).toBeDisabled();
+
+      createObjectUrlSpy.mockRestore();
+      revokeObjectUrlSpy.mockRestore();
+      anchorClickSpy.mockRestore();
     });
 
     it('RunMaintenanceTool dispatches POST /api/notifications/maintenance and toasts outcome', async () => {
@@ -825,7 +964,7 @@ describe('Auth & Settings UI Components', () => {
         const { container } = await renderClient(
           <PreferencesProvider
             initialPreferences={{ loaded: true }}
-            initialRole="student"
+            initialRole="patron"
             initialProfile={{
               id: 'user-1',
               full_name: 'Jane Doe',
@@ -920,7 +1059,7 @@ describe('Auth & Settings UI Components', () => {
     it('PersonalInfoForm renders student academic program and fallback labels for missing fields', async () => {
       const handle = await renderClient(
         <PersonalInfoForm
-          role="student"
+          role="patron"
           initialProfile={{
             full_name: 'Juan Dela Cruz',
             student_id: '2026-0012',
@@ -986,13 +1125,13 @@ describe('Auth & Settings UI Components', () => {
 
       expect(container).toHaveTextContent('Admin User');
       expect(container).toHaveTextContent('Current Membership');
-      expect(container).toHaveTextContent('super admin');
+      expect(container).toHaveTextContent('Super Admin');
       expect(container).toHaveTextContent('Security Status');
       expect(container).toHaveTextContent('Verified');
     });
 
     it('SecuritySection renders role-specific credential management text', async () => {
-      const handle = await renderClient(<SecuritySection role="student" />);
+      const handle = await renderClient(<SecuritySection role="patron" />);
       expect(handle.container).toHaveTextContent('Identity & Access');
       expect(handle.container).toHaveTextContent('managed by the school system');
 
@@ -1074,7 +1213,7 @@ describe('Auth & Settings UI Components', () => {
       await act(async () => {
         handle = await renderClient(
           <PoliciesSection
-            role="student"
+            role="patron"
             settingsPromise={Promise.resolve(baseSettings)}
             categoriesPromise={Promise.resolve(baseCategories)}
           />
@@ -1101,6 +1240,7 @@ describe('Auth & Settings UI Components', () => {
 
       await clickElement(findButtonByText(handle.container, 'Lifecycle'));
       expect(handle.container).toHaveTextContent('Batch Account Reset');
+      expect(handle.container).toHaveTextContent('Archive Old Records');
       expect(handle.container).toHaveTextContent('Email Dispatch');
       expect(handle.container).toHaveTextContent('Email Configuration Test');
     });

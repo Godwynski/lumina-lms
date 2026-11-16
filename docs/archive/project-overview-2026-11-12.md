@@ -133,7 +133,7 @@ Traditional academic libraries often struggle with operational bottlenecks, resu
 
 Lumina enforces strict role boundary segregation across four distinct user tiers:
 
-| System Capability | Super Admin (`super_admin`) | Librarian (`librarian`) | Student Assistant (`student_assistant`) | Student Patron (`student`) |
+| System Capability | Super Admin (`super_admin`) | Librarian (`librarian`) | Student Assistant (`library_staff`) | Student Patron (`patron`) |
 | :--- | :---: | :---: | :---: | :---: |
 | **System Settings & Policies** | ✅ Full Access | ✅ Limits & Announcements | ❌ No Access | ❌ No Access |
 | **Database Resets & Testing Tools** | ✅ Full Access | ❌ No Access | ❌ No Access | ❌ No Access |
@@ -409,7 +409,7 @@ Open [http://localhost:3000](http://localhost:3000) in your web browser.
 
 ## 10. Signing In
 
-Access is through **Sign in with Microsoft** with an `@alabang.sti.edu.ph` account only. There are no shared or demo accounts and no password sign-in. The **first** account to sign up on an empty system becomes the active super admin. Every account after that starts as `student` / `PENDING` until approved by staff.
+Access is through **Sign in with Microsoft** with an `@alabang.sti.edu.ph` account only. There are no shared or demo accounts and no password sign-in. The **first** account to sign up on an empty system becomes the active super admin. Every account after that starts as `patron` / `PENDING` until approved by staff.
 
 #### Demo accounts (thesis evaluation only)
 Demo accounts are off by default. To turn them on:

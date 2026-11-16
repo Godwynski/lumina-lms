@@ -10,10 +10,11 @@ import { createClient } from '@/lib/supabase/client';
 import { MicrosoftIcon } from '@/components/ui/microsoft-icon';
 import { toast } from 'sonner';
 import { DEMO_ACCOUNTS } from '@/lib/demo/accounts';
+import { ROLE_LABELS, getRoleLabel } from '@/components/common/RoleBadge';
 
 // Only labels and emails live in the browser. Passwords stay on the server (/api/demo-login).
-const DEMO_ICONS = { super_admin: ShieldCheck, librarian: BookOpen, student_assistant: UserCheck, student: GraduationCap };
-const DEMO_BUTTONS = DEMO_ACCOUNTS.map(({ label, email, role }) => ({ label, email, icon: DEMO_ICONS[role] }));
+const DEMO_ICONS = { super_admin: ShieldCheck, librarian: BookOpen, library_staff: UserCheck, patron: GraduationCap };
+const DEMO_BUTTONS = DEMO_ACCOUNTS.map(({ label, email, role }) => ({ label: ROLE_LABELS[role] || label, email, icon: DEMO_ICONS[role] }));
 
 /** Sign-in actions for the landing page. The headline and copy are static in app/page.tsx. */
 export function Hero({ user, role, showDemo = false }: { user: User | null; role: string | null; showDemo?: boolean }) {
@@ -78,7 +79,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
           </Link>
         </Button>
         <p className="break-words text-sm text-muted-foreground">
-          Signed in as {user.user_metadata?.full_name || user.email?.split('@')[0]} with the {role} role.
+          Signed in as {user.user_metadata?.full_name || user.email?.split('@')[0]} with the {getRoleLabel(role)} role.
         </p>
       </div>
     );

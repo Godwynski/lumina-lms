@@ -89,10 +89,11 @@ export const inviteUser = createSafeAction(
   UserCreateSchema,
   async (input, { supabase, role: requesterRole, userId }) => {
     const email = input.email.trim().toLowerCase();
-    const requestedRole = normalizeUserRole(input.role) || 'student';
-    const department = input.department?.trim() || 'General';
+    const requestedRole = normalizeUserRole(input.role) || 'patron';
+    const patronType = input.patron_type ?? 'student';
+    const department = input.department?.trim() || (patronType === 'faculty' ? null : 'General');
 
-    if (requesterRole === 'librarian' && input.role && requestedRole !== 'student') {
+    if (requesterRole === 'librarian' && input.role && requestedRole !== 'patron') {
       throw new Error('Librarians are not allowed to assign roles');
     }
 
@@ -107,13 +108,13 @@ export const inviteUser = createSafeAction(
       throw new Error('No account found for that email. They must sign in first.');
     }
 
-    const targetRole = normalizeUserRole(profile.role) || 'student';
+    const targetRole = normalizeUserRole(profile.role) || 'patron';
 
     if (targetRole === 'super_admin' && requesterRole !== 'super_admin') {
       throw new Error('Only super administrators can modify a super administrator account');
     }
 
-    if (requesterRole === 'librarian' && targetRole !== 'student') {
+    if (requesterRole === 'librarian' && targetRole !== 'patron') {
       throw new Error('Librarians cannot modify accounts with staff or admin roles');
     }
 
@@ -137,6 +138,7 @@ export const inviteUser = createSafeAction(
       .from('profiles')
       .update({
         role: requestedRole,
+        patron_type: patronType,
         status: requestedRole === 'super_admin' ? 'ACTIVE' : 'PENDING',
         department,
       })

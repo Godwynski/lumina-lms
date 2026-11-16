@@ -114,7 +114,7 @@ export function LuminaTable<T extends { id: string | number }>({
           : "border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm"
       )}>
         {/* ── Mobile view ── */}
-        <div className="md:hidden flex flex-col divide-y divide-border/50">
+        <div className="md:hidden print:hidden flex flex-col divide-y divide-border/50">
           {isLoading ? (
             <div className="p-8 text-center text-sm text-muted-foreground animate-pulse">
               Loading...
@@ -153,7 +153,7 @@ export function LuminaTable<T extends { id: string | number }>({
         </div>
 
         {/* ── Desktop table ── */}
-        <table className="hidden md:table w-full text-left text-sm border-collapse">
+        <table className="hidden md:table print:table w-full text-left text-sm border-collapse">
           <thead>
             <tr className="border-b border-border/10 bg-muted/30">
               {columns.map((col, idx) => (

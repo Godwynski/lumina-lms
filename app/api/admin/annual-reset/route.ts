@@ -20,7 +20,7 @@ export const POST = withAuthApi(async (_req, { supabase, user }) => {
     "Mass suspension of all student accounts for the new school year.",
     {
       affectedCount: affectedCount ?? 0,
-      role: "student",
+      role: "patron",
       action: "SUSPENDED"
     },
     { status: "ACTIVE" },

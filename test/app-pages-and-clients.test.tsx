@@ -116,10 +116,10 @@ vi.mock('@/lib/actions/analytics', () => ({
 }));
 
 const mockGetAttendanceHistory = vi.fn();
-const mockToggleAttendanceByCard = vi.fn();
+const mockRecordAttendanceByCard = vi.fn();
 vi.mock('@/lib/actions/attendance', () => ({
   getAttendanceHistory: (...args: unknown[]) => mockGetAttendanceHistory(...args),
-  toggleAttendanceByCard: (...args: unknown[]) => mockToggleAttendanceByCard(...args),
+  recordAttendanceByCard: (...args: unknown[]) => mockRecordAttendanceByCard(...args),
 }));
 
 const mockPlayScanCue = vi.fn();
@@ -165,6 +165,7 @@ const mockGetBookAdminDetails = vi.fn();
 const mockGetBookPublicDetails = vi.fn();
 vi.mock('@/lib/actions/catalog', () => ({
   createBook: (...args: unknown[]) => mockCreateBook(...args),
+  getBooks: vi.fn().mockResolvedValue({ data: [], count: 0 }),
   getCategories: (...args: unknown[]) => mockGetCategories(...args),
   getBooksForExport: vi.fn().mockResolvedValue([]),
   batchImportBooks: vi.fn(),
@@ -200,6 +201,22 @@ const mockCompressImage = vi.fn();
 vi.mock('@/lib/image-utils', () => ({
   compressImage: (...args: unknown[]) => mockCompressImage(...args),
 }));
+
+const mockGetBorrowingHistory = vi.fn().mockResolvedValue({ records: [], totalCount: 0 });
+const mockGetUserBorrowingHistory = vi.fn().mockResolvedValue({ success: true, data: { records: [], totalCount: 0 } });
+vi.mock('@/lib/actions/history', () => ({
+  getBorrowingHistory: (...args: unknown[]) => mockGetBorrowingHistory(...args),
+  getUserBorrowingHistory: (...args: unknown[]) => mockGetUserBorrowingHistory(...args),
+}));
+
+const mockXlsxWriteFile = vi.fn();
+vi.mock('xlsx', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('xlsx')>();
+  return {
+    ...actual,
+    writeFile: (...args: unknown[]) => mockXlsxWriteFile(...args),
+  };
+});
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => (
@@ -343,6 +360,9 @@ import { AnalyticsDetailModal } from '@/app/(authenticated)/analytics/AnalyticsD
 import AttendancePage, { AttendanceSkeleton } from '@/app/(authenticated)/attendance/page';
 import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
 import AuditPage, { AuditSkeleton } from '@/app/(authenticated)/audit/page';
+import InventoryPage from '@/app/(authenticated)/inventory/page';
+import AddBookPage from '@/app/(authenticated)/inventory/add/page';
+import StudentCatalogLayout from '@/app/(authenticated)/student-catalog/layout';
 import StudentCatalogPage, { CatalogSkeletonView } from '@/app/(authenticated)/student-catalog/page';
 import StudentBookDetailPage, { BookDetailSkeleton } from '@/app/(authenticated)/student-catalog/[id]/page';
 import UsersPage, { UsersSkeleton } from '@/app/(authenticated)/users/page';
@@ -352,6 +372,7 @@ import { StudentCatalogClient } from '@/app/(authenticated)/student-catalog/Stud
 import { StudentBookDetailClient } from '@/app/(authenticated)/student-catalog/[id]/StudentBookDetailClient';
 import { UsersContent } from '@/app/(authenticated)/users/UsersContent';
 import { NewUserClient } from '@/app/(authenticated)/users/new/NewUserClient';
+import UserDetailPage from '@/app/(authenticated)/users/[id]/page';
 import { UserDetailClient } from '@/app/(authenticated)/users/[id]/UserDetailClient';
 import { StreamedNav } from '@/app/(authenticated)/_components/StreamedNav';
 import { StreamedUserNav } from '@/app/(authenticated)/_components/StreamedUserNav';
@@ -559,7 +580,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
     it('redirects students from app/(auth)/update-password/page.tsx and renders form for staff', async () => {
       mockServerGetUser.mockResolvedValue({ data: { user: { id: 'stu-1' } } });
-      mockServerProfileSingle.mockResolvedValue({ data: { role: 'student' } });
+      mockServerProfileSingle.mockResolvedValue({ data: { role: 'patron' } });
 
       await expect(UpdatePasswordPage()).rejects.toThrow('NEXT_REDIRECT:/security');
 
@@ -787,6 +808,22 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       mockGetAnalyticsSummary.mockResolvedValueOnce(summary30);
       await clickElement(findButtonByText(errRender.container, 'Retry'));
       expect(errRender.container).toHaveTextContent('Dune');
+
+      // Export (.xlsx) writes Summary + High Demand workbook and Print invokes window.print()
+      const printSpy = vi.fn();
+      vi.stubGlobal('print', printSpy);
+      mockXlsxWriteFile.mockClear();
+
+      await clickElement(findButtonByText(errRender.container, 'Export (.xlsx)'));
+      await vi.waitFor(() => {
+        expect(mockXlsxWriteFile).toHaveBeenCalledWith(
+          expect.objectContaining({ SheetNames: ['Summary', 'High Demand'] }),
+          expect.stringMatching(/^lumina_analytics_\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2}\.xlsx$/)
+        );
+      });
+
+      await clickElement(findButtonByText(errRender.container, 'Print'));
+      expect(printSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1074,7 +1111,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       id: 'usr-1',
       name: 'Juan Dela Cruz',
       email: 'juan@alabang.sti.edu.ph',
-      role: 'student',
+      role: 'patron',
       status: 'PENDING',
       department: 'BSCS',
       student_id: '2024-1001',
@@ -1147,7 +1184,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
       expect(mockInviteUser).toHaveBeenCalledWith({
         email: 'new.user@alabang.sti.edu.ph',
-        role: 'student',
+        role: 'patron',
+        patron_type: 'student',
         department: 'Information Technology',
       });
       expect(mockToastSuccess).toHaveBeenCalledWith('Access granted to new.user@alabang.sti.edu.ph');
@@ -1156,6 +1194,33 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       mockInviteUser.mockResolvedValueOnce({ success: false, error: 'User already active' });
       await submitForm(container.querySelector('form'));
       expect(mockToastError).toHaveBeenCalledWith('User already active');
+
+      // Choosing Faculty hides Academic Program / Department and omits department
+      cleanupClients();
+      mockInviteUser.mockResolvedValueOnce({ success: true });
+      const facRender = await renderClient(<NewUserClient currentRole="librarian" />);
+      const facEmailInput = facRender.container.querySelector('input[name="email"]') as HTMLInputElement;
+      await typeIntoInput(facEmailInput, 'faculty.member@alabang.sti.edu.ph');
+
+      const patronTypeTrigger = facRender.container.querySelector('[aria-label="Patron Type"]') as HTMLButtonElement;
+      await clickElement(patronTypeTrigger);
+      if (patronTypeTrigger.getAttribute('aria-expanded') !== 'true') {
+        await pressKey(patronTypeTrigger, 'Enter');
+      }
+      const facultyOpt = Array.from(document.body.querySelectorAll('[role="option"]')).find((el) =>
+        el.textContent?.trim() === 'Faculty'
+      );
+      expect(facultyOpt).toBeDefined();
+      await clickElement(facultyOpt);
+
+      expect(facRender.container.querySelector('input[name="department"]')).toBeNull();
+      await submitForm(facRender.container.querySelector('form'));
+      expect(mockInviteUser).toHaveBeenCalledWith({
+        email: 'faculty.member@alabang.sti.edu.ph',
+        role: 'patron',
+        patron_type: 'faculty',
+        department: undefined,
+      });
     });
 
     it('updates profile, verifies pending student, manages SA permissions, and enforces librarian read-only in UserDetailClient', async () => {
@@ -1211,7 +1276,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const saUser: User = {
         ...sampleUser,
         id: 'sa-1',
-        role: 'student_assistant',
+        role: 'library_staff',
         status: 'ACTIVE',
         permissions: { manage_circulation: false },
       };
@@ -1219,7 +1284,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         <UserDetailClient initialUser={saUser} currentRole="super_admin" />
       );
       await clickElement(findButtonByText(saRender.container, 'Manage Assistant Permissions'));
-      expect(document.body).toHaveTextContent('Student Assistant Access Control');
+      expect(document.body).toHaveTextContent('Library Staff Access Control');
+      expect(document.querySelector('[aria-labelledby="perm-manage_inventory-label"]')).toHaveAttribute('aria-checked', 'false');
       await clickElement(findButtonByText(document.body, 'Confirm & Close'));
 
       // Librarian viewing another librarian is read-only
@@ -1230,6 +1296,131 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       );
       expect(roRender.container.querySelector('input[placeholder="Full name"]')).toBeDisabled();
       expect(findButtonByText(roRender.container, 'Archive')).toBeUndefined();
+    });
+
+    it('shows paginated Borrowing History in UserDetailClient for librarian/super_admin and denies staff (WP5 #9)', async () => {
+      mockGetUserBorrowingHistory.mockClear();
+      const patronUser: User = {
+        id: 'patron-9',
+        name: 'Maria Clara',
+        email: 'maria@alabang.sti.edu.ph',
+        role: 'patron',
+        status: 'ACTIVE',
+        department: 'BSIT',
+        student_id: '2024-9009',
+        address: null,
+        phone: null,
+        avatarUrl: null,
+        joined: 'Jan 2026',
+        updatedAt: '2026-11-01T00:00:00Z',
+        permissions: {},
+      };
+
+      const page1History = {
+        totalCount: 12,
+        records: [
+          {
+            id: 'rec-1',
+            book_copy_id: 'copy-1',
+            user_id: 'patron-9',
+            status: 'RETURNED' as const,
+            borrowed_at: '2026-10-01T00:00:00Z',
+            due_date: '2026-10-15T00:00:00Z',
+            returned_at: '2026-10-17T00:00:00Z',
+            fine_amount: 10,
+            fine_settled_at: '2026-10-17T02:00:00Z',
+            fine_resolution: 'PAID' as const,
+            books: { id: 'b-1', title: 'Refactoring', author: 'Martin Fowler', cover_url: null },
+            profiles: null,
+          },
+          {
+            id: 'rec-2',
+            book_copy_id: 'copy-2',
+            user_id: 'patron-9',
+            status: 'OVERDUE' as const,
+            borrowed_at: '2026-11-01T00:00:00Z',
+            due_date: '2026-11-10T00:00:00Z',
+            returned_at: null,
+            fine_amount: 25,
+            fine_settled_at: null,
+            fine_resolution: null,
+            books: { id: 'b-2', title: 'Design Patterns', author: 'GoF', cover_url: null },
+            profiles: null,
+          },
+        ],
+      };
+
+      // Visible to librarian with title, borrowed, due, returned, status, fine/resolution, and pagination
+      const libRender = await renderClient(
+        <UserDetailClient
+          initialUser={patronUser}
+          currentRole="librarian"
+          initialHistory={page1History}
+        />
+      );
+      expect(libRender.container).toHaveTextContent('Borrowing History');
+      expect(libRender.container).toHaveTextContent('Refactoring');
+      expect(libRender.container).toHaveTextContent('Design Patterns');
+      expect(libRender.container).toHaveTextContent('₱10.00');
+      expect(libRender.container).toHaveTextContent('Paid');
+      expect(libRender.container).toHaveTextContent('₱25.00');
+      expect(libRender.container).toHaveTextContent('Receivable');
+
+      mockGetUserBorrowingHistory.mockResolvedValueOnce({
+        success: true,
+        data: {
+          totalCount: 12,
+          records: [
+            {
+              id: 'rec-11',
+              book_copy_id: 'copy-11',
+              user_id: 'patron-9',
+              status: 'RETURNED' as const,
+              borrowed_at: '2026-09-01T00:00:00Z',
+              due_date: '2026-09-15T00:00:00Z',
+              returned_at: '2026-09-16T00:00:00Z',
+              fine_amount: 5,
+              fine_settled_at: '2026-09-16T01:00:00Z',
+              fine_resolution: 'CONDONED' as const,
+              books: { id: 'b-11', title: 'Domain-Driven Design', author: 'Eric Evans', cover_url: null },
+              profiles: null,
+            },
+          ],
+        },
+      });
+      await clickElement(libRender.container.querySelector('button[aria-label="Next page"]'));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockGetUserBorrowingHistory).toHaveBeenCalledWith({
+        userId: 'patron-9',
+        page: 2,
+        pageSize: 10,
+      });
+      expect(libRender.container).toHaveTextContent('Domain-Driven Design');
+      expect(libRender.container).toHaveTextContent('Condoned');
+
+      // Hidden/denied for library_staff (library staff)
+      cleanupClients();
+      mockGetUserBorrowingHistory.mockClear();
+      const staffRender = await renderClient(
+        <UserDetailClient initialUser={patronUser} currentRole="library_staff" />
+      );
+      expect(staffRender.container).not.toHaveTextContent('Borrowing History');
+      expect(mockGetUserBorrowingHistory).not.toHaveBeenCalled();
+
+      // Server page redirects library_staff away from /users/[id]
+      mockGetMe.mockResolvedValueOnce({
+        user: { id: 'sa-1' },
+        profile: { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' },
+        role: 'library_staff',
+        supabase: {},
+      });
+      const el = UserDetailPage({ params: Promise.resolve({ id: 'patron-9' }) });
+      const suspenseEl = (el.props as { children: React.ReactElement }).children;
+      const loaderEl = (suspenseEl.props as { children: React.ReactElement }).children;
+      const LoaderFn = loaderEl.type as (p: { params: Promise<{ id: string }> }) => Promise<unknown>;
+      await expect(LoaderFn({ params: Promise.resolve({ id: 'patron-9' }) })).rejects.toThrow('NEXT_REDIRECT:/dashboard');
     });
   });
 
@@ -1280,7 +1471,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const profile = {
         id: 'u-2',
         full_name: 'Maria Clara',
-        role: 'student' as const,
+        role: 'patron' as const,
         status: 'ACTIVE',
         student_id: '2024-0002',
         department: 'BSIT',
@@ -1288,13 +1479,13 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         address: null,
         phone: null,
       };
-      mockGetMe.mockResolvedValueOnce({ user, profile, role: 'student' });
+      mockGetMe.mockResolvedValueOnce({ user, profile, role: 'patron' });
 
       const userNavEl = await StreamedUserNav();
       const { container } = await renderClient(
         <PreferencesProvider
           initialPreferences={{ compact: true }}
-          initialRole="student"
+          initialRole="patron"
           initialProfile={profile}
         >
           {userNavEl}
@@ -1387,7 +1578,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       // 2. Student -> personal logs only
       mockGetMe.mockResolvedValueOnce({
         user: { id: 'stu-1' },
-        role: 'student',
+        role: 'patron',
         isDeactivatedSA: false,
         hasPermission: () => false,
       });
@@ -1427,7 +1618,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       vi.clearAllMocks();
       mockGetMe.mockResolvedValueOnce({
         user: { id: 'sa-1' },
-        role: 'student_assistant',
+        role: 'library_staff',
         isDeactivatedSA: false,
         hasPermission: (p: string) => p === 'manage_attendance',
       });
@@ -1443,7 +1634,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       vi.clearAllMocks();
       mockGetMe.mockResolvedValueOnce({
         user: { id: 'sa-2' },
-        role: 'student_assistant',
+        role: 'library_staff',
         isDeactivatedSA: true,
         hasPermission: () => true,
       });
@@ -1456,23 +1647,26 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(deactivatedRender.container).toHaveTextContent('All-Time History');
     });
 
-    it('AuditPage redirects non-super_admin and renders AuditLogClient for super_admin', async () => {
+    it('AuditPage redirects student/library_staff and renders AuditLogClient for librarian and super_admin', async () => {
       const skel = await renderClient(<AuditSkeleton />);
       expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
       cleanupClients();
 
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      // Non-super_admin redirects to /dashboard?error=unauthorized
-      mockGetUserRole.mockResolvedValueOnce('librarian');
       const gateEl = AuditPage();
       const gateSuspense = (gateEl.props as { children: React.ReactElement }).children;
       const gateChild = (gateSuspense.props as { children: React.ReactElement }).children;
       const GateFn = gateChild.type as () => Promise<React.ReactElement>;
+
+      // student & library_staff redirect to /dashboard?error=unauthorized
+      mockGetUserRole.mockResolvedValueOnce('patron');
       await expect(GateFn()).rejects.toThrow('NEXT_REDIRECT:/dashboard?error=unauthorized');
 
-      // super_admin renders AuditLogClient
-      mockGetUserRole.mockResolvedValueOnce('super_admin');
+      mockGetUserRole.mockResolvedValueOnce('library_staff');
+      await expect(GateFn()).rejects.toThrow('NEXT_REDIRECT:/dashboard?error=unauthorized');
+
+      // librarian renders AuditLogClient (with userRole="librarian", export only)
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
@@ -1480,6 +1674,22 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
           json: async () => ({ logs: [], total: 0 }),
         })
       );
+      mockGetUserRole.mockResolvedValueOnce('librarian');
+      const libGateResult = await GateFn();
+      const libRender = await renderClient(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          {libGateResult}
+        </SWRConfig>
+      );
+      await vi.waitFor(() => {
+        expect(libRender.container).toHaveTextContent('0 matching records');
+      });
+      expect(findButtonByText(libRender.container, 'Export')).toBeDefined();
+      expect(findButtonByText(libRender.container, 'Export / Import')).toBeUndefined();
+      cleanupClients();
+
+      // super_admin renders AuditLogClient (Export / Import)
+      mockGetUserRole.mockResolvedValueOnce('super_admin');
       const adminGateResult = await GateFn();
       const { container } = await renderClient(
         <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
@@ -1489,7 +1699,86 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await vi.waitFor(() => {
         expect(container).toHaveTextContent('0 matching records');
       });
+      expect(findButtonByText(container, 'Export / Import')).toBeDefined();
       consoleErrorSpy.mockRestore();
+    });
+
+    it('InventoryPage, AddBookPage, and StudentCatalogLayout enforce WP4 role & manage_inventory gates', async () => {
+      // StudentCatalogLayout no longer redirects librarian/super_admin away from /student-catalog
+      const layoutEl = StudentCatalogLayout({ children: <div>Catalog View</div> });
+      const layoutRender = await renderClient(layoutEl);
+      expect(layoutRender.container).toHaveTextContent('Catalog View');
+      cleanupClients();
+
+      // InventoryPage gate: rejects without manage_inventory (including circulation/attendance-only), patron, and suspended staff with permission; allows active staff with manage_inventory
+      const invEl = InventoryPage({ searchParams: Promise.resolve({}) });
+      const invChildren = (invEl.props as { children: React.ReactElement[] }).children;
+      const invSuspense = invChildren[1];
+      const invChild = (invSuspense.props as { children: React.ReactElement }).children;
+      const InvGate = invChild.type as (p: { searchParams: Promise<Record<string, string>> }) => Promise<React.ReactElement>;
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'library_staff',
+        profile: { status: 'ACTIVE', permissions: { manage_circulation: true, manage_attendance: true, manage_inventory: false } },
+      });
+      await expect(InvGate({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'patron',
+        profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      });
+      await expect(InvGate({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'library_staff',
+        profile: { status: 'SUSPENDED', permissions: { manage_inventory: true } },
+      });
+      await expect(InvGate({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'library_staff',
+        profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      });
+      const allowedInv = await InvGate({ searchParams: Promise.resolve({}) });
+      expect(allowedInv).toBeTruthy();
+
+      // AddBookPage gate: rejects without manage_inventory, patron, and suspended staff with permission; allows active staff with manage_inventory and librarian
+      const addEl = AddBookPage();
+      const addSuspense = (addEl.props as { children: React.ReactElement }).children;
+      const addChild = (addSuspense.props as { children: React.ReactElement }).children;
+      const AddGate = addChild.type as () => Promise<React.ReactElement>;
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'library_staff',
+        profile: { status: 'ACTIVE', permissions: { manage_circulation: true, manage_attendance: true, manage_inventory: false } },
+      });
+      await expect(AddGate()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'patron',
+        profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      });
+      await expect(AddGate()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'library_staff',
+        profile: { status: 'SUSPENDED', permissions: { manage_inventory: true } },
+      });
+      await expect(AddGate()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'library_staff',
+        profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      });
+      const allowedAdd = await AddGate();
+      expect(allowedAdd).toBeTruthy();
+
+      mockGetMe.mockResolvedValueOnce({
+        role: 'librarian',
+        profile: { status: 'ACTIVE', permissions: {} },
+      });
+      const libAdd = await AddGate();
+      expect(libAdd).toBeTruthy();
     });
 
     it('StudentCatalogPage resolves searchParams, defaults sortBy, and passes props to StudentCatalogClient', async () => {
@@ -1616,7 +1905,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await expect(unauthPromise).rejects.toThrow('NEXT_REDIRECT:/');
 
       // 2. Student -> redirect('/dashboard')
-      mockGetMe.mockResolvedValueOnce({ role: 'student' });
+      mockGetMe.mockResolvedValueOnce({ role: 'patron' });
       const studentEl = UsersPage();
       const studentSuspense = (studentEl.props as { children: React.ReactElement }).children;
       const studentWrapper = (studentSuspense.props as { children: React.ReactElement }).children;
@@ -1631,7 +1920,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
             id: 'u-10',
             name: 'Ana Reyes',
             email: 'ana@alabang.sti.edu.ph',
-            role: 'student',
+            role: 'patron',
             status: 'ACTIVE',
             department: 'BSIT',
             student_id: '2025-0010',
@@ -1958,10 +2247,12 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await typeIntoInput(searchInput, '');
 
       // Manual card entry: success IN, error result, and rejection
-      mockToggleAttendanceByCard.mockResolvedValueOnce({
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
         success: true,
         data: {
           status: 'IN',
+          outcome: 'CHECKED_IN',
+          userId: 'stu-9',
           userName: 'Pedro Reyes',
           recordedAt: '2026-11-14T09:00:00.000Z',
           message: 'Checked in Pedro Reyes',
@@ -1971,10 +2262,10 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
       await typeIntoInput(cardInput, 'LC-9001');
       await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
-      expect(mockToggleAttendanceByCard).toHaveBeenCalledWith({
+      expect(mockRecordAttendanceByCard).toHaveBeenCalledWith({
         cardNumber: 'LC-9001',
+        mode: 'in',
         isManual: true,
-        confirmed: false,
       });
       expect(mockPlayScanCue).toHaveBeenCalledWith('success');
       expect(mockToastSuccess).toHaveBeenCalledWith(
@@ -1983,7 +2274,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       );
       expect(cardInput.value).toBe('');
 
-      mockToggleAttendanceByCard.mockResolvedValueOnce({
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
         success: false,
         error: 'Unknown card ID',
       });
@@ -1994,7 +2285,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         id: 'attendance-toast-error',
       });
 
-      mockToggleAttendanceByCard.mockRejectedValueOnce(new Error('Network error'));
+      mockRecordAttendanceByCard.mockRejectedValueOnce(new Error('Network error'));
       await typeIntoInput(cardInput, 'ERR-CARD');
       await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
       expect(mockToastError).toHaveBeenCalledWith('Failed to process attendance transaction.', {
@@ -2023,7 +2314,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       expect(container).toHaveTextContent('Searched User');
 
-      // Open camera scanner modal -> Discard & Register attendance + cameraIssue/cameraOpen states
+      // Open camera scanner modal -> Discard & Register Check-Out + cameraIssue/cameraOpen states
       mockScannerRef.cameraIssue = 'Camera permission denied';
       await clickElement(container.querySelector('button[aria-haspopup="dialog"]'));
       expect(document.body).toHaveTextContent('Gate Attendance Scanner');
@@ -2031,7 +2322,11 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await clickElement(findButtonByText(document.body, 'Retry camera'));
       expect(mockScannerStart).toHaveBeenCalled();
 
-      // Scan a card -> Discard it -> Scan again -> Register attendance
+      // Switch to Check-Out mode inside the scanner
+      const scannerModeGroup = document.body.querySelector('[aria-label="Scanner attendance mode"]')!;
+      await clickElement(findButtonByText(scannerModeGroup, 'Check-Out'));
+
+      // Scan a card -> Discard it -> Scan again -> Register Check-Out
       await act(async () => {
         await mockScannerRef.onScan('LC-SCAN-1');
       });
@@ -2042,21 +2337,23 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await act(async () => {
         await mockScannerRef.onScan('LC-SCAN-2');
       });
-      mockToggleAttendanceByCard.mockResolvedValueOnce({
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
         success: true,
         data: {
           status: 'OUT',
+          outcome: 'CHECKED_OUT',
+          userId: 'stu-10',
           userName: 'Elena Cruz',
           recordedAt: '2026-11-14T11:30:00.000Z',
           message: 'Checked out Elena Cruz',
           description: 'Timed out successfully.',
         },
       });
-      await clickElement(findButtonByText(document.body, 'Register attendance'));
-      expect(mockToggleAttendanceByCard).toHaveBeenCalledWith({
+      await clickElement(findButtonByText(document.body, 'Register Check-Out'));
+      expect(mockRecordAttendanceByCard).toHaveBeenCalledWith({
         cardNumber: 'LC-SCAN-2',
+        mode: 'out',
         isManual: false,
-        confirmed: true,
       });
       expect(document.body).toHaveTextContent('Elena Cruz');
 

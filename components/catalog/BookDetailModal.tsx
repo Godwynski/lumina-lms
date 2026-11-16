@@ -370,7 +370,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
         </DialogHeader>
 
         <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
-        {role === 'super_admin' && <Link href={`/audit?bookId=${bookId}`} className="mb-4 inline-block text-sm font-semibold text-primary hover:underline" onClick={() => onOpenChange(false)}>View book records</Link>}
+        {(role === 'super_admin' || role === 'librarian') && <Link href={`/audit?bookId=${bookId}`} className="mb-4 inline-block text-sm font-semibold text-primary hover:underline" onClick={() => onOpenChange(false)}>View book records</Link>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         {!error && !activeAdminData && !activeStudentData && <ModalSkeleton />}

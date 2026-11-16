@@ -4,6 +4,7 @@ import { UserCheck, Shield } from "lucide-react";
 import { Section } from "../SettingsShared";
 import { AvatarManager } from "../profile/AvatarManager";
 import { PersonalInfoForm } from "../profile/PersonalInfoForm";
+import { getRoleLabel } from "@/components/common/RoleBadge";
 
 
 interface ProfileSectionProps {
@@ -15,6 +16,7 @@ interface ProfileSectionProps {
     address: string | null;
     phone: string | null;
     department: string | null;
+    patron_type?: string | null;
     status: string;
     student_id: string | null;
     email: string | null;
@@ -54,7 +56,7 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
                 <div>
                   <p className="text-sm font-bold text-foreground">Current Membership</p>
                   <p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">
-                    {role.replace('_', ' ')}
+                    {getRoleLabel(role)}
                   </p>
                 </div>
               </div>

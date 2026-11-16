@@ -85,7 +85,7 @@ import { POST as bulkNotificationsPost } from "@/app/api/notifications/bulk/rout
 import { POST as maintenanceNotificationsPost } from "@/app/api/notifications/maintenance/route";
 import { POST as testEmailPost } from "@/app/api/test-email/route";
 
-type AuthRole = "super_admin" | "librarian" | "student_assistant" | "student";
+type AuthRole = "super_admin" | "librarian" | "library_staff" | "patron";
 
 const VALID_BOOK_UUID = "11111111-1111-4111-8111-111111111111";
 const VALID_USER_UUID = "22222222-2222-4222-8222-222222222222";
@@ -154,19 +154,65 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
   });
 
   describe("GET /api/catalog/export/covers", () => {
-    it("denies unauthenticated, student, and disabled student_assistant requests", async () => {
+    it("denies unauthenticated, student, and disabled library_staff requests", async () => {
       setupAuth(supabase, null);
       expect((await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"))).status).toBe(401);
 
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       expect((await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"))).status).toBe(403);
 
-      setupAuth(supabase, "student_assistant", "SUSPENDED");
+      setupAuth(supabase, "library_staff", "SUSPENDED");
+      expect((await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"))).status).toBe(403);
+
+      // Active SA without manage_inventory is denied
+      setupAuth(supabase, "library_staff", "ACTIVE");
+      expect((await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"))).status).toBe(403);
+
+      // Active SA with circulation/attendance only (no manage_inventory) is denied
+      setupAuth(supabase, "library_staff", "ACTIVE");
+      supabase.setTableResponse("profiles", {
+        id: "user-1",
+        email: null,
+        full_name: "Test library_staff",
+        role: "library_staff",
+        status: "ACTIVE",
+        permissions: {
+          manage_circulation: true,
+          manage_attendance: true,
+          view_admin_dashboard: true,
+          manage_inventory: false,
+        },
+      });
+      expect((await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"))).status).toBe(403);
+
+      // Suspended library_staff WITH manage_inventory is denied
+      setupAuth(supabase, "library_staff", "SUSPENDED");
+      supabase.setTableResponse("profiles", {
+        id: "user-1",
+        email: null,
+        full_name: "Suspended Staff",
+        role: "library_staff",
+        status: "SUSPENDED",
+        permissions: { manage_inventory: true },
+      });
       expect((await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"))).status).toBe(403);
     });
 
     it("exports downloaded covers into a real ZIP archive and tolerates individual download failures", async () => {
-      setupAuth(supabase, "student_assistant", "ACTIVE");
+      setupAuth(supabase, "library_staff", "ACTIVE");
+      supabase.setTableResponse("profiles", {
+        id: "user-1",
+        email: null,
+        full_name: "Test library_staff",
+        role: "library_staff",
+        status: "ACTIVE",
+        permissions: {
+          manage_circulation: true,
+          manage_attendance: true,
+          view_admin_dashboard: true,
+          manage_inventory: true,
+        },
+      });
       supabase.setTableResponse("books", [
         { title: "Clean Code", isbn: "9780132350884", cover_url: "https://cdn.example.com/1.png" },
         { title: "The Pragmatic Programmer!", isbn: null, cover_url: "https://cdn.example.com/2.jpg" },
@@ -219,7 +265,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         ).status
       ).toBe(401);
 
-      setupAuth(supabase, "student", "ARCHIVED");
+      setupAuth(supabase, "patron", "ARCHIVED");
       expect(
         (
           await reservationsGet(
@@ -230,7 +276,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
     });
 
     it("returns 400 on malformed JSON or invalid UUIDs", async () => {
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
 
       const badJson = await reservationsPost(
         new Request("http://localhost/api/circulation/reservations", {
@@ -250,7 +296,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
     });
 
     it("forbids students from reserving on behalf of another user, but allows staff", async () => {
-      setupAuth(supabase, "student", "ACTIVE", VALID_USER_UUID);
+      setupAuth(supabase, "patron", "ACTIVE", VALID_USER_UUID);
       const denied = await reservationsPost(
         new Request("http://localhost/api/circulation/reservations", {
           method: "POST",
@@ -259,7 +305,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       );
       expect(denied.status).toBe(403);
 
-      setupAuth(supabase, "student_assistant", "ACTIVE", VALID_USER_UUID);
+      setupAuth(supabase, "library_staff", "ACTIVE", VALID_USER_UUID);
       supabase.setRpcResponse(
         { ok: true, reservation_id: "res-1", status: "ACTIVE", queue_position: 2 },
         null,
@@ -293,7 +339,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       ["UNAUTHORIZED", 401],
       ["UNKNOWN_CODE", 400],
     ])("maps RPC domain error code %s to HTTP %i", async (code, expectedStatus) => {
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       supabase.setRpcResponse(
         { ok: false, code, message: `Error ${code}` },
         null,
@@ -315,7 +361,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
     });
 
     it("returns 500 when reservation RPC fails at database level", async () => {
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       supabase.setRpcResponse(null, new Error("Connection lost"), "create_reservation_atomic");
 
       const res = await reservationsPost(
@@ -328,7 +374,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
     });
 
     it("GET enforces self-scoping for students, allows staff queries, and handles errors", async () => {
-      setupAuth(supabase, "student", "ACTIVE", VALID_USER_UUID);
+      setupAuth(supabase, "patron", "ACTIVE", VALID_USER_UUID);
       const forbiddenRes = await reservationsGet(
         new Request(`http://localhost/api/circulation/reservations?userId=${OTHER_USER_UUID}`)
       );
@@ -418,7 +464,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         ).status
       ).toBe(401);
 
-      setupAuth(supabase, "student_assistant");
+      setupAuth(supabase, "library_staff");
       expect(
         (
           await bulkNotificationsPost(
@@ -555,7 +601,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       setupAuth(supabase, null);
       expect((await maintenanceNotificationsPost(new Request("http://localhost/api/notifications/maintenance", { method: "POST" }))).status).toBe(401);
 
-      setupAuth(supabase, "student_assistant");
+      setupAuth(supabase, "library_staff");
       expect((await maintenanceNotificationsPost(new Request("http://localhost/api/notifications/maintenance", { method: "POST" }))).status).toBe(403);
 
       setupAuth(supabase, "librarian");
@@ -587,7 +633,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         ).status
       ).toBe(401);
 
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       expect(
         (
           await testEmailPost(

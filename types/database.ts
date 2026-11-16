@@ -17,7 +17,7 @@ export type Json =
 /* Database Enums                                                             */
 /* -------------------------------------------------------------------------- */
 
-export type UserRole = 'super_admin' | 'librarian' | 'student' | 'student_assistant';
+export type UserRole = 'super_admin' | 'librarian' | 'patron' | 'library_staff';
 export type BorrowStatus = 'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'LOST';
 export type ReservationStatus = 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
 

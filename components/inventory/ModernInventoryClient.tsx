@@ -17,8 +17,18 @@ import {
   FileSpreadsheet, 
   FileCode,
   Image as ImageIcon,
-  Settings
+  Settings,
+  LayoutGrid,
+  Table2,
+  Eye
 } from "lucide-react";
+import {
+  buildImportTemplateWorkbook,
+  filterValidImportBooks,
+  parseImportRows,
+  type ParsedBook,
+} from "@/lib/catalog-import";
+export type { ParsedBook };
 
 export const AVAILABLE_BOOK_COLUMNS = [
   { id: "title", label: "Title", desc: "The title of the book" },
@@ -34,20 +44,6 @@ export const AVAILABLE_BOOK_COLUMNS = [
   { id: "description", label: "Description", desc: "Book synopsis or descriptive summary" },
   { id: "cover_url", label: "Cover URL", desc: "Full path to the stored cover image" }
 ];
-
-export interface ParsedBook {
-  title: string;
-  author: string;
-  isbn: string;
-  category: string;
-  published_year: string;
-  description: string;
-  stock: number;
-  location: string;
-  section: string;
-  dewey_decimal: string;
-  tags: string;
-}
 
 export interface ExportBook {
   id: string;
@@ -70,6 +66,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { InventoryGrid } from "./InventoryGrid";
+import { InventoryTable } from "./InventoryTable";
+import { InventoryReportPreview } from "./InventoryReportPreview";
 import { Book, Category, Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -130,6 +128,7 @@ export function ModernInventoryClient({
   const status = (searchParams.get("status")?.toUpperCase() as "ACTIVE" | "ARCHIVED" | "ALL") || "ACTIVE";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
+  const viewMode = searchParams.get("view") === "table" ? "table" : "cards";
 
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   // Queries this component pushed that the URL hasn't caught up with yet.
@@ -158,7 +157,7 @@ export function ModernInventoryClient({
   const [isbnInput, setIsbnInput] = useState("");
   const { isISBNProcessing, isbnProgress, isbnLogs, startISBNLookup, refreshJobs } = useBatchTask();
 
-  // Export States
+  // Export & Report Preview States
   const [selectedExportColumns, setSelectedExportColumns] = useState<string[]>(
     AVAILABLE_BOOK_COLUMNS.map(c => c.id)
   );
@@ -166,6 +165,9 @@ export function ModernInventoryClient({
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingJSON, setIsExportingJSON] = useState(false);
   const [isExportingZip, setIsExportingZip] = useState(false);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false);
+  const [reportPreviewRows, setReportPreviewRows] = useState<Record<string, string | number>[]>([]);
 
   // Handle spreadsheet or JSON file selection and parsing on the client
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,30 +224,9 @@ export function ModernInventoryClient({
           return;
         }
 
-        // Normalize headers/keys
-        const normalized: ParsedBook[] = jsonArray.map((row) => {
-          const cleanRow: Record<string, unknown> = {};
-          Object.keys(row).forEach(key => {
-            const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
-            cleanRow[cleanKey] = row[key];
-          });
-
-          return {
-            title: String(cleanRow.title || cleanRow.book_title || cleanRow.name || ""),
-            author: String(cleanRow.author || cleanRow.writer || cleanRow.authors || ""),
-            isbn: String(cleanRow.isbn || cleanRow.isbn_number || cleanRow.code || ""),
-            category: String(cleanRow.category || cleanRow.category_name || cleanRow.genre || ""),
-            published_year: String(cleanRow.published_year || cleanRow.year || cleanRow.pub_year || ""),
-            description: String(cleanRow.description || cleanRow.desc || cleanRow.summary || ""),
-            stock: Math.min(50, Math.max(0, Number(cleanRow.stock || cleanRow.copies || cleanRow.quantity || cleanRow.copies_count || 1))),
-            location: String(cleanRow.location || cleanRow.shelving || cleanRow.shelf || ""),
-            section: String(cleanRow.section || ""),
-            dewey_decimal: String(cleanRow.dewey || cleanRow.dewey_decimal || cleanRow.call_number || ""),
-            tags: Array.isArray(cleanRow.tags) ? cleanRow.tags.join(', ') : String(cleanRow.tags || cleanRow.subjects || cleanRow.keywords || "")
-          };
-        });
-
-        const validBooks = normalized.filter(b => b.title && b.author);
+        // Normalize headers/keys using the shared importer column list
+        const normalized = parseImportRows(jsonArray);
+        const validBooks = filterValidImportBooks(normalized);
         if (validBooks.length === 0) {
           failParse("No rows with both a title and an author were found.");
           return;
@@ -263,6 +244,18 @@ export function ModernInventoryClient({
       reader.readAsText(file);
     } else {
       reader.readAsArrayBuffer(file);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      const workbook = buildImportTemplateWorkbook(XLSX);
+      XLSX.writeFile(workbook, "lumina_import_template.xlsx");
+      toast.success("Import template downloaded!");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      toast.error(`Template download failed: ${errMsg}`);
     }
   };
 
@@ -339,11 +332,38 @@ export function ModernInventoryClient({
     });
   };
 
+  const getExportFilters = useCallback(
+    () => ({
+      query: urlQuery,
+      categoryId,
+      status,
+      sort: sortBy,
+    }),
+    [urlQuery, categoryId, status, sortBy]
+  );
+
+  const selectedColumnHeaders = AVAILABLE_BOOK_COLUMNS
+    .filter((col) => selectedExportColumns.includes(col.id))
+    .map((col) => col.label);
+
+  const exportFilterSummary = [
+    `Status: ${status === "ACTIVE" ? "Visible" : status === "ARCHIVED" ? "Archived" : "All"}`,
+    categoryId !== "all"
+      ? `Category: ${categoryId
+          .split(",")
+          .map((id) => categories.find((c) => c.id === id)?.name || id)
+          .join(", ")}`
+      : "Category: All",
+    urlQuery.trim() ? `Search: "${urlQuery.trim()}"` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   // Client-side Excel Export
   const handleExportExcel = async () => {
     setIsExportingExcel(true);
     try {
-      const data = await getBooksForExport();
+      const data = await getBooksForExport(getExportFilters());
       const rows = getMappedExportRows(data);
       const XLSX = await import("xlsx");
 
@@ -375,7 +395,7 @@ export function ModernInventoryClient({
   const handleExportCSV = async () => {
     setIsExportingCSV(true);
     try {
-      const data = await getBooksForExport();
+      const data = await getBooksForExport(getExportFilters());
       const rows = getMappedExportRows(data);
       const XLSX = await import("xlsx");
 
@@ -404,7 +424,7 @@ export function ModernInventoryClient({
   const handleExportJSON = async () => {
     setIsExportingJSON(true);
     try {
-      const data = await getBooksForExport() as ExportBook[];
+      const data = await getBooksForExport(getExportFilters()) as ExportBook[];
       const rows = data.map((b) => {
         const row: Record<string, string | number | string[] | null> = {};
         if (selectedExportColumns.includes("title")) row.title = b.title;
@@ -441,6 +461,22 @@ export function ModernInventoryClient({
       toast.error(`JSON export failed: ${errMsg}`);
     } finally {
       setIsExportingJSON(false);
+    }
+  };
+
+  // On-screen report preview using the exact export columns + active filters
+  const handleViewReport = async () => {
+    setIsLoadingReport(true);
+    try {
+      const data = await getBooksForExport(getExportFilters());
+      const rows = getMappedExportRows(data);
+      setReportPreviewRows(rows);
+      setIsReportPreviewOpen(true);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to load report preview: ${errMsg}`);
+    } finally {
+      setIsLoadingReport(false);
     }
   };
 
@@ -535,15 +571,21 @@ export function ModernInventoryClient({
     const params = new URLSearchParams(searchParams.toString());
     
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === "all" || (key === "page" && value === 1) || (key === "status" && value === "ACTIVE")) {
+      if (
+        value === null ||
+        value === "all" ||
+        (key === "page" && value === 1) ||
+        (key === "status" && value === "ACTIVE") ||
+        (key === "view" && value === "cards")
+      ) {
         params.delete(key);
       } else {
         params.set(key, value.toString());
       }
     });
 
-    // Reset page on filter change unless explicitly setting page
-    if (!updates.page) {
+    // Reset page on filter change unless explicitly setting page or toggling view
+    if (!updates.page && Object.keys(updates).some((k) => k !== "view")) {
       params.delete("page");
     }
 
@@ -567,6 +609,7 @@ export function ModernInventoryClient({
   const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
   const setStatus = (s: typeof status) => updateParams({ status: s });
   const setPage = (p: number) => updateParams({ page: p });
+  const setViewMode = (nextView: "cards" | "table") => updateParams({ view: nextView });
   const pushQuery = useCallback((raw: string) => {
     const q = raw.trim();
     if (q !== urlQuery) pendingQueries.current.push(q);
@@ -596,8 +639,9 @@ export function ModernInventoryClient({
 
   return (
     <div className="w-full space-y-6 pb-10">
+      <div className={cn("space-y-6", isReportPreviewOpen && "print:hidden")}>
       <div className="sticky top-0 z-30 flex flex-col gap-4 rounded-3xl border border-border/10 bg-background/60 p-2.5 backdrop-blur-2xl transition-all duration-300">
-        <div className="flex items-center gap-3 w-full">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
           {/* Search Box */}
           <form onSubmit={handleSearch} className="relative flex flex-1 items-center gap-2">
             <div className="relative flex-1 group">
@@ -763,6 +807,32 @@ export function ModernInventoryClient({
             </SheetContent>
           </Sheet>
 
+          {/* Cards / Table View Toggle */}
+          <div role="group" aria-label="Inventory view mode" className="flex items-center rounded-2xl border border-border/20 bg-muted/5 p-1 shrink-0">
+            <Button
+              type="button"
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              aria-pressed={viewMode === "cards"}
+              onClick={() => setViewMode("cards")}
+              className="h-9 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Cards</span>
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              aria-pressed={viewMode === "table"}
+              onClick={() => setViewMode("table")}
+              className="h-9 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+            >
+              <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Table</span>
+            </Button>
+          </div>
+
           {/* Add Item & Batch Operations Buttons */}
           {canManage && (
             <div className="flex gap-2 shrink-0">
@@ -773,7 +843,7 @@ export function ModernInventoryClient({
                     <span className="hidden sm:inline">Batch Operations</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="w-full sm:max-w-2xl rounded-3xl border border-border/10 bg-background/95 backdrop-blur-xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-[9999]">
+                <DialogContent className={cn("w-full sm:max-w-2xl rounded-3xl border border-border/10 bg-background/95 backdrop-blur-xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-[9999]", isReportPreviewOpen && "print:hidden")}>
                   <DialogHeader className="pb-4">
                     <DialogTitle className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
                       <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -824,6 +894,22 @@ export function ModernInventoryClient({
                   {/* Tab 1: Import Sheet */}
                   {activeTab === "import" && (
                     <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/10 bg-muted/10 px-4 py-2.5">
+                        <span className="text-xs text-muted-foreground font-medium">
+                          Need a starting spreadsheet? Download the template with accepted headers and a sample row.
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadTemplate}
+                          className="h-8 rounded-xl gap-1.5 text-[11px] font-bold uppercase tracking-wider shrink-0"
+                        >
+                          <Download className="h-3.5 w-3.5 text-primary" />
+                          Download Template
+                        </Button>
+                      </div>
+
                       <div className="border-2 border-dashed border-border/20 rounded-2xl p-8 flex flex-col items-center justify-center bg-muted/5 transition-all hover:border-primary/30 focus-within:ring-2 focus-within:ring-primary relative">
                         <input
                           type="file"
@@ -1091,6 +1177,28 @@ export function ModernInventoryClient({
                         </div>
                       </div>
 
+                      {/* View Report Preview Button */}
+                      <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/10 bg-muted/10 px-4 py-2.5">
+                        <span className="text-xs text-muted-foreground font-medium truncate">
+                          {exportFilterSummary}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleViewReport}
+                          disabled={isLoadingReport || selectedExportColumns.length === 0}
+                          className="h-8 rounded-xl gap-1.5 text-[11px] font-bold uppercase tracking-wider shrink-0"
+                        >
+                          {isLoadingReport ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5 text-primary" />
+                          )}
+                          View Report
+                        </Button>
+                      </div>
+
                       {/* Export buttons grid (4 items: Excel, CSV, JSON, ZIP) */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                         {/* Excel Export */}
@@ -1195,6 +1303,11 @@ export function ModernInventoryClient({
             <Loader2 className="h-4 w-4 animate-spin" />
             Searching...
           </div>
+        ) : viewMode === "table" ? (
+          <InventoryTable
+            books={books}
+            canManage={canManage}
+          />
         ) : (
           <InventoryGrid
             books={books}
@@ -1214,6 +1327,17 @@ export function ModernInventoryClient({
           variant="default"
         />
       )}
+      </div>
+
+      <InventoryReportPreview
+        open={isReportPreviewOpen}
+        onOpenChange={setIsReportPreviewOpen}
+        rows={reportPreviewRows}
+        columnHeaders={selectedColumnHeaders}
+        filterSummary={exportFilterSummary}
+        onExportExcel={handleExportExcel}
+        isExporting={isExportingExcel}
+      />
     </div>
   );
 }

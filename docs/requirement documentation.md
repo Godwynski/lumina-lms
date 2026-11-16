@@ -1,4 +1,4 @@
-
+﻿
 Requirements Documentation
 This specific part defines the software features of the web-based system of Lumina: A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang. The requirements stated below are formulated based on the data gathered, standard operating procedure analysis, and key stakeholder consultations conducted with the library staff and administration of STI College Alabang, as well as particularly selected information based on the specific objectives of this study. The defined requirements below are expected to cater to the operational needs of STI College Alabang to enhance library transaction efficiency, inventory tracking accuracy, and asset security. The requirements below also describe how all the authorized users Super Administrators, Librarians, Student Assistants, and Students of STI College Alabang can interact with the system. 
 4.1. Functional Requirements
@@ -148,3 +148,13 @@ REQ089. The system architecture shall be modularly designed to allow updates to 
 REQ090. The system must function consistently across major modern web browsers, including Google Chrome, Mozilla Firefox, Microsoft Edge, and Apple Safari, without requiring special extensions.
 REQ091. The system shall be fully accessible and responsive across multiple hardware devices and operating systems (Windows, macOS, Linux, iOS, Android).
 REQ092. The system shall support customizable data export operations, allowing administrative catalog data and audit logs to be downloaded in Spreadsheet CSV, JSON, and ZIP formats.
+
+## Scope & Limitations (implementation-aligned)
+
+Lumina is a **Restricted / Authenticated OPAC**: catalog access is limited to authenticated accounts and their assigned permissions. Koha and MARC 21 are reference systems/standards for the OPAC and bibliographic catalog context; Lumina does not claim direct Koha integration or full MARC 21 conformance. In user-facing terminology, **Patron** includes students and faculty, and **Library Staff** refers to student assistants. The database role identifiers are `patron` and `library_staff`.
+
+Cash payments and official receipts are handled manually in a physical ledger. The system computes fines and tracks them as **Receivable**, **Paid**, or **Condoned**; it does not provide full digital accounting or generate official receipts. Book purchase price, replacement cost, and donation tracking are limitations: these acquisition and costing data are not stored by the current system.
+
+## Future Recommendations
+
+Implement full digital accounting and official receipt support, including auditable payment recording and receipt issuance, as a future extension. Any such implementation should complement the existing fine computation and Receivable / Paid / Condoned tracking.

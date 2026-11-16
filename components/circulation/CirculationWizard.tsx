@@ -1,34 +1,41 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, RefreshCcw } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { ArrowLeft, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { FineSettlementDialog } from '@/components/common/FineSettlementDialog';
 import { CirculationStepper } from './CirculationStepper';
 import { ScanStep } from './steps/ScanStep';
 import { ReviewStep } from './steps/ReviewStep';
 import { SuccessStep } from './steps/SuccessStep';
 import { MemberPreview } from './MemberPreview';
 import { useCirculationWizard } from '@/hooks/use-circulation-wizard';
+import { usePreferences } from '@/components/providers/PreferencesProvider';
+import type { UserRole } from '@/lib/types';
+
+export interface CirculationWizardProps {
+  userRole?: UserRole | null;
+}
 
 /**
  * Streamlined Circulation Wizard shell.
  * Coordinates circulation step presentation while state management, audio cues,
  * and server actions are isolated in dedicated hooks and subcomponents.
  */
-export function CirculationWizard() {
+export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
+  const { role: contextRole } = usePreferences();
+  const effectiveRole = userRole ?? contextRole;
+  const canOverrideBlock = effectiveRole === 'librarian' || effectiveRole === 'super_admin';
+
   const {
     mode,
     steps,
     currentStep,
     activeStudent,
+    overrideReason,
+    isBlockedPendingOverride,
     pendingCheckout,
     pendingReturn,
     isProcessing,
@@ -37,6 +44,7 @@ export function CirculationWizard() {
     reservationData,
     switchMode,
     handleReset: resetWizard,
+    applyOverride,
     processScan,
     confirmAction,
   } = useCirculationWizard();
@@ -49,26 +57,53 @@ export function CirculationWizard() {
   const step = isConfirmed || viewStep === null ? reachedStep : Math.min(viewStep, reachedStep);
   const canNavigate = !isConfirmed && !isProcessing && !isCommitting;
 
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideDraft, setOverrideDraft] = useState('');
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const overrideFieldId = useId();
+
   const goToStep = (id: number) => {
     if (canNavigate && id >= 1 && id <= reachedStep) setViewStep(id < reachedStep ? id : null);
+  };
+  const clearOverrideDraft = () => {
+    setShowOverrideForm(false);
+    setOverrideDraft('');
+    setOverrideError(null);
   };
   const handleReset = () => {
     setViewStep(null);
     setSession(n => n + 1);
+    clearOverrideDraft();
     resetWizard();
   };
   const handleSwitchMode = (next: typeof mode) => {
     setViewStep(null);
+    clearOverrideDraft();
     switchMode(next);
   };
   // A successful scan produces a fresh draft, so resume at the furthest step.
   const handleScan: typeof processScan = async (value, isManual) => {
     const ok = await processScan(value, isManual);
-    if (ok) setViewStep(null);
+    if (ok) {
+      setViewStep(null);
+      clearOverrideDraft();
+    }
     return ok;
   };
   // Stepped back to student identification with a student already scanned.
-  const reviewingStudent = mode === 'checkout' && step === 1 && !!activeStudent;
+  const reviewingStudent = mode === 'checkout' && step === 1 && !!activeStudent && !isBlockedPendingOverride;
+
+  const handleOverrideContinue = () => {
+    const trimmed = overrideDraft.trim();
+    if (trimmed.length < 10 || trimmed.length > 300) {
+      setOverrideError('Override reason must be between 10 and 300 characters.');
+      return;
+    }
+    if (applyOverride(trimmed)) {
+      clearOverrideDraft();
+      setViewStep(null);
+    }
+  };
 
   // When a step replaces the focused control, move focus to the new stage.
   // Preserve normal route-entry focus and keep failed scans in the current field.
@@ -172,10 +207,95 @@ export function CirculationWizard() {
           ) : (step === 1 || (step === 2 && mode === 'checkout')) ? (
             <div key={`${mode}-${session}`}>
               {activeStudent && mode === 'checkout' && (
-                <MemberPreview student={activeStudent} />
+                <MemberPreview student={activeStudent} overrideReason={overrideReason} />
               )}
-              
-              {reviewingStudent ? (
+
+              {isBlockedPendingOverride ? (
+                <div className="rounded-2xl border border-border/20 bg-muted/10 p-5 space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Checkout cannot proceed while this patron has overdue books or unpaid fines.
+                    </p>
+                    {!canOverrideBlock && (
+                      <p className="text-xs text-muted-foreground">
+                        Only a Librarian or Super Admin can override a borrowing block.
+                      </p>
+                    )}
+                  </div>
+
+                  {showOverrideForm && canOverrideBlock ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={overrideFieldId} className="text-xs font-bold uppercase tracking-wider">
+                          Override reason
+                        </Label>
+                        <Textarea
+                          id={overrideFieldId}
+                          value={overrideDraft}
+                          onChange={(e) => {
+                            setOverrideDraft(e.target.value);
+                            if (overrideError) setOverrideError(null);
+                          }}
+                          placeholder="Enter reason for overriding this borrowing block (10–300 characters)"
+                          maxLength={300}
+                          aria-invalid={Boolean(overrideError)}
+                          className="min-h-24"
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                          <span>Minimum 10 characters required.</span>
+                          <span className="tabular-nums">{overrideDraft.trim().length}/300</span>
+                        </div>
+                        {overrideError && (
+                          <p role="alert" className="text-xs font-medium text-destructive">
+                            {overrideError}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleReset}
+                          className="rounded-xl px-5 h-10 text-[11px] font-bold uppercase tracking-wider"
+                        >
+                          Start over
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleOverrideContinue}
+                          className="rounded-xl px-6 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                        >
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleReset}
+                        className="rounded-xl px-5 h-10 text-[11px] font-bold uppercase tracking-wider"
+                      >
+                        Start over
+                      </Button>
+                      {canOverrideBlock && (
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setShowOverrideForm(true);
+                            setOverrideError(null);
+                          }}
+                          className="rounded-xl px-6 h-10 gap-2 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                        >
+                          <ShieldAlert className="h-3.5 w-3.5" />
+                          Override
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : reviewingStudent ? (
                 <div className="flex justify-end pt-6">
                   <Button
                     onClick={() => goToStep(2)}
@@ -188,20 +308,20 @@ export function CirculationWizard() {
               <ScanStep 
                 title={
                   step === 1 
-                    ? (mode === 'checkout' ? 'Scan student card' : 'Scan book copy')
-                    : 'Scan book copy'
+                    ? (mode === 'checkout' ? 'Scan library card' : 'Scan item')
+                    : 'Scan item'
                 }
                 description={
                   step === 1
                     ? (mode === 'checkout' 
-                        ? 'Scan student library card or enter number.' 
-                        : 'Scan book copy QR code to begin.')
-                    : `${activeStudent?.fullName} verified. Scan the QR on the physical copy.`
+                        ? 'Scan library card or enter number.' 
+                        : 'Scan item QR code to begin.')
+                    : `${activeStudent?.fullName} verified. Scan the QR on the physical item.`
                 }
                 placeholder={
                   step === 1
-                    ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Book QR')
-                    : 'Enter Book QR'
+                    ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Item QR')
+                    : 'Enter Item QR'
                 }
                 onScan={handleScan}
                 isProcessing={isProcessing}
@@ -233,43 +353,31 @@ export function CirculationWizard() {
                   </Button>
               </div>
 
-              <Dialog open={isSettleModalOpen} onOpenChange={setIsSettleModalOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Overdue Penalty Settlement</DialogTitle>
-                    <DialogDescription>
-                      This book is {pendingReturn?.overdueDays || 1} day(s) overdue with a penalty of{' '}
-                      <span className="font-bold text-destructive tabular-nums">
-                        ₱{Number(pendingReturn?.fineAmount ?? 0).toFixed(2)}
-                      </span>
-                      . Collect payment now or mark it unpaid to settle later from Borrowing Logs.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter className="gap-2 sm:gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isProcessing}
-                      onClick={() => {
-                        setIsSettleModalOpen(false);
-                        void confirmAction(false);
-                      }}
-                    >
-                      Return Only (Pay Later)
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={isProcessing}
-                      onClick={() => {
-                        setIsSettleModalOpen(false);
-                        void confirmAction(true);
-                      }}
-                    >
-                      Return &amp; Settle (₱{Number(pendingReturn?.fineAmount ?? 0).toFixed(2)})
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <FineSettlementDialog
+                open={isSettleModalOpen}
+                onOpenChange={setIsSettleModalOpen}
+                title="Overdue Penalty Settlement"
+                description={
+                  <>
+                    This book is {pendingReturn?.overdueDays || 1} day(s) overdue with a penalty of{' '}
+                    <span className="font-bold text-destructive tabular-nums">
+                      ₱{Number(pendingReturn?.fineAmount ?? 0).toFixed(2)}
+                    </span>
+                    . Mark as Paid, Mark as Condoned, or return unpaid (Receivable) to settle later from Borrowing Logs.
+                  </>
+                }
+                fineAmount={Number(pendingReturn?.fineAmount ?? 0)}
+                isSubmitting={isProcessing}
+                allowReturnOnly
+                onReturnOnly={() => {
+                  setIsSettleModalOpen(false);
+                  void confirmAction(false);
+                }}
+                onResolve={(resolution, remarks) => {
+                  setIsSettleModalOpen(false);
+                  void confirmAction(true, resolution, remarks);
+                }}
+              />
             </div>
           )}
         </section>

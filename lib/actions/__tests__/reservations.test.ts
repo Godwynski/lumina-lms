@@ -47,13 +47,13 @@ import {
 function makeAuthContext(
   supabase: ReturnType<typeof createMockSupabaseClient>['client'],
   userId = 'student-1',
-  role: 'student' | 'librarian' | 'super_admin' | 'student_assistant' = 'student'
+  role: 'patron' | 'librarian' | 'super_admin' | 'library_staff' = 'patron'
 ) {
   return {
     user: { id: userId },
     profile: { id: userId, role, status: 'ACTIVE' },
     role,
-    isStaff: role !== 'student',
+    isStaff: role !== 'patron',
     isAdmin: role === 'super_admin',
     isDeactivatedSA: false,
     hasPermission: () => true,

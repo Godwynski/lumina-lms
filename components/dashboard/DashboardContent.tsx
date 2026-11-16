@@ -25,7 +25,7 @@ export async function DashboardContent({
 
   const faqKeys = ["student_faq_list"];
 
-  const isStudent = role === "student";
+  const isStudent = role === "patron";
 
 
 
@@ -38,16 +38,14 @@ export async function DashboardContent({
         .eq("user_id", user.id)
         .maybeSingle();
 
-  const faqPromise = (isStudent || role === "student_assistant")
+  const faqPromise = (isStudent || role === "library_staff")
     ? supabase
         .from("system_settings")
         .select("key, value")
         .in("key", faqKeys)
     : Promise.resolve({ data: null, error: null });
 
-  const reservationsPromise = (isStudent || role === "student_assistant")
-    ? (getMyReservations() as unknown as Promise<Reservation[]>)
-    : Promise.resolve([]);
+  const reservationsPromise = (getMyReservations() as unknown as Promise<Reservation[]>);
 
   const attendancePromise = supabase
     .from("attendance")

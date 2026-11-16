@@ -164,7 +164,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
 
     mockPathname = '/dashboard';
     const cardHandle = await renderClient(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
         <MyCardContainer initialData={baseCardData} variant="dashboard" />
       </PreferencesProvider>
@@ -181,7 +181,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
     ).toBe(true);
 
     await cardHandle.rerender(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
         <MyCardContainer initialData={baseCardData} variant="page" />
       </PreferencesProvider>
@@ -222,7 +222,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
     };
 
     const bookHandle = await renderClient(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
         <AdminTableShell title="Resource Explorer" description="Details">
           <Suspense fallback={<div>Loading</div>}>
@@ -294,7 +294,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
 
     const profileHandle = await renderClient(
       <PersonalInfoForm
-        role="student"
+        role="patron"
         initialProfile={{
           full_name: 'Ana Reyes',
           student_id: '2026-0099',
@@ -308,7 +308,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
     );
 
     for (const label of [
-      'Student ID info',
+      'Patron ID info',
       'Official Email info',
       'Account Status info',
       'Academic Program info',
@@ -320,7 +320,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
 
     cleanupClients();
 
-    const securityHandle = await renderClient(<SecuritySection role="student" />);
+    const securityHandle = await renderClient(<SecuritySection role="patron" />);
     const secBtn = securityHandle.container.querySelector('button');
     expect(secBtn).not.toBeNull();
     expect(secBtn).toHaveAttribute('aria-label', 'Identity & Access info');

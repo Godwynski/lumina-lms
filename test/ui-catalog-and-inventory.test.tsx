@@ -1353,7 +1353,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       { id: 'cat-2', name: 'History' },
     ];
 
-    function makeStaffProfile(role: 'librarian' | 'student'): ProfileData {
+    function makeStaffProfile(role: 'librarian' | 'patron'): ProfileData {
       return {
         id: 'staff-1',
         full_name: 'Librarian User',
@@ -1372,7 +1372,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
 
     function renderInventory(props: Partial<React.ComponentProps<typeof ModernInventoryClient>> = {}) {
       const canManage = props.canManage ?? true;
-      const role = canManage ? 'librarian' : 'student';
+      const role = canManage ? 'librarian' : 'patron';
       return renderClient(
         <AnimationProvider>
           <PreferencesProvider
@@ -1732,6 +1732,162 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         writable: true,
         configurable: true,
         value: originalLocation,
+      });
+    });
+
+    it('supports Cards/Table view toggle (view=table), Download Template, and View Report preview with Export and Print (WP5 #1, #2)', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ jobs: [] }), { status: 200 }))
+      );
+      const printSpy = vi.fn();
+      vi.stubGlobal('print', printSpy);
+
+      // 1. Toggle from Cards to Table updates URL with view=table
+      const { container } = await renderInventory();
+      await flushPromises();
+      const tableBtn = findButtonByText(container, 'Table');
+      expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
+      await clickElement(tableBtn);
+      expect(mockRouterReplace).toHaveBeenCalledWith('?view=table', { scroll: false });
+
+      // 2. Rendering with view=table displays table rows with title, author, ISBN, category, copies, status
+      cleanupClients();
+      mockSearchParamsString = 'view=table&q=Clean&status=ALL&categoryId=cat-1';
+      const books = [
+        makeBook({
+          id: 'b-avail',
+          title: 'Clean Code',
+          author: 'Robert C. Martin',
+          isbn: '9780132350884',
+          categories: { name: 'Computer Science' },
+          available_copies: 2,
+          total_copies: 5,
+          is_active: true,
+        }),
+        makeBook({
+          id: 'b-out',
+          title: 'Clean Architecture',
+          author: 'Robert C. Martin',
+          isbn: '9780134494166',
+          categories: { name: 'Computer Science' },
+          available_copies: 0,
+          total_copies: 3,
+          is_active: true,
+        }),
+        makeBook({
+          id: 'b-arch',
+          title: 'Legacy Systems',
+          author: 'Old Author',
+          isbn: '9780000000000',
+          categories: { name: 'History' },
+          available_copies: 1,
+          total_copies: 1,
+          is_active: false,
+        }),
+      ];
+
+      const tableRender = await renderInventory({ books, totalItems: 3 });
+      await flushPromises();
+      expect(findButtonByText(tableRender.container, 'Table')).toHaveAttribute('aria-pressed', 'true');
+      const table = tableRender.container.querySelector('table');
+      expect(table).not.toBeNull();
+      expect(table).toHaveTextContent('Clean Code');
+      expect(table).toHaveTextContent('Robert C. Martin');
+      expect(table).toHaveTextContent('9780132350884');
+      expect(table).toHaveTextContent('Computer Science');
+      expect(table).toHaveTextContent('2 / 5');
+      expect(table).toHaveTextContent('Available');
+      expect(table).toHaveTextContent('0 / 3');
+      expect(table).toHaveTextContent('Out of Stock');
+      expect(table).toHaveTextContent('Archived');
+
+      // Row click opens BookDetailModal
+      mockGetBookAdminDetails.mockResolvedValueOnce({
+        book: books[0],
+        copies: [],
+        queue: [],
+      });
+      const firstRow = tableRender.container.querySelector('tbody tr') as HTMLElement;
+      await clickElement(firstRow);
+      await flushPromises();
+      expect(mockGetBookAdminDetails).toHaveBeenCalledWith('b-avail');
+
+      // 3. Batch Operations -> Download Template produces lumina_import_template.xlsx
+      await clickElement(tableRender.container.querySelector('button[aria-label="Batch operations"]'));
+      await clickElement(findButtonByText(document.body, 'Download Template'));
+      await vi.waitFor(() => {
+        expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_import_template.xlsx');
+      });
+
+      // 4. Batch Operations -> Export -> View Report previews exact selected columns + filtered rows
+      mockGetBooksForExport.mockResolvedValueOnce([
+        {
+          id: 'b-avail',
+          title: 'Clean Code',
+          author: 'Robert C. Martin',
+          isbn: '9780132350884',
+          dewey_decimal: '005.1',
+          description: 'Software craftsmanship',
+          published_year: 2008,
+          cover_url: null,
+          tags: ['Code'],
+          location: 'Shelf A',
+          section: 'CS',
+          is_active: true,
+          created_at: '2026-01-01T00:00:00Z',
+          categories: { name: 'Computer Science' },
+        },
+      ]);
+
+      await clickElement(findButtonByText(document.body, 'Export Data'));
+      // Uncheck Description so preview only shows selected columns
+      const descCheckbox = Array.from(document.body.querySelectorAll('label')).find((el) =>
+        el.textContent?.includes('Description')
+      )?.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      await clickElement(descCheckbox);
+      expect(descCheckbox.checked).toBe(false);
+
+      await clickElement(findButtonByText(document.body, 'View Report'));
+      await flushPromises();
+
+      expect(mockGetBooksForExport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: 'Clean',
+          categoryId: 'cat-1',
+          status: 'ALL',
+        })
+      );
+      expect(document.body).toHaveTextContent('Inventory Report Preview');
+      expect(document.body).toHaveTextContent('1 record');
+      expect(document.body).toHaveTextContent('Clean Code');
+      expect(document.body).not.toHaveTextContent('Software craftsmanship');
+
+      // Print & Export buttons inside report preview
+      await clickElement(findButtonByText(document.body, 'Print'));
+      expect(printSpy).toHaveBeenCalledTimes(1);
+
+      mockGetBooksForExport.mockResolvedValueOnce([
+        {
+          id: 'b-avail',
+          title: 'Clean Code',
+          author: 'Robert C. Martin',
+          isbn: '9780132350884',
+          dewey_decimal: '005.1',
+          description: 'Software craftsmanship',
+          published_year: 2008,
+          cover_url: null,
+          tags: ['Code'],
+          location: 'Shelf A',
+          section: 'CS',
+          is_active: true,
+          created_at: '2026-01-01T00:00:00Z',
+          categories: { name: 'Computer Science' },
+        },
+      ]);
+      await clickElement(findButtonByText(document.body, 'Export (.xlsx)'));
+      await vi.waitFor(() => {
+        expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_catalog_export.xlsx');
       });
     });
   });

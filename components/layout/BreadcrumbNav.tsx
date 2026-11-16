@@ -85,11 +85,11 @@ export function BreadcrumbNav() {
   let title = formatSegment(current, parentSegment);
   if (current === "history") {
     const isViewingLogs = viewParam === "logs" && 
-                          (role === "super_admin" || role === "librarian" || role === "student_assistant");
+                          (role === "super_admin" || role === "librarian" || role === "library_staff");
     title = isViewingLogs ? "Borrowing Logs" : "My Borrowing";
   } else if (current === "attendance") {
     const isStaffUser = (role === "super_admin" || role === "librarian") || 
-                        (role === "student_assistant" && viewParam === "logs");
+                        (role === "library_staff" && viewParam === "logs");
     title = isStaffUser ? "Attendance Logs" : "My Attendance";
   }
 
@@ -98,11 +98,11 @@ export function BreadcrumbNav() {
   let backLabel = parentSegment ? formatSegment(parentSegment) : null;
   if (parentSegment === "history") {
     const isViewingLogs = viewParam === "logs" && 
-                          (role === "super_admin" || role === "librarian" || role === "student_assistant");
+                          (role === "super_admin" || role === "librarian" || role === "library_staff");
     backLabel = isViewingLogs ? "Borrowing Logs" : "My Borrowing";
   } else if (parentSegment === "attendance") {
     const isStaffUser = (role === "super_admin" || role === "librarian") || 
-                        (role === "student_assistant" && viewParam === "logs");
+                        (role === "library_staff" && viewParam === "logs");
     backLabel = isStaffUser ? "Attendance Logs" : "My Attendance";
   }
 

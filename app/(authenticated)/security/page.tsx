@@ -10,7 +10,7 @@ async function SecurityPageContent() {
   const me = await getMe();
   if (!me) redirect("/");
 
-  return <SecuritySection role={me.profile?.role || "student"} />;
+  return <SecuritySection role={me.profile?.role || "patron"} />;
 }
 
 export default function SecurityPage() {

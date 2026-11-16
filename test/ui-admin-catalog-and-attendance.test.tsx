@@ -34,11 +34,22 @@ vi.mock('sonner', () => ({
   },
 }));
 
-const mockToggleAttendanceByCard = vi.fn();
+const mockRecordAttendanceByCard = vi.fn();
 const mockGetAttendanceHistory = vi.fn();
 vi.mock('@/lib/actions/attendance', () => ({
-  toggleAttendanceByCard: (...args: unknown[]) => mockToggleAttendanceByCard(...args),
+  recordAttendanceByCard: (...args: unknown[]) => mockRecordAttendanceByCard(...args),
   getAttendanceHistory: (...args: unknown[]) => mockGetAttendanceHistory(...args),
+}));
+
+const mockXlsxWriteFile = vi.fn();
+const mockXlsxJsonToSheet = vi.fn((_rows?: unknown[]) => ({}));
+vi.mock('xlsx', () => ({
+  utils: {
+    json_to_sheet: (rows: unknown[]) => mockXlsxJsonToSheet(rows),
+    book_new: () => ({}),
+    book_append_sheet: vi.fn(),
+  },
+  writeFile: (...args: unknown[]) => mockXlsxWriteFile(...args),
 }));
 
 const mockGetBookAvailabilityStatus = vi.fn();
@@ -51,13 +62,13 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockCreateClient(),
 }));
 
-import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
+import { AttendanceClient, buildAttendanceExportRows } from '@/app/(authenticated)/attendance/AttendanceClient';
 import type { AttendanceRecord } from '@/lib/actions/attendance';
 import { PolicyField } from '@/components/admin/policies/PolicyField';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LuminaTable, type LuminaColumn } from '@/components/common/LuminaTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { RoleBadge } from '@/components/common/RoleBadge';
+import { RoleBadge, ROLE_LABELS, getRoleLabel } from '@/components/common/RoleBadge';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import { NotificationItem } from '@/components/notifications/NotificationItem';
 import { FieldGroup } from '@/components/common/FieldGroup';
@@ -137,22 +148,41 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       return handle;
     }
 
-    it('renders accessible #attendance-card-id input and submits card check-in/check-out', async () => {
+    it('renders accessible #attendance-card-id input, Check-In/Check-Out mode buttons, and submits explicit mode', async () => {
       const { container } = await renderStaffAttendance();
+
+      const modeGroup = container.querySelector('[role="group"][aria-label="Attendance mode"]')!;
+      expect(modeGroup).toBeInTheDocument();
+      const checkInModeBtn = findButtonByText(modeGroup, 'Check-In')!;
+      const checkOutModeBtn = findButtonByText(modeGroup, 'Check-Out')!;
+      expect(checkInModeBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(checkInModeBtn).toHaveTextContent('Active');
+      expect(checkInModeBtn.className).toContain('bg-emerald-600');
+      expect(checkOutModeBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(checkOutModeBtn).not.toHaveTextContent('Active');
 
       const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
       expect(cardInput).toBeInTheDocument();
       const label = container.querySelector('label[for="attendance-card-id"]');
       expect(label).toHaveTextContent('Card ID or student number');
 
+      // Switch to Check-Out mode
+      await clickElement(checkOutModeBtn);
+      expect(checkOutModeBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(checkOutModeBtn).toHaveTextContent('Active');
+      expect(checkOutModeBtn.className).toContain('bg-orange-600');
+      expect(checkInModeBtn).toHaveAttribute('aria-pressed', 'false');
+
       const updatedRecord = makeAttendance({
         id: 'att-2',
         check_out_at: '2026-11-14T10:00:00Z',
       });
-      mockToggleAttendanceByCard.mockResolvedValueOnce({
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
         success: true,
         data: {
           status: 'OUT',
+          outcome: 'CHECKED_OUT',
+          userId: 'stu-1',
           recordedAt: '2026-11-14T10:00:00Z',
           message: 'Checked out Maria Clara',
           description: 'Checked out successfully.',
@@ -164,16 +194,124 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       await typeIntoInput(cardInput, 'LIB-1001');
       await submitForm(cardInput.closest('form'));
 
-      expect(mockToggleAttendanceByCard).toHaveBeenCalledWith({
+      expect(mockRecordAttendanceByCard).toHaveBeenCalledWith({
         cardNumber: 'LIB-1001',
+        mode: 'out',
         isManual: true,
-        confirmed: false,
       });
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Transaction recorded',
         expect.objectContaining({ description: 'Checked out Maria Clara' })
       );
       expect(cardInput.value).toBe('');
+    });
+
+    it('shows ALREADY_IN warning and disables Check-In for that person until they check out', async () => {
+      const { container } = await renderStaffAttendance();
+      const modeGroup = container.querySelector('[role="group"][aria-label="Attendance mode"]')!;
+      const checkOutModeBtn = findButtonByText(modeGroup, 'Check-Out')!;
+      const checkInModeBtn = findButtonByText(modeGroup, 'Check-In')!;
+      const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
+      const form = cardInput.closest('form')!;
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'ALREADY_IN',
+          outcome: 'ALREADY_IN',
+          userId: 'stu-1',
+          userName: 'Maria Clara',
+          recordedAt: '2026-11-14T08:30:00Z',
+          message: 'You are already checked in',
+          description: 'Maria Clara is already checked in.',
+        },
+      });
+
+      await typeIntoInput(cardInput, 'LIB-1001');
+      await submitForm(form);
+
+      const alert = container.querySelector('[role="alert"]');
+      expect(alert).toBeInTheDocument();
+      expect(alert).toHaveTextContent('You are already checked in');
+      // Check-In is disabled for Maria Clara
+      expect(submitBtn).toBeDisabled();
+
+      // Typing a different patron's ID re-enables Check-In for that other person
+      await typeIntoInput(cardInput, 'LIB-2002');
+      expect(submitBtn).not.toBeDisabled();
+
+      // Re-typing Maria Clara's ID disables Check-In again until checkout
+      await typeIntoInput(cardInput, 'LIB-1001');
+      expect(submitBtn).toBeDisabled();
+
+      // Switching to Check-Out enables submission so staff can check Maria Clara out
+      await clickElement(checkOutModeBtn);
+      expect(submitBtn).not.toBeDisabled();
+      expect(submitBtn).toHaveTextContent('Check-Out');
+
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'OUT',
+          outcome: 'CHECKED_OUT',
+          userId: 'stu-1',
+          userName: 'Maria Clara',
+          recordedAt: '2026-11-14T10:00:00Z',
+          message: 'Goodbye, Maria Clara!',
+          description: 'Timed out successfully.',
+        },
+      });
+      mockGetAttendanceHistory.mockResolvedValue([
+        makeAttendance({ check_out_at: '2026-11-14T10:00:00Z' }),
+      ]);
+      await submitForm(form);
+
+      // Warning cleared and Check-In for LIB-1001 is no longer blocked
+      expect(container.querySelector('[role="alert"]')).not.toBeInTheDocument();
+      await clickElement(checkInModeBtn);
+      await typeIntoInput(cardInput, 'LIB-1001');
+      expect(submitBtn).not.toBeDisabled();
+    });
+
+    it('renders No Log Out badge in logs table and includes it in the xlsx export', async () => {
+      const autoClosedRecord = makeAttendance({
+        id: 'att-auto',
+        check_in_at: '2026-11-13T09:00:00Z',
+        check_out_at: '2026-11-13T17:00:00Z',
+        notes: 'No Log Out',
+      });
+      const normalRecord = makeAttendance({
+        id: 'att-normal',
+        check_in_at: '2026-11-14T08:00:00Z',
+        check_out_at: '2026-11-14T11:00:00Z',
+        notes: null,
+      });
+
+      const { container } = await renderStaffAttendance([autoClosedRecord, normalRecord], [autoClosedRecord, normalRecord]);
+      expect(container).toHaveTextContent('No Log Out');
+
+      const exportRows = buildAttendanceExportRows([autoClosedRecord, normalRecord]);
+      expect(exportRows[0]).toMatchObject({
+        Patron: 'Maria Clara',
+        Status: 'No Log Out',
+        Notes: 'No Log Out',
+      });
+      expect(exportRows[1]).toMatchObject({
+        Status: 'Completed',
+        Notes: '',
+      });
+
+      const exportBtn = findButtonByText(container, 'Export (.xlsx)')!;
+      expect(exportBtn).toBeDefined();
+      await clickElement(exportBtn);
+
+      expect(mockXlsxJsonToSheet).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ Status: 'No Log Out', Notes: 'No Log Out' }),
+        ])
+      );
+      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_attendance_logs.xlsx');
     });
 
     it('opens Gate Attendance Scanner modal and restores focus to trigger on Escape', async () => {
@@ -300,6 +438,44 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(handle.container).toHaveTextContent('Books');
       expect(handle.container).not.toHaveTextContent('Modified');
     });
+
+    it('renders time input for library_closing_time and validates 24-hour HH:MM format', async () => {
+      const onChange = vi.fn();
+      const onInvalidChange = vi.fn();
+
+      const handle = await renderClient(
+        <TooltipProvider>
+          <PolicyField
+            policyKey="library_closing_time"
+            value="17:00"
+            initialValue="17:00"
+            onChange={onChange}
+            onInvalidChange={onInvalidChange}
+            disabled={false}
+            loading={false}
+          />
+        </TooltipProvider>
+      );
+
+      expect(handle.container).toHaveTextContent('Library Closing Time');
+      const input = handle.container.querySelector('input') as HTMLInputElement;
+      expect(input).toHaveAttribute('type', 'time');
+      expect(input).toHaveAttribute('aria-label', 'Library Closing Time');
+
+      await typeIntoInput(input, '19:30');
+      expect(onInvalidChange).toHaveBeenLastCalledWith(false);
+      expect(onChange).toHaveBeenLastCalledWith('19:30');
+      expect(handle.container.querySelector('[role="alert"]')).toBeNull();
+
+      await typeIntoInput(input, '25:00');
+      expect(onInvalidChange).toHaveBeenLastCalledWith(true);
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(handle.container.querySelector('[role="alert"]')).toHaveTextContent('HH:MM');
+
+      await typeIntoInput(input, '');
+      expect(onInvalidChange).toHaveBeenLastCalledWith(true);
+      expect(handle.container.querySelector('[role="alert"]')).toHaveTextContent('Enter a time');
+    });
   });
 
   describe('Common & Catalog Components', () => {
@@ -351,10 +527,11 @@ describe('Admin, Catalog & Attendance UI Components', () => {
           <StatusBadge status="RETURNED" />
           <StatusBadge status="READY" />
           <StatusBadge status="custom_state" />
+          <RoleBadge role="super_admin" />
           <RoleBadge role="admin" />
           <RoleBadge role="librarian" />
-          <RoleBadge role="student_assistant" />
-          <RoleBadge role="student" />
+          <RoleBadge role="library_staff" />
+          <RoleBadge role="patron" />
           <RoleBadge role="guest" />
         </div>
       );
@@ -364,11 +541,16 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(container).toHaveTextContent('Returned');
       expect(container).toHaveTextContent('Ready');
       expect(container).toHaveTextContent('custom_state');
+      expect(container).toHaveTextContent('Super Admin');
       expect(container).toHaveTextContent('Administrator');
       expect(container).toHaveTextContent('Librarian');
-      expect(container).toHaveTextContent('Student Assistant');
-      expect(container).toHaveTextContent('Student');
+      expect(container).toHaveTextContent('Library Staff');
+      expect(container).toHaveTextContent('Patron');
       expect(container).toHaveTextContent('guest');
+      expect(ROLE_LABELS.patron).toBe('Patron');
+      expect(ROLE_LABELS.library_staff).toBe('Library Staff');
+      expect(getRoleLabel('library_staff')).toBe('Library Staff');
+      expect(getRoleLabel('patron')).toBe('Patron');
     });
 
     it('CompactPagination displays range and triggers onPageChange with boundary disabled states', async () => {

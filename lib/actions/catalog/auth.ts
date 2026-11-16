@@ -8,10 +8,12 @@ import { getMe } from '@/lib/auth-helpers';
  */
 export async function assertStaffCatalogAccess(allowAssistants = false) {
   const me = await getMe();
-  if (!me || !me.isStaff) throw new Error('Unauthorized');
+  if (!me || !me.isStaff || me.isDeactivatedSA) throw new Error('Unauthorized');
 
-  if (!allowAssistants && me.role !== 'super_admin' && me.role !== 'librarian') {
-    throw new Error('Access denied: Inventory management is restricted to authorized staff roles.');
+  if (me.role !== 'super_admin' && me.role !== 'librarian') {
+    if (!allowAssistants || me.profile?.permissions?.manage_inventory !== true) {
+      throw new Error('Access denied: Inventory management is restricted to authorized staff roles.');
+    }
   }
 
   return me.supabase;

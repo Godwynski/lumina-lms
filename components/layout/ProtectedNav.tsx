@@ -70,16 +70,16 @@ import {
 import { Role, Profile, NavItem, hasPermission } from "@/lib/auth/permissions";
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "student" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "student", excludeRoles: ["super_admin", "librarian"] },
-  { href: "/inventory", label: "Inventory", icon: BookMarked, minRole: "student_assistant", permissionKey: "view_admin_dashboard" },
-  { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "student_assistant", permissionKey: "manage_circulation" },
-  { href: "/history", label: "Borrow History", icon: History, minRole: "student" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "patron" },
+  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "patron" },
+  { href: "/inventory", label: "Inventory", icon: BookMarked, minRole: "library_staff", permissionKey: "manage_inventory" },
+  { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "library_staff", permissionKey: "manage_circulation" },
+  { href: "/history", label: "Borrow History", icon: History, minRole: "patron" },
   { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/attendance", label: "Attendance Logs", icon: UserCheck, minRole: "student" },
+  { href: "/attendance", label: "Attendance Logs", icon: UserCheck, minRole: "patron" },
   { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "super_admin", permissionKey: "view_admin_dashboard" },
+  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian", permissionKey: "view_admin_dashboard" },
 ];
 const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
 
@@ -176,11 +176,11 @@ export function ProtectedNav({
 
   const hasAttendancePerm = currentRole === "super_admin" ||
     currentRole === "librarian" ||
-    (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+    (currentRole === "library_staff" && !!currentProfile?.permissions?.manage_attendance && currentProfile?.status?.toUpperCase() === 'ACTIVE');
 
   const hasCirculationPerm = currentRole === "super_admin" ||
     currentRole === "librarian" ||
-    (currentRole === "student_assistant" && !!currentProfile?.permissions?.manage_circulation && currentProfile?.status?.toUpperCase() === 'ACTIVE');
+    (currentRole === "library_staff" && !!currentProfile?.permissions?.manage_circulation && currentProfile?.status?.toUpperCase() === 'ACTIVE');
 
   const navItemsToRender = useMemo(() => {
     const items: Array<{
@@ -203,7 +203,7 @@ export function ProtectedNav({
             isActive: pathname === "/history"
           });
         } else {
-          const isSAWithCirculation = currentRole === "student_assistant" && hasCirculationPerm;
+          const isSAWithCirculation = currentRole === "library_staff" && hasCirculationPerm;
           if (isSAWithCirculation) {
             // Authorized Student Assistants get BOTH My Borrowing and Borrowing Logs
             items.push({
@@ -229,7 +229,7 @@ export function ProtectedNav({
           }
         }
       } else if (item.href === "/attendance") {
-        if (currentRole === "student_assistant" && hasAttendancePerm) {
+        if (currentRole === "library_staff" && hasAttendancePerm) {
           // Student Assistant with attendance permission gets BOTH My Attendance and Attendance Logs
           items.push({
             href: "/attendance",

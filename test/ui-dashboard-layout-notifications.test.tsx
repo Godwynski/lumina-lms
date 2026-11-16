@@ -392,7 +392,7 @@ function makeProfile(overrides: Partial<ProfileData> = {}): ProfileData {
     id: 'user-1',
     full_name: 'Ada Lovelace',
     email: 'ada.lovelace@alabang.sti.edu.ph',
-    role: 'student',
+    role: 'patron',
     status: 'ACTIVE',
     student_id: 'STU-20260001',
     department: 'BS Computer Science',
@@ -710,6 +710,7 @@ describe('Dashboard Components', () => {
     expect(container.textContent).toContain('Designing Data-Intensive Applications');
     expect(container.textContent).toContain('Active');
     expect(container.textContent).toContain('Overdue');
+    expect(container.textContent).toContain('₱50.00');
     expect(container.textContent).toContain('Ready for Pickup');
     expect(container.textContent).toContain('Queue Position #3');
     expect(container.textContent).toContain('2h 30m');
@@ -760,6 +761,54 @@ describe('Dashboard Components', () => {
       'button[aria-label="Cancel reservation for Domain-Driven Design"]'
     ) as HTMLButtonElement | null;
     expect(disabledCancelBtn?.disabled).toBe(true);
+  });
+
+  it('ActivitySection computes fine owed dynamically for overdue loans and displays Fine owed for returned receivable loans', async () => {
+    const borrows: BorrowingRecord[] = [
+      {
+        id: 'b-overdue-live',
+        book_copy_id: 'c1',
+        user_id: 'u1',
+        status: 'ACTIVE',
+        borrowed_at: '2026-01-01T00:00:00Z',
+        due_date: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        returned_at: null,
+        books: { id: 'book-1', title: 'Overdue Active Loan', author: 'Author', cover_url: null },
+        profiles: null,
+      },
+      {
+        id: 'b-returned-receivable',
+        book_copy_id: 'c2',
+        user_id: 'u1',
+        status: 'RETURNED',
+        borrowed_at: '2026-01-01T00:00:00Z',
+        due_date: '2026-01-05T00:00:00Z',
+        returned_at: '2026-01-08T00:00:00Z',
+        fine_amount: 15,
+        fine_settled_at: null,
+        books: { id: 'book-2', title: 'Returned With Receivable', author: 'Author', cover_url: null },
+        profiles: null,
+      },
+    ];
+
+    const { container } = await renderClient(
+      <ActivitySection
+        activeBorrows={borrows}
+        reservations={[]}
+        attendanceLogs={[]}
+        onOpenBook={vi.fn()}
+        onCancelReservation={vi.fn()}
+        isPending={false}
+        mounted={true}
+      />
+    );
+
+    expect(container.textContent).toContain('Overdue Active Loan');
+    expect(container.textContent).toContain('Overdue');
+    expect(container.textContent).toContain('₱10.00');
+    expect(container.textContent).toContain('Returned With Receivable');
+    expect(container.textContent).toContain('Fine owed');
+    expect(container.textContent).toContain('₱15.00');
   });
 
   it('SupportSection hides when empty and renders FAQ pairs when populated', async () => {
@@ -911,6 +960,7 @@ describe('Dashboard Components', () => {
     expect(container.textContent).toContain('500');
     expect(container.textContent).toContain('Audit Trail');
     expect(container.textContent).toContain('Settings & Policies');
+    expect(container.textContent).toContain('My Library Card');
     expect(container.textContent).toContain('Algorithms');
 
     // Click recent book opens BookDetailModal
@@ -947,7 +997,8 @@ describe('Dashboard Components', () => {
 
     expect(container.textContent).toContain('All caught up. No pending administrative actions.');
     expect(container.textContent).toContain('No recent additions');
-    expect(container.textContent).not.toContain('Audit Trail');
+    expect(container.textContent).toContain('Audit Trail');
+    expect(container.textContent).toContain('My Library Card');
     expect(container.textContent).not.toContain('Settings & Policies');
   });
 
@@ -980,11 +1031,11 @@ describe('Dashboard Components', () => {
       <Suspense fallback={<div>Suspending</div>}>
         <DashboardClient
           user={makeUser()}
-          role="student_assistant"
+          role="library_staff"
           statsPromise={Promise.resolve(stats)}
           profilePromise={Promise.resolve({
             data: makeProfile({
-              role: 'student_assistant',
+              role: 'library_staff',
               status: 'ACTIVE',
               permissions: {
                 manage_circulation: true,
@@ -1047,7 +1098,7 @@ describe('Dashboard Components', () => {
       <Suspense fallback={<div>Suspending</div>}>
         <DashboardClient
           user={makeUser()}
-          role="student"
+          role="patron"
           statsPromise={Promise.resolve(stats)}
           profilePromise={Promise.resolve({ data: null })}
           cardPromise={Promise.resolve({ data: null })}
@@ -1127,9 +1178,9 @@ describe('Dashboard Components', () => {
       <Suspense fallback={<div>Suspending</div>}>
         <DashboardClient
           user={makeUser()}
-          role="student"
+          role="patron"
           statsPromise={Promise.resolve(stats)}
-          profilePromise={Promise.resolve({ data: makeProfile({ role: 'student' }) })}
+          profilePromise={Promise.resolve({ data: makeProfile({ role: 'patron' }) })}
           cardPromise={Promise.resolve({ data: null })}
           faqPromise={Promise.resolve({
             data: [{ key: 'student_faq_list', value: '{not-valid-json' }],
@@ -1227,7 +1278,7 @@ describe('Dashboard Components', () => {
 
     mockGetMe.mockResolvedValueOnce({
       user: makeUser(),
-      role: 'student',
+      role: 'patron',
       profile: makeProfile(),
       supabase: sb,
     });
@@ -1252,7 +1303,7 @@ describe('Dashboard Components', () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     });
-    expect(mockGetDashboardStats).toHaveBeenCalledWith({ role: 'student' });
+    expect(mockGetDashboardStats).toHaveBeenCalledWith({ role: 'patron' });
     expect(mockGetMyReservations).toHaveBeenCalled();
     expect(container.textContent).toContain('Currently Timed In');
   });
@@ -1265,7 +1316,7 @@ describe('Layout Components', () => {
   it('BreadcrumbNav formats dashboard, dynamic UUIDs, catalog redirect, and role-aware history/attendance titles', async () => {
     mockPathname = '/dashboard';
     const { container, rerender } = await renderClient(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
@@ -1274,7 +1325,7 @@ describe('Layout Components', () => {
     // Empty root returns null
     mockPathname = '/';
     await rerender(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
@@ -1283,7 +1334,7 @@ describe('Layout Components', () => {
     // Dynamic UUID under student-catalog
     mockPathname = '/student-catalog/123e4567-e89b-12d3-a456-426614174000';
     await rerender(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
@@ -1322,11 +1373,11 @@ describe('Layout Components', () => {
     );
     expect(container.querySelector('h1')?.textContent).toBe('Borrowing Logs');
 
-    // /attendance?view=logs as student_assistant -> Attendance Logs
+    // /attendance?view=logs as library_staff -> Attendance Logs
     mockPathname = '/attendance';
     mockSearchParamsString = 'view=logs';
     await rerender(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student_assistant">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="library_staff">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
@@ -1347,7 +1398,7 @@ describe('Layout Components', () => {
     mockPathname = '/attendance/123e4567-e89b-12d3-a456-426614174000';
     mockSearchParamsString = '';
     await rerender(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
@@ -1357,7 +1408,7 @@ describe('Layout Components', () => {
     // Root UUID segment -> Details
     mockPathname = '/123e4567-e89b-12d3-a456-426614174000';
     await rerender(
-      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="student">
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
@@ -1481,8 +1532,8 @@ describe('Layout Components', () => {
     const { container, rerender } = await renderClient(
       <PreferencesProvider
         initialPreferences={{ theme: 'light' }}
-        initialRole="student"
-        initialProfile={makeProfile({ role: 'student' })}
+        initialRole="patron"
+        initialProfile={makeProfile({ role: 'patron' })}
       >
         <SidebarProvider>
           <ProtectedNav user={makeUser()} />
@@ -1523,7 +1574,94 @@ describe('Layout Components', () => {
 
     expect(container.textContent).toContain('Audit Logs');
     expect(container.textContent).toContain('Borrowing Logs');
-    expect(container.textContent).not.toContain('Catalog');
+    expect(container.textContent).toContain('Catalog');
+
+    // Librarian sees Catalog and Audit Logs
+    await rerender(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="librarian"
+        initialProfile={makeProfile({
+          role: 'librarian',
+          permissions: {
+            manage_circulation: true,
+            manage_attendance: true,
+            view_admin_dashboard: true,
+            manage_inventory: true,
+          },
+        })}
+      >
+        <SidebarProvider>
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    expect(container.textContent).toContain('Catalog');
+    expect(container.textContent).toContain('Audit Logs');
+
+    // Student assistant without manage_inventory does NOT see Inventory; with manage_inventory === true DOES see Inventory
+    await rerender(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="library_staff"
+        initialProfile={makeProfile({
+          role: 'library_staff',
+          status: 'ACTIVE',
+          permissions: {
+            manage_circulation: true,
+            manage_attendance: true,
+            view_admin_dashboard: true,
+            manage_inventory: false,
+          },
+        })}
+      >
+        <SidebarProvider>
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    expect(container.textContent).not.toContain('Inventory');
+    expect(container.textContent).toContain('Catalog');
+
+    await rerender(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="library_staff"
+        initialProfile={makeProfile({
+          role: 'library_staff',
+          status: 'ACTIVE',
+          permissions: {
+            manage_inventory: true,
+          },
+        })}
+      >
+        <SidebarProvider>
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    expect(container.textContent).toContain('Inventory');
+    expect(container.textContent).toContain('Catalog');
+
+    // Suspended library_staff with manage_inventory=true does NOT see Inventory
+    await rerender(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="library_staff"
+        initialProfile={makeProfile({
+          role: 'library_staff',
+          status: 'SUSPENDED',
+          permissions: {
+            manage_inventory: true,
+          },
+        })}
+      >
+        <SidebarProvider>
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    expect(container.textContent).not.toContain('Inventory');
 
     // Open account dropdown and trigger Log out dialog
     const accountTrigger = findButtonByText(container, 'Ada Lovelace');
@@ -1541,7 +1679,7 @@ describe('Layout Components', () => {
     await clickElement(cancelDialogBtn);
   });
 
-  it('ProtectedNav supports student_assistant split history/attendance links, prefetching, mobile close, and logout confirmation', async () => {
+  it('ProtectedNav supports library_staff split history/attendance links, prefetching, mobile close, and logout confirmation', async () => {
     const sb = makeSupabaseMock();
     mockCreateClient.mockReturnValue(sb);
 
@@ -1550,9 +1688,9 @@ describe('Layout Components', () => {
     const { container, rerender } = await renderClient(
       <PreferencesProvider
         initialPreferences={{ theme: 'light' }}
-        initialRole="student_assistant"
+        initialRole="library_staff"
         initialProfile={makeProfile({
-          role: 'student_assistant',
+          role: 'library_staff',
           status: 'ACTIVE',
           permissions: {
             manage_circulation: true,
@@ -1626,13 +1764,13 @@ describe('Layout Components', () => {
       value: originalLocation,
     });
 
-    // Inactive student_assistant with null profile falls back to email prefix + single history/attendance links
+    // Inactive library_staff with null profile falls back to email prefix + single history/attendance links
     mockPathname = '/attendance';
     mockSearchParamsString = '';
     await rerender(
       <PreferencesProvider
         initialPreferences={{ theme: 'light' }}
-        initialRole="student_assistant"
+        initialRole="library_staff"
         initialProfile={null}
       >
         <SidebarProvider>
@@ -1940,8 +2078,8 @@ describe('Provider Components', () => {
     const nonStaffRender = await renderClient(
       <PreferencesProvider
         initialPreferences={{ theme: 'light' }}
-        initialRole="student"
-        initialProfile={makeProfile({ role: 'student' })}
+        initialRole="patron"
+        initialProfile={makeProfile({ role: 'patron' })}
       >
         <BatchTaskProvider>
           <BatchTester />
@@ -2139,9 +2277,9 @@ describe('Provider Components', () => {
     await rerender(
       <PreferencesProvider
         initialPreferences={prefPromise}
-        initialRole="student_assistant"
+        initialRole="library_staff"
         initialProfile={makeProfile({
-          role: 'student_assistant',
+          role: 'library_staff',
           status: 'SUSPENDED',
           permissions: {
             manage_circulation: true,
@@ -2255,7 +2393,7 @@ describe('Landing, Hero & EnvVarWarning Components', () => {
       'Go to Dashboard'
     );
     expect(container.textContent).toContain(
-      'Signed in as Ada Lovelace with the librarian role.'
+      'Signed in as Ada Lovelace with the Librarian role.'
     );
 
     // Unauthenticated with demo mode: OAuth error resets loading state
@@ -2274,7 +2412,7 @@ describe('Landing, Hero & EnvVarWarning Components', () => {
       ok: false,
       json: async () => ({ error: 'Demo disabled' }),
     });
-    await clickElement(findButtonByText(container, 'Student'));
+    await clickElement(findButtonByText(container, 'Patron'));
     expect(mockToastError).toHaveBeenCalledWith('Demo disabled');
 
     // Demo login success

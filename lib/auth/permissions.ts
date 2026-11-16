@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-export type Role = "student" | "student_assistant" | "librarian" | "super_admin" | null;
+export type Role = "patron" | "library_staff" | "librarian" | "super_admin" | null;
 
 export interface Profile {
   full_name?: string | null;
@@ -11,12 +11,13 @@ export interface Profile {
     manage_circulation?: boolean;
     manage_attendance?: boolean;
     view_admin_dashboard?: boolean;
+    manage_inventory?: boolean;
   } | null;
 }
 
 export const ROLE_RANKS: Record<Exclude<Role, null>, number> = {
-  student: 1,
-  student_assistant: 2,
+  patron: 1,
+  library_staff: 2,
   librarian: 3,
   super_admin: 4,
 };
@@ -28,7 +29,7 @@ export type NavItem = {
   minRole?: Exclude<Role, null>;
   exactRoles?: Exclude<Role, null>[];
   excludeRoles?: Exclude<Role, null>[];
-  permissionKey?: "manage_circulation" | "manage_attendance" | "view_admin_dashboard";
+  permissionKey?: "manage_circulation" | "manage_attendance" | "view_admin_dashboard" | "manage_inventory";
 };
 
 export function hasPermission(
@@ -37,7 +38,7 @@ export function hasPermission(
   profile?: Profile | null
 ): boolean {
   const { minRole, exactRoles, permissionKey, excludeRoles } = item;
-  const isDeactivatedSA = userRole === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
+  const isDeactivatedSA = userRole === "library_staff" && profile?.status?.toUpperCase() !== "ACTIVE";
 
   if (excludeRoles && userRole && excludeRoles.includes(userRole)) {
     return false;
@@ -67,7 +68,7 @@ export function hasPermission(
   }
 
   // 4. Deactivation check
-  if (isDeactivatedSA && (minRole !== "student" || permissionKey)) {
+  if (isDeactivatedSA && (minRole !== "patron" || permissionKey)) {
     return false;
   }
 
@@ -78,7 +79,7 @@ export function isStaff(role: Role, profile?: Profile | null): boolean {
   return (
     role === "super_admin" ||
     role === "librarian" ||
-    (role === "student_assistant" && profile?.status?.toUpperCase() === "ACTIVE")
+    (role === "library_staff" && profile?.status?.toUpperCase() === "ACTIVE")
   );
 }
 

@@ -5,7 +5,7 @@ All tests execute real production code against real Postgres (PGlite), mocked Su
 ## Suite Layout
 
 1. **Real Postgres Schema, RLS, Triggers & RPCs (`test/`):**
-   - `test/db-schema-and-rls.test.ts` — Schema defaults, triggers (`handle_new_user`, `sync_book_available_copies`), helper functions, and per-role RLS enforcement (`anon`, `student`, `student_assistant`, `librarian`, `super_admin`, `service_role`).
+   - `test/db-schema-and-rls.test.ts` — Schema defaults, triggers (`handle_new_user`, `sync_book_available_copies`), helper functions, and per-role RLS enforcement (`anon`, `patron`, `library_staff`, `librarian`, `super_admin`, `service_role`).
    - `test/db-rpcs-and-triggers.test.ts` — `process_qr_checkout`, `process_qr_return`, `get_borrowing_history_v2`, reservation promotion, catalog RPCs, expiry, and annual reset.
 2. **Core Utilities, Auth, Permissions & Services (`lib/__tests__/`):**
    - `lib/__tests__/utils-and-mappers.test.ts`

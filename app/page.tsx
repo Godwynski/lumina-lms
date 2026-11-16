@@ -29,7 +29,7 @@ async function AuthRedirect() {
   if (me?.user) {
     const isPrivileged = me.role === "super_admin" || me.role === "librarian";
     const isBlocked = checkAccessBlocked(me.profile as Profile);
-    if (isBlocked && !isPrivileged && me.role !== "student_assistant") {
+    if (isBlocked && !isPrivileged && me.role !== "library_staff") {
       return null;
     }
     return redirect("/dashboard");

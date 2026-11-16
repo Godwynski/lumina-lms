@@ -41,7 +41,7 @@ export default async function ProtectedLayout({
 
   const { profile, role } = me;
 
-  const isStudent = role === "student";
+  const isStudent = role === "patron";
   const isPrivileged = role === "super_admin" || role === "librarian";
 
   // ─── Access restriction: render a blocking screen (no shell needed) ───────
@@ -51,7 +51,7 @@ export default async function ProtectedLayout({
 
   const isAccessBlocked = checkAccessBlocked(profile as Profile);
 
-  if (isAccessBlocked && !isPrivileged && role !== "student_assistant") {
+  if (isAccessBlocked && !isPrivileged && role !== "library_staff") {
     return <AccountPendingScreen profile={profile} isStudent={isStudent} />;
   }
 

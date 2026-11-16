@@ -37,11 +37,11 @@ async function InventoryDataWrapper({
   }
 
   const role = me.role;
-  const hasAnyPermission = role === 'student_assistant'
-    ? !!(me.profile?.permissions?.manage_circulation || me.profile?.permissions?.manage_attendance || me.profile?.permissions?.view_admin_dashboard)
+  const hasInventoryAccess = role === 'library_staff'
+    ? me.profile?.permissions?.manage_inventory === true
     : true;
 
-  const isStaffUser = isStaff(role, me.profile) && hasAnyPermission;
+  const isStaffUser = isStaff(role, me.profile) && hasInventoryAccess;
 
   if (!isStaffUser) {
     redirect('/dashboard');

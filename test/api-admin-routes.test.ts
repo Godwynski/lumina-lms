@@ -47,8 +47,14 @@ vi.mock("next/server", async () => {
 });
 
 import { POST as annualResetPost } from "@/app/api/admin/annual-reset/route";
+import {
+  GET as archiveGet,
+  POST as archivePost,
+} from "@/app/api/admin/archive/route";
+import { getMinArchiveCutoffDate } from "@/lib/archive";
 import { GET as auditLogsGet } from "@/app/api/admin/audit-logs/route";
 import { GET as auditLogsExportGet } from "@/app/api/admin/audit-logs/export/route";
+import { GET as auditLogsOptionsGet } from "@/app/api/admin/audit-logs/options/route";
 import { POST as auditLogsImportPost } from "@/app/api/admin/audit-logs/import/route";
 import {
   GET as categoriesGet,
@@ -64,7 +70,7 @@ import {
   POST as policySettingsPost,
 } from "@/app/api/admin/policy-settings/route";
 
-type AuthRole = "super_admin" | "librarian" | "student_assistant" | "student";
+type AuthRole = "super_admin" | "librarian" | "library_staff" | "patron";
 
 function setupAuth(
   supabase: MockSupabaseClientHelper,
@@ -123,7 +129,7 @@ describe("Admin API Route Handlers", () => {
       expect(res.status).toBe(401);
     });
 
-    it.each<AuthRole>(["student", "student_assistant", "librarian"])(
+    it.each<AuthRole>(["patron", "library_staff", "librarian"])(
       "returns 403 for non-super_admin role: %s",
       async (role) => {
         setupAuth(supabase, role);
@@ -172,12 +178,12 @@ describe("Admin API Route Handlers", () => {
         (await auditLogsGet(new NextRequest("http://localhost/api/admin/audit-logs"))).status
       ).toBe(401);
 
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       expect(
         (await auditLogsGet(new NextRequest("http://localhost/api/admin/audit-logs"))).status
       ).toBe(403);
 
-      setupAuth(supabase, "student_assistant");
+      setupAuth(supabase, "library_staff");
       expect(
         (await auditLogsGet(new NextRequest("http://localhost/api/admin/audit-logs"))).status
       ).toBe(403);
@@ -314,16 +320,78 @@ describe("Admin API Route Handlers", () => {
   });
 
   describe("GET /api/admin/audit-logs/export", () => {
-    it("denies non-super_admin roles (401/403)", async () => {
+    it("denies unauthenticated, patron, and library_staff roles (401/403)", async () => {
       setupAuth(supabase, null);
       expect(
         (await auditLogsExportGet(new NextRequest("http://localhost/api/admin/audit-logs/export"))).status
       ).toBe(401);
 
-      setupAuth(supabase, "librarian");
+      setupAuth(supabase, "patron");
       expect(
         (await auditLogsExportGet(new NextRequest("http://localhost/api/admin/audit-logs/export"))).status
       ).toBe(403);
+
+      setupAuth(supabase, "library_staff");
+      expect(
+        (await auditLogsExportGet(new NextRequest("http://localhost/api/admin/audit-logs/export"))).status
+      ).toBe(403);
+    });
+
+    it("allows librarian export while returning no super-admin-actor rows (WP10 Part B)", async () => {
+      setupAuth(supabase, "librarian", "ACTIVE", "lib-1");
+      supabase.setTableResponse("audit_log_records", [
+        {
+          id: "log-sa",
+          admin_id: "adm-1",
+          created_at: "2026-03-01T01:00:00.000Z",
+          entity_type: "policy",
+          action: "update",
+          reason: "Super admin secret change",
+        },
+        {
+          id: "log-lib",
+          admin_id: "lib-1",
+          created_at: "2026-03-01T02:00:00.000Z",
+          entity_type: "book",
+          action: "create",
+          reason: "Librarian added book",
+        },
+        {
+          id: "log-sys",
+          admin_id: null,
+          created_at: "2026-03-01T03:00:00.000Z",
+          entity_type: "attendance",
+          action: "auto_checkout",
+          reason: "System closing",
+        },
+      ]);
+
+      const joinProfilesBuilder = createMockQueryBuilder([
+        { id: "adm-1", full_name: "Head Admin", email: "adm@alabang.sti.edu.ph", role: "super_admin" },
+        { id: "lib-1", full_name: "Head Librarian", email: "lib@alabang.sti.edu.ph", role: "librarian" },
+      ]);
+      const meProfileBuilder = supabase.getTableBuilder("profiles");
+      supabase.from.mockImplementation((table: string) => {
+        if (table === "profiles") {
+          return supabase.from.mock.calls.filter((c) => c[0] === "profiles").length % 2 === 1
+            ? meProfileBuilder
+            : joinProfilesBuilder;
+        }
+        return supabase.getTableBuilder(table);
+      });
+
+      const res = await auditLogsExportGet(
+        new NextRequest("http://localhost/api/admin/audit-logs/export?format=json")
+      );
+      expect(res.status).toBe(200);
+      const rows = await res.json();
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r: { reason: string }) => r.reason)).toEqual([
+        "Librarian added book",
+        "System closing",
+      ]);
+      expect(JSON.stringify(rows)).not.toContain("Super admin secret change");
+      expect(adminSupabase.from).not.toHaveBeenCalled();
     });
 
     it("exports CSV with formula-injection neutralization, subject columns, and Manila timestamps", async () => {
@@ -381,7 +449,7 @@ describe("Admin API Route Handlers", () => {
       );
       const customColsText = await customColsRes.text();
       expect(customColsRes.status).toBe(200);
-      expect(customColsText).toContain("Book,ISBN,Copy barcode,Student,Student ID");
+      expect(customColsText).toContain("Book,ISBN,Copy barcode,Student,Patron ID");
       expect(customColsText).toContain("Clean Code,9780132350884,BC-001,Jane Doe,2026-0001");
     });
 
@@ -456,6 +524,93 @@ describe("Admin API Route Handlers", () => {
         new NextRequest("http://localhost/api/admin/audit-logs/export")
       );
       expect(abortRes.status).toBe(499);
+    });
+  });
+
+  describe("GET /api/admin/audit-logs/options", () => {
+    it("denies unauthenticated, student, and library_staff; allows librarian without super_admin actors", async () => {
+      setupAuth(supabase, null);
+      expect(
+        (await auditLogsOptionsGet(new NextRequest("http://localhost/api/admin/audit-logs/options?kind=actor"))).status
+      ).toBe(401);
+
+      setupAuth(supabase, "patron");
+      expect(
+        (await auditLogsOptionsGet(new NextRequest("http://localhost/api/admin/audit-logs/options?kind=actor"))).status
+      ).toBe(403);
+
+      setupAuth(supabase, "library_staff");
+      expect(
+        (await auditLogsOptionsGet(new NextRequest("http://localhost/api/admin/audit-logs/options?kind=actor"))).status
+      ).toBe(403);
+
+      setupAuth(supabase, "librarian", "ACTIVE", "lib-1");
+      const libAuthBuilder = createMockQueryBuilder({
+        id: "lib-1",
+        email: "librarian@alabang.sti.edu.ph",
+        full_name: "Test librarian",
+        role: "librarian",
+        status: "ACTIVE",
+        permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true },
+      });
+      const libOptionsBuilder = createMockQueryBuilder([
+        { id: "lib-1", full_name: "Test librarian", email: "lib@alabang.sti.edu.ph", role: "librarian", status: "ACTIVE", student_id: "FAC-1" },
+      ]);
+      supabase.from.mockImplementationOnce(() => libAuthBuilder).mockImplementationOnce(() => libOptionsBuilder);
+      const libRes = await auditLogsOptionsGet(
+        new NextRequest("http://localhost/api/admin/audit-logs/options?kind=actor")
+      );
+      expect(libRes.status).toBe(200);
+      expect(libOptionsBuilder.neq).toHaveBeenCalledWith("role", "super_admin");
+      expect(libOptionsBuilder.in).toHaveBeenCalledWith("role", ["librarian", "library_staff"]);
+
+      // Librarian querying specific super_admin actor ID or student kind still excludes super_admin
+      const libSpecificBuilder = createMockQueryBuilder([]);
+      supabase.from.mockImplementationOnce(() => libAuthBuilder).mockImplementationOnce(() => libSpecificBuilder);
+      const specificRes = await auditLogsOptionsGet(
+        new NextRequest(
+          "http://localhost/api/admin/audit-logs/options?kind=actor&id=00000000-0000-4000-8000-000000000001"
+        )
+      );
+      expect(specificRes.status).toBe(200);
+      expect(libSpecificBuilder.neq).toHaveBeenCalledWith("role", "super_admin");
+      expect(await specificRes.json()).toEqual({ options: [] });
+
+      const libStudentBuilder = createMockQueryBuilder([
+        { id: "stu-1", full_name: "Student One", email: "s1@alabang.sti.edu.ph", role: "patron", student_id: "STU-1" },
+      ]);
+      supabase.from.mockImplementationOnce(() => libAuthBuilder).mockImplementationOnce(() => libStudentBuilder);
+      const stuRes = await auditLogsOptionsGet(
+        new NextRequest("http://localhost/api/admin/audit-logs/options?kind=student")
+      );
+      expect(stuRes.status).toBe(200);
+      expect(libStudentBuilder.neq).toHaveBeenCalledWith("role", "super_admin");
+      expect(libStudentBuilder.in).toHaveBeenCalledWith("role", ["patron", "library_staff", "librarian"]);
+      expect(adminSupabase.from).not.toHaveBeenCalled();
+
+      setupAuth(supabase, "super_admin", "ACTIVE", "admin-1");
+      const adminAuthBuilder = createMockQueryBuilder({
+        id: "admin-1",
+        email: "super_admin@alabang.sti.edu.ph",
+        full_name: "Test super_admin",
+        role: "super_admin",
+        status: "ACTIVE",
+        permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true },
+      });
+      const adminOptionsBuilder = createMockQueryBuilder([
+        { id: "admin-1", full_name: "Test super_admin", email: "admin@alabang.sti.edu.ph", role: "super_admin", status: "ACTIVE", student_id: "FAC-0" },
+      ]);
+      supabase.from.mockImplementationOnce(() => adminAuthBuilder).mockImplementationOnce(() => adminOptionsBuilder);
+      const adminRes = await auditLogsOptionsGet(
+        new NextRequest("http://localhost/api/admin/audit-logs/options?kind=actor")
+      );
+      expect(adminRes.status).toBe(200);
+      expect(adminOptionsBuilder.neq).not.toHaveBeenCalled();
+      expect(adminOptionsBuilder.in).toHaveBeenCalledWith("role", [
+        "super_admin",
+        "librarian",
+        "library_staff",
+      ]);
     });
   });
 
@@ -569,7 +724,7 @@ describe("Admin API Route Handlers", () => {
 
   describe("/api/admin/categories and /api/admin/categories/[id]", () => {
     it("enforces role permissions on GET, POST, PUT, DELETE", async () => {
-      setupAuth(supabase, "student");
+      setupAuth(supabase, "patron");
       expect((await categoriesGet(new Request("http://localhost/api/admin/categories"))).status).toBe(403);
       expect(
         (
@@ -735,7 +890,7 @@ describe("Admin API Route Handlers", () => {
         (await policySettingsGet(new Request("http://localhost/api/admin/policy-settings"))).status
       ).toBe(401);
 
-      setupAuth(supabase, "student_assistant");
+      setupAuth(supabase, "library_staff");
       expect(
         (await policySettingsGet(new Request("http://localhost/api/admin/policy-settings"))).status
       ).toBe(403);
@@ -796,6 +951,11 @@ describe("Admin API Route Handlers", () => {
         ["loan_period_days", "91"],
         ["max_borrow_limit", "25"],
         ["student_faq_list", "not-json"],
+        ["library_closing_time", "24:00"],
+        ["library_closing_time", "17:60"],
+        ["library_closing_time", "5:00"],
+        ["library_closing_time", "17:00:00"],
+        ["library_closing_time", "5 PM"],
       ]) {
         const res = await policySettingsPost(
           new Request("http://localhost/api/admin/policy-settings", {
@@ -805,6 +965,29 @@ describe("Admin API Route Handlers", () => {
         );
         expect(res.status, `Expected 400 for ${key}=${value}`).toBe(400);
       }
+    });
+
+    it("POST allows librarian and super_admin to update library_closing_time with valid HH:MM", async () => {
+      setupAuth(supabase, "librarian", "ACTIVE", "lib-1");
+      const settingsBuilder = adminSupabase.getTableBuilder("system_settings");
+      settingsBuilder.maybeSingle.mockResolvedValueOnce({
+        data: { id: "set-close", key: "library_closing_time", value: "17:00" },
+        error: null,
+      });
+      settingsBuilder.single.mockResolvedValueOnce({
+        data: { id: "set-close", key: "library_closing_time", value: "19:30" },
+        error: null,
+      });
+
+      const res = await policySettingsPost(
+        new Request("http://localhost/api/admin/policy-settings", {
+          method: "POST",
+          body: JSON.stringify({ key: "library_closing_time", value: "19:30" }),
+        })
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.value).toBe("19:30");
     });
 
     it("POST updates existing overdue_fine_per_day and inserts new policy keys with audit & revalidation", async () => {
@@ -976,6 +1159,234 @@ describe("Admin API Route Handlers", () => {
         new Request("http://localhost/api/admin/policy-settings", {
           method: "POST",
           body: JSON.stringify({ key: "overdue_fine_per_day", value: "0" }),
+        })
+      );
+      expect(res.status).toBe(500);
+    });
+  });
+
+  describe("GET & POST /api/admin/archive", () => {
+    const validCutoff = "2024-06-01";
+
+    it("returns 401 when unauthenticated for GET and POST", async () => {
+      setupAuth(supabase, null);
+      expect(
+        (await archiveGet(new Request(`http://localhost/api/admin/archive?before=${validCutoff}`))).status
+      ).toBe(401);
+      expect(
+        (
+          await archivePost(
+            new Request("http://localhost/api/admin/archive", {
+              method: "POST",
+              body: JSON.stringify({ before: validCutoff }),
+            })
+          )
+        ).status
+      ).toBe(401);
+    });
+
+    it.each<AuthRole>(["patron", "library_staff", "librarian"])(
+      "returns 403 for non-super_admin role on GET & POST: %s",
+      async (role) => {
+        setupAuth(supabase, role);
+        expect(
+          (await archiveGet(new Request(`http://localhost/api/admin/archive?before=${validCutoff}`))).status
+        ).toBe(403);
+        expect(
+          (
+            await archivePost(
+              new Request("http://localhost/api/admin/archive", {
+                method: "POST",
+                body: JSON.stringify({ before: validCutoff }),
+              })
+            )
+          ).status
+        ).toBe(403);
+      }
+    );
+
+    it("rejects missing, malformed, and recent (<1 year old) cutoff dates with 400", async () => {
+      setupAuth(supabase, "super_admin");
+      const todayManila = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+
+      for (const url of [
+        "http://localhost/api/admin/archive",
+        "http://localhost/api/admin/archive?before=not-a-date",
+        "http://localhost/api/admin/archive?before=2024-02-30",
+        `http://localhost/api/admin/archive?before=${todayManila}`,
+      ]) {
+        const res = await archiveGet(new Request(url));
+        expect(res.status).toBe(400);
+      }
+
+      for (const body of [
+        "not-json{",
+        JSON.stringify({}),
+        JSON.stringify({ before: "2024-13-01" }),
+        JSON.stringify({ before: todayManila }),
+      ]) {
+        const res = await archivePost(
+          new Request("http://localhost/api/admin/archive", {
+            method: "POST",
+            body,
+          })
+        );
+        expect(res.status).toBe(400);
+      }
+    });
+
+    it("GET ?preview=true returns eligible borrowing and attendance counts for super_admin", async () => {
+      setupAuth(supabase, "super_admin");
+      supabase.setTableResponse("borrowing_records", null, null, 14);
+      supabase.setTableResponse("attendance", null, null, 27);
+
+      const res = await archiveGet(
+        new Request(`http://localhost/api/admin/archive?before=${validCutoff}&preview=true`)
+      );
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body).toMatchObject({
+        ok: true,
+        before: validCutoff,
+        borrowingCount: 14,
+        attendanceCount: 27,
+        totalCount: 41,
+      });
+    });
+
+    it("GET streams an xlsx backup with Borrowing Records and Attendance sheets including WP1/WP3 columns", async () => {
+      setupAuth(supabase, "super_admin");
+      const minCutoff = getMinArchiveCutoffDate();
+
+      supabase.setTableResponse("borrowing_records", [
+        {
+          id: "br-1",
+          user_id: "u-1",
+          book_copy_id: "bc-1",
+          processed_by: "lib-1",
+          borrowed_at: "2023-05-01T08:00:00Z",
+          due_date: "2023-05-15T08:00:00Z",
+          returned_at: "2023-05-16T08:00:00Z",
+          status: "RETURNED",
+          returned_by: "lib-1",
+          reminder_sent: true,
+          overdue_notified: false,
+          fine_amount: 10,
+          fine_settled_at: "2023-05-16T08:05:00Z",
+          fine_resolution: "CONDONED",
+          fine_remarks: "School event excuse",
+          fine_settled_by: "lib-1",
+          created_at: "2023-05-01T08:00:00Z",
+          updated_at: "2023-05-16T08:05:00Z",
+          profiles: { full_name: "Juan Dela Cruz", email: "juan@alabang.sti.edu.ph", student_id: "STU-123" },
+          book_copies: { accession_number: "ACC-1", qr_string: "QR-1", books: { title: "Clean Code", isbn: "9780132350884" } },
+        },
+      ]);
+      supabase.setTableResponse("attendance", [
+        {
+          id: "att-1",
+          user_id: "u-1",
+          check_in_at: "2023-05-01T09:00:00+08:00",
+          check_out_at: "2023-05-01T17:00:00+08:00",
+          notes: "No Log Out",
+          created_at: "2023-05-01T09:00:00+08:00",
+          profiles: { full_name: "Juan Dela Cruz", email: "juan@alabang.sti.edu.ph", student_id: "STU-123" },
+        },
+      ]);
+
+      const res = await archiveGet(
+        new Request(`http://localhost/api/admin/archive?before=${minCutoff}`)
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      expect(res.headers.get("content-disposition")).toContain(
+        `lumina-archive-before-${minCutoff}.xlsx`
+      );
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const wb = XLSX.read(buffer, { type: "buffer" });
+      expect(wb.SheetNames).toEqual(["Borrowing Records", "Attendance"]);
+
+      const borrowingRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+        wb.Sheets["Borrowing Records"]
+      );
+      expect(borrowingRows).toHaveLength(1);
+      expect(borrowingRows[0]).toMatchObject({
+        id: "br-1",
+        fine_resolution: "CONDONED",
+        fine_remarks: "School event excuse",
+        fine_settled_by: "lib-1",
+        book_title: "Clean Code",
+      });
+
+      const attendanceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+        wb.Sheets["Attendance"]
+      );
+      expect(attendanceRows).toHaveLength(1);
+      expect(attendanceRows[0]).toMatchObject({
+        id: "att-1",
+        notes: "No Log Out",
+        patron_name: "Juan Dela Cruz",
+      });
+    });
+
+    it("POST executes archive_old_logs RPC and writes an audit log row for super_admin", async () => {
+      setupAuth(supabase, "super_admin", "ACTIVE", "admin-99");
+      supabase.setRpcResponse(
+        { before: validCutoff, borrowing_count: 8, attendance_count: 19, total_count: 27 },
+        null,
+        "archive_old_logs"
+      );
+
+      const res = await archivePost(
+        new Request("http://localhost/api/admin/archive", {
+          method: "POST",
+          body: JSON.stringify({ before: validCutoff }),
+        })
+      );
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body).toMatchObject({
+        ok: true,
+        before: validCutoff,
+        borrowingCount: 8,
+        attendanceCount: 19,
+        totalCount: 27,
+      });
+      expect(supabase.rpc).toHaveBeenCalledWith("archive_old_logs", { p_before: validCutoff });
+      expect(adminSupabase.getTableBuilder("audit_logs").insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          admin_id: "admin-99",
+          entity_type: "system",
+          action: "archive_old_logs",
+          details: expect.objectContaining({
+            before: validCutoff,
+            borrowingCount: 8,
+            attendanceCount: 19,
+            totalCount: 27,
+          }),
+        })
+      );
+    });
+
+    it("POST returns 500 when archive_old_logs RPC fails", async () => {
+      setupAuth(supabase, "super_admin");
+      supabase.setRpcResponse(null, { message: "Unexpected failure" }, "archive_old_logs");
+
+      const res = await archivePost(
+        new Request("http://localhost/api/admin/archive", {
+          method: "POST",
+          body: JSON.stringify({ before: validCutoff }),
         })
       );
       expect(res.status).toBe(500);

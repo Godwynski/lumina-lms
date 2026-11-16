@@ -159,14 +159,14 @@ export function PreferencesProvider({
   };
 
   // Centrally calculated view mode (staff or student)
-  const isDeactivatedSA = role === "student_assistant" && profile?.status?.toUpperCase() !== "ACTIVE";
-  const hasAnyPermission = role === "student_assistant"
-    ? !!(profile?.permissions?.manage_circulation || profile?.permissions?.manage_attendance || profile?.permissions?.view_admin_dashboard)
+  const isDeactivatedSA = role === "library_staff" && profile?.status?.toUpperCase() !== "ACTIVE";
+  const hasAnyPermission = role === "library_staff"
+    ? !!(profile?.permissions?.manage_circulation || profile?.permissions?.manage_attendance || profile?.permissions?.view_admin_dashboard || profile?.permissions?.manage_inventory)
     : true;
 
-  const currentMode: "staff" | "student" = (isDeactivatedSA || (role === "student_assistant" && !hasAnyPermission))
+  const currentMode: "staff" | "student" = (isDeactivatedSA || (role === "library_staff" && !hasAnyPermission))
     ? "student" 
-    : (role === "super_admin" || role === "librarian" || role === "student_assistant")
+    : (role === "super_admin" || role === "librarian" || role === "library_staff")
       ? "staff"
       : "student";
 

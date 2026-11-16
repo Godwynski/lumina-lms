@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- 2. CUSTOM TYPES & ENUMS
 DO $$ BEGIN
-    CREATE TYPE public.user_role AS ENUM ('super_admin', 'librarian', 'student', 'student_assistant');
+    CREATE TYPE public.user_role AS ENUM ('super_admin', 'librarian', 'patron', 'library_staff');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -85,7 +85,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT UNIQUE,
     full_name TEXT,
     avatar_url TEXT,
-    role public.user_role NOT NULL DEFAULT 'student'::public.user_role,
+    role public.user_role NOT NULL DEFAULT 'patron'::public.user_role,
+    patron_type TEXT NOT NULL DEFAULT 'student'::text CHECK (patron_type = ANY (ARRAY['student'::text, 'faculty'::text])),
     student_id TEXT UNIQUE,
     department TEXT,
     phone TEXT,
@@ -124,10 +125,40 @@ CREATE TABLE IF NOT EXISTS public.borrowing_records (
     overdue_notified BOOLEAN DEFAULT FALSE,
     fine_amount NUMERIC(10,2),
     fine_settled_at TIMESTAMPTZ,
+    fine_resolution TEXT CONSTRAINT borrowing_records_fine_resolution_check CHECK (fine_resolution IN ('PAID', 'CONDONED')),
+    fine_remarks TEXT,
+    fine_settled_by UUID CONSTRAINT borrowing_records_fine_settled_by_fkey REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT borrowing_records_due_date_check CHECK (due_date >= borrowed_at),
-    CONSTRAINT borrowing_records_returned_at_check CHECK (returned_at IS NULL OR returned_at >= borrowed_at)
+    CONSTRAINT borrowing_records_returned_at_check CHECK (returned_at IS NULL OR returned_at >= borrowed_at),
+    CONSTRAINT borrowing_records_fine_settlement_pair_check CHECK (
+      (fine_settled_at IS NULL AND fine_resolution IS NULL)
+      OR (fine_settled_at IS NOT NULL AND fine_resolution IS NOT NULL)
+    )
+);
+
+-- Borrowing Records Archive Table
+CREATE TABLE IF NOT EXISTS public.borrowing_records_archive (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    book_copy_id UUID NOT NULL,
+    processed_by UUID,
+    borrowed_at TIMESTAMPTZ,
+    due_date TIMESTAMPTZ NOT NULL,
+    returned_at TIMESTAMPTZ,
+    status public."BorrowStatus",
+    returned_by UUID,
+    reminder_sent BOOLEAN,
+    overdue_notified BOOLEAN,
+    fine_amount NUMERIC(10,2),
+    fine_settled_at TIMESTAMPTZ,
+    fine_resolution TEXT,
+    fine_remarks TEXT,
+    fine_settled_by UUID,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Reservations Table
@@ -211,6 +242,17 @@ CREATE TABLE IF NOT EXISTS public.attendance (
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT attendance_checkout_check CHECK (check_out_at IS NULL OR check_out_at >= check_in_at)
+);
+
+-- Attendance Archive Table
+CREATE TABLE IF NOT EXISTS public.attendance_archive (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    check_in_at TIMESTAMPTZ,
+    check_out_at TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ,
+    archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- UI Preferences Table
@@ -346,6 +388,10 @@ CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON public.notification
 CREATE INDEX IF NOT EXISTS notifications_unread_idx ON public.notifications(user_id) WHERE is_read = false;
 CREATE INDEX IF NOT EXISTS catalog_import_items_pending ON public.catalog_import_items(next_attempt_at, created_at) WHERE status IN ('queued', 'retry', 'processing');
 CREATE INDEX IF NOT EXISTS catalog_import_items_job ON public.catalog_import_items(job_id);
+CREATE INDEX IF NOT EXISTS borrowing_records_archive_archived_at_idx ON public.borrowing_records_archive(archived_at DESC);
+CREATE INDEX IF NOT EXISTS borrowing_records_archive_user_id_idx ON public.borrowing_records_archive(user_id);
+CREATE INDEX IF NOT EXISTS attendance_archive_archived_at_idx ON public.attendance_archive(archived_at DESC);
+CREATE INDEX IF NOT EXISTS attendance_archive_user_id_idx ON public.attendance_archive(user_id);
 
 -- 6. TRIGGER & HELPER FUNCTIONS
 
@@ -362,7 +408,7 @@ BEGIN
     SELECT 1 FROM public.profiles
     WHERE id = (SELECT auth.uid())
     AND status = 'ACTIVE'
-    AND role IN ('super_admin', 'librarian', 'student_assistant')
+    AND role IN ('super_admin', 'librarian', 'library_staff')
   );
 END;
 $$;
@@ -390,6 +436,70 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.is_manager() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_manager() TO authenticated, service_role;
+
+-- Audit log visibility: super_admin sees all; librarian sees rows whose actor is not a super_admin (null = system rows, visible)
+CREATE OR REPLACE FUNCTION public.can_view_audit_log(p_actor_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ STABLE
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_caller_role public.user_role;
+BEGIN
+  SELECT role INTO v_caller_role
+  FROM public.profiles
+  WHERE id = (SELECT auth.uid())
+    AND status = 'ACTIVE';
+
+  IF v_caller_role = 'super_admin'::public.user_role THEN
+    RETURN TRUE;
+  END IF;
+
+  IF v_caller_role = 'librarian'::public.user_role THEN
+    IF p_actor_id IS NULL THEN
+      RETURN TRUE;
+    END IF;
+    RETURN NOT EXISTS (
+      SELECT 1
+      FROM public.profiles
+      WHERE id = p_actor_id
+        AND role = 'super_admin'::public.user_role
+    );
+  END IF;
+
+  RETURN FALSE;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.can_view_audit_log(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.can_view_audit_log(uuid) TO authenticated, service_role;
+
+-- Ensures every inserted profile gets a library card (even if inserted outside handle_new_user)
+CREATE OR REPLACE FUNCTION public.ensure_profile_library_card()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_card_number TEXT;
+BEGIN
+  v_card_number := 'LIB-' || to_char(now(), 'YYYY') || '-' || upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+
+  INSERT INTO public.library_cards (user_id, card_number, status, expires_at)
+  VALUES (
+    NEW.id,
+    v_card_number,
+    CASE WHEN UPPER(COALESCE(NEW.status, 'PENDING')) = 'ACTIVE' THEN 'ACTIVE' ELSE 'PENDING' END,
+    now() + interval '100 years'
+  )
+  ON CONFLICT (user_id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
 
 -- Atomic transaction-safe ownership transfer function
 CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
@@ -521,15 +631,31 @@ CREATE OR REPLACE FUNCTION public.auto_checkout_forgotten_attendance()
  SECURITY DEFINER
  SET search_path = public, pg_temp
 AS $$
+DECLARE
+  v_closing_raw TEXT;
+  v_closing_time TIME := time '17:00:00';
 BEGIN
+  SELECT value
+  INTO v_closing_raw
+  FROM public.system_settings
+  WHERE key = 'library_closing_time'
+  LIMIT 1;
+
+  IF v_closing_raw IS NOT NULL AND trim(v_closing_raw) ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' THEN
+    v_closing_time := (trim(v_closing_raw) || ':00')::time;
+  END IF;
+
   -- Close any open attendance records from previous days
-  -- Setting checkout time to 5:00 PM (17:00:00) Asia/Manila time of that check-in day
+  -- Setting checkout time to GREATEST(check_in_at, closing time Asia/Manila of that check-in day)
   UPDATE public.attendance
-  SET 
-    check_out_at = ((check_in_at AT TIME ZONE 'Asia/Manila')::date + time '17:00:00') AT TIME ZONE 'Asia/Manila',
-    notes = 'System auto-checkout: forgotten checkout'
-  WHERE 
-    check_out_at IS NULL 
+  SET
+    check_out_at = GREATEST(
+      check_in_at,
+      (((check_in_at AT TIME ZONE 'Asia/Manila')::date + v_closing_time) AT TIME ZONE 'Asia/Manila')
+    ),
+    notes = 'No Log Out'
+  WHERE
+    check_out_at IS NULL
     AND (check_in_at AT TIME ZONE 'Asia/Manila')::date < (NOW() AT TIME ZONE 'Asia/Manila')::date;
 END;
 $$;
@@ -572,7 +698,7 @@ BEGIN
     new.raw_user_meta_data->>'avatar_url',
     new.email,
     'PENDING',
-    'student'::public.user_role
+    'patron'::public.user_role
   )
   ON CONFLICT (id) DO UPDATE
   SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, updated_at = NOW();
@@ -670,6 +796,10 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 CREATE OR REPLACE TRIGGER trg_guard_profile_updates
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION public.fn_guard_profile_updates();
+
+CREATE OR REPLACE TRIGGER trg_ensure_profile_library_card
+    AFTER INSERT ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.ensure_profile_library_card();
 
 -- 8. ATOMIC SECURITY-DEFINER RPCs
 
@@ -817,7 +947,7 @@ BEGIN
     -- 2. If reserving on behalf of another user, verify that p_actor_id has an active staff role.
     IF v_target_id <> p_actor_id THEN
         SELECT role INTO v_actor_role FROM public.profiles WHERE id = p_actor_id AND status = 'ACTIVE';
-        IF v_actor_role NOT IN ('super_admin', 'librarian', 'student_assistant') THEN
+        IF v_actor_role NOT IN ('super_admin', 'librarian', 'library_staff') THEN
             RETURN jsonb_build_object('ok', false, 'code', 'FORBIDDEN', 'message', 'Only library staff can reserve books on behalf of other users.');
         END IF;
     END IF;
@@ -950,6 +1080,15 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'CARD_NOT_FOUND', 'message', 'Library card not found.');
   END IF;
 
+  -- Block self-checkout: a staff member cannot check out a book to themself
+  IF p_librarian_id IS NOT NULL AND v_card.user_id = p_librarian_id THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'SELF_CHECKOUT_FORBIDDEN',
+      'message', 'You cannot check out a book to yourself. Another staff member must process your checkout.'
+    );
+  END IF;
+
   -- Use UPPER() for case-insensitive status check
   IF UPPER(v_card.card_status) <> 'ACTIVE' THEN
     RETURN jsonb_build_object('ok', false, 'code', 'CARD_INACTIVE', 'message', 'Library card is not active.');
@@ -957,7 +1096,7 @@ BEGIN
 
   -- Check if the profile (account) itself is active
   IF UPPER(v_card.profile_status) <> 'ACTIVE' THEN
-    RETURN jsonb_build_object('ok', false, 'code', 'ACCOUNT_INACTIVE', 'message', 'Student account is not active.');
+    RETURN jsonb_build_object('ok', false, 'code', 'ACCOUNT_INACTIVE', 'message', 'Patron account is not active.');
   END IF;
 
   -- Read policy settings from system_settings
@@ -1004,7 +1143,7 @@ BEGIN
 
     IF v_res_id IS NULL THEN
       -- Reserved for someone else
-      RETURN jsonb_build_object('ok', false, 'code', 'COPY_UNAVAILABLE', 'message', 'This copy is reserved for another student.');
+      RETURN jsonb_build_object('ok', false, 'code', 'COPY_UNAVAILABLE', 'message', 'This copy is reserved for another patron.');
     END IF;
   ELSIF v_copy.status <> 'AVAILABLE' THEN
     RETURN jsonb_build_object('ok', false, 'code', 'COPY_UNAVAILABLE', 'message', 'This copy is not available for checkout.');
@@ -1231,7 +1370,7 @@ BEGIN
   WITH updated_profiles AS (
     UPDATE public.profiles
     SET status = 'SUSPENDED', updated_at = NOW()
-    WHERE role = 'student'
+    WHERE role = 'patron'
     RETURNING id
   )
   SELECT count(*)::integer INTO v_count FROM updated_profiles;
@@ -1240,9 +1379,99 @@ BEGIN
   SET status = 'SUSPENDED', updated_at = NOW()
   FROM public.profiles p
   WHERE lc.user_id = p.id
-    AND p.role = 'student';
+    AND p.role = 'patron';
 
   RETURN v_count;
+END;
+$$;
+
+-- WP6 #10: Archive eligible completed borrowing_records and attendance rows older than p_before
+CREATE OR REPLACE FUNCTION public.archive_old_logs(p_before DATE)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_min_cutoff       DATE;
+  v_cutoff           TIMESTAMPTZ;
+  v_borrowing_count  INTEGER := 0;
+  v_attendance_count INTEGER := 0;
+BEGIN
+  IF COALESCE((auth.jwt() ->> 'role'), '') <> 'service_role' AND current_user <> 'service_role' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+        AND status = 'ACTIVE'
+        AND role = 'super_admin'::public.user_role
+    ) THEN
+      RAISE EXCEPTION 'Unauthorized: Only super_admin can archive old logs';
+    END IF;
+  END IF;
+
+  v_min_cutoff := ((NOW() AT TIME ZONE 'Asia/Manila')::date - INTERVAL '1 year')::date;
+  IF p_before IS NULL OR p_before > v_min_cutoff THEN
+    RAISE EXCEPTION 'Cutoff date must be at least 1 year old (on or before %)', v_min_cutoff;
+  END IF;
+
+  v_cutoff := (p_before::timestamp AT TIME ZONE 'Asia/Manila');
+
+  WITH moved_attendance AS (
+    DELETE FROM public.attendance a
+    WHERE a.check_out_at IS NOT NULL
+      AND a.check_out_at < v_cutoff
+    RETURNING a.id, a.user_id, a.check_in_at, a.check_out_at, a.notes, a.created_at
+  ),
+  inserted_attendance AS (
+    INSERT INTO public.attendance_archive (
+      id, user_id, check_in_at, check_out_at, notes, created_at, archived_at
+    )
+    SELECT id, user_id, check_in_at, check_out_at, notes, created_at, NOW()
+    FROM moved_attendance
+    ON CONFLICT (id) DO NOTHING
+    RETURNING id
+  ),
+  moved_borrowing AS (
+    DELETE FROM public.borrowing_records br
+    WHERE br.status = 'RETURNED'::public."BorrowStatus"
+      AND COALESCE(br.returned_at, br.borrowed_at) < v_cutoff
+      AND (COALESCE(br.fine_amount, 0) <= 0 OR br.fine_settled_at IS NOT NULL)
+    RETURNING
+      br.id, br.user_id, br.book_copy_id, br.processed_by,
+      br.borrowed_at, br.due_date, br.returned_at, br.status,
+      br.returned_by, br.reminder_sent, br.overdue_notified,
+      br.fine_amount, br.fine_settled_at, br.fine_resolution,
+      br.fine_remarks, br.fine_settled_by, br.created_at, br.updated_at
+  ),
+  inserted_borrowing AS (
+    INSERT INTO public.borrowing_records_archive (
+      id, user_id, book_copy_id, processed_by,
+      borrowed_at, due_date, returned_at, status,
+      returned_by, reminder_sent, overdue_notified,
+      fine_amount, fine_settled_at, fine_resolution,
+      fine_remarks, fine_settled_by, created_at, updated_at, archived_at
+    )
+    SELECT
+      id, user_id, book_copy_id, processed_by,
+      borrowed_at, due_date, returned_at, status,
+      returned_by, reminder_sent, overdue_notified,
+      fine_amount, fine_settled_at, fine_resolution,
+      fine_remarks, fine_settled_by, created_at, updated_at, NOW()
+    FROM moved_borrowing
+    ON CONFLICT (id) DO NOTHING
+    RETURNING id
+  )
+  SELECT
+    (SELECT count(*)::integer FROM inserted_borrowing),
+    (SELECT count(*)::integer FROM inserted_attendance)
+  INTO v_borrowing_count, v_attendance_count;
+
+  RETURN jsonb_build_object(
+    'before', p_before::text,
+    'borrowing_count', v_borrowing_count,
+    'attendance_count', v_attendance_count,
+    'total_count', v_borrowing_count + v_attendance_count
+  );
 END;
 $$;
 
@@ -1427,7 +1656,7 @@ BEGIN
       COALESCE(p_metadata, '{}'::jsonb)
     FROM public.profiles p
     WHERE p_target = 'all'
-       OR (p_target = 'students' AND p.role IN ('student', 'student_assistant'))
+       OR (p_target = 'students' AND p.role IN ('patron', 'library_staff'))
     RETURNING id
   )
   SELECT count(*)::integer INTO v_count FROM inserted;
@@ -1465,7 +1694,7 @@ BEGIN
     UPDATE public.profiles
     SET status = 'ACTIVE', updated_at = NOW()
     WHERE id = ANY(p_user_ids)
-      AND (v_caller_role = 'super_admin'::public.user_role OR role = 'student'::public.user_role)
+      AND (v_caller_role = 'super_admin'::public.user_role OR role = 'patron'::public.user_role)
     RETURNING id
   ), cards AS (
     UPDATE public.library_cards
@@ -1639,10 +1868,12 @@ $$;
 
 -- 9. ROW LEVEL SECURITY (RLS) ACTIVATION
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance_archive ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.book_copies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.borrowing_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.borrowing_records_archive ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.catalog_import_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.catalog_import_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -1671,10 +1902,33 @@ CREATE POLICY "Staff can update attendance" ON public.attendance
   USING (public.is_staff())
   WITH CHECK (public.is_staff());
 
--- audit_logs Policies
-CREATE POLICY "Librarians can view all audit logs" ON public.audit_logs
+-- attendance_archive & borrowing_records_archive Policies (super_admin read-only)
+CREATE POLICY "Super admins can view attendance archive" ON public.attendance_archive
   FOR SELECT TO authenticated
-  USING (public.is_manager());
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+        AND status = 'ACTIVE'
+        AND role = 'super_admin'::public.user_role
+    )
+  );
+
+CREATE POLICY "Super admins can view borrowing archive" ON public.borrowing_records_archive
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = (SELECT auth.uid())
+        AND status = 'ACTIVE'
+        AND role = 'super_admin'::public.user_role
+    )
+  );
+
+-- audit_logs Policies
+CREATE POLICY "Managers can view permitted audit logs" ON public.audit_logs
+  FOR SELECT TO authenticated
+  USING (public.can_view_audit_log(admin_id));
 
 -- book_copies Policies
 CREATE POLICY "Librarians can delete book_copies" ON public.book_copies
@@ -1718,7 +1972,7 @@ CREATE POLICY "Books select policy" ON public.books
         AND role IN (
           'super_admin'::public.user_role,
           'librarian'::public.user_role,
-          'student_assistant'::public.user_role
+          'library_staff'::public.user_role
         )
     )
   );
@@ -1935,6 +2189,13 @@ GRANT EXECUTE ON FUNCTION public.release_copy(uuid) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.annual_student_reset() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.annual_student_reset() TO authenticated, service_role;
 
+REVOKE EXECUTE ON FUNCTION public.archive_old_logs(date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.archive_old_logs(date) TO authenticated, service_role;
+
+REVOKE ALL ON public.borrowing_records_archive, public.attendance_archive FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.borrowing_records_archive, public.attendance_archive TO authenticated;
+GRANT ALL ON public.borrowing_records_archive, public.attendance_archive TO service_role;
+
 REVOKE EXECUTE ON FUNCTION public.get_analytics_summary(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_analytics_summary(text) TO authenticated, service_role;
 
@@ -1957,7 +2218,8 @@ INSERT INTO public.system_settings (key, value, description, data_type) VALUES
 ('max_borrow_limit', '5', 'Max books a student can borrow at once', 'number'),
 ('loan_period_days', '14', 'Standard borrowing duration in days', 'number'),
 ('hold_expiry_days', '3', 'Days a student has to pick up a reserved book', 'number'),
-('overdue_fine_per_day', '5', 'Daily overdue penalty in PHP', 'number')
+('overdue_fine_per_day', '5', 'Daily overdue penalty in PHP', 'number'),
+('library_closing_time', '17:00', 'Daily library closing time (24h HH:MM, Asia/Manila) used to close forgotten check-outs', 'string')
 ON CONFLICT (key) DO NOTHING;
 
 
@@ -2048,12 +2310,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
 
 -- 6. RPC: High-Performance Unified Borrowing History & Timeline Search
 DROP FUNCTION IF EXISTS public.get_borrowing_history_v2(uuid, integer, integer, text, text);
+DROP FUNCTION IF EXISTS public.get_borrowing_history_v2(uuid, integer, integer, text, text, text);
 CREATE OR REPLACE FUNCTION public.get_borrowing_history_v2(
   p_user_id uuid DEFAULT NULL,
   p_page int DEFAULT 1,
   p_page_size int DEFAULT 10,
   p_status text DEFAULT NULL,
-  p_search text DEFAULT NULL
+  p_search text DEFAULT NULL,
+  p_resolution text DEFAULT NULL
 )
 RETURNS TABLE (
   id uuid,
@@ -2076,6 +2340,9 @@ RETURNS TABLE (
   profile_student_id text,
   fine_amount numeric,
   fine_settled_at timestamptz,
+  fine_resolution text,
+  fine_remarks text,
+  fine_settled_by uuid,
   total_count bigint
 ) 
 LANGUAGE plpgsql
@@ -2137,7 +2404,10 @@ BEGIN
           THEN GREATEST(1, ((NOW() AT TIME ZONE 'Asia/Manila')::date - (br.due_date AT TIME ZONE 'Asia/Manila')::date)) * v_fine_rate
         ELSE 0
       END::numeric(10,2) AS fine_amount,
-      br.fine_settled_at
+      br.fine_settled_at,
+      br.fine_resolution,
+      br.fine_remarks,
+      br.fine_settled_by
     FROM borrowing_records br
     JOIN book_copies bc ON br.book_copy_id = bc.id
     JOIN books b ON bc.book_id = b.id
@@ -2151,9 +2421,17 @@ BEGIN
           OR (br.status = 'ACTIVE' AND br.due_date < NOW())
           OR (br.status = 'RETURNED' AND COALESCE(br.fine_amount, 0) > 0 AND br.fine_settled_at IS NULL)
         ))
+        OR (UPPER(p_status) = 'CURRENT' AND (
+          br.status IN ('ACTIVE', 'OVERDUE')
+          OR (br.status = 'RETURNED' AND COALESCE(br.fine_amount, 0) > 0 AND br.fine_settled_at IS NULL)
+        ))
         OR (UPPER(p_status) = 'RETURNED' AND br.status = 'RETURNED' AND (COALESCE(br.fine_amount, 0) = 0 OR br.fine_settled_at IS NOT NULL))
         OR (UPPER(p_status) = 'SETTLED' AND COALESCE(br.fine_amount, 0) > 0 AND br.fine_settled_at IS NOT NULL)
-        OR (v_norm_status IS NOT NULL AND UPPER(p_status) NOT IN ('ACTIVE', 'OVERDUE', 'RETURNED', 'SETTLED') AND br.status = v_norm_status)
+        OR (v_norm_status IS NOT NULL AND UPPER(p_status) NOT IN ('ACTIVE', 'OVERDUE', 'CURRENT', 'RETURNED', 'SETTLED') AND br.status = v_norm_status)
+      )
+      AND (
+        p_resolution IS NULL OR p_resolution = '' OR LOWER(p_resolution) = 'all'
+        OR br.fine_resolution = UPPER(p_resolution)
       )
       AND (
         p_search IS NULL OR p_search = '' OR (
@@ -2205,16 +2483,32 @@ BEGIN
     f.profile_student_id,
     f.fine_amount,
     f.fine_settled_at,
+    f.fine_resolution,
+    f.fine_remarks,
+    f.fine_settled_by,
     COUNT(*) OVER() AS total_count
   FROM filtered f
-  ORDER BY f.borrowed_at DESC
+  ORDER BY
+    CASE
+      WHEN UPPER(COALESCE(p_status, '')) = 'CURRENT' THEN
+        CASE
+          WHEN f.status = 'OVERDUE'
+            OR (f.status = 'ACTIVE' AND f.due_date < NOW())
+            OR (f.status = 'RETURNED' AND COALESCE(f.fine_amount, 0) > 0 AND f.fine_settled_at IS NULL)
+          THEN 0
+          ELSE 1
+        END
+      ELSE 0
+    END ASC,
+    CASE WHEN UPPER(COALESCE(p_status, '')) = 'CURRENT' THEN f.due_date ELSE NULL END ASC,
+    f.borrowed_at DESC
   LIMIT p_page_size
   OFFSET v_offset;
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text, text) TO authenticated, service_role;
 
 -- Ranked book search ("Best match"). See migrations/20261106120000_search_book_ids_ranked.sql.
 CREATE OR REPLACE FUNCTION public.search_book_ids(

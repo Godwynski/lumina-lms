@@ -21,7 +21,7 @@ import Link from "next/link";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { RoleBadge } from "@/components/common/RoleBadge";
+import { RoleBadge, ROLE_LABELS } from "@/components/common/RoleBadge";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { UserRole } from "@/lib/auth-helpers";
 import type { User } from "@/lib/types";
@@ -43,7 +43,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
-  const [activeTab, setActiveTab] = useState<"all" | "super_admin" | "librarian" | "student_assistant" | "student" | "review" | "archived">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "super_admin" | "librarian" | "library_staff" | "patron" | "review" | "archived">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const pageSize = 12;
@@ -52,15 +52,15 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const roleFilterLabels: Record<string, string> = {
     all: "All",
     review: "Pending Review",
-    super_admin: "Super Admin",
-    librarian: "Librarian",
-    student_assistant: "Student Assistant",
-    student: "Student",
+    super_admin: ROLE_LABELS.super_admin,
+    librarian: ROLE_LABELS.librarian,
+    library_staff: ROLE_LABELS.library_staff,
+    patron: ROLE_LABELS.patron,
     archived: "Archived",
   };
 
   // If librarian, remove 'super_admin' from filter options
-  const filterOptions = ["all", "review", "super_admin", "librarian", "student_assistant", "student", "archived"] as const;
+  const filterOptions = ["all", "review", "super_admin", "librarian", "library_staff", "patron", "archived"] as const;
   const visibleTabs = filterOptions.filter(t => {
     if (isLibrarian && t === "super_admin") return false;
     if (t === "archived" && !["super_admin", "librarian"].includes(currentRole)) return false;

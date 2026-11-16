@@ -16,9 +16,10 @@ export const mapProfileToUser = (row: Record<string, unknown>): User => ({
       : "Unnamed User"),
   email: typeof row.email === "string" ? row.email : "",
   avatarUrl: typeof row.avatar_url === "string" && row.avatar_url.trim() ? row.avatar_url : null,
-  role: ["super_admin", "librarian", "staff", "student_assistant", "student"].includes(String(row.role))
+  role: ["super_admin", "librarian", "staff", "library_staff", "patron"].includes(String(row.role))
     ? (String(row.role) as User["role"])
-    : "student",
+    : "patron",
+  patron_type: row.patron_type === "faculty" ? "faculty" : "student",
   status: typeof row.status === "string" ? row.status.toUpperCase() : "ACTIVE",
   department: typeof row.department === "string" && row.department.trim() ? row.department : "General",
   joined:

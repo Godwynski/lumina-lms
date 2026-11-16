@@ -22,7 +22,7 @@ async function ProfileContent() {
 
   return (
     <ProfileSection
-      role={profile?.role || "student"}
+      role={profile?.role || "patron"}
       preferences={preferences}
       initialProfile={{
         full_name: profile?.full_name || null,

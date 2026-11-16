@@ -36,7 +36,7 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-import { getBorrowingHistory, settleBorrowingFine } from '@/lib/actions/history';
+import { getBorrowingHistory, exportBorrowingHistory, settleBorrowingFine, getUserBorrowingHistory } from '@/lib/actions/history';
 
 const VALID_RECORD_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -44,7 +44,7 @@ function makeStaffContext(
   supabase: ReturnType<typeof createMockSupabaseClient>['client'],
   overrides: {
     id?: string;
-    role?: 'super_admin' | 'librarian' | 'student_assistant' | 'student';
+    role?: 'super_admin' | 'librarian' | 'library_staff' | 'patron';
     isDeactivatedSA?: boolean;
     hasCirculationPerm?: boolean;
   } = {}
@@ -53,13 +53,13 @@ function makeStaffContext(
   const id = overrides.id ?? 'staff-1';
   const isDeactivatedSA = overrides.isDeactivatedSA ?? false;
   const hasCirculationPerm =
-    overrides.hasCirculationPerm ?? (role === 'super_admin' || role === 'librarian' || role === 'student_assistant');
+    overrides.hasCirculationPerm ?? (role === 'super_admin' || role === 'librarian' || role === 'library_staff');
 
   return {
     user: { id },
     profile: { id, role, status: isDeactivatedSA ? 'DEACTIVATED' : 'ACTIVE' },
     role,
-    isStaff: role !== 'student',
+    isStaff: role !== 'patron',
     isAdmin: role === 'super_admin',
     isDeactivatedSA,
     hasPermission: (perm: string) => {
@@ -229,6 +229,9 @@ describe('history server actions', () => {
             returned_at: '2026-06-10T00:00:00Z',
             fine_amount: 10,
             fine_settled_at: '2026-06-10T01:00:00Z',
+            fine_resolution: 'PAID',
+            fine_remarks: 'Paid at desk',
+            fine_settled_by: 'staff-1',
             copy_qr: 'QR-BOOK-001',
             total_count: '25',
             book_id: 'book-1',
@@ -270,6 +273,9 @@ describe('history server actions', () => {
           copy_qr: 'QR-BOOK-001',
           fine_amount: 10,
           fine_settled_at: '2026-06-10T01:00:00Z',
+          fine_resolution: 'PAID',
+          fine_remarks: 'Paid at desk',
+          fine_settled_by: 'staff-1',
           books: {
             id: 'book-1',
             title: 'Noli Me Tangere',
@@ -390,14 +396,14 @@ describe('history server actions', () => {
         error: 'Authentication required',
       });
 
-      mockGetMe.mockResolvedValue(makeStaffContext(supaMock.client, { role: 'student' }));
+      mockGetMe.mockResolvedValue(makeStaffContext(supaMock.client, { role: 'patron' }));
       expect(await settleBorrowingFine({ recordId: VALID_RECORD_ID })).toEqual({
         success: false,
         error: 'Unauthorized access',
       });
 
       mockGetMe.mockResolvedValue(
-        makeStaffContext(supaMock.client, { role: 'student_assistant', isDeactivatedSA: true })
+        makeStaffContext(supaMock.client, { role: 'library_staff', isDeactivatedSA: true })
       );
       expect(await settleBorrowingFine({ recordId: VALID_RECORD_ID })).toEqual({
         success: false,
@@ -481,12 +487,18 @@ describe('history server actions', () => {
         id: VALID_RECORD_ID,
         fine_amount: 35,
         fine_settled_at: expect.any(String),
+        fine_resolution: 'PAID',
+        fine_remarks: null,
+        fine_settled_by: 'staff-1',
       });
       const borrowBuilder = adminMock.getTableBuilder('borrowing_records');
       expect(borrowBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           fine_amount: 35,
           fine_settled_at: expect.any(String),
+          fine_resolution: 'PAID',
+          fine_remarks: null,
+          fine_settled_by: 'staff-1',
           updated_at: expect.any(String),
         })
       );
@@ -497,7 +509,7 @@ describe('history server actions', () => {
         'borrowing_record',
         VALID_RECORD_ID,
         'settle_fine',
-        'Settled overdue fine (PHP 35)',
+        'Paid overdue fine (PHP 35.00)',
         null,
         null,
         null
@@ -551,11 +563,16 @@ describe('history server actions', () => {
         id: VALID_RECORD_ID,
         fine_amount: 25,
         fine_settled_at: expect.any(String),
+        fine_resolution: 'PAID',
+        fine_remarks: null,
+        fine_settled_by: 'staff-1',
       });
       expect(adminMock.getTableBuilder('borrowing_records').update).toHaveBeenCalledWith(
         expect.objectContaining({
           fine_amount: 25,
           fine_settled_at: expect.any(String),
+          fine_resolution: 'PAID',
+          fine_settled_by: 'staff-1',
         })
       );
       expect(mockRevalidatePath).toHaveBeenCalledWith('/history');
@@ -617,6 +634,202 @@ describe('history server actions', () => {
       expect(selectBuilder.update).not.toHaveBeenCalled();
       expect(mockRevalidatePath).toHaveBeenCalledWith('/history');
       expect(mockRevalidatePath).toHaveBeenCalledWith('/circulation');
+    });
+
+    it('supports CONDONED resolution with >= 5 char remarks and rejects missing/short/overlong remarks and missing circulation permission', async () => {
+      // Condoned without remarks or < 5 non-whitespace chars rejected before DB lookup
+      const noRemarks = await settleBorrowingFine({
+        recordId: VALID_RECORD_ID,
+        mode: 'settle',
+        resolution: 'CONDONED',
+      });
+      expect(noRemarks.success).toBe(false);
+      if (!noRemarks.success) {
+        expect(noRemarks.error).toBe('Validation failed');
+        expect(noRemarks.validationErrors?.remarks).toBeDefined();
+      }
+
+      const shortRemarks = await settleBorrowingFine({
+        recordId: VALID_RECORD_ID,
+        mode: 'settle',
+        resolution: 'CONDONED',
+        remarks: '  ok  ',
+      });
+      expect(shortRemarks.success).toBe(false);
+      expect(shortRemarks.error).toBe('Validation failed');
+
+      const tooLong = await settleBorrowingFine({
+        recordId: VALID_RECORD_ID,
+        mode: 'settle',
+        resolution: 'PAID',
+        remarks: 'x'.repeat(501),
+      });
+      expect(tooLong.success).toBe(false);
+      expect(tooLong.error).toBe('Validation failed');
+
+      // SA without manage_circulation denied
+      mockGetMe.mockResolvedValueOnce(
+        makeStaffContext(supaMock.client, { role: 'library_staff', hasCirculationPerm: false })
+      );
+      expect(
+        await settleBorrowingFine({
+          recordId: VALID_RECORD_ID,
+          mode: 'settle',
+          resolution: 'CONDONED',
+          remarks: 'Valid waiver reason',
+        })
+      ).toEqual({
+        success: false,
+        error: 'Access denied: Missing required permission.',
+      });
+
+      // Valid CONDONED settlement
+      adminMock.setTableResponse('borrowing_records', {
+        id: VALID_RECORD_ID,
+        book_copy_id: 'copy-1',
+        due_date: '2026-06-01T00:00:00Z',
+        returned_at: '2026-06-05T00:00:00Z',
+        status: 'RETURNED',
+        fine_amount: 40,
+        fine_settled_at: null,
+      });
+      adminMock.setTableResponse('system_settings', { value: '5' });
+
+      const condonedRes = await settleBorrowingFine({
+        recordId: VALID_RECORD_ID,
+        mode: 'settle',
+        resolution: 'CONDONED',
+        remarks: '  Medical emergency excused by dean  ',
+      });
+      expect(condonedRes.success).toBe(true);
+      expect(condonedRes.data).toEqual({
+        id: VALID_RECORD_ID,
+        fine_amount: 40,
+        fine_settled_at: expect.any(String),
+        fine_resolution: 'CONDONED',
+        fine_remarks: 'Medical emergency excused by dean',
+        fine_settled_by: 'staff-1',
+      });
+      expect(mockLogAuditActivity).toHaveBeenCalledWith(
+        'staff-1',
+        'borrowing_record',
+        VALID_RECORD_ID,
+        'settle_fine',
+        'Condoned overdue fine (PHP 40.00) — Remarks: Medical emergency excused by dean',
+        null,
+        null,
+        null
+      );
+    });
+  });
+
+  describe('resolutionFilter & exportBorrowingHistory', () => {
+    it('passes p_resolution to RPC and applies fine_resolution filter in fallback', async () => {
+      supaMock.setRpcResponse([], null, 'get_borrowing_history_v2');
+      await getBorrowingHistory(null, 1, 10, 'SETTLED', undefined, undefined, 'condoned');
+      expect(supaMock.rpc).toHaveBeenCalledWith('get_borrowing_history_v2', {
+        p_user_id: null,
+        p_page: 1,
+        p_page_size: 10,
+        p_status: 'SETTLED',
+        p_search: null,
+        p_resolution: 'CONDONED',
+      });
+
+      supaMock.setRpcResponse(null, { message: 'rpc failed' }, 'get_borrowing_history_v2');
+      supaMock.setTableResponse('borrowing_records', [], null, 0);
+      await getBorrowingHistory('stu-1', 1, 10, 'SETTLED', undefined, undefined, 'paid');
+      const borrowBuilder = supaMock.getTableBuilder('borrowing_records');
+      expect(borrowBuilder.not).toHaveBeenCalledWith('fine_settled_at', 'is', null);
+      expect(borrowBuilder.eq).toHaveBeenCalledWith('fine_resolution', 'PAID');
+    });
+
+    it('enforces patron scoping on exportBorrowingHistory and paginates all filtered pages for staff', async () => {
+      // Patron requesting scope='logs' is forced to their own userId
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'stu-42', role: 'patron' }));
+      supaMock.setRpcResponse([], null, 'get_borrowing_history_v2');
+      await exportBorrowingHistory({ status: 'SETTLED', resolution: 'PAID', scope: 'logs' });
+      expect(supaMock.rpc).toHaveBeenCalledWith('get_borrowing_history_v2', {
+        p_user_id: 'stu-42',
+        p_page: 1,
+        p_page_size: 1000,
+        p_status: 'SETTLED',
+        p_search: null,
+        p_resolution: 'PAID',
+      });
+
+      // Staff requesting scope='logs' fetches multiple pages when totalCount > 1000
+      supaMock.rpc
+        .mockResolvedValueOnce({
+          data: [{ id: 'r1', book_copy_id: 'c1', user_id: 'u1', status: 'OVERDUE', borrowed_at: '2026-01-01', due_date: '2026-01-02', returned_at: null, fine_amount: 10, total_count: 1001 }],
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: 'r2', book_copy_id: 'c2', user_id: 'u2', status: 'OVERDUE', borrowed_at: '2026-01-01', due_date: '2026-01-02', returned_at: null, fine_amount: 20, total_count: 1001 }],
+          error: null,
+        });
+      const expRes = await exportBorrowingHistory({ status: 'OVERDUE', scope: 'logs' });
+      expect(expRes.success).toBe(true);
+      if (expRes.success) {
+        expect(expRes.data.records.map((r) => r.id)).toEqual(['r1', 'r2']);
+        expect(expRes.data.totalCount).toBe(1001);
+      }
+      expect(supaMock.rpc).toHaveBeenLastCalledWith('get_borrowing_history_v2', expect.objectContaining({ p_page: 2 }));
+    });
+  });
+
+  describe('getUserBorrowingHistory (WP5 #9)', () => {
+    it('allows librarian and super_admin and denies library_staff and student', async () => {
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'sa-1', role: 'library_staff' }));
+      expect(await getUserBorrowingHistory({ userId: 'patron-1', page: 1 })).toEqual({
+        success: false,
+        error: 'Unauthorized access',
+      });
+
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'stu-1', role: 'patron' }));
+      expect(await getUserBorrowingHistory({ userId: 'patron-1', page: 1 })).toEqual({
+        success: false,
+        error: 'Unauthorized access',
+      });
+
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'lib-1', role: 'librarian' }));
+      supaMock.setRpcResponse(
+        [
+          {
+            id: 'rec-1',
+            book_copy_id: 'copy-1',
+            user_id: 'patron-1',
+            status: 'RETURNED',
+            borrowed_at: '2026-10-01T00:00:00Z',
+            due_date: '2026-10-15T00:00:00Z',
+            returned_at: '2026-10-18T00:00:00Z',
+            fine_amount: 15,
+            fine_settled_at: '2026-10-18T01:00:00Z',
+            fine_resolution: 'PAID',
+            book_id: 'book-1',
+            book_title: 'Clean Code',
+            book_author: 'Robert Martin',
+            total_count: 1,
+          },
+        ],
+        null,
+        'get_borrowing_history_v2'
+      );
+
+      const libRes = await getUserBorrowingHistory({ userId: 'patron-1', page: 2, pageSize: 10 });
+      expect(libRes.success).toBe(true);
+      if (libRes.success) {
+        expect(libRes.data.totalCount).toBe(1);
+        expect(libRes.data.records[0].books?.title).toBe('Clean Code');
+        expect(libRes.data.records[0].fine_resolution).toBe('PAID');
+      }
+      expect(supaMock.rpc).toHaveBeenCalledWith('get_borrowing_history_v2', {
+        p_user_id: 'patron-1',
+        p_page: 2,
+        p_page_size: 10,
+        p_status: null,
+        p_search: null,
+      });
     });
   });
 });

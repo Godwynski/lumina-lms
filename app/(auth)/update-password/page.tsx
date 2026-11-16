@@ -19,7 +19,7 @@ export default async function UpdatePasswordPage() {
       .eq("id", user.id)
       .single();
 
-    if (profile?.role === "student") {
+    if (profile?.role === "patron") {
       redirect("/security");
     }
   }

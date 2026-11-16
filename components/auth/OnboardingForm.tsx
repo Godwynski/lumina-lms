@@ -30,6 +30,7 @@ interface OnboardingFormProps {
     address?: string | null;
     phone?: string | null;
     department?: string | null;
+    patron_type?: "student" | "faculty" | string | null;
   };
 }
 
@@ -41,6 +42,7 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
   const [formData, setFormData] = useState({
     address: initialData?.address || "",
     phone: initialData?.phone || "",
+    patron_type: (initialData?.patron_type === "faculty" ? "faculty" : "student") as "student" | "faculty",
     department: initialData?.department || ""
   });
 
@@ -51,14 +53,19 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.address || !formData.phone || !formData.department) {
+    if (!formData.address || !formData.phone || (formData.patron_type === "student" && !formData.department)) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await submitOnboarding(formData);
+      await submitOnboarding({
+        address: formData.address,
+        phone: formData.phone,
+        patron_type: formData.patron_type,
+        department: formData.patron_type === "faculty" ? undefined : formData.department,
+      });
       setIsSuccess(true);
       toast.success("Profile submitted successfully!");
       
@@ -145,6 +152,26 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="patron_type" className="text-sm font-semibold flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-primary" />
+              Patron Type
+            </Label>
+            <Select 
+              value={formData.patron_type}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, patron_type: val as "student" | "faculty" }))}
+            >
+              <SelectTrigger id="patron_type" className="h-11 rounded-xl transition-all focus-visible:ring-primary/20">
+                <SelectValue placeholder="Select patron type" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="student" className="rounded-lg">Student</SelectItem>
+                <SelectItem value="faculty" className="rounded-lg">Faculty</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.patron_type === "student" && (
+          <div className="space-y-2">
             <Label htmlFor="program" className="text-sm font-semibold flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-primary" />
               Academic Program
@@ -166,6 +193,7 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
               </SelectContent>
             </Select>
           </div>
+          )}
 
           <div className="pt-2">
             <Button 

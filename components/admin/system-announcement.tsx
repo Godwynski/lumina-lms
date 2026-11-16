@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ROLE_LABELS } from '@/components/common/RoleBadge'
 
 export interface AnnouncementDraft {
   title: string
@@ -146,7 +147,7 @@ export function SystemAnnouncement({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs max-w-xs">
-                  Students & Student Assistants excludes admins and librarians. All Users includes every registered account.
+                  {`${ROLE_LABELS.patron}s & ${ROLE_LABELS.library_staff}`} excludes admins and librarians. All Users includes every registered account.
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -158,7 +159,7 @@ export function SystemAnnouncement({
                 <SelectItem value="students" className="py-2.5 px-3 text-xs font-medium">
                   <div className="flex items-center gap-2">
                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>Students & Student Assistants</span>
+                    <span>{`${ROLE_LABELS.patron}s & ${ROLE_LABELS.library_staff}`}</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="all" className="py-2.5 px-3 text-xs font-medium">
@@ -295,7 +296,7 @@ export function SystemAnnouncement({
                 Subject: <span className="font-normal text-muted-foreground">{title}</span>
               </p>
               <p className="font-semibold text-foreground">
-                Audience: <span className="font-normal text-muted-foreground">{target === 'all' ? 'All Users (Everyone)' : 'Students & Student Assistants'}</span>
+                Audience: <span className="font-normal text-muted-foreground">{target === 'all' ? 'All Users (Everyone)' : `${ROLE_LABELS.patron}s & ${ROLE_LABELS.library_staff}`}</span>
               </p>
               <p className="text-muted-foreground line-clamp-3 italic pt-1 border-t border-border/30">
                 &ldquo;{content}&rdquo;

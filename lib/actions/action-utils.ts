@@ -31,7 +31,7 @@ type SafeActionOptions = {
   auditEntity?: string;
   /** Whether this action requires a specific role. */
   allowedRoles?: UserRole[];
-  /** Optional: Required permissions for student_assistants. 
+  /** Optional: Required permissions for library_staffs. 
    * If provided, an SA must have at least one of these permissions.
    * Admins and Librarians bypass this check.
    */
@@ -63,8 +63,8 @@ export function createSafeAction<TInput, TOutput>(
       }
 
       // Permission check for staff roles (excluding student role if allowed)
-      const isStaffOnlyAction = options.allowedRoles && !options.allowedRoles.includes('student');
-      const isStaffRole = me.role === 'super_admin' || me.role === 'librarian' || me.role === 'student_assistant';
+      const isStaffOnlyAction = options.allowedRoles && !options.allowedRoles.includes('patron');
+      const isStaffRole = me.role === 'super_admin' || me.role === 'librarian' || me.role === 'library_staff';
       const isInactiveStaff = isStaffRole && me.profile?.status?.toUpperCase() !== 'ACTIVE';
 
       if (isStaffOnlyAction && (me.isDeactivatedSA || isInactiveStaff)) {

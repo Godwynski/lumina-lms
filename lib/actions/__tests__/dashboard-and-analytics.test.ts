@@ -44,12 +44,12 @@ describe('Dashboard & Analytics Server Actions', () => {
   describe('getDashboardStats (lib/actions/dashboard.ts)', () => {
     it('throws Unauthorized when unauthenticated', async () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
-      await expect(getDashboardStats({ role: 'student' })).rejects.toThrow('Unauthorized');
+      await expect(getDashboardStats({ role: 'patron' })).rejects.toThrow('Unauthorized');
     });
 
     it('returns student view without querying staff-only tables', async () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'student', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'patron', status: 'ACTIVE' }, null);
       serverClientHelper.setTableResponse('borrowing_records', null, null, 3);
       serverClientHelper.setTableResponse('attendance', null, null, 12);
       serverClientHelper.setRpcResponse(
@@ -79,7 +79,7 @@ describe('Dashboard & Analytics Server Actions', () => {
       ];
       safeClientHelper.setTableResponse('books', recentBooks, null);
 
-      const stats = await getDashboardStats({ role: 'student' });
+      const stats = await getDashboardStats({ role: 'patron' });
 
       expect(stats).toEqual({
         activeBorrows: 3,
@@ -113,11 +113,11 @@ describe('Dashboard & Analytics Server Actions', () => {
       expect(attendanceGteCall[1]).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\+08:00$/);
     });
 
-    it('gates book totals for active vs deactivated student_assistant', async () => {
+    it('gates book totals for active vs deactivated library_staff', async () => {
       // Active SA: gets totalBooks and archivedBooks, not pendingApprovals/totalUsers/overdueBorrows/readyHolds
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'sa-1' } }, error: null });
       queueTableBuilders(serverClientHelper, {
-        profiles: [createMockQueryBuilder({ id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' }, null)],
+        profiles: [createMockQueryBuilder({ id: 'sa-1', role: 'library_staff', status: 'ACTIVE' }, null)],
         books: [
           createMockQueryBuilder(null, null, 120),
           createMockQueryBuilder(null, null, 8),
@@ -128,7 +128,7 @@ describe('Dashboard & Analytics Server Actions', () => {
       serverClientHelper.setRpcResponse([], null, 'get_borrowing_history_v2');
       safeClientHelper.setTableResponse('books', [], null);
 
-      const activeSaStats = await getDashboardStats({ role: 'student_assistant' });
+      const activeSaStats = await getDashboardStats({ role: 'library_staff' });
       expect(activeSaStats.totalBooks).toBe(120);
       expect(activeSaStats.archivedBooks).toBe(8);
       expect(activeSaStats.pendingApprovals).toBe(0);
@@ -139,9 +139,9 @@ describe('Dashboard & Analytics Server Actions', () => {
       // Deactivated SA: book totals stay 0
       serverClientHelper = createMockSupabaseClient();
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'sa-2' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'sa-2', role: 'student_assistant', status: 'INACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'sa-2', role: 'library_staff', status: 'INACTIVE' }, null);
       serverClientHelper.setRpcResponse([], null, 'get_borrowing_history_v2');
-      const inactiveSaStats = await getDashboardStats({ role: 'student_assistant' });
+      const inactiveSaStats = await getDashboardStats({ role: 'library_staff' });
       expect(inactiveSaStats.totalBooks).toBe(0);
       expect(inactiveSaStats.archivedBooks).toBe(0);
     });
@@ -206,6 +206,79 @@ describe('Dashboard & Analytics Server Actions', () => {
       });
       await expect(getDashboardStats({ role: 'super_admin' })).rejects.toThrow('Request aborted');
     });
+
+    it('requests CURRENT borrows and returns overdue/receivable loans first with computed fine_amount', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-2' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { id: 'stu-2', role: 'patron', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('borrowing_records', null, null, 2);
+      serverClientHelper.setTableResponse('attendance', null, null, 4);
+      safeClientHelper.setTableResponse('books', [], null);
+
+      serverClientHelper.setRpcResponse(
+        [
+          {
+            id: 'loan-active',
+            book_copy_id: 'c1',
+            user_id: 'stu-2',
+            status: 'ACTIVE',
+            borrowed_at: '2026-11-10T00:00:00Z',
+            due_date: '2099-12-31T00:00:00Z',
+            returned_at: null,
+            fine_amount: null,
+            total_count: 3,
+            book_id: 'b1',
+            book_title: 'Future Due Book',
+            book_author: 'Author A',
+          },
+          {
+            id: 'loan-returned-unpaid',
+            book_copy_id: 'c2',
+            user_id: 'stu-2',
+            status: 'RETURNED',
+            borrowed_at: '2026-10-01T00:00:00Z',
+            due_date: '2026-10-10T00:00:00Z',
+            returned_at: '2026-10-12T00:00:00Z',
+            fine_amount: 10,
+            fine_settled_at: null,
+            total_count: 3,
+            book_id: 'b2',
+            book_title: 'Returned Unpaid Book',
+            book_author: 'Author B',
+          },
+          {
+            id: 'loan-overdue',
+            book_copy_id: 'c3',
+            user_id: 'stu-2',
+            status: 'OVERDUE',
+            borrowed_at: '2026-10-01T00:00:00Z',
+            due_date: '2026-10-05T00:00:00Z',
+            returned_at: null,
+            fine_amount: null,
+            total_count: 3,
+            book_id: 'b3',
+            book_title: 'Overdue Book',
+            book_author: 'Author C',
+          },
+        ],
+        null,
+        'get_borrowing_history_v2'
+      );
+
+      const stats = await getDashboardStats({ role: 'patron' });
+
+      expect(serverClientHelper.rpc).toHaveBeenCalledWith(
+        'get_borrowing_history_v2',
+        expect.objectContaining({ p_user_id: 'stu-2', p_status: 'CURRENT' })
+      );
+      expect(stats.activeBorrowsList?.map((b) => b.id)).toEqual([
+        'loan-overdue',
+        'loan-returned-unpaid',
+        'loan-active',
+      ]);
+      expect(stats.activeBorrowsList?.[0].fine_amount).toBeGreaterThan(0);
+      expect(stats.activeBorrowsList?.[1].fine_amount).toBe(10);
+      expect(stats.activeBorrowsList?.[2].fine_amount).toBe(0);
+    });
   });
 
   describe('getBookCopyTitle (lib/actions/dashboard.ts)', () => {
@@ -214,7 +287,7 @@ describe('Dashboard & Analytics Server Actions', () => {
       expect(await getBookCopyTitle('copy-1')).toBe('Resource');
 
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'u1', role: 'student', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'u1', role: 'patron', status: 'ACTIVE' }, null);
       serverClientHelper.setTableResponse('book_copies', { books: { title: 'Designing Data-Intensive Applications' } }, null);
       expect(await getBookCopyTitle('copy-1')).toBe('Designing Data-Intensive Applications');
 
@@ -229,11 +302,11 @@ describe('Dashboard & Analytics Server Actions', () => {
       await expect(getAnalyticsSummary('7d')).rejects.toThrow('Unauthorized');
 
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'student', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'patron', status: 'ACTIVE' }, null);
       await expect(getAnalyticsSummary('7d')).rejects.toThrow('Forbidden');
 
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'sa-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' }, null);
       await expect(getAnalyticsSummary('30d')).rejects.toThrow('Forbidden');
     });
 
@@ -342,11 +415,11 @@ describe('Dashboard & Analytics Server Actions', () => {
       await expect(getAnalyticsDetail(validSelection)).rejects.toThrow('Unauthorized');
 
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'student', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'stu-1', role: 'patron', status: 'ACTIVE' }, null);
       await expect(getAnalyticsDetail(validSelection)).rejects.toThrow('Forbidden');
 
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'sa-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' }, null);
+      serverClientHelper.setTableResponse('profiles', { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' }, null);
       await expect(getAnalyticsDetail(validSelection)).rejects.toThrow('Forbidden');
     });
 

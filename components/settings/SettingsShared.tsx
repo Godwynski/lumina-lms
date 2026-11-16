@@ -1,15 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { memo, useState } from "react";
-import { LucideIcon, Loader2, HelpCircle } from "lucide-react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { LucideIcon, Loader2, HelpCircle, Download, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FieldGroup } from "@/components/common/FieldGroup";
+import {
+  getMinArchiveCutoffDate,
+  getSchoolYearCutoffOptions,
+  parseArchiveCutoffDate,
+} from "@/lib/archive";
 export { FieldGroup };
 
 export const Section = memo(({ 
@@ -101,6 +114,322 @@ export function AnnualResetTool() {
             Start the end-of-year student account freeze.
           </TooltipContent>
         </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+interface ArchivePreviewCounts {
+  before: string;
+  borrowingCount: number;
+  attendanceCount: number;
+  totalCount: number;
+}
+
+export function ArchiveLogsTool() {
+  const minCutoff = useMemo(() => getMinArchiveCutoffDate(), []);
+  const schoolYearOptions = useMemo(() => getSchoolYearCutoffOptions(), []);
+
+  const [cutoffDate, setCutoffDate] = useState("");
+  const [counts, setCounts] = useState<ArchivePreviewCounts | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [backupDownloadedFor, setBackupDownloadedFor] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const parsedCutoff = useMemo(
+    () => (cutoffDate ? parseArchiveCutoffDate(cutoffDate) : null),
+    [cutoffDate]
+  );
+
+  const fetchPreviewCounts = React.useCallback(async (before: string, signal?: AbortSignal) => {
+    setIsLoadingCounts(true);
+    setPreviewError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/archive?before=${encodeURIComponent(before)}&preview=true`,
+        { signal }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load eligible counts");
+      }
+      if (!signal?.aborted) {
+        setCounts({
+          before: data.before ?? before,
+          borrowingCount: Number(data.borrowingCount ?? 0),
+          attendanceCount: Number(data.attendanceCount ?? 0),
+          totalCount: Number(data.totalCount ?? 0),
+        });
+      }
+    } catch (err) {
+      if (signal?.aborted) return;
+      setCounts(null);
+      setPreviewError(err instanceof Error ? err.message : "Failed to load eligible counts");
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoadingCounts(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    setBackupDownloadedFor(null);
+    setCounts(null);
+
+    if (!cutoffDate) {
+      setPreviewError(null);
+      return;
+    }
+
+    if (!parsedCutoff || !parsedCutoff.ok) {
+      setPreviewError(parsedCutoff ? parsedCutoff.error : "Invalid cutoff date.");
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetchPreviewCounts(parsedCutoff.before, controller.signal);
+    return () => controller.abort();
+  }, [cutoffDate, parsedCutoff, fetchPreviewCounts]);
+
+  const handleDownloadBackup = async () => {
+    if (!parsedCutoff || !parsedCutoff.ok) return;
+
+    setIsDownloading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/archive?before=${encodeURIComponent(parsedCutoff.before)}`
+      );
+      if (!res.ok) {
+        let message = "Backup download failed";
+        try {
+          const errData = await res.json();
+          if (errData?.error) message = errData.error;
+        } catch {
+          // ignore non-JSON error body
+        }
+        throw new Error(message);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `lumina-archive-before-${parsedCutoff.before}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      setBackupDownloadedFor(parsedCutoff.before);
+      toast.success("Backup downloaded.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Backup download failed");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleConfirmArchive = async () => {
+    if (!parsedCutoff || !parsedCutoff.ok || backupDownloadedFor !== parsedCutoff.before) {
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      const res = await fetch("/api/admin/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ before: parsedCutoff.before }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Archive failed");
+      }
+
+      const borrowingCount = Number(data.borrowingCount ?? 0);
+      const attendanceCount = Number(data.attendanceCount ?? 0);
+      toast.success(
+        `Archived ${borrowingCount} borrowing record(s) and ${attendanceCount} attendance log(s).`
+      );
+      setConfirmOpen(false);
+      setBackupDownloadedFor(null);
+      await fetchPreviewCounts(parsedCutoff.before);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Archive failed");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const validBefore = parsedCutoff?.ok ? parsedCutoff.before : null;
+  const isDateValid = validBefore !== null;
+  const canDownload = isDateValid && !isLoadingCounts && !isDownloading && !isArchiving;
+  const canArchive =
+    isDateValid &&
+    counts !== null &&
+    counts.totalCount > 0 &&
+    backupDownloadedFor === validBefore &&
+    !isDownloading &&
+    !isArchiving;
+
+  return (
+    <TooltipProvider>
+      <div className="space-y-4 py-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-sm font-medium">Archive Old Records</h4>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center"
+                  aria-label="Archive old records info"
+                >
+                  <HelpCircle className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs max-w-xs">
+                Exports completed borrowing and attendance records older than 1 year to Excel, then moves them to archive tables. Open loans, lost books, and unsettled fines are preserved.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Export and archive completed records strictly before a school-year cutoff (at least 1 year old).
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {schoolYearOptions.map((opt) => (
+            <Button
+              key={opt.value}
+              type="button"
+              variant={cutoffDate === opt.value ? "default" : "outline"}
+              size="sm"
+              className="h-7 rounded-lg text-[11px]"
+              onClick={() => setCutoffDate(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="space-y-1.5">
+            <label htmlFor="archive-cutoff-date" className="block text-xs font-medium text-foreground">
+              Cutoff date
+            </label>
+            <Input
+              id="archive-cutoff-date"
+              type="date"
+              aria-label="Archive cutoff date"
+              max={minCutoff}
+              value={cutoffDate}
+              onChange={(e) => setCutoffDate(e.target.value)}
+              className="h-9 w-full sm:w-[200px] rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!canDownload}
+              onClick={handleDownloadBackup}
+              className="h-9 rounded-xl text-xs font-medium gap-1.5"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              <span>{isDownloading ? "Downloading..." : "Download backup"}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={!canArchive}
+              onClick={() => setConfirmOpen(true)}
+              className="h-9 rounded-xl text-xs font-medium gap-1.5"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              <span>Archive</span>
+            </Button>
+          </div>
+        </div>
+
+        {previewError && (
+          <p role="alert" className="text-xs text-destructive">
+            {previewError}
+          </p>
+        )}
+
+        {isLoadingCounts && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span>Counting eligible records...</span>
+          </p>
+        )}
+
+        {!isLoadingCounts && counts && (
+          <div className="rounded-xl border border-border/50 bg-background/60 p-3 text-xs space-y-1">
+            <p className="font-medium text-foreground">
+              Eligible records before {counts.before}: {counts.totalCount}
+            </p>
+            <p className="text-muted-foreground">
+              {counts.borrowingCount} borrowing record(s) · {counts.attendanceCount} attendance log(s)
+            </p>
+            {counts.totalCount === 0 ? (
+              <p className="text-muted-foreground">No eligible records found before this cutoff.</p>
+            ) : backupDownloadedFor === counts.before ? (
+              <p className="text-emerald-600 dark:text-emerald-400 font-medium">
+                Backup downloaded. Archive is now enabled.
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                Download backup before archiving.
+              </p>
+            )}
+          </div>
+        )}
+
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Record Archive</DialogTitle>
+              <DialogDescription>
+                {counts
+                  ? `Move ${counts.borrowingCount} borrowing record(s) and ${counts.attendanceCount} attendance log(s) strictly before ${counts.before} into the archive tables? Active loans, lost items, and unsettled fines will be preserved.`
+                  : "Confirm archiving eligible historical records."}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isArchiving}
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={isArchiving}
+                onClick={handleConfirmArchive}
+              >
+                {isArchiving ? "Archiving..." : "Confirm Archive"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

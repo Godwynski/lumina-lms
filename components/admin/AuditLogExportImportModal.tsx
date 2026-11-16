@@ -29,6 +29,7 @@ interface AuditLogExportImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImportSuccess?: () => void;
+  canImport?: boolean;
   currentFilters: {
     query?: string;
     entityType?: string;
@@ -59,7 +60,7 @@ const AVAILABLE_COLUMNS = [
   { id: "book_isbn", label: "ISBN", desc: "Book identifier" },
   { id: "copy_barcode", label: "Copy barcode", desc: "Physical copy involved" },
   { id: "student_name", label: "Student", desc: "Student involved, independently of the staff actor" },
-  { id: "student_number", label: "Student ID", desc: "School student identifier" },
+  { id: "student_number", label: "Patron ID", desc: "School patron identifier" },
   { id: "created_at", label: "Timestamp", desc: "Date and time of the event" },
   { id: "full_name", label: "Admin Name", desc: "Full name of performing admin" },
   { id: "email", label: "Admin Email", desc: "Email of performing admin" },
@@ -116,9 +117,11 @@ export function AuditLogExportImportModal({
   isOpen,
   onClose,
   onImportSuccess,
+  canImport = true,
   currentFilters,
 }: AuditLogExportImportModalProps) {
   const [activeTab, setActiveTab] = useState<"export" | "import">("export");
+  const effectiveTab = canImport ? activeTab : "export";
 
   // Export States
   const [exportFormat, setExportFormat] = useState<"csv" | "json" | "xlsx">("csv");
@@ -425,20 +428,23 @@ export function AuditLogExportImportModal({
             Audit Log Operations
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1">
-            Configure customizations to download logs, or import audit backup files.
+            {canImport
+              ? "Configure customizations to download logs, or import audit backup files."
+              : "Configure customizations to download audit logs."}
           </DialogDescription>
 
           {/* Custom Switcher Tabs */}
+          {canImport && (
           <div className="flex gap-1.5 bg-muted/40 p-1 rounded-2xl border border-border/5 mt-4">
             <button
-              aria-pressed={activeTab === "export"}
+              aria-pressed={effectiveTab === "export"}
               onClick={() => {
                 setActiveTab("export");
                 resetImport();
               }}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 px-3 rounded-xl transition-all",
-                activeTab === "export"
+                effectiveTab === "export"
                   ? "bg-background text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
               )}
@@ -447,11 +453,11 @@ export function AuditLogExportImportModal({
               Custom Export Settings
             </button>
             <button
-              aria-pressed={activeTab === "import"}
+              aria-pressed={effectiveTab === "import"}
               onClick={() => setActiveTab("import")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 text-xs font-bold py-2.5 px-3 rounded-xl transition-all",
-                activeTab === "import"
+                effectiveTab === "import"
                   ? "bg-background text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
               )}
@@ -460,11 +466,12 @@ export function AuditLogExportImportModal({
               Restoration & Import
             </button>
           </div>
+          )}
         </div>
 
         {/* Tab Content Panel */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
-          {activeTab === "export" ? (
+          {effectiveTab === "export" ? (
             <div className="space-y-5 animate-in fade-in duration-200">
               
               {/* Format selection */}
@@ -778,7 +785,7 @@ export function AuditLogExportImportModal({
             Cancel
           </Button>
 
-          {activeTab === "export" ? (
+          {effectiveTab === "export" ? (
             <Button
               onClick={handleExportSubmit}
               disabled={isExporting || selectedColumns.length === 0}

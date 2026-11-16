@@ -5,7 +5,7 @@ export type DemoAccount = {
   legacyEmail: string;
   label: string;
   fullName: string;
-  role: 'super_admin' | 'librarian' | 'student_assistant' | 'student';
+  role: 'super_admin' | 'librarian' | 'library_staff' | 'patron';
   studentId: string;
   department: string;
   phone: string;
@@ -15,6 +15,7 @@ export type DemoAccount = {
     manage_circulation: boolean;
     manage_attendance: boolean;
     view_admin_dashboard: boolean;
+    manage_inventory: boolean;
   };
 };
 
@@ -25,7 +26,7 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     studentId: 'FAC-DEMO.AQUINO', department: 'Library Services',
     phone: '+63 917 555 0101', address: 'STI College Alabang, Muntinlupa City (demo)',
     cardNumber: 'DEMO-ADM-001',
-    permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true },
+    permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true, manage_inventory: true },
   },
   {
     email: 'demo.galang@alabang.sti.edu.ph', legacyEmail: 'librarian@lumina.test',
@@ -33,22 +34,22 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     studentId: 'FAC-DEMO.GALANG', department: 'Library Services',
     phone: '+63 917 555 0102', address: 'STI College Alabang, Muntinlupa City (demo)',
     cardNumber: 'DEMO-LIB-001',
-    permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true },
+    permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true, manage_inventory: true },
   },
   {
     email: 'demo.marasigan.20230148@alabang.sti.edu.ph', legacyEmail: 'staff@lumina.test',
-    label: 'Student Assistant', fullName: 'Kaye Marasigan', role: 'student_assistant',
+    label: 'Library Staff', fullName: 'Kaye Marasigan', role: 'library_staff',
     studentId: 'STU-20230148', department: 'BS Information Technology',
     phone: '+63 917 555 0103', address: 'Alabang, Muntinlupa City (demo)',
     cardNumber: 'DEMO-STF-001',
-    permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true },
+    permissions: { manage_circulation: true, manage_attendance: true, view_admin_dashboard: true, manage_inventory: false },
   },
   {
     email: 'demo.bautista.20220271@alabang.sti.edu.ph', legacyEmail: 'student@lumina.test',
-    label: 'Student', fullName: 'Paolo Ian Bautista', role: 'student',
+    label: 'Patron', fullName: 'Paolo Ian Bautista', role: 'patron',
     studentId: 'STU-20220271', department: 'BS Computer Science',
     phone: '+63 917 555 0104', address: 'Cupang, Muntinlupa City (demo)',
     cardNumber: 'DEMO-STU-001',
-    permissions: { manage_circulation: false, manage_attendance: false, view_admin_dashboard: false },
+    permissions: { manage_circulation: false, manage_attendance: false, view_admin_dashboard: false, manage_inventory: false },
   },
 ];

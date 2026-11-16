@@ -829,7 +829,8 @@ describe('Admin & Policies UI Components', () => {
       expect(document.body).toHaveTextContent('Search: "book"');
       expect(document.body).toHaveTextContent('Customize Columns (15 / 15)');
       expect(document.body).toHaveTextContent('Copy barcode');
-      expect(document.body).toHaveTextContent('Student ID');
+      expect(document.body).toHaveTextContent('Patron ID');
+      expect(document.body).toHaveTextContent('Restoration & Import');
 
       // Switch format to Developer JSON
       await clickElement(findButtonByText(document.body, 'Developer JSON'));
@@ -943,6 +944,19 @@ describe('Admin & Policies UI Components', () => {
       // Reset via Import Another File
       await clickElement(findButtonByText(document.body, 'Import Another File'));
       expect(document.body).toHaveTextContent('Drag & Drop Log Backup');
+    });
+
+    it('hides Restoration & Import tab when canImport is false (librarian view)', async () => {
+      await renderClient(
+        <AuditLogExportImportModal
+          isOpen={true}
+          onClose={vi.fn()}
+          canImport={false}
+          currentFilters={{}}
+        />
+      );
+      expect(document.body).not.toHaveTextContent('Restoration & Import');
+      expect(document.body).toHaveTextContent('Download Backup File');
     });
   });
 
@@ -1127,7 +1141,7 @@ describe('Admin & Policies UI Components', () => {
       await clickElement(sendBtn);
       expect(document.body).toHaveTextContent('Confirm Announcement Broadcast');
       expect(document.body).toHaveTextContent('Library Hours');
-      expect(document.body).toHaveTextContent('Students & Student Assistants');
+      expect(document.body).toHaveTextContent('Patrons & Library Staff');
 
       await clickElement(findButtonByText(document.body, 'Confirm & Send'));
 

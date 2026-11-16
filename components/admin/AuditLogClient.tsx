@@ -398,7 +398,8 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
 
 // --- Main Component ---
 
-export function AuditLogClient() {
+export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string } = {}) {
+  const canImport = userRole === "super_admin";
   const urlFilters = useSearchParams();
   const updateFilters = useCallback((changes: Record<string, string>) => {
     const params = new URLSearchParams(window.location.search);
@@ -566,7 +567,7 @@ export function AuditLogClient() {
                 className="h-10 rounded-2xl text-[11px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" />
-                <span>Export / Import</span>
+                <span>{canImport ? "Export / Import" : "Export"}</span>
               </Button>
             </div>
           </div>
@@ -907,6 +908,7 @@ export function AuditLogClient() {
           isOpen={isExportImportOpen}
           onClose={() => setIsExportImportOpen(false)}
           onImportSuccess={() => mutate()}
+          canImport={canImport}
           currentFilters={{
             query: debouncedSearch,
             entityType,

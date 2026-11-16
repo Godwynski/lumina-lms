@@ -46,7 +46,7 @@ export default function UsersPage() {
 function UserPageWrapper({ usersPromise }: { usersPromise: ReturnType<typeof buildUsersPromise> }) {
   const { currentRole } = use(usersPromise);
   
-  return <UsersContent usersPromise={usersPromise} currentRole={currentRole as "super_admin" | "librarian" | "student_assistant" | "student"} />;
+  return <UsersContent usersPromise={usersPromise} currentRole={currentRole as "super_admin" | "librarian" | "library_staff" | "patron"} />;
 }
 
 export function UsersSkeleton() {

@@ -22,8 +22,8 @@ import { proxy, config as proxyConfig } from '@/proxy';
 describe('lib/auth/permissions', () => {
   it('defines monotonically increasing ROLE_RANKS', () => {
     expect(ROLE_RANKS).toEqual({
-      student: 1,
-      student_assistant: 2,
+      patron: 1,
+      library_staff: 2,
       librarian: 3,
       super_admin: 4,
     });
@@ -33,16 +33,16 @@ describe('lib/auth/permissions', () => {
     const baseItem: NavItem = { href: '/x', label: 'X' };
 
     it('denies null roles when exactRoles is not matched', () => {
-      expect(hasPermission(null, { ...baseItem, minRole: 'student' })).toBe(false);
+      expect(hasPermission(null, { ...baseItem, minRole: 'patron' })).toBe(false);
       expect(hasPermission(null, baseItem)).toBe(false);
     });
 
     it('enforces excludeRoles before exactRoles or minRole', () => {
       expect(
-        hasPermission('student', {
+        hasPermission('patron', {
           ...baseItem,
-          minRole: 'student',
-          excludeRoles: ['student'],
+          minRole: 'patron',
+          excludeRoles: ['patron'],
         })
       ).toBe(false);
 
@@ -64,34 +64,53 @@ describe('lib/auth/permissions', () => {
     });
 
     it('checks minRole ranks accurately', () => {
-      expect(hasPermission('student', { ...baseItem, minRole: 'student' })).toBe(true);
-      expect(hasPermission('student', { ...baseItem, minRole: 'student_assistant' })).toBe(false);
-      expect(hasPermission('librarian', { ...baseItem, minRole: 'student_assistant' })).toBe(true);
+      expect(hasPermission('patron', { ...baseItem, minRole: 'patron' })).toBe(true);
+      expect(hasPermission('patron', { ...baseItem, minRole: 'library_staff' })).toBe(false);
+      expect(hasPermission('librarian', { ...baseItem, minRole: 'library_staff' })).toBe(true);
       expect(hasPermission('super_admin', { ...baseItem, minRole: 'super_admin' })).toBe(true);
     });
 
-    it('requires permissionKey for student_assistant while bypassing for librarian and super_admin', () => {
+    it('requires permissionKey for library_staff while bypassing for librarian and super_admin', () => {
       const circItem: NavItem = {
         ...baseItem,
-        minRole: 'student_assistant',
+        minRole: 'library_staff',
         permissionKey: 'manage_circulation',
+      };
+      const invItem: NavItem = {
+        ...baseItem,
+        minRole: 'library_staff',
+        permissionKey: 'manage_inventory',
       };
 
       expect(hasPermission('super_admin', circItem, null)).toBe(true);
       expect(hasPermission('librarian', circItem, null)).toBe(true);
+      expect(hasPermission('super_admin', invItem, null)).toBe(true);
+      expect(hasPermission('librarian', invItem, null)).toBe(true);
       expect(
-        hasPermission('student_assistant', circItem, {
+        hasPermission('library_staff', invItem, {
+          status: 'ACTIVE',
+          permissions: { manage_circulation: true, manage_inventory: false },
+        })
+      ).toBe(false);
+      expect(
+        hasPermission('library_staff', invItem, {
+          status: 'ACTIVE',
+          permissions: { manage_inventory: true },
+        })
+      ).toBe(true);
+      expect(
+        hasPermission('library_staff', circItem, {
           status: 'ACTIVE',
           permissions: { manage_circulation: true },
         })
       ).toBe(true);
       expect(
-        hasPermission('student_assistant', circItem, {
+        hasPermission('library_staff', circItem, {
           status: 'ACTIVE',
           permissions: { manage_circulation: false },
         })
       ).toBe(false);
-      expect(hasPermission('student_assistant', circItem, { status: 'ACTIVE', permissions: null })).toBe(false);
+      expect(hasPermission('library_staff', circItem, { status: 'ACTIVE', permissions: null })).toBe(false);
     });
 
     it('blocks deactivated student assistants from staff routes while allowing student routes', () => {
@@ -100,12 +119,12 @@ describe('lib/auth/permissions', () => {
         permissions: { manage_circulation: true, manage_attendance: true },
       };
 
-      expect(hasPermission('student_assistant', { ...baseItem, minRole: 'student' }, inactiveSA)).toBe(true);
-      expect(hasPermission('student_assistant', { ...baseItem, minRole: 'student_assistant' }, inactiveSA)).toBe(false);
+      expect(hasPermission('library_staff', { ...baseItem, minRole: 'patron' }, inactiveSA)).toBe(true);
+      expect(hasPermission('library_staff', { ...baseItem, minRole: 'library_staff' }, inactiveSA)).toBe(false);
       expect(
         hasPermission(
-          'student_assistant',
-          { ...baseItem, minRole: 'student', permissionKey: 'manage_attendance' },
+          'library_staff',
+          { ...baseItem, minRole: 'patron', permissionKey: 'manage_attendance' },
           inactiveSA
         )
       ).toBe(false);
@@ -116,10 +135,10 @@ describe('lib/auth/permissions', () => {
     it('identifies staff roles and active student assistants only', () => {
       expect(isStaff('super_admin')).toBe(true);
       expect(isStaff('librarian')).toBe(true);
-      expect(isStaff('student_assistant', { status: 'active' })).toBe(true);
-      expect(isStaff('student_assistant', { status: 'INACTIVE' })).toBe(false);
-      expect(isStaff('student_assistant', null)).toBe(false);
-      expect(isStaff('student', { status: 'ACTIVE' })).toBe(false);
+      expect(isStaff('library_staff', { status: 'active' })).toBe(true);
+      expect(isStaff('library_staff', { status: 'INACTIVE' })).toBe(false);
+      expect(isStaff('library_staff', null)).toBe(false);
+      expect(isStaff('patron', { status: 'ACTIVE' })).toBe(false);
       expect(isStaff(null)).toBe(false);
     });
 
@@ -143,8 +162,10 @@ describe('lib/auth-helpers', () => {
     it('normalizes valid roles and rejects unknown or non-string values', () => {
       expect(normalizeUserRole('  SUPER_ADMIN ')).toBe('super_admin');
       expect(normalizeUserRole('Librarian')).toBe('librarian');
-      expect(normalizeUserRole('student_assistant')).toBe('student_assistant');
-      expect(normalizeUserRole('student')).toBe('student');
+      expect(normalizeUserRole('student_assistant')).toBe('library_staff');
+      expect(normalizeUserRole('library_staff')).toBe('library_staff');
+      expect(normalizeUserRole('student')).toBe('patron');
+      expect(normalizeUserRole('patron')).toBe('patron');
       expect(normalizeUserRole('staff')).toBeNull();
       expect(normalizeUserRole('')).toBeNull();
       expect(normalizeUserRole(null)).toBeNull();
@@ -186,7 +207,7 @@ describe('lib/auth-helpers', () => {
 
     it.each([
       {
-        role: 'student' as const,
+        role: 'patron' as const,
         status: 'ACTIVE',
         permissions: { manage_circulation: true },
         expectedStaff: false,
@@ -195,7 +216,7 @@ describe('lib/auth-helpers', () => {
         expectedPerm: true,
       },
       {
-        role: 'student_assistant' as const,
+        role: 'library_staff' as const,
         status: 'ACTIVE',
         permissions: { manage_circulation: true, manage_attendance: false },
         expectedStaff: true,
@@ -204,7 +225,7 @@ describe('lib/auth-helpers', () => {
         expectedPerm: true,
       },
       {
-        role: 'student_assistant' as const,
+        role: 'library_staff' as const,
         status: 'INACTIVE',
         permissions: { manage_circulation: false },
         expectedStaff: true,
@@ -278,7 +299,7 @@ describe('lib/auth-helpers', () => {
       mockCreateClient.mockResolvedValueOnce(supaFallback.client);
 
       const meFallback = await getMe();
-      expect(meFallback?.role).toBe('student');
+      expect(meFallback?.role).toBe('patron');
     });
   });
 
@@ -291,14 +312,14 @@ describe('lib/auth-helpers', () => {
 
       const errSupa = createMockSupabaseClient();
       errSupa.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', app_metadata: {} } }, error: null });
-      errSupa.setTableResponse('profiles', { id: 'u1', role: 'student', status: 'ACTIVE' });
+      errSupa.setTableResponse('profiles', { id: 'u1', role: 'patron', status: 'ACTIVE' });
       errSupa.setTableResponse('ui_preferences', null, { message: 'prefs fail' });
       mockCreateClient.mockResolvedValueOnce(errSupa.client);
       expect(await getPreferences()).toEqual({});
 
       const okSupa = createMockSupabaseClient();
       okSupa.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', app_metadata: {} } }, error: null });
-      okSupa.setTableResponse('profiles', { id: 'u1', role: 'student', status: 'ACTIVE' });
+      okSupa.setTableResponse('profiles', { id: 'u1', role: 'patron', status: 'ACTIVE' });
       okSupa.setTableResponse('ui_preferences', { preferences: { sidebarCollapsed: true } });
       mockCreateClient.mockResolvedValueOnce(okSupa.client);
       expect(await getPreferences()).toEqual({ sidebarCollapsed: true });
@@ -325,7 +346,7 @@ describe('lib/auth-helpers', () => {
 
       const studentSupa = createMockSupabaseClient();
       studentSupa.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', app_metadata: {} } }, error: null });
-      studentSupa.setTableResponse('profiles', { id: 'u1', role: 'student', status: 'ACTIVE' });
+      studentSupa.setTableResponse('profiles', { id: 'u1', role: 'patron', status: 'ACTIVE' });
       mockCreateClient.mockResolvedValueOnce(studentSupa.client);
       await expect(assertRole(['librarian', 'super_admin'])).rejects.toThrow('Forbidden');
 
@@ -347,8 +368,8 @@ describe('lib/demo/config and lib/demo/accounts', () => {
     expect(DEMO_ACCOUNTS.map((a) => a.role)).toEqual([
       'super_admin',
       'librarian',
-      'student_assistant',
-      'student',
+      'library_staff',
+      'patron',
     ]);
   });
 
@@ -358,11 +379,17 @@ describe('lib/demo/config and lib/demo/accounts', () => {
     expect(admin?.cardNumber).toBe('DEMO-ADM-001');
 
     const student = findDemoAccount('demo.bautista.20220271@alabang.sti.edu.ph');
+    expect(student?.label).toBe('Patron');
     expect(student?.permissions).toEqual({
       manage_circulation: false,
       manage_attendance: false,
       view_admin_dashboard: false,
+      manage_inventory: false,
     });
+
+    const assistant = findDemoAccount('demo.marasigan.20230148@alabang.sti.edu.ph');
+    expect(assistant?.label).toBe('Library Staff');
+    expect(assistant?.permissions.manage_inventory).toBe(false);
 
     expect(findDemoAccount('unknown@example.com')).toBeUndefined();
   });
@@ -382,12 +409,12 @@ describe('lib/demo/config and lib/demo/accounts', () => {
   });
 
   it('gives the student assistant the permissions required by staff navigation', () => {
-    const account = DEMO_ACCOUNTS.find((a) => a.role === 'student_assistant')!;
+    const account = DEMO_ACCOUNTS.find((a) => a.role === 'library_staff')!;
     for (const permissionKey of ['manage_circulation', 'manage_attendance', 'view_admin_dashboard'] as const) {
       expect(
         hasPermission(
           account.role,
-          { href: '/', label: 'Staff', minRole: 'student_assistant', permissionKey },
+          { href: '/', label: 'Staff', minRole: 'library_staff', permissionKey },
           { status: 'ACTIVE', permissions: account.permissions }
         )
       ).toBe(true);

@@ -171,7 +171,7 @@ describe('Custom Hooks Behavioral Suite', () => {
       expect(ok).toBe(true);
       expect(api.currentStep).toBe(2);
       expect(api.activeStudent?.fullName).toBe('Maria Clara');
-      expect(mockToastSuccess).toHaveBeenCalledWith('Student verified. Please scan the book copy.');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Patron verified. Please scan the item.');
 
       // Book preview failure stays on step 2
       mockCheckoutBook.mockResolvedValueOnce({ success: false, error: 'Copy already borrowed' });
@@ -308,6 +308,114 @@ describe('Custom Hooks Behavioral Suite', () => {
         settleFine: true,
       });
       expect(api.reservationData).toEqual({ ready: true, studentName: 'Pedro Santos' });
+
+      // Condoned return settlement passes resolution and trimmed remarks
+      await act(async () => {
+        api.handleReset();
+      });
+      mockReturnBook.mockResolvedValueOnce({
+        success: true,
+        data: { book_title: 'Clean Code', student_name: 'Ana Reyes', fine_amount: 20, overdue_days: 4 },
+      });
+      await act(async () => {
+        await api.processScan('BK-RETURN-3', true);
+      });
+      mockReturnBook.mockResolvedValueOnce({
+        success: true,
+        data: { reservation_ready: false },
+      });
+      await act(async () => {
+        await api.confirmAction(true, 'CONDONED', '  Approved waiver  ');
+      });
+      expect(mockReturnBook).toHaveBeenLastCalledWith({
+        bookQr: 'BK-RETURN-3',
+        idempotencyKey: expect.any(String),
+        previewOnly: false,
+        isManual: true,
+        settleFine: true,
+        resolution: 'CONDONED',
+        remarks: 'Approved waiver',
+      });
+    });
+
+    it('holds blocked patrons at step 1 until a valid overrideReason is applied and forwarded to checkoutBook', async () => {
+      let api!: ReturnType<typeof useCirculationWizard>;
+      await renderClient(<WizardHarness onState={(s) => { api = s; }} />);
+
+      mockResolveScan.mockResolvedValueOnce({
+        success: true,
+        data: {
+          type: 'student',
+          data: {
+            cardNumber: 'LIB-BLK',
+            fullName: 'Emilio Aguinaldo',
+            studentId: '2026-0042',
+            status: 'ACTIVE',
+            block: { overdueCount: 2, receivableTotal: 35 },
+          },
+        },
+      });
+
+      let ok = false;
+      await act(async () => {
+        ok = await api.processScan('LIB-BLK', true);
+      });
+      expect(ok).toBe(true);
+      expect(api.currentStep).toBe(1);
+      expect(api.isBlocked).toBe(true);
+      expect(api.isBlockedPendingOverride).toBe(true);
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Patron has overdue books or unpaid fines. Borrowing is blocked.'
+      );
+
+      // Short override reason is rejected
+      let applied = false;
+      await act(async () => {
+        applied = api.applyOverride('short');
+      });
+      expect(applied).toBe(false);
+      expect(api.currentStep).toBe(1);
+      expect(api.overrideReason).toBeNull();
+
+      // Valid override reason advances to step 2
+      await act(async () => {
+        applied = api.applyOverride('  Approved by head librarian for exam review  ');
+      });
+      expect(applied).toBe(true);
+      expect(api.overrideReason).toBe('Approved by head librarian for exam review');
+      expect(api.isBlockedPendingOverride).toBe(false);
+      expect(api.currentStep).toBe(2);
+
+      // Scan book -> step 3 -> confirm forwards overrideReason
+      mockCheckoutBook.mockResolvedValueOnce({
+        success: true,
+        data: { book_title: 'Operating Systems', due_date: '2026-12-01T00:00:00Z' },
+      });
+      await act(async () => {
+        await api.processScan('BK-OS-1', true);
+      });
+      expect(api.currentStep).toBe(3);
+
+      mockCheckoutBook.mockResolvedValueOnce({ success: true, data: {} });
+      await act(async () => {
+        await api.confirmAction();
+      });
+      expect(mockCheckoutBook).toHaveBeenLastCalledWith({
+        studentCardQr: 'LIB-BLK',
+        bookQr: 'BK-OS-1',
+        idempotencyKey: expect.any(String),
+        previewOnly: false,
+        isManual: true,
+        overrideReason: 'Approved by head librarian for exam review',
+      });
+      expect(api.isConfirmed).toBe(true);
+
+      // Reset clears overrideReason
+      await act(async () => {
+        api.handleReset();
+      });
+      expect(api.overrideReason).toBeNull();
+      expect(api.activeStudent).toBeNull();
     });
 
     it('switches mode, ignores stale async scan results after reset, and surfaces thrown errors', async () => {

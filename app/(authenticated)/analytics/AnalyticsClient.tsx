@@ -3,11 +3,13 @@
 import { use, useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, BookOpen, Library, UserCircle2 } from 'lucide-react';
+import { Clock, BookOpen, Library, UserCircle2, Download, Printer, Loader2 } from 'lucide-react';
 import { TrendChart, CategoryPieChart, PeakHoursBarChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange, type AnalyticsSelection } from '@/lib/actions/analytics';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { analyticsDates, validateDates, type AnalyticsDates } from '@/lib/analytics-dates';
+import { buildAnalyticsWorkbook } from '@/lib/analytics-export';
+import { Button } from '@/components/ui/button';
 import { AnalyticsDetailModal } from './AnalyticsDetailModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -57,6 +59,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
 
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const summaryRequestRef = useRef(0);
   const initialKeyRef = useRef<string | null>(
     initialSummary ? `30d:${dates.from}:${dates.to}` : null
@@ -122,9 +125,53 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
     };
   }, [debouncedRefresh]);
 
+  const handleExportXlsx = async () => {
+    if (!summary) return;
+    setIsExporting(true);
+    try {
+      const XLSX = await import('xlsx');
+      const workbook = buildAnalyticsWorkbook(XLSX, stats, summary, loadedDates);
+      XLSX.writeFile(workbook, `lumina_analytics_${loadedDates.from}_to_${loadedDates.to}.xlsx`);
+      toast.success('Analytics exported to Excel.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Analytics export failed.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex justify-end px-1">
+      <div className="hidden print:block mb-4 border-b pb-2">
+        <h1 className="text-lg font-bold">Lumina LMS — Analytics &amp; High Demand Catalog</h1>
+        <p className="text-xs text-muted-foreground">Date Range: {loadedDates.from} – {loadedDates.to}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-end gap-2 px-1 print:hidden">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportXlsx}
+            disabled={!summary || isLoadingSummary || isExporting}
+            className="h-9 rounded-xl gap-1.5 text-xs font-bold"
+          >
+            {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Export (.xlsx)
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            className="h-9 rounded-xl gap-1.5 text-xs font-bold"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Print
+          </Button>
+        </div>
+
         <div className="flex bg-muted/40 p-1 rounded-xl border border-border/60">
           {RANGES.map((r) => (
             <button

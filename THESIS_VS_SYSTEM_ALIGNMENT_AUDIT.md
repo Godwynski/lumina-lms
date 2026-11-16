@@ -1,9 +1,9 @@
-# Lumina LMS: Comprehensive Thesis Manuscript vs. Production System Alignment & Discrepancy Audit
+﻿# Lumina LMS: Comprehensive Thesis Manuscript vs. Production System Alignment & Discrepancy Audit
 > Historical assessment dated 31 October 2026. Findings and test totals below belong to that assessment. Current source code and maintained guides take precedence for present behavior.
 
 **Audit Date:** October 31, 2026  
 **Target Codebase:** Lumina Library Management System (`C:\Users\Godwyn\Documents\Projects\thesis`)  
-**Target Manuscript:** Google Docs — *Capstone 1 Revise* (All 15 Document Tabs: `t.0` to `t.p58ui6k2ul0o`)  
+**Target Manuscript:** Google Docs â€” *Capstone 1 Revise* (All 15 Document Tabs: `t.0` to `t.p58ui6k2ul0o`)
 **Codebase Stack:** Next.js 16 (App Router), React 19, TypeScript, Supabase (PostgreSQL 15+), Tailwind CSS, Radix UI, Vitest  
 **Empirical Verification:** 49 test files passed, **1,072 unit and integration tests passed (100% green)**  
 **Constraint Adherence:** Read-only evaluation. Zero files modified in the thesis codebase or Google Docs manuscript.
@@ -13,8 +13,8 @@
 ## Executive Summary & Alignment Dashboard
 
 This audit cross-examines the thesis manuscript across all 15 document tabs against the live implementation in the Lumina LMS repository. Five autonomous parallel audit streams evaluated:
-1. **Requirements Traceability (REQ001 – REQ092)**
-2. **Research Problem Statements, Objectives, Scope & Methodology (Chapters 1–3, Tab 04)**
+1. **Requirements Traceability (REQ001 â€“ REQ092)**
+2. **Research Problem Statements, Objectives, Scope & Methodology (Chapters 1â€“3, Tab 04)**
 3. **Software Architecture, Data Schema & Report Specifications (Tabs 05, 09, 11)**
 4. **UX Workflows, User Guides & Flowcharts (Tabs 10, 12, 13)**
 5. **Software Quality, Testing & Future Recommendations (Tabs 06, 08, 14)**
@@ -22,7 +22,7 @@ This audit cross-examines the thesis manuscript across all 15 document tabs agai
 ### Compliance Overview by Domain
 | Audit Domain | Total Points Evaluated | Aligned | Discrepancies / Divergences | Compliance Rate |
 | :--- | :---: | :---: | :---: | :---: |
-| **Functional Requirements (REQ001–REQ092)** | 92 requirements | 87 | 5 entries (4 distinct issues) | **94.6%** |
+| **Functional Requirements (REQ001â€“REQ092)** | 92 requirements | 87 | 5 entries (4 distinct issues) | **94.6%** |
 | **Research Objectives & Scope Criteria** | 48 criteria | 40 | 8 (3 major discrepancies, 5 divergences) | **89.6%** |
 | **Data Schema & Entity Attributes** | 24 data fields | 19 | 5 (1 missing field, 4 naming/relational) | **91.7%** |
 | **Report Specifications** | 7 report types | 4 full / 3 partial | 3 (lack printable CSS stylesheets) | **85.7%** |
@@ -54,7 +54,7 @@ These four items represent functional contradictions or missing features where a
   > *"The searchable catalog focuses strictly on physically available local resources and local thesis soft copies, meaning it does not integrate with enterprise-grade electronic research databases like EBSCO."*
 * **Codebase Reality:**
   * Search across all source files in `app/`, `components/`, `lib/`, `types/`, and `supabase/` reveals **zero references** to digital thesis documents, PDF readers, or document file viewers.
-  * In `app/api/upload/route.ts` (Lines 7–8):
+  * In `app/api/upload/route.ts` (Lines 7â€“8):
     ```typescript
     const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"];
     ```
@@ -67,13 +67,13 @@ These four items represent functional contradictions or missing features where a
 
 ### Critical 2: Missing "Report Missing Book" Feature in Catalog Detail Modal
 * **Document Citation:**
-  * `12_user_guide.txt` (Lines 159–165, Section 9.A):
+  * `12_user_guide.txt` (Lines 159â€“165, Section 9.A):
     > *"Reporting a Missing Book: Students can report a book that cannot be located in the library. 1. Navigate to the Catalog. 2. Search for the missing book. 3. Open the book details. 4. Select Report Missing Book. 5. Submit the report."*
-  * `13_user_guide_2.txt` (Lines 90, 169–176, 428–437, Section 9.A):
+  * `13_user_guide_2.txt` (Lines 90, 169â€“176, 428â€“437, Section 9.A):
     > *"Report a Missing Book: 1. Open the Catalog. 2. Search for the book that cannot be found. 3. Select the correct book to open its details. 4. Select Report Missing Book. 5. Follow the instructions shown on the page and submit the report."*
 * **Codebase Reality:**
   * Database table `public.reports` exists in `supabase/schema_clean_install.sql` (Line 537) with fields `id`, `book_id`, `user_id`, `notes`, `status` (`'pending'`, `'resolved'`, `'dismissed'`).
-  * In `components/catalog/BookDetailModal.tsx` (`StudentModalContent`, Lines 73–223), the modal only renders `<ReserveTitleButton>` and `<CancelReservationDialog>`. There is **no button, modal, or form** for students to dispatch a report for a missing physical book.
+  * In `components/catalog/BookDetailModal.tsx` (`StudentModalContent`, Lines 73â€“223), the modal only renders `<ReserveTitleButton>` and `<CancelReservationDialog>`. There is **no button, modal, or form** for students to dispatch a report for a missing physical book.
 * **Impact & Defense Risk:** If a panelist follows the User Guide during evaluation, they will click into book details expecting a "Report Missing Book" button and find none.
 * **Remediation:** Either:
   1. *Code Alignment:* Add a `<Button variant="ghost" size="sm"> <Flag className="h-3.5 w-3.5 mr-1" /> Report Missing </Button>` into `BookDetailModal.tsx` hooked to `public.reports`.
@@ -82,14 +82,14 @@ These four items represent functional contradictions or missing features where a
 ---
 
 ### Critical 3: Missing `Year Level` Field in Student Information
-* **Document Citation:** `09_input_and_output.txt` (Lines 20–22, Section 1: Student Information Input Table):
+* **Document Citation:** `09_input_and_output.txt` (Lines 20â€“22, Section 1: Student Information Input Table):
   > `Year Level | Current year level of the student | 3rd Year`
 * **Codebase Reality:**
-  * In `supabase/schema_clean_install.sql` (Lines 83–98), `public.profiles` contains:
+  * In `supabase/schema_clean_install.sql` (Lines 83â€“98), `public.profiles` contains:
     `id`, `email`, `full_name`, `avatar_url`, `role`, `student_id`, `department`, `phone`, `address`, `status`, `created_at`, `updated_at`, `onboarding_completed`, `permissions`. There is **no `year_level` column**.
-  * In `components/auth/OnboardingForm.tsx` (Lines 41–45): Form state only tracks `address`, `phone`, and `department`.
-  * In `lib/actions/onboarding.ts` (Lines 83–90): Server action `submitOnboarding` payload updates only `address`, `phone`, `department`, `onboarding_completed`, `status`, and `student_id`.
-  * In `types/database.ts` (Lines 78–93): Interface `ProfilesRow` has no `year_level` attribute.
+  * In `components/auth/OnboardingForm.tsx` (Lines 41â€“45): Form state only tracks `address`, `phone`, and `department`.
+  * In `lib/actions/onboarding.ts` (Lines 83â€“90): Server action `submitOnboarding` payload updates only `address`, `phone`, `department`, `onboarding_completed`, `status`, and `student_id`.
+  * In `types/database.ts` (Lines 78â€“93): Interface `ProfilesRow` has no `year_level` attribute.
 * **Impact & Defense Risk:** A panelist checking database normalization against Chapter 3/4 Data Dictionary will flag that a documented input field is non-existent in the schema.
 * **Remediation:** In Tab `09_input_and_output.txt`, remove `Year Level` from Table 1, clarifying that academic standing in Lumina LMS is tracked via the student's degree program (`department`) and library card issue/expiration timestamps.
 
@@ -105,7 +105,7 @@ These four items represent functional contradictions or missing features where a
     ```typescript
     { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "super_admin", permissionKey: "view_admin_dashboard" }
     ```
-  * In `app/(authenticated)/audit/page.tsx` (Lines 33–36):
+  * In `app/(authenticated)/audit/page.tsx` (Lines 33â€“36):
     ```typescript
     const role = await getUserRole();
     if (role !== "super_admin") {
@@ -122,7 +122,7 @@ These four items represent functional contradictions or missing features where a
 
 ---
 
-## 2. Requirements Traceability Matrix Audit (REQ001 – REQ092)
+## 2. Requirements Traceability Matrix Audit (REQ001 â€“ REQ092)
 
 ### 2.1 Complete Requirement Verification Matrix
 
@@ -138,7 +138,7 @@ Legend:
 | **REQ001** | Super admin secure login via Microsoft O365 institutional credentials. | **VERIFIED\*** | `components/hero.tsx` (`handleMicrosoftLogin`), Azure OAuth. | \*Dev bypass buttons present. |
 | **REQ002** | Restrict access to administrative tools to authorized super admins. | **VERIFIED** | `lib/auth/permissions.ts`, `ProtectedNav.tsx`, PostgreSQL RLS. | 100% RBAC enforcement. |
 | **REQ003** | Real-time overview counters: daily visitors, registered users, inventory, active loans. | **VERIFIED** | `lib/actions/dashboard.ts` (`getDashboardStats`), `DashboardClient.tsx`. | Live counters render dynamically. |
-| **REQ004** | Shortcuts: Circulation Desk, Inventory, User Directory, Attendance, Audit, Analytics. | **VERIFIED** | `components/dashboard/DashboardClient.tsx` (Lines 290–338). | All 7 action shortcuts active. |
+| **REQ004** | Shortcuts: Circulation Desk, Inventory, User Directory, Attendance, Audit, Analytics. | **VERIFIED** | `components/dashboard/DashboardClient.tsx` (Lines 290â€“338). | All 7 action shortcuts active. |
 | **REQ005** | Visual gallery highlighting most recently cataloged library assets on dashboard. | **VERIFIED** | `components/dashboard/DashboardClient.tsx`, `LiveActivityTicker.tsx`. | Live asset gallery active. |
 | **REQ006** | Automatically fetch book metadata (title, author, cover) via automated ISBN lookup. | **VERIFIED** | `components/catalog/add/ISBNLookupBar.tsx` (Google Books API). | Populates title, author, desc, cover. |
 | **REQ007** | Manually input Dewey Decimal numbers, categories, copy counts, physical locations. | **VERIFIED** | `components/catalog/add/BookDetailsForm.tsx` (`dewey_decimal`, `location`). | Manual catalog attributes. |
@@ -188,7 +188,7 @@ Legend:
 | **REQ051** | View read-only personal details, account status, membership role, security status. | **VERIFIED** | `app/(authenticated)/profile/page.tsx`. | Read-only profile view active. |
 | **REQ052** | Student assistant login using Microsoft O365 institutional credentials. | **VERIFIED** | `components/hero.tsx`. | Institutional SSO active. |
 | **REQ053** | Real-time statistics: daily visitors, total users, active book loans. | **DIVERGED** | In `DashboardClient.tsx#L267`, metric grid is gated to `super_admin \|\| librarian`. | SAs see Assistant Desk shortcuts, but metric grid is not rendered. |
-| **REQ054** | Quick shortcuts to Circulation Desk, Attendance Logs, and Book Catalog modules. | **VERIFIED** | `DashboardClient.tsx` (Lines 614–670). | Assistant Desk shortcuts active. |
+| **REQ054** | Quick shortcuts to Circulation Desk, Attendance Logs, and Book Catalog modules. | **VERIFIED** | `DashboardClient.tsx` (Lines 614â€“670). | Assistant Desk shortcuts active. |
 | **REQ055** | Personal tracking section: own current borrows, hold reservations, recent attendance. | **VERIFIED** | `components/dashboard/ActivitySection.tsx`. | Patron activity tracker active. |
 | **REQ056** | Browse book cards with titles, authors, covers, and fractional availability indicators. | **VERIFIED** | `app/(authenticated)/student-catalog/page.tsx`, `StudentBookCard.tsx`. | Card grid with fractional copies. |
 | **REQ057** | Search catalog books using keyword bar and refine via category, availability, sorting. | **VERIFIED** | `app/(authenticated)/student-catalog/page.tsx`. | Debounced search and filters. |
@@ -218,7 +218,7 @@ Legend:
 | **REQ081** | Fast search queries, inventory filtering, and analytics visualizations without UI lag. | **VERIFIED** | Debounced queries (300ms), SWR client cache, React Suspense streaming. | Sub-second page interactions. |
 | **REQ082** | Operationally accessible 24/7 except scheduled maintenance windows. | **VERIFIED** | Serverless Next.js edge deployment on Vercel paired with managed Supabase Postgres. | 99.9% uptime architecture. |
 | **REQ083** | Enforce user authentication exclusively through Microsoft O365 across all user roles. | **DIVERGED** | Microsoft O365 Azure OAuth active; **Quick Demo Access credentials retained** in `hero.tsx`. | Evaluation bypass fixture present. |
-| **REQ084** | Strict Role-Based Access Control (RBAC): students barred from admin tools & logs. | **VERIFIED** | Server-side `getUserRole()`, 61 Postgres RLS policies in schema, `hasPermission()`. | Four-tier hierarchy (1–4). |
+| **REQ084** | Strict Role-Based Access Control (RBAC): students barred from admin tools & logs. | **VERIFIED** | Server-side `getUserRole()`, 61 Postgres RLS policies in schema, `hasPermission()`. | Four-tier hierarchy (1â€“4). |
 | **REQ085** | Immutable security audit trail recording all administrative activity and data modifications. | **VERIFIED** | `public.audit_logs` has only `SELECT` RLS policy; UPDATE and DELETE disallowed. | Cryptographic append-only log. |
 | **REQ086** | Intuitive, visually clear, and consistent interface tailored to each of 4 user roles. | **VERIFIED** | Role-segmented dashboard views, role-tailored sidebar navigation (`ProtectedNav.tsx`). | Role-tailored UI presentation. |
 | **REQ087** | Consistent color-coded visual badges (green=Returned, blue=Active, red=Overdue). | **VERIFIED** | `components/common/StatusBadge.tsx`, `RoleBadge.tsx`. | Uniform design tokens. |
@@ -242,10 +242,10 @@ Legend:
 5. **Local Thesis Soft Copies (Critical Discrepancy):** Manuscript explicitly promises digital thesis soft copies in the catalog (`01` Line 334), but the codebase implements physical book cataloging only.
 
 ### 3.2 Tab 04 (Specific Problems) vs. Codebase Reality
-In `04_specific_problem.txt` (Lines 81–82), the problem statement for Student Assistants asserts:
+In `04_specific_problem.txt` (Lines 81â€“82), the problem statement for Student Assistants asserts:
 > *"How to develop an Inventory Module for student assistants to manage library collections? In this module, student assistants can access and manage the digital record of library books... providing tools to add new resources through QR-code scanning or ISBN fetching..."*
 
-*Codebase Fact:* In `lib/actions/catalog/books.ts` (Lines 150–154) and `app/(authenticated)/inventory/page.tsx` (Line 68), adding new books and batch imports are strictly restricted to `super_admin` and `librarian` (`canManage = false` for student assistants). SAs can view inventory and print QR codes, but cannot add books. Chapter 1 Scope (Line 290) correctly states this restriction; Tab 04 contains an accidental over-promise.
+*Codebase Fact:* In `lib/actions/catalog/books.ts` (Lines 150â€“154) and `app/(authenticated)/inventory/page.tsx` (Line 68), adding new books and batch imports are strictly restricted to `super_admin` and `librarian` (`canManage = false` for student assistants). SAs can view inventory and print QR codes, but cannot add books. Chapter 1 Scope (Line 290) correctly states this restriction; Tab 04 contains an accidental over-promise.
 
 ---
 
@@ -452,3 +452,14 @@ When defending these architectural differences before the panel:
 
 ---
 *Audit completed with zero mutations to codebase or manuscript files. Artifact generated on October 31, 2026.*
+
+## WP8 update — implementation and manuscript alignment (16 November 2026)
+
+The historical audit above predates the WP1–WP6 implementation. Its findings and totals are retained as historical evidence; use this addendum and the current [user guide](docs/user-guide.md) for current behavior.
+
+- **OPAC terminology:** Describe Lumina as a Restricted / Authenticated OPAC. Koha and MARC 21 are references; do not imply direct Koha integration or full MARC 21 compliance.
+- **Roles:** Use Patron for students and faculty and Library Staff for student assistants in prose and screen descriptions. Code identifiers `student` and `student_assistant` stay as implemented.
+- **Fines:** The system computes fines and tracks Receivable, Paid, and Condoned. Cash payments and official receipts remain manual in a physical ledger; no full digital accounting or receipt issuance is implemented.
+- **Acquisitions:** Purchase price, replacement cost, and donation tracking are not implemented and belong in Scope & Limitations.
+- **Updated workflows:** Current screens include fine settlement and filtered/exportable settlement reports; explicit Check-In/Check-Out and configurable closing time with No Log Out marking; patron/faculty labels and permission-gated inventory; inventory table, report preview and import template; analytics export/print; user borrowing history; and super-admin archival with backup-first confirmation. Refer to the user guide for operating steps.
+- **Future recommendation:** Full digital accounting and official receipts remain future work. Historic claims about report printing/export or missing features should be rechecked against the current screens before being repeated.

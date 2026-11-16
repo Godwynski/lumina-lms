@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { useState } from 'react';
 import { BorrowingRecord } from '@/lib/actions/history';
+import { computeOverdueFine } from '@/lib/fines';
 import { Reservation } from '@/lib/types';
 
 function ActivityItemCover({ src }: { src?: string | null }) {
@@ -59,31 +60,45 @@ export function ActivitySection({
           </div>
         ) : (
           <div className="grid gap-2">
-            {activeBorrows.map((borrow) => (
-              <CardButton
-                key={borrow.id}
-                onClick={() => onOpenBook(borrow.books?.id || '')}
-                aria-label={`Open details for ${borrow.books?.title || 'this book'}`}
-                className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm cursor-pointer group"
-              >
-                <CardContent className="flex items-center justify-between gap-4 p-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm ring-1 ring-border/5 group-hover:ring-primary/20 transition-all">
-                      <ActivityItemCover src={borrow.books?.cover_url} />
+            {activeBorrows.map((borrow) => {
+              const fineOwed = computeOverdueFine(borrow);
+              const isReturnedUnsettled = borrow.status === 'RETURNED' && fineOwed > 0 && !borrow.fine_settled_at;
+              const isOverdue = !isReturnedUnsettled && (borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()));
+              return (
+                <CardButton
+                  key={borrow.id}
+                  onClick={() => onOpenBook(borrow.books?.id || '')}
+                  aria-label={`Open details for ${borrow.books?.title || 'this book'}`}
+                  className="border-border/20 bg-card/10 shadow-none transition-all hover:bg-muted/20 hover:border-primary/10 backdrop-blur-sm cursor-pointer group"
+                >
+                  <CardContent className="flex items-center justify-between gap-4 p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md bg-muted/20 overflow-hidden relative shadow-sm ring-1 ring-border/5 group-hover:ring-primary/20 transition-all">
+                        <ActivityItemCover src={borrow.books?.cover_url} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">{borrow.books?.title || 'Unknown Book'}</p>
+                        <p className="text-[11px] font-bold text-muted-foreground tracking-tight" suppressHydrationWarning>
+                          {isReturnedUnsettled
+                            ? `Returned ${mounted && borrow.returned_at ? new Date(borrow.returned_at).toLocaleDateString() : '...'}`
+                            : `Due ${mounted ? new Date(borrow.due_date).toLocaleDateString() : '...'}`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">{borrow.books?.title || 'Unknown Book'}</p>
-                      <p className="text-[11px] font-bold text-muted-foreground tracking-tight" suppressHydrationWarning>
-                        Due {mounted ? new Date(borrow.due_date).toLocaleDateString() : '...'}
-                      </p>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {fineOwed > 0 && (
+                        <span className="text-[11px] font-black text-destructive tabular-nums">
+                          ₱{fineOwed.toFixed(2)}
+                        </span>
+                      )}
+                      <Badge variant={isReturnedUnsettled || isOverdue ? 'destructive' : 'outline'} className="text-[11px] px-1.5 py-0">
+                        {isReturnedUnsettled ? 'Fine owed' : isOverdue ? 'Overdue' : 'Active'}
+                      </Badge>
                     </div>
-                  </div>
-                  <Badge variant={borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'destructive' : 'outline'} className="text-[11px] px-1.5 py-0">
-                    {borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()) ? 'Overdue' : 'Active'}
-                  </Badge>
-                </CardContent>
-              </CardButton>
-            ))}
+                  </CardContent>
+                </CardButton>
+              );
+            })}
           </div>
         )}
       </section>

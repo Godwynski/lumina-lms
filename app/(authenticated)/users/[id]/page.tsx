@@ -3,6 +3,7 @@ import { getMe } from "@/lib/auth-helpers";
 import { redirect, notFound } from "next/navigation";
 import { UserDetailClient } from "./UserDetailClient";
 import { mapProfileToUser } from "@/lib/utils/mappers";
+import { getBorrowingHistory } from "@/lib/actions/history";
 
 export const metadata = { title: "User details" };
 
@@ -11,17 +12,27 @@ export const metadata = { title: "User details" };
 function buildUserDetailPromise(userId: string) {
   return getMe().then(async (me) => {
     if (!me) redirect("/");
+    if (me.role !== "super_admin" && me.role !== "librarian") {
+      redirect("/dashboard");
+    }
     const { supabase } = me;
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*, library_cards(*)")
-      .eq("id", userId)
-      .single();
+    const [{ data, error }, history] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*, library_cards(*)")
+        .eq("id", userId)
+        .single(),
+      getBorrowingHistory(userId, 1, 10, "all", undefined, supabase),
+    ]);
 
     if (error || !data) notFound();
 
-    return mapProfileToUser(data as Record<string, unknown>);
+    return {
+      user: mapProfileToUser(data as Record<string, unknown>),
+      history,
+      role: me.role,
+    };
   });
 }
 
@@ -37,7 +48,6 @@ export default function UserDetailPage(props: { params: Promise<{ id: string }> 
 
 async function UserDetailLoader({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await buildUserDetailPromise(id);
-  const me = await getMe();
-  return <UserDetailClient initialUser={user} currentRole={me?.role ?? 'student'} />;
+  const { user, history, role } = await buildUserDetailPromise(id);
+  return <UserDetailClient initialUser={user} currentRole={role} initialHistory={history} />;
 }

@@ -45,11 +45,43 @@ describe('/api/catalog/import-jobs & /process', () => {
 
     vi.mocked(getMe).mockResolvedValueOnce({
       user: { id: 'sa-1' },
-      role: 'student_assistant',
-      profile: { status: 'ACTIVE' },
+      role: 'library_staff',
+      profile: { status: 'ACTIVE', permissions: { manage_inventory: false } },
       supabase: supaMock.client,
     } as unknown as Awaited<ReturnType<typeof getMe>>);
     expect((await GET(new Request('http://localhost/api/catalog/import-jobs'))).status).toBe(403);
+
+    vi.mocked(getMe).mockResolvedValueOnce({
+      user: { id: 'patron-1' },
+      role: 'patron',
+      profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      supabase: supaMock.client,
+    } as unknown as Awaited<ReturnType<typeof getMe>>);
+    expect((await POST(request({ isbns: ['9781492040347'] }))).status).toBe(403);
+
+    vi.mocked(getMe).mockResolvedValueOnce({
+      user: { id: 'sa-1' },
+      role: 'library_staff',
+      profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      supabase: supaMock.client,
+    } as unknown as Awaited<ReturnType<typeof getMe>>);
+    expect((await POST(request({ isbns: ['9781492040347'] }))).status).toBe(403);
+
+    vi.mocked(getMe).mockResolvedValueOnce({
+      user: { id: 'sa-1' },
+      role: 'library_staff',
+      profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
+      supabase: supaMock.client,
+    } as unknown as Awaited<ReturnType<typeof getMe>>);
+    expect((await process(request({}))).status).toBe(403);
+
+    vi.mocked(getMe).mockResolvedValueOnce({
+      user: { id: 'patron-1' },
+      role: 'patron',
+      profile: { status: 'ACTIVE' },
+      supabase: supaMock.client,
+    } as unknown as Awaited<ReturnType<typeof getMe>>);
+    expect((await process(request({}))).status).toBe(403);
 
     const job1 = { id: 'job-1', label: 'ISBN import', created_at: '2026-11-14T00:00:00Z' };
     const job2 = { id: 'job-2', label: 'Enrichment', created_at: '2026-11-13T00:00:00Z' };

@@ -33,7 +33,7 @@ async function PoliciesPageContent() {
 
   return (
     <PoliciesSection 
-      role={profile?.role || "student"} 
+      role={profile?.role || "patron"} 
       settingsPromise={settingsPromise} 
       categoriesPromise={categoriesPromise}
     />

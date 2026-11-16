@@ -73,14 +73,14 @@ describe('Users, Onboarding & Profile Server Actions', () => {
   });
 
   describe('getUsers (lib/actions/users.ts)', () => {
-    it('throws Unauthorized when unauthenticated and Forbidden for student or student_assistant', async () => {
+    it('throws Unauthorized when unauthenticated and Forbidden for student or library_staff', async () => {
       setAuthUser(serverClientHelper, null, null);
       await expect(getUsers()).rejects.toThrow('Unauthorized');
 
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       await expect(getUsers()).rejects.toThrow('Forbidden');
 
-      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' });
       await expect(getUsers()).rejects.toThrow('Forbidden');
     });
 
@@ -167,14 +167,14 @@ describe('Users, Onboarding & Profile Server Actions', () => {
   });
 
   describe('inviteUser (lib/actions/users.ts)', () => {
-    it('rejects unauthenticated users, students, student_assistants, and invalid emails', async () => {
+    it('rejects unauthenticated users, students, library_staffs, and invalid emails', async () => {
       setAuthUser(serverClientHelper, null, null);
       expect(await inviteUser({ email: 'user@example.com' })).toEqual({
         success: false,
         error: 'Authentication required',
       });
 
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       expect(await inviteUser({ email: 'user@example.com' })).toEqual({
         success: false,
         error: 'Unauthorized access',
@@ -183,7 +183,7 @@ describe('Users, Onboarding & Profile Server Actions', () => {
       setAuthUser(
         serverClientHelper,
         { id: 'sa-1' },
-        { id: 'sa-1', role: 'student_assistant', status: 'INACTIVE' }
+        { id: 'sa-1', role: 'library_staff', status: 'INACTIVE' }
       );
       expect(await inviteUser({ email: 'user@example.com' })).toEqual({
         success: false,
@@ -215,15 +215,15 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         createMockQueryBuilder({ id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null),
         createMockQueryBuilder({ id: 'sa-target', role: 'super_admin', status: 'ACTIVE' }, null),
       ]);
-      expect(await inviteUser({ email: 'sa@school.edu', role: 'student' })).toEqual({
+      expect(await inviteUser({ email: 'sa@school.edu', role: 'patron' })).toEqual({
         success: false,
         error: 'Only super administrators can modify a super administrator account',
       });
 
-      // Librarian cannot modify existing staff (librarian / student_assistant)
+      // Librarian cannot modify existing staff (librarian / library_staff)
       queueProfileBuilders(serverClientHelper, [
         createMockQueryBuilder({ id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null),
-        createMockQueryBuilder({ id: 'staff-target', role: 'student_assistant', status: 'ACTIVE' }, null),
+        createMockQueryBuilder({ id: 'staff-target', role: 'library_staff', status: 'ACTIVE' }, null),
       ]);
       expect(await inviteUser({ email: 'sa2@school.edu' })).toEqual({
         success: false,
@@ -236,22 +236,23 @@ describe('Users, Onboarding & Profile Server Actions', () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'lib-1' } }, error: null });
       const meB = createMockQueryBuilder({ id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null);
       const targetB = createMockQueryBuilder(
-        { id: 'stu-2', email: 'stu2@school.edu', role: 'student', status: 'ACTIVE', department: 'General' },
+        { id: 'stu-2', email: 'stu2@school.edu', role: 'patron', status: 'ACTIVE', department: 'General' },
         null
       );
       const updateB = createMockQueryBuilder(
-        { id: 'stu-2', email: 'stu2@school.edu', role: 'student', status: 'PENDING', department: 'IT' },
+        { id: 'stu-2', email: 'stu2@school.edu', role: 'patron', status: 'PENDING', department: 'IT' },
         null
       );
       queueProfileBuilders(serverClientHelper, [meB, targetB, updateB]);
 
-      const res = await inviteUser({ email: 'STU2@SCHOOL.EDU', role: 'student', department: 'IT' });
+      const res = await inviteUser({ email: 'STU2@SCHOOL.EDU', role: 'patron', department: 'IT' });
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.data.user).toMatchObject({ id: 'stu-2', role: 'student', status: 'PENDING', department: 'IT' });
+        expect(res.data.user).toMatchObject({ id: 'stu-2', role: 'patron', status: 'PENDING', department: 'IT' });
       }
       expect(updateB.update).toHaveBeenCalledWith({
-        role: 'student',
+        role: 'patron',
+        patron_type: 'student',
         status: 'PENDING',
         department: 'IT',
       });
@@ -262,8 +263,8 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         'role_updated',
         expect.stringContaining('stu2@school.edu'),
         null,
-        { role: 'student', status: 'ACTIVE', department: 'General' },
-        { role: 'student', status: 'PENDING', department: 'IT' }
+        { role: 'patron', status: 'ACTIVE', department: 'General' },
+        { role: 'patron', status: 'PENDING', department: 'IT' }
       );
     });
 
@@ -307,9 +308,44 @@ describe('Users, Onboarding & Profile Server Actions', () => {
       });
       expect(adminUpdateB.update).toHaveBeenCalledWith({
         role: 'super_admin',
+        patron_type: 'student',
         status: 'ACTIVE',
         department: 'Admin',
       });
+    });
+
+    it('allows inviting faculty without department (department optional and stored as null)', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'lib-1' } }, error: null });
+      const meB = createMockQueryBuilder({ id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null);
+      const targetB = createMockQueryBuilder(
+        { id: 'fac-1', email: 'prof@alabang.sti.edu.ph', role: 'patron', status: 'ACTIVE', department: null },
+        null
+      );
+      const updateB = createMockQueryBuilder(
+        { id: 'fac-1', email: 'prof@alabang.sti.edu.ph', role: 'patron', patron_type: 'faculty', status: 'PENDING', department: null },
+        null
+      );
+      queueProfileBuilders(serverClientHelper, [meB, targetB, updateB]);
+
+      const res = await inviteUser({ email: 'prof@alabang.sti.edu.ph', role: 'patron', patron_type: 'faculty' });
+      expect(res.success).toBe(true);
+      expect(updateB.update).toHaveBeenCalledWith({
+        role: 'patron',
+        patron_type: 'faculty',
+        status: 'PENDING',
+        department: null,
+      });
+
+      queueProfileBuilders(serverClientHelper, [
+        createMockQueryBuilder({ id: 'lib-1', role: 'librarian', status: 'ACTIVE' }, null),
+      ]);
+      const invalidTypeRes = await inviteUser({
+        email: 'bad@alabang.sti.edu.ph',
+        role: 'patron',
+        patron_type: 'visitor',
+      });
+      expect(invalidTypeRes.success).toBe(false);
+      expect(invalidTypeRes.error).toBe('Validation failed');
     });
 
     it('aborts super_admin transfer if transfer_super_admin_ownership RPC fails', async () => {
@@ -331,12 +367,12 @@ describe('Users, Onboarding & Profile Server Actions', () => {
   });
 
   describe('createSafeAction staff & permission guards', () => {
-    it('blocks deactivated student_assistant on staff-only actions and enforces allowedPermissions', async () => {
+    it('blocks deactivated library_staff on staff-only actions and enforces allowedPermissions', async () => {
       const staffAction = createSafeAction(
         z.object({ ok: z.boolean() }),
         async (input) => input,
         {
-          allowedRoles: ['super_admin', 'librarian', 'student_assistant'],
+          allowedRoles: ['super_admin', 'librarian', 'library_staff'],
           allowedPermissions: ['manage_users'],
         }
       );
@@ -347,7 +383,7 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         { id: 'sa-inactive' },
         {
           id: 'sa-inactive',
-          role: 'student_assistant',
+          role: 'library_staff',
           status: 'INACTIVE',
           permissions: { manage_users: true },
         }
@@ -363,7 +399,7 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         { id: 'sa-no-perm' },
         {
           id: 'sa-no-perm',
-          role: 'student_assistant',
+          role: 'library_staff',
           status: 'ACTIVE',
           permissions: { manage_circulation: true, manage_users: false },
         }
@@ -379,7 +415,7 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         { id: 'sa-ok' },
         {
           id: 'sa-ok',
-          role: 'student_assistant',
+          role: 'library_staff',
           status: 'ACTIVE',
           permissions: { manage_users: true },
         }
@@ -444,9 +480,45 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         'stu-1',
         'onboarding_completed',
         'Completed onboarding and profile setup.',
-        { address: '456 Elm St', phone: '09181234567', department: 'Computer Science' }
+        { address: '456 Elm St', phone: '09181234567', patron_type: 'student', department: 'Computer Science' }
       );
       expect(mockRevalidatePath).toHaveBeenCalledWith('/');
+    });
+
+    it('submitOnboarding allows faculty without department and rejects student without department', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'fac-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', null, null);
+
+      await expect(
+        submitOnboarding({ address: '123 Main', phone: '09171234567', patron_type: 'student', department: '' })
+      ).rejects.toThrow('Academic program is required for students');
+
+      await expect(
+        submitOnboarding({
+          address: '123 Main',
+          phone: '09171234567',
+          patron_type: 'visitor' as unknown as 'student',
+          department: 'CS',
+        })
+      ).rejects.toThrow();
+
+      const res = await submitOnboarding({
+        address: 'Faculty Wing',
+        phone: '09170001234',
+        patron_type: 'faculty',
+      });
+      expect(res).toEqual({ success: true });
+      const profileBuilder = serverClientHelper.getTableBuilder('profiles');
+      expect(profileBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: 'Faculty Wing',
+          phone: '09170001234',
+          patron_type: 'faculty',
+          department: null,
+          onboarding_completed: true,
+          status: 'PENDING',
+        })
+      );
     });
 
     it('submitOnboarding throws when database update fails', async () => {

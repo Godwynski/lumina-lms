@@ -37,7 +37,7 @@ export function apiError(
 interface AuthOptions {
   allowedRoles?: UserRole[];
   requireStaff?: boolean;
-  /** Optional: Required permissions for student_assistants. 
+  /** Optional: Required permissions for library_staffs. 
    * If provided, an SA must have at least one of these permissions.
    * Admins and Librarians bypass this check.
    */
@@ -84,7 +84,7 @@ export function withAuthApi(
       }
 
       const isActive = profile.status?.toUpperCase() === 'ACTIVE';
-      const isStaffRole = role === 'super_admin' || role === 'librarian' || role === 'student_assistant';
+      const isStaffRole = role === 'super_admin' || role === 'librarian' || role === 'library_staff';
       const isActuallyStaff = isStaffRole && isActive;
 
       if (options.requireStaff && !isActuallyStaff) {
@@ -93,9 +93,9 @@ export function withAuthApi(
 
       if (options.allowedRoles) {
         const isAllowedRole = options.allowedRoles.includes(role);
-        const isStaffOnlyCheck = !options.allowedRoles.includes('student');
+        const isStaffOnlyCheck = !options.allowedRoles.includes('patron');
 
-        // Staff-only checks require ACTIVE status for every staff role; disabled SAs only count as 'student'.
+        // Staff-only checks require ACTIVE status for every staff role; disabled SAs only count as 'patron'.
         if (!isAllowedRole || (isStaffOnlyCheck && isStaffRole && !isActive)) {
           return apiError(
             "Forbidden: Insufficient permissions or account disabled",
@@ -106,7 +106,7 @@ export function withAuthApi(
       }
 
       // Permission check for student assistants
-      if (role === 'student_assistant' && options.allowedPermissions) {
+      if (role === 'library_staff' && options.allowedPermissions) {
         if (!isActive) {
           return apiError("Forbidden: Account disabled", "FORBIDDEN", 403);
         }

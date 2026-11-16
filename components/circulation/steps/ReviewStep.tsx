@@ -64,7 +64,7 @@ export function ReviewStep({
             {studentId && <div className="bg-background rounded-xl p-4 border border-border/20 shadow-sm">
                <p className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-widest">
                  <ShieldAlert className="h-3 w-3" />
-                 Student ID
+                 Patron ID
                </p>
                <p className="mt-1 font-mono text-xl font-bold tracking-widest text-foreground">
                  {studentId}
@@ -76,9 +76,9 @@ export function ReviewStep({
         <div className="space-y-4">
           <div className="rounded-2xl border border-border/20 bg-muted/10 p-5 space-y-4 h-full">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Book copy</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Book / Item</p>
               <p className="text-base font-bold mt-1 text-foreground leading-tight">{bookTitle}</p>
-              <p className="mt-2 text-sm text-muted-foreground">Copy ID <span className="font-mono text-foreground break-all">{copyCode}</span></p>
+              <p className="mt-2 text-sm text-muted-foreground">Item ID <span className="font-mono text-foreground break-all">{copyCode}</span></p>
             </div>
 
             <div className="space-y-2 pt-3 border-t border-border/10">

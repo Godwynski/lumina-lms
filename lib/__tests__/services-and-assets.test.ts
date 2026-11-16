@@ -713,9 +713,9 @@ describe('lib/library-card-assets and lib/library-card-assets.server', () => {
   });
 
   it('resolves studentId from stored ID, role, email, or userId fallback', () => {
-    expect(resolveStudentId({ studentId: '20230148', role: 'student' })).toBe('STU-20230148');
+    expect(resolveStudentId({ studentId: '20230148', role: 'patron' })).toBe('STU-20230148');
     expect(resolveStudentId({ studentId: 'galang', role: 'librarian' })).toBe('FAC-GALANG');
-    expect(resolveStudentId({ studentId: 'STU-123456', role: 'student' })).toBe('STU-123456');
+    expect(resolveStudentId({ studentId: 'STU-123456', role: 'patron' })).toBe('STU-123456');
     expect(resolveStudentId({ studentId: null, email: 'cruz.20250001@alabang.sti.edu.ph' })).toBe('STU-20250001');
     expect(resolveStudentId({ studentId: null, email: null, fallbackEmail: 'a.20251111@gmail.com' })).toBe(
       'STU-20251111'
@@ -731,7 +731,7 @@ describe('lib/library-card-assets and lib/library-card-assets.server', () => {
       email: 'juan.20241234@alabang.sti.edu.ph',
       student_id: '20241234',
       avatar_url: null,
-      role: 'student',
+      role: 'patron',
       status: 'ACTIVE',
     });
     admin.setTableResponse('library_cards', null, null);
@@ -861,7 +861,7 @@ describe('lib/library-card-assets and lib/library-card-assets.server', () => {
       email: 'ext.20240001@alabang.sti.edu.ph',
       student_id: 'STU-20240001',
       avatar_url: null,
-      role: 'student',
+      role: 'patron',
       status: 'ACTIVE',
     });
     extAdmin.setTableResponse('library_cards', { card_number: 'LIB-2026-EXT1' });

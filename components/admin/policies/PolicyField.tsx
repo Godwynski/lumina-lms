@@ -102,17 +102,40 @@ export function PolicyField({
     return null;
   };
 
-  const numberError = validation?.type === "number" && draft !== null ? validateNumber(draft) : null;
+  const validateTime = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    if (trimmed === "") return "Enter a time in HH:MM format.";
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(trimmed)) {
+      return "Use 24-hour HH:MM format (00:00–23:59).";
+    }
+    return null;
+  };
 
-  const handleNumericChange = (val: string) => {
-    if (validation?.type !== "number") {
-      onChange(val);
+  const fieldError =
+    draft === null
+      ? null
+      : validation?.type === "number"
+        ? validateNumber(draft)
+        : validation?.type === "time"
+          ? validateTime(draft)
+          : null;
+
+  const handleValueChange = (val: string) => {
+    if (validation?.type === "number") {
+      setDraft(val);
+      const valid = validateNumber(val) === null;
+      onInvalidChange?.(!valid);
+      if (valid) onChange(String(Number(val.trim())));
       return;
     }
-    setDraft(val);
-    const valid = validateNumber(val) === null;
-    onInvalidChange?.(!valid);
-    if (valid) onChange(String(Number(val.trim())));
+    if (validation?.type === "time") {
+      setDraft(val);
+      const valid = validateTime(val) === null;
+      onInvalidChange?.(!valid);
+      if (valid) onChange(val.trim());
+      return;
+    }
+    onChange(val);
   };
 
   if (isIdentityList) {
@@ -157,6 +180,11 @@ export function PolicyField({
                       {validation?.type === "number" && (
                         <p className="text-[11px] font-bold text-primary uppercase tracking-widest">
                           Limit: {validation.min ?? 0} - {validation.max ?? '∞'}
+                        </p>
+                      )}
+                      {validation?.type === "time" && (
+                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest">
+                          Format: 24-hour HH:MM
                         </p>
                       )}
                       {config.example && (
@@ -231,20 +259,22 @@ export function PolicyField({
               <Input
                 id={fieldId}
                 aria-label={unit ? `${labelText} (${unit.toLowerCase()})` : labelText}
-                aria-invalid={numberError ? true : undefined}
-                aria-describedby={numberError ? errorId : undefined}
-                type={validation?.type === "number" ? "number" : "text"}
+                aria-invalid={fieldError ? true : undefined}
+                aria-describedby={fieldError ? errorId : undefined}
+                type={validation?.type === "number" ? "number" : validation?.type === "time" ? "time" : "text"}
                 inputMode={validation?.type === "number" ? "numeric" : undefined}
+                placeholder={validation?.type === "time" ? "17:00" : undefined}
                 min={validation?.min}
                 max={validation?.max}
                 step={validation?.type === "number" ? 1 : undefined}
                 value={draft ?? value ?? ""}
-                onChange={(e) => handleNumericChange(e.target.value)}
-                onBlur={() => { if (!numberError) setDraft(null); }}
+                onChange={(e) => handleValueChange(e.target.value)}
+                onBlur={() => { if (!fieldError) setDraft(null); }}
                 disabled={loading || disabled}
                 className={cn(
-                  "h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 pr-16 transition-all shadow-sm",
-                  numberError && "border-destructive focus-visible:ring-destructive/30"
+                  "h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 transition-all shadow-sm",
+                  unit ? "pr-16" : "pr-3",
+                  fieldError && "border-destructive focus-visible:ring-destructive/30"
                 )}
               />
               {unit && (
@@ -252,9 +282,9 @@ export function PolicyField({
                   {unit}
                 </span>
               )}
-              {numberError && (
+              {fieldError && (
                 <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-destructive">
-                  {numberError}
+                  {fieldError}
                 </p>
               )}
             </div>

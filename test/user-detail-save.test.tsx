@@ -14,7 +14,7 @@ vi.mock('@/components/ui/select', () => ({
   SelectTrigger: () => null, SelectValue: () => null, SelectContent: ({ children }: { children: ReactNode }) => <>{children}</>,
   SelectItem: ({ value, disabled }: { value: string; disabled?: boolean }) => <option value={value} disabled={disabled}>{value}</option>,
 }));
-const initial: User = { id: 'u1', name: 'Assistant', email: 'assistant@example.test', role: 'student_assistant', status: 'ACTIVE', department: 'Library', student_id: null, address: null, phone: null, avatarUrl: null, joined: 'Nov 2026', updatedAt: '2026-11-13T00:00:00Z', permissions: {} };
+const initial: User = { id: 'u1', name: 'Assistant', email: 'assistant@example.test', role: 'library_staff', status: 'ACTIVE', department: 'Library', student_id: null, address: null, phone: null, avatarUrl: null, joined: 'Nov 2026', updatedAt: '2026-11-13T00:00:00Z', permissions: {} };
 let root: Root;
 let host: HTMLDivElement;
 const save = () => Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Save Changes')!;
@@ -33,16 +33,16 @@ afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(
 it('disables Save initially, after reverting a role change, and immediately after a successful save', async () => {
   await act(async () => root.render(<UserDetailClient initialUser={initial} currentRole="super_admin" />));
   expect(save()).toBeDisabled();
-  await edit('select', 'student'); expect(save()).toBeEnabled();
-  await edit('select', 'student_assistant'); expect(save()).toBeDisabled();
-  await edit('select', 'student');
-  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, user: { ...initial, role: 'student' } }) });
+  await edit('select', 'patron'); expect(save()).toBeEnabled();
+  await edit('select', 'library_staff'); expect(save()).toBeDisabled();
+  await edit('select', 'patron');
+  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, user: { ...initial, role: 'patron' } }) });
   await act(async () => save().click());
   const [, request] = mocks.fetch.mock.calls.find(([url]) => url === '/api/users')!;
   expect(JSON.parse(request.body)).toMatchObject({ student_id: '', address: '', phone: '' });
   expect(save()).toBeDisabled();
-  await edit('select', 'student_assistant'); expect(save()).toBeEnabled();
-  await edit('select', 'student'); expect(save()).toBeDisabled();
+  await edit('select', 'library_staff'); expect(save()).toBeEnabled();
+  await edit('select', 'patron'); expect(save()).toBeDisabled();
 });
 it('syncs refreshed profile props without manufacturing unsaved changes or overwriting edits', async () => {
   await act(async () => root.render(<UserDetailClient initialUser={initial} currentRole="super_admin" />));
@@ -56,11 +56,12 @@ it('syncs refreshed profile props without manufacturing unsaved changes or overw
   expect(host.querySelector('input[placeholder="Contact number"]')).toHaveValue('09123456789');
   expect(save()).toBeEnabled();
 });
-it('labels the existing assistant permission Inventory and does not dirty the form when toggled back off', async () => {
+it('labels the assistant permission Inventory (default OFF) and does not dirty the form when toggled back off', async () => {
   await act(async () => root.render(<UserDetailClient initialUser={initial} currentRole="super_admin" />));
   await act(async () => Array.from(host.querySelectorAll('button')).find(button => button.textContent?.includes('Manage Assistant Permissions'))!.click());
-  const toggle = document.querySelector<HTMLButtonElement>('[aria-labelledby="perm-view_admin_dashboard-label"]')!;
-  expect(document.getElementById('perm-view_admin_dashboard-label')).toHaveTextContent('Inventory');
+  const toggle = document.querySelector<HTMLButtonElement>('[aria-labelledby="perm-manage_inventory-label"]')!;
+  expect(document.getElementById('perm-manage_inventory-label')).toHaveTextContent('Inventory');
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
   await act(async () => toggle.click()); expect(save()).toBeEnabled();
   await act(async () => toggle.click()); expect(save()).toBeDisabled();
 });
@@ -87,4 +88,44 @@ it('keeps a failed save dirty and preserves edits made while a save is in flight
   expect(host.querySelector('input')).toHaveValue('Second edit');
   expect(save()).toBeEnabled();
   await edit('input', 'First edit'); expect(save()).toBeDisabled();
+});
+
+it('persists manage_inventory toggle on save for super_admin and disables permission toggles for librarian (WP10 Part B)', async () => {
+  await act(async () => root.render(<UserDetailClient initialUser={initial} currentRole="super_admin" />));
+  await act(async () => Array.from(host.querySelectorAll('button')).find(button => button.textContent?.includes('Manage Assistant Permissions'))!.click());
+  const toggle = document.querySelector<HTMLButtonElement>('[aria-labelledby="perm-manage_inventory-label"]')!;
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await act(async () => toggle.click());
+  expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await act(async () => Array.from(document.body.querySelectorAll('button')).find(button => button.textContent?.includes('Confirm & Close'))!.click());
+
+  mocks.fetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ ok: true, user: { ...initial, permissions: { manage_inventory: true } } }),
+  });
+  await act(async () => save().click());
+  const [, req] = mocks.fetch.mock.calls.find(([url]) => url === '/api/users')!;
+  expect(JSON.parse(req.body)).toMatchObject({ permissions: { manage_inventory: true } });
+  expect(save()).toBeDisabled();
+
+  await act(async () => Array.from(host.querySelectorAll('button')).find(button => button.textContent?.includes('Manage Assistant Permissions'))!.click());
+  expect(document.querySelector<HTMLButtonElement>('[aria-labelledby="perm-manage_inventory-label"]')).toHaveAttribute('aria-checked', 'true');
+  await act(async () => Array.from(document.body.querySelectorAll('button')).find(button => button.textContent?.includes('Confirm & Close'))!.click());
+
+  // Librarian cannot toggle permissions and saves profile edits without sending permissions
+  await act(async () => root.render(<UserDetailClient initialUser={initial} currentRole="librarian" />));
+  await act(async () => Array.from(host.querySelectorAll('button')).find(button => button.textContent?.includes('Manage Assistant Permissions'))!.click());
+  const libToggle = document.querySelector<HTMLButtonElement>('[aria-labelledby="perm-manage_inventory-label"]')!;
+  expect(libToggle).toBeDisabled();
+  await act(async () => Array.from(document.body.querySelectorAll('button')).find(button => button.textContent?.includes('Confirm & Close'))!.click());
+
+  await edit('input[placeholder="Full name"]', 'Renamed Staff');
+  mocks.fetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ ok: true, user: { ...initial, name: 'Renamed Staff' } }),
+  });
+  await act(async () => save().click());
+  const patchCalls = mocks.fetch.mock.calls.filter(([url]) => url === '/api/users');
+  const [, libReq] = patchCalls[patchCalls.length - 1];
+  expect(JSON.parse(libReq.body)).not.toHaveProperty('permissions');
 });

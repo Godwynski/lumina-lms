@@ -19,7 +19,7 @@ export async function generateMetadata({
   const view = params.view || "";
 
   const isStaff = me.role === "super_admin" || me.role === "librarian";
-  const hasCirculationPerm = me.role === "student_assistant" && 
+  const hasCirculationPerm = me.role === "library_staff" && 
                              !!me.profile?.permissions?.manage_circulation && 
                              me.profile?.status?.toUpperCase() === 'ACTIVE';
 
@@ -36,7 +36,7 @@ export async function generateMetadata({
 export default function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; resolution?: string; q?: string; view?: string }>;
 }) {
   return (
     <div className="space-y-6 w-full">
@@ -50,11 +50,12 @@ export default function HistoryPage({
 async function HistoryPageContent({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; resolution?: string; q?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
   const status = params.status || "all";
+  const resolution = params.resolution || "all";
   const q = params.q || "";
   const view = params.view || "";
 
@@ -62,20 +63,21 @@ async function HistoryPageContent({
   if (!me) redirect("/");
 
   const isStaff = me.role === "super_admin" || me.role === "librarian";
-  const hasCirculationPerm = me.role === "student_assistant" && 
+  const hasCirculationPerm = me.role === "library_staff" && 
                              !!me.profile?.permissions?.manage_circulation && 
                              me.profile?.status?.toUpperCase() === 'ACTIVE';
 
   const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
   const userId = showAllLogs ? null : me.user.id;
 
-  const historyPromise = getBorrowingHistory(userId, page, 10, status, q);
+  const historyPromise = getBorrowingHistory(userId, page, 10, status, q, undefined, resolution);
 
   return (
     <HistoryContent
       historyPromise={historyPromise}
       page={page}
       statusFilter={status}
+      resolutionFilter={resolution}
       searchQuery={q}
       userRole={me.role}
       userId={userId}

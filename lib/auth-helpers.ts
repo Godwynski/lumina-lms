@@ -8,7 +8,9 @@ export const normalizeUserRole = (value: unknown): UserRole | null => {
   if (typeof value !== 'string') return null;
   const role = value.trim().toLowerCase();
   
-  if (role === 'super_admin' || role === 'librarian' || role === 'student_assistant' || role === 'student') {
+  if (role === 'student') return 'patron';
+  if (role === 'student_assistant') return 'library_staff';
+  if (role === 'super_admin' || role === 'librarian' || role === 'library_staff' || role === 'patron') {
     return role as UserRole;
   }
   return null;
@@ -67,7 +69,7 @@ export const getMe = cache(async () => {
     const profile = await getProfileRow(supabase, user.id);
     if (!profile) return null;
 
-    const role = normalizeUserRole(profile.role) || metadataRole || 'student';
+    const role = normalizeUserRole(profile.role) || metadataRole || 'patron';
 
     return {
       user,
@@ -79,9 +81,9 @@ export const getMe = cache(async () => {
         permissions: UserPermissions | null;
       },
       role: role as UserRole,
-      isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
+      isStaff: ['super_admin', 'librarian', 'library_staff'].includes(role),
       isAdmin: role === 'super_admin',
-      isDeactivatedSA: role === 'student_assistant' && profile.status?.toUpperCase() !== 'ACTIVE',
+      isDeactivatedSA: role === 'library_staff' && profile.status?.toUpperCase() !== 'ACTIVE',
       hasPermission: (permission: keyof UserPermissions) => {
         if (role === 'super_admin' || role === 'librarian') return true;
         const perms = (profile.permissions as UserPermissions | null);
@@ -154,7 +156,7 @@ export async function assertRole(allowedRoles: UserRole[]) {
     throw new Error('Forbidden');
   }
 
-  const isStaffOnly = !allowedRoles.includes('student');
+  const isStaffOnly = !allowedRoles.includes('patron');
   if (isStaffOnly && me.profile.status?.toUpperCase() !== 'ACTIVE') {
     throw new Error('Forbidden');
   }

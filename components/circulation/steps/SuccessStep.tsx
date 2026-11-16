@@ -36,7 +36,7 @@ export function SuccessStep({ title, message, nextLabel, onReset, reservationRea
           <div className="text-left">
             <p className="text-[11px] font-bold uppercase tracking-widest text-primary">Hold Fulfillment</p>
             <p className="text-[11px] font-black text-primary leading-tight mt-0.5 uppercase">Place on Hold Shelf</p>
-            <p className="text-[11px] font-medium text-primary break-words">{reservedFor || 'Reserved Student'}</p>
+            <p className="text-[11px] font-medium text-primary break-words">{reservedFor || 'Reserved Patron'}</p>
           </div>
         </div>
       )}

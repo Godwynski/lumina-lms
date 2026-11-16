@@ -9,22 +9,31 @@ interface RoleBadgeProps {
 }
 
 const roleStyles: Record<string, string> = {
+  super_admin: "text-foreground font-bold",
   admin: "text-foreground font-bold",
   librarian: "text-blue-700 font-semibold",
-  student_assistant: "text-indigo-700 font-semibold",
-  student: "text-muted-foreground font-medium",
+  library_staff: "text-indigo-700 font-semibold",
+  patron: "text-muted-foreground font-medium",
 };
 
-const roleLabels: Record<string, string> = {
+export const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
   admin: "Administrator",
   librarian: "Librarian",
-  student_assistant: "Student Assistant",
-  student: "Student",
+  library_staff: "Library Staff",
+  patron: "Patron",
 };
 
+export function getRoleLabel(role?: string | null, fallback = "Patron"): string {
+  if (!role) return fallback;
+  const normalized = role.trim().toLowerCase();
+  if (!normalized) return fallback;
+  return ROLE_LABELS[normalized] || role;
+}
+
 export function RoleBadge({ role, className }: RoleBadgeProps) {
-  const normalized = role.toLowerCase();
-  const displayName = roleLabels[normalized] || role;
+  const normalized = role.trim().toLowerCase();
+  const displayName = ROLE_LABELS[normalized] || role;
   
   return (
     <span className={cn("text-[11px] uppercase tracking-tight", roleStyles[normalized] || "text-muted-foreground", className)}>

@@ -36,19 +36,67 @@ export interface GoogleOrOpenLibraryBookDetails {
   tags: string[];
 }
 
+export interface ExportBooksFilters {
+  query?: string;
+  categoryId?: string;
+  status?: 'ACTIVE' | 'ARCHIVED' | 'ALL';
+  sort?: string;
+}
+
 /**
- * Fetches all books with their categories for high-performance client-side Excel/CSV export.
+ * Fetches books with their categories for client-side Excel/CSV/report export,
+ * honoring any active inventory filters.
  */
-export async function getBooksForExport() {
+export async function getBooksForExport(filters?: ExportBooksFilters) {
   const supabase = await assertStaffCatalogAccess();
-  const { data, error } = await supabase
+  let dbQuery = supabase
     .from('books')
     .select(`
       id, title, author, isbn, dewey_decimal, description, 
       published_year, cover_url, tags, location, section, is_active, created_at,
       categories(name)
-    `)
-    .order('title');
+    `);
+
+  if (filters) {
+    const status = filters.status || 'ACTIVE';
+    if (status !== 'ALL') {
+      dbQuery = dbQuery.eq('is_active', status === 'ACTIVE');
+    }
+
+    const cleanQuery = filters.query?.trim();
+    if (cleanQuery) {
+      const pattern = `%${cleanQuery.replace(/[%_(),.:*\\"]/g, '_')}%`;
+      if (cleanQuery.length < 3) {
+        dbQuery = dbQuery.ilike('title', pattern);
+      } else {
+        dbQuery = dbQuery.or(`title.ilike.${pattern},author.ilike.${pattern},isbn.ilike.${pattern}`);
+      }
+    }
+
+    if (filters.categoryId && filters.categoryId !== 'all') {
+      const categoryIds = filters.categoryId.split(',').filter(Boolean);
+      if (categoryIds.length > 0) {
+        dbQuery = dbQuery.in('category_id', categoryIds);
+      }
+    }
+
+    const sort = filters.sort || 'title_asc';
+    if (sort === 'newest') {
+      dbQuery = dbQuery.order('created_at', { ascending: false });
+    } else if (sort === 'title_desc') {
+      dbQuery = dbQuery.order('title', { ascending: false });
+    } else if (sort === 'availability_desc') {
+      dbQuery = dbQuery.order('available_copies', { ascending: false });
+    } else if (sort === 'availability_asc') {
+      dbQuery = dbQuery.order('available_copies', { ascending: true });
+    } else {
+      dbQuery = dbQuery.order('title');
+    }
+  } else {
+    dbQuery = dbQuery.order('title');
+  }
+
+  const { data, error } = await dbQuery;
 
   if (error) {
     logger.error('catalog', 'Failed to fetch books for export', { error: error.message });

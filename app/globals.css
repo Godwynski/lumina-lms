@@ -231,3 +231,17 @@ body [data-sonner-toaster][data-sonner-theme="light"] {
     scroll-behavior: auto !important;
   }
 }
+
+@media print {
+  [data-slot="sidebar"],
+  [data-sidebar="sidebar"],
+  [data-slot="dialog-overlay"],
+  header {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+  }
+}

@@ -2,6 +2,7 @@
 
 import { createSafeClient } from '@/lib/supabase/server';
 import { getBorrowingHistory, type BorrowingRecord } from './history';
+import { computeOverdueFine } from '@/lib/fines';
 import { unstable_cache } from 'next/cache';
 import { getMe } from '@/lib/auth-helpers';
 import { isAbortError } from '@/lib/error-utils';
@@ -56,7 +57,7 @@ export async function getDashboardStats({
 
   const isActuallyStaff = role === 'super_admin' || 
                           role === 'librarian' || 
-                          (role === 'student_assistant' && me.profile?.status?.toUpperCase() === 'ACTIVE');
+                          (role === 'library_staff' && me.profile?.status?.toUpperCase() === 'ACTIVE');
 
 
   const isManager = isActuallyStaff;
@@ -112,7 +113,7 @@ export async function getDashboardStats({
       : Promise.resolve({ count: 0 }),
     isFullScope
       ? safeWrap(
-          getBorrowingHistory(userId, 1, 5, 'ACTIVE', undefined, supabase),
+          getBorrowingHistory(userId, 1, 10, 'CURRENT', undefined, supabase),
           { records: [], totalCount: 0 }
         )
       : Promise.resolve({ records: [], totalCount: 0 }),
@@ -204,12 +205,29 @@ export async function getDashboardStats({
   interface SupabaseCountResult { count: number | null }
   interface BorrowHistoryResult { records: BorrowingRecord[]; totalCount: number }
 
+  const isPriorityBorrow = (b: BorrowingRecord) =>
+    b.status === 'OVERDUE' ||
+    (b.status === 'ACTIVE' && new Date(b.due_date).getTime() < Date.now()) ||
+    (b.status === 'RETURNED' && Number(b.fine_amount ?? 0) > 0 && !b.fine_settled_at);
+
+  const sortedActiveBorrows = [...(borrowingHistoryResult as BorrowHistoryResult).records]
+    .map((b) => ({
+      ...b,
+      fine_amount: computeOverdueFine(b),
+    }))
+    .sort((a, b) => {
+      const ap = isPriorityBorrow(a) ? 0 : 1;
+      const bp = isPriorityBorrow(b) ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
+
   return {
     activeBorrows: (activeBorrowsResult as SupabaseCountResult).count || 0,
     pendingApprovals: (pendingCardsResult as SupabaseCountResult).count || 0,
     myActiveBorrows: (borrowingHistoryResult as BorrowHistoryResult).totalCount || 0,
     recentBooks: recentBooksResult as { id: string; title: string; author: string; cover_url: string | null; created_at: string }[],
-    activeBorrowsList: (borrowingHistoryResult as BorrowHistoryResult).records,
+    activeBorrowsList: sortedActiveBorrows,
     attendanceToday: (dailyAttendanceResult as SupabaseCountResult).count || 0,
     totalBooks: (totalBooksResult as SupabaseCountResult).count || 0,
     totalUsers: (totalUsersResult as SupabaseCountResult).count || 0,

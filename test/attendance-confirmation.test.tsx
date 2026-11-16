@@ -1,11 +1,11 @@
 import { act, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
-import { toggleAttendanceByCard, getAttendanceHistory } from '@/lib/actions/attendance';
+import { recordAttendanceByCard, getAttendanceHistory } from '@/lib/actions/attendance';
 import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
 
 vi.mock('@/lib/actions/attendance', () => ({
-  toggleAttendanceByCard: vi.fn(),
+  recordAttendanceByCard: vi.fn(),
   getAttendanceHistory: vi.fn(),
 }));
 vi.mock('@/lib/supabase/client', () => ({
@@ -23,21 +23,32 @@ vi.mock('@/hooks/use-scanner', () => ({
   }); },
 }));
 
-it('does not register a camera read until the librarian confirms it', async () => {
+it('does not register a camera read until the librarian confirms it and passes explicit mode', async () => {
  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
  vi.mocked(getAttendanceHistory).mockResolvedValue([]);
- vi.mocked(toggleAttendanceByCard).mockResolvedValue({ success: true, data: { status: 'IN', userName: 'Student', recordedAt: new Date().toISOString(), message: 'Welcome', description: 'Timed in successfully.' } });
+ vi.mocked(recordAttendanceByCard).mockResolvedValue({
+   success: true,
+   data: {
+     status: 'IN',
+     outcome: 'CHECKED_IN',
+     userId: 'stu-1',
+     userName: 'Student',
+     recordedAt: new Date().toISOString(),
+     message: 'Welcome',
+     description: 'Timed in successfully.',
+   },
+ });
  const el = document.body.appendChild(document.createElement('div')); const root = createRoot(el); const records = Promise.resolve([]);
  try {
   await act(async () => root.render(<Suspense><AttendanceClient personalHistoryPromise={records} systemTodayPromise={records} systemAllPromise={records} isStaff userId="staff" /></Suspense>));
   await act(async () => el.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!.click());
   await act(async () => scan.onScan('CARD-123'));
   await act(async () => scan.onScan('DIFFERENT-CARD'));
-  expect(toggleAttendanceByCard).not.toHaveBeenCalled();
-  const register = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.includes('Register attendance'));
+  expect(recordAttendanceByCard).not.toHaveBeenCalled();
+  const register = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.includes('Register Check-In'));
   expect(register).toBeDefined();
   await act(async () => { register!.click(); register!.click(); });
-  expect(toggleAttendanceByCard).toHaveBeenCalledTimes(1);
-  expect(toggleAttendanceByCard).toHaveBeenCalledWith({ cardNumber: 'CARD-123', isManual: false, confirmed: true });
+  expect(recordAttendanceByCard).toHaveBeenCalledTimes(1);
+  expect(recordAttendanceByCard).toHaveBeenCalledWith({ cardNumber: 'CARD-123', mode: 'in', isManual: false });
  } finally { act(() => root.unmount()); el.remove(); }
 });

@@ -33,7 +33,7 @@ import {
 import { BookSchema } from '@/lib/validations/catalog';
 
 function makeMe(
-  role: 'student' | 'student_assistant' | 'librarian' | 'super_admin',
+  role: 'patron' | 'library_staff' | 'librarian' | 'super_admin',
   opts: {
     status?: string;
     permissions?: Record<string, boolean> | null;
@@ -43,7 +43,7 @@ function makeMe(
   const status = opts.status ?? 'ACTIVE';
   const permissions = opts.permissions ?? null;
   const isDeactivatedSA =
-    opts.isDeactivatedSA ?? (role === 'student_assistant' && status.toUpperCase() !== 'ACTIVE');
+    opts.isDeactivatedSA ?? (role === 'library_staff' && status.toUpperCase() !== 'ACTIVE');
 
   return {
     user: { id: `uid-${role}`, email: `${role}@sti.edu.ph` } as unknown as User,
@@ -61,7 +61,7 @@ function makeMe(
       permissions,
     },
     role,
-    isStaff: ['super_admin', 'librarian', 'student_assistant'].includes(role),
+    isStaff: ['super_admin', 'librarian', 'library_staff'].includes(role),
     isAdmin: role === 'super_admin',
     isDeactivatedSA,
     hasPermission: (p: string) => {
@@ -125,13 +125,13 @@ describe('lib/api-utils', () => {
     it('enforces requireStaff for students and deactivated student assistants', async () => {
       const wrapped = withAuthApi(async () => apiSuccess({ ok: true }), { requireStaff: true });
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student'));
+      mockGetMe.mockResolvedValueOnce(makeMe('patron'));
       expect((await wrapped(new Request('https://lumina.test/api/x'))).status).toBe(403);
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'INACTIVE' }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'INACTIVE' }));
       expect((await wrapped(new Request('https://lumina.test/api/x'))).status).toBe(403);
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'ACTIVE' }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'ACTIVE' }));
       expect((await wrapped(new Request('https://lumina.test/api/x'))).status).toBe(200);
 
       mockGetMe.mockResolvedValueOnce(makeMe('librarian'));
@@ -143,19 +143,19 @@ describe('lib/api-utils', () => {
 
     it('enforces allowedRoles including deactivated SA fallback to student only', async () => {
       const staffOnly = withAuthApi(async () => apiSuccess({ pass: true }), {
-        allowedRoles: ['librarian', 'student_assistant'],
+        allowedRoles: ['librarian', 'library_staff'],
       });
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'SUSPENDED' }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'SUSPENDED' }));
       expect((await staffOnly(new Request('https://lumina.test/api/x'))).status).toBe(403);
 
       const includesStudent = withAuthApi(async () => apiSuccess({ pass: true }), {
-        allowedRoles: ['student', 'student_assistant'],
+        allowedRoles: ['patron', 'library_staff'],
       });
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'SUSPENDED' }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'SUSPENDED' }));
       expect((await includesStudent(new Request('https://lumina.test/api/x'))).status).toBe(200);
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student'));
+      mockGetMe.mockResolvedValueOnce(makeMe('patron'));
       expect((await staffOnly(new Request('https://lumina.test/api/x'))).status).toBe(403);
     });
 
@@ -164,15 +164,15 @@ describe('lib/api-utils', () => {
         allowedPermissions: ['manage_circulation', 'manage_attendance'],
       });
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'INACTIVE', permissions: { manage_circulation: true } }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'INACTIVE', permissions: { manage_circulation: true } }));
       expect((await wrapped(new Request('https://lumina.test/api/x'))).status).toBe(403);
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'ACTIVE', permissions: { manage_circulation: false } }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'ACTIVE', permissions: { manage_circulation: false } }));
       const deniedRes = await wrapped(new Request('https://lumina.test/api/x'));
       expect(deniedRes.status).toBe(403);
       expect(await deniedRes.json()).toMatchObject({ code: 'PERMISSION_DENIED' });
 
-      mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'ACTIVE', permissions: { manage_attendance: true } }));
+      mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'ACTIVE', permissions: { manage_attendance: true } }));
       expect((await wrapped(new Request('https://lumina.test/api/x'))).status).toBe(200);
 
       mockGetMe.mockResolvedValueOnce(makeMe('librarian', { permissions: null }));
@@ -290,21 +290,21 @@ describe('lib/actions/action-utils', () => {
 
   it('rejects disallowed roles, deactivated SAs on staff actions, and missing permissions', async () => {
     const action = createSafeAction(TestSchema, async () => ({ ok: true }), {
-      allowedRoles: ['librarian', 'student_assistant'],
+      allowedRoles: ['librarian', 'library_staff'],
       allowedPermissions: ['manage_circulation'],
     });
 
-    mockGetMe.mockResolvedValueOnce(makeMe('student'));
+    mockGetMe.mockResolvedValueOnce(makeMe('patron'));
     expect(await action({ title: 'Book' })).toEqual({ success: false, error: 'Unauthorized access' });
 
-    mockGetMe.mockResolvedValueOnce(makeMe('student_assistant', { status: 'INACTIVE', isDeactivatedSA: true }));
+    mockGetMe.mockResolvedValueOnce(makeMe('library_staff', { status: 'INACTIVE', isDeactivatedSA: true }));
     expect(await action({ title: 'Book' })).toEqual({
       success: false,
       error: 'Access denied: Staff account is currently deactivated.',
     });
 
     mockGetMe.mockResolvedValueOnce(
-      makeMe('student_assistant', { status: 'ACTIVE', permissions: { manage_circulation: false } })
+      makeMe('library_staff', { status: 'ACTIVE', permissions: { manage_circulation: false } })
     );
     expect(await action({ title: 'Book' })).toEqual({
       success: false,
@@ -314,10 +314,10 @@ describe('lib/actions/action-utils', () => {
 
   it('allows deactivated SA when student role is also permitted', async () => {
     mockGetMe.mockResolvedValueOnce(
-      makeMe('student_assistant', { status: 'INACTIVE', isDeactivatedSA: true })
+      makeMe('library_staff', { status: 'INACTIVE', isDeactivatedSA: true })
     );
     const action = createSafeAction(null, async (input: { ok: boolean }) => input, {
-      allowedRoles: ['student', 'student_assistant'],
+      allowedRoles: ['patron', 'library_staff'],
     });
     expect(await action({ ok: true })).toEqual({ success: true, data: { ok: true } });
   });
@@ -382,7 +382,7 @@ describe('lib/actions/action-utils', () => {
 });
 
 describe('lib/actions/policy-constants', () => {
-  it('defines all 8 core policy keys including overdue_fine_per_day and valid defaults', () => {
+  it('defines all core policy keys including overdue_fine_per_day and library_closing_time with valid defaults', () => {
     const keys = Object.keys(DEFAULT_POLICIES);
     expect(keys).toEqual([
       'loan_period_days',
@@ -393,6 +393,7 @@ describe('lib/actions/policy-constants', () => {
       'student_faq_list',
       'academic_programs',
       'due_soon_reminder_days',
+      'library_closing_time',
     ]);
 
     for (const [key, config] of Object.entries(DEFAULT_POLICIES)) {
@@ -403,7 +404,7 @@ describe('lib/actions/policy-constants', () => {
     expect(DEFAULT_STUDENT_FAQS.length).toBe(4);
   });
 
-  it('validates numeric bounds, rejects decimals/non-digits, and validates JSON keys', () => {
+  it('validates numeric bounds, rejects decimals/non-digits, validates JSON keys, and validates 24h HH:MM time keys', () => {
     expect(isValidPolicyValue('unknown_key', '10')).toBe(false);
 
     // overdue_fine_per_day: 0..500 integer
@@ -427,6 +428,17 @@ describe('lib/actions/policy-constants', () => {
     expect(isValidPolicyValue('academic_programs', '{bad json')).toBe(false);
     expect(isValidPolicyValue('student_faq_list', '[]')).toBe(true);
     expect(isValidPolicyValue('student_faq_list', 'not-json')).toBe(false);
+
+    // Time policies (24-hour HH:MM)
+    expect(isValidPolicyValue('library_closing_time', '00:00')).toBe(true);
+    expect(isValidPolicyValue('library_closing_time', '17:00')).toBe(true);
+    expect(isValidPolicyValue('library_closing_time', '23:59')).toBe(true);
+    expect(isValidPolicyValue('library_closing_time', '24:00')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '17:60')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '5:00')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '17:00:00')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '5 PM')).toBe(false);
+    expect(isValidPolicyValue('library_closing_time', '')).toBe(false);
   });
 });
 

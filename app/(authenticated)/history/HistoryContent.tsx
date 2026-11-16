@@ -4,22 +4,20 @@ import { useState, use, useEffect, useTransition, useCallback, useRef } from "re
 import Image from "next/image";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { BorrowerDetailsModal } from "@/components/common/BorrowerDetailsModal";
-import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2 } from "lucide-react";
+import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FineSettlementDialog } from "@/components/common/FineSettlementDialog";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatDisplayDate } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BorrowingRecord, settleBorrowingFine } from "@/lib/actions/history";
+import {
+  BorrowingRecord,
+  FineResolution,
+  exportBorrowingHistory,
+  settleBorrowingFine,
+} from "@/lib/actions/history";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { type UserRole } from "@/lib/auth-helpers";
@@ -30,9 +28,40 @@ interface HistoryContentProps {
   historyPromise: Promise<{ records: BorrowingRecord[]; totalCount: number }>;
   page: number;
   statusFilter: string;
+  resolutionFilter?: string;
   searchQuery: string;
   userRole: UserRole;
   userId?: string | null;
+}
+
+const STATUS_TABS = [
+  { key: "all", label: "All" },
+  { key: "ACTIVE", label: "Active" },
+  { key: "OVERDUE", label: "Overdue" },
+  { key: "RETURNED", label: "Returned" },
+  { key: "SETTLED", label: "Settlements" },
+] as const;
+
+const RESOLUTION_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "PAID", label: "Paid" },
+  { key: "CONDONED", label: "Condoned" },
+] as const;
+
+function ResolutionBadge({ resolution }: { resolution?: FineResolution | null }) {
+  const isCondoned = resolution === "CONDONED";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+        isCondoned
+          ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+      )}
+    >
+      {isCondoned ? "Condoned" : "Paid"}
+    </span>
+  );
 }
 
 function HistoryBookCover({ coverUrl, title }: { coverUrl?: string | null; title?: string }) {
@@ -77,6 +106,7 @@ export default function HistoryContent({
   historyPromise,
   page,
   statusFilter,
+  resolutionFilter,
   searchQuery,
   userRole,
 }: HistoryContentProps) {
@@ -90,8 +120,12 @@ export default function HistoryContent({
   };
   const router = useRouter();
   const searchParams = useSearchParams();
+  const effectiveResolution = (resolutionFilter ?? searchParams.get("resolution") ?? "all").toUpperCase() === "ALL"
+    ? "all"
+    : (resolutionFilter ?? searchParams.get("resolution") ?? "all").toUpperCase();
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [settlingId, setSettlingId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ record: BorrowingRecord } | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -142,6 +176,9 @@ export default function HistoryContent({
 
   const updateFilters = useCallback((updates: Record<string, string | number>) => {
     const params = new URLSearchParams(searchParams.toString());
+    if (!("status" in updates) && statusFilter && statusFilter !== "all" && !params.has("status")) {
+      params.set("status", statusFilter);
+    }
     Object.entries(updates).forEach(([key, value]) => {
       if (value === "all" || value === "") {
         params.delete(key);
@@ -152,7 +189,7 @@ export default function HistoryContent({
     startTransition(() => {
       router.replace(`/history?${params.toString()}`, { scroll: false });
     });
-  }, [searchParams, router, startTransition]);
+  }, [searchParams, statusFilter, router, startTransition]);
 
   // Debounced auto-search on typing (300ms) with zero UI freezing
   useEffect(() => {
@@ -174,21 +211,36 @@ export default function HistoryContent({
 
   const handleSettle = async (
     recordId: string,
-    mode: "settle" | "return_and_settle" | "return_only" = "settle"
+    mode: "settle" | "return_and_settle" | "return_only" = "settle",
+    resolution: FineResolution = "PAID",
+    remarks?: string
   ) => {
     setSettlingId(recordId);
     try {
-      const res = await settleBorrowingFine({ recordId, mode });
+      const payload: {
+        recordId: string;
+        mode: "settle" | "return_and_settle" | "return_only";
+        resolution?: FineResolution;
+        remarks?: string;
+      } = { recordId, mode };
+      if (mode !== "return_only") {
+        payload.resolution = resolution;
+        if (remarks && remarks.trim().length > 0) {
+          payload.remarks = remarks.trim();
+        }
+      }
+      const res = await settleBorrowingFine(payload);
       if (!res.success) {
         toast.error(res.error || "Failed to process overdue action");
         return;
       }
+      const resLabel = resolution === "CONDONED" ? "condoned" : "paid";
       toast.success(
         mode === "return_only"
-          ? "Book returned (penalty marked unpaid)"
+          ? "Book returned (penalty marked receivable)"
           : mode === "return_and_settle"
-            ? "Book returned and overdue penalty settled"
-            : "Overdue penalty settled"
+            ? `Book returned and penalty marked as ${resLabel}`
+            : `Penalty marked as ${resLabel}`
       );
       setPendingAction(null);
       startTransition(() => {
@@ -203,7 +255,78 @@ export default function HistoryContent({
   const isPrivileged =
     userRole === "super_admin" ||
     userRole === "librarian" ||
-    (userRole === "student_assistant" && viewParam === "logs");
+    (userRole === "library_staff" && viewParam === "logs");
+
+  const isSettlementsTab = statusFilter.toUpperCase() === "SETTLED";
+  const isOverdueTab = statusFilter.toUpperCase() === "OVERDUE";
+  const showExportPrint = isOverdueTab || isSettlementsTab;
+
+  const handleExportXlsx = async () => {
+    setIsExporting(true);
+    try {
+      const res = await exportBorrowingHistory({
+        status: statusFilter,
+        resolution: effectiveResolution,
+        search: searchQuery,
+        scope: isPrivileged ? "logs" : "personal",
+      });
+      if (!res.success) {
+        toast.error(res.error || "Failed to export records");
+        return;
+      }
+      if (res.data.records.length === 0) {
+        toast.info("No records match the current filters.");
+        return;
+      }
+
+      const XLSX = await import("xlsx");
+      const rows = res.data.records.map((r) => {
+        const fine = Number(r.fine_amount ?? 0);
+        const fineStatus =
+          fine <= 0
+            ? "None"
+            : r.fine_settled_at
+              ? r.fine_resolution === "CONDONED"
+                ? "Condoned"
+                : "Paid"
+              : "Receivable";
+        return {
+          ...(isPrivileged
+            ? {
+                Borrower: r.profiles?.full_name || "Unknown User",
+                "Patron ID": r.profiles?.student_id || "—",
+                Email: r.profiles?.email || "—",
+              }
+            : {}),
+          "Book Title": r.books?.title || "Unknown Title",
+          Author: r.books?.author || "—",
+          "Copy QR": r.copy_qr || "—",
+          Borrowed: formatDate(r.borrowed_at),
+          "Due Date": formatDate(r.due_date),
+          Returned: r.returned_at ? formatDate(r.returned_at) : "Not returned",
+          Status: isOverdue(r) ? "OVERDUE" : r.status,
+          "Fine Amount (PHP)": fine.toFixed(2),
+          "Fine Resolution": fineStatus,
+          Remarks: r.fine_remarks || "—",
+          "Settled Date": r.fine_settled_at ? formatDate(r.fine_settled_at) : "—",
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      const sheetTitle = isSettlementsTab ? "Settlements" : "Overdue & Receivables";
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetTitle);
+      const filename = isSettlementsTab
+        ? "lumina_fine_settlements.xlsx"
+        : "lumina_overdue_receivables.xlsx";
+      XLSX.writeFile(workbook, filename);
+      toast.success(`Exported ${rows.length} record(s) to Excel.`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged
@@ -215,7 +338,7 @@ export default function HistoryContent({
                 {record.profiles ? <button type="button"
                   aria-label={`View borrower: ${record.profiles.full_name || "Unknown User"}`}
                   className="w-fit text-left text-xs font-bold text-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                  onClick={(event) => { detailTrigger.current = event.currentTarget; setSelectedBorrower(record.profiles); }}>
+                  onClick={(event) => { event.stopPropagation(); detailTrigger.current = event.currentTarget; setSelectedBorrower(record.profiles); }}>
                   {record.profiles.full_name || "Unknown User"}
                 </button> : <span className="text-xs font-bold">Unknown User</span>}
                 <span className="text-[11px] text-muted-foreground uppercase tracking-tighter">
@@ -233,7 +356,7 @@ export default function HistoryContent({
       accessor: (record) => (
         <button type="button" disabled={!record.books?.id}
           aria-label={`View book details: ${record.books?.title || "Unknown Title"}`}
-          onClick={(event) => { detailTrigger.current = event.currentTarget; setSelectedBook(record.books); }}
+          onClick={(event) => { event.stopPropagation(); detailTrigger.current = event.currentTarget; setSelectedBook(record.books); }}
           className="group flex max-w-full items-center gap-3 rounded-md text-left hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default disabled:no-underline">
           <HistoryBookCover coverUrl={record.books?.cover_url} title={record.books?.title} />
           <div className="min-w-0">
@@ -253,163 +376,276 @@ export default function HistoryContent({
       ),
       mobileMain: true,
     },
-    {
-      header: "Borrowed",
-      accessor: (record) => (
-        <div className="flex items-center gap-2">
-          <Calendar size={14} className="text-muted-foreground" />
-          <span className="text-[11px] font-bold text-foreground">{formatDate(record.borrowed_at)}</span>
-        </div>
-      ),
-    },
-    {
-      header: "Timeline",
-      accessor: (record) => {
-        const overdue = isOverdue(record);
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <Clock size={14} className={cn("text-muted-foreground", overdue && "text-destructive")} />
-              <span className={cn("text-[11px] font-bold", overdue ? "text-destructive" : "text-foreground")}>
-                Due {formatDate(record.due_date)}
+    ...(isSettlementsTab
+      ? [
+          {
+            header: "Fine Amount",
+            accessor: (record: BorrowingRecord) => (
+              <span className="text-xs font-bold text-foreground tabular-nums">
+                ₱{Number(record.fine_amount ?? 0).toFixed(2)}
               </span>
-            </div>
-            {record.returned_at && (
-              <div className="flex items-center gap-1.5 text-[11px] font-black text-emerald-600 uppercase tracking-tight">
-                <CheckCircle2 size={12} strokeWidth={3} />
-                Returned {formatDate(record.returned_at)}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      header: "Status",
-      accessor: (record) => {
-        const overdue = isOverdue(record);
-        return <StatusBadge status={overdue ? "OVERDUE" : record.status} />;
-      },
-    },
-    ...(statusFilter === "ACTIVE"
-      ? []
+            ),
+          },
+          {
+            header: "Resolution",
+            accessor: (record: BorrowingRecord) => (
+              <ResolutionBadge resolution={record.fine_resolution} />
+            ),
+          },
+          {
+            header: "Remarks",
+            accessor: (record: BorrowingRecord) => (
+              <span
+                className="block max-w-[240px] truncate text-xs text-muted-foreground"
+                title={record.fine_remarks || undefined}
+              >
+                {record.fine_remarks || "—"}
+              </span>
+            ),
+          },
+          {
+            header: "Settled Date",
+            accessor: (record: BorrowingRecord) => (
+              <span className="text-[11px] font-bold text-foreground">
+                {record.fine_settled_at ? formatDate(record.fine_settled_at) : "—"}
+              </span>
+            ),
+          },
+        ]
       : [
           {
-            header: "Penalty",
+            header: "Borrowed",
+            accessor: (record: BorrowingRecord) => (
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="text-muted-foreground" />
+                <span className="text-[11px] font-bold text-foreground">{formatDate(record.borrowed_at)}</span>
+              </div>
+            ),
+          },
+          {
+            header: "Timeline",
             accessor: (record: BorrowingRecord) => {
-              const fine = Number(record.fine_amount ?? 0);
-              if (fine <= 0) {
-                return <span className="text-[11px] font-bold text-muted-foreground">—</span>;
-              }
-              if (record.fine_settled_at) {
-                return (
+              const overdue = isOverdue(record);
+              return (
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground tabular-nums">
-                      ₱{fine.toFixed(2)}
-                    </span>
-                    <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
-                      Settled
+                    <Clock size={14} className={cn("text-muted-foreground", overdue && "text-destructive")} />
+                    <span className={cn("text-[11px] font-bold", overdue ? "text-destructive" : "text-foreground")}>
+                      Due {formatDate(record.due_date)}
                     </span>
                   </div>
-                );
-              }
-              const isUnreturned = !record.returned_at;
-              return (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-destructive tabular-nums">
-                    ₱{fine.toFixed(2)}
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
-                      isUnreturned
-                        ? "border-amber-200 bg-amber-50 text-amber-800"
-                        : "border-red-200 bg-red-50 text-red-700"
-                    )}
-                  >
-                    {isUnreturned ? "Accruing" : "Unpaid"}
-                  </span>
-                  {isPrivileged && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={settlingId === record.id}
-                      onClick={() => setPendingAction({ record })}
-                      className="h-7 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-wider"
-                    >
-                      {settlingId === record.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : isUnreturned ? (
-                        "Return / Settle"
-                      ) : (
-                        "Settle"
-                      )}
-                    </Button>
+                  {record.returned_at && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-black text-emerald-600 uppercase tracking-tight">
+                      <CheckCircle2 size={12} strokeWidth={3} />
+                      Returned {formatDate(record.returned_at)}
+                    </div>
                   )}
                 </div>
               );
             },
           },
+          {
+            header: "Status",
+            accessor: (record: BorrowingRecord) => {
+              const overdue = isOverdue(record);
+              return <StatusBadge status={overdue ? "OVERDUE" : record.status} />;
+            },
+          },
+          ...(statusFilter === "ACTIVE"
+            ? []
+            : [
+                {
+                  header: "Penalty",
+                  accessor: (record: BorrowingRecord) => {
+                    const fine = Number(record.fine_amount ?? 0);
+                    if (fine <= 0) {
+                      return <span className="text-[11px] font-bold text-muted-foreground">—</span>;
+                    }
+                    if (record.fine_settled_at) {
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-foreground tabular-nums">
+                            ₱{fine.toFixed(2)}
+                          </span>
+                          <ResolutionBadge resolution={record.fine_resolution} />
+                        </div>
+                      );
+                    }
+                    const isUnreturned = !record.returned_at;
+                    return (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-black text-destructive tabular-nums">
+                          ₱{fine.toFixed(2)}
+                        </span>
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+                            isUnreturned
+                              ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
+                              : "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
+                          )}
+                        >
+                          Receivable
+                        </span>
+                        {isPrivileged && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={settlingId === record.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingAction({ record });
+                            }}
+                            className="h-7 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-wider print:hidden"
+                          >
+                            {settlingId === record.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : isUnreturned ? (
+                              "Return / Settle"
+                            ) : (
+                              "Settle"
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  },
+                },
+              ]),
         ]),
   ];
 
   const filterControls = (
-    <div className="flex flex-wrap items-center justify-between gap-4 w-full font-sans">
-      <form 
-        onSubmit={(e) => {
-          e.preventDefault();
-          updateFilters({ q: localSearch, page: 1 });
-        }}
-        className="relative w-full sm:max-w-xs"
-      >
-        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-        <Input
-          type="search"
-          aria-label="Search borrowing history"
-          placeholder="Search timeline, borrower, book, barcode..."
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          className="h-10 rounded-xl pl-9 pr-8 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
-        />
-        {isPending && (
-          <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary animate-spin" />
-        )}
-      </form>
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
-        {(["all", "ACTIVE", "OVERDUE", "RETURNED", "SETTLED"] as const).map((status) => (
-          <button
-            key={status}
-            type="button"
-            aria-pressed={statusFilter === status}
-            onClick={() => updateFilters({ status, page: 1 })}
-            className={cn(
-              "rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all",
-              statusFilter === status
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-          >
-            {status === "all" ? "All" : status.toLowerCase()}
-          </button>
-        ))}
+    <div className="flex flex-col gap-3 w-full font-sans print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            updateFilters({ q: localSearch, page: 1 });
+          }}
+          className="relative w-full sm:max-w-xs"
+        >
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+          <Input
+            type="search"
+            aria-label="Search borrowing history"
+            placeholder="Search timeline, borrower, book, barcode..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            className="h-10 rounded-xl pl-9 pr-8 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
+          />
+          {isPending && (
+            <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary animate-spin" />
+          )}
+        </form>
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              aria-pressed={statusFilter === tab.key}
+              onClick={() => updateFilters({ status: tab.key, resolution: tab.key === "SETTLED" ? effectiveResolution : "", page: 1 })}
+              className={cn(
+                "rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all",
+                statusFilter === tab.key
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {(isSettlementsTab || showExportPrint) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          {isSettlementsTab ? (
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/15 rounded-xl border border-border/10" role="group" aria-label="Filter settlements by resolution">
+              {RESOLUTION_FILTERS.map((res) => (
+                <button
+                  key={res.key}
+                  type="button"
+                  aria-pressed={effectiveResolution === res.key}
+                  onClick={() => updateFilters({ resolution: res.key, page: 1 })}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
+                    effectiveResolution === res.key
+                      ? "bg-background text-foreground shadow-xs border border-border/30"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {res.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {showExportPrint && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isExporting}
+                onClick={handleExportXlsx}
+                className="h-9 rounded-xl gap-1.5 text-xs font-bold"
+              >
+                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                Export (.xlsx)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+                className="h-9 rounded-xl gap-1.5 text-xs font-bold"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
+  const hasReceivableRows = isPrivileged && records.some((r) => !r.fine_settled_at && Number(r.fine_amount ?? 0) > 0);
+
   return (
     <>
+    <div className="hidden print:block mb-4 border-b pb-2">
+      <h1 className="text-lg font-bold">
+        {isSettlementsTab
+          ? "Lumina LMS — Fine Settlements Report"
+          : isOverdueTab
+            ? "Lumina LMS — Overdue & Receivable Fines Report"
+            : "Lumina LMS — Borrowing History"}
+      </h1>
+      <p className="text-xs text-muted-foreground">
+        Filter: {statusFilter}
+        {isSettlementsTab && effectiveResolution !== "all" ? ` · Resolution: ${effectiveResolution}` : ""}
+        {searchQuery ? ` · Search: "${searchQuery}"` : ""}
+      </p>
+    </div>
+
     <AdminTableShell
       controls={filterControls}
       pagination={
         totalCount > 0 ? (
-          <CompactPagination
-            page={page}
-            totalItems={totalCount}
-            pageSize={10}
-            onPageChange={(p) => updateFilters({ page: p })}
-            variant="ghost"
-          />
+          <div className="print:hidden">
+            <CompactPagination
+              page={page}
+              totalItems={totalCount}
+              pageSize={10}
+              onPageChange={(p) => updateFilters({ page: p })}
+              variant="ghost"
+            />
+          </div>
         ) : null
       }
       className={cn(
@@ -421,6 +657,15 @@ export default function HistoryContent({
         data={records}
         columns={columns}
         noBorder
+        onRowClick={
+          hasReceivableRows
+            ? (record) => {
+                if (isPrivileged && !record.fine_settled_at && Number(record.fine_amount ?? 0) > 0) {
+                  setPendingAction({ record });
+                }
+              }
+            : undefined
+        }
         emptyState={{
           title: searchQuery || statusFilter !== "all" ? "No matches found" : "Timeline empty",
           description: searchQuery || statusFilter !== "all" 
@@ -431,96 +676,55 @@ export default function HistoryContent({
           icon: BookOpen,
           action: {
             label: "Clear All Filters",
-            onClick: () => updateFilters({ q: "", status: "all", page: 1 }),
+            onClick: () => updateFilters({ q: "", status: "all", resolution: "", page: 1 }),
           },
         }}
       />
 
-      <Dialog
+      <FineSettlementDialog
         open={Boolean(pendingAction)}
         onOpenChange={(open) => {
           if (!open) setPendingAction(null);
         }}
-      >
-        <DialogContent>
-          {pendingAction && !pendingAction.record.returned_at ? (
+        title={pendingAction && !pendingAction.record.returned_at ? "Return & Penalty Settlement" : "Penalty Settlement"}
+        description={
+          pendingAction && !pendingAction.record.returned_at ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Return &amp; Penalty Settlement</DialogTitle>
-                <DialogDescription>
-                  <span className="font-semibold text-foreground">
-                    {pendingAction.record.books?.title || "This book"}
-                  </span>{" "}
-                  is still checked out with an accruing penalty of{" "}
-                  <span className="font-bold text-destructive tabular-nums">
-                    ₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)}
-                  </span>
-                  . Return the copy first, then settle now or mark it unpaid to pay later.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={settlingId === pendingAction.record.id}
-                  onClick={() => setPendingAction(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={settlingId === pendingAction.record.id}
-                  onClick={() => handleSettle(pendingAction.record.id, "return_only")}
-                >
-                  Return Only (Pay Later)
-                </Button>
-                <Button
-                  type="button"
-                  disabled={settlingId === pendingAction.record.id}
-                  onClick={() => handleSettle(pendingAction.record.id, "return_and_settle")}
-                >
-                  Return &amp; Settle (₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)})
-                </Button>
-              </DialogFooter>
+              <span className="font-semibold text-foreground">
+                {pendingAction.record.books?.title || "This book"}
+              </span>{" "}
+              is still checked out with an accruing penalty of{" "}
+              <span className="font-bold text-destructive tabular-nums">
+                ₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)}
+              </span>
+              . Return the copy first, then mark it as Paid or Condoned, or return unpaid (Receivable).
             </>
           ) : pendingAction ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Confirm Penalty Settlement</DialogTitle>
-                <DialogDescription>
-                  Mark the overdue penalty of{" "}
-                  <span className="font-bold text-destructive tabular-nums">
-                    ₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)}
-                  </span>{" "}
-                  for{" "}
-                  <span className="font-semibold text-foreground">
-                    {pendingAction.record.books?.title || "this book"}
-                  </span>{" "}
-                  as paid?
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={settlingId === pendingAction.record.id}
-                  onClick={() => setPendingAction(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={settlingId === pendingAction.record.id}
-                  onClick={() => handleSettle(pendingAction.record.id, "settle")}
-                >
-                  Confirm Settle (₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)})
-                </Button>
-              </DialogFooter>
+              Resolve the overdue penalty of{" "}
+              <span className="font-bold text-destructive tabular-nums">
+                ₱{Number(pendingAction.record.fine_amount ?? 0).toFixed(2)}
+              </span>{" "}
+              for{" "}
+              <span className="font-semibold text-foreground">
+                {pendingAction.record.books?.title || "this book"}
+              </span>
+              .
             </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+          ) : null
+        }
+        fineAmount={Number(pendingAction?.record.fine_amount ?? 0)}
+        isSubmitting={Boolean(pendingAction && settlingId === pendingAction.record.id)}
+        allowReturnOnly={Boolean(pendingAction && !pendingAction.record.returned_at)}
+        onReturnOnly={() => {
+          if (pendingAction) void handleSettle(pendingAction.record.id, "return_only");
+        }}
+        onResolve={(resolution, remarks) => {
+          if (!pendingAction) return;
+          const mode = pendingAction.record.returned_at ? "settle" : "return_and_settle";
+          void handleSettle(pendingAction.record.id, mode, resolution, remarks);
+        }}
+      />
     </AdminTableShell>
     {selectedBook && <BookDetailModal key={selectedBook.id} bookId={selectedBook.id}
       open variant="read_only" onOpenChange={(open) => { if (!open) setSelectedBook(null); }}

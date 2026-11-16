@@ -44,7 +44,7 @@ function makeStaffContext(
   supabase: ReturnType<typeof createMockSupabaseClient>['client'],
   overrides: {
     id?: string;
-    role?: 'super_admin' | 'librarian' | 'student_assistant' | 'student';
+    role?: 'super_admin' | 'librarian' | 'library_staff' | 'patron';
     isDeactivatedSA?: boolean;
     hasCirculationPerm?: boolean;
   } = {}
@@ -53,13 +53,13 @@ function makeStaffContext(
   const id = overrides.id ?? 'staff-1';
   const isDeactivatedSA = overrides.isDeactivatedSA ?? false;
   const hasCirculationPerm =
-    overrides.hasCirculationPerm ?? (role === 'super_admin' || role === 'librarian' || role === 'student_assistant');
+    overrides.hasCirculationPerm ?? (role === 'super_admin' || role === 'librarian' || role === 'library_staff');
 
   return {
     user: { id },
     profile: { id, role, status: isDeactivatedSA ? 'DEACTIVATED' : 'ACTIVE' },
     role,
-    isStaff: role !== 'student',
+    isStaff: role !== 'patron',
     isAdmin: role === 'super_admin',
     isDeactivatedSA,
     hasPermission: (perm: string) => {
@@ -93,7 +93,7 @@ describe('circulation server actions', () => {
     });
 
     it('rejects student role on resolveScan, checkoutBook, and returnBook', async () => {
-      mockGetMe.mockResolvedValue(makeStaffContext(supaMock.client, { role: 'student' }));
+      mockGetMe.mockResolvedValue(makeStaffContext(supaMock.client, { role: 'patron' }));
 
       expect(await resolveScan({ scanValue: 'LIB-001' })).toEqual({
         success: false,
@@ -111,7 +111,7 @@ describe('circulation server actions', () => {
 
     it('rejects deactivated student assistants', async () => {
       mockGetMe.mockResolvedValue(
-        makeStaffContext(supaMock.client, { role: 'student_assistant', isDeactivatedSA: true })
+        makeStaffContext(supaMock.client, { role: 'library_staff', isDeactivatedSA: true })
       );
 
       const res = await checkoutBook({ studentCardQr: 'LIB-001', bookQr: 'BK-001' });
@@ -124,7 +124,7 @@ describe('circulation server actions', () => {
     it('rejects active student assistants lacking manage_circulation permission', async () => {
       mockGetMe.mockResolvedValue(
         makeStaffContext(supaMock.client, {
-          role: 'student_assistant',
+          role: 'library_staff',
           isDeactivatedSA: false,
           hasCirculationPerm: false,
         })
@@ -172,6 +172,7 @@ describe('circulation server actions', () => {
             userId: 'student-1',
             fullName: 'Maria Clara',
             studentId: '2024-0001',
+            block: { overdueCount: 0, receivableTotal: 0 },
           },
         },
       });
@@ -216,6 +217,7 @@ describe('circulation server actions', () => {
             userId: 'student-2',
             fullName: 'Jose Rizal',
             studentId: '2024-0002',
+            block: { overdueCount: 0, receivableTotal: 0 },
           },
         },
       });
@@ -245,7 +247,7 @@ describe('circulation server actions', () => {
 
       expect(await resolveScan({ scanValue: 'LIB-ACTIVE' })).toEqual({
         success: false,
-        error: 'Student account is suspended.',
+        error: 'Patron account is suspended.',
       });
     });
 
@@ -293,9 +295,40 @@ describe('circulation server actions', () => {
         error: 'The identifier is not recognized by the circulation system.',
       });
     });
+
+    it('blocks staff self-scan during circulation', async () => {
+      supaMock.setTableResponse('library_cards', {
+        card_number: 'LIB-STAFF-1',
+        status: 'ACTIVE',
+        user_id: 'staff-1',
+        profiles: { full_name: 'Staff Member', student_id: 'FAC-001', status: 'ACTIVE' },
+      });
+
+      const res = await resolveScan({ scanValue: 'LIB-STAFF-1' });
+      expect(res).toEqual({
+        success: false,
+        error: 'You cannot check out a book to yourself. Another staff member must process your checkout.',
+      });
+    });
   });
 
   describe('checkoutBook', () => {
+    it('blocks staff self-checkout when borrower card belongs to the calling staff member', async () => {
+      supaMock.setTableResponse('library_cards', { user_id: 'staff-1' });
+
+      const res = await checkoutBook({
+        studentCardQr: 'LIB-STAFF-1',
+        bookQr: 'COPY-001',
+        previewOnly: false,
+      });
+
+      expect(res).toEqual({
+        success: false,
+        error: 'You cannot check out a book to yourself. Another staff member must process your checkout.',
+      });
+      expect(adminMock.rpc).not.toHaveBeenCalled();
+    });
+
     it('supports previewOnly without eligibility pre-check, audit log, notification, or revalidation', async () => {
       adminMock.setRpcResponse(
         {
@@ -330,9 +363,19 @@ describe('circulation server actions', () => {
     });
 
     it('commits checkout, checks eligibility, logs audit, notifies student, and revalidates paths/tags', async () => {
+      const futureDue = new Date(Date.now() + 5 * 86_400_000).toISOString();
       supaMock.setTableResponse('library_cards', { user_id: 'student-1' });
       supaMock.setTableResponse('profiles', { status: 'ACTIVE', full_name: 'Maria Clara' });
-      supaMock.setTableResponse('borrowing_records', null, null, 0);
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'b-active-clean',
+          status: 'ACTIVE',
+          due_date: futureDue,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+      ]);
 
       adminMock.setRpcResponse(
         {
@@ -418,8 +461,26 @@ describe('circulation server actions', () => {
       });
       expect(adminMock.rpc).not.toHaveBeenCalled();
 
+      const pastDue = new Date(Date.now() - 2 * 86_400_000).toISOString();
       supaMock.setTableResponse('profiles', { status: 'ACTIVE', full_name: 'Maria Clara' });
-      supaMock.setTableResponse('borrowing_records', null, null, 2);
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'b-1',
+          status: 'OVERDUE',
+          due_date: pastDue,
+          returned_at: null,
+          fine_amount: 0,
+          fine_settled_at: null,
+        },
+        {
+          id: 'b-2',
+          status: 'OVERDUE',
+          due_date: pastDue,
+          returned_at: null,
+          fine_amount: 0,
+          fine_settled_at: null,
+        },
+      ]);
 
       const overdueRes = await checkoutBook({
         studentCardQr: 'LIB-1001',
@@ -430,6 +491,300 @@ describe('circulation server actions', () => {
         error: 'User has 2 overdue book(s). Please return them before borrowing more.',
       });
       expect(adminMock.rpc).not.toHaveBeenCalled();
+    });
+
+    it('detects OVERDUE status, past-due ACTIVE loans, receivable fines, and clean patrons in resolveScan', async () => {
+      const now = Date.now();
+      const threeDaysAgo = new Date(now - 3 * 86_400_000).toISOString();
+      const twoDaysAgo = new Date(now - 2 * 86_400_000).toISOString();
+      const fiveDaysAhead = new Date(now + 5 * 86_400_000).toISOString();
+
+      supaMock.setTableResponse('library_cards', {
+        card_number: 'LIB-2001',
+        status: 'ACTIVE',
+        user_id: 'student-eligible-test',
+        profiles: { full_name: 'Ana Reyes', student_id: '2024-0010', status: 'ACTIVE' },
+      });
+      supaMock.setTableResponse('system_settings', { value: '5' });
+
+      // 1. OVERDUE status + past-due ACTIVE + unsettled RETURNED fine + settled RETURNED fine + future ACTIVE
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'r-overdue',
+          status: 'OVERDUE',
+          due_date: threeDaysAgo,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+        {
+          id: 'r-past-active',
+          status: 'ACTIVE',
+          due_date: twoDaysAgo,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+        {
+          id: 'r-receivable',
+          status: 'RETURNED',
+          due_date: threeDaysAgo,
+          returned_at: twoDaysAgo,
+          fine_amount: 20,
+          fine_settled_at: null,
+        },
+        {
+          id: 'r-settled',
+          status: 'RETURNED',
+          due_date: threeDaysAgo,
+          returned_at: twoDaysAgo,
+          fine_amount: 50,
+          fine_settled_at: new Date(now - 86_400_000).toISOString(),
+        },
+        {
+          id: 'r-future-active',
+          status: 'ACTIVE',
+          due_date: fiveDaysAhead,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+      ]);
+
+      const blockedRes = await resolveScan({ scanValue: 'LIB-2001' });
+      expect(blockedRes.success).toBe(true);
+      if (blockedRes.success && blockedRes.data.type === 'student') {
+        expect(blockedRes.data.data.block).toEqual({
+          overdueCount: 2,
+          receivableTotal: 45, // 3*5 (15) + 2*5 (10) + 20 = 45; settled 50 ignored
+        });
+      }
+
+      // 2. Clean patron (only future ACTIVE + settled RETURNED)
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'r-future-active',
+          status: 'ACTIVE',
+          due_date: fiveDaysAhead,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+        {
+          id: 'r-settled',
+          status: 'RETURNED',
+          due_date: threeDaysAgo,
+          returned_at: twoDaysAgo,
+          fine_amount: 50,
+          fine_settled_at: new Date(now - 86_400_000).toISOString(),
+        },
+      ]);
+
+      const cleanRes = await resolveScan({ scanValue: 'LIB-2001' });
+      expect(cleanRes.success).toBe(true);
+      if (cleanRes.success && cleanRes.data.type === 'student') {
+        expect(cleanRes.data.data.block).toEqual({ overdueCount: 0, receivableTotal: 0 });
+      }
+    });
+
+    it('blocks checkout for past-due ACTIVE and receivable fines when no overrideReason is provided', async () => {
+      const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+      supaMock.setTableResponse('library_cards', { user_id: 'student-1' });
+      supaMock.setTableResponse('profiles', { status: 'ACTIVE', full_name: 'Maria Clara' });
+      supaMock.setTableResponse('system_settings', { value: '5' });
+
+      // Past-due ACTIVE + unsettled receivable
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'b-past-active',
+          status: 'ACTIVE',
+          due_date: twoDaysAgo,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+      ]);
+
+      const pastActiveRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+      });
+      expect(pastActiveRes).toEqual({
+        success: false,
+        error: 'User has 1 overdue book(s) and ₱10.00 in unpaid fines. Please settle them before borrowing more.',
+      });
+      expect(adminMock.rpc).not.toHaveBeenCalled();
+
+      // Returned with unsettled receivable fine only
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'b-receivable',
+          status: 'RETURNED',
+          due_date: twoDaysAgo,
+          returned_at: new Date().toISOString(),
+          fine_amount: 30,
+          fine_settled_at: null,
+        },
+      ]);
+
+      const receivableRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+      });
+      expect(receivableRes).toEqual({
+        success: false,
+        error: 'User has ₱30.00 in unpaid fines. Please settle them before borrowing more.',
+      });
+      expect(adminMock.rpc).not.toHaveBeenCalled();
+    });
+
+    it('enforces overrideReason validation, role permissions, and writes checkout_override audit row', async () => {
+      const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+      supaMock.setTableResponse('library_cards', { user_id: 'student-1' });
+      supaMock.setTableResponse('profiles', { status: 'ACTIVE', full_name: 'Maria Clara' });
+      supaMock.setTableResponse('system_settings', { value: '5' });
+      supaMock.setTableResponse('borrowing_records', [
+        {
+          id: 'b-overdue',
+          status: 'OVERDUE',
+          due_date: twoDaysAgo,
+          returned_at: null,
+          fine_amount: null,
+          fine_settled_at: null,
+        },
+        {
+          id: 'b-receivable',
+          status: 'RETURNED',
+          due_date: twoDaysAgo,
+          returned_at: new Date().toISOString(),
+          fine_amount: 25,
+          fine_settled_at: null,
+        },
+      ]);
+
+      // 1. Short overrideReason rejected by validation
+      const shortRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+        overrideReason: '  too short ',
+      });
+      expect(shortRes.success).toBe(false);
+      if (!shortRes.success) {
+        expect(shortRes.error).toBe('Validation failed');
+        expect(shortRes.validationErrors?.overrideReason).toBeDefined();
+      }
+      expect(adminMock.rpc).not.toHaveBeenCalled();
+
+      // 2. Too-long overrideReason (> 300 chars) rejected by validation
+      const longRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+        overrideReason: 'a'.repeat(301),
+      });
+      expect(longRes.success).toBe(false);
+      if (!longRes.success) {
+        expect(longRes.error).toBe('Validation failed');
+        expect(longRes.validationErrors?.overrideReason).toBeDefined();
+      }
+
+      // 3. library_staff cannot override even with valid reason
+      mockGetMe.mockResolvedValueOnce(
+        makeStaffContext(supaMock.client, { id: 'sa-1', role: 'library_staff' })
+      );
+      const saRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+        overrideReason: 'Patron promised to pay tomorrow morning',
+      });
+      expect(saRes).toEqual({
+        success: false,
+        error: 'Only librarians and super admins can override borrowing blocks.',
+      });
+      expect(adminMock.rpc).not.toHaveBeenCalled();
+      expect(mockLogAuditActivity).not.toHaveBeenCalled();
+
+      // 4. librarian can override and writes checkout_override audit row
+      mockGetMe.mockResolvedValueOnce(
+        makeStaffContext(supaMock.client, { id: 'lib-1', role: 'librarian' })
+      );
+      adminMock.setRpcResponse(
+        {
+          ok: true,
+          borrowing_id: 'borrow-override-1',
+          book_title: 'Clean Code',
+          student_name: 'Maria Clara',
+          due_date: '2026-12-01T00:00:00.000Z',
+        },
+        null,
+        'process_qr_checkout'
+      );
+
+      const libRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+        overrideReason: '  Approved by librarian for thesis defense  ',
+      });
+      expect(libRes.success).toBe(true);
+      expect(adminMock.rpc).toHaveBeenCalledTimes(1);
+      expect(mockLogAuditActivity).toHaveBeenCalledWith(
+        'lib-1',
+        'borrowing_record',
+        'borrow-override-1',
+        'checkout_override',
+        'Approved by librarian for thesis defense',
+        expect.objectContaining({
+          studentCardQr: 'LIB-1001',
+          bookQr: 'COPY-001',
+          student_user_id: 'student-1',
+          studentName: 'Maria Clara',
+          bookTitle: 'Clean Code',
+          overdueCount: 1,
+          receivableTotal: 35,
+        }),
+        { blocked: true, overdueCount: 1, receivableTotal: 35 },
+        { overridden: true, reason: 'Approved by librarian for thesis defense' }
+      );
+
+      // 5. super_admin can override as well
+      vi.clearAllMocks();
+      mockGetMe.mockResolvedValueOnce(
+        makeStaffContext(supaMock.client, { id: 'admin-1', role: 'super_admin' })
+      );
+      mockCreateAdminClient.mockReturnValue(adminMock.client);
+      mockLogAuditActivity.mockResolvedValue(undefined);
+      mockSendNotification.mockResolvedValue(undefined);
+      adminMock.setRpcResponse(
+        {
+          ok: true,
+          borrowing_id: 'borrow-override-2',
+          book_title: 'Clean Code',
+          student_name: 'Maria Clara',
+          due_date: '2026-12-01T00:00:00.000Z',
+        },
+        null,
+        'process_qr_checkout'
+      );
+
+      const adminRes = await checkoutBook({
+        studentCardQr: 'LIB-1001',
+        bookQr: 'COPY-001',
+        overrideReason: 'Super admin emergency checkout approval',
+      });
+      expect(adminRes.success).toBe(true);
+      expect(mockLogAuditActivity).toHaveBeenCalledWith(
+        'admin-1',
+        'borrowing_record',
+        'borrow-override-2',
+        'checkout_override',
+        'Super admin emergency checkout approval',
+        expect.objectContaining({
+          student_user_id: 'student-1',
+          overdueCount: 1,
+          receivableTotal: 35,
+        }),
+        expect.anything(),
+        expect.anything()
+      );
     });
 
     it('propagates RPC error and maps manual not-found RPC failure', async () => {
@@ -579,6 +934,9 @@ describe('circulation server actions', () => {
       expect(borrowBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           fine_settled_at: expect.any(String),
+          fine_resolution: 'PAID',
+          fine_remarks: null,
+          fine_settled_by: 'staff-1',
           updated_at: expect.any(String),
         })
       );
@@ -588,13 +946,73 @@ describe('circulation server actions', () => {
         'book_copy',
         'copy-1',
         'return',
-        "Returned book 'Design Patterns' from Maria Clara (QR: COPY-002) — settled PHP 25.00 fine",
+        "Returned book 'Design Patterns' from Maria Clara (QR: COPY-002) — Paid PHP 25.00 fine",
         expect.objectContaining({
           book_id: 'book-2',
           book_copy_id: 'copy-1',
           student_user_id: 'student-1',
           fineAmount: 25,
           fineSettled: true,
+          fineResolution: 'PAID',
+          fineRemarks: null,
+        }),
+        { status: 'BORROWED' },
+        { status: 'RETURNED' }
+      );
+    });
+
+    it('supports CONDONED return settlement with >= 5 char remarks and rejects CONDONED without remarks', async () => {
+      const invalidRes = await returnBook({
+        bookQr: 'COPY-002',
+        settleFine: true,
+        resolution: 'CONDONED',
+        remarks: 'abc',
+      });
+      expect(invalidRes.success).toBe(false);
+      expect(invalidRes.error).toBe('Validation failed');
+      expect(adminMock.rpc).not.toHaveBeenCalled();
+
+      supaMock.setTableResponse('book_copies', { id: 'copy-1', book_id: 'book-2' });
+      supaMock.setTableResponse('borrowing_records', { user_id: 'student-1' });
+      adminMock.setTableResponse('borrowing_records', null, null);
+      adminMock.setRpcResponse(
+        {
+          ok: true,
+          borrowing_id: 'borrow-condone',
+          book_title: 'Clean Architecture',
+          student_name: 'Maria Clara',
+          reservation_ready: false,
+          fine_amount: 30,
+          overdue_days: 6,
+        },
+        null,
+        'process_qr_return'
+      );
+
+      const okRes = await returnBook({
+        bookQr: 'COPY-002',
+        settleFine: true,
+        resolution: 'CONDONED',
+        remarks: '  Typhoon closure waiver  ',
+      });
+      expect(okRes.success).toBe(true);
+      expect(adminMock.getTableBuilder('borrowing_records').update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fine_settled_at: expect.any(String),
+          fine_resolution: 'CONDONED',
+          fine_remarks: 'Typhoon closure waiver',
+          fine_settled_by: 'staff-1',
+        })
+      );
+      expect(mockLogAuditActivity).toHaveBeenCalledWith(
+        'staff-1',
+        'book_copy',
+        'copy-1',
+        'return',
+        "Returned book 'Clean Architecture' from Maria Clara (QR: COPY-002) — Condoned PHP 30.00 fine — Remarks: Typhoon closure waiver",
+        expect.objectContaining({
+          fineResolution: 'CONDONED',
+          fineRemarks: 'Typhoon closure waiver',
         }),
         { status: 'BORROWED' },
         { status: 'RETURNED' }

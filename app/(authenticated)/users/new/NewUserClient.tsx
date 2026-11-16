@@ -11,16 +11,19 @@ import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section } from "@/components/settings/SettingsShared";
 import { FieldGroup } from "@/components/common/FieldGroup";
+import { ROLE_LABELS } from "@/components/common/RoleBadge";
 
 export function NewUserClient({ currentRole }: { currentRole?: string }) {
   const router = useRouter();
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("student");
+  const [inviteRole, setInviteRole] = useState("patron");
+  const [patronType, setPatronType] = useState<"student" | "faculty">("student");
   const [inviteDept, setInviteDept] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const isLibrarian = currentRole === "librarian";
   const isSuperAdmin = currentRole === "super_admin";
+  const showStudentFields = inviteRole !== "patron" || patronType !== "faculty";
 
   const isDirty = inviteEmail.length > 0 || inviteDept.length > 0;
 
@@ -31,10 +34,12 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
     setIsSaving(true);
     try {
       const email = inviteEmail.trim().toLowerCase();
+      const effectivePatronType = inviteRole === "patron" ? patronType : "student";
       const res = await inviteUser({
         email,
         role: inviteRole,
-        department: inviteDept.trim() || undefined,
+        patron_type: effectivePatronType,
+        department: showStudentFields ? (inviteDept.trim() || undefined) : undefined,
       });
 
       if (!res.success) {
@@ -84,27 +89,42 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
           </Section>
           <FieldGroup label="Assign Role">
             <Select value={inviteRole} onValueChange={setInviteRole} disabled={isLibrarian}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Assign Role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {!isLibrarian && <SelectItem value="librarian">Librarian</SelectItem>}
-                {!isLibrarian && <SelectItem value="student_assistant">Staff / SA</SelectItem>}
-                <SelectItem value="student">Student</SelectItem>
-                {isSuperAdmin && <SelectItem value="super_admin">Admin</SelectItem>}
+                {!isLibrarian && <SelectItem value="librarian">{ROLE_LABELS.librarian}</SelectItem>}
+                {!isLibrarian && <SelectItem value="library_staff">{ROLE_LABELS.library_staff}</SelectItem>}
+                <SelectItem value="patron">{ROLE_LABELS.patron}</SelectItem>
+                {isSuperAdmin && <SelectItem value="super_admin">{ROLE_LABELS.super_admin}</SelectItem>}
               </SelectContent>
             </Select>
           </FieldGroup>
-          <FieldGroup label="Academic Program / Department">
-            <Input
-              type="text"
-              name="department"
-              autoComplete="organization-title"
-              value={inviteDept}
-              onChange={(e) => setInviteDept(e.target.value)}
-              placeholder="e.g. Computer Science"
-            />
-          </FieldGroup>
+          {inviteRole === "patron" && (
+            <FieldGroup label="Patron Type">
+              <Select value={patronType} onValueChange={(v) => setPatronType(v as "student" | "faculty")}>
+                <SelectTrigger aria-label="Patron Type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="faculty">Faculty</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldGroup>
+          )}
+          {showStudentFields && (
+            <FieldGroup label="Academic Program / Department">
+              <Input
+                type="text"
+                name="department"
+                autoComplete="organization-title"
+                value={inviteDept}
+                onChange={(e) => setInviteDept(e.target.value)}
+                placeholder="e.g. Computer Science"
+              />
+            </FieldGroup>
+          )}
           <div className="pt-4 border-t mt-6 flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => router.push('/users')} disabled={isSaving}>
               Cancel

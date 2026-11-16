@@ -1,8 +1,11 @@
 import { z } from "zod";
 
+export const PatronTypeSchema = z.enum(["student", "faculty"]);
+
 export const UserCreateSchema = z.object({
   email: z.string().trim().email("Valid email is required"),
   role: z.string().optional(),
+  patron_type: PatronTypeSchema.optional().default("student"),
   department: z.string().trim().optional(),
 });
 
@@ -11,13 +14,31 @@ export const UserPatchSchema = z.object({
   name: z.string().trim().optional(),
   email: z.string().trim().email().optional(),
   role: z.string().optional(),
+  patron_type: PatronTypeSchema.optional(),
   status: z.string().optional(),
-  department: z.string().trim().optional(),
+  department: z.string().trim().nullable().optional(),
   student_id: z.string().trim().nullable().optional(),
   permissions: z.record(z.string(), z.boolean()).or(z.array(z.string())).optional(),
   address: z.string().trim().nullable().optional(),
   phone: z.string().trim().nullable().optional(),
 });
+
+export const OnboardingSchema = z
+  .object({
+    address: z.string().trim().min(1, "Address is required"),
+    phone: z.string().trim().min(1, "Contact number is required"),
+    patron_type: PatronTypeSchema.optional().default("student"),
+    department: z.string().trim().optional().nullable(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.patron_type === "student" && !val.department?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["department"],
+        message: "Academic program is required for students",
+      });
+    }
+  });
 
 export const CategoryCreateSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),

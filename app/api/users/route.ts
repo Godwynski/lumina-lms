@@ -13,6 +13,7 @@ const UserPermissionsSchema = z
     manage_circulation: z.boolean().optional(),
     manage_attendance: z.boolean().optional(),
     view_admin_dashboard: z.boolean().optional(),
+    manage_inventory: z.boolean().optional(),
   })
   .strict();
 
@@ -146,13 +147,21 @@ export const PATCH = withAuthApi(
       updates.status = nextStatus;
     }
 
+    if (
+      body.patron_type &&
+      Object.prototype.hasOwnProperty.call(profile, "patron_type")
+    ) {
+      updates.patron_type = body.patron_type;
+    }
+
+    const effectivePatronType = body.patron_type ?? profile.patron_type;
     const nextDepartment =
       typeof body.department === "string" ? body.department.trim() : null;
     if (
-      nextDepartment !== null &&
+      body.department !== undefined &&
       Object.prototype.hasOwnProperty.call(profile, "department")
     ) {
-      updates.department = nextDepartment || "General";
+      updates.department = nextDepartment || (effectivePatronType === "faculty" ? null : "General");
     }
 
     if (body.permissions !== undefined) {

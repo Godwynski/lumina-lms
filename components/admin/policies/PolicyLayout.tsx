@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { CategoryManagement } from "../CategoryManagement";
 import { PolicySimulationPanel } from "../PolicySimulationPanel";
 import { PolicyField } from "./PolicyField";
-import { AnnualResetTool, RunMaintenanceTool, TestEmailTool } from "../../settings/SettingsShared";
+import { AnnualResetTool, ArchiveLogsTool, RunMaintenanceTool, TestEmailTool } from "../../settings/SettingsShared";
 import { SystemAnnouncement } from "../system-announcement";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -431,6 +431,9 @@ export function PolicyLayout({
                 <div className="space-y-6">
                   <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
                     <AnnualResetTool />
+                  </div>
+                  <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
+                    <ArchiveLogsTool />
                   </div>
                   <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
                     <RunMaintenanceTool />

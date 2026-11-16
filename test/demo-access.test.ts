@@ -30,9 +30,9 @@ describe('demo identities', () => {
   });
 
   it('gives the student assistant the permissions required by staff navigation', () => {
-    const account = DEMO_ACCOUNTS.find(a => a.role === 'student_assistant')!;
+    const account = DEMO_ACCOUNTS.find(a => a.role === 'library_staff')!;
     for (const permissionKey of ['manage_circulation', 'manage_attendance', 'view_admin_dashboard'] as const) {
-      expect(hasPermission(account.role, { href: '/', label: 'Staff', minRole: 'student_assistant', permissionKey },
+      expect(hasPermission(account.role, { href: '/', label: 'Staff', minRole: 'library_staff', permissionKey },
         { status: 'ACTIVE', permissions: account.permissions })).toBe(true);
     }
   });
@@ -40,7 +40,7 @@ describe('demo identities', () => {
 
 describe('demo login', () => {
   afterEach(() => vi.unstubAllEnvs());
-  const account = DEMO_ACCOUNTS.find(a => a.role === 'student')!;
+  const account = DEMO_ACCOUNTS.find(a => a.role === 'patron')!;
   const request = (body: unknown = { email: account.email }) => new Request('http://localhost/api/demo-login', {
     method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' },
   });
@@ -60,8 +60,8 @@ describe('demo login', () => {
     expect((await POST(request())).status).toBe(200);
   });
   it('allows login after a demo account role or permissions change', async () => {
-    const assistant = DEMO_ACCOUNTS.find(a => a.role === 'student_assistant')!;
-    profile.single.mockResolvedValue({ data: { role: 'student', permissions: {} }, error: null });
+    const assistant = DEMO_ACCOUNTS.find(a => a.role === 'library_staff')!;
+    profile.single.mockResolvedValue({ data: { role: 'patron', permissions: {} }, error: null });
     expect((await POST(request({ email: assistant.email }))).status).toBe(200);
     expect(client.auth.signOut).not.toHaveBeenCalled();
   });

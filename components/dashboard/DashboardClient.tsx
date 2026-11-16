@@ -33,6 +33,7 @@ import { LiveActivityTicker } from './LiveActivityTicker';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { ActivitySection } from './ActivitySection';
 import { SupportSection } from './SupportSection';
+import { ROLE_LABELS, getRoleLabel } from '@/components/common/RoleBadge';
 
 const MyCardContainer = dynamic(() => import('@/components/library/MyCardContainer'), {
   ssr: false,
@@ -128,7 +129,7 @@ export function DashboardClient({
 
   useEffect(() => {
     // Unique channel name to avoid collisions
-    const isStaff = role === 'super_admin' || role === 'librarian' || role === 'student_assistant';
+    const isStaff = role === 'super_admin' || role === 'librarian' || role === 'library_staff';
     const channelName = `dashboard-${user.id}-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -207,7 +208,7 @@ export function DashboardClient({
       const expiresAt = studentCardData?.expires_at || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
 
       card = {
-        fullName: profileData.full_name || "Student",
+        fullName: profileData.full_name || ROLE_LABELS.patron,
         studentId: resolvedStudentId || profileData.student_id || "N/A",
         cardNumber: studentCardData?.card_number || "Pending assignment",
         department: profileData.department || "General",
@@ -218,7 +219,7 @@ export function DashboardClient({
         qrUrl: null, // signed URL is loaded by MyCardContainer (the library-cards bucket is private)
         address: profileData.address || undefined,
         phone: profileData.phone || undefined,
-        roleLabel: role ? role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Student",
+        roleLabel: getRoleLabel(role, ROLE_LABELS.patron),
       };
 
       if (faqRows && faqRows.length > 0) {
@@ -258,8 +259,8 @@ export function DashboardClient({
     return inventoryData.data?.find(b => b.id === selectedBookId);
   }, [selectedBookId, reservations, activeBorrowsList, inventoryData.data]);
 
-  const hasAnyPermission = role === "student_assistant"
-    ? !!(profileData?.permissions?.manage_circulation || profileData?.permissions?.manage_attendance || profileData?.permissions?.view_admin_dashboard)
+  const hasAnyPermission = role === "library_staff"
+    ? !!(profileData?.permissions?.manage_circulation || profileData?.permissions?.manage_attendance || profileData?.permissions?.view_admin_dashboard || profileData?.permissions?.manage_inventory)
     : true;
 
   // =========================================================================
@@ -325,7 +326,7 @@ export function DashboardClient({
         icon: ScrollText,
         color: "group-hover:border-primary/30",
         iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: role === 'super_admin',
+        show: role === 'super_admin' || role === 'librarian',
       },
       {
         title: "Settings & Policies",
@@ -514,6 +515,25 @@ export function DashboardClient({
           ))}
         </section>
 
+        {/* ==================== MY LIBRARY CARD (ALL ROLES) ==================== */}
+        <section aria-label="My Library Card" className="space-y-3">
+          <Card className="border border-border/20 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden relative p-5 sm:p-7 rounded-xl">
+            <div className="flex items-center gap-2 border-b border-border/10 pb-3 mb-4">
+              <Library size={14} className="text-primary" />
+              <h2 className="text-xs font-black uppercase tracking-wider text-muted-foreground">My Library Card</h2>
+            </div>
+            {studentCard ? (
+              <MyCardContainer initialData={studentCard} variant="dashboard" />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Library size={36} className="text-muted-foreground/20 mb-2" />
+                <p className="text-sm font-bold text-muted-foreground">No Digital Card Available</p>
+                <p className="text-xs text-muted-foreground mt-1">Your library card is being provisioned.</p>
+              </div>
+            )}
+          </Card>
+        </section>
+
         {/* ==================== RECENTLY CATALOGED BOOKS ==================== */}
         <section className="space-y-3">
           <div className="border border-border/20 bg-card/30 backdrop-blur-sm rounded-xl p-4 shadow-sm">
@@ -566,7 +586,7 @@ export function DashboardClient({
   // =========================================================================
   // VIEW 2: UNIFIED STUDENT DASHBOARD (STUDENT & ACTIVE STUDENT ASSISTANTS)
   // =========================================================================
-  const isAssistant = role === "student_assistant" && profileData?.status?.toUpperCase() === "ACTIVE" && hasAnyPermission;
+  const isAssistant = role === "library_staff" && profileData?.status?.toUpperCase() === "ACTIVE" && hasAnyPermission;
   const hasCirculationPerm = !!profileData?.permissions?.manage_circulation;
   const hasAttendancePerm = !!profileData?.permissions?.manage_attendance;
 

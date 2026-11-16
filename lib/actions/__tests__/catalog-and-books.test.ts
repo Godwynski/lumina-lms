@@ -125,18 +125,31 @@ describe('Catalog & Books Server Actions', () => {
       setAuthUser(
         serverClientHelper,
         { id: 'stu-1' },
-        { id: 'stu-1', role: 'student', status: 'ACTIVE' }
+        { id: 'stu-1', role: 'patron', status: 'ACTIVE' }
       );
       await expect(assertStaffCatalogAccess(true)).rejects.toThrow('Unauthorized');
     });
 
-    it('denies student_assistant when allowAssistants is false, allows when true', async () => {
+    it('denies library_staff without manage_inventory, allows when manage_inventory === true and allowAssistants is true', async () => {
       setAuthUser(
         serverClientHelper,
         { id: 'sa-1' },
-        { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' }
+        { id: 'sa-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_circulation: true } }
       );
 
+      await expect(assertStaffCatalogAccess(false)).rejects.toThrow(
+        'Access denied: Inventory management is restricted to authorized staff roles.'
+      );
+      await expect(assertStaffCatalogAccess(true)).rejects.toThrow(
+        'Access denied: Inventory management is restricted to authorized staff roles.'
+      );
+
+      setAuthUser(
+        serverClientHelper,
+        { id: 'sa-1' },
+        { id: 'sa-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_inventory: true } }
+      );
+      serverClientHelper.setTableResponse('books', { id: 'book-1', title: 'Admin Book' }, null);
       await expect(assertStaffCatalogAccess(false)).rejects.toThrow(
         'Access denied: Inventory management is restricted to authorized staff roles.'
       );
@@ -385,15 +398,23 @@ describe('Catalog & Books Server Actions', () => {
       is_active: true,
     };
 
-    it('getBooks enforces staff access (including active student_assistant) and maps sort modes', async () => {
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+    it('getBooks enforces staff access (including active library_staff) and maps sort modes', async () => {
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       await expect(getBooks()).rejects.toThrow('Unauthorized');
 
       setAuthUser(
         serverClientHelper,
         { id: 'sa-1' },
-        { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' }
+        { id: 'sa-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_inventory: false } }
       );
+      await expect(getBooks()).rejects.toThrow('Access denied');
+
+      setAuthUser(
+        serverClientHelper,
+        { id: 'sa-1' },
+        { id: 'sa-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_inventory: true } }
+      );
+      serverClientHelper.setTableResponse('books', { id: 'book-1', title: 'Admin Book' }, null);
       serverClientHelper.setTableResponse('books', [{ id: 'b1', title: 'Clean' }], null, 1);
 
       const res = await getBooks('', undefined, 2, 5, 'availability_desc', 'ARCHIVED');
@@ -411,7 +432,7 @@ describe('Catalog & Books Server Actions', () => {
         error: 'Authentication required',
       });
 
-      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' });
       expect(await createBook({ bookData: validBookData, copiesCount: 1 })).toEqual({
         success: false,
         error: 'Unauthorized access',
@@ -682,7 +703,7 @@ describe('Catalog & Books Server Actions', () => {
 
       // Archived book is hidden for students, visible to staff via fallback query, and propagates DB error
       safeClientHelper.setTableResponse('books', null, null);
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       const studentArchived = await getBookPublicDetails('book-archived');
       expect(studentArchived.book).toBeNull();
 
@@ -697,10 +718,14 @@ describe('Catalog & Books Server Actions', () => {
     });
 
     it('getBookAdminDetails enforces staff access and normalizes active reservations onto copies', async () => {
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       await expect(getBookAdminDetails('book-1')).rejects.toThrow('Unauthorized');
 
-      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      setAuthUser(
+        serverClientHelper,
+        { id: 'sa-1' },
+        { id: 'sa-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_inventory: true } }
+      );
       serverClientHelper.setTableResponse('books', { id: 'book-1', title: 'Admin Book' }, null);
       serverClientHelper.setTableResponse('book_copies', [
         {
@@ -746,7 +771,7 @@ describe('Catalog & Books Server Actions', () => {
 
   describe('Import / Export Actions (lib/actions/catalog/import-export.ts)', () => {
     it('getBooksForExport enforces librarian/super_admin access and returns books', async () => {
-      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' });
       await expect(getBooksForExport()).rejects.toThrow('Access denied');
 
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
@@ -758,6 +783,26 @@ describe('Catalog & Books Server Actions', () => {
       serverClientHelper.setTableResponse('books', null, { message: 'Export failed' });
       await expect(getBooksForExport()).rejects.toThrow('Failed to fetch books for export: Export failed');
       errSpy.mockRestore();
+    });
+
+    it('getBooksForExport applies query, categoryId, status, and sort filters when provided', async () => {
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+      const filtered = [{ id: 'b2', title: 'Clean Architecture' }];
+      serverClientHelper.setTableResponse('books', filtered, null);
+
+      const res = await getBooksForExport({
+        query: 'Clean',
+        categoryId: 'cat-1,cat-2',
+        status: 'ARCHIVED',
+        sort: 'title_desc',
+      });
+
+      expect(res).toEqual(filtered);
+      const booksBuilder = serverClientHelper.getTableBuilder('books');
+      expect(booksBuilder.eq).toHaveBeenCalledWith('is_active', false);
+      expect(booksBuilder.or).toHaveBeenCalledWith(expect.stringContaining('title.ilike.%Clean%'));
+      expect(booksBuilder.in).toHaveBeenCalledWith('category_id', ['cat-1', 'cat-2']);
+      expect(booksBuilder.order).toHaveBeenCalledWith('title', { ascending: false });
     });
 
     it('batchImportBooks rejects > 500 rows and propagates initial duplicate-check DB errors', async () => {
@@ -844,11 +889,11 @@ describe('Catalog & Books Server Actions', () => {
     });
 
     it('lookupAndImportISBN enforces staff access, validates ISBN format, and queues catalog_import_jobs', async () => {
-      // RBAC: students and student_assistants are rejected
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      // RBAC: students and library_staffs are rejected
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       await expect(lookupAndImportISBN('9780131103627')).rejects.toThrow('Unauthorized');
 
-      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' });
       await expect(lookupAndImportISBN('9780131103627')).rejects.toThrow(
         'Access denied: Inventory management is restricted to authorized staff roles.'
       );
@@ -934,10 +979,10 @@ describe('Catalog & Books Server Actions', () => {
     });
 
     it('fetchISBNDetails enforces staff access and delegates to lookupISBN', async () => {
-      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'student', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'stu-1' }, { id: 'stu-1', role: 'patron', status: 'ACTIVE' });
       await expect(fetchISBNDetails('9780131103627')).rejects.toThrow('Unauthorized');
 
-      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'student_assistant', status: 'ACTIVE' });
+      setAuthUser(serverClientHelper, { id: 'sa-1' }, { id: 'sa-1', role: 'library_staff', status: 'ACTIVE' });
       await expect(fetchISBNDetails('9780131103627')).rejects.toThrow(
         'Access denied: Inventory management is restricted to authorized staff roles.'
       );
@@ -1021,6 +1066,59 @@ describe('Catalog & Books Server Actions', () => {
       const cats = [{ id: 'c1', name: 'Literature' }];
       safeClientHelper.setTableResponse('categories', cats, null);
       expect(await getCategoriesCached()).toEqual(cats);
+    });
+  });
+
+  describe('WP10 Part B: Inventory permission & role enforcement', () => {
+    it('rejects suspended library_staff with manage_inventory and active library_staff with only circulation/attendance across catalog read, write, export, and import actions', async () => {
+      const deniedProfiles = [
+        { id: 'patron-1', role: 'patron', status: 'ACTIVE', permissions: { manage_inventory: true } },
+        {
+          id: 'staff-circ-att',
+          role: 'library_staff',
+          status: 'ACTIVE',
+          permissions: { manage_circulation: true, manage_attendance: true, manage_inventory: false },
+        },
+        {
+          id: 'staff-suspended',
+          role: 'library_staff',
+          status: 'SUSPENDED',
+          permissions: { manage_inventory: true },
+        },
+      ] as const;
+
+      for (const profile of deniedProfiles) {
+        setAuthUser(serverClientHelper, { id: profile.id }, { ...profile });
+
+        await expect(assertStaffCatalogAccess(true)).rejects.toThrow();
+        await expect(getBooks()).rejects.toThrow();
+        await expect(getBookAdminDetails('book-1')).rejects.toThrow();
+        await expect(getBooksForExport()).rejects.toThrow();
+        await expect(batchImportBooks([{ title: 'T', author: 'A' }])).rejects.toThrow();
+        await expect(lookupAndImportISBN('9780131103627')).rejects.toThrow();
+        await expect(fetchISBNDetails('9780131103627')).rejects.toThrow();
+
+        const createRes = await createBook({
+          bookData: { title: 'T', author: 'A', isbn: '9780131103627', is_active: true },
+          copiesCount: 1,
+        });
+        expect(createRes.success).toBe(false);
+
+        const updateRes = await updateBook({ id: 'book-1', bookData: { title: 'New' } });
+        expect(updateRes.success).toBe(false);
+
+        const delRes = await softDeleteBook('book-1');
+        expect(delRes.success).toBe(false);
+
+        const restoreRes = await restoreBook('book-1');
+        expect(restoreRes.success).toBe(false);
+
+        const addCopyRes = await addBookCopies({ bookId: 'book-1', copiesCount: 1 });
+        expect(addCopyRes.success).toBe(false);
+
+        const copyStatusRes = await updateBookCopyStatus({ id: 'copy-1', status: 'MAINTENANCE' });
+        expect(copyStatusRes.success).toBe(false);
+      }
     });
   });
 });

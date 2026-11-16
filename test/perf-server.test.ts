@@ -83,7 +83,7 @@ import { getMe, getPreferences } from '@/lib/auth-helpers';
 
 function setupStaffAuth(
   helper: MockSupabaseClientHelper,
-  role: 'super_admin' | 'librarian' | 'student' = 'librarian',
+  role: 'super_admin' | 'librarian' | 'patron' = 'librarian',
   userId = 'user-1'
 ) {
   helper.auth.getUser.mockResolvedValue({
@@ -365,7 +365,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
 
   it('Item 3b: AttendanceClient personal view debounces realtime bursts and fetches personal history', async () => {
     vi.useFakeTimers();
-    setupStaffAuth(serverSupa, 'student', 'stu-9');
+    setupStaffAuth(serverSupa, 'patron', 'stu-9');
     serverSupa.setTableResponse('attendance', []);
 
     const handlers: Array<() => void> = [];
@@ -554,7 +554,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
   });
 
   it('Item 5: DashboardContent does not query ui_preferences', async () => {
-    setupStaffAuth(serverSupa, 'student', 'stu-1');
+    setupStaffAuth(serverSupa, 'patron', 'stu-1');
     serverSupa.setTableResponse('library_cards', { card_number: 'LC-1', status: 'ACTIVE', expires_at: '2027-01-01' });
     serverSupa.setTableResponse('system_settings', []);
     serverSupa.setTableResponse('attendance', []);
@@ -571,9 +571,9 @@ describe('P1 Server Data & Caching Optimizations', () => {
 
   it('Item 6: getMe skips ui_preferences; getPreferences queries profiles and ui_preferences in parallel after getUser', async () => {
     // 1. getMe() alone does NOT query ui_preferences
-    setupStaffAuth(serverSupa, 'student', 'stu-1');
+    setupStaffAuth(serverSupa, 'patron', 'stu-1');
     const me = await getMe();
-    expect(me?.role).toBe('student');
+    expect(me?.role).toBe('patron');
     expect(serverSupa.from).toHaveBeenCalledWith('profiles');
     expect(serverSupa.from).not.toHaveBeenCalledWith('ui_preferences');
 
@@ -590,7 +590,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
     const prefsBuilder = createMockQueryBuilder({ preferences: { compact: true } });
 
     serverSupa.auth.getUser.mockResolvedValue({
-      data: { user: { id: 'stu-2', app_metadata: { role: 'student' } } },
+      data: { user: { id: 'stu-2', app_metadata: { role: 'patron' } } },
       error: null,
     });
     serverSupa.from.mockImplementation((table: string) => {
@@ -610,7 +610,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
     expect(serverSupa.from).toHaveBeenCalledWith('profiles');
     expect(serverSupa.from).toHaveBeenCalledWith('ui_preferences');
 
-    resolveProfile({ data: { id: 'stu-2', role: 'student', status: 'ACTIVE' }, error: null });
+    resolveProfile({ data: { id: 'stu-2', role: 'patron', status: 'ACTIVE' }, error: null });
     expect(await prefsPromise).toEqual({ compact: true });
 
     // 3. Returns {} if profile is missing even when ui_preferences has data

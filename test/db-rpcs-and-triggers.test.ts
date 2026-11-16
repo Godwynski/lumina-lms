@@ -24,6 +24,7 @@ const SUPABASE_PRELUDE = `
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email text UNIQUE,
     raw_user_meta_data jsonb DEFAULT '{}'::jsonb,
+    raw_app_meta_data jsonb DEFAULT '{}'::jsonb,
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
   );
@@ -71,6 +72,8 @@ async function bootLuminaDb(): Promise<PGlite> {
   const db = new PGlite({ extensions: { pg_trgm, uuid_ossp } });
   await db.exec(SUPABASE_PRELUDE);
   await db.exec(SCHEMA_SQL);
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8'));
   return db;
 }
 
@@ -103,7 +106,7 @@ async function createUser(
   opts: {
     email: string;
     fullName: string;
-    role?: 'super_admin' | 'librarian' | 'student_assistant' | 'student';
+    role?: 'super_admin' | 'librarian' | 'library_staff' | 'patron';
     status?: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
     cardStatus?: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
   }
@@ -363,7 +366,11 @@ describe('Circulation RPCs: process_qr_checkout, process_qr_return & release_cop
       `SELECT public.process_qr_checkout($1, $2, $3, NULL, false) AS res`,
       [librarian.id, pendingStudent.cardNumber, copies[2].qr]
     );
-    expect(inactiveAccRes.rows[0].res).toMatchObject({ ok: false, code: 'ACCOUNT_INACTIVE' });
+    expect(inactiveAccRes.rows[0].res).toMatchObject({
+      ok: false,
+      code: 'ACCOUNT_INACTIVE',
+      message: 'Patron account is not active.',
+    });
   });
 
   it('process_qr_checkout fulfills caller READY reservation and blocks other patrons from checking out a RESERVED copy', async () => {
@@ -386,7 +393,11 @@ describe('Circulation RPCs: process_qr_checkout, process_qr_return & release_cop
       `SELECT public.process_qr_checkout($1, $2, $3, NULL, false) AS res`,
       [librarian.id, student2.cardNumber, copies[0].qr]
     );
-    expect(blocked.rows[0].res).toMatchObject({ ok: false, code: 'COPY_UNAVAILABLE' });
+    expect(blocked.rows[0].res).toMatchObject({
+      ok: false,
+      code: 'COPY_UNAVAILABLE',
+      message: 'This copy is reserved for another patron.',
+    });
 
     // Student1 checks out their READY copy -> reservation becomes FULFILLED
     const fulfilled = await db.query<{ res: Record<string, unknown> }>(
@@ -423,6 +434,44 @@ describe('Circulation RPCs: process_qr_checkout, process_qr_return & release_cop
       [librarian.id, student1.cardNumber, copies[1].qr]
     );
     expect(blocked.rows[0].res).toMatchObject({ ok: false, code: 'LIMIT_EXCEEDED' });
+  });
+
+  it('process_qr_checkout blocks staff self-checkout and allows another staff member to process staff borrowing', async () => {
+    const { copies } = await createBookWithCopies(db, {
+      title: 'Staff Borrowing Book',
+      copyStatuses: ['AVAILABLE'],
+    });
+    const staff2 = await createUser(db, {
+      email: 'staff2@alabang.sti.edu.ph',
+      fullName: 'Library Staff Two',
+      role: 'library_staff',
+      status: 'ACTIVE',
+      cardStatus: 'ACTIVE',
+    });
+
+    // Self-checkout preview & commit both rejected
+    const selfPreview = await db.query<{ res: Record<string, unknown> }>(
+      `SELECT public.process_qr_checkout($1, $2, $3, NULL, true) AS res`,
+      [librarian.id, librarian.cardNumber, copies[0].qr]
+    );
+    expect(selfPreview.rows[0].res).toMatchObject({ ok: false, code: 'SELF_CHECKOUT_FORBIDDEN' });
+
+    const selfCommit = await db.query<{ res: Record<string, unknown> }>(
+      `SELECT public.process_qr_checkout($1, $2, $3, NULL, false) AS res`,
+      [librarian.id, librarian.cardNumber, copies[0].qr]
+    );
+    expect(selfCommit.rows[0].res).toMatchObject({ ok: false, code: 'SELF_CHECKOUT_FORBIDDEN' });
+
+    // A second staff member can check out the book to the librarian
+    const otherStaffCheckout = await db.query<{ res: Record<string, unknown> }>(
+      `SELECT public.process_qr_checkout($1, $2, $3, NULL, false) AS res`,
+      [staff2.id, librarian.cardNumber, copies[0].qr]
+    );
+    expect(otherStaffCheckout.rows[0].res).toMatchObject({
+      ok: true,
+      student_name: 'Librarian User',
+      book_title: 'Staff Borrowing Book',
+    });
   });
 
   it('process_qr_return handles preview, on-time return, Asia/Manila overdue calculation, and fine_amount snapshot immutability', async () => {
@@ -650,7 +699,7 @@ describe('get_borrowing_history_v2', () => {
     sa = await createUser(db, {
       email: 'sa@alabang.sti.edu.ph',
       fullName: 'Assistant',
-      role: 'student_assistant',
+      role: 'library_staff',
       status: 'ACTIVE',
       cardStatus: 'ACTIVE',
     });
@@ -729,8 +778,8 @@ describe('get_borrowing_history_v2', () => {
     // 5. Returned late with settled fine -> shows in RETURNED and SETTLED
     recSettledLateReturnId = (
       await db.query<{ id: string }>(
-        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, returned_at, status, fine_amount, fine_settled_at)
-         VALUES ($1, $2, NOW() - interval '22 days', NOW() - interval '10 days', NOW() - interval '8 days', 'RETURNED', 25.00, NOW() - interval '7 days') RETURNING id`,
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, returned_at, status, fine_amount, fine_settled_at, fine_resolution, fine_remarks)
+         VALUES ($1, $2, NOW() - interval '22 days', NOW() - interval '10 days', NOW() - interval '8 days', 'RETURNED', 25.00, NOW() - interval '7 days', 'PAID', 'Cash receipt #101') RETURNING id`,
         [student1.id, b1.copies[4].id]
       )
     ).rows[0].id;
@@ -864,6 +913,105 @@ describe('get_borrowing_history_v2', () => {
     });
     expect(unauth.rows).toHaveLength(0);
   });
+
+  it('enforces fine_resolution constraints, filters SETTLED by p_resolution, and returns CURRENT borrows overdue-first', async () => {
+    const condonedBook = await createBookWithCopies(db, {
+      title: 'Condoned Fine Book',
+      copyStatuses: ['AVAILABLE'],
+    });
+    const recCondonedId = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (
+           user_id, book_copy_id, borrowed_at, due_date, returned_at, status,
+           fine_amount, fine_settled_at, fine_resolution, fine_remarks, fine_settled_by
+         )
+         VALUES ($1, $2, NOW() - interval '15 days', NOW() - interval '8 days', NOW() - interval '5 days', 'RETURNED',
+           15.00, NOW() - interval '4 days', 'CONDONED', 'Medical excuse approved', $3)
+         RETURNING id`,
+        [student1.id, condonedBook.copies[0].id, sa.id]
+      )
+    ).rows[0].id;
+
+    // Invalid fine_resolution enum value rejected
+    await expect(
+      db.query(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, due_date, status, fine_amount, fine_settled_at, fine_resolution)
+         VALUES ($1, $2, NOW(), 'RETURNED', 10.00, NOW(), 'WAIVED')`,
+        [student1.id, condonedBook.copies[0].id]
+      )
+    ).rejects.toThrow();
+
+    // fine_settled_at without fine_resolution rejected
+    await expect(
+      db.query(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, due_date, status, fine_amount, fine_settled_at)
+         VALUES ($1, $2, NOW(), 'RETURNED', 10.00, NOW())`,
+        [student1.id, condonedBook.copies[0].id]
+      )
+    ).rejects.toThrow();
+
+    // fine_resolution without fine_settled_at rejected
+    await expect(
+      db.query(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, due_date, status, fine_amount, fine_resolution)
+         VALUES ($1, $2, NOW(), 'RETURNED', 10.00, 'PAID')`,
+        [student1.id, condonedBook.copies[0].id]
+      )
+    ).rejects.toThrow();
+
+    // Verify migration backfill logic: dropping pair constraint, inserting legacy settled row, running backfill UPDATE, re-adding constraint
+    await db.exec(`
+      ALTER TABLE public.borrowing_records DROP CONSTRAINT borrowing_records_fine_settlement_pair_check;
+      INSERT INTO public.borrowing_records (id, user_id, book_copy_id, borrowed_at, due_date, returned_at, status, fine_amount, fine_settled_at)
+      VALUES ('00000000-0000-4000-8000-000000000999', '${student2.id}', '${condonedBook.copies[0].id}', NOW() - interval '10 days', NOW() - interval '5 days', NOW() - interval '2 days', 'RETURNED', 15.00, NOW() - interval '1 day');
+      UPDATE public.borrowing_records SET fine_resolution = 'PAID' WHERE fine_settled_at IS NOT NULL AND fine_resolution IS NULL;
+      ALTER TABLE public.borrowing_records ADD CONSTRAINT borrowing_records_fine_settlement_pair_check CHECK (
+        (fine_settled_at IS NULL AND fine_resolution IS NULL)
+        OR (fine_settled_at IS NOT NULL AND fine_resolution IS NOT NULL)
+      );
+    `);
+    const backfilled = await db.query<{ fine_resolution: string }>(
+      `SELECT fine_resolution FROM public.borrowing_records WHERE id = '00000000-0000-4000-8000-000000000999'`
+    );
+    expect(backfilled.rows[0].fine_resolution).toBe('PAID');
+
+    // Filter SETTLED by p_resolution = PAID / CONDONED / all
+    const paidRows = await withRole(db, 'authenticated', sa.id, (tx) =>
+      tx.query<{ id: string; fine_resolution: string; fine_remarks: string | null }>(
+        `SELECT id, fine_resolution, fine_remarks FROM public.get_borrowing_history_v2(NULL, 1, 50, 'SETTLED', NULL, 'PAID')`
+      )
+    );
+    expect(paidRows.rows.every((r) => r.fine_resolution === 'PAID')).toBe(true);
+    expect(paidRows.rows.map((r) => r.id)).toContain(recSettledLateReturnId);
+    expect(paidRows.rows.map((r) => r.id)).not.toContain(recCondonedId);
+
+    const condonedRows = await withRole(db, 'authenticated', sa.id, (tx) =>
+      tx.query<{ id: string; fine_resolution: string; fine_remarks: string; fine_settled_by: string }>(
+        `SELECT id, fine_resolution, fine_remarks, fine_settled_by FROM public.get_borrowing_history_v2(NULL, 1, 50, 'SETTLED', NULL, 'CONDONED')`
+      )
+    );
+    expect(condonedRows.rows).toEqual([
+      {
+        id: recCondonedId,
+        fine_resolution: 'CONDONED',
+        fine_remarks: 'Medical excuse approved',
+        fine_settled_by: sa.id,
+      },
+    ]);
+
+    // p_status = 'CURRENT' for student1 returns past-due ACTIVE and unpaid RETURNED before non-overdue ACTIVE
+    const currentRows = await withRole(db, 'authenticated', student1.id, (tx) =>
+      tx.query<{ id: string }>(
+        `SELECT id FROM public.get_borrowing_history_v2($1, 1, 50, 'CURRENT', NULL, NULL)`,
+        [student1.id]
+      )
+    );
+    expect(currentRows.rows.map((r) => r.id)).toEqual([
+      recUnpaidLateReturnId,
+      recPastDueActiveId,
+      recActiveId,
+    ]);
+  });
 });
 
 describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs', () => {
@@ -888,7 +1036,7 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
     sa = await createUser(db, {
       email: 'sa@alabang.sti.edu.ph',
       fullName: 'Student Assistant',
-      role: 'student_assistant',
+      role: 'library_staff',
       status: 'ACTIVE',
       cardStatus: 'ACTIVE',
     });
@@ -1202,7 +1350,7 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
        FROM public.profiles p JOIN public.library_cards lc ON lc.user_id = p.id`
     );
     for (const row of afterReset.rows) {
-      if (row.role === 'student') {
+      if (row.role === 'patron') {
         expect(row.status).toBe('SUSPENDED');
         expect(row.card_status).toBe('SUSPENDED');
       } else {
@@ -1236,7 +1384,7 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
     );
     expect(emptyReactivate.rows[0].cnt).toBe(0);
 
-    // send_bulk_notifications_by_target: SA rejected; manager sends to students (student + student_assistant) or all
+    // send_bulk_notifications_by_target: SA rejected; manager sends to students (student + library_staff) or all
     await expect(
       withRole(db, 'authenticated', sa.id, (tx) =>
         tx.query(`SELECT public.send_bulk_notifications_by_target('students', 'Hi', 'Body')`)
@@ -1248,7 +1396,7 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
         `SELECT public.send_bulk_notifications_by_target('students', 'Term Start', 'Welcome back') AS cnt`
       )
     );
-    expect(sentStudents.rows[0].cnt).toBe(4); // student1, student2, pendingStudent, and student_assistant (sa)
+    expect(sentStudents.rows[0].cnt).toBe(4); // student1, student2, pendingStudent, and library_staff (sa)
 
     const studentNotifUsers = await db.query<{ user_id: string }>(
       `SELECT user_id FROM public.notifications WHERE title = 'Term Start' ORDER BY user_id`
@@ -1264,7 +1412,7 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
     );
     expect(sentAll.rows[0].cnt).toBe(6);
 
-    // auto_checkout_forgotten_attendance: closes yesterday's Manila attendance at 17:00 Manila, leaves today's open
+    // auto_checkout_forgotten_attendance: closes yesterday's Manila attendance at library_closing_time (default 17:00), leaves today's open
     const yesterdayCheckIn = await db.query<{ id: string }>(
       `INSERT INTO public.attendance (user_id, check_in_at)
        VALUES ($1, (((NOW() AT TIME ZONE 'Asia/Manila')::date - 1) + time '09:30:00') AT TIME ZONE 'Asia/Manila')
@@ -1280,14 +1428,17 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
 
     await db.query(`SELECT public.auto_checkout_forgotten_attendance()`);
 
-    const yesterdayAfter = await db.query<{ notes: string; manila_hour: number }>(
-      `SELECT notes, EXTRACT(HOUR FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_hour
+    const yesterdayAfter = await db.query<{ notes: string; manila_hour: number; manila_min: number }>(
+      `SELECT notes,
+              EXTRACT(HOUR FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_hour,
+              EXTRACT(MINUTE FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_min
        FROM public.attendance WHERE id = $1`,
       [yesterdayCheckIn.rows[0].id]
     );
     expect(yesterdayAfter.rows[0]).toEqual({
-      notes: 'System auto-checkout: forgotten checkout',
+      notes: 'No Log Out',
       manila_hour: 17,
+      manila_min: 0,
     });
 
     const todayAfter = await db.query<{ check_out_at: string | null }>(
@@ -1295,6 +1446,85 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
       [todayCheckIn.rows[0].id]
     );
     expect(todayAfter.rows[0].check_out_at).toBeNull();
+
+    // Custom closing time + check-in after closing time never yields check_out_at < check_in_at
+    await db.query(
+      `UPDATE public.system_settings SET value = '19:30' WHERE key = 'library_closing_time'`
+    );
+    const beforeCustomClosing = await db.query<{ id: string }>(
+      `INSERT INTO public.attendance (user_id, check_in_at)
+       VALUES ($1, (((NOW() AT TIME ZONE 'Asia/Manila')::date - 2) + time '10:00:00') AT TIME ZONE 'Asia/Manila')
+       RETURNING id`,
+      [student1.id]
+    );
+    const afterCustomClosing = await db.query<{ id: string }>(
+      `INSERT INTO public.attendance (user_id, check_in_at)
+       VALUES ($1, (((NOW() AT TIME ZONE 'Asia/Manila')::date - 2) + time '21:15:00') AT TIME ZONE 'Asia/Manila')
+       RETURNING id`,
+      [sa.id]
+    );
+
+    await db.query(`SELECT public.auto_checkout_forgotten_attendance()`);
+
+    const beforeRes = await db.query<{ notes: string; manila_hour: number; manila_min: number; non_negative: boolean }>(
+      `SELECT notes,
+              EXTRACT(HOUR FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_hour,
+              EXTRACT(MINUTE FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_min,
+              (check_out_at >= check_in_at) AS non_negative
+       FROM public.attendance WHERE id = $1`,
+      [beforeCustomClosing.rows[0].id]
+    );
+    expect(beforeRes.rows[0]).toEqual({
+      notes: 'No Log Out',
+      manila_hour: 19,
+      manila_min: 30,
+      non_negative: true,
+    });
+
+    const afterRes = await db.query<{ notes: string; manila_hour: number; manila_min: number; non_negative: boolean; same_ts: boolean }>(
+      `SELECT notes,
+              EXTRACT(HOUR FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_hour,
+              EXTRACT(MINUTE FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_min,
+              (check_out_at >= check_in_at) AS non_negative,
+              (check_out_at = check_in_at) AS same_ts
+       FROM public.attendance WHERE id = $1`,
+      [afterCustomClosing.rows[0].id]
+    );
+    expect(afterRes.rows[0]).toEqual({
+      notes: 'No Log Out',
+      manila_hour: 21,
+      manila_min: 15,
+      non_negative: true,
+      same_ts: true,
+    });
+
+    // Malformed library_closing_time safely falls back to 17:00
+    await db.query(
+      `UPDATE public.system_settings SET value = 'invalid-time' WHERE key = 'library_closing_time'`
+    );
+    const fallbackCheckIn = await db.query<{ id: string }>(
+      `INSERT INTO public.attendance (user_id, check_in_at)
+       VALUES ($1, (((NOW() AT TIME ZONE 'Asia/Manila')::date - 3) + time '08:00:00') AT TIME ZONE 'Asia/Manila')
+       RETURNING id`,
+      [student1.id]
+    );
+    await db.query(`SELECT public.auto_checkout_forgotten_attendance()`);
+    const fallbackRes = await db.query<{ notes: string; manila_hour: number; manila_min: number }>(
+      `SELECT notes,
+              EXTRACT(HOUR FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_hour,
+              EXTRACT(MINUTE FROM (check_out_at AT TIME ZONE 'Asia/Manila'))::int AS manila_min
+       FROM public.attendance WHERE id = $1`,
+      [fallbackCheckIn.rows[0].id]
+    );
+    expect(fallbackRes.rows[0]).toEqual({
+      notes: 'No Log Out',
+      manila_hour: 17,
+      manila_min: 0,
+    });
+    // Restore default closing time
+    await db.query(
+      `UPDATE public.system_settings SET value = '17:00' WHERE key = 'library_closing_time'`
+    );
 
     // get_analytics_summary: SA rejected; librarian/super_admin gets 7d, 30d, 1y summaries
     await expect(
@@ -1333,5 +1563,193 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
       tx.query<{ summary: Record<string, unknown[]> }>(`SELECT public.get_analytics_summary('1y') AS summary`)
     );
     expect(summary1y.rows[0].summary.attendanceTrends.length).toBeGreaterThanOrEqual(12);
+  });
+
+  it('archive_old_logs enforces super_admin, rejects recent cutoffs, and moves only eligible completed rows', async () => {
+    const patron = student1;
+    const patron2 = student2;
+
+    const { copies } = await createBookWithCopies(db, {
+      title: 'Archive Test Book',
+      copyStatuses: ['AVAILABLE', 'AVAILABLE', 'AVAILABLE', 'BORROWED', 'BORROWED', 'LOST'],
+    });
+
+    // Compute a cutoff strictly more than 1 year old and one strictly less than 1 year old in Manila time
+    const datesRes = await db.query<{ valid_cutoff: string; too_recent: string }>(
+      `SELECT
+         (((NOW() AT TIME ZONE 'Asia/Manila')::date - INTERVAL '1 year' - INTERVAL '10 days')::date)::text AS valid_cutoff,
+         (((NOW() AT TIME ZONE 'Asia/Manila')::date - INTERVAL '1 year' + INTERVAL '1 day')::date)::text AS too_recent`
+    );
+    const { valid_cutoff: validCutoff, too_recent: tooRecent } = datesRes.rows[0];
+
+    // 1. Non-super-admin roles & anon denied
+    await expect(
+      withRole(db, 'anon', null, (tx) => tx.query(`SELECT public.archive_old_logs($1::date)`, [validCutoff]))
+    ).rejects.toThrow();
+    for (const actorId of [patron.id, sa.id, librarian.id]) {
+      await expect(
+        withRole(db, 'authenticated', actorId, (tx) => tx.query(`SELECT public.archive_old_logs($1::date)`, [validCutoff]))
+      ).rejects.toThrow(/Unauthorized/);
+    }
+
+    // 2. Cutoff less than 1 year old or null refused
+    await expect(
+      withRole(db, 'authenticated', admin.id, (tx) => tx.query(`SELECT public.archive_old_logs($1::date)`, [tooRecent]))
+    ).rejects.toThrow(/at least 1 year old/);
+    await expect(
+      withRole(db, 'authenticated', admin.id, (tx) => tx.query(`SELECT public.archive_old_logs(NULL::date)`))
+    ).rejects.toThrow(/at least 1 year old/);
+
+    // 3. Seed borrowing_records (eligible vs ineligible)
+    const oldStart = `('${validCutoff}'::date - 30)::timestamp AT TIME ZONE 'Asia/Manila'`;
+    const oldDue = `('${validCutoff}'::date - 16)::timestamp AT TIME ZONE 'Asia/Manila'`;
+    const oldEnd = `('${validCutoff}'::date - 10)::timestamp AT TIME ZONE 'Asia/Manila'`;
+    const afterCutoff = `('${validCutoff}'::date + 2)::timestamp AT TIME ZONE 'Asia/Manila'`;
+
+    // Eligible 1: RETURNED, no fine, before cutoff
+    const brEligibleClean = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, returned_at, status)
+         VALUES ($1, $2, ${oldStart}, ${oldDue}, ${oldEnd}, 'RETURNED') RETURNING id`,
+        [patron.id, copies[0].id]
+      )
+    ).rows[0].id;
+
+    // Eligible 2: RETURNED, settled fine (CONDONED with remarks & settled_by), before cutoff
+    const brEligibleSettled = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (
+           user_id, book_copy_id, borrowed_at, due_date, returned_at, status,
+           fine_amount, fine_settled_at, fine_resolution, fine_remarks, fine_settled_by
+         ) VALUES (
+           $1, $2, ${oldStart}, ${oldDue}, ${oldEnd}, 'RETURNED',
+           25.00, ${oldEnd}, 'CONDONED', 'Medical excuse approved', $3
+         ) RETURNING id`,
+        [patron.id, copies[1].id, librarian.id]
+      )
+    ).rows[0].id;
+
+    // Ineligible 1: RETURNED before cutoff, but UNSETTLED receivable fine
+    const brUnsettled = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (
+           user_id, book_copy_id, borrowed_at, due_date, returned_at, status, fine_amount
+         ) VALUES ($1, $2, ${oldStart}, ${oldDue}, ${oldEnd}, 'RETURNED', 30.00) RETURNING id`,
+        [patron.id, copies[2].id]
+      )
+    ).rows[0].id;
+
+    // Ineligible 2: ACTIVE old loan
+    const brActive = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, status)
+         VALUES ($1, $2, ${oldStart}, ${oldDue}, 'ACTIVE') RETURNING id`,
+        [patron.id, copies[3].id]
+      )
+    ).rows[0].id;
+
+    // Ineligible 3: OVERDUE old loan
+    const brOverdue = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, status)
+         VALUES ($1, $2, ${oldStart}, ${oldDue}, 'OVERDUE') RETURNING id`,
+        [patron.id, copies[4].id]
+      )
+    ).rows[0].id;
+
+    // Ineligible 4: LOST old loan
+    const brLost = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, status)
+         VALUES ($1, $2, ${oldStart}, ${oldDue}, 'LOST') RETURNING id`,
+        [patron.id, copies[5].id]
+      )
+    ).rows[0].id;
+
+    // Ineligible 5: RETURNED on/after cutoff
+    const brRecent = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, returned_at, status)
+         VALUES ($1, $2, ${oldStart}, ${oldDue}, ${afterCutoff}, 'RETURNED') RETURNING id`,
+        [patron2.id, copies[0].id]
+      )
+    ).rows[0].id;
+
+    // 4. Seed attendance (eligible vs ineligible)
+    // Eligible attendance: checked out before cutoff with 'No Log Out' note
+    const attEligible = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.attendance (user_id, check_in_at, check_out_at, notes)
+         VALUES ($1, ${oldStart}, ${oldEnd}, 'No Log Out') RETURNING id`,
+        [patron.id]
+      )
+    ).rows[0].id;
+
+    // Ineligible attendance 1: open check-in (check_out_at IS NULL)
+    const attOpen = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.attendance (user_id, check_in_at)
+         VALUES ($1, ${oldStart}) RETURNING id`,
+        [patron.id]
+      )
+    ).rows[0].id;
+
+    // Ineligible attendance 2: checked out on/after cutoff
+    const attRecent = (
+      await db.query<{ id: string }>(
+        `INSERT INTO public.attendance (user_id, check_in_at, check_out_at)
+         VALUES ($1, ${oldStart}, ${afterCutoff}) RETURNING id`,
+        [patron2.id]
+      )
+    ).rows[0].id;
+
+    // Run RPC as super_admin
+    const res = await withRole(db, 'authenticated', admin.id, (tx) =>
+      tx.query<{ result: { before: string; borrowing_count: number; attendance_count: number; total_count: number } }>(
+        `SELECT public.archive_old_logs($1::date) AS result`,
+        [validCutoff]
+      )
+    );
+
+    expect(res.rows[0].result).toEqual({
+      before: validCutoff,
+      borrowing_count: 2,
+      attendance_count: 1,
+      total_count: 3,
+    });
+
+    // Verify remaining rows in live tables
+    const liveBorrowingIds = (
+      await db.query<{ id: string }>(`SELECT id FROM public.borrowing_records ORDER BY id`)
+    ).rows.map((r) => r.id);
+    expect(new Set(liveBorrowingIds)).toEqual(new Set([brUnsettled, brActive, brOverdue, brLost, brRecent]));
+
+    const liveAttendanceIds = (
+      await db.query<{ id: string }>(`SELECT id FROM public.attendance ORDER BY id`)
+    ).rows.map((r) => r.id);
+    expect(new Set(liveAttendanceIds)).toEqual(new Set([attOpen, attRecent]));
+
+    // Verify archived rows & WP1/WP3 columns preserved
+    const archBorrowing = await db.query<{
+      id: string;
+      fine_resolution: string | null;
+      fine_remarks: string | null;
+      fine_settled_by: string | null;
+      archived_at: string;
+    }>(`SELECT id, fine_resolution, fine_remarks, fine_settled_by, archived_at FROM public.borrowing_records_archive`);
+    expect(new Set(archBorrowing.rows.map((r) => r.id))).toEqual(new Set([brEligibleClean, brEligibleSettled]));
+    const settledArch = archBorrowing.rows.find((r) => r.id === brEligibleSettled)!;
+    expect(settledArch.fine_resolution).toBe('CONDONED');
+    expect(settledArch.fine_remarks).toBe('Medical excuse approved');
+    expect(settledArch.fine_settled_by).toBe(librarian.id);
+    expect(settledArch.archived_at).toBeTruthy();
+
+    const archAttendance = await db.query<{ id: string; notes: string | null; archived_at: string }>(
+      `SELECT id, notes, archived_at FROM public.attendance_archive`
+    );
+    expect(archAttendance.rows).toHaveLength(1);
+    expect(archAttendance.rows[0].id).toBe(attEligible);
+    expect(archAttendance.rows[0].notes).toBe('No Log Out');
+    expect(archAttendance.rows[0].archived_at).toBeTruthy();
   });
 });

@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { ROLE_LABELS, getRoleLabel } from "@/components/common/RoleBadge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter, DialogClose
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section } from "@/components/settings/SettingsShared";
 import { FieldGroup } from "@/components/common/FieldGroup";
+import { UserBorrowingHistorySection, type UserBorrowingHistoryData } from "@/components/users/UserBorrowingHistorySection";
 import { createClient } from "@/lib/supabase/client";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
@@ -33,6 +35,7 @@ function profileForm(user: User) {
     name: user.name || "",
     email: user.email,
     role: user.role,
+    patron_type: user.patron_type || "student",
     status: user.status,
     department: user.department || "",
     student_id: user.student_id || "",
@@ -50,14 +53,16 @@ function sameField(key: keyof ProfileForm, left: ProfileForm, right: ProfileForm
   const normalize = (value: string) => key === "status" ? value.trim().toUpperCase() : key === "department" ? value.trim() || "General" : value.trim();
   return normalize(left[key]) === normalize(right[key]);
 }
-const formKeys = ["name", "email", "role", "status", "department", "student_id", "address", "phone", "permissions"] as const;
+const formKeys = ["name", "email", "role", "patron_type", "status", "department", "student_id", "address", "phone", "permissions"] as const;
 
 export function UserDetailClient({
   initialUser,
-  currentRole
+  currentRole,
+  initialHistory,
 }: {
   initialUser: User;
   currentRole: string;
+  initialHistory?: UserBorrowingHistoryData;
 }) {
   const router = useRouter();
   const [user, setUser] = useState<User>(initialUser);
@@ -154,7 +159,7 @@ export function UserDetailClient({
   const savedForm = profileForm(user);
   const isDirty = formKeys.some(key => !sameField(key, form, savedForm));
 
-  const needsVerification = form.role === "student" && form.status.toUpperCase() === "ACTIVE" && user.status.toUpperCase() === "PENDING";
+  const needsVerification = form.role === "patron" && form.status.toUpperCase() === "ACTIVE" && user.status.toUpperCase() === "PENDING";
 
   const handleUpdateProfile = async () => {
     if (!isDirty || isSaving) return;
@@ -168,12 +173,13 @@ export function UserDetailClient({
           id: user.id,
           name: form.name.trim(),
           role: form.role,
+          patron_type: form.patron_type,
           status: form.status.trim().toUpperCase(),
-          department: form.department.trim() || "General",
+          department: form.patron_type === "faculty" ? form.department.trim() || null : (form.department.trim() || "General"),
           student_id: form.student_id.trim(),
           address: form.address.trim(),
           phone: form.phone.trim(),
-          permissions: form.permissions,
+          ...(isAdmin ? { permissions: form.permissions } : {}),
         }),
       });
 
@@ -203,12 +209,13 @@ export function UserDetailClient({
           id: user.id,
           name: form.name.trim(),
           role: form.role,
+          patron_type: form.patron_type,
           status: "ACTIVE", // Force Active
-          department: form.department.trim() || "General",
+          department: form.patron_type === "faculty" ? form.department.trim() || null : (form.department.trim() || "General"),
           student_id: form.student_id.trim(),
           address: form.address.trim(),
           phone: form.phone.trim(),
-          permissions: form.permissions,
+          ...(isAdmin ? { permissions: form.permissions } : {}),
         }),
       });
 
@@ -245,10 +252,10 @@ export function UserDetailClient({
   ];
 
   const roleOptions = [
-    { id: "super_admin", label: "Administrator", icon: Shield, hidden: !isAdmin },
-    { id: "librarian", label: "Librarian", icon: Building },
-    { id: "student_assistant", label: "Student Assistant", icon: UserCheck },
-    { id: "student", label: "Student", icon: UserIcon },
+    { id: "super_admin", label: ROLE_LABELS.super_admin, icon: Shield, hidden: !isAdmin },
+    { id: "librarian", label: ROLE_LABELS.librarian, icon: Building },
+    { id: "library_staff", label: ROLE_LABELS.library_staff, icon: UserCheck },
+    { id: "patron", label: ROLE_LABELS.patron, icon: UserIcon },
   ];
 
   return (
@@ -268,7 +275,7 @@ export function UserDetailClient({
                   </AvatarFallback>
                 </Avatar>
                 
-                {isAdmin && <Link href={`/audit?studentId=${initialUser.id}`} className="text-sm font-semibold text-primary hover:underline">View student records</Link>}
+                {(isAdmin || (isLibrarian && !isTargetAdmin)) && <Link href={`/audit?studentId=${initialUser.id}`} className="text-sm font-semibold text-primary hover:underline">View patron records</Link>}
                 <div className="w-full space-y-3">
                   <div className="text-center px-1">
                     <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
@@ -402,7 +409,7 @@ export function UserDetailClient({
 
                 {/* Inline Action Buttons */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  {form.role === "student_assistant" && (
+                  {form.role === "library_staff" && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -463,7 +470,7 @@ export function UserDetailClient({
               <div className="space-y-0.5">
                 <p className="text-xs font-bold text-foreground">{isDirty ? "Pending Changes" : "No Unsaved Changes"}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Role <span className="text-foreground font-medium">{form.role}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
+                  Role <span className="text-foreground font-medium">{getRoleLabel(form.role)}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
                 </p>
               </div>
             </div>
@@ -476,6 +483,10 @@ export function UserDetailClient({
             </Button>
           </div>
 
+          {(isAdmin || isLibrarian) && (
+            <UserBorrowingHistorySection userId={user.id} initialHistory={initialHistory} />
+          )}
+
         </div>
       </div>
 
@@ -487,10 +498,10 @@ export function UserDetailClient({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
               <Key className="h-4 w-4" />
-              Student Assistant Access Control
+              Library Staff Access Control
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Grant specific administrative and operational capabilities to this Student Assistant.
+              Grant specific administrative and operational capabilities to this Library Staff member.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -498,17 +509,22 @@ export function UserDetailClient({
               { 
                 key: "manage_circulation", 
                 label: "Circulation Desk Access", 
-                desc: "Allows checking out library books, processing returns, managing reservations, and assisting other students at the desk." 
+                desc: "Allows checking out library books, processing returns, managing reservations, and assisting patrons at the desk." 
               },
               { 
                 key: "manage_attendance", 
                 label: "Attendance Desk & Scanner", 
-                desc: "Allows processing card scans (barcode/QR code entries), viewing today's overall student gate attendance logs, and accessing the Gate Scanner Console." 
+                desc: "Allows processing card scans (barcode/QR code entries), viewing today's overall library attendance logs, and accessing the Gate Scanner Console." 
+              },
+              { 
+                key: "manage_inventory", 
+                label: "Inventory",
+                desc: "Allows access to the inventory catalog to view library books, stock, and availability."
               },
               { 
                 key: "view_admin_dashboard", 
-                label: "Inventory",
-                desc: "Allows access to the inventory catalog to view library books, stock, and availability."
+                label: "Staff Dashboard View",
+                desc: "Allows viewing staff operational summary on the dashboard."
               },
             ].map(p => (
               <div
@@ -529,7 +545,7 @@ export function UserDetailClient({
                       permissions: { ...prev.permissions, [p.key]: checked },
                     }))
                   }
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || !isAdmin}
                   className="mt-0.5 shrink-0"
                 />
               </div>
@@ -562,7 +578,7 @@ export function UserDetailClient({
               ID Verification
             </DialogTitle>
             <DialogDescription>
-              Verify student identity via physical ID card presentation.
+              Verify patron identity via physical ID card presentation.
             </DialogDescription>
           </DialogHeader>
 
@@ -577,7 +593,7 @@ export function UserDetailClient({
                     <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Student ID</p>
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Patron ID</p>
                     <p className="text-sm font-mono font-bold text-foreground">{initialUser.student_id}</p>
                   </div>
                 </div>

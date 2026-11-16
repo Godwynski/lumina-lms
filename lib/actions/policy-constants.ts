@@ -1,5 +1,5 @@
 export interface PolicyValidation {
-  type: "number" | "json";
+  type: "number" | "json" | "time";
   min?: number;
   max?: number;
   step?: number;
@@ -93,6 +93,15 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     category: "broadcasts",
     icon: "Megaphone",
     validation: { min: 1, max: 7, type: "number" }
+  },
+  library_closing_time: {
+    value: "17:00",
+    label: "Library Closing Time",
+    description: "Daily closing time (24-hour HH:MM, Asia/Manila) used to automatically close forgotten attendance check-outs.",
+    example: "Example: 17:00 (5:00 PM).",
+    category: "circulation",
+    icon: "Clock",
+    validation: { type: "time" }
   }
 };
 
@@ -114,6 +123,10 @@ export function isValidPolicyValue(key: string, value: string) {
     if (validation.min !== undefined && parsed < validation.min) return false;
     if (validation.max !== undefined && parsed > validation.max) return false;
     return true;
+  }
+
+  if (validation.type === "time") {
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(value.trim());
   }
 
   if (validation.type === "json") {

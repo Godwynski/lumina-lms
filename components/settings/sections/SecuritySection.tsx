@@ -39,7 +39,7 @@ export function SecuritySection({ role }: SecuritySectionProps) {
                     </Tooltip>
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground max-w-lg">
-                    {role === "student"
+                    {role === "patron"
                       ? "Your account credentials are managed by the school system. Contact the administrator for security concerns."
                       : "Your account credentials and access permissions are managed by the system. Contact an administrator if you need changes."}
                   </p>

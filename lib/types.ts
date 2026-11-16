@@ -1,9 +1,11 @@
-export type UserRole = 'super_admin' | 'librarian' | 'student_assistant' | 'student';
+export type UserRole = 'super_admin' | 'librarian' | 'library_staff' | 'patron';
+export type PatronType = 'student' | 'faculty';
 
 export type UserPermissions = {
   manage_circulation?: boolean;
   manage_attendance?: boolean;
   view_admin_dashboard?: boolean;
+  manage_inventory?: boolean;
 };
 
 export type User = {
@@ -11,7 +13,8 @@ export type User = {
   name: string;
   email: string;
   avatarUrl: string | null;
-  role: "super_admin" | "librarian" | "student_assistant" | "student";
+  role: "super_admin" | "librarian" | "library_staff" | "patron";
+  patron_type?: PatronType;
   status: string;
   department: string;
   joined: string;
@@ -112,6 +115,7 @@ export type ProfileData = {
   full_name: string | null;
   email?: string | null;
   role?: UserRole;
+  patron_type?: PatronType;
   student_id: string | null;
   department: string | null;
   avatar_url: string | null;
