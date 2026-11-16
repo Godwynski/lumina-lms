@@ -279,8 +279,8 @@ describe('P2 client performance and duplicate work', () => {
 
     await vi.waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Successfully parsed 1 valid book records.');
+      expect(document.body).toHaveTextContent('Domain-Driven Design');
     });
-    expect(document.body).toHaveTextContent('Domain-Driven Design');
 
     // 2. CSV export via dynamic import("xlsx")
     const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:csv');

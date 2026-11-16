@@ -46,6 +46,7 @@ blob-report/
 /graphify-out/
 /.graphify/
 /.agents/
+/.claude/worktrees/
 /.impeccable/
 /.impeccable-live/
 .impeccable-live.json

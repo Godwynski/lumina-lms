@@ -4,7 +4,7 @@ import nextConfig from "eslint-config-next";
 const config = [
   ...nextConfig,
   {
-    ignores: ["scripts/**/*", ".next/**/*", "next-env.d.ts", "coverage/**/*"],
+    ignores: ["scripts/**/*", ".next/**/*", "next-env.d.ts", "coverage/**/*", ".claude/**"],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],

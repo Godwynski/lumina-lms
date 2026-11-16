@@ -6,10 +6,7 @@ Patrons (students and faculty) browse the restricted/authenticated OPAC, reserve
 
 ## Documentation
 
-- [User guide](docs/user-guide.md) for circulation, attendance, and account management.
-- [Documentation index](docs/README.md) for requirements, assessments, and thesis sources.
 - [Testing guide](test/README.md) for test organization and commands.
-- [Accessibility guidance](docs/accessibility.md) for interaction patterns and assessment limits.
 
 ## Local setup
 
@@ -83,10 +80,8 @@ When this checkout contains nested worktrees, use the exclusion in the [testing 
 
 The seed, clean, demo:on, and demo:off scripts are listed in [package.json](package.json). Review each script and confirm its target environment before running it.
 
-The earlier detailed overview is retained as a [historical snapshot](docs/archive/project-overview-2026-11-12.md), including its architecture discussion and academic attribution.
-
 ## Scope and limitations
 
 Lumina is a **Restricted / Authenticated OPAC** for patrons (students and faculty) and authorized library personnel. Koha and MARC 21 inform the library-system and bibliographic-reference context; they are references, not integrated products. The application’s role labels are Patron and Library Staff; the database role values are `patron` and `library_staff`.
 
-Cash fine payments and official receipts are handled manually in a physical ledger. Lumina computes fines and tracks Receivable, Paid, and Condoned resolutions, but does not provide full digital accounting or receipt issuance. Book purchase price, replacement cost, and donation tracking are not implemented. See [Future recommendations](docs/requirement%20documentation.md#future-recommendations) for the planned accounting and receipt capability.
+Cash fine payments and official receipts are handled manually in a physical ledger. Lumina computes fines and tracks Receivable, Paid, and Condoned resolutions, but does not provide full digital accounting or receipt issuance. Book purchase price, replacement cost, and donation tracking are not implemented.
