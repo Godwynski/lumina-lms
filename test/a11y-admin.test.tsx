@@ -6,7 +6,6 @@ import {
   renderClient,
   cleanupClients,
   clickElement,
-  typeIntoInput,
 } from './helpers/render';
 import { createMockQueryBuilder } from './mocks/supabase';
 
