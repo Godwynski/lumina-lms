@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="screen-06-student-catalog" width="1440" height="1432" viewBox="0 0 1440 1432">
+  <rect id="canvas-bg" x="0" y="0" width="1440" height="1432" fill="#f8fafc"/>
+  <g id="wireframe-base-page">
+    <rect x="0" y="0" width="256" height="900" rx="0" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="0" y="0" width="255" height="900" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="16" y="16" width="32" height="32" rx="10" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="16" y="120" width="223" height="44" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="0" y="835" width="255" height="65" rx="0" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="8" y="844" width="239" height="48" rx="10" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="16" y="852" width="32" height="32" rx="12" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="256" y="0" width="1174" height="1432" rx="0" fill="#ffffff" stroke="none" stroke-width="1"/>
+    <rect x="256" y="0" width="1174" height="64" rx="0" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1366" y="12" width="40" height="40" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1388" y="10" width="20" height="20" rx="10" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="280" y="72" width="1126" height="62" rx="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="289" y="83" width="706" height="40" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1007" y="85" width="140" height="36" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1155" y="85" width="87" height="36" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1254" y="91" width="1" height="24" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1267" y="85" width="130" height="36" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="282" y="150" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="163" width="119" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="568" y="163" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="295" y1="271" x2="632" y2="271" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="288" width="42" height="20" rx="10" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="494" y="284" width="139" height="28" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="283" y="320" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="661" y="150" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="163" width="234" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="948" y="163" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="674" y1="271" x2="1011" y2="271" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="288" width="40" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="873" y="284" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="662" y="320" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="662" y="320" width="120" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1041" y="150" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="163" width="70" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1327" y="163" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="1054" y1="271" x2="1391" y2="271" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="288" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1252" y="284" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1042" y="320" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1042" y="320" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="282" y="341" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="354" width="78" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="429" y="400" width="62" height="18" rx="9" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+    <rect x="568" y="354" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="295" y1="462" x2="632" y2="462" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="479" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="481" y="475" width="151" height="28" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="283" y="511" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="283" y="511" width="145" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="661" y="341" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="354" width="185" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="948" y="354" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="674" y1="462" x2="1011" y2="462" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="479" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="873" y="475" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="662" y="511" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="662" y="511" width="241" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1041" y="341" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="354" width="72" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1327" y="354" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="1054" y1="462" x2="1391" y2="462" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="479" width="42" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1252" y="475" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1042" y="511" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1042" y="511" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="282" y="532" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="545" width="67" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="568" y="545" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="295" y1="653" x2="632" y2="653" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="670" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="493" y="666" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="283" y="702" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="283" y="702" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="661" y="532" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="545" width="181" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="809" y="591" width="62" height="18" rx="9" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+    <rect x="948" y="545" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="674" y1="653" x2="1011" y2="653" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="670" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="860" y="666" width="151" height="28" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="662" y="702" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="662" y="702" width="289" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1041" y="532" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="545" width="260" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1327" y="545" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="1054" y1="653" x2="1391" y2="653" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="670" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1252" y="666" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1042" y="702" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1042" y="702" width="241" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="282" y="723" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="736" width="261" height="35" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="568" y="736" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="295" y1="844" x2="632" y2="844" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="861" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="493" y="857" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="283" y="893" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="283" y="893" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="661" y="723" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="736" width="261" height="35" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="809" y="799" width="45" height="18" rx="9" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="948" y="736" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="674" y1="844" x2="1011" y2="844" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="861" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="900" y="857" width="111" height="28" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="662" y="893" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="662" y="893" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1041" y="723" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="736" width="169" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1327" y="736" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="1054" y1="844" x2="1391" y2="844" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="861" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1252" y="857" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1042" y="893" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1042" y="893" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="282" y="914" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="927" width="261" height="35" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="568" y="927" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="295" y1="1035" x2="632" y2="1035" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="1052" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="493" y="1048" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="283" y="1084" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="283" y="1084" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="661" y="914" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="927" width="261" height="35" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="948" y="927" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="674" y1="1035" x2="1011" y2="1035" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="674" y="1052" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="873" y="1048" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="662" y="1084" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="662" y="1084" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1041" y="914" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="927" width="106" height="18" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1327" y="927" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="1054" y1="1035" x2="1391" y2="1035" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1054" y="1052" width="42" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1252" y="1048" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1042" y="1084" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="1042" y="1084" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="282" y="1105" width="363" height="175" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="1118" width="261" height="35" rx="0" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="568" y="1118" width="64" height="96" rx="12" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="295" y1="1226" x2="632" y2="1226" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="295" y="1243" width="41" height="20" rx="10" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="493" y="1239" width="139" height="28" rx="12" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="283" y="1275" width="361" height="4" rx="0" fill="#f1f5f9" stroke="none" stroke-width="1"/>
+    <rect x="283" y="1275" width="361" height="4" rx="0" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="1260" y="1360" width="32" height="32" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <rect x="1296" y="1360" width="54" height="32" rx="16" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="1354" y="1360" width="32" height="32" rx="16" fill="#ffffff" stroke="#64748b" stroke-width="1"/>
+    <g>
+      <rect x="66" y="16" width="32" height="32" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="68" y1="18" x2="96" y2="46" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="96" y1="18" x2="68" y2="46" stroke="#cbd5e1" stroke-width="1"/>
+    </g>
+    <g>
+      <rect x="569" y="164" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="571" y1="166" x2="629" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="629" y1="166" x2="571" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="600" y="215" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="949" y="164" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="951" y1="166" x2="1009" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1009" y1="166" x2="951" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="980" y="215" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="1328" y="164" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="1330" y1="166" x2="1388" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1388" y1="166" x2="1330" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="1359" y="215" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="569" y="355" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="571" y1="357" x2="629" y2="447" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="629" y1="357" x2="571" y2="447" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="600" y="406" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="949" y="355" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="951" y1="357" x2="1009" y2="447" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1009" y1="357" x2="951" y2="447" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="980" y="406" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="1328" y="355" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="1330" y1="357" x2="1388" y2="447" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1388" y1="357" x2="1330" y2="447" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="1359" y="406" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="569" y="546" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="571" y1="548" x2="629" y2="638" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="629" y1="548" x2="571" y2="638" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="600" y="597" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="949" y="546" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="951" y1="548" x2="1009" y2="638" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1009" y1="548" x2="951" y2="638" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="980" y="597" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="1328" y="546" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="1330" y1="548" x2="1388" y2="638" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1388" y1="548" x2="1330" y2="638" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="1359" y="597" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="569" y="737" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="571" y1="739" x2="629" y2="829" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="629" y1="739" x2="571" y2="829" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="600" y="788" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="949" y="737" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="951" y1="739" x2="1009" y2="829" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1009" y1="739" x2="951" y2="829" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="980" y="788" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="1328" y="737" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="1330" y1="739" x2="1388" y2="829" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1388" y1="739" x2="1330" y2="829" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="1359" y="788" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="569" y="928" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="571" y1="930" x2="629" y2="1020" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="629" y1="930" x2="571" y2="1020" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="600" y="979" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="949" y="928" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="951" y1="930" x2="1009" y2="1020" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1009" y1="930" x2="951" y2="1020" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="980" y="979" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="1328" y="928" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="1330" y1="930" x2="1388" y2="1020" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="1388" y1="930" x2="1330" y2="1020" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="1359" y="979" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <g>
+      <rect x="569" y="1119" width="62" height="94" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="571" y1="1121" x2="629" y2="1211" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="629" y1="1121" x2="571" y2="1211" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="600" y="1170" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <svg x="20" y="20" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>
+    <svg x="24" y="86" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+    <svg x="24" y="134" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+    <svg x="24" y="182" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+    <svg x="24" y="230" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 11 2 2 4-4"></path><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+    <svg x="223" y="860" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>
+    <svg x="1378" y="24" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+    <svg x="301" y="95" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+    <svg x="1118" y="95" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+    <svg x="1372" y="95" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+    <svg x="503" y="290" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+    <svg x="881" y="290" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="1260" y="290" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="436" y="404" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path><path d="M20 3v4"></path><path d="M22 5h-4"></path><path d="M4 17v2"></path><path d="M5 18H3"></path></svg>
+    <svg x="490" y="481" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    <svg x="881" y="481" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="1260" y="481" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="501" y="672" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="816" y="595" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path><path d="M20 3v4"></path><path d="M22 5h-4"></path><path d="M4 17v2"></path><path d="M5 18H3"></path></svg>
+    <svg x="869" y="672" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    <svg x="1260" y="672" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="501" y="863" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="816" y="803" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg>
+    <svg x="909" y="863" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+    <svg x="1260" y="863" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="501" y="1054" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="881" y="1054" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="1260" y="1054" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="501" y="1245" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+    <svg x="1268" y="1368" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <svg x="1362" y="1368" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+    <text x="325" y="107" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="400" fill="#64748b">Search by title, author, or ISBN...</text>
+    <text x="112" y="28" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Lumina</text>
+    <text x="112" y="45" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0f172a">LMS Platform</text>
+    <text x="48" y="99" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="400" fill="#0f172a">Dashboard</text>
+    <text x="48" y="147" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="500" fill="#0f172a">Catalog</text>
+    <text x="48" y="195" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="400" fill="#0f172a">My Borrowing</text>
+    <text x="48" y="243" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="400" fill="#0f172a">My Attendance</text>
+    <text x="26" y="873" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">PI</text>
+    <text x="56" y="865" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Paolo Ian Bautista</text>
+    <text x="56" y="881" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">demo.bautista.20220271@alabang.sti.edu.ph</text>
+    <text x="280" y="38" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">Catalog</text>
+    <text x="1395" y="23" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">4</text>
+    <text x="1020" y="106" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">All Categories</text>
+    <text x="1172" y="106" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Available</text>
+    <text x="1280" y="106" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Recently Added</text>
+    <text x="295" y="177" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Leonardo da Vinci</text>
+    <text x="295" y="197" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="311" y="197" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Walter Isaacson</text>
+    <text x="295" y="220" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Biography</text>
+    <text x="306" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">0</text>
+    <text x="313" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">/</text>
+    <text x="320" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">2</text>
+    <text x="527" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Reserve to Borrow</text>
+    <text x="674" y="177" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">The Rise and Fall of the Third Reich</text>
+    <text x="674" y="197" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="690" y="197" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">William L. Shirer</text>
+    <text x="674" y="220" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">History</text>
+    <text x="685" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">1</text>
+    <text x="690" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="697" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="905" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="1054" y="177" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">On Liberty</text>
+    <text x="1054" y="197" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="1070" y="197" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">John Stuart Mill</text>
+    <text x="1054" y="220" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Politics</text>
+    <text x="1065" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="1071" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="1077" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="1284" y="301" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="295" y="368" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Clean Code</text>
+    <text x="295" y="388" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="311" y="388" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Robert C. Martin</text>
+    <text x="295" y="411" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="450" y="412" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">Ready</text>
+    <text x="306" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="312" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="319" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">5</text>
+    <text x="514" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">Ready (Until Nov 16)</text>
+    <text x="674" y="368" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">The Pragmatic Programmer</text>
+    <text x="674" y="388" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="690" y="388" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Andrew Hunt &amp; David Thomas</text>
+    <text x="674" y="411" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="685" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="692" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="698" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="905" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="1054" y="368" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">The Prince</text>
+    <text x="1054" y="388" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="1070" y="388" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Niccolò Machiavelli</text>
+    <text x="1054" y="411" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Politics</text>
+    <text x="1065" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">4</text>
+    <text x="1071" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="1078" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">4</text>
+    <text x="1284" y="492" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="295" y="559" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Leviathan</text>
+    <text x="295" y="579" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="311" y="579" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Thomas Hobbes</text>
+    <text x="295" y="602" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Politics</text>
+    <text x="306" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="312" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="319" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="525" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="674" y="559" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Introduction to Algorithms</text>
+    <text x="674" y="579" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="690" y="579" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Thomas H. Cormen</text>
+    <text x="674" y="602" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="830" y="603" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#ffffff">Ready</text>
+    <text x="685" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">4</text>
+    <text x="692" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="698" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">5</text>
+    <text x="893" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">Ready (Until Nov 16)</text>
+    <text x="1054" y="559" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Designing Data-Intensive Applications</text>
+    <text x="1054" y="579" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="1070" y="579" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Martin Kleppmann</text>
+    <text x="1054" y="602" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="1065" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="1071" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="1078" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="1284" y="683" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="295" y="750" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Refactoring: Improving the Design of</text>
+    <text x="295" y="768" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Existing Code</text>
+    <text x="295" y="787" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="311" y="787" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Martin Fowler</text>
+    <text x="295" y="811" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="306" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="312" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="319" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="525" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="674" y="750" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Design Patterns: Elements of</text>
+    <text x="674" y="768" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Reusable Object-Oriented Software</text>
+    <text x="674" y="787" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="690" y="787" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides</text>
+    <text x="674" y="811" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="830" y="811" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">#2</text>
+    <text x="685" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="692" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="698" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="933" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Your Reserve</text>
+    <text x="1054" y="750" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">The Mythical Man-Month</text>
+    <text x="1054" y="770" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="1070" y="770" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Frederick P. Brooks Jr.</text>
+    <text x="1054" y="793" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="1065" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="1071" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="1078" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">2</text>
+    <text x="1284" y="874" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="295" y="941" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Compilers: Principles, Techniques,</text>
+    <text x="295" y="959" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">and Tools</text>
+    <text x="295" y="978" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="311" y="978" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Alfred V. Aho, Monica S. Lam, Ravi Sethi, Jeffrey D. Ullman</text>
+    <text x="295" y="1002" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="306" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="312" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="319" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="525" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="674" y="941" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Structure and Interpretation of</text>
+    <text x="674" y="959" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Computer Programs</text>
+    <text x="674" y="978" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="690" y="978" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Harold Abelson &amp; Gerald Jay Sussman</text>
+    <text x="674" y="1002" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="685" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="692" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="698" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="905" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="1054" y="941" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Code Complete</text>
+    <text x="1054" y="961" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="1070" y="961" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Steve McConnell</text>
+    <text x="1054" y="984" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Computer Science</text>
+    <text x="1065" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">4</text>
+    <text x="1071" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="1078" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">4</text>
+    <text x="1284" y="1065" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="295" y="1132" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Discrete Mathematics and Its</text>
+    <text x="295" y="1150" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Applications</text>
+    <text x="295" y="1169" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">by</text>
+    <text x="311" y="1169" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="600" fill="#0f172a">Kenneth H. Rosen</text>
+    <text x="295" y="1193" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Mathematics</text>
+    <text x="306" y="1256" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="312" y="1256" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">/</text>
+    <text x="319" y="1256" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">3</text>
+    <text x="525" y="1256" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff">Reserve for Pickup</text>
+    <text x="300" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">Showing</text>
+    <text x="365" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">1</text>
+    <text x="371" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">-</text>
+    <text x="377" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">16</text>
+    <text x="391" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">of</text>
+    <text x="414" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">101</text>
+    <text x="1309" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="900" fill="#0f172a">1</text>
+    <text x="1320" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">/</text>
+    <text x="1331" y="1379" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">7</text>
+  </g>
+</svg>

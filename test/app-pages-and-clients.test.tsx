@@ -343,6 +343,7 @@ if (typeof Element !== 'undefined') {
 import { SWRConfig, useSWRConfig } from 'swr';
 import RootError from '@/app/error';
 import RootNotFound from '@/app/not-found';
+import LoginRedirectPage from '@/app/login/page';
 import sitemap from '@/app/sitemap';
 import AuthErrorPage from '@/app/(auth)/error/page';
 import ForgotPasswordPage from '@/app/(auth)/forgot-password/page';
@@ -2503,6 +2504,93 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       vi.useRealTimers();
       expect(mockRouterRefresh).toHaveBeenCalled();
+    });
+
+    it('supports Cards/Table toggle and persists/restores catalogView preference on StudentCatalogClient, and redirects /login', async () => {
+      expect(() => LoginRedirectPage()).toThrow('NEXT_REDIRECT:/');
+
+      const fetchMock = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ ok: true, preferences: { catalogView: 'table' } }), { status: 200 })
+        )
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      const books: Book[] = [
+        {
+          id: 'sb-tbl-1',
+          title: 'Designing Data-Intensive Applications',
+          author: 'Martin Kleppmann',
+          isbn: '9781449373320',
+          category_id: 'cat-1',
+          categories: { name: 'Computer Science' },
+          available_copies: 2,
+          total_copies: 3,
+          tags: ['Systems'],
+          section: 'CS',
+          location: 'Floor 2',
+          is_active: true,
+        },
+      ];
+      const categories: Category[] = [{ id: 'cat-1', name: 'Computer Science' }];
+
+      // 1. Clicking Table updates URL and persists catalogView
+      mockSearchParams = new URLSearchParams('');
+      const { container } = await renderClient(
+        <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
+          <Suspense fallback={<div>Loading</div>}>
+            <StudentCatalogClient
+              booksPromise={Promise.resolve({ books, total: 1, hasMore: false })}
+              categoriesPromise={Promise.resolve(categories)}
+              reservationsPromise={Promise.resolve([])}
+              initialFilters={{ q: '', categoryId: '', availableOnly: false, page: 1, sortBy: 'newest' }}
+            />
+          </Suspense>
+        </PreferencesProvider>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const tableBtn = findButtonByText(container, 'Table');
+      expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
+      await clickElement(tableBtn);
+      expect(mockRouterReplace).toHaveBeenCalledWith('?view=table', { scroll: false });
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ui-preferences',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ catalogView: 'table' }),
+        })
+      );
+
+      // 2. Returning to Catalog without ?view= restores table from saved preference
+      cleanupClients();
+      mockSearchParams = new URLSearchParams('');
+      const tableRender = await renderClient(
+        <PreferencesProvider initialPreferences={{ catalogView: 'table' }} initialRole="patron">
+          <Suspense fallback={<div>Loading</div>}>
+            <StudentCatalogClient
+              booksPromise={Promise.resolve({ books, total: 1, hasMore: false })}
+              categoriesPromise={Promise.resolve(categories)}
+              reservationsPromise={Promise.resolve([{ status: 'READY', queue_position: 1, books: { id: 'sb-tbl-1' } }])}
+              initialFilters={{ q: '', categoryId: '', availableOnly: false, page: 1, sortBy: 'newest' }}
+            />
+          </Suspense>
+        </PreferencesProvider>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const table = tableRender.container.querySelector('table');
+      expect(table).not.toBeNull();
+      expect(table).toHaveTextContent('Designing Data-Intensive Applications');
+      expect(table).toHaveTextContent('Martin Kleppmann');
+      expect(table).toHaveTextContent('9781449373320');
+      expect(table).toHaveTextContent('Computer Science');
+      expect(table).toHaveTextContent('2 / 3');
+      expect(table).toHaveTextContent('Ready');
     });
 
     it('StudentBookDetailClient renders queue badge, nextAvailableDate hint, image fallback, and cancel error toast', async () => {

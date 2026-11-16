@@ -164,7 +164,12 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
       expect(cardInput).toBeInTheDocument();
       const label = container.querySelector('label[for="attendance-card-id"]');
-      expect(label).toHaveTextContent('Card ID or student number');
+      expect(label).toHaveTextContent('Card ID or Patron ID');
+      expect(container).toHaveTextContent('Start camera');
+      expect(container).toHaveTextContent('Today');
+      expect(container).toHaveTextContent('All History');
+      expect(container).toHaveTextContent('active');
+      expect(container).toHaveTextContent('completed');
 
       // Switch to Check-Out mode
       await clickElement(checkOutModeBtn);

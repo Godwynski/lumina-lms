@@ -151,7 +151,9 @@ export function PreferencesProvider({
       }
 
       const data = await response.json();
-      setPreferences(data.preferences || {});
+      if (data?.preferences) {
+        setPreferences(data.preferences);
+      }
     } catch (error) {
       console.error("Error updating preferences:", error);
       fetchPreferences();

@@ -1743,13 +1743,51 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       const printSpy = vi.fn();
       vi.stubGlobal('print', printSpy);
 
-      // 1. Toggle from Cards to Table updates URL with view=table
+      // 1. Toggle from Cards to Table updates URL with view=table and persists inventoryView
+      const fetchMock = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ ok: true, preferences: { theme: 'light', inventoryView: 'table' }, jobs: [] }), { status: 200 })
+        )
+      );
+      vi.stubGlobal('fetch', fetchMock);
       const { container } = await renderInventory();
       await flushPromises();
       const tableBtn = findButtonByText(container, 'Table');
       expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
       await clickElement(tableBtn);
       expect(mockRouterReplace).toHaveBeenCalledWith('?view=table', { scroll: false });
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/ui-preferences',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ inventoryView: 'table' }),
+        })
+      );
+
+      // 1b. Saved inventoryView="table" preference is restored when returning to /inventory without ?view=
+      cleanupClients();
+      mockSearchParamsString = '';
+      const restoredRender = await renderClient(
+        <AnimationProvider>
+          <PreferencesProvider
+            initialPreferences={{ theme: 'light', inventoryView: 'table' }}
+            initialRole="librarian"
+            initialProfile={makeStaffProfile('librarian')}
+          >
+            <BatchTaskProvider>
+              <ModernInventoryClient
+                books={[makeBook({ title: 'Restored Table Book' })]}
+                totalItems={1}
+                categories={categories}
+                canManage={true}
+              />
+            </BatchTaskProvider>
+          </PreferencesProvider>
+        </AnimationProvider>
+      );
+      await flushPromises();
+      expect(findButtonByText(restoredRender.container, 'Table')).toHaveAttribute('aria-pressed', 'true');
+      expect(restoredRender.container.querySelector('table')).toHaveTextContent('Restored Table Book');
 
       // 2. Rendering with view=table displays table rows with title, author, ISBN, category, copies, status
       cleanupClients();

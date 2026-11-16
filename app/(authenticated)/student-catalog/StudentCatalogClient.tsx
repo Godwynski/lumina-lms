@@ -21,6 +21,9 @@ import { Book, Category as CatalogCategory } from '@/lib/types';
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { StudentBookCard } from '@/components/library/StudentBookCard';
+import { CatalogTable } from '@/components/library/CatalogTable';
+import { ViewModeToggle, resolveViewMode, type CatalogViewMode } from '@/components/common/ViewModeToggle';
+import { usePreferences } from '@/components/providers/PreferencesProvider';
 import { AnimatePresence, m } from 'framer-motion';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { createClient } from '@/lib/supabase/client';
@@ -64,6 +67,7 @@ export function StudentCatalogClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const { preferences, updatePreferences } = usePreferences();
   const initialData = use(booksPromise);
   const categories = use(categoriesPromise);
   const reservations = use(reservationsPromise);
@@ -240,6 +244,11 @@ export function StudentCatalogClient({
   const handleAvailableToggle = () => updateParams({ available: !availableOnly ? 'true' : null, page: 1 });
   const handleSortChange = (val: string) => updateParams({ sort: val });
   const handlePageChange = (p: number) => updateParams({ page: p });
+  const viewMode = resolveViewMode(searchParams.get('view'), preferences.catalogView);
+  const setViewMode = (nextView: CatalogViewMode) => {
+    updateParams({ view: nextView });
+    void updatePreferences({ catalogView: nextView });
+  };
 
   const clearFilters = () => {
     setLocalQuery('');
@@ -351,6 +360,8 @@ export function StudentCatalogClient({
                 <SelectItem value="availability">Availability</SelectItem>
               </SelectContent>
             </Select>
+
+            <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Catalog view mode" />
           </div>
 
           {(selectedCategory || availableOnly || localQuery || explicitSort) && (
@@ -373,26 +384,37 @@ export function StudentCatalogClient({
     >
       <p className="sr-only" role="status">{isSearchSettled ? `${totalBooks} ${totalBooks === 1 ? "book" : "books"} found.` : "Searching..."}</p>
       <div className={cn("transition-opacity w-full pb-10", isPending && "opacity-50")}>
-        <AnimatePresence mode="popLayout" initial={false}>
-          <m.div 
-            key="grid"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
-          >
-            {books.map((book, index) => (
-              <StudentBookCard 
-                key={book.id} 
-                book={book} 
-                priority={index < 4}
-                reservedInfo={reservedBooksMap.get(book.id)}
-                onReserveSuccess={(pos, status, expires) => handleReserveSuccess(book.id, pos, status, expires)}
-                onCancelSuccess={() => handleCancelSuccess(book.id)}
-              />
-            ))}
-          </m.div>
-        </AnimatePresence>
+        {viewMode === 'table' ? (
+          books.length > 0 ? (
+            <CatalogTable
+              books={books}
+              reservedBooksMap={reservedBooksMap}
+              onReserveSuccess={handleReserveSuccess}
+              onCancelSuccess={handleCancelSuccess}
+            />
+          ) : null
+        ) : (
+          <AnimatePresence mode="popLayout" initial={false}>
+            <m.div 
+              key="grid"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+            >
+              {books.map((book, index) => (
+                <StudentBookCard 
+                  key={book.id} 
+                  book={book} 
+                  priority={index < 4}
+                  reservedInfo={reservedBooksMap.get(book.id)}
+                  onReserveSuccess={(pos, status, expires) => handleReserveSuccess(book.id, pos, status, expires)}
+                  onCancelSuccess={() => handleCancelSuccess(book.id)}
+                />
+              ))}
+            </m.div>
+          </AnimatePresence>
+        )}
 
         {books.length === 0 && !isSearchSettled && (
           // Don't claim "no results" while a search is still in flight.

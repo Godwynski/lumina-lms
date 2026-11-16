@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEMO_ACCOUNTS } from '@/lib/demo/config';
 import { hasPermission } from '@/lib/auth/permissions';
-import { POST } from '@/app/api/demo-login/route';
+import { POST, demoLoginRateLimiter } from '@/app/api/demo-login/route';
 
 const { client, profile, card } = vi.hoisted(() => {
   const profile = { single: vi.fn() };
@@ -45,6 +45,7 @@ describe('demo login', () => {
     method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' },
   });
   beforeEach(() => {
+    demoLoginRateLimiter.reset();
     vi.stubEnv('DEMO_MODE', 'true');
     vi.stubEnv('DEMO_PASSWORD', 'test-password-only');
     vi.clearAllMocks();
@@ -81,5 +82,33 @@ describe('demo login', () => {
     vi.stubEnv('DEMO_MODE', value);
     expect((await POST(request())).status).toBe(200);
     expect(client.auth.signInWithPassword).toHaveBeenCalled();
+  });
+
+  const requestFromIp = (ip: string) => new Request('http://localhost/api/demo-login', {
+    method: 'POST',
+    body: JSON.stringify({ email: account.email }),
+    headers: { 'Content-Type': 'application/json', 'x-forwarded-for': `${ip}, 10.0.0.1` },
+  });
+
+  it('throttles repeated attempts from the same IP with a 429 and Retry-After', async () => {
+    for (let i = 0; i < 5; i++) {
+      expect((await POST(requestFromIp('203.0.113.5'))).status).toBe(200);
+    }
+    const blocked = await POST(requestFromIp('203.0.113.5'));
+    expect(blocked.status).toBe(429);
+    expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
+  it('does not attempt a sign-in once an IP is throttled', async () => {
+    for (let i = 0; i < 5; i++) await POST(requestFromIp('203.0.113.6'));
+    client.auth.signInWithPassword.mockClear();
+    expect((await POST(requestFromIp('203.0.113.6'))).status).toBe(429);
+    expect(client.auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('keeps separate budgets per client IP', async () => {
+    for (let i = 0; i < 5; i++) await POST(requestFromIp('203.0.113.7'));
+    expect((await POST(requestFromIp('203.0.113.7'))).status).toBe(429);
+    expect((await POST(requestFromIp('203.0.113.8'))).status).toBe(200);
   });
 });

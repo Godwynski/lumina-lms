@@ -18,10 +18,10 @@ import {
   FileCode,
   Image as ImageIcon,
   Settings,
-  LayoutGrid,
-  Table2,
   Eye
 } from "lucide-react";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { ViewModeToggle, resolveViewMode } from "@/components/common/ViewModeToggle";
 import {
   buildImportTemplateWorkbook,
   filterValidImportBooks,
@@ -116,6 +116,7 @@ export function ModernInventoryClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const { preferences, updatePreferences } = usePreferences();
 
   // Derived values from URL
   const urlQuery = searchParams.get("q") || "";
@@ -128,7 +129,7 @@ export function ModernInventoryClient({
   const status = (searchParams.get("status")?.toUpperCase() as "ACTIVE" | "ARCHIVED" | "ALL") || "ACTIVE";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
-  const viewMode = searchParams.get("view") === "table" ? "table" : "cards";
+  const viewMode = resolveViewMode(searchParams.get("view"), preferences.inventoryView);
 
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   // Queries this component pushed that the URL hasn't caught up with yet.
@@ -609,7 +610,10 @@ export function ModernInventoryClient({
   const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
   const setStatus = (s: typeof status) => updateParams({ status: s });
   const setPage = (p: number) => updateParams({ page: p });
-  const setViewMode = (nextView: "cards" | "table") => updateParams({ view: nextView });
+  const setViewMode = (nextView: "cards" | "table") => {
+    updateParams({ view: nextView });
+    void updatePreferences({ inventoryView: nextView });
+  };
   const pushQuery = useCallback((raw: string) => {
     const q = raw.trim();
     if (q !== urlQuery) pendingQueries.current.push(q);
@@ -808,30 +812,7 @@ export function ModernInventoryClient({
           </Sheet>
 
           {/* Cards / Table View Toggle */}
-          <div role="group" aria-label="Inventory view mode" className="flex items-center rounded-2xl border border-border/20 bg-muted/5 p-1 shrink-0">
-            <Button
-              type="button"
-              variant={viewMode === "cards" ? "default" : "ghost"}
-              size="sm"
-              aria-pressed={viewMode === "cards"}
-              onClick={() => setViewMode("cards")}
-              className="h-9 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Cards</span>
-            </Button>
-            <Button
-              type="button"
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              aria-pressed={viewMode === "table"}
-              onClick={() => setViewMode("table")}
-              className="h-9 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
-            >
-              <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Table</span>
-            </Button>
-          </div>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Inventory view mode" />
 
           {/* Add Item & Batch Operations Buttons */}
           {canManage && (

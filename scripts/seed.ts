@@ -1604,6 +1604,26 @@ const booksToSeed = [
     }
   }
 
+  // 2 Archive-eligible returned borrows (> 1 year old) so Archive Old Records can be exercised
+  for (let i = 1; i <= 2; i++) {
+    const borrowDate = new Date(now.getTime() - (420 + i * 15) * 24 * 60 * 60 * 1000);
+    const dueDate = new Date(borrowDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const returnedDate = new Date(borrowDate.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const copy = pickCopy();
+    if (copy) {
+      borrowsToSeed.push({
+        user_id: studentBorrowers[i % studentBorrowers.length],
+        book_copy_id: copy.id,
+        processed_by: deskStaff[0],
+        borrowed_at: borrowDate.toISOString(),
+        due_date: dueDate.toISOString(),
+        returned_at: returnedDate.toISOString(),
+        returned_by: deskStaff[1],
+        status: 'RETURNED'
+      });
+    }
+  }
+
   // 20 Active borrows (due in early November 2026)
   const activeCopyIds: string[] = [];
   for (let i = 1; i <= 20; i++) {
@@ -1841,6 +1861,19 @@ const booksToSeed = [
     }
   }
 
+  // 2 Archive-eligible completed attendance records (> 1 year old)
+  for (let i = 1; i <= 2; i++) {
+    const oldDay = new Date(today.getTime() - (420 + i * 15) * 24 * 60 * 60 * 1000);
+    const checkIn = new Date(oldDay.getFullYear(), oldDay.getMonth(), oldDay.getDate(), 9, 0);
+    const checkOut = new Date(oldDay.getFullYear(), oldDay.getMonth(), oldDay.getDate(), 11, 30);
+    attendanceToSeed.push({
+      user_id: allPatrons[i % allPatrons.length],
+      check_in_at: checkIn.toISOString(),
+      check_out_at: checkOut.toISOString(),
+      notes: 'Historical study visit'
+    });
+  }
+
   for (let i = 0; i < attendanceToSeed.length; i += chunkSize) {
     const chunk = attendanceToSeed.slice(i, i + chunkSize);
     const { error: aErr } = await supabase.from('attendance').insert(chunk);
@@ -1981,7 +2014,7 @@ const booksToSeed = [
       action: 'ISSUANCE',
       old_value: null,
       new_value: { card_number: 'STU-190782', user: 'Josh Raizen Calinog' },
-      reason: 'Digital student assistant card activated',
+      reason: 'Digital library staff card activated',
       details: { status: 'ACTIVE' }
     },
     {

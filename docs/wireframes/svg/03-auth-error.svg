@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="screen-03-auth-error" width="1440" height="900" viewBox="0 0 1440 900">
+  <rect id="canvas-bg" x="0" y="0" width="1440" height="900" fill="#f8fafc"/>
+  <g id="wireframe-base-page">
+    <rect x="491" y="169" width="448" height="599" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="687" y="202" width="56" height="56" rx="16" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="524" y="358" width="382" height="73" rx="16" fill="#0f172a" stroke="#0f172a" stroke-width="1"/>
+    <rect x="524" y="483" width="382" height="167" rx="16" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="541" y1="571" x2="889" y2="571" stroke="#cbd5e1" stroke-width="1"/>
+    <rect x="524" y="690" width="382" height="44" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <g>
+      <rect x="692" y="91" width="46" height="46" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="694" y1="93" x2="736" y2="135" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="736" y1="93" x2="694" y2="135" stroke="#cbd5e1" stroke-width="1"/>
+      <text x="715" y="118" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#64748b" text-anchor="middle">IMAGE</text>
+    </g>
+    <svg x="701" y="216" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+    <svg x="541" y="377" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+    <svg x="651" y="704" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+    <text x="601" y="298" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a">Authentication Error</text>
+    <text x="597" y="328" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="500" fill="#0f172a">Access to the system was restricted</text>
+    <text x="573" y="389" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="500" fill="#0f172a">Your account has been</text>
+    <text x="703" y="389" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">archived</text>
+    <text x="753" y="389" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="500" fill="#0f172a">. This typically happens</text>
+    <text x="573" y="408" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="500" fill="#0f172a">when an account is no longer in use or has been retired.</text>
+    <text x="528" y="466" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">What this means</text>
+    <text x="541" y="514" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">Archived accounts cannot access system resources or borrow</text>
+    <text x="541" y="534" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">books. Your data is preserved for records but active access is</text>
+    <text x="541" y="553" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="12" font-weight="400" fill="#0f172a">disabled.</text>
+    <text x="541" y="591" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Need assistance?</text>
+    <text x="541" y="612" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="400" fill="#0f172a">If you believe this is a mistake, please visit the</text>
+    <text x="773" y="612" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">School Library</text>
+    <text x="541" y="629" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Administration</text>
+    <text x="621" y="628" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="400" fill="#0f172a">to request account reactivation.</text>
+    <text x="683" y="717" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="600" fill="#0f172a">Back to Sign In</text>
+    <text x="608" y="803" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Lumina LMS Security Protocol</text>
+  </g>
+</svg>

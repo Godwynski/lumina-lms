@@ -10,6 +10,8 @@ const UiPreferencesPatchSchema = z
   .object({
     theme: z.enum(["light", "dark", "system", "sepia"]).optional(),
     sidebarCollapsed: z.boolean().optional(),
+    inventoryView: z.enum(["cards", "table"]).optional(),
+    catalogView: z.enum(["cards", "table"]).optional(),
     readProgress: z
       .record(
         z

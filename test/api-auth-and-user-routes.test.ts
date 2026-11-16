@@ -68,7 +68,7 @@ vi.mock("next/server", async () => {
 
 import { GET as authCallbackGet } from "@/app/(auth)/callback/route";
 import { GET as authConfirmGet } from "@/app/(auth)/confirm/route";
-import { POST as demoLoginPost } from "@/app/api/demo-login/route";
+import { POST as demoLoginPost, demoLoginRateLimiter } from "@/app/api/demo-login/route";
 import { POST as assetsRefreshPost } from "@/app/api/my-card/assets-refresh/route";
 import { GET as assetsStatusGet } from "@/app/api/my-card/assets-status/route";
 import {
@@ -137,6 +137,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    demoLoginRateLimiter.reset();
     supabase = createMockSupabaseClient();
     adminSupabase = createMockSupabaseClient();
     mockCreateClient.mockResolvedValue(supabase.client);
@@ -513,6 +514,8 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           method: "PATCH",
           body: JSON.stringify({
             theme: "dark",
+            inventoryView: "table",
+            catalogView: "table",
             readProgress: { bookB: 80 },
           }),
         })
@@ -522,6 +525,8 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         ok: true,
         preferences: {
           theme: "dark",
+          inventoryView: "table",
+          catalogView: "table",
           readProgress: { bookA: 40, bookB: 80 },
         },
       });
@@ -530,6 +535,8 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           user_id: "u-1",
           preferences: {
             theme: "dark",
+            inventoryView: "table",
+            catalogView: "table",
             readProgress: { bookA: 40, bookB: 80 },
           },
         },

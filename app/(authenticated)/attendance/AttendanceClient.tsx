@@ -492,8 +492,101 @@ export function AttendanceClient({
 
   const scannerControls = (
     <div className="flex flex-col gap-3 w-full">
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full">
-        {/* Left: View Tabs + Search Box */}
+      {/* Band 1: Gate Desk Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-border/25 bg-muted/20 p-2.5">
+        <div
+          role="group"
+          aria-label="Attendance mode"
+          className="inline-flex items-center gap-1 bg-background/80 p-1 rounded-xl border border-border/20 self-start sm:self-auto"
+        >
+          <button
+            type="button"
+            onClick={() => setMode("in")}
+            aria-pressed={mode === "in"}
+            className={cn(
+              "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+              mode === "in"
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
+                : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
+            )}
+          >
+            <LogIn className="w-3.5 h-3.5 shrink-0" />
+            <span>Check-In</span>
+            {mode === "in" && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
+                <Check className="w-2.5 h-2.5" aria-hidden="true" />
+                Active
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("out")}
+            aria-pressed={mode === "out"}
+            className={cn(
+              "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+              mode === "out"
+                ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
+                : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
+            )}
+          >
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+            <span>Check-Out</span>
+            {mode === "out" && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
+                <Check className="w-2.5 h-2.5" aria-hidden="true" />
+                Active
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 flex-1 sm:justify-end">
+          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
+            <div className="relative flex-1 sm:w-52">
+              <label htmlFor="attendance-card-id" className="sr-only">Card ID or Patron ID</label>
+              <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+              <Input
+                id="attendance-card-id"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                placeholder="Card ID or Patron ID..."
+                className="h-9 pl-8 pr-3 text-xs bg-background rounded-xl border-border/30"
+                readOnly={isProcessing}
+                autoComplete="off"
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
+              className={cn(
+                "h-9 px-3.5 font-semibold text-xs rounded-xl shrink-0",
+                mode === "in"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-orange-600 hover:bg-orange-700 text-white"
+              )}
+            >
+              {isProcessing ? "Recording…" : mode === "in" ? "Check-In" : "Check-Out"}
+            </Button>
+          </form>
+
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 transition-colors border-border/30 bg-background hover:bg-muted/40"
+              disabled={isProcessing}
+            >
+              <Camera className="w-3.5 h-3.5 text-primary" />
+              <span>Start camera</span>
+            </Button>
+          </DialogTrigger>
+        </div>
+      </div>
+
+      {/* Band 2: Log Tabs, Live Status & Search/Export */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 w-full">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="inline-flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/15">
             <button
@@ -501,7 +594,7 @@ export function AttendanceClient({
               onClick={() => setActiveTab('today')}
               aria-pressed={activeTab === 'today'}
               className={cn(
-                "h-7 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                "h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
                 activeTab === 'today' 
                   ? "bg-background text-foreground shadow-sm font-bold" 
                   : "text-muted-foreground hover:text-foreground"
@@ -520,7 +613,7 @@ export function AttendanceClient({
               onClick={() => setActiveTab('all')}
               aria-pressed={activeTab === 'all'}
               className={cn(
-                "h-7 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                "h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
                 activeTab === 'all' 
                   ? "bg-background text-foreground shadow-sm font-bold" 
                   : "text-muted-foreground hover:text-foreground"
@@ -536,8 +629,7 @@ export function AttendanceClient({
             </button>
           </div>
 
-          {/* Quick stats pill */}
-          <div className="flex flex-wrap items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/10 text-[11px] font-medium text-muted-foreground">
+          <div className="flex items-center gap-2 px-2.5 h-9 rounded-xl bg-muted/20 border border-border/15 text-[11px] font-medium text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <strong className="text-foreground">{activeCount}</strong> active
@@ -545,17 +637,18 @@ export function AttendanceClient({
             <span className="text-border/60">•</span>
             <span><strong className="text-foreground">{completedTodayCount}</strong> completed</span>
           </div>
+        </div>
 
-          {/* Search box */}
-          <div className="relative flex-1 min-w-[160px] max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:justify-end">
+          <div className="relative flex-1 sm:w-56">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               type="search"
               aria-label="Search attendance by patron name or ID"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search patron or ID..."
-              className="h-8 pl-8 pr-2.5 text-xs bg-background/50 rounded-lg border-border/20"
+              className="h-9 pl-8 pr-3 text-xs bg-background/50 rounded-xl border-border/25"
             />
           </div>
 
@@ -563,106 +656,13 @@ export function AttendanceClient({
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 border-border/30 hover:bg-muted/40"
+            className="h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 border-border/30 hover:bg-muted/40"
             disabled={isExporting || filteredStaffRecords.length === 0}
             onClick={() => void handleExport()}
           >
             <Download className="w-3.5 h-3.5" />
             <span>{isExporting ? "Exporting..." : "Export (.xlsx)"}</span>
           </Button>
-        </div>
-
-        {/* Right: Mode Selector + Manual Input Form + Scanner Button */}
-        <div className="flex items-end gap-2 flex-wrap">
-          <div
-            role="group"
-            aria-label="Attendance mode"
-            className="inline-flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/20"
-          >
-            <button
-              type="button"
-              onClick={() => setMode("in")}
-              aria-pressed={mode === "in"}
-              className={cn(
-                "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
-                mode === "in"
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
-                  : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-              )}
-            >
-              <LogIn className="w-3.5 h-3.5 shrink-0" />
-              <span>Check-In</span>
-              {mode === "in" && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
-                  <Check className="w-2.5 h-2.5" aria-hidden="true" />
-                  Active
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("out")}
-              aria-pressed={mode === "out"}
-              className={cn(
-                "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
-                mode === "out"
-                  ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
-                  : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-              )}
-            >
-              <LogOut className="w-3.5 h-3.5 shrink-0" />
-              <span>Check-Out</span>
-              {mode === "out" && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
-                  <Check className="w-2.5 h-2.5" aria-hidden="true" />
-                  Active
-                </span>
-              )}
-            </button>
-          </div>
-
-          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-end gap-1.5 flex-1 sm:flex-none">
-            <div className="relative flex-1 sm:w-44">
-              <label htmlFor="attendance-card-id" className="block text-xs font-medium">Card ID or student number</label>
-              <div className="relative">
-                <ScanLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  id="attendance-card-id"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  placeholder="Card ID or Student No..."
-                  className="h-8 pl-8 pr-2 text-xs bg-background/50 rounded-lg border-border/20"
-                  readOnly={isProcessing}
-                  autoComplete="off"
-                />
-              </div>
-            </div>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
-              className={cn(
-                "h-8 px-3 font-semibold text-xs rounded-lg shrink-0",
-                mode === "in"
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  : "bg-orange-600 hover:bg-orange-700 text-white"
-              )}
-            >
-              {isProcessing ? "Recording…" : mode === "in" ? "Check-In" : "Check-Out"}
-            </Button>
-          </form>
-
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-3 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/30 hover:bg-muted/40"
-              disabled={isProcessing}
-            >
-              <Camera className="w-3.5 h-3.5 text-primary" />
-              <span>Start camera</span>
-            </Button>
-          </DialogTrigger>
         </div>
       </div>
 

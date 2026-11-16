@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lumina LMS — 100% Live DOM-Extracted A4 Wireframes</title>
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, 'Segoe UI', Arial, sans-serif; background: #cbd5e1; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .toolbar { position: sticky; top: 0; z-index: 50; background: #0f172a; color: #fff; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    .toolbar a, .toolbar button { background: #2563eb; color: #fff; border: none; padding: 7px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; margin-left: 8px; }
+    .a4-sheet { width: 210mm; height: 297mm; background: #fff; margin: 14px auto; padding: 10mm 12mm; display: flex; flex-direction: column; gap: 3.5mm; page-break-after: always; break-after: page; overflow: hidden; box-shadow: 0 4px 20px rgba(15,23,42,.16); }
+    .a4-sheet:last-child { page-break-after: auto; break-after: auto; }
+    .sheet-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1.5px solid #0f172a; padding-bottom: 2.5mm; gap: 6mm; }
+    .kicker { font-size: 7.2pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #2563eb; margin-bottom: 1mm; }
+    .sheet-header h1 { font-size: 12.5pt; font-weight: 800; line-height: 1.15; }
+    .header-right { text-align: right; flex-shrink: 0; font-size: 7.5pt; line-height: 1.45; color: #334155; }
+    .header-right code { font-family: 'JetBrains Mono', Consolas, monospace; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; }
+    .wireframe-frame { width: 186mm; height: 148mm; border: 1px solid #94a3b8; border-radius: 4px; overflow: hidden; background: #f8fafc; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .spec-deck { flex: 1; display: flex; flex-direction: column; gap: 3mm; min-height: 0; }
+    .summary { font-size: 8.3pt; line-height: 1.4; color: #334155; background: #f8fafc; border-left: 3px solid #2563eb; padding: 2mm 3mm; }
+    .spec-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 3.5mm; flex: 1; min-height: 0; }
+    .callout-box, .tech-box { border: 1px solid #cbd5e1; border-radius: 4px; padding: 2.8mm 3.2mm; background: #fff; }
+    .spec-grid h2 { font-size: 7.8pt; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2mm; border-bottom: 1px solid #e2e8f0; padding-bottom: 1mm; }
+    .callout-list { list-style: none; display: flex; flex-direction: column; gap: 2mm; font-size: 7.8pt; line-height: 1.35; }
+    .callout-list li { display: flex; gap: 2mm; align-items: flex-start; }
+    .pin { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 7pt; font-weight: 700; flex-shrink: 0; }
+    .links-list { list-style: none; display: flex; flex-direction: column; gap: 1.6mm; font-size: 7.4pt; line-height: 1.3; color: #1e293b; }
+    .links-list code { font-family: 'JetBrains Mono', Consolas, monospace; background: #f1f5f9; padding: 1px 3px; border-radius: 2px; }
+    .tech-code { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 7.3pt; line-height: 1.45; background: #f1f5f9; padding: 2.2mm; border-radius: 3px; margin-bottom: 2.5mm; white-space: pre-wrap; }
+    .fidelity-note { font-size: 7.5pt; line-height: 1.45; color: #475569; }
+    .fidelity-note code { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 7pt; color: #0f172a; }
+    .sheet-footer { display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 2mm; font-size: 7.4pt; color: #64748b; font-family: 'JetBrains Mono', Consolas, monospace; }
+    @media print { body { background: #fff; } .toolbar { display: none; } .a4-sheet { margin: 0; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span><strong>Lumina LMS</strong> — Live DOM-Extracted A4 Wireframe Book (29 pages)</span>
+    <div>
+      <a href="lumina-playable-wireframe.html">Open Playable Prototype</a>
+      <button onclick="window.print()">Print / Save PDF</button>
+    </div>
+  </div>
+  
+    <section class="a4-sheet">
+      <header class="sheet-header">
+        <div>
+          <div class="kicker">LIVE DOM-EXTRACTED CAPSTONE WIREFRAME DOCUMENTATION</div>
+          <h1>Lumina LMS — Complete System Wireframes &amp; Screen Map</h1>
+        </div>
+        <div class="header-right">
+          <div><strong>Screens Captured:</strong> 28 Live Views</div>
+          <div><strong>Mapped Connections:</strong> 134 Interactive Links</div>
+        </div>
+      </header>
+      <div class="wireframe-frame" style="height: 118mm; padding: 4mm; overflow: hidden; display:flex; align-items:center; justify-content:center;">
+        <img src="lumina-connected-flow.svg" style="max-width:100%; max-height:100%; object-fit:contain;" />
+      </div>
+      <div class="spec-deck">
+        <p class="summary">Every plate in this document was extracted directly from the live running Next.js DOM at <code>http://localhost:3000</code> across all 4 demo roles (Student, Student Assistant, Librarian, Super Admin), Public routes, and Mobile (390&times;844).</p>
+        <div class="spec-grid">
+          <div class="callout-box">
+            <h2>Included Deliverables</h2>
+            <ol class="callout-list">
+              <li><span class="pin">1</span><span><strong>lumina-wireframes-a4.pdf</strong> — 29-page A4 Portrait specification book with live-extracted wireframes &amp; reference screenshots.</span></li>
+              <li><span class="pin">2</span><span><strong>lumina-playable-wireframe.html</strong> — Interactive browser prototype with clickable hotspots across all roles.</span></li>
+              <li><span class="pin">3</span><span><strong>lumina-connected-flow.svg</strong> — Full system canvas with 134 connector arrows for Figma &amp; Penpot.</span></li>
+              <li><span class="pin">4</span><span><strong>figma-prototype-builder.js</strong> — Figma plugin script that auto-builds frames and wires clickable prototype noodles.</span></li>
+            </ol>
+          </div>
+          <div class="tech-box">
+            <h2>Screen Coverage Index</h2>
+            <p class="tech-code">01-landing (Public) • 02-forgot-password (Public) • 03-auth-error (Public) • 04-student-dashboard (Student) • 05-student-card-back (Student) • 06-student-catalog (Student) • 07-student-book-modal (Student) • 08-student-history (Student) • 09-student-attendance (Student) • 10-student-notifications (Student) • 11-profile (Student) • 12-security (Student) • 13-circulation-checkout (Student Asst.) • 14-circulation-return (Student Asst.) • 15-librarian-dashboard (Librarian) • 16-inventory (Librarian) • 17-inventory-add (Librarian) • 18-attendance-staff (Librarian) • 19-users-directory (Librarian) • 20-users-detail (Librarian) • 21-users-new (Librarian) • 22-analytics (Librarian) • 23-policies (Librarian) • 24-audit-logs (Super Admin) • 25-mobile-dashboard (Mobile) • 26-mobile-nav-drawer (Mobile) • 27-mobile-catalog (Mobile) • 28-mobile-circulation (Mobile)</p>
+          </div>
+        </div>
+      </div>
+      <footer class="sheet-footer">
+        <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+        <span>Page 01 of 29</span>
+      </footer>
+    </section>
+  
+  
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Public &amp; Authentication • PUBLIC</div>
+            <h1>01-landing: Landing Page &amp; Sign-In</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 2455 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/01-landing.svg" alt="Landing Page &amp; Sign-In" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (5 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/01-landing.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Sign in with Microsoft</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>SUPER ADMIN</code> &rarr; <strong>24-audit-logs</strong></li><li><code>LIBRARIAN</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>STUDENT ASSISTANT</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>STUDENT</code> &rarr; <strong>04-student-dashboard</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 15
+Media/QR/Chart Boxes: 2
+Vector Icons: 5
+Typography Nodes: 41
+Interactive Hotspots: 7</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/01-landing.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/01-landing.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 02 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Public &amp; Authentication • PUBLIC</div>
+            <h1>02-forgot-password: Forgot Password</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/forgot-password</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/02-forgot-password.svg" alt="Forgot Password" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (1 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/02-forgot-password.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Back to sign in</code> &rarr; <strong>01-landing</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 4
+Media/QR/Chart Boxes: 1
+Vector Icons: 1
+Typography Nodes: 11
+Interactive Hotspots: 2</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/02-forgot-password.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/02-forgot-password.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 03 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Public &amp; Authentication • PUBLIC</div>
+            <h1>03-auth-error: Account Restricted / Auth Error</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/error?error=archived_account</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/03-auth-error.svg" alt="Account Restricted / Auth Error" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (1 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/03-auth-error.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Back to Sign In</code> &rarr; <strong>01-landing</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 6
+Media/QR/Chart Boxes: 1
+Vector Icons: 3
+Typography Nodes: 17
+Interactive Hotspots: 1</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/03-auth-error.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/03-auth-error.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 04 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>04-student-dashboard: Student Dashboard &amp; Digital Library Card</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/dashboard</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1335 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/04-student-dashboard.svg" alt="Student Dashboard &amp; Digital Library Card" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (5 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/04-student-dashboard.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li><li><code>Back</code> &rarr; <strong>05-student-card-back</strong></li><li><code>View All</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 80
+Media/QR/Chart Boxes: 12
+Vector Icons: 19
+Typography Nodes: 105
+Interactive Hotspots: 27</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/04-student-dashboard.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/04-student-dashboard.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 05 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>05-student-card-back: Digital Library Card — Back / QR View</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/dashboard</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1335 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/05-student-card-back.svg" alt="Digital Library Card — Back / QR View" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (7 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/05-student-card-back.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li><li><code>Front</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>View All</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 79
+Media/QR/Chart Boxes: 11
+Vector Icons: 19
+Typography Nodes: 106
+Interactive Hotspots: 26</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/05-student-card-back.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/05-student-card-back.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 06 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>06-student-catalog: Student Catalog Search &amp; Filters</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/student-catalog</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1432 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/06-student-catalog.svg" alt="Student Catalog Search &amp; Filters" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (41 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/06-student-catalog.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Toggle Sidebar</code> &rarr; <strong>07-student-book-modal</strong></li><li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li><li><code>PI Paolo Ian Bautista demo.b</code> &rarr; <strong>07-student-book-modal</strong></li><li><code>4</code> &rarr; <strong>07-student-book-modal</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 150
+Media/QR/Chart Boxes: 17
+Vector Icons: 31
+Typography Nodes: 160
+Interactive Hotspots: 45</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/06-student-catalog.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/06-student-catalog.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 07 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>07-student-book-modal: Book Detail Modal &amp; Reserve Action</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/student-catalog (BookDetailModal)</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1432 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/07-student-book-modal.svg" alt="Book Detail Modal &amp; Reserve Action" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (5 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/07-student-book-modal.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 150
+Media/QR/Chart Boxes: 17
+Vector Icons: 31
+Typography Nodes: 160
+Interactive Hotspots: 47</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/07-student-book-modal.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/07-student-book-modal.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 08 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>08-student-history: Student Borrow History</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/history</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 974 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/08-student-history.svg" alt="Student Borrow History" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (4 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/08-student-history.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 64
+Media/QR/Chart Boxes: 11
+Vector Icons: 30
+Typography Nodes: 101
+Interactive Hotspots: 25</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/08-student-history.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/08-student-history.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 09 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>09-student-attendance: Student Attendance Logs</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/attendance</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/09-student-attendance.svg" alt="Student Attendance Logs" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (4 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/09-student-attendance.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 28
+Media/QR/Chart Boxes: 1
+Vector Icons: 40
+Typography Nodes: 54
+Interactive Hotspots: 10</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/09-student-attendance.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/09-student-attendance.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 10 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Student Experience • STUDENT</div>
+            <h1>10-student-notifications: Notifications Center</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/notifications</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1190 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/10-student-notifications.svg" alt="Notifications Center" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (5 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/10-student-notifications.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 60
+Media/QR/Chart Boxes: 1
+Vector Icons: 25
+Typography Nodes: 55
+Interactive Hotspots: 29</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/10-student-notifications.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/10-student-notifications.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 11 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Account Settings • STUDENT</div>
+            <h1>11-profile: Profile &amp; Avatar Manager</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/profile</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/11-profile.svg" alt="Profile &amp; Avatar Manager" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (5 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/11-profile.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 30
+Media/QR/Chart Boxes: 1
+Vector Icons: 13
+Typography Nodes: 32
+Interactive Hotspots: 13</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/11-profile.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/11-profile.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 12 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Account Settings • STUDENT</div>
+            <h1>12-security: Account Security</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/security</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/12-security.svg" alt="Account Security" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (5 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/12-security.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 13
+Media/QR/Chart Boxes: 1
+Vector Icons: 9
+Typography Nodes: 14
+Interactive Hotspots: 9</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/12-security.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/12-security.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 13 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Circulation &amp; Desk Operations • STUDENT ASST.</div>
+            <h1>13-circulation-checkout: Circulation Desk — Checkout Mode</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/circulation?mode=checkout</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/13-circulation-checkout.svg" alt="Circulation Desk — Checkout Mode" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (9 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/13-circulation-checkout.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 32
+Media/QR/Chart Boxes: 1
+Vector Icons: 18
+Typography Nodes: 27
+Interactive Hotspots: 20</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/13-circulation-checkout.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/13-circulation-checkout.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 14 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Circulation &amp; Desk Operations • STUDENT ASST.</div>
+            <h1>14-circulation-return: Circulation Desk — Return Mode</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/circulation?mode=return</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/14-circulation-return.svg" alt="Circulation Desk — Return Mode" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (10 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/14-circulation-return.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>06-student-catalog</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 29
+Media/QR/Chart Boxes: 1
+Vector Icons: 17
+Typography Nodes: 26
+Interactive Hotspots: 19</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/14-circulation-return.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/14-circulation-return.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 15 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Staff &amp; Librarian Operations • LIBRARIAN</div>
+            <h1>15-librarian-dashboard: Librarian Operations Dashboard</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/dashboard</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/15-librarian-dashboard.svg" alt="Librarian Operations Dashboard" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (19 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/15-librarian-dashboard.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li><li><code>Attendance Logs</code> &rarr; <strong>18-attendance-staff</strong></li><li><code>Settings &amp; Policies</code> &rarr; <strong>23-policies</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 49
+Media/QR/Chart Boxes: 6
+Vector Icons: 27
+Typography Nodes: 54
+Interactive Hotspots: 29</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/15-librarian-dashboard.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/15-librarian-dashboard.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 16 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Staff &amp; Librarian Operations • LIBRARIAN</div>
+            <h1>16-inventory: Inventory Management</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/inventory</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1180 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/16-inventory.svg" alt="Inventory Management" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (9 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/16-inventory.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li><li><code>Attendance Logs</code> &rarr; <strong>18-attendance-staff</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 104
+Media/QR/Chart Boxes: 13
+Vector Icons: 53
+Typography Nodes: 199
+Interactive Hotspots: 29</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/16-inventory.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/16-inventory.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 17 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Staff &amp; Librarian Operations • LIBRARIAN</div>
+            <h1>17-inventory-add: Add Book &amp; ISBN Lookup</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/inventory/add</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1239 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/17-inventory-add.svg" alt="Add Book &amp; ISBN Lookup" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (11 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/17-inventory-add.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 38
+Media/QR/Chart Boxes: 2
+Vector Icons: 20
+Typography Nodes: 49
+Interactive Hotspots: 18</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/17-inventory-add.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/17-inventory-add.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 18 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Staff &amp; Librarian Operations • LIBRARIAN</div>
+            <h1>18-attendance-staff: Staff Gate Attendance Logs</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/attendance</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/18-attendance-staff.svg" alt="Staff Gate Attendance Logs" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (8 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/18-attendance-staff.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 25
+Media/QR/Chart Boxes: 1
+Vector Icons: 15
+Typography Nodes: 35
+Interactive Hotspots: 16</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/18-attendance-staff.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/18-attendance-staff.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 19 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Administration &amp; Analytics • LIBRARIAN</div>
+            <h1>19-users-directory: User Directory</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/users</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/19-users-directory.svg" alt="User Directory" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (13 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/19-users-directory.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>Attendance Logs</code> &rarr; <strong>18-attendance-staff</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 33
+Media/QR/Chart Boxes: 1
+Vector Icons: 15
+Typography Nodes: 65
+Interactive Hotspots: 20</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/19-users-directory.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/19-users-directory.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 20 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Administration &amp; Analytics • LIBRARIAN</div>
+            <h1>20-users-detail: User Detail &amp; Card Management</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/users/[id]</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/20-users-detail.svg" alt="User Detail &amp; Card Management" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (10 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/20-users-detail.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 27
+Media/QR/Chart Boxes: 1
+Vector Icons: 23
+Typography Nodes: 42
+Interactive Hotspots: 17</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/20-users-detail.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/20-users-detail.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 21 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Administration &amp; Analytics • LIBRARIAN</div>
+            <h1>21-users-new: Provision New User</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/users/new</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/21-users-new.svg" alt="Provision New User" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (10 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/21-users-new.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 18
+Media/QR/Chart Boxes: 1
+Vector Icons: 14
+Typography Nodes: 25
+Interactive Hotspots: 16</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/21-users-new.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/21-users-new.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 22 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Administration &amp; Analytics • LIBRARIAN</div>
+            <h1>22-analytics: Library Analytics Dashboard</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/analytics</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1099 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/22-analytics.svg" alt="Library Analytics Dashboard" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (12 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/22-analytics.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li><li><code>Attendance Logs</code> &rarr; <strong>18-attendance-staff</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 49
+Media/QR/Chart Boxes: 7
+Vector Icons: 15
+Typography Nodes: 87
+Interactive Hotspots: 26</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/22-analytics.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/22-analytics.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 23 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Administration &amp; Analytics • LIBRARIAN</div>
+            <h1>23-policies: Library Policies Console</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/policies</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 900 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/23-policies.svg" alt="Library Policies Console" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (8 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/23-policies.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>15-librarian-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 28
+Media/QR/Chart Boxes: 1
+Vector Icons: 23
+Typography Nodes: 35
+Interactive Hotspots: 21</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/23-policies.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/23-policies.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 24 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Administration &amp; Analytics • SUPER ADMIN</div>
+            <h1>24-audit-logs: Super Admin Audit Logs</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/audit</code></div>
+            <div><strong>Viewport:</strong> 1440 &times; 1004 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/24-audit-logs.svg" alt="Super Admin Audit Logs" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (11 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/24-audit-logs.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>04-student-dashboard</strong></li><li><code>Inventory</code> &rarr; <strong>16-inventory</strong></li><li><code>Circulation Desk</code> &rarr; <strong>13-circulation-checkout</strong></li><li><code>Borrowing Logs</code> &rarr; <strong>08-student-history</strong></li><li><code>Analytics</code> &rarr; <strong>22-analytics</strong></li><li><code>User Directory</code> &rarr; <strong>19-users-directory</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 51
+Media/QR/Chart Boxes: 1
+Vector Icons: 17
+Typography Nodes: 107
+Interactive Hotspots: 31</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/24-audit-logs.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/24-audit-logs.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 25 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Mobile Responsive (390×844) • MOBILE</div>
+            <h1>25-mobile-dashboard: Mobile Student Dashboard</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/dashboard</code></div>
+            <div><strong>Viewport:</strong> 390 &times; 2266 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/25-mobile-dashboard.svg" alt="Mobile Student Dashboard" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (1 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/25-mobile-dashboard.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Toggle Sidebar</code> &rarr; <strong>26-mobile-nav-drawer</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 64
+Media/QR/Chart Boxes: 11
+Vector Icons: 8
+Typography Nodes: 88
+Interactive Hotspots: 16</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/25-mobile-dashboard.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/25-mobile-dashboard.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 26 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Mobile Responsive (390×844) • MOBILE</div>
+            <h1>26-mobile-nav-drawer: Mobile Navigation Drawer</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/dashboard</code></div>
+            <div><strong>Viewport:</strong> 390 &times; 2266 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/26-mobile-nav-drawer.svg" alt="Mobile Navigation Drawer" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (6 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/26-mobile-nav-drawer.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li><code>Lumina LMS PLATFORM</code> &rarr; <strong>25-mobile-dashboard</strong></li><li><code>Dashboard</code> &rarr; <strong>25-mobile-dashboard</strong></li><li><code>Catalog</code> &rarr; <strong>27-mobile-catalog</strong></li><li><code>My Borrowing</code> &rarr; <strong>08-student-history</strong></li><li><code>My Attendance</code> &rarr; <strong>09-student-attendance</strong></li><li><code>Close</code> &rarr; <strong>25-mobile-dashboard</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 64
+Media/QR/Chart Boxes: 11
+Vector Icons: 8
+Typography Nodes: 88
+Interactive Hotspots: 22</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/26-mobile-nav-drawer.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/26-mobile-nav-drawer.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 27 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Mobile Responsive (390×844) • MOBILE</div>
+            <h1>27-mobile-catalog: Mobile Student Catalog</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/student-catalog</code></div>
+            <div><strong>Viewport:</strong> 390 &times; 3200 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/27-mobile-catalog.svg" alt="Mobile Student Catalog" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (0 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/27-mobile-catalog.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li>Self-contained form / view state</li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 138
+Media/QR/Chart Boxes: 16
+Vector Icons: 23
+Typography Nodes: 139
+Interactive Hotspots: 37</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/27-mobile-catalog.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/27-mobile-catalog.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 28 of 29</span>
+        </footer>
+      </section>
+
+      <section class="a4-sheet">
+        <header class="sheet-header">
+          <div>
+            <div class="kicker">Mobile Responsive (390×844) • MOBILE</div>
+            <h1>28-mobile-circulation: Mobile Circulation Desk</h1>
+          </div>
+          <div class="header-right">
+            <div><strong>Route:</strong> <code>/circulation?mode=checkout</code></div>
+            <div><strong>Viewport:</strong> 390 &times; 901 px</div>
+          </div>
+        </header>
+
+        <div class="wireframe-frame">
+          <img src="svg/28-mobile-circulation.svg" alt="Mobile Circulation Desk" style="width:100%; height:100%; object-fit:contain; background:#f8fafc;" />
+        </div>
+
+        <div class="spec-deck">
+          <div class="spec-grid" style="grid-template-columns: 1.25fr 1fr;">
+            <div class="callout-box">
+              <h2>Live UI Verification &amp; Connected Navigation (0 Links)</h2>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items:start;">
+                <div style="border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; height:76mm; display:flex; align-items:center; justify-content:center;">
+                  <img src="screenshots/28-mobile-circulation.png" style="max-width:100%; max-height:100%; object-fit:contain;" />
+                </div>
+                <ul class="links-list">
+                  <li>Self-contained form / view state</li>
+                </ul>
+              </div>
+            </div>
+            <div class="tech-box">
+              <h2>DOM Extraction Telemetry</h2>
+              <p class="tech-code">Containers/Borders: 29
+Media/QR/Chart Boxes: 0
+Vector Icons: 9
+Typography Nodes: 17
+Interactive Hotspots: 11</p>
+              <div class="fidelity-note">
+                <strong>Editable Vector Artboard</strong>
+                <p>File: <code>svg/28-mobile-circulation.svg</code></p>
+                <p>Live Screenshot: <code>screenshots/28-mobile-circulation.png</code></p>
+                <p>100% derived from live DOM coordinates.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="sheet-footer">
+          <span>Lumina LMS — STI College Alabang (Live DOM Extraction)</span>
+          <span>Page 29 of 29</span>
+        </footer>
+      </section>
+</body>
+</html>

@@ -382,6 +382,14 @@ describe("Security Hardening Verification", () => {
       );
       expect(badThemeRes.status).toBe(400);
 
+      const badViewRes = await uiPreferencesPatch(
+        new Request("http://localhost/api/ui-preferences", {
+          method: "PATCH",
+          body: JSON.stringify({ inventoryView: "grid" }),
+        })
+      );
+      expect(badViewRes.status).toBe(400);
+
       const badProgressRes = await uiPreferencesPatch(
         new Request("http://localhost/api/ui-preferences", {
           method: "PATCH",
