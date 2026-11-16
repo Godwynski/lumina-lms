@@ -18,6 +18,7 @@ import {
   UserCheck,
   History,
   BarChart3,
+  Shield,
 } from "lucide-react";
 
 
@@ -58,6 +59,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -69,19 +71,32 @@ import {
 
 import { Role, Profile, NavItem, hasPermission } from "@/lib/auth/permissions";
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "patron" },
-  { href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "patron" },
-  { href: "/inventory", label: "Inventory", icon: BookMarked, minRole: "library_staff", permissionKey: "manage_inventory" },
-  { href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "library_staff", permissionKey: "manage_circulation" },
-  { href: "/history", label: "Borrow History", icon: History, minRole: "patron" },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/attendance", label: "Attendance Logs", icon: UserCheck, minRole: "patron" },
-  { href: "/policies", label: "Settings & Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
-  { href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+type NavGroupKey = "daily" | "records" | "manage" | "admin";
+
+type GroupedNavItem = NavItem & {
+  group: NavGroupKey;
+};
+
+const NAV_GROUPS: Array<{ key: NavGroupKey; label: string }> = [
+  { key: "daily", label: "Daily" },
+  { key: "records", label: "Records" },
+  { key: "manage", label: "Manage" },
+  { key: "admin", label: "Admin" },
 ];
-const SETTINGS_PATHS = ["/profile", "/preferences", "/security", "/policies"];
+
+const NAV_ITEMS: GroupedNavItem[] = [
+  { group: "daily", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minRole: "patron" },
+  { group: "daily", href: "/student-catalog", label: "Catalog", icon: BookOpen, minRole: "patron" },
+  { group: "daily", href: "/circulation", label: "Circulation Desk", icon: RefreshCw, minRole: "library_staff", permissionKey: "manage_circulation" },
+  { group: "records", href: "/history", label: "My Borrowing", icon: History, minRole: "patron" },
+  { group: "records", href: "/attendance", label: "Attendance Logs", icon: UserCheck, minRole: "patron" },
+  { group: "manage", href: "/inventory", label: "Inventory", icon: BookMarked, minRole: "library_staff", permissionKey: "manage_inventory" },
+  { group: "manage", href: "/users", label: "User Directory", icon: Users, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+  { group: "admin", href: "/analytics", label: "Analytics", icon: BarChart3, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+  { group: "admin", href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+  { group: "admin", href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian", permissionKey: "view_admin_dashboard" },
+];
+const SETTINGS_PATHS = ["/profile", "/security", "/policies"];
 
 export function ProtectedNav({
   role: _initialRole,
@@ -182,8 +197,9 @@ export function ProtectedNav({
     currentRole === "librarian" ||
     (currentRole === "library_staff" && !!currentProfile?.permissions?.manage_circulation && currentProfile?.status?.toUpperCase() === 'ACTIVE');
 
-  const navItemsToRender = useMemo(() => {
+  const navGroupsToRender = useMemo(() => {
     const items: Array<{
+      group: NavGroupKey;
       href: string;
       label: string;
       icon: NavItem["icon"];
@@ -197,6 +213,7 @@ export function ProtectedNav({
         if (isStaffUser) {
           // Staff gets ONLY Borrowing Logs
           items.push({
+            group: item.group,
             href: "/history?view=logs",
             label: "Borrowing Logs",
             icon: item.icon,
@@ -207,12 +224,14 @@ export function ProtectedNav({
           if (isSAWithCirculation) {
             // Authorized Student Assistants get BOTH My Borrowing and Borrowing Logs
             items.push({
+              group: item.group,
               href: "/history",
               label: "My Borrowing",
               icon: item.icon,
               isActive: pathname === "/history" && viewParam !== "logs"
             });
             items.push({
+              group: item.group,
               href: "/history?view=logs",
               label: "Borrowing Logs",
               icon: item.icon,
@@ -221,6 +240,7 @@ export function ProtectedNav({
           } else {
             // Regular students (and SAs without circulation permission) get ONLY My Borrowing
             items.push({
+              group: item.group,
               href: "/history",
               label: "My Borrowing",
               icon: item.icon,
@@ -232,12 +252,14 @@ export function ProtectedNav({
         if (currentRole === "library_staff" && hasAttendancePerm) {
           // Student Assistant with attendance permission gets BOTH My Attendance and Attendance Logs
           items.push({
+            group: item.group,
             href: "/attendance",
             label: "My Attendance",
             icon: item.icon,
             isActive: pathname === "/attendance" && viewParam !== "logs"
           });
           items.push({
+            group: item.group,
             href: "/attendance?view=logs",
             label: "Attendance Logs",
             icon: item.icon,
@@ -246,6 +268,7 @@ export function ProtectedNav({
         } else {
           const isStaffUser = currentRole === "super_admin" || currentRole === "librarian";
           items.push({
+            group: item.group,
             href: isStaffUser ? "/attendance?view=logs" : "/attendance",
             label: hasAttendancePerm ? "Attendance Logs" : "My Attendance",
             icon: item.icon,
@@ -254,6 +277,7 @@ export function ProtectedNav({
         }
       } else {
         items.push({
+          group: item.group,
           href: item.href,
           label: item.label,
           icon: item.icon,
@@ -262,7 +286,13 @@ export function ProtectedNav({
       }
     });
 
-    return items;
+    return NAV_GROUPS
+      .map(group => ({
+        key: group.key,
+        label: group.label,
+        items: items.filter(i => i.group === group.key),
+      }))
+      .filter(group => group.items.length > 0);
   }, [visibleItems, currentRole, hasCirculationPerm, hasAttendancePerm, pathname, viewParam, isActive]);
 
 
@@ -283,45 +313,50 @@ export function ProtectedNav({
           <Logo size={20} className="scale-90 shrink-0" />
           <div className="flex flex-col whitespace-nowrap">
             <span className="leading-none text-base font-bold tracking-tight text-sidebar-foreground">Lumina</span>
-            <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/70">LMS Platform</span>
+            <span className="mt-1 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">LMS Platform</span>
           </div>
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-2 flex-1">
-        <nav className="flex flex-col h-full" aria-label="Main Navigation">
-          <SidebarGroup className="flex-1">
-            <SidebarMenu>
-              {navItemsToRender.map(item => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={item.isActive}
-                    tooltip={item.label}
-                  >
-                    <Link 
-                      href={item.href}
-                      aria-label={item.label}
-                      aria-current={item.isActive ? (pathname === item.href.split('?')[0] ? 'page' : 'location') : undefined}
-                      prefetch={true}
-                      className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
-                      onClick={() => {
-                        if (isMobile) setOpenMobile(false);
-                      }}
-                      onMouseEnter={() => handlePrefetch(item.href)}
+        <nav className="flex flex-col h-full gap-1" aria-label="Main Navigation">
+          {navGroupsToRender.map(group => (
+            <SidebarGroup key={group.key} className="py-1.5">
+              <SidebarGroupLabel className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.label}
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                {group.items.map(item => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={item.isActive}
+                      tooltip={item.label}
                     >
-                      {item.icon && <item.icon className="shrink-0" />}
-                      <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+                      <Link 
+                        href={item.href}
+                        aria-label={item.label}
+                        aria-current={item.isActive ? (pathname === item.href.split('?')[0] ? 'page' : 'location') : undefined}
+                        prefetch={true}
+                        className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
+                        onClick={() => {
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                        onMouseEnter={() => handlePrefetch(item.href)}
+                      >
+                        {item.icon && <item.icon className="shrink-0" />}
+                        <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))}
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 hidden md:flex">
+      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -380,8 +415,20 @@ export function ProtectedNav({
                       <span>My Profile</span>
                     </Link>
                   </DropdownMenuItem>
-
-
+                  <DropdownMenuItem asChild>
+                    <Link 
+                      href="/security" 
+                      prefetch={true}
+                      className="flex w-full cursor-pointer items-center" 
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
+                      }}
+                      onMouseEnter={() => handlePrefetch("/security")}
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Security</span>
+                    </Link>
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -428,14 +475,14 @@ export function ProtectedNav({
         <Dialog open={isLoggingOut}>
           <DialogContent className="border-none bg-transparent p-0 shadow-none outline-none ring-0 focus:ring-0 [&>button]:hidden">
             <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl animate-in fade-in duration-500">
-              <div className="flex flex-col items-center gap-6 p-12 rounded-3xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
+              <div className="flex flex-col items-center gap-6 p-8 rounded-2xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
                 <div className="relative">
                   <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
                   <Loader2 className="absolute inset-0 h-12 w-12 animate-spin text-primary [animation-duration:3s]" />
                 </div>
                 <DialogHeader className="flex flex-col items-center gap-2">
                   <DialogTitle className="text-2xl font-bold tracking-tight">Logging out...</DialogTitle>
-                  <DialogDescription className="text-base text-muted-foreground font-medium text-center balance opacity-80">
+                  <DialogDescription className="text-sm text-muted-foreground font-medium text-center balance">
                     Ending your current session safely.
                   </DialogDescription>
                 </DialogHeader>

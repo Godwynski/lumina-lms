@@ -1350,7 +1350,7 @@ describe('Layout Components', () => {
         <BreadcrumbNav />
       </PreferencesProvider>
     );
-    expect(container.querySelector('h1')?.textContent).toBe('Add Asset');
+    expect(container.querySelector('h1')?.textContent).toBe('Add Book');
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/inventory');
     expect(container.querySelector('a')?.textContent).toContain('Inventory');
 

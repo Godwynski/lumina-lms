@@ -12,11 +12,15 @@ type EmptyStateAction = {
   icon?: LucideIcon;
 };
 
+type EmptyStateVariant = "first-use" | "no-results";
+
 type EmptyStateProps = {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   description: string;
   action?: EmptyStateAction;
+  variant?: EmptyStateVariant;
+  noCard?: boolean;
   className?: string;
   contentClassName?: string;
 };
@@ -26,45 +30,69 @@ export function EmptyState({
   title,
   description,
   action,
+  variant = "first-use",
+  noCard = false,
   className,
   contentClassName,
 }: EmptyStateProps) {
-  return (
-    <Card className={cn("w-full border-dashed border-border bg-card shadow-sm", className)}>
-      <CardContent
-        className={cn(
-          "flex min-h-[380px] flex-col items-center justify-center px-6 py-12 text-center sm:px-10 sm:py-16",
-          contentClassName,
-        )}
-      >
-        <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground">
-          <Icon size={38} />
-        </div>
-        <h3 className="mb-2 text-2xl font-bold tracking-tight text-foreground">{title}</h3>
-        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
+  const isNoResults = variant === "no-results";
 
-        {action ? (
-          action.href ? (
-            <Button
-              asChild
-              className="mt-7 h-11 rounded-lg bg-primary px-6 text-xs font-semibold uppercase tracking-[0.08em] text-primary-foreground hover:bg-primary/90"
-            >
-              <Link href={action.href}>
-                {action.icon ? <action.icon size={18} /> : null}
-                {action.label}
-              </Link>
-            </Button>
-          ) : (
-            <Button
-              onClick={action.onClick}
-              className="mt-7 h-11 rounded-lg bg-primary px-6 text-xs font-semibold uppercase tracking-[0.08em] text-primary-foreground hover:bg-primary/90"
-            >
-              {action.icon ? <action.icon size={18} /> : null}
+  const body = (
+    <div
+      data-empty-variant={variant}
+      className={cn(
+        "flex flex-col items-center justify-center px-6 text-center sm:px-10",
+        isNoResults ? "min-h-[260px] py-10 sm:py-12" : "min-h-[340px] py-12 sm:py-16",
+        contentClassName,
+      )}
+    >
+      {Icon ? (
+        <div
+          className={cn(
+            "mb-4 flex items-center justify-center rounded-2xl border border-border text-muted-foreground",
+            isNoResults ? "h-14 w-14 bg-muted/60" : "h-16 w-16 bg-muted"
+          )}
+        >
+          <Icon size={isNoResults ? 26 : 32} aria-hidden="true" />
+        </div>
+      ) : null}
+      <h3 className="mb-1.5 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
+      <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>
+
+      {action ? (
+        action.href ? (
+          <Button
+            asChild
+            variant={isNoResults ? "outline" : "default"}
+            className="mt-6 h-10 rounded-lg px-5 text-sm font-semibold"
+          >
+            <Link href={action.href}>
+              {action.icon ? <action.icon size={16} aria-hidden="true" /> : null}
               {action.label}
-            </Button>
-          )
-        ) : null}
-      </CardContent>
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            onClick={action.onClick}
+            variant={isNoResults ? "outline" : "default"}
+            className="mt-6 h-10 rounded-lg px-5 text-sm font-semibold"
+          >
+            {action.icon ? <action.icon size={16} aria-hidden="true" /> : null}
+            {action.label}
+          </Button>
+        )
+      ) : null}
+    </div>
+  );
+
+  if (noCard) {
+    return <div className={cn("w-full", className)}>{body}</div>;
+  }
+
+  return (
+    <Card className={cn("w-full rounded-xl border-dashed border-border bg-card shadow-sm", className)}>
+      <CardContent className="p-0">{body}</CardContent>
     </Card>
   );
 }

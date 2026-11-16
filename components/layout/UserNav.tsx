@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogOut, Settings, Loader2 } from "lucide-react";
+import { LogOut, Settings, Shield, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useLogout } from "@/hooks/use-logout";
@@ -95,7 +95,7 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium leading-none">{name}</p>
                 {role && (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                  <span className="rounded-lg bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
                     {role}
                   </span>
                 )}
@@ -110,7 +110,13 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
             <DropdownMenuItem asChild>
               <Link href="/profile" prefetch={true} className="flex w-full cursor-pointer items-center">
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Profile Settings</span>
+                <span>My Profile</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/security" prefetch={true} className="flex w-full cursor-pointer items-center">
+                <Shield className="mr-2 h-4 w-4" />
+                <span>Security</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -156,14 +162,14 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
         <Dialog open={isLoggingOut}>
           <DialogContent className="border-none bg-transparent p-0 shadow-none outline-none ring-0 focus:ring-0 [&>button]:hidden">
             <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl animate-in fade-in duration-500">
-              <div className="flex flex-col items-center gap-6 p-12 rounded-3xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
+              <div className="flex flex-col items-center gap-6 p-8 rounded-2xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
                 <div className="relative">
                   <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
                   <Loader2 className="absolute inset-0 h-12 w-12 animate-spin text-primary [animation-duration:3s]" />
                 </div>
                 <DialogHeader className="flex flex-col items-center gap-2">
                   <DialogTitle className="text-2xl font-bold tracking-tight">Logging out...</DialogTitle>
-                  <DialogDescription className="text-base text-muted-foreground font-medium text-center balance opacity-80">
+                  <DialogDescription className="text-sm text-muted-foreground font-medium text-center balance">
                     Ending your current session safely.
                   </DialogDescription>
                 </DialogHeader>

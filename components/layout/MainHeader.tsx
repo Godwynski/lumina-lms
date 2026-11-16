@@ -34,8 +34,8 @@ export function MainHeader({ userNav }: MainHeaderProps) {
               <div className="absolute -inset-1 bg-primary/10 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex flex-col whitespace-nowrap">
-              <span className="leading-none text-[15px] font-black tracking-tight text-foreground/90">Lumina</span>
-              <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">LMS Platform</span>
+              <span className="leading-none text-base font-bold tracking-tight text-foreground">Lumina</span>
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">LMS Platform</span>
             </div>
           </Link>
           <div className="h-5 w-[1px] bg-border/20 mx-1" />
