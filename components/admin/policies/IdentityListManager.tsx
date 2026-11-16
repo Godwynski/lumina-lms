@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ export function IdentityListManager({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formName, setFormName] = useState("");
+  const programNameId = useId();
 
   const currentItems = useMemo(() => {
     try {
@@ -281,6 +282,7 @@ export function IdentityListManager({
                   value={item}
                   onChange={(e) => handleDraftChange(index, e.target.value)}
                   placeholder="e.g. BS Information Technology"
+                  aria-label={`Program ${index + 1} name`}
                   disabled={disabled}
                   maxLength={MAX_ITEM_LENGTH}
                   className="h-9 rounded-lg bg-background text-xs font-medium border-border"
@@ -291,6 +293,7 @@ export function IdentityListManager({
                   size="icon"
                   onClick={() => removeDraftItem(index)}
                   disabled={disabled}
+                  aria-label={item.trim() ? `Remove ${item}` : `Remove program ${index + 1}`}
                   className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -418,7 +421,7 @@ export function IdentityListManager({
 
             <div className="space-y-2">
               <div className="flex justify-between items-center px-0.5">
-                <label className="text-xs font-semibold text-foreground">
+                <label htmlFor={programNameId} className="text-xs font-semibold text-foreground">
                   Program Name
                 </label>
                 <span
@@ -433,6 +436,7 @@ export function IdentityListManager({
                 </span>
               </div>
               <Input
+                id={programNameId}
                 placeholder="e.g. BS Information Technology"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}

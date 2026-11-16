@@ -2066,6 +2066,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       )?.[2] as (() => Promise<void>) | undefined;
       await act(async () => {
         await realtimeCb?.();
+        await new Promise((resolve) => setTimeout(resolve, 350));
       });
       expect(mockGetAttendanceHistory).toHaveBeenCalled();
     });
@@ -2123,6 +2124,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       mockGetAttendanceHistory.mockResolvedValueOnce(personalRecords.slice(0, 1));
       await act(async () => {
         await realtimeCb?.();
+        await new Promise((resolve) => setTimeout(resolve, 350));
       });
       expect(mockGetAttendanceHistory).toHaveBeenCalledWith('stu-99');
     });

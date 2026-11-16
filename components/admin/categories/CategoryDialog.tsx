@@ -88,7 +88,7 @@ export function CategoryDialog({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Category Name info">
+                        <button type="button" className="grid size-6 place-items-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Category Name info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>
@@ -141,7 +141,7 @@ export function CategoryDialog({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Slug info">
+                        <button type="button" className="grid size-6 place-items-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Slug info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>
@@ -183,7 +183,7 @@ export function CategoryDialog({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Description info">
+                        <button type="button" className="grid size-6 place-items-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Description info">
                           <HelpCircle className="h-3 w-3" />
                         </button>
                       </TooltipTrigger>

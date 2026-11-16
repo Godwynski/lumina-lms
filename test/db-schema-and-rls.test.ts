@@ -770,21 +770,39 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       await expectRoleFailure(db, role, uid, `INSERT INTO public.books (title, author) VALUES ('X', 'Y')`);
       await expectRoleFailure(db, role, uid, `INSERT INTO public.book_copies (book_id) VALUES ($1)`, [activeBookId]);
       await expectRoleFailure(db, role, uid, `INSERT INTO public.categories (name, slug) VALUES ('X', 'x')`);
+      const noUpdBook = await withRole(db, role, uid, (tx) =>
+        tx.query(`UPDATE public.books SET title = 'Blocked' WHERE id = $1 RETURNING id`, [activeBookId])
+      );
+      expect(noUpdBook.rows).toHaveLength(0);
+      const noUpdCat = await withRole(db, role, uid, (tx) =>
+        tx.query(`UPDATE public.categories SET name = 'Blocked' WHERE id = $1 RETURNING id`, [activeCategoryId])
+      );
+      expect(noUpdCat.rows).toHaveLength(0);
     }
 
-    // student_assistant sees inactive books too, can insert/update books & categories, CANNOT delete books/categories or write book_copies
+    // student_assistant sees inactive books too, but CANNOT insert/update/delete books, categories, or book_copies
     const saBooks = await withRole(db, 'authenticated', saId, (tx) => tx.query<{ id: string }>(`SELECT id FROM public.books`));
     expect(saBooks.rows).toHaveLength(2);
 
-    const saInsertedBook = await withRole(db, 'authenticated', saId, (tx) =>
-      tx.query<{ id: string }>(`INSERT INTO public.books (title, author) VALUES ('SA Book', 'SA') RETURNING id`)
+    await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.books (title, author) VALUES ('SA Book', 'SA')`);
+    const saUpdBook = await withRole(db, 'authenticated', saId, (tx) =>
+      tx.query(`UPDATE public.books SET title = 'SA Edit' WHERE id = $1 RETURNING id`, [activeBookId])
     );
-    expect(saInsertedBook.rows[0].id).toBeTruthy();
-
+    expect(saUpdBook.rows).toHaveLength(0);
     const saDelBook = await withRole(db, 'authenticated', saId, (tx) =>
-      tx.query(`DELETE FROM public.books WHERE id = $1 RETURNING id`, [saInsertedBook.rows[0].id])
+      tx.query(`DELETE FROM public.books WHERE id = $1 RETURNING id`, [activeBookId])
     );
     expect(saDelBook.rows).toHaveLength(0);
+
+    await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.categories (name, slug) VALUES ('SA Cat', 'sa-cat')`);
+    const saUpdCat = await withRole(db, 'authenticated', saId, (tx) =>
+      tx.query(`UPDATE public.categories SET name = 'SA Cat Edit' WHERE id = $1 RETURNING id`, [activeCategoryId])
+    );
+    expect(saUpdCat.rows).toHaveLength(0);
+    const saDelCat = await withRole(db, 'authenticated', saId, (tx) =>
+      tx.query(`DELETE FROM public.categories WHERE id = $1 RETURNING id`, [activeCategoryId])
+    );
+    expect(saDelCat.rows).toHaveLength(0);
 
     await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.book_copies (book_id) VALUES ($1)`, [activeBookId]);
     const saUpdCopy = await withRole(db, 'authenticated', saId, (tx) =>
@@ -793,6 +811,15 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     expect(saUpdCopy.rows).toHaveLength(0);
 
     // librarian & super_admin can insert/update/delete books, book_copies, categories
+    const libBook = await withRole(db, 'authenticated', librarianId, (tx) =>
+      tx.query<{ id: string }>(`INSERT INTO public.books (title, author) VALUES ('Lib Book', 'Lib') RETURNING id`)
+    );
+    expect(libBook.rows[0].id).toBeTruthy();
+    const adminUpdBook = await withRole(db, 'authenticated', superAdminId, (tx) =>
+      tx.query<{ title: string }>(`UPDATE public.books SET title = 'Lib Book v2' WHERE id = $1 RETURNING title`, [libBook.rows[0].id])
+    );
+    expect(adminUpdBook.rows[0].title).toBe('Lib Book v2');
+
     const libCopy = await withRole(db, 'authenticated', librarianId, (tx) =>
       tx.query<{ id: string }>(`INSERT INTO public.book_copies (book_id) VALUES ($1) RETURNING id`, [activeBookId])
     );
@@ -800,12 +827,16 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       tx.query(`DELETE FROM public.book_copies WHERE id = $1`, [libCopy.rows[0].id])
     );
     await withRole(db, 'authenticated', librarianId, (tx) =>
-      tx.query(`DELETE FROM public.books WHERE id = $1`, [saInsertedBook.rows[0].id])
+      tx.query(`DELETE FROM public.books WHERE id = $1`, [libBook.rows[0].id])
     );
 
     const libCat = await withRole(db, 'authenticated', librarianId, (tx) =>
       tx.query<{ id: string }>(`INSERT INTO public.categories (name, slug) VALUES ('History', 'history') RETURNING id`)
     );
+    const libUpdCat = await withRole(db, 'authenticated', librarianId, (tx) =>
+      tx.query<{ name: string }>(`UPDATE public.categories SET name = 'World History' WHERE id = $1 RETURNING name`, [libCat.rows[0].id])
+    );
+    expect(libUpdCat.rows[0].name).toBe('World History');
     await withRole(db, 'authenticated', superAdminId, (tx) =>
       tx.query(`DELETE FROM public.categories WHERE id = $1`, [libCat.rows[0].id])
     );
@@ -953,10 +984,14 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       [student1Id]
     );
 
-    // audit_logs: anon & student see 0 rows; staff see all; nobody in authenticated can insert directly; service_role can insert
+    // audit_logs: anon, student, pending staff & student_assistant see 0 rows; librarian & super_admin see all; nobody in authenticated can insert directly; service_role can insert
     expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
     expect((await withRole(db, 'authenticated', student1Id, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
-    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(1);
+    expect((await withRole(db, 'authenticated', pendingLibrarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_log_records`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(1);
+    expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(1);
     await expectRoleFailure(
       db,
       'authenticated',
@@ -1057,5 +1092,25 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       tx.query<{ name: string }>(`SELECT name FROM storage.objects WHERE bucket_id = 'library-cards'`)
     );
     expect(s1CardsStorage.rows.map((r) => r.name)).toEqual([`${student1Id}/card.png`]);
+  });
+
+  it('applies rollback and migration 20261116141500 cleanly and enforces tightened manager-only policies', async () => {
+    const rollbackSql = fs.readFileSync(
+      path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_tighten_audit_and_catalog_rls.sql'),
+      'utf8'
+    );
+    const migrationSql = fs.readFileSync(
+      path.resolve(process.cwd(), 'supabase/migrations/20261116141500_tighten_audit_and_catalog_rls.sql'),
+      'utf8'
+    );
+
+    await db.exec(rollbackSql);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(2);
+
+    await db.exec(migrationSql);
+    expect((await withRole(db, 'authenticated', saId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(0);
+    await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.books (title, author) VALUES ('Blocked', 'SA')`);
+    await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.categories (name, slug) VALUES ('Blocked', 'blocked')`);
+    expect((await withRole(db, 'authenticated', librarianId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(2);
   });
 });

@@ -53,9 +53,10 @@ function ToastItem({ event, onDismiss }: ToastItemProps) {
          <p className="text-xs font-bold truncate text-foreground/90">{event.title}</p>
       </div>
       <button
+        type="button"
         onClick={() => onDismiss(event.id)}
-        className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
-        aria-label="Close notification"
+        className="grid size-6 place-items-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        aria-label={`Close notification for ${event.title}`}
       >
         <X size={14} />
       </button>
@@ -103,10 +104,12 @@ export function LiveActivityTicker() {
     };
   }, [supabase]);
 
-  if (events.length === 0) return null;
-
   return (
-    <div className="flex flex-col gap-2 overflow-hidden pointer-events-none fixed bottom-4 right-4 z-50 p-4 md:p-0 w-full max-w-[calc(100vw-2rem)] md:max-w-xs">
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-col gap-2 overflow-hidden pointer-events-none fixed bottom-4 right-4 z-50 p-4 md:p-0 w-full max-w-[calc(100vw-2rem)] md:max-w-xs"
+    >
       <AnimatePresence initial={false}>
         {events.map((event) => (
           <ToastItem key={event.id} event={event} onDismiss={handleDismiss} />

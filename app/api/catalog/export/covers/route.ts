@@ -12,7 +12,8 @@ export const GET = withAuthApi(async (_req, { supabase }) => {
       .not("cover_url", "is", null);
 
     if (error) {
-      return NextResponse.json({ error: `Database error: ${error.message}` }, { status: 500 });
+      console.error("Failed to fetch book covers for export:", error);
+      return NextResponse.json({ error: "Failed to export book covers" }, { status: 500 });
     }
 
     const booksWithCovers = (books || []).filter(b => b.cover_url && b.cover_url.startsWith("http"));
@@ -72,7 +73,6 @@ export const GET = withAuthApi(async (_req, { supabase }) => {
     });
   } catch (err: unknown) {
     console.error("Failed to generate covers ZIP:", err);
-    const errMsg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `Server error: ${errMsg}` }, { status: 500 });
+    return NextResponse.json({ error: "Failed to export book covers" }, { status: 500 });
   }
 }, { allowedRoles: ["super_admin", "librarian", "student_assistant"] });

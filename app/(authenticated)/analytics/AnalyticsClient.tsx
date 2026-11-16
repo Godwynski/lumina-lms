@@ -25,6 +25,8 @@ type DashboardStats = {
 
 interface AnalyticsProps {
   statsPromise: Promise<DashboardStats>;
+  initialSummaryPromise?: Promise<AnalyticsSummary | null>;
+  initialDates?: AnalyticsDates;
   role: 'super_admin' | 'librarian';
 }
 
@@ -34,11 +36,12 @@ const RANGES: { label: string; value: AnalyticsRange }[] = [
   { label: '1 Year', value: '1y' },
 ];
 
-export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
+export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDates, role }: AnalyticsProps) {
   const router = useRouter();
   const stats = use(statsPromise);
+  const initialSummary = initialSummaryPromise ? use(initialSummaryPromise) : null;
   const [range, setRange] = useState<AnalyticsRange | 'custom'>('30d');
-  const [dates, setDates] = useState<AnalyticsDates>(() => analyticsDates('30d'));
+  const [dates, setDates] = useState<AnalyticsDates>(() => initialDates ?? analyticsDates('30d'));
   const [loadedDates, setLoadedDates] = useState(dates);
   const [draft, setDraft] = useState(dates);
   const [dateError, setDateError] = useState('');
@@ -47,7 +50,7 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   const applyDates = (next: AnalyticsDates, preset: AnalyticsRange | 'custom') => {
     setDates(next); setRange(preset); setSelection(null);
   };
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(initialSummary);
   const [isPending, startTransition] = useTransition();
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,6 +58,9 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const summaryRequestRef = useRef(0);
+  const initialKeyRef = useRef<string | null>(
+    initialSummary ? `30d:${dates.from}:${dates.to}` : null
+  );
 
   const loadSummary = useCallback(async () => {
     // Only the newest request may update the charts (e.g. after fast range changes).
@@ -76,10 +82,15 @@ export function AnalyticsClient({ statsPromise, role }: AnalyticsProps) {
   }, [range, dates]);
 
   useEffect(() => {
+    const currentKey = `${range}:${dates.from}:${dates.to}`;
+    if (initialKeyRef.current === currentKey) {
+      return;
+    }
+    initialKeyRef.current = null;
     startTransition(() => {
       loadSummary();
     });
-  }, [loadSummary]);
+  }, [range, dates, loadSummary]);
 
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {

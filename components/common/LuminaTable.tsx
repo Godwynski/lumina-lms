@@ -159,6 +159,7 @@ export function LuminaTable<T extends { id: string | number }>({
               {columns.map((col, idx) => (
                 <th
                   key={`head-${idx}`}
+                  scope="col"
                   className={cn(
                     "px-4 py-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap",
                     col.headerClassName

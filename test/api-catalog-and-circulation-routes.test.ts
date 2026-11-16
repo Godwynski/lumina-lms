@@ -201,7 +201,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       supabase.setTableResponse("books", null, { message: "DB failed" });
       const errRes = await exportCoversGet(new Request("http://localhost/api/catalog/export/covers"));
       expect(errRes.status).toBe(500);
-      expect((await errRes.json()).error).toContain("DB failed");
+      expect((await errRes.json()).error).toBe("Failed to export book covers");
     });
   });
 
@@ -572,7 +572,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         new Request("http://localhost/api/notifications/maintenance", { method: "POST" })
       );
       expect(errRes.status).toBe(500);
-      expect(await errRes.json()).toEqual({ error: "Maintenance DB error" });
+      expect(await errRes.json()).toEqual({ error: "Failed to run maintenance tasks" });
     });
   });
 

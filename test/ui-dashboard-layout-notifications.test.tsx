@@ -786,7 +786,9 @@ describe('Dashboard Components', () => {
       mockGetBookCopyTitle.mockResolvedValue('Clean Architecture');
 
       const { container } = await renderClient(<LiveActivityTicker />);
-      expect(container.innerHTML).toBe('');
+      const liveRegion = container.querySelector('[role="status"][aria-live="polite"]');
+      expect(liveRegion).not.toBeNull();
+      expect(liveRegion?.textContent).toBe('');
 
       const tickerChannel = registeredChannels.find((c) => c.name === 'live-tickers');
       expect(tickerChannel).toBeDefined();
@@ -823,7 +825,7 @@ describe('Dashboard Components', () => {
       expect(container.textContent).not.toContain('Borrow Processed');
 
       // Manual dismiss removes one
-      const closeBtn = container.querySelector('button[aria-label="Close notification"]');
+      const closeBtn = container.querySelector('button[aria-label="Close notification for Compilers"]');
       await clickElement(closeBtn);
       expect(container.textContent).not.toContain('Compilers');
 
@@ -831,7 +833,7 @@ describe('Dashboard Components', () => {
       await act(async () => {
         vi.advanceTimersByTime(8100);
       });
-      expect(container.innerHTML).toBe('');
+      expect(liveRegion?.textContent).toBe('');
     } finally {
       cleanupClients();
       vi.useRealTimers();

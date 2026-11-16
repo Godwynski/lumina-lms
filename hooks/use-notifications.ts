@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -18,12 +18,12 @@ export interface Notification {
 
 const PAGE_SIZE = 50
 
-export function useNotifications() {
-  const [supabase] = useState(() => createClient())
+export function useNotificationsState(enabled = true) {
+  const [supabase] = useState(() => (enabled ? createClient() : null))
   const [notifications, setNotifications] = useState<Notification[]>([])
   // Unread notifications older than the loaded ones (the badge must count them too)
   const [olderUnread, setOlderUnread] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -31,6 +31,7 @@ export function useNotifications() {
   const userIdRef = useRef<string | null>(null)
 
   const fetchNotifications = useCallback(async (userId: string) => {
+    if (!supabase) return
     const [{ data, error }, { count }] = await Promise.all([
       supabase
         .from('notifications')
@@ -62,7 +63,7 @@ export function useNotifications() {
   const loadMore = useCallback(async () => {
     const userId = userIdRef.current
     const oldest = notifications[notifications.length - 1]
-    if (!userId || !oldest || loadingMore) return
+    if (!supabase || !userId || !oldest || loadingMore) return
 
     setLoadingMore(true)
     const { data, error } = await supabase
@@ -92,7 +93,7 @@ export function useNotifications() {
     const userId = userIdRef.current
     // Strip characters that have meaning in PostgREST filter syntax.
     const clean = term.replace(/[,()%*\\:]/g, ' ').trim()
-    if (!userId || !clean) return []
+    if (!supabase || !userId || !clean) return []
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -105,14 +106,16 @@ export function useNotifications() {
   }, [supabase])
 
   useEffect(() => {
+    if (!enabled || !supabase) return
+    const client = supabase
     let active = true
-    let channel: ReturnType<typeof supabase.channel> | null = null
+    let channel: ReturnType<typeof client.channel> | null = null
 
     async function setupNotifications() {
       // getSession() reads the session locally (no network round-trip). It is only used for
       // the user id; it is not a security check, since RLS verifies the token on every query.
       // proxy.ts and the browser client keep the token refreshed.
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { session } } = await client.auth.getSession()
       if (!session?.user || !active) {
         if (active) setLoading(false)
         return
@@ -127,7 +130,7 @@ export function useNotifications() {
 
       // Subscribe to new notifications with a unique channel name to avoid collisions
       const channelName = `notifications-${user.id}-${crypto.randomUUID()}`
-      channel = supabase
+      channel = client
         .channel(channelName)
         .on(
           'postgres_changes',
@@ -164,8 +167,9 @@ export function useNotifications() {
           }
         )
         .subscribe((status) => {
-          // Reload after joining/rejoining to recover messages missed while disconnected.
-          if (active && status === 'SUBSCRIBED') void fetchNotifications(user.id);
+          if (!active) return
+          // Reload on every (re)subscribe: closes the gap between the first fetch and the channel going live.
+          if (status === 'SUBSCRIBED') void fetchNotifications(user.id)
         })
     }
 
@@ -185,14 +189,15 @@ export function useNotifications() {
       window.removeEventListener('online', refreshVisible);
       document.removeEventListener('visibilitychange', refreshVisible);
       if (channel) {
-        supabase.removeChannel(channel)
+        client.removeChannel(channel)
       }
     }
-  }, [supabase, fetchNotifications])
+  }, [enabled, supabase, fetchNotifications])
 
   const unreadCount = olderUnread + notifications.filter(n => !n.is_read).length
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
+    if (!supabase) return
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
@@ -202,15 +207,17 @@ export function useNotifications() {
       toast.error('Failed to update notification')
     } else {
       // An unread item that isn't loaded (e.g. from search) was counted in olderUnread.
-      if (!notifications.some(n => n.id === id)) setOlderUnread(prev => Math.max(0, prev - 1))
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+      setNotifications(prev => {
+        if (!prev.some(n => n.id === id)) setOlderUnread(old => Math.max(0, old - 1))
+        return prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      })
     }
-  }
+  }, [supabase])
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     // Use cached userId instead of re-fetching from auth endpoint
     const userId = userIdRef.current
-    if (!userId) return
+    if (!supabase || !userId) return
 
     const { error } = await supabase
       .from('notifications')
@@ -224,10 +231,18 @@ export function useNotifications() {
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
       setOlderUnread(0)
     }
-  }
+  }, [supabase])
 
+  const refresh = useCallback(async () => {
+    // Use cached userId instead of re-fetching from auth endpoint
+    const userId = userIdRef.current
+    if (userId) {
+      setLoading(true)
+      await fetchNotifications(userId)
+    }
+  }, [fetchNotifications])
 
-  return {
+  return useMemo(() => ({
     notifications,
     unreadCount,
     olderUnread,
@@ -239,13 +254,29 @@ export function useNotifications() {
     searchNotifications,
     markAsRead,
     markAllAsRead,
-    refresh: async () => {
-        // Use cached userId instead of re-fetching from auth endpoint
-        const userId = userIdRef.current
-        if (userId) {
-          setLoading(true)
-          await fetchNotifications(userId)
-        }
-    }
-  }
+    refresh,
+  }), [
+    notifications,
+    unreadCount,
+    olderUnread,
+    loading,
+    error,
+    hasMore,
+    loadingMore,
+    loadMore,
+    searchNotifications,
+    markAsRead,
+    markAllAsRead,
+    refresh,
+  ])
+}
+
+export type NotificationsState = ReturnType<typeof useNotificationsState>
+
+export const NotificationsContext = createContext<NotificationsState | null>(null)
+
+export function useNotifications() {
+  const shared = useContext(NotificationsContext)
+  const standalone = useNotificationsState(shared === null)
+  return shared ?? standalone
 }

@@ -45,12 +45,15 @@ export const POST = withAuthApi(async (_req, { supabase }) => {
 
     // Convert to WebP using Sharp
     try {
-      buffer = await sharp(buffer)
+      buffer = await sharp(buffer, { limitInputPixels: 40000000 })
         .webp({ quality: 85 })
         .toBuffer();
     } catch (err) {
       console.error("Sharp conversion error:", err);
-      // Fallback to original if conversion fails, though it shouldn't for supported types
+      return NextResponse.json(
+        { error: "Invalid or unsupported image file." },
+        { status: 400 }
+      );
     }
 
     // Generate random UUID

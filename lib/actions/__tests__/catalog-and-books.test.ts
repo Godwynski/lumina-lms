@@ -452,6 +452,7 @@ describe('Catalog & Books Server Actions', () => {
       ]);
       expect(mockRevalidateTag).toHaveBeenCalledWith('catalog', 'max');
       expect(mockRevalidateTag).toHaveBeenCalledWith('books', 'max');
+      expect(mockRevalidateTag).toHaveBeenCalledWith('public-books', 'max');
       expect(mockLogAuditActivity).toHaveBeenCalledWith(
         'lib-1',
         'book',
@@ -498,6 +499,7 @@ describe('Catalog & Books Server Actions', () => {
       expect(res.success).toBe(true);
       expect(res.data).toEqual({ id: 'book-1', title: 'New Title' });
       expect(mockRevalidateTag).toHaveBeenCalledWith('catalog', 'max');
+      expect(mockRevalidateTag).toHaveBeenCalledWith('public-books', 'max');
       expect(mockRevalidateTag).toHaveBeenCalledWith('book-book-1', 'max');
 
       queueTableBuilders(serverClientHelper, 'books', [
@@ -568,7 +570,8 @@ describe('Catalog & Books Server Actions', () => {
         { book_id: 'book-1', status: 'AVAILABLE' },
         { book_id: 'book-1', status: 'AVAILABLE' },
       ]);
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/catalog/book-1');
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/inventory');
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/student-catalog/book-1');
 
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       serverClientHelper.setTableResponse('book_copies', null, { message: 'DB err' });

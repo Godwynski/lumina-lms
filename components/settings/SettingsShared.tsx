@@ -72,7 +72,7 @@ export function AnnualResetTool() {
             <h4 className="text-sm font-medium">Batch Account Reset</h4>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Batch reset info">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center" aria-label="Batch reset info">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
@@ -135,7 +135,7 @@ export function RunMaintenanceTool() {
             <h4 className="text-sm font-medium text-foreground">Email Dispatch</h4>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Email dispatch info">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center" aria-label="Email dispatch info">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
@@ -207,7 +207,7 @@ export function TestEmailTool() {
             <h4 className="text-sm font-semibold text-foreground">Email Configuration Test</h4>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Email test info">
+                <button type="button" className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center" aria-label="Email test info">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
@@ -224,12 +224,13 @@ export function TestEmailTool() {
           <Input 
             type="email"
             placeholder="Recipient email address" 
+            aria-label="Recipient email address"
             value={targetEmail}
             onChange={(e) => setTargetEmail(e.target.value)}
             className="h-9 text-xs sm:max-w-[250px] rounded-xl"
           />
           <Select value={emailType} onValueChange={setEmailType}>
-            <SelectTrigger className="h-9 w-full sm:w-[190px] text-xs rounded-xl">
+            <SelectTrigger aria-label="Email Type" className="h-9 w-full sm:w-[190px] text-xs rounded-xl">
               <SelectValue placeholder="Email Type" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">

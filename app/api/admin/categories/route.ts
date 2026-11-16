@@ -70,7 +70,7 @@ export const POST = withAuthApi(async (request, { user, supabase }) => {
     );
 
     revalidateTag("categories", "default");
-    revalidatePath("/catalog", "page");
+    revalidatePath("/inventory", "page");
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {

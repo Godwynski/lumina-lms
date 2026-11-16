@@ -228,7 +228,7 @@ export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProp
 
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2 min-h-[40px] max-h-[70px] overflow-y-auto custom-scrollbar">
         {hasData ? data.map((entry, index) => (
-          <button type="button" onClick={() => onSelect?.(entry.name)} key={entry.name} className="flex items-center gap-1.5 rounded hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+          <button type="button" onClick={() => onSelect?.(entry.name)} key={entry.name} className="flex min-h-6 min-w-6 items-center justify-center gap-1.5 rounded hover:underline focus-visible:outline-2 focus-visible:outline-ring">
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
             <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[80px]">{entry.name}</span>
             <span className="text-[11px] font-black text-foreground/60">{entry.value}</span>

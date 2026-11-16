@@ -30,8 +30,10 @@ const getCachedRecentBooks = unstable_cache(
 
 export async function getDashboardStats({
   role,
+  scope = 'full',
 }: {
   role: string | null;
+  scope?: 'full' | 'analytics';
 }): Promise<{
   activeBorrows: number;
   pendingApprovals: number;
@@ -59,6 +61,7 @@ export async function getDashboardStats({
 
   const isManager = isActuallyStaff;
   const canReviewApprovals = role === 'super_admin' || role === 'librarian';
+  const isFullScope = scope === 'full';
 
   const safeWrap = async <T>(promise: Promise<T>, defaultValue: T): Promise<T> => {
     try {
@@ -92,8 +95,10 @@ export async function getDashboardStats({
       ),
       { count: 0 }
     ),
-    safeWrap(getCachedRecentBooks(), []),
-    canReviewApprovals
+    isFullScope
+      ? safeWrap(getCachedRecentBooks(), [])
+      : Promise.resolve([]),
+    isFullScope && canReviewApprovals
       ? safeWrap(
           Promise.resolve(
             supabase
@@ -105,10 +110,12 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
-    safeWrap(
-      getBorrowingHistory(userId, 1, 5, 'ACTIVE', undefined, supabase),
-      { records: [], totalCount: 0 }
-    ),
+    isFullScope
+      ? safeWrap(
+          getBorrowingHistory(userId, 1, 5, 'ACTIVE', undefined, supabase),
+          { records: [], totalCount: 0 }
+        )
+      : Promise.resolve({ records: [], totalCount: 0 }),
     safeWrap(
       Promise.resolve(
         supabase
@@ -144,7 +151,7 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
-    isManager
+    isFullScope && isManager
       ? safeWrap(
           Promise.resolve(
             supabase
@@ -156,7 +163,7 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
-    canReviewApprovals
+    isFullScope && canReviewApprovals
       ? safeWrap(
           Promise.resolve(
             supabase
@@ -168,7 +175,7 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
-    canReviewApprovals
+    isFullScope && canReviewApprovals
       ? safeWrap(
           Promise.resolve(
             supabase
@@ -180,7 +187,7 @@ export async function getDashboardStats({
           { count: 0 }
         )
       : Promise.resolve({ count: 0 }),
-    canReviewApprovals
+    isFullScope && canReviewApprovals
       ? safeWrap(
           Promise.resolve(
             supabase

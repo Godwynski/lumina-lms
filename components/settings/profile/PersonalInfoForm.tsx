@@ -25,7 +25,7 @@ function InfoLabel({ children, tooltip }: { children: React.ReactNode; tooltip?:
       {tooltip && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label={`${children} info`}>
+            <button type="button" className="grid size-6 place-items-center text-muted-foreground hover:text-foreground transition-colors" aria-label={`${children} info`}>
               <HelpCircle className="h-3 w-3" />
             </button>
           </TooltipTrigger>

@@ -97,7 +97,7 @@ export const PUT = withAuthApi(async (request, { supabase, user, params }) => {
     );
 
     revalidateTag("categories", "default");
-    revalidatePath("/catalog", "page");
+    revalidatePath("/inventory", "page");
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error updating category:", error);
@@ -131,7 +131,7 @@ export const DELETE = withAuthApi(async (_request, { supabase, user, params }) =
     );
 
     revalidateTag("categories", "default");
-    revalidatePath("/catalog", "page");
+    revalidatePath("/inventory", "page");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting category:", error);

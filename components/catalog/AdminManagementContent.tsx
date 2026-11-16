@@ -378,6 +378,7 @@ export function AdminManagementContent({
                  variant="ghost" 
                  size="icon"
                  onClick={() => setIsEditing(true)}
+                 aria-label={`Edit ${book.title}`}
                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
                >
                  <Edit3 size={16} />
@@ -552,8 +553,8 @@ export function AdminManagementContent({
             </div>
             <div className="w-px h-8 bg-border/20" />
             <div className="text-center">
-              <p className="text-[11px] font-bold text-emerald-500/60 uppercase tracking-widest mb-1">Available</p>
-              <p className="text-xl font-semibold text-emerald-500 leading-none">{book.available_copies ?? 0}</p>
+              <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Available</p>
+              <p className="text-xl font-semibold text-emerald-800 leading-none">{book.available_copies ?? 0}</p>
             </div>
             {reservationQueue.length > 0 && (
               <>
@@ -588,6 +589,7 @@ export function AdminManagementContent({
                     min={1} 
                     max={50} 
                     value={copiesToAdd} 
+                    aria-label="Number of copies to add"
                     onKeyDown={(e) => {
                       if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
                         e.preventDefault();
@@ -609,7 +611,7 @@ export function AdminManagementContent({
             <Select value={copyFilter} onValueChange={(v) => {
               if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
             }}>
-              <SelectTrigger className="h-8 w-[110px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-medium text-muted-foreground shadow-none focus:ring-0 transition-colors">
+              <SelectTrigger aria-label="Filter copies by status" className="h-8 w-[110px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-medium text-muted-foreground shadow-none focus:ring-0 transition-colors">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-border/40 shadow-xl">
@@ -668,7 +670,7 @@ export function AdminManagementContent({
                         <Select value={copy.status} onValueChange={(v) => {
                           if (isEditableStatus(v)) handleStatusChange(copy.id, v);
                         }}>
-                          <SelectTrigger className="h-8 w-[100px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-semibold uppercase shadow-none focus:ring-0 transition-colors">
+                          <SelectTrigger aria-label={`Status for copy ${copy.accession_number || copy.qr_string}`} className="h-8 w-[100px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-semibold uppercase shadow-none focus:ring-0 transition-colors">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="border-border/40 shadow-xl">

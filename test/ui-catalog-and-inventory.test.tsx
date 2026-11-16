@@ -1568,13 +1568,15 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(findButtonByText(document.body, 'Spreadsheet')).not.toBeDisabled();
 
       await clickElement(findButtonByText(document.body, 'Spreadsheet'));
-      await flushPromises();
-      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_catalog_export.xlsx');
+      await vi.waitFor(() => {
+        expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_catalog_export.xlsx');
+      });
 
       await clickElement(findButtonByText(document.body, 'Text CSV'));
-      await flushPromises();
-      expect(createObjectURLSpy).toHaveBeenCalled();
-      expect(anchorClickSpy).toHaveBeenCalled();
+      await vi.waitFor(() => {
+        expect(createObjectURLSpy).toHaveBeenCalled();
+        expect(anchorClickSpy).toHaveBeenCalled();
+      });
 
       await clickElement(findButtonByText(document.body, 'JSON Data'));
       await flushPromises();

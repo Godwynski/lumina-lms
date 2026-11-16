@@ -49,12 +49,6 @@ export async function DashboardContent({
     ? (getMyReservations() as unknown as Promise<Reservation[]>)
     : Promise.resolve([]);
 
-  const prefsPromise = supabase
-    .from("ui_preferences")
-    .select("preferences")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
   const attendancePromise = supabase
     .from("attendance")
     .select("id, check_in_at, check_out_at")
@@ -63,9 +57,8 @@ export async function DashboardContent({
     .limit(5);
 
   // Await only what we need for rendering decisions
-  const [, , { data: attendanceLogs }] = await Promise.all([
+  const [, { data: attendanceLogs }] = await Promise.all([
     searchParams,
-    prefsPromise,
     attendancePromise
   ]);
 

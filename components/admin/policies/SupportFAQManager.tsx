@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,8 @@ export function SupportFAQManager({
   const [newA, setNewA] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const questionId = useId();
+  const answerId = useId();
   
   const currentFaqs = useMemo(() => {
     try {
@@ -186,7 +188,7 @@ export function SupportFAQManager({
                     </div>
                   </div>
                   {!disabled && (
-                    <div className="flex gap-2 opacity-0 group-hover/faq:opacity-100 transition-all duration-300 translate-x-2 group-hover/faq:translate-x-0">
+                    <div className="flex gap-2 opacity-0 group-hover/faq:opacity-100 group-focus-within/faq:opacity-100 transition-all duration-300 translate-x-2 group-hover/faq:translate-x-0 group-focus-within/faq:translate-x-0">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -297,7 +299,7 @@ export function SupportFAQManager({
           <div className="p-8 pt-2 space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
-                <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                <Label htmlFor={questionId} className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Question
                 </Label>
                 <span className={cn(
@@ -308,6 +310,7 @@ export function SupportFAQManager({
                 </span>
               </div>
               <Input
+                id={questionId}
                 placeholder="How do I borrow a book?"
                 value={newQ}
                 onChange={(e) => setNewQ(e.target.value)}
@@ -320,7 +323,7 @@ export function SupportFAQManager({
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
-                <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                <Label htmlFor={answerId} className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Answer
                 </Label>
                 <span className={cn(
@@ -331,6 +334,7 @@ export function SupportFAQManager({
                 </span>
               </div>
               <Textarea
+                id={answerId}
                 placeholder="Enter the detailed answer here..."
                 value={newA}
                 onChange={(e) => setNewA(e.target.value)}

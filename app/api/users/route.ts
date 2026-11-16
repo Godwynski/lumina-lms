@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
 import { normalizeUserRole, UserRole } from "@/lib/auth-helpers";
 import { logAuditActivity } from "@/lib/audit";
@@ -6,6 +7,14 @@ import { UserPatchSchema } from "@/lib/validations/api";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 
 const MANAGER_ROLES: UserRole[] = ["super_admin", "librarian"];
+
+const UserPermissionsSchema = z
+  .object({
+    manage_circulation: z.boolean().optional(),
+    manage_attendance: z.boolean().optional(),
+    view_admin_dashboard: z.boolean().optional(),
+  })
+  .strict();
 
 export const PATCH = withAuthApi(
   async (request, { supabase, user, role: requesterRole }) => {
@@ -146,8 +155,19 @@ export const PATCH = withAuthApi(
       updates.department = nextDepartment || "General";
     }
 
-    if (body.permissions !== undefined && typeof body.permissions === "object") {
-      updates.permissions = body.permissions;
+    if (body.permissions !== undefined) {
+      if (requesterRole !== "super_admin") {
+        return apiError("Only super administrators can modify user permissions", "FORBIDDEN", 403);
+      }
+      const parsedPermissions = UserPermissionsSchema.safeParse(body.permissions);
+      if (!parsedPermissions.success) {
+        return apiError(
+          parsedPermissions.error.issues[0]?.message || "Invalid permissions object",
+          "VALIDATION_ERROR",
+          400
+        );
+      }
+      updates.permissions = parsedPermissions.data;
     }
 
     const nextAddress = typeof body.address === "string" ? body.address.trim() : null;

@@ -14,6 +14,39 @@ export const normalizeUserRole = (value: unknown): UserRole | null => {
   return null;
 };
 
+const getAuthSession = cache(async () => {
+  try {
+    const supabase = await createClient();
+    const { data, error: userError } = await supabase.auth.getUser();
+
+    // If an auth error occurred (such as refresh_token_not_found, expired session, etc.),
+    // treat the visitor as unauthenticated and return null cleanly.
+    if (userError || !data?.user) return null;
+
+    return { supabase, user: data.user };
+  } catch {
+    return null;
+  }
+});
+
+const getProfileRow = cache(async (
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) => {
+  try {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) return null;
+    return profile;
+  } catch {
+    return null;
+  }
+});
+
 /**
  * Returns the currently authenticated user's profile and role.
  * Wrapped in React cache() for request-level memoization.
@@ -23,25 +56,16 @@ export const normalizeUserRole = (value: unknown): UserRole | null => {
  */
 export const getMe = cache(async () => {
   try {
-    const supabase = await createClient();
-    const { data, error: userError } = await supabase.auth.getUser();
+    const session = await getAuthSession();
+    if (!session) return null;
 
-    // If an auth error occurred (such as refresh_token_not_found, expired session, etc.),
-    // treat the visitor as unauthenticated and return null cleanly.
-    if (userError || !data?.user) return null;
-
-    const user = data.user;
+    const { supabase, user } = session;
 
     // Faster path: Get role from metadata if available
     const metadataRole = normalizeUserRole(user.app_metadata?.role);
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile) return null;
+    const profile = await getProfileRow(supabase, user.id);
+    if (!profile) return null;
 
     const role = normalizeUserRole(profile.role) || metadataRole || 'student';
 
@@ -79,15 +103,22 @@ export const getMe = cache(async () => {
  */
 export const getPreferences = cache(async () => {
   try {
-    const me = await getMe();
-    if (!me) return {};
+    const session = await getAuthSession();
+    if (!session) return {};
 
-    const { supabase, user } = me;
-    const { data, error } = await supabase
-      .from('ui_preferences')
-      .select('preferences')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const { supabase, user } = session;
+    const [profile, prefsResult] = await Promise.all([
+      getProfileRow(supabase, user.id),
+      supabase
+        .from('ui_preferences')
+        .select('preferences')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+    ]);
+
+    if (!profile) return {};
+
+    const { data, error } = prefsResult;
 
     if (error) {
       console.error('[AUTH-HELPERS] Failed to fetch preferences:', error.message);
@@ -120,6 +151,11 @@ export async function assertRole(allowedRoles: UserRole[]) {
   }
 
   if (!allowedRoles.includes(me.role)) {
+    throw new Error('Forbidden');
+  }
+
+  const isStaffOnly = !allowedRoles.includes('student');
+  if (isStaffOnly && me.profile.status?.toUpperCase() !== 'ACTIVE') {
     throw new Error('Forbidden');
   }
 

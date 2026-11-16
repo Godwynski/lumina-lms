@@ -8,7 +8,8 @@ export const POST = withAuthApi(async (_req, { supabase, user }) => {
   const { data: affectedCount, error } = await supabase.rpc("annual_student_reset");
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Annual reset RPC error:", error);
+    return NextResponse.json({ error: "Failed to execute annual reset" }, { status: 500 });
   }
 
   await logAuditActivity(

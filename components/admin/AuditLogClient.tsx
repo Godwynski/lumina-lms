@@ -37,8 +37,13 @@ import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
 import { AdminTableShell } from "./AdminTableShell";
-import { AuditLogExportImportModal } from "./AuditLogExportImportModal";
+
+const AuditLogExportImportModal = dynamic(
+  () => import("./AuditLogExportImportModal").then((mod) => mod.AuditLogExportImportModal),
+  { ssr: false }
+);
 
 // Always shown in library time (Asia/Manila), whatever the viewer's browser zone is.
 const manilaFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -613,12 +618,12 @@ export function AuditLogClient() {
           <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-border/20 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                  <th className="p-3 font-bold w-48">Timestamp (Manila, UTC+8)</th>
-                  <th className="p-3 font-bold w-48">Performed by</th>
-                  <th className="p-3 font-bold">Action</th>
-                  <th className="p-3 font-bold min-w-60">Book / student / copy</th>
-                  <th className="p-3 font-bold">Reason</th>
-                  <th className="p-3 font-bold text-center">Diff</th>
+                  <th scope="col" className="p-3 font-bold w-48">Timestamp (Manila, UTC+8)</th>
+                  <th scope="col" className="p-3 font-bold w-48">Performed by</th>
+                  <th scope="col" className="p-3 font-bold">Action</th>
+                  <th scope="col" className="p-3 font-bold min-w-60">Book / student / copy</th>
+                  <th scope="col" className="p-3 font-bold">Reason</th>
+                  <th scope="col" className="p-3 font-bold text-center">Diff</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/10">
@@ -650,9 +655,9 @@ export function AuditLogClient() {
                         <td className="p-3">
                           <Badge variant="outline" className={cn(
                             "font-bold text-[11px] uppercase tracking-wider px-2 py-0.5 rounded shadow-xs border-transparent",
-                            log.action === "create" ? "bg-green-500/10 text-green-600" :
-                            log.action === "archive" ? "bg-amber-500/10 text-amber-600" :
-                            log.action === "delete" ? "bg-red-500/10 text-red-600" :
+                            log.action === "create" ? "status-success" :
+                            log.action === "archive" ? "status-warning" :
+                            log.action === "delete" ? "status-danger" :
                             "bg-primary/10 text-primary"
                           )}>
                             {log.action.replace(/_/g, " ")}
@@ -897,22 +902,24 @@ export function AuditLogClient() {
     </Dialog>
 
       {detailBookId && <BookDetailModal bookId={detailBookId} open onOpenChange={open => { if (!open) setDetailBookId(null); }} variant="read_only" />}
-      <AuditLogExportImportModal
-      isOpen={isExportImportOpen}
-      onClose={() => setIsExportImportOpen(false)}
-      onImportSuccess={() => mutate()}
-      currentFilters={{
-        query: debouncedSearch,
-        entityType,
-        actionType,
-        startDate,
-        endDate,
-        bookId,
-        studentId,
-        copyId,
-        userId,
-      }}
-    />
+      {isExportImportOpen && (
+        <AuditLogExportImportModal
+          isOpen={isExportImportOpen}
+          onClose={() => setIsExportImportOpen(false)}
+          onImportSuccess={() => mutate()}
+          currentFilters={{
+            query: debouncedSearch,
+            entityType,
+            actionType,
+            startDate,
+            endDate,
+            bookId,
+            studentId,
+            copyId,
+            userId,
+          }}
+        />
+      )}
   </>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -225,7 +224,7 @@ export function AuditLogExportImportModal({
     const fileType = file.name.split(".").pop()?.toLowerCase();
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         let logsArray: ParsedAuditLog[] = [];
 
@@ -234,6 +233,7 @@ export function AuditLogExportImportModal({
           const parsed = JSON.parse(text);
           logsArray = Array.isArray(parsed) ? parsed : [parsed];
         } else if (fileType === "csv" || fileType === "xlsx") {
+          const XLSX = await import("xlsx");
           const data = new Uint8Array(event.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
@@ -678,6 +678,7 @@ export function AuditLogExportImportModal({
                       variant="ghost"
                       size="icon"
                       onClick={resetImport}
+                      aria-label={importFile?.name ? `Remove ${importFile.name}` : "Remove selected file"}
                       className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
@@ -693,8 +694,8 @@ export function AuditLogExportImportModal({
                       </div>
                     </div>
                     <div className="bg-emerald-500/[0.02] border border-emerald-500/10 rounded-2xl p-3 text-center">
-                      <div className="text-xs font-black text-emerald-600">{parsedMeta.validCount}</div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-500/60 mt-0.5">
+                      <div className="text-xs font-black text-emerald-800">{parsedMeta.validCount}</div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 mt-0.5">
                         Valid Records
                       </div>
                     </div>
@@ -704,7 +705,7 @@ export function AuditLogExportImportModal({
                         ? "bg-amber-500/[0.02] border-amber-500/10" 
                         : "bg-muted/5 border-border/5"
                     )}>
-                      <div className={cn("text-xs font-black", parsedMeta.invalidCount > 0 ? "text-amber-600" : "text-muted-foreground")}>
+                      <div className={cn("text-xs font-black", parsedMeta.invalidCount > 0 ? "text-amber-800" : "text-muted-foreground")}>
                         {parsedMeta.invalidCount}
                       </div>
                       <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
@@ -722,10 +723,10 @@ export function AuditLogExportImportModal({
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-muted/20 border-b border-border/10 text-[11px] text-muted-foreground font-black uppercase tracking-wider">
-                            <th className="p-2 pl-3">Action</th>
-                            <th className="p-2">Entity</th>
-                            <th className="p-2">Reason</th>
-                            <th className="p-2 pr-3">Timestamp</th>
+                            <th scope="col" className="p-2 pl-3">Action</th>
+                            <th scope="col" className="p-2">Entity</th>
+                            <th scope="col" className="p-2">Reason</th>
+                            <th scope="col" className="p-2 pr-3">Timestamp</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/5">

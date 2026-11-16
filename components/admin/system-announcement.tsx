@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useId, useState } from 'react'
 import { Megaphone, Loader2, Users, Send, Target, AlertTriangle, HelpCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +42,9 @@ export function SystemAnnouncement({
   const [confirmOpen, setConfirmOpen] = useState(false)
   // null = closed; otherwise the recipient count the API reported (undefined if it gave none).
   const [sent, setSent] = useState<{ count?: number } | null>(null)
+  const targetLabelId = useId()
+  const subjectId = useId()
+  const messageId = useId()
 
   const title = draft ? draft.title : localTitle
   const content = draft ? draft.content : localContent
@@ -132,13 +135,13 @@ export function SystemAnnouncement({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <label id={targetLabelId} className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Target className="h-3.5 w-3.5 text-muted-foreground" />
                 Target Audience
               </label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Target audience info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center" aria-label="Target audience info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -148,7 +151,7 @@ export function SystemAnnouncement({
               </Tooltip>
             </div>
             <Select value={target} onValueChange={(v: 'all' | 'students') => setTarget(v)}>
-              <SelectTrigger className="h-10 rounded-xl border-border bg-background text-xs font-medium focus:ring-2 focus:ring-primary/20 transition-all">
+              <SelectTrigger aria-labelledby={targetLabelId} className="h-10 rounded-xl border-border bg-background text-xs font-medium focus:ring-2 focus:ring-primary/20 transition-all">
                 <SelectValue placeholder="Select target" />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-border shadow-xl">
@@ -170,12 +173,12 @@ export function SystemAnnouncement({
 
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <label className="text-xs font-semibold text-foreground">
+              <label htmlFor={subjectId} className="text-xs font-semibold text-foreground">
                 Subject
               </label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Subject info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center" aria-label="Subject info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -185,6 +188,7 @@ export function SystemAnnouncement({
               </Tooltip>
             </div>
             <Input
+              id={subjectId}
               placeholder="e.g. Scheduled Library Maintenance This Weekend"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -197,12 +201,12 @@ export function SystemAnnouncement({
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5">
-              <label className="text-xs font-semibold text-foreground">
+              <label htmlFor={messageId} className="text-xs font-semibold text-foreground">
                 Announcement Message
               </label>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-0.5" aria-label="Message info">
+                  <button type="button" className="text-muted-foreground hover:text-foreground transition-colors grid size-6 place-items-center" aria-label="Message info">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -216,6 +220,7 @@ export function SystemAnnouncement({
             </span>
           </div>
           <Textarea
+            id={messageId}
             placeholder="Write the announcement message here. It will be pushed directly to active student and staff dashboards..."
             maxLength={500}
             className="min-h-[120px] rounded-xl border-border bg-background text-sm font-medium p-3.5 focus:ring-2 focus:ring-primary/20 resize-none transition-all placeholder:text-muted-foreground/40 shadow-xs"

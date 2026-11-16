@@ -173,25 +173,50 @@ export function AttendanceClient({
   useEffect(() => {
     const supabase = createClient();
     const channelName = `attendance-updates-${Math.random().toString(36).slice(2, 7)}`;
-    
-    const refreshLogs = async () => {
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let inFlight = false;
+    let pending = false;
+
+    const executeRefresh = async () => {
+      if (cancelled) return;
+      if (inFlight) {
+        pending = true;
+        return;
+      }
+      inFlight = true;
       try {
         if (isStaff) {
-          const [freshToday, freshAll, freshPersonal] = await Promise.all([
+          const [freshToday, freshAll] = await Promise.all([
             getAttendanceHistory(undefined, { range: 'today' }),
             getAttendanceHistory(undefined, { range: 'all', limit: allLimitRef.current }),
-            getAttendanceHistory(userId)
           ]);
+          if (cancelled) return;
           setSystemTodayRecords(freshToday);
           setSystemAllRecords(freshAll);
-          setPersonalRecords(freshPersonal);
         } else {
           const freshPersonal = await getAttendanceHistory(userId);
+          if (cancelled) return;
           setPersonalRecords(freshPersonal);
         }
       } catch (error) {
         console.error("Failed to refresh attendance logs:", error);
+      } finally {
+        inFlight = false;
+        if (pending && !cancelled) {
+          pending = false;
+          void executeRefresh();
+        }
       }
+    };
+
+    const refreshLogs = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        void executeRefresh();
+      }, 300);
     };
 
     const channel = supabase
@@ -209,6 +234,8 @@ export function AttendanceClient({
       .subscribe();
 
     return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
       void supabase.removeChannel(channel);
     };
   }, [isStaff, userId]);

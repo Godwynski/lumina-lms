@@ -64,8 +64,10 @@ export function createSafeAction<TInput, TOutput>(
 
       // Permission check for staff roles (excluding student role if allowed)
       const isStaffOnlyAction = options.allowedRoles && !options.allowedRoles.includes('student');
-      
-      if (isStaffOnlyAction && me.isDeactivatedSA) {
+      const isStaffRole = me.role === 'super_admin' || me.role === 'librarian' || me.role === 'student_assistant';
+      const isInactiveStaff = isStaffRole && me.profile?.status?.toUpperCase() !== 'ACTIVE';
+
+      if (isStaffOnlyAction && (me.isDeactivatedSA || isInactiveStaff)) {
         return { success: false, error: "Access denied: Staff account is currently deactivated." };
       }
 
@@ -131,7 +133,7 @@ export function createSafeAction<TInput, TOutput>(
 
     } catch (error: unknown) {
       const err = error as Error;
-      logger.error("action-utils", "Server action failed", { error: err.message, stack: err.stack });
+      logger.error("action-utils", "Server action failed", { error: err?.message ?? String(error), stack: err?.stack });
       
       if (err instanceof ZodError) {
           return { success: false, error: "Input validation error" };
@@ -139,7 +141,7 @@ export function createSafeAction<TInput, TOutput>(
 
       return { 
         success: false, 
-        error: err.message || "An unexpected error occurred. Please try again." 
+        error: err?.message || "An unexpected error occurred. Please try again." 
       };
     }
   };

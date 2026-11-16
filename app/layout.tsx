@@ -6,9 +6,11 @@ import { AnimationProvider } from "@/components/providers/animation-provider";
 import "./globals.css";
 
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://127.0.0.1:3000";
+const defaultUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://127.0.0.1:3000");
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -54,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={appSans.variable} suppressHydrationWarning>
       <head />
       <body className={`${appSans.className} antialiased`}>
         <AnimationProvider>

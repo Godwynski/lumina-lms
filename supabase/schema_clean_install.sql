@@ -1672,9 +1672,9 @@ CREATE POLICY "Staff can update attendance" ON public.attendance
   WITH CHECK (public.is_staff());
 
 -- audit_logs Policies
-CREATE POLICY "Staff can view all audit logs" ON public.audit_logs
+CREATE POLICY "Librarians can view all audit logs" ON public.audit_logs
   FOR SELECT TO authenticated
-  USING (public.is_staff());
+  USING (public.is_manager());
 
 -- book_copies Policies
 CREATE POLICY "Librarians can delete book_copies" ON public.book_copies
@@ -1700,9 +1700,9 @@ CREATE POLICY "Librarians can delete books" ON public.books
   FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
-CREATE POLICY "Staff can insert books" ON public.books
+CREATE POLICY "Librarians can insert books" ON public.books
   FOR INSERT TO authenticated
-  WITH CHECK (public.is_staff());
+  WITH CHECK (public.is_manager());
 
 -- Inline the active-staff check instead of calling public.is_staff() because
 -- EXECUTE on is_staff() is revoked from anon; referencing it in a TO public
@@ -1723,10 +1723,10 @@ CREATE POLICY "Books select policy" ON public.books
     )
   );
 
-CREATE POLICY "Staff can update books" ON public.books
+CREATE POLICY "Librarians can update books" ON public.books
   FOR UPDATE TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
+  USING (public.is_manager())
+  WITH CHECK (public.is_manager());
 
 -- borrowing_records Policies
 CREATE POLICY "Librarians can insert borrowing records" ON public.borrowing_records
@@ -1776,18 +1776,18 @@ CREATE POLICY "Librarians can delete categories" ON public.categories
   FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = (SELECT auth.uid()) AND profiles.role IN ('super_admin'::public.user_role, 'librarian'::public.user_role)));
 
-CREATE POLICY "Staff can insert categories" ON public.categories
+CREATE POLICY "Librarians can insert categories" ON public.categories
   FOR INSERT TO authenticated
-  WITH CHECK (public.is_staff());
+  WITH CHECK (public.is_manager());
 
 CREATE POLICY "Categories are viewable by everyone" ON public.categories
   FOR SELECT TO public
   USING (true);
 
-CREATE POLICY "Staff can update categories" ON public.categories
+CREATE POLICY "Librarians can update categories" ON public.categories
   FOR UPDATE TO authenticated
-  USING (public.is_staff())
-  WITH CHECK (public.is_staff());
+  USING (public.is_manager())
+  WITH CHECK (public.is_manager());
 
 -- checkout_idempotency Policies
 CREATE POLICY "Staff can manage checkout idempotency" ON public.checkout_idempotency

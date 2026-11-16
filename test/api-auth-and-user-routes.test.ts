@@ -200,7 +200,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           )
         );
         expect(res.status).toBe(307);
-        expect(res.headers.get("location")).toBe("https://app.lumina.edu/dashboard");
+        expect(res.headers.get("location")).toBe("https://lumina.test/dashboard");
       }
     );
 
@@ -1013,7 +1013,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         })
       );
       expect(transferErrRes.status).toBe(400);
-      expect((await transferErrRes.json()).error).toBe("Transfer blocked");
+      expect((await transferErrRes.json()).error).toBe("A database error occurred. Please try again.");
     });
   });
 });

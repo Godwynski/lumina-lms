@@ -1,7 +1,45 @@
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { connection } from "next/server";
 import { withAuthApi } from "@/lib/api-utils";
+
+const MAX_IMPORT_ROWS = 500;
+const MAX_IMPORT_BODY_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_JSON_FIELD_CHARS = 16_384;
+
+const JsonFieldSchema = z.unknown().refine(
+  (val) => {
+    if (val === undefined || val === null) return true;
+    try {
+      return JSON.stringify(val).length <= MAX_JSON_FIELD_CHARS;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Log field value exceeds maximum allowed size." }
+);
+
+const AuditLogImportItemSchema = z.object({
+  entity_type: z.string().trim().min(1, "Validation failed: 'entity_type' and 'action' are required fields on all log items.").max(100),
+  action: z.string().trim().min(1, "Validation failed: 'entity_type' and 'action' are required fields on all log items.").max(100),
+  entity_id: z.string().max(255).nullable().optional(),
+  admin_id: z.string().max(255).nullable().optional(),
+  reason: z.string().max(2000).nullable().optional(),
+  old_value: JsonFieldSchema.optional(),
+  new_value: JsonFieldSchema.optional(),
+  details: JsonFieldSchema.optional(),
+  created_at: z.union([z.string().max(100), z.number().finite(), z.date()]).nullable().optional(),
+});
+
+const AuditLogImportBodySchema = z
+  .object({
+    logs: z
+      .array(AuditLogImportItemSchema)
+      .min(1, "Invalid payload. 'logs' field must be a non-empty array.")
+      .max(MAX_IMPORT_ROWS, `Too many log records. Maximum ${MAX_IMPORT_ROWS} rows per request.`),
+  })
+  .strict();
 
 function parseAnyDate(val: unknown): Date | null {
   if (val === null || val === undefined || val === "") return null;
@@ -46,37 +84,48 @@ function parseAnyDate(val: unknown): Date | null {
 export const POST = withAuthApi(async (request, { user, profile }) => {
   await connection();
   try {
-    let body: { logs?: unknown };
+    let rawText: string;
     try {
-      body = await request.json();
+      rawText = await request.text();
     } catch {
       return NextResponse.json(
         { error: "Invalid JSON body" },
         { status: 400 }
       );
     }
-    const { logs } = body || {};
 
-    if (!Array.isArray(logs) || logs.length === 0) {
+    if (rawText.length > MAX_IMPORT_BODY_BYTES) {
       return NextResponse.json(
-        { error: "Invalid payload. 'logs' field must be a non-empty array." },
+        { error: "Payload too large" },
         { status: 400 }
       );
     }
 
+    let rawBody: unknown;
+    try {
+      rawBody = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
+    const parsed = AuditLogImportBodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid payload." },
+        { status: 400 }
+      );
+    }
+
+    const { logs } = parsed.data;
+
     // Validate and clean up records
     const cleanedLogs: Record<string, unknown>[] = [];
 
-    for (const log of logs as Record<string, unknown>[]) {
-      // Basic validations
-      if (!log.entity_type || !log.action) {
-        return NextResponse.json(
-          { error: "Validation failed: 'entity_type' and 'action' are required fields on all log items." },
-          { status: 400 }
-        );
-      }
-
-      const cleanEntityType = String(log.entity_type).toLowerCase().trim();
+    for (const log of logs) {
+      const cleanEntityType = log.entity_type.toLowerCase().trim();
       const details =
         log.details && typeof log.details === "object" && !Array.isArray(log.details)
           ? (log.details as Record<string, unknown>)
@@ -88,9 +137,9 @@ export const POST = withAuthApi(async (request, { user, profile }) => {
         admin_id: user.id,
         entity_type: cleanEntityType,
         entity_id: log.entity_id || null,
-        action: String(log.action).toLowerCase().trim(),
-        old_value: log.old_value || null,
-        new_value: log.new_value || null,
+        action: log.action.toLowerCase().trim(),
+        old_value: log.old_value ?? null,
+        new_value: log.new_value ?? null,
         reason: log.reason || null,
         details: { ...details, imported: true, original_admin_id: log.admin_id ?? null },
         created_at: parsedDate ? parsedDate.toISOString() : new Date().toISOString(),
@@ -111,7 +160,7 @@ export const POST = withAuthApi(async (request, { user, profile }) => {
       if (insertError) {
         console.error("Batch insert error:", insertError);
         return NextResponse.json(
-          { error: `Database error during batch insertion: ${insertError.message}` },
+          { error: "Failed to import audit logs due to a database error" },
           { status: 500 }
         );
       }
@@ -138,9 +187,8 @@ export const POST = withAuthApi(async (request, { user, profile }) => {
     });
   } catch (error) {
     console.error("Error importing audit logs:", error);
-    const message = error instanceof Error ? error.message : "Failed to import audit logs";
     return NextResponse.json(
-      { error: message },
+      { error: "Failed to import audit logs" },
       { status: 500 }
     );
   }

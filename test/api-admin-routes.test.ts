@@ -161,7 +161,7 @@ describe("Admin API Route Handlers", () => {
       const body = await res.json();
 
       expect(res.status).toBe(500);
-      expect(body.error).toBe("Database timeout");
+      expect(body.error).toBe("Failed to execute annual reset");
     });
   });
 
@@ -353,7 +353,7 @@ describe("Admin API Route Handlers", () => {
       const meProfileBuilder = supabase.getTableBuilder("profiles");
       supabase.from.mockImplementation((table: string) => {
         if (table === "profiles") {
-          return supabase.from.mock.calls.filter((c) => c[0] === "profiles").length === 1
+          return supabase.from.mock.calls.filter((c) => c[0] === "profiles").length % 2 === 1
             ? meProfileBuilder
             : joinProfilesBuilder;
         }
@@ -563,7 +563,7 @@ describe("Admin API Route Handlers", () => {
       );
       const body = await res.json();
       expect(res.status).toBe(500);
-      expect(body.error).toContain("Insert constraint error");
+      expect(body.error).toBe("Failed to import audit logs due to a database error");
     });
   });
 
@@ -644,7 +644,7 @@ describe("Admin API Route Handlers", () => {
         { name: "Computer Science", slug: "computer-science", description: "CS books", is_active: true },
       ]);
       expect(mockRevalidateTag).toHaveBeenCalledWith("categories", "default");
-      expect(mockRevalidatePath).toHaveBeenCalledWith("/catalog", "page");
+      expect(mockRevalidatePath).toHaveBeenCalledWith("/inventory", "page");
     });
 
     it("GET/PUT/DELETE /categories/[id] handles 200, 400, 404, and 500", async () => {

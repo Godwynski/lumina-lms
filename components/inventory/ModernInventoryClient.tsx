@@ -91,7 +91,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { 
   getBooksForExport, 
@@ -196,7 +195,7 @@ export function ModernInventoryClient({
       failParse("Could not read the selected file.");
     };
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       if (parseId !== parseIdRef.current) return;
       try {
         let jsonArray: Record<string, unknown>[] = [];
@@ -206,6 +205,8 @@ export function ModernInventoryClient({
           const parsed = JSON.parse(text);
           jsonArray = Array.isArray(parsed) ? parsed : [parsed];
         } else if (fileType === "csv" || fileType === "xlsx" || fileType === "xls") {
+          const XLSX = await import("xlsx");
+          if (parseId !== parseIdRef.current) return;
           const data = new Uint8Array(event.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
@@ -344,6 +345,7 @@ export function ModernInventoryClient({
     try {
       const data = await getBooksForExport();
       const rows = getMappedExportRows(data);
+      const XLSX = await import("xlsx");
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
@@ -375,6 +377,7 @@ export function ModernInventoryClient({
     try {
       const data = await getBooksForExport();
       const rows = getMappedExportRows(data);
+      const XLSX = await import("xlsx");
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const csvContent = XLSX.utils.sheet_to_csv(worksheet);
@@ -608,7 +611,7 @@ export function ModernInventoryClient({
                 placeholder="Search inventory..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-2xl border border-border/20 bg-muted/5 pl-11 pr-11 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground/30"
+                className="h-11 w-full rounded-2xl border border-border/20 bg-muted/5 pl-11 pr-11 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground"
               />
               {searchQuery && (
                 <button
@@ -912,21 +915,21 @@ export function ModernInventoryClient({
 
                       {importResults && (
                         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
-                          <div className="flex items-center gap-2 text-emerald-500 font-bold text-sm">
+                          <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
                             <CheckCircle2 className="h-5 w-5" />
                             Catalog Rows Imported
                           </div>
                           <div className="grid grid-cols-3 gap-3 text-center py-2 bg-emerald-500/10 rounded-xl">
                             <div>
-                              <div className="text-xl font-bold text-emerald-400">{importResults.imported}</div>
+                              <div className="text-xl font-bold text-emerald-800">{importResults.imported}</div>
                               <div className="text-[11px] text-muted-foreground uppercase font-black">Created</div>
                             </div>
                             <div>
-                              <div className="text-xl font-bold text-emerald-400">{importResults.copiesAdded}</div>
+                              <div className="text-xl font-bold text-emerald-800">{importResults.copiesAdded}</div>
                               <div className="text-[11px] text-muted-foreground uppercase font-black">Copies Added</div>
                             </div>
                             <div>
-                              <div className="text-xl font-bold text-amber-400">{importResults.duplicates}</div>
+                              <div className="text-xl font-bold text-amber-800">{importResults.duplicates}</div>
                               <div className="text-[11px] text-muted-foreground uppercase font-black">Duplicates</div>
                             </div>
                           </div>

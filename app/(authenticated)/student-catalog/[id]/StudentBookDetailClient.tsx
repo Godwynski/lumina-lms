@@ -200,7 +200,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
 
           {/* Title & Author */}
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground leading-tight">{book.title}</h1>
+            <h2 className="text-2xl font-black tracking-tight text-foreground leading-tight">{book.title}</h2>
             <p className="mt-1 text-sm font-bold text-muted-foreground">{book.author}</p>
           </div>
 

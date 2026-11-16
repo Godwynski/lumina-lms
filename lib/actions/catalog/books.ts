@@ -89,6 +89,7 @@ export const createBook = createSafeAction(
     logger.info('catalog', `Book created: ${bookData.title}`, { bookId: finalData.id, isbn: bookData.isbn });
     revalidateTag('catalog', 'max');
     revalidateTag('books', 'max');
+    revalidateTag('public-books', 'max');
     
     return [finalData, {
       reason: `Created new book: ${bookData.title}`,
@@ -125,6 +126,7 @@ export const updateBook = createSafeAction(
     
     logger.info('catalog', `Book updated: ${id}`, { updates: bookData });
     revalidateTag('catalog', 'max');
+    revalidateTag('public-books', 'max');
     revalidateTag(`book-${id}`, 'max');
     
     return [data, {
@@ -182,6 +184,7 @@ export const softDeleteBook = createSafeAction(
     logger.warn('catalog', `Book soft-deleted: ${id}`);
     revalidateTag('catalog', 'max');
     revalidateTag('books', 'max');
+    revalidateTag('public-books', 'max');
     
     return [data, {
       reason: `Archived book: ${data.title}`,
@@ -211,6 +214,7 @@ export const restoreBook = createSafeAction(
     logger.info('catalog', `Book restored: ${id}`);
     revalidateTag('catalog', 'max');
     revalidateTag('books', 'max');
+    revalidateTag('public-books', 'max');
     
     return [data, {
       reason: `Restored book: ${data.title}`,

@@ -68,7 +68,8 @@ export const addBookCopies = createSafeAction(
     revalidateTag('catalog', 'max');
     revalidateTag('public-books', 'max');
     revalidateTag(`book-${bookId}`, 'max');
-    revalidatePath(`/catalog/${bookId}`);
+    revalidatePath('/inventory');
+    revalidatePath(`/student-catalog/${bookId}`);
     
     return [null, {
       reason: `Added ${copiesCount} copies to book ID: ${bookId}`,
@@ -140,8 +141,8 @@ export const updateBookCopyStatus = createSafeAction(
     revalidateTag('catalog', 'max');
     revalidateTag('public-books', 'max');
     revalidateTag(`book-${data.book_id}`, 'max');
-    revalidatePath('/catalog');
-    revalidatePath(`/catalog/${data.book_id}`);
+    revalidatePath('/inventory');
+    revalidatePath(`/student-catalog/${data.book_id}`);
     
     return [data, {
       reason: `Changed book copy status to ${status}`,

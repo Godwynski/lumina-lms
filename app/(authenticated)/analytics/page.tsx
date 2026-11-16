@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { getDashboardStats } from "@/lib/actions/dashboard";
+import { getAnalyticsSummary } from "@/lib/actions/analytics";
+import { analyticsDates } from "@/lib/analytics-dates";
 import { getMe } from "@/lib/auth-helpers";
 import { AnalyticsClient } from "./AnalyticsClient";
 import { Loader2 } from "lucide-react";
@@ -19,7 +21,9 @@ export default async function AnalyticsPage() {
     redirect('/dashboard');
   }
 
-  const statsPromise = getDashboardStats({ role });
+  const initialDates = analyticsDates('30d');
+  const statsPromise = getDashboardStats({ role, scope: 'analytics' });
+  const initialSummaryPromise = getAnalyticsSummary('30d', initialDates).catch(() => null);
   
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -30,6 +34,8 @@ export default async function AnalyticsPage() {
       }>
         <AnalyticsClient 
           statsPromise={statsPromise}
+          initialSummaryPromise={initialSummaryPromise}
+          initialDates={initialDates}
           role={role}
         />
       </Suspense>

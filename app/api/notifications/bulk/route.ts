@@ -34,7 +34,8 @@ export const POST = withAuthApi(async (request, { supabase }) => {
         p_metadata: metadata || {},
       })
       if (rpcError) {
-        return NextResponse.json({ error: rpcError.message }, { status: 500 })
+        console.error('Bulk notification RPC error:', rpcError)
+        return NextResponse.json({ error: 'Failed to send bulk notifications' }, { status: 500 })
       }
       if (!count) {
         return NextResponse.json({ error: 'No recipients found for notification' }, { status: 400 })
@@ -57,12 +58,13 @@ export const POST = withAuthApi(async (request, { supabase }) => {
     })
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 500 })
+      console.error('Bulk notification send error:', result.error)
+      return NextResponse.json({ error: 'Failed to send bulk notifications' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, count: resolvedUserIds.length })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'An unknown error occurred'
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error('Bulk notification error:', error)
+    return NextResponse.json({ error: 'Failed to send bulk notifications' }, { status: 500 })
   }
 }, { allowedRoles: ['super_admin', 'librarian'] })

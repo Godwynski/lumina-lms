@@ -51,9 +51,9 @@ export function AdminTableShell({
         )}>
           <div className="flex flex-col gap-1.5">
             {title && (
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">
                 {title}
-              </h1>
+              </h2>
             )}
             {description && (
               <div className="text-sm font-medium text-muted-foreground leading-relaxed max-w-2xl">

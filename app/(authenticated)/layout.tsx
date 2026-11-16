@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
@@ -8,11 +9,16 @@ import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 import NavAnimatePresence from "./NavAnimatePresence";
 import { SWRProvider } from "./_components/SWRProvider";
 import { BatchTaskProvider } from "@/components/providers/BatchTaskProvider";
 import { cookies } from "next/headers";
 import { isAccessBlocked as checkAccessBlocked, type Profile } from "@/lib/auth/permissions";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function ProtectedLayout({
   children,
@@ -59,7 +65,8 @@ export default async function ProtectedLayout({
     >
       <SWRProvider>
         <BatchTaskProvider>
-          <SidebarProvider defaultOpen={defaultOpen}>
+          <NotificationsProvider>
+            <SidebarProvider defaultOpen={defaultOpen}>
             {/* First tab stop: lets keyboard users jump past the navigation. */}
             <a
               href="#main-content"
@@ -98,7 +105,8 @@ export default async function ProtectedLayout({
                 </NavAnimatePresence>
               </div>
             </SidebarInset>
-          </SidebarProvider>
+            </SidebarProvider>
+          </NotificationsProvider>
         </BatchTaskProvider>
       </SWRProvider>
     </PreferencesProvider>

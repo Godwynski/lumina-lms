@@ -5,14 +5,43 @@ import { safeNextPath } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+function parseEnvHost(raw: string | undefined): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  try {
+    const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    return new URL(withScheme).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function getAllowedForwardedHosts(): Set<string> {
+  const hosts = new Set<string>();
+  for (const envVar of [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ]) {
+    const host = parseEnvHost(envVar);
+    if (host) hosts.add(host);
+  }
+  return hosts;
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = safeNextPath(searchParams.get("next"));
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim().toLowerCase();
   const isLocalEnv = process.env.NODE_ENV === "development";
-  const host = isLocalEnv ? origin : forwardedHost ? `https://${forwardedHost}` : origin;
+  const allowedHosts = getAllowedForwardedHosts();
+  const host = isLocalEnv
+    ? origin
+    : forwardedHost && allowedHosts.has(forwardedHost)
+      ? `https://${forwardedHost}`
+      : origin;
 
   const providerError = searchParams.get("error_description") || searchParams.get("error");
 

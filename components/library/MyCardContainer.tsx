@@ -358,7 +358,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         <div className="relative mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Badge className="mb-1 bg-primary/20 text-primary border-none text-[11px] font-bold uppercase tracking-widest px-2.5 h-6">Official Library ID</Badge>
-            <h1 className="text-xl font-black tracking-tight text-foreground/90 uppercase">{data.fullName}</h1>
+            <h2 className="text-xl font-black tracking-tight text-foreground/90 uppercase">{data.fullName}</h2>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -485,7 +485,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <div className="flex flex-col gap-4 border-b border-border/40 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Digital Card</h1>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">My Digital Card</h2>
           <p className="text-sm text-muted-foreground">STI College Alabang official library identity card</p>
         </div>
 
@@ -611,7 +611,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
 
       <div className="mt-8 rounded-xl border border-border/20 bg-card p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4">Quick Guide</h3>
+        <h2 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4">Quick Guide</h2>
         <ul className="space-y-3 text-sm text-muted-foreground">
           <li className="flex gap-3">
             <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">1</span>

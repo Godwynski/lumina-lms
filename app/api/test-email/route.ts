@@ -63,12 +63,15 @@ export const POST = withAuthApi(async (request, { profile }) => {
         errorMessage = 'SMTP Connection timed out. Please check your SMTP_HOST and SMTP_PORT.';
       } else if (errorMessage.includes('ECONNREFUSED')) {
         errorMessage = 'SMTP Connection refused. Please verify your SMTP_HOST and SMTP_PORT.';
+      } else {
+        console.error('Test email failed:', result.error);
+        errorMessage = 'Failed to send test email';
       }
 
       return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
     }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Test email route error:', error);
+    return NextResponse.json({ error: 'Failed to send test email' }, { status: 500 });
   }
 }, { allowedRoles: ['super_admin', 'librarian'] });

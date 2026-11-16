@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, ArrowRight, Info, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
 
@@ -29,6 +29,7 @@ export function PolicyCommitModal({
   loading
 }: CommitModalProps) {
   const [reason, setReason] = useState("");
+  const reasonId = useId();
 
   useEffect(() => {
     if (!isOpen) {
@@ -159,7 +160,7 @@ export function PolicyCommitModal({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor={reasonId} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Audit Protocol Reason
                 </label>
                 <span className={cn(
@@ -171,6 +172,7 @@ export function PolicyCommitModal({
               </div>
               <div className="relative group">
                 <Textarea
+                  id={reasonId}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Provide a detailed reason for these changes for the audit log..."

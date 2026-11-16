@@ -7,7 +7,7 @@ export const POST = withAuthApi(async () => {
     const results = await runMaintenanceTasks();
     return NextResponse.json(results);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Maintenance task error:', error);
+    return NextResponse.json({ error: 'Failed to run maintenance tasks' }, { status: 500 });
   }
 }, { allowedRoles: ['super_admin', 'librarian'] });
