@@ -39,20 +39,36 @@ blob-report/
 *.cert
 *.crt
 
-# Vercel & Deployment
+# Vercel & Supabase Local
 .vercel
+supabase/.temp/
+supabase/.branches/
 
-# Agent, Tooling & Knowledge Graph Artifacts
+# Agent, Tooling & Knowledge Graph Artifacts (keep .claude/agents/ tracked)
 /graphify-out/
 /.graphify/
 /.agents/
-/.claude/worktrees/
+**/.claude/worktrees/
+**/.claude/checkpoints/
+**/.claude/mailbox/
+**/.claude/routines/.state/
+**/.claude/scheduled_tasks.lock
+**/.claude/scheduled_tasks.json
+**/.claude/agent-registry.json
+**/.claude/agent-memory-local
+**/.claude/first-run
+**/.claude/assistant-daemon-state.json
 /.impeccable/
-/.impeccable-live/
+**/.impeccable-live/
 .impeccable-live.json
 /scratch/
 /.superpowers/
 /skill-observations/
+
+# Local Uploads, Backups & Static Dev Storage
+/uploads/
+/storage/
+/backups/
 
 # Logs, Dumps & Diagnostics
 *.log
@@ -71,10 +87,6 @@ dump.sql
 *.dump
 *.sqlite
 *.sqlite3
-
-# Local Uploads & Static Dev Storage
-/uploads/
-/storage/
 
 # Editor & IDE Configs
 .idea/
@@ -99,5 +111,3 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
-
-/backups/
