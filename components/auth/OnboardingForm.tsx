@@ -50,6 +50,11 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
     getAcademicPrograms().then(setPrograms);
   }, []);
 
+  const programOptions =
+    formData.department.trim() && !programs.includes(formData.department)
+      ? [formData.department, ...programs]
+      : programs;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -185,7 +190,7 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
                 <SelectValue placeholder="Select your program" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {programs.map((prog) => (
+                {programOptions.map((prog) => (
                   <SelectItem key={prog} value={prog} className="rounded-lg">
                     {prog}
                   </SelectItem>

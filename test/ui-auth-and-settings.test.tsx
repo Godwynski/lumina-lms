@@ -469,6 +469,102 @@ describe('Auth & Settings UI Components', () => {
         department: undefined,
       });
     });
+
+    it('displays and selects saved department when not in academic programs list', async () => {
+      const { container } = await renderClient(
+        <OnboardingForm
+          initialData={{
+            address: '123 Rizal St',
+            phone: '09171234567',
+            patron_type: 'student',
+            department: 'BS Nursing',
+          }}
+        />
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const trigger = container.querySelector('#program') as HTMLButtonElement;
+      expect(trigger).toHaveTextContent('BS Nursing');
+
+      await clickElement(trigger);
+      if (trigger.getAttribute('aria-expanded') !== 'true') {
+        await pressKey(trigger, 'Enter');
+      }
+
+      const options = Array.from(document.body.querySelectorAll('[role="option"]'));
+      const optionTexts = options.map((el) => el.textContent?.trim());
+      expect(optionTexts).toContain('BS Nursing');
+      expect(optionTexts).toContain('BS Information Technology');
+      expect(optionTexts).toContain('BS Computer Science');
+
+      const savedOption = options.find((el) => el.textContent?.trim() === 'BS Nursing');
+      expect(savedOption).toHaveAttribute('aria-selected', 'true');
+      await clickElement(savedOption);
+
+      expect(trigger).toHaveTextContent('BS Nursing');
+
+      await submitForm(container.querySelector('form'));
+      expect(mockSubmitOnboarding).toHaveBeenCalledWith({
+        address: '123 Rizal St',
+        phone: '09171234567',
+        patron_type: 'student',
+        department: 'BS Nursing',
+      });
+    });
+
+    it('displays saved department without duplication when it is in academic programs list', async () => {
+      const { container } = await renderClient(
+        <OnboardingForm
+          initialData={{
+            address: '123 Rizal St',
+            phone: '09171234567',
+            patron_type: 'student',
+            department: 'BS Computer Science',
+          }}
+        />
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const trigger = container.querySelector('#program') as HTMLButtonElement;
+      expect(trigger).toHaveTextContent('BS Computer Science');
+
+      await clickElement(trigger);
+      if (trigger.getAttribute('aria-expanded') !== 'true') {
+        await pressKey(trigger, 'Enter');
+      }
+
+      const options = Array.from(document.body.querySelectorAll('[role="option"]'));
+      const csOptions = options.filter((el) => el.textContent?.trim() === 'BS Computer Science');
+      expect(csOptions).toHaveLength(1);
+    });
+
+    it('blocks student submit when address and phone are filled but department is empty', async () => {
+      const { container } = await renderClient(
+        <OnboardingForm
+          initialData={{
+            address: '123 Rizal St',
+            phone: '09171234567',
+            patron_type: 'student',
+            department: '',
+          }}
+        />
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const trigger = container.querySelector('#program') as HTMLButtonElement;
+      expect(trigger).toHaveTextContent('Select your program');
+
+      await submitForm(container.querySelector('form'));
+
+      expect(mockToastError).toHaveBeenCalledWith('Please fill in all required fields');
+      expect(mockSubmitOnboarding).not.toHaveBeenCalled();
+    });
   });
 
   describe('AccountPendingScreen', () => {
