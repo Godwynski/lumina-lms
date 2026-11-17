@@ -218,10 +218,10 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
   });
 
   it('Home landing renders Quick Demo Access buttons synchronously without skeleton delay', async () => {
-    // Keep getMe pending forever to verify Suspense fallback renders real Hero demo buttons synchronously
-    mockGetMe.mockReturnValue(new Promise(() => {}));
-
-    const { container } = await renderClient(<Home />);
+    mockGetMe.mockResolvedValue(null);
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchSpy);
+    const { container } = await renderClient(await Home());
     expect(container).toHaveTextContent('Quick Demo Access');
     const demoLabels = ['Super Admin', 'Librarian', 'Library Staff', 'Patron'];
     for (const label of demoLabels) {
@@ -232,6 +232,9 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
       expect(btn?.getAttribute('type')).toBe('button');
     }
     expect(container).toHaveTextContent('My Borrowing');
+    await clickElement(Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Patron'));
+    expect(fetchSpy).toHaveBeenCalledWith('/api/demo-login', expect.objectContaining({ method: 'POST' }));
+    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
   });
 
   it('Hero triggers demo sign-in and navigates to /dashboard', async () => {

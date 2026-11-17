@@ -24,6 +24,7 @@ interface BookDetailsFormProps {
   onUpdate: (updates: Partial<BookDetailsFormProps["formData"]>) => void;
   categories: Array<{ id: string; name: string }>;
   hideIsbnField?: boolean;
+  validationAttempted?: boolean;
 }
 
 const UNIFIED_INPUT_CLASS = "h-10 w-full rounded-lg border-border/60 bg-background px-3 text-sm";
@@ -39,7 +40,7 @@ function SectionHeader({ icon: Icon, title }: { icon: React.ElementType, title: 
   );
 }
 
-export function BookDetailsForm({ formData, onUpdate, categories, hideIsbnField = false }: BookDetailsFormProps) {
+export function BookDetailsForm({ formData, onUpdate, categories, hideIsbnField = false, validationAttempted = false }: BookDetailsFormProps) {
   return (
     <div className="space-y-8">
       {/* 1. Basic Information */}
@@ -50,6 +51,7 @@ export function BookDetailsForm({ formData, onUpdate, categories, hideIsbnField 
             <Input
               type="text"
               required
+              aria-invalid={validationAttempted && !formData.title.trim() ? true : undefined}
               value={formData.title}
               onChange={e => onUpdate({ title: e.target.value })}
               placeholder="e.g. Clean Code"
@@ -61,6 +63,7 @@ export function BookDetailsForm({ formData, onUpdate, categories, hideIsbnField 
             <Input
               type="text"
               required
+              aria-invalid={validationAttempted && !formData.author.trim() ? true : undefined}
               value={formData.author}
               onChange={e => onUpdate({ author: e.target.value })}
               placeholder="e.g. Robert C. Martin"

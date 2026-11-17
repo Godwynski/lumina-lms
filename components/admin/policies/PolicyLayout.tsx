@@ -363,7 +363,7 @@ export function PolicyLayout({
         </aside>
 
         {/* ── Content ───────────────────────────────────────────── */}
-        <main className="min-w-0">
+        <div className="min-w-0">
            <div className="max-w-3xl">
              <TooltipProvider>
               {activeCategory === "broadcasts" ? (
@@ -375,7 +375,7 @@ export function PolicyLayout({
                           <Megaphone className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <h4 className="text-sm font-semibold text-foreground">Global Announcement</h4>
+                          <h2 className="text-sm font-semibold text-foreground">Global Announcement</h2>
                           <p className="text-xs text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
                         </div>
                       </div>
@@ -403,7 +403,7 @@ export function PolicyLayout({
                         <ShieldCheck className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-semibold text-foreground">Trigger Policies</h4>
+                        <h2 className="text-sm font-semibold text-foreground">Trigger Policies</h2>
                         <p className="text-xs text-muted-foreground leading-relaxed">Set the rules for automated system alerts and borrowing reminders.</p>
                       </div>
                     </div>
@@ -461,7 +461,7 @@ export function PolicyLayout({
                   {activeCategory === "reservations" && (
                     <div className="mt-10 pt-10 border-t border-border/50">
                       <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-foreground">Simulation Engine</h4>
+                        <h2 className="text-sm font-semibold text-foreground">Simulation Engine</h2>
                         <p className="text-xs text-muted-foreground leading-relaxed">Preview the impact of reservation policies on system throughput.</p>
                       </div>
                       <PolicySimulationPanel formData={formData} />
@@ -471,7 +471,7 @@ export function PolicyLayout({
               )}
              </TooltipProvider>
            </div>
-        </main>
+        </div>
 
 
       </div>

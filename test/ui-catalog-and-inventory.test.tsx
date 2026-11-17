@@ -701,6 +701,14 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
   });
 
   describe('AddBookClient', () => {
+    it('marks required fields invalid when an empty book is submitted', async () => {
+      const { container } = await renderClient(<AddBookClient />);
+      const form = container.querySelector('form')!;
+      await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+      expect(container.querySelector('input[placeholder="e.g. Clean Code"]')).toHaveAttribute('aria-invalid', 'true');
+      expect(container.querySelector('input[placeholder="e.g. Robert C. Martin"]')).toHaveAttribute('aria-invalid', 'true');
+    });
+
     it('matches categories on ISBN lookup, handles lookup exceptions/stale requests, and uploads HTTP cover URLs', async () => {
       mockFetchISBNDetails.mockResolvedValueOnce({
         success: true,
@@ -1433,7 +1441,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
     });
 
     it('executes Batch Operations tabs: JSON Import, ISBN Fallback, and Export (Excel/CSV/JSON/ZIP)', async () => {
-      const createObjectURLSpy = vi.fn(() => 'blob:mock-export');
+      const createObjectURLSpy = vi.fn((_blob: Blob) => 'blob:mock-export');
       vi.stubGlobal('URL', { ...URL, createObjectURL: createObjectURLSpy });
       const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
@@ -1501,7 +1509,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       mockGetBooksForExport.mockResolvedValue([
         {
           id: 'b-1',
-          title: 'Clean Code',
+          title: '=SUM(1,1) QA-CSV-Probe',
           author: 'Robert Martin',
           isbn: '9780132350884',
           dewey_decimal: '005.1',
@@ -1579,6 +1587,10 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         expect(createObjectURLSpy).toHaveBeenCalled();
         expect(anchorClickSpy).toHaveBeenCalled();
       });
+
+      const csvBlob = createObjectURLSpy.mock.calls.at(-1)?.[0] as unknown as Blob;
+      const csvText = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(csvBlob); });
+      expect(csvText).toContain("'=SUM(1,1) QA-CSV-Probe");
 
       await clickElement(findButtonByText(document.body, 'JSON Data'));
       await flushPromises();
@@ -2062,5 +2074,54 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(mockToPng).toHaveBeenCalledTimes(3);
       expect(anchorClickSpy).toHaveBeenCalledTimes(2);
     });
-  });
+
+    it('Export never hangs: a stalled or failed render shows an error toast and restores the Export button', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          qr_url: 'https://example.com/qr.png',
+          profile_url: '',
+          qr_exists: true,
+          profile_exists: false,
+          ready: true,
+        }),
+      }));
+      const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+      const handle = await renderClient(
+        <AnimationProvider>
+          <MyCardContainer initialData={baseData} variant="dashboard" />
+        </AnimationProvider>
+      );
+      await flushPromises();
+
+      // 1. html-to-image never settles (blocked font / cross-origin image).
+      mockToPng.mockImplementation(() => new Promise(() => {}));
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        await clickElement(findButtonByText(handle.container, 'Export'));
+        expect(handle.container).toHaveTextContent('Exporting...');
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(20_000);
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Couldn't export your card. Check your connection and try again."
+      );
+      expect(handle.container).not.toHaveTextContent('Exporting...');
+      expect(findButtonByText(handle.container, 'Export')).not.toBeDisabled();
+      expect(anchorClickSpy).not.toHaveBeenCalled();
+
+      // 2. The render rejects outright.
+      mockToastError.mockClear();
+      mockToPng.mockReset();
+      mockToPng.mockRejectedValue(new Error('tainted canvas'));
+      await clickElement(findButtonByText(handle.container, 'Export'));
+      await flushPromises(20);
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+      expect(handle.container).not.toHaveTextContent('Exporting...');
+      expect(anchorClickSpy).not.toHaveBeenCalled();
+    });  });
 });

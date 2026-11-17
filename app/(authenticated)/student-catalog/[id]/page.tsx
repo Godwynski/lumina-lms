@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import { getPublicBookById } from '@/lib/actions/public-catalog';
 import { getBookAvailabilityStatus } from '@/lib/actions/reservations';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
@@ -6,6 +7,8 @@ import { StudentBookDetailClient } from './StudentBookDetailClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const metadata = { title: "Book Details" };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function BookDetailSkeleton() {
   return (
@@ -40,6 +43,9 @@ export function BookDetailSkeleton() {
 
 async function StudentBookDetailLoader({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // A malformed id can never match a book; show the not-found page instead of a database error.
+  if (!UUID_PATTERN.test(id)) notFound();
 
   // Kick off both data fetches concurrently
   const bookPromise = getPublicBookById(id);

@@ -6,12 +6,18 @@ import { isAbortError } from "@/lib/error-utils";
 import { connection } from "next/server";
 import * as XLSX from "xlsx";
 import { withAuthApi } from "@/lib/api-utils";
+import { toCsv } from "@/lib/csv";
 
 export const GET = withAuthApi(async (request, { supabase, role }) => {
   await connection();
   try {
     const searchParams = new URL(request.url).searchParams;
     parseAuditFilters(searchParams);
+
+    const formatParam = searchParams.get("format") || "csv";
+    if (!["csv", "json", "xlsx"].includes(formatParam)) {
+      return NextResponse.json({ error: "Unsupported export format. Use csv, json or xlsx." }, { status: 400 });
+    }
 
     // The API returns at most 1,000 rows per request, so page through everything that matches (M8).
     // Dates are whole days in Manila time, like the audit log screen (M9).
@@ -50,7 +56,6 @@ export const GET = withAuthApi(async (request, { supabase, role }) => {
       profiles: profilesMap.get(log.admin_id) || null
     }));
 
-    const formatParam = searchParams.get("format") || "csv";
     const columnsParam = searchParams.get("columns");
 
     // Build Export Content
@@ -143,19 +148,7 @@ export const GET = withAuthApi(async (request, { supabase, role }) => {
       });
     }
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map(val => {
-        let strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
-        if (/^[=+\-@\t\r]/.test(strVal)) {
-          strVal = `'${strVal}`;
-        }
-        if (strVal.includes(",") || strVal.includes('"') || strVal.includes("\n") || strVal.includes("\r")) {
-          return `"${strVal.replace(/"/g, '""')}"`;
-        }
-        return strVal;
-      }).join(",")),
-    ].join("\n");
+    const csvContent = toCsv(headers, rows);
 
     return new NextResponse(csvContent, {
       headers: {

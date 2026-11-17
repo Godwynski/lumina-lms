@@ -100,6 +100,12 @@ export const PUT = withAuthApi(async (request, { supabase, user, params }) => {
     revalidatePath("/inventory", "page");
     return NextResponse.json(data);
   } catch (error) {
+    if ((error as { code?: string } | null)?.code === "23505") {
+      return NextResponse.json(
+        { error: "A category with this name or slug already exists." },
+        { status: 409 }
+      );
+    }
     console.error("Error updating category:", error);
     return NextResponse.json(
       { error: "Failed to update category" },

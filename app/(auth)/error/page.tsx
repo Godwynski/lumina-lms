@@ -10,7 +10,7 @@ function getErrorSubtitle(errorCode?: string): string {
   if (errorCode === "archived_account") {
     return "This account is currently archived and cannot sign in.";
   }
-  if (errorCode === "restricted_access") {
+  if (errorCode === "restricted_access" || errorCode === "unauthorized_domain") {
     return "Access is restricted to STI College Alabang accounts.";
   }
   if (
@@ -76,13 +76,13 @@ async function ErrorBody({
               </div>
             </div>
           </div>
-        ) : params?.error === "restricted_access" ? (
+        ) : (params?.error === "restricted_access" || params?.error === "unauthorized_domain") ? (
           <div className="space-y-5">
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex gap-3 items-start">
               <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-foreground leading-relaxed font-medium">
                 This system is exclusively for <strong>STI Alabang</strong> students and faculty.
-                Please use your official institutional email to sign in.
+                Please sign in with your <strong>@alabang.sti.edu.ph</strong> Microsoft account.
               </p>
             </div>
 

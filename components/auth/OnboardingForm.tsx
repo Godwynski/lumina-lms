@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { 
   MapPin, 
   Phone, 
@@ -23,9 +22,12 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAcademicPrograms, submitOnboarding } from "@/lib/actions/onboarding";
 import { toast } from "sonner";
+import { useLogout } from "@/hooks/use-logout";
 
 
 interface OnboardingFormProps {
+  /** True when staff already approved the account, so submitting does not wait for approval. */
+  activeAccount?: boolean;
   initialData?: {
     address?: string | null;
     phone?: string | null;
@@ -34,7 +36,8 @@ interface OnboardingFormProps {
   };
 }
 
-export function OnboardingForm({ initialData }: OnboardingFormProps) {
+export function OnboardingForm({ initialData, activeAccount = false }: OnboardingFormProps) {
+  const { logout, isLoggingOut } = useLogout();
   const [programs, setPrograms] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -210,19 +213,21 @@ export function OnboardingForm({ initialData }: OnboardingFormProps) {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  Submit for Approval
+                  {activeAccount ? "Save and Continue" : "Submit for Approval"}
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </Button>
           </div>
           <div className="text-center pt-2">
-            <Link 
-              href="/" 
+            <button
+              type="button"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
-              Return to Landing Page
-            </Link>
+              {isLoggingOut ? "Signing out..." : "Return to Landing Page"}
+            </button>
           </div>
         </form>
       </CardContent>

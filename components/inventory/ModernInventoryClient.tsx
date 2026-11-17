@@ -91,6 +91,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { toCsv } from "@/lib/csv";
 import { 
   getBooksForExport, 
   batchImportBooks
@@ -399,10 +400,8 @@ export function ModernInventoryClient({
     try {
       const data = await getBooksForExport(getExportFilters());
       const rows = getMappedExportRows(data);
-      const XLSX = await import("xlsx");
-
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+      const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+      const csvContent = toCsv(headers, rows.map((row) => headers.map((h) => row[h])));
       
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);

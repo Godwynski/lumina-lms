@@ -142,6 +142,13 @@ describe("Security Hardening Verification", () => {
     consoleErrSpy.mockRestore();
   });
 
+  it.each(["{}", '{"confirm":"reset"}'])("blocks annual reset without exact confirmation: %s", async (body) => {
+    setupAuth(supabase, "super_admin");
+    const res = await annualResetPost(new Request("http://localhost/api/admin/annual-reset", { method: "POST", body }));
+    expect(res.status).toBe(400);
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
   describe("1. PATCH /api/users permissions authorization and strict validation", () => {
     it("forbids librarians from modifying permissions (403)", async () => {
       setupAuth(supabase, "librarian", "ACTIVE", "lib-1");
@@ -474,7 +481,7 @@ describe("Security Hardening Verification", () => {
       setupAuth(supabase, "super_admin", "ACTIVE");
       supabase.setRpcResponse(null, { message: secretMsg }, "annual_student_reset");
       const resetRes = await annualResetPost(
-        new Request("http://localhost/api/admin/annual-reset", { method: "POST" })
+        new Request("http://localhost/api/admin/annual-reset", { method: "POST", body: JSON.stringify({ confirm: "RESET" }) })
       );
       expect(resetRes.status).toBe(500);
       expect(JSON.stringify(await resetRes.json())).not.toContain("postgres");

@@ -527,6 +527,9 @@ describe('Admin & Policies UI Components', () => {
         />
       );
 
+      expect(handle.container.querySelector('main')).toBeNull();
+      expect(handle.container.querySelector('h2')).toHaveTextContent('Borrowing Duration');
+
       // Admin does not see Lifecycle
       expect(findButtonByText(handle.container, 'Lifecycle')).toBeUndefined();
       expect(handle.container).toHaveTextContent('Borrowing Duration');

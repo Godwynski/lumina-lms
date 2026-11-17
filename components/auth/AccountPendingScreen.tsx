@@ -19,6 +19,8 @@ import { OnboardingForm } from "./OnboardingForm";
 
 
 interface AccountPendingScreenProps {
+  /** Profile status from the database. A missing value is treated as PENDING. */
+  status?: string | null;
   profile: {
     onboarding_completed?: boolean;
     address?: string | null;
@@ -29,24 +31,83 @@ interface AccountPendingScreenProps {
   isStudent: boolean;
 }
 
+// Copy for accounts that are blocked outright. PENDING and ACTIVE accounts never get this screen.
+const BLOCKED_COPY: Record<string, { title: string; description: string }> = {
+  SUSPENDED: { title: "Account Suspended", description: "Your account is suspended, so you cannot borrow or reserve books." },
+  INACTIVE: { title: "Account Inactive", description: "Your account is inactive, so you cannot borrow or reserve books." },
+  GRADUATED: { title: "Account Graduated", description: "Graduated accounts no longer have access to borrowing or reservations." },
+  DELETED: { title: "Account Removed", description: "This account has been removed and can no longer be used." },
+  ARCHIVED: { title: "Account Archived", description: "This account is archived and can no longer be used." },
+};
+
 export function AccountPendingScreen({ 
   profile, 
-  isStudent 
+  isStudent,
+  status
 }: AccountPendingScreenProps) {
   const { logout, isLoggingOut } = useLogout();
   const [isEditing, setIsEditing] = useState(false);
+  const accountStatus = (status ?? "PENDING").trim().toUpperCase();
+  const isActive = accountStatus === "ACTIVE";
 
+  if (accountStatus !== "PENDING" && !isActive) {
+    const copy = BLOCKED_COPY[accountStatus] ?? { title: "Account Unavailable", description: "Your account cannot be used right now." };
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20">
+        <Card className="max-w-md w-full border-border shadow-2xl" role="alert">
+          <CardHeader className="text-center space-y-4 pb-2">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <ShieldAlert className="w-8 h-8 text-destructive" />
+            </div>
+            <div className="space-y-1">
+              <CardTitle className="text-2xl font-bold tracking-tight">{copy.title}</CardTitle>
+              <CardDescription className="text-base font-medium text-muted-foreground">{copy.description}</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-sm text-muted-foreground text-center leading-relaxed">
+              If you think this is a mistake, visit the Library Circulation Desk and ask a librarian to review your account.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3 pb-8 px-8">
+            <Button
+              variant="outline"
+              className="w-full h-11 rounded-xl font-semibold"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+            >
+              <Home className="mr-2 w-4 h-4" />
+              Return to Landing Page
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground hover:text-destructive h-10 rounded-lg font-medium"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="mr-2 w-4 h-4" />
+              {isLoggingOut ? "Signing out..." : "Sign Out"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // An approved patron only needs the profile flag; a pending one also needs the fields staff verify.
   const needsOnboarding = isStudent && (
     !profile?.onboarding_completed || 
-    !profile?.address || 
-    !profile?.phone || 
-    (profile?.patron_type !== "faculty" && !profile?.department)
+    (!isActive && (
+      !profile?.address || 
+      !profile?.phone || 
+      (profile?.patron_type !== "faculty" && !profile?.department)
+    ))
   );
 
   if (needsOnboarding || isEditing) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-muted/20 gap-6">
-        <OnboardingForm initialData={profile} />
+        <OnboardingForm initialData={profile} activeAccount={isActive} />
         {isEditing && (
           <Button 
             variant="ghost" 

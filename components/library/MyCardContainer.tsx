@@ -45,6 +45,25 @@ const EXPORT_CARD_HEIGHT = 353;
 const WALLET_EXPORT_WIDTH = 1012;
 const WALLET_EXPORT_HEIGHT = 638;
 
+// html-to-image can wait forever on a blocked font or cross-origin image, so every export step is bounded
+// and the export always ends in either a download or an error toast.
+const EXPORT_STEP_TIMEOUT_MS = 20_000;
+
+const withTimeout = <T,>(promise: Promise<T>, label: string, ms = EXPORT_STEP_TIMEOUT_MS): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timed out while `)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+
 const isHiddenForCapture = (node: HTMLElement) => {
   const style = window.getComputedStyle(node);
   return style.display === "none" || style.visibility === "hidden";
@@ -58,8 +77,8 @@ const captureCardPng = async (node: HTMLElement) => {
   }
 
   try {
-    const { toPng } = await import("html-to-image");
-    return await toPng(node, {
+    const { toPng } = await withTimeout(import("html-to-image"), "loading the image exporter");
+    return await withTimeout(toPng(node, {
       pixelRatio: 2,
       cacheBust: true,
       backgroundColor: "#ffffff",
@@ -74,7 +93,7 @@ const captureCardPng = async (node: HTMLElement) => {
         height: `${EXPORT_CARD_HEIGHT}px`,
         transform: "none",
       },
-    });
+    }), "rendering the card");
   } finally {
     if (hidden) {
       node.style.display = previousDisplay;
@@ -212,10 +231,8 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
     setIsExporting(true);
     try {
-      const [frontUrl, backUrl] = await Promise.all([
-        captureCardPng(frontCardEl),
-        captureCardPng(backCardEl),
-      ]);
+      const frontUrl = await captureCardPng(frontCardEl);
+      const backUrl = await captureCardPng(backCardEl);
 
       const frontImage = new window.Image();
       const backImage = new window.Image();
@@ -233,7 +250,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
       frontImage.src = frontUrl;
       backImage.src = backUrl;
 
-      await Promise.all([frontLoaded, backLoaded]);
+      await withTimeout(Promise.all([frontLoaded, backLoaded]), "loading the card images");
 
       const cardWidth = WALLET_EXPORT_WIDTH;
       const cardHeight = WALLET_EXPORT_HEIGHT;
@@ -298,11 +315,14 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
       const frontUrl = await captureCardPng(frontCardEl);
 
       const frontImage = new window.Image();
-      await new Promise<void>((resolve, reject) => {
-        frontImage.onload = () => resolve();
-        frontImage.onerror = () => reject(new Error("Failed to load front image"));
-        frontImage.src = frontUrl;
-      });
+      await withTimeout(
+        new Promise<void>((resolve, reject) => {
+          frontImage.onload = () => resolve();
+          frontImage.onerror = () => reject(new Error("Failed to load front image"));
+          frontImage.src = frontUrl;
+        }),
+        "loading the card image",
+      );
 
       const canvas = document.createElement("canvas");
       canvas.width = WALLET_EXPORT_WIDTH;

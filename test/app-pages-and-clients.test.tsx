@@ -31,6 +31,9 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams,
   usePathname: () => mockPathname,
   redirect: (url: string) => mockRedirect(url),
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND');
+  },
 }));
 
 vi.mock('next/headers', () => ({
@@ -982,6 +985,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         await Promise.resolve();
       });
       expect(emptyRender.container).toHaveTextContent('No matching books found');
+      expect(emptyRender.container.querySelector('h2')).toHaveTextContent('No matching books found');
       await clickElement(findButtonByText(emptyRender.container, 'Clear all filters'));
       expect(mockRouterReplace).toHaveBeenCalledWith('?', { scroll: false });
     });
@@ -1131,6 +1135,11 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       await clickElement(findButtonByText(adminRender.container, 'Filter'));
       expect(findButtonByText(document.body, 'Super Admin')).toBeDefined();
+    });
+
+    it.each(['INACTIVE', 'GRADUATED', 'DELETED'])('shows the current %s account status', async (status) => {
+      const { container } = await renderClient(<UserDetailClient initialUser={{ ...sampleUser, status }} currentRole="super_admin" />);
+      expect(container).toHaveTextContent(status[0] + status.slice(1).toLowerCase());
     });
 
     it('updates profile, verifies pending student, manages SA permissions, and enforces librarian read-only in UserDetailClient', async () => {
@@ -1371,6 +1380,24 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent('Dashboard');
       expect(container).toHaveTextContent('User Directory');
       expect(container).toHaveTextContent('Audit Logs');
+    });
+
+    it.each(['SUSPENDED', 'INACTIVE', 'GRADUATED', 'DELETED', 'ARCHIVED'])('blocks %s patrons before rendering the shell', async (status) => {
+      const profile = { id: 'u-blocked', status, onboarding_completed: false, phone: null, address: null };
+      mockGetMe.mockResolvedValue({ user: { id: profile.id }, profile, role: 'patron' });
+      mockGetPreferences.mockResolvedValue({});
+      const shell = await ProtectedLayout({ children: <p>Page body</p> });
+      expect(shell.props.status).toBe(status);
+      expect(shell.props.profile).toEqual(profile);
+    });
+
+    it('gates active patrons who have not finished onboarding', async () => {
+      const profile = { id: 'u-active', status: 'ACTIVE', onboarding_completed: false };
+      mockGetMe.mockResolvedValue({ user: { id: profile.id }, profile, role: 'patron' });
+      mockGetPreferences.mockResolvedValue({});
+      const shell = await ProtectedLayout({ children: <p>Page body</p> });
+      expect(shell.props.profile).toEqual(profile);
+      expect(shell.props.isStudent).toBe(true);
     });
 
     it('authenticated shell keeps the account menu in the sidebar only, not in the mobile header', async () => {
@@ -1760,7 +1787,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       cleanupClients();
 
       const book: BookDetail = {
-        id: 'sb-42',
+        id: '20000000-0000-4000-8000-000000000042',
         title: 'The Pragmatic Programmer',
         author: 'Andy Hunt',
         isbn: '9780135957059',
@@ -1782,14 +1809,14 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         reservationId: null,
       });
 
-      const pageEl = StudentBookDetailPage({ params: Promise.resolve({ id: 'sb-42' }) });
+      const pageEl = StudentBookDetailPage({ params: Promise.resolve({ id: '20000000-0000-4000-8000-000000000042' }) });
       const suspenseEl = (pageEl.props as { children: React.ReactElement }).children;
       const loaderEl = (suspenseEl.props as { children: React.ReactElement }).children;
       const LoaderFn = loaderEl.type as (p: { params: Promise<{ id: string }> }) => Promise<React.ReactElement>;
-      const detailClientEl = await LoaderFn({ params: Promise.resolve({ id: 'sb-42' }) });
+      const detailClientEl = await LoaderFn({ params: Promise.resolve({ id: '20000000-0000-4000-8000-000000000042' }) });
 
-      expect(mockGetPublicBookById).toHaveBeenCalledWith('sb-42');
-      expect(mockGetBookAvailabilityStatus).toHaveBeenCalledWith('sb-42');
+      expect(mockGetPublicBookById).toHaveBeenCalledWith('20000000-0000-4000-8000-000000000042');
+      expect(mockGetBookAvailabilityStatus).toHaveBeenCalledWith('20000000-0000-4000-8000-000000000042');
 
       const { container } = await renderClient(
         <Suspense fallback={<div>Loading</div>}>{detailClientEl}</Suspense>
@@ -1799,6 +1826,20 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       expect(container).toHaveTextContent('The Pragmatic Programmer');
       expect(container).toHaveTextContent('Andy Hunt');
+    });
+
+    it('StudentBookDetailPage shows not-found for a non-UUID id without querying the database', async () => {
+      mockGetPublicBookById.mockClear();
+      mockGetBookAvailabilityStatus.mockClear();
+      const pageEl = StudentBookDetailPage({ params: Promise.resolve({ id: 'not-a-uuid' }) });
+      const suspenseEl = (pageEl.props as { children: React.ReactElement }).children;
+      const loaderEl = (suspenseEl.props as { children: React.ReactElement }).children;
+      const LoaderFn = loaderEl.type as (p: { params: Promise<{ id: string }> }) => Promise<React.ReactElement>;
+
+      await expect(LoaderFn({ params: Promise.resolve({ id: 'not-a-uuid' }) })).rejects.toThrow('NEXT_NOT_FOUND');
+      await expect(LoaderFn({ params: Promise.resolve({ id: '123' }) })).rejects.toThrow('NEXT_NOT_FOUND');
+      expect(mockGetPublicBookById).not.toHaveBeenCalled();
+      expect(mockGetBookAvailabilityStatus).not.toHaveBeenCalled();
     });
 
     it('UsersPage redirects unauthenticated/non-staff users and loads directory for super_admin', async () => {

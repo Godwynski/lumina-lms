@@ -4,6 +4,11 @@ import { useState } from "react";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { validateImageFile } from "@/lib/image-utils";
+
+const COVER_TYPES = ["image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"] as const;
+const MAX_COVER_MB = 5;
 
 interface CoverUploaderProps {
   coverPreviewUrl: string | null;
@@ -14,6 +19,7 @@ interface CoverUploaderProps {
 export function CoverUploader({ coverPreviewUrl, coverUrl, onCoverSelected }: CoverUploaderProps) {
   const source = coverPreviewUrl || coverUrl || "/images/default-book-cover.png";
   const [failedSource, setFailedSource] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   return (
     <div className="space-y-4">
       <div className="sticky top-24 rounded-2xl border border-border/40 bg-card p-6 shadow-sm">
@@ -47,13 +53,24 @@ export function CoverUploader({ coverPreviewUrl, coverUrl, onCoverSelected }: Co
         <div className="mt-5 space-y-3">
           <input
             id="file-upload"
+            aria-label="Book cover image"
             type="file"
             accept="image/jpeg, image/png, image/webp, image/jpg, image/gif"
             className="hidden"
             onChange={e => {
-              if (e.target.files && e.target.files.length > 0) {
-                onCoverSelected(e.target.files[0]);
+              const input = e.target;
+              const file = input.files?.[0];
+              if (!file) return;
+              const error = validateImageFile(file, { maxMB: MAX_COVER_MB, allowedTypes: COVER_TYPES });
+              if (error) {
+                // Keep the current cover and say why the file was refused.
+                setUploadError(error);
+                toast.error(error);
+                input.value = '';
+                return;
               }
+              setUploadError(null);
+              onCoverSelected(file);
             }}
           />
           <Button
@@ -64,7 +81,10 @@ export function CoverUploader({ coverPreviewUrl, coverUrl, onCoverSelected }: Co
           >
             Upload File
           </Button>
-          <p className="text-[11px] text-muted-foreground text-center font-medium">Supported: JPG, PNG, WEBP (Max 2MB)</p>
+          <p className="text-[11px] text-muted-foreground text-center font-medium">Supported: JPG, PNG, WEBP, GIF (Max 5MB)</p>
+          {uploadError && (
+            <p role="alert" className="text-center text-[11px] font-semibold text-destructive">{uploadError}</p>
+          )}
         </div>
       </div>
     </div>

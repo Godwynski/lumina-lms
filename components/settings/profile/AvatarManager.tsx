@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 import { ImageCropper } from "./ImageCropper";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
+import { validateImageFile } from "@/lib/image-utils";
+
+const MAX_AVATAR_MB = 5;
 
 interface AvatarManagerProps {
   initialAvatarUrl: string | null;
@@ -33,8 +36,11 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file.");
+    // Check type and size before reading the file so an oversized photo never reaches the cropper.
+    const validationError = validateImageFile(file, { maxMB: MAX_AVATAR_MB });
+    if (validationError) {
+      toast.error(validationError);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -148,6 +154,7 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
         type="file"
         ref={fileInputRef}
         className="hidden"
+        aria-label="Upload profile photo"
         accept="image/*"
         onChange={handleFileSelect}
       />

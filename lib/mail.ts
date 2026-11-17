@@ -202,7 +202,7 @@ export async function sendDueSoonEmail({
     </p>
     <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
       <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #1e3a8a;">
-        You can return it to the library or renew it online if the item is still eligible for renewal.
+        Please return it to the library or visit the library desk if you need assistance.
       </p>
     </div>
   `;

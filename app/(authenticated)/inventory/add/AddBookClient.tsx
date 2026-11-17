@@ -32,6 +32,7 @@ const EMPTY_FORM = {
 export function AddBookClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const lookupRequest = useRef(0);
   const [isbnLoading, setIsbnLoading] = useState(false);
   
@@ -95,8 +96,10 @@ export function AddBookClient() {
     return () => URL.revokeObjectURL(objectUrl);
   }, [coverFile]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setValidationAttempted(true);
+    if (!e.currentTarget.checkValidity()) return;
     setLoading(true);
 
     try {
@@ -180,7 +183,7 @@ export function AddBookClient() {
       <NavigationGuard isDirty={isDirty} message="You have an unsaved book draft. Leave this page and discard it?" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 relative overflow-hidden">
+          <form noValidate onSubmit={handleSubmit} className="space-y-8 rounded-2xl border border-border/40 bg-card p-6 sm:p-8 relative overflow-hidden">
             
             <ISBNLookupBar 
               isbn={formData.isbn}
@@ -194,6 +197,7 @@ export function AddBookClient() {
               onUpdate={updateFormData}
               categories={categories}
               hideIsbnField
+              validationAttempted={validationAttempted}
             />
 
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-border/30 mt-8">

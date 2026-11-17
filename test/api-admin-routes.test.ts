@@ -138,11 +138,19 @@ describe("Admin API Route Handlers", () => {
       }
     );
 
+    it.each([undefined, "{}", '{"confirm":"wrong"}', "{bad"])("rejects missing or invalid confirmation without running reset: %s", async (body) => {
+      setupAuth(supabase, "super_admin");
+      const res = await annualResetPost(new Request("http://localhost/api/admin/annual-reset", { method: "POST", body }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain("Confirmation required");
+      expect(supabase.rpc).not.toHaveBeenCalled();
+    });
+
     it("executes annual_student_reset RPC and logs audit activity for super_admin", async () => {
       setupAuth(supabase, "super_admin", "ACTIVE", "admin-42");
       supabase.setRpcResponse(125, null, "annual_student_reset");
 
-      const res = await annualResetPost(new Request("http://localhost/api/admin/annual-reset", { method: "POST" }));
+      const res = await annualResetPost(new Request("http://localhost/api/admin/annual-reset", { method: "POST", body: JSON.stringify({ confirm: "RESET" }) }));
       const body = await res.json();
 
       expect(res.status).toBe(200);
@@ -163,7 +171,7 @@ describe("Admin API Route Handlers", () => {
       setupAuth(supabase, "super_admin");
       supabase.setRpcResponse(null, { message: "Database timeout" }, "annual_student_reset");
 
-      const res = await annualResetPost(new Request("http://localhost/api/admin/annual-reset", { method: "POST" }));
+      const res = await annualResetPost(new Request("http://localhost/api/admin/annual-reset", { method: "POST", body: JSON.stringify({ confirm: "RESET" }) }));
       const body = await res.json();
 
       expect(res.status).toBe(500);
@@ -265,7 +273,7 @@ describe("Admin API Route Handlers", () => {
       expect(auditBuilder.eq).toHaveBeenCalledWith("subject_copy_id", copyId);
       expect(auditBuilder.eq).toHaveBeenCalledWith("admin_id", userId);
 
-      const expectedPattern = JSON.stringify("%al(ice):\\_50\\%%");
+      const expectedPattern = JSON.stringify("%alice\\_50\\%%");
       const expectedSearchOr = [
         "entity_type",
         "action",
@@ -319,7 +327,24 @@ describe("Admin API Route Handlers", () => {
     });
   });
 
+  it("safely filters audit search metacharacters", async () => {
+    setupAuth(supabase, "super_admin");
+    supabase.setTableResponse("audit_log_records", [], null, 0);
+    const res = await auditLogsGet(new NextRequest(`http://localhost/api/admin/audit-logs?query=${encodeURIComponent("' OR 1=1 --")}`));
+    expect(res.status).toBe(200);
+    expect((await res.json()).logs).toEqual([]);
+    expect(supabase.getTableBuilder("audit_log_records").or).toHaveBeenCalledWith(expect.stringContaining('OR 11 --'));
+  });
+
   describe("GET /api/admin/audit-logs/export", () => {
+    it("rejects unsupported formats before fetching logs", async () => {
+      setupAuth(supabase, "super_admin");
+      const res = await auditLogsExportGet(new NextRequest("http://localhost/api/admin/audit-logs/export?format=exe"));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain("Unsupported");
+      expect(supabase.from).not.toHaveBeenCalledWith("audit_log_records");
+    });
+
     it("denies unauthenticated, patron, and library_staff roles (401/403)", async () => {
       setupAuth(supabase, null);
       expect(
@@ -800,6 +825,14 @@ describe("Admin API Route Handlers", () => {
       ]);
       expect(mockRevalidateTag).toHaveBeenCalledWith("categories", "default");
       expect(mockRevalidatePath).toHaveBeenCalledWith("/inventory", "page");
+    });
+
+    it("returns conflict for duplicate category names", async () => {
+      setupAuth(supabase, "librarian");
+      supabase.setTableResponse("categories", null, { code: "23505", message: "duplicate" });
+      const res = await categoriesPost(new Request("http://localhost/api/admin/categories", { method: "POST", body: JSON.stringify({ name: "Fiction" }) }));
+      expect(res.status).toBe(409);
+      expect((await res.json()).error).toContain("already exists");
     });
 
     it("GET/PUT/DELETE /categories/[id] handles 200, 400, 404, and 500", async () => {

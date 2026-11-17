@@ -34,6 +34,10 @@ export const PATCH = withAuthApi(
     const body = parseResult.data;
     const id = body.id;
 
+    if (body.role !== undefined && !normalizeUserRole(body.role)) {
+      return apiError("Invalid role", "VALIDATION_ERROR", 400);
+    }
+
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")

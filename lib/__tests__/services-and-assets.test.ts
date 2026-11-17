@@ -215,6 +215,8 @@ describe('lib/mail', () => {
       })
     ).toEqual({ success: true, messageId: 'due-1' });
     expect(mockSendMail.mock.calls[0][0].html).toContain('O&#39;Brien');
+    expect(mockSendMail.mock.calls[0][0].html).toContain('Please return it to the library');
+    expect(mockSendMail.mock.calls[0][0].html).not.toContain('renew it online');
 
     expect(await sendTestEmail('', 'Admin')).toEqual({ success: false, error: 'No email address' });
 

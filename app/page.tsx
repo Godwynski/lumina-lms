@@ -16,25 +16,6 @@ export const metadata = {
   title: "STI College Alabang Library | Lumina LMS",
 };
 
-async function HeroSection() {
-  const me = await getMe();
-  return <Hero user={me?.user ?? null} role={me?.role ?? null} showDemo={isDemoModeEnabled()} />;
-}
-
-async function AuthRedirect() {
-  const me = await getMe();
-
-  if (me?.user) {
-    const isPrivileged = me.role === "super_admin" || me.role === "librarian";
-    const isBlocked = checkAccessBlocked(me.profile as Profile);
-    if (isBlocked && !isPrivileged && me.role !== "library_staff") {
-      return null;
-    }
-    return redirect("/dashboard");
-  }
-  return null;
-}
-
 // Copy below is traced from the student catalog, reservation, dashboard and circulation desk screens.
 const STEPS = [
   {
@@ -68,23 +49,19 @@ const QUESTIONS = [
 
 const container = "mx-auto w-full max-w-6xl px-5 sm:px-8";
 
-function SignIn() {
-  const showDemo = isDemoModeEnabled();
-  return (
-    <Suspense fallback={<Hero user={null} role={null} showDemo={showDemo} />}>
-      <HeroSection />
-    </Suspense>
-  );
-}
+// The signed-in state is resolved before rendering so the hero is part of the initial HTML.
+// Streaming it through a Suspense boundary left it hidden and unhydrated until the browser
+// ran the boundary swap script, which never fires in a throttled or background tab.
+export default async function Home() {
+  const me = await getMe();
+  if (me?.user) {
+    const isBlocked = checkAccessBlocked(me.profile as Profile);
+    if (!isBlocked) redirect("/dashboard");
+  }
 
-export default function Home() {
   return (
     <div className="bg-background">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded focus:bg-background focus:p-3 focus:text-foreground">Skip to main content</a>
-      <Suspense fallback={null}>
-        <AuthRedirect />
-      </Suspense>
-
       <header className="border-b border-border">
         <div className={`${container} flex h-14 items-center justify-between`}>
           <Link
@@ -119,7 +96,7 @@ export default function Home() {
           Search the library catalog, reserve a copy for pickup and keep track of what you have borrowed.
         </p>
         <div className="mt-6 max-w-sm sm:mt-8 [@media(max-height:480px)]:mt-4">
-          <SignIn />
+          <Hero user={me?.user ?? null} role={me?.role ?? null} showDemo={isDemoModeEnabled()} />
         </div>
         <a
           href="#how-borrowing-works"

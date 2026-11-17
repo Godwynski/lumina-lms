@@ -66,7 +66,11 @@ export function AnnualResetTool() {
 
     setIsResetting(true);
     try {
-      const res = await fetch("/api/admin/annual-reset", { method: "POST" });
+      const res = await fetch("/api/admin/annual-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "RESET" }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success("Reset complete.");

@@ -58,7 +58,6 @@ export async function submitOnboarding(formData: {
       patron_type,
       department: resolvedDepartment,
       onboarding_completed: true,
-      status: 'PENDING',
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id);

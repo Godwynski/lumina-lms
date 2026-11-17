@@ -626,7 +626,7 @@ describe('Auth & Settings UI Components', () => {
       // Confirmed -> fetch succeeds
       confirmSpy.mockReturnValueOnce(true);
       await clickElement(resetBtn);
-      expect(fetchSpy).toHaveBeenCalledWith('/api/admin/annual-reset', { method: 'POST' });
+      expect(fetchSpy).toHaveBeenCalledWith('/api/admin/annual-reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'RESET' }) });
       expect(mockToastSuccess).toHaveBeenCalledWith('Reset complete.');
 
       // Confirmed -> fetch error

@@ -6,6 +6,7 @@ export interface Profile {
   full_name?: string | null;
   avatar_url?: string | null;
   status?: string;
+  onboarding_completed?: boolean | null;
   role?: string | null;
   permissions?: {
     manage_circulation?: boolean;
@@ -83,10 +84,18 @@ export function isStaff(role: Role, profile?: Profile | null): boolean {
   );
 }
 
+// Only ACTIVE accounts may use the app. The schema also allows PENDING, INACTIVE, SUSPENDED,
+// GRADUATED, DELETED and ARCHIVED, and every one of them is blocked. A missing status is not blocked.
 export function isAccessBlocked(profile?: Profile | null): boolean {
+  const status = profile?.status?.trim().toUpperCase();
+  return !!status && status !== "ACTIVE";
+}
+
+// An approved (ACTIVE) patron who never completed the profile form goes through onboarding first.
+export function needsOnboarding(role: Role, profile?: Profile | null): boolean {
   return (
-    profile?.status === "PENDING" ||
-    profile?.status === "SUSPENDED" ||
-    profile?.status === "INACTIVE"
+    role === "patron" &&
+    profile?.status?.trim().toUpperCase() === "ACTIVE" &&
+    profile.onboarding_completed === false
   );
 }

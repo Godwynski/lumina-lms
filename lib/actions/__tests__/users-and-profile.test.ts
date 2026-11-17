@@ -247,7 +247,7 @@ describe('Users, Onboarding & Profile Server Actions', () => {
       ]);
     });
 
-    it('submitOnboarding rejects unauthenticated callers, updates profile to PENDING, logs audit, and revalidates', async () => {
+    it('submitOnboarding rejects unauthenticated callers, updates profile without changing status, logs audit, and revalidates', async () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
       await expect(
         submitOnboarding({ address: '123 Main', phone: '09171234567', department: 'CS' })
@@ -270,7 +270,6 @@ describe('Users, Onboarding & Profile Server Actions', () => {
           phone: '09181234567',
           department: 'Computer Science',
           onboarding_completed: true,
-          status: 'PENDING',
         })
       );
       expect(profileBuilder.eq).toHaveBeenCalledWith('id', 'stu-1');
@@ -283,6 +282,13 @@ describe('Users, Onboarding & Profile Server Actions', () => {
         { address: '456 Elm St', phone: '09181234567', patron_type: 'student', department: 'Computer Science' }
       );
       expect(mockRevalidatePath).toHaveBeenCalledWith('/');
+    });
+
+    it('preserves the account status when completing an approved profile', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'approved-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', null, null);
+      await submitOnboarding({ address: '123 Main', phone: '09171234567', department: 'CS' });
+      expect(serverClientHelper.getTableBuilder('profiles').update.mock.calls[0][0]).not.toHaveProperty('status');
     });
 
     it('submitOnboarding allows faculty without department and rejects student without department', async () => {
@@ -316,7 +322,6 @@ describe('Users, Onboarding & Profile Server Actions', () => {
           patron_type: 'faculty',
           department: null,
           onboarding_completed: true,
-          status: 'PENDING',
         })
       );
     });

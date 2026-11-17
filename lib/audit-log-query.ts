@@ -7,6 +7,11 @@ export function auditSearchPattern(input: string) {
   return JSON.stringify(`%${input.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%`);
 }
 
+// Quotes, separators, operators and control characters can break the PostgREST `or` filter; drop them.
+export function auditSearchTerm(input: string) {
+  return input.replace(/[\u0000-\u001f\u007f'"`\\,()=;*:<>|&!]/g, '').replace(/\s+/g, ' ').trim().slice(0, 150);
+}
+
 const filtersSchema = z.object({
   bookId: z.string().uuid().optional(),
   studentId: z.string().uuid().optional(),
@@ -53,7 +58,7 @@ export function auditLogQuery(supabase: SupabaseClient, params: URLSearchParams,
   if (filters.userId) query = query.eq('admin_id', filters.userId);
   if (filters.startDate) query = query.gte('created_at', `${filters.startDate}T00:00:00+08:00`);
   if (filters.endDate) query = query.lte('created_at', `${filters.endDate}T23:59:59.999+08:00`);
-  const term = (params.get('query') || '').trim().slice(0, 150);
+  const term = auditSearchTerm(params.get('query') || '');
   if (term) query = query.or(['entity_type', 'action', 'reason', 'actor_name', 'actor_email', 'book_title', 'book_isbn', 'copy_barcode', 'copy_accession', 'student_name', 'student_number', 'student_email'].map(field => `${field}.ilike.${auditSearchPattern(term)}`).join(','));
   return query;
 }

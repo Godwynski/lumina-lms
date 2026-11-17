@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const account = typeof body.email === 'string' ? findDemoAccount(body.email) : undefined;
   if (!account) {
-    return new NextResponse(null, { status: 404 });
+    return NextResponse.json({ error: 'Unknown demo account. Use one of the listed demo accounts.' }, { status: 400 });
   }
 
   const password = process.env.DEMO_PASSWORD;

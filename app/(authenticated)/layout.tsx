@@ -13,7 +13,7 @@ import NavAnimatePresence from "./NavAnimatePresence";
 import { SWRProvider } from "./_components/SWRProvider";
 import { BatchTaskProvider } from "@/components/providers/BatchTaskProvider";
 import { cookies } from "next/headers";
-import { isAccessBlocked as checkAccessBlocked, type Profile } from "@/lib/auth/permissions";
+import { isAccessBlocked as checkAccessBlocked, needsOnboarding, type Profile } from "@/lib/auth/permissions";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -41,17 +41,17 @@ export default async function ProtectedLayout({
   const { profile, role } = me;
 
   const isStudent = role === "patron";
-  const isPrivileged = role === "super_admin" || role === "librarian";
 
   // ─── Access restriction: render a blocking screen (no shell needed) ───────
-  if (profile?.status === "ARCHIVED" && !isPrivileged) {
-    redirect("/error?error=archived_account");
-  }
-
   const isAccessBlocked = checkAccessBlocked(profile as Profile);
 
-  if (isAccessBlocked && !isPrivileged && role !== "library_staff") {
-    return <AccountPendingScreen profile={profile} isStudent={isStudent} />;
+  if (isAccessBlocked) {
+    return <AccountPendingScreen profile={profile} status={profile?.status} isStudent={isStudent} />;
+  }
+
+  // An approved patron who skipped the profile form completes it before seeing the dashboard.
+  if (needsOnboarding(role, profile as Profile)) {
+    return <AccountPendingScreen profile={profile} status={profile?.status} isStudent={isStudent} />;
   }
 
   // ─── Shell returns immediately — streamed children fill in behind it ──────
@@ -81,7 +81,7 @@ export default async function ProtectedLayout({
                 <div className="flex flex-1 items-center gap-2 overflow-hidden min-w-0">
                   <SidebarTrigger className="h-11 w-11 shrink-0" />
                   <div className="truncate text-sm font-semibold tracking-tight">
-                    <BreadcrumbNav />
+                    <BreadcrumbNav asHeading={false} />
                   </div>
                 </div>
                 <div className="ml-1.5 shrink-0 flex items-center gap-1">

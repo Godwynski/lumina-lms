@@ -291,7 +291,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
   });
 
   describe("POST /api/demo-login", () => {
-    it("returns 404 when demo mode disabled or email is not a demo account", async () => {
+    it("returns 404 when demo mode disabled and 400 JSON when email/role is not a demo account", async () => {
       mockIsDemoModeEnabled.mockReturnValueOnce(false);
       const disabledRes = await demoLoginPost(
         new Request("http://localhost/api/demo-login", {
@@ -307,7 +307,17 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           body: JSON.stringify({ email: "stranger@alabang.sti.edu.ph" }),
         })
       );
-      expect(unknownRes.status).toBe(404);
+      expect(unknownRes.status).toBe(400);
+      expect((await unknownRes.json()).error).toMatch(/unknown demo account/i);
+
+      const roleOnlyRes = await demoLoginPost(
+        new Request("http://localhost/api/demo-login", {
+          method: "POST",
+          body: JSON.stringify({ role: "super_hacker" }),
+        })
+      );
+      expect(roleOnlyRes.status).toBe(400);
+      expect((await roleOnlyRes.json()).error).toBeTruthy();
     });
 
     it("returns 400 on malformed JSON or non-object payload, and 503 if DEMO_PASSWORD is missing", async () => {
@@ -572,6 +582,16 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       ).toBe(403);
     });
 
+    it("requires inventory permission for active staff", async () => {
+      setupAuth(supabase, "library_staff");
+      const denied = await uploadPost(new Request("http://localhost/api/upload", { method: "POST", body: new FormData() }));
+      expect(denied.status).toBe(403);
+      supabase.setTableResponse("profiles", { id: "user-1", role: "library_staff", status: "ACTIVE", permissions: { manage_inventory: true } });
+      const allowed = await uploadPost(new Request("http://localhost/api/upload", { method: "POST", body: new FormData() }));
+      expect(allowed.status).toBe(400);
+      expect((await allowed.json()).error).toContain("No file");
+    });
+
     it("rejects empty form, disallowed MIME type, oversized file, and invalid remote URLs with 400", async () => {
       setupAuth(supabase, "librarian");
 
@@ -626,6 +646,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
 
     it("converts uploaded PNG to WebP, uploads to book-covers bucket, and handles remote + storage errors", async () => {
       setupAuth(supabase, "library_staff", "ACTIVE");
+      supabase.setTableResponse("profiles", { id: "user-1", role: "library_staff", status: "ACTIVE", permissions: { manage_inventory: true } });
 
       const validForm = new FormData();
       validForm.append("file", new File([TINY_PNG_BUFFER], "cover.png", { type: "image/png" }));
@@ -722,6 +743,14 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
           )
         ).status
       ).toBe(400);
+    });
+
+    it.each(["god", "", "  "])("rejects invalid role %s", async (role) => {
+      setupAuth(supabase, "super_admin");
+      const res = await usersPatch(new Request("http://localhost/api/users", { method: "PATCH", body: JSON.stringify({ id: "u-2", role }) }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain("role");
+      expect(adminSupabase.from).not.toHaveBeenCalled();
     });
 
     it("enforces librarian privilege boundaries and super_admin self-demotion guard", async () => {

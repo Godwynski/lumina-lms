@@ -393,6 +393,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
 
       const input = handle.container.querySelector('input') as HTMLInputElement;
       expect(input).toHaveAttribute('aria-label', 'Daily Overdue Fine (php / day)');
+      expect(input.labels?.[0]).toHaveTextContent('Daily Overdue Fine');
 
       // Valid numeric change
       await typeIntoInput(input, '15');

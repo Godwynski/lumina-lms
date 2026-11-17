@@ -72,7 +72,7 @@ describe('demo login', () => {
     expect(client.from).not.toHaveBeenCalled();
   });
   it('rejects emails outside the configured demo accounts', async () => {
-    expect((await POST(request({ email: 'someone@alabang.sti.edu.ph' }))).status).toBe(404);
+    expect((await POST(request({ email: 'someone@alabang.sti.edu.ph' }))).status).toBe(400);
     expect(client.auth.signInWithPassword).not.toHaveBeenCalled();
   });
   it('handles a null JSON body', async () => {

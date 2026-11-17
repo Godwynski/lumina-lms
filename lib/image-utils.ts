@@ -1,4 +1,23 @@
 /**
+ * Checks a user-picked file before it is read or uploaded. Returns an error message, or null when the
+ * file is acceptable. allowedTypes lists exact MIME types; omit it to accept any image/* file.
+ */
+export function validateImageFile(
+  file: File,
+  { maxMB, allowedTypes }: { maxMB: number; allowedTypes?: readonly string[] },
+): string | null {
+  const typeOk = allowedTypes ? allowedTypes.includes(file.type) : file.type.startsWith("image/");
+  if (!typeOk) {
+    return allowedTypes
+      ? `Unsupported file type. Use ${allowedTypes.join(", ")}.`
+      : "Please upload an image file.";
+  }
+  if (file.size > maxMB * 1024 * 1024) {
+    return `File is too large. The maximum size is ${maxMB} MB.`;
+  }
+  return null;
+}
+/**
  * Options for image compression
  */
 interface CompressOptions {

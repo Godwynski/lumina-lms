@@ -54,7 +54,12 @@ function formatSegment(segment: string, parentSegment?: string) {
     .join(" ");
 }
 
-export function BreadcrumbNav() {
+/**
+ * The page title is the heading only once per page. The mobile and desktop headers both render this
+ * component, so the duplicate passes sHeading={false} to get a plain text title.
+ */
+export function BreadcrumbNav({ asHeading = true }: { asHeading?: boolean } = {}) {
+  const Title = asHeading ? "h1" : "span";
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
   const { role } = usePreferences();
@@ -68,7 +73,7 @@ export function BreadcrumbNav() {
   if (clean === "/dashboard" || clean === "/dashboard/") {
     return (
       <div className="flex items-center gap-2">
-        <h1 className="text-base font-bold tracking-tight text-foreground md:text-xl">Dashboard</h1>
+        <Title className="text-base font-bold tracking-tight text-foreground md:text-xl">Dashboard</Title>
       </div>
     );
   }
@@ -113,7 +118,7 @@ export function BreadcrumbNav() {
 
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
-      <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-xl">{title}</h1>
+      <Title className="truncate text-base font-bold tracking-tight text-foreground md:text-xl">{title}</Title>
       {backHref && backLabel && (
         <Link href={backHref} className="ml-1 hidden text-xs font-medium text-muted-foreground transition-colors hover:text-primary sm:inline-flex items-center gap-1">
           <div className="h-1 w-1 rounded-full bg-border" />

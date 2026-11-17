@@ -11,7 +11,7 @@ import {
 } from '@/lib/utils';
 import { mapProfileToUser } from '@/lib/utils/mappers';
 import { bustAvatarCache } from '@/lib/utils/avatar-cache';
-import { compressImage, getCroppedImg } from '@/lib/image-utils';
+import { compressImage, getCroppedImg, validateImageFile } from '@/lib/image-utils';
 
 describe('lib/utils', () => {
   describe('cn', () => {
@@ -374,4 +374,10 @@ describe('lib/image-utils', () => {
       getCroppedImg('https://example.com/photo.jpg', { x: 0, y: 0, width: 100, height: 100 })
     ).rejects.toThrow('Canvas is empty');
   });
+});
+
+
+it('reports the allowed types and size when a selected image is invalid', () => {
+  expect(validateImageFile(new File(['x'], 'bad.txt', { type: 'text/plain' }), { maxMB: 5, allowedTypes: ['image/png'] })).toContain('image/png');
+  expect(validateImageFile(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'big.png', { type: 'image/png' }), { maxMB: 5 })).toContain('5 MB');
 });

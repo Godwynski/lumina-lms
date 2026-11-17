@@ -165,7 +165,7 @@ export function PolicyField({
             <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground leading-snug">{labelText}</h3>
+                  <h2 className="text-sm font-semibold text-foreground leading-snug"><label htmlFor={fieldId}>{labelText}</label></h2>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
                       <button type="button" aria-label={`About ${labelText}`} className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground hover:text-primary cursor-help">

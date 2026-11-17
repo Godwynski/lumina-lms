@@ -247,6 +247,9 @@ export function UserDetailClient({
   const statusOptions = [
     { id: "ACTIVE", label: "Active", icon: CheckCircle2 },
     { id: "PENDING", label: "Pending", icon: Calendar },
+    { id: "INACTIVE", label: "Inactive", icon: AlertCircle },
+    { id: "GRADUATED", label: "Graduated", icon: UserCheck },
+    { id: "DELETED", label: "Deleted", icon: Archive },
     { id: "SUSPENDED", label: "Suspended", icon: AlertCircle, restricted: !isAdmin },
     { id: "ARCHIVED", label: "Archived", icon: Archive, restricted: !isAdmin },
   ];

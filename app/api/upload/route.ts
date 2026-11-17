@@ -89,4 +89,4 @@ export const POST = withAuthApi(async (_req, { supabase }) => {
     console.error("Error uploading file:", error);
     return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
   }
-}, { allowedRoles: ["super_admin", "librarian", "library_staff"] });
+}, { allowedRoles: ["super_admin", "librarian", "library_staff"], allowedPermissions: ["manage_inventory"] });

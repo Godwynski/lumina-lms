@@ -554,7 +554,7 @@ export function StudentCatalogClient({
             <div className="mb-4 rounded-full bg-primary/5 p-5 text-primary/40 ring-1 ring-primary/10">
               <Search className="h-10 w-10" />
             </div>
-            <h3 className="text-xl font-bold tracking-tight text-foreground">No matching books found</h3>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">No matching books found</h2>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
               We couldn&apos;t find any titles matching your current search criteria. Try broadening your terms or clear all filters.
             </p>
