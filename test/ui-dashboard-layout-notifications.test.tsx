@@ -958,8 +958,9 @@ describe('Dashboard Components', () => {
     expect(container.textContent).toContain('Holds Ready');
     expect(container.textContent).toContain('42');
     expect(container.textContent).toContain('500');
-    expect(container.textContent).toContain('Audit Trail');
-    expect(container.textContent).toContain('Settings & Policies');
+    expect(container.textContent).toContain('Inventory');
+    expect(container.textContent).toContain('User Directory');
+    expect(container.textContent).not.toContain('Settings & Policies');
     expect(container.textContent).toContain('My Library Card');
     expect(container.textContent).toContain('Algorithms');
 
@@ -968,7 +969,7 @@ describe('Dashboard Components', () => {
     await clickElement(bookBtn);
     expect(mockGetBookPublicDetails).toHaveBeenCalledWith('book-99');
 
-    // Librarian hides Audit Trail & Settings & Policies, and 0 actions shows All caught up
+    // Librarian with 0 actions shows All caught up
     await rerender(
       <Suspense fallback={<div>Suspending</div>}>
         <DashboardClient
@@ -997,7 +998,6 @@ describe('Dashboard Components', () => {
 
     expect(container.textContent).toContain('All caught up. No pending administrative actions.');
     expect(container.textContent).toContain('No recent additions');
-    expect(container.textContent).toContain('Audit Trail');
     expect(container.textContent).toContain('My Library Card');
     expect(container.textContent).not.toContain('Settings & Policies');
   });
@@ -2873,10 +2873,10 @@ describe('Library Card, Pagination & Borrower Modal Components', () => {
     await act(async () => { await Promise.resolve(); });
 
     // Flip Back -> Front on dashboard variant
-    await clickElement(findButtonByText(container, 'Back'));
-    expect(findButtonByText(container, 'Front')).toBeDefined();
-    await clickElement(findButtonByText(container, 'Front'));
-    expect(findButtonByText(container, 'Back')).toBeDefined();
+    await clickElement(findButtonByText(container, 'Show card back'));
+    expect(findButtonByText(container, 'Show card front')).toBeDefined();
+    await clickElement(findButtonByText(container, 'Show card front'));
+    expect(findButtonByText(container, 'Show card back')).toBeDefined();
 
     // Open QR dialog from dashboard variant
     await clickElement(container.querySelector('button[aria-label="Expand QR code"]'));

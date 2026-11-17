@@ -357,8 +357,8 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         
         <div className="relative mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Badge className="mb-1 bg-primary/20 text-primary border-none text-[11px] font-bold uppercase tracking-widest px-2.5 h-6">Official Library ID</Badge>
-            <h2 className="text-xl font-black tracking-tight text-foreground/90 uppercase">{data.fullName}</h2>
+            <Badge className="mb-1 bg-primary/15 text-primary border-none text-2xs font-semibold uppercase tracking-wider px-2.5 h-6">Official Library ID</Badge>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">{data.fullName}</h2>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -367,10 +367,10 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               onClick={() => setShowBack((prev) => !prev)}
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 text-[11px] font-bold"
+              className="h-9 gap-1.5 text-xs font-semibold"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              {showBack ? "Front" : "Back"}
+              {showBack ? "Show card front" : "Show card back"}
             </Button>
 
             <Button
@@ -378,7 +378,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               onClick={exportCardAsImage}
               disabled={exportDisabled}
               size="sm"
-              className="h-8 gap-1.5 text-[11px] font-bold"
+              className="h-9 gap-1.5 text-xs font-semibold"
             >
               <Download className="h-3.5 w-3.5" />
               {isExporting ? "Exporting..." : "Export"}
@@ -496,10 +496,10 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               onClick={() => setShowBack((prev) => !prev)}
               variant="outline"
               size="sm"
-              className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+              className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[140px]"
             >
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              {showBack ? "Show front" : "Show back"}
+              {showBack ? "Show card front" : "Show card back"}
             </Button>
 
             <Button
@@ -507,7 +507,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               onClick={exportCardAsImage}
               disabled={exportDisabled}
               size="sm"
-              className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+              className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[140px]"
             >
               <Download className="mr-1.5 h-3.5 w-3.5" />
               {isExporting ? "Exporting..." : "Export front + back"}
@@ -519,7 +519,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
               disabled={exportDisabled}
               variant="outline"
               size="sm"
-              className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+              className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
             >
               <Wallet className="mr-1.5 h-3.5 w-3.5" />
               Wallet preset
@@ -532,7 +532,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
                 disabled={isRefreshingAssets}
                 variant="outline"
                 size="sm"
-                className="flex-1 sm:flex-none text-[11px] font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+                className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
               >
                 <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isRefreshingAssets && "animate-spin")} />
                 {isRefreshingAssets ? "Refreshing..." : "Refresh assets"}

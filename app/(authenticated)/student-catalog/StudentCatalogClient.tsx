@@ -274,14 +274,14 @@ export function StudentCatalogClient({
                   pushQuery(localQuery);
                 }
               }}
-              className="h-10 pl-9 pr-10 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20"
+              className="h-10 pl-9 pr-10 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20 [&::-webkit-search-cancel-button]:appearance-none"
             />
             {localQuery && (
               <Button 
                 variant="ghost" 
                 size="icon"
                 aria-label="Clear search"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
                 onClick={() => { setLocalQuery(''); pushQuery(''); }}
               >
                 <X className="h-3.5 w-3.5" />
@@ -296,7 +296,7 @@ export function StudentCatalogClient({
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-9 min-w-[140px] rounded-xl border-border/40 bg-background/50 text-[11px] font-bold shadow-none hover:bg-muted/10 justify-between px-3",
+                    "h-9 min-w-[140px] rounded-xl border-border/40 bg-background/50 text-xs font-semibold shadow-none hover:bg-muted/10 justify-between px-3",
                     selectedIds.length > 0 && "border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
                   )}
                 >
@@ -339,7 +339,7 @@ export function StudentCatalogClient({
               onClick={handleAvailableToggle}
               aria-pressed={availableOnly}
               className={cn(
-                "h-9 px-4 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all",
+                "h-9 px-4 rounded-xl text-xs font-semibold transition-all",
                 availableOnly ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shadow-none" : "border-border/40 bg-background/50 text-muted-foreground shadow-none"
               )}
             >
@@ -349,7 +349,7 @@ export function StudentCatalogClient({
             <div className="h-6 w-[1px] bg-border/40 mx-1 hidden sm:block" />
 
             <Select value={sortBy} onValueChange={handleSortChange}>
-              <SelectTrigger aria-label="Sort books" className="h-9 w-[130px] rounded-xl border-border/40 bg-background/50 px-3 text-[11px] font-bold shadow-none">
+              <SelectTrigger aria-label="Sort books" className="h-9 w-[140px] rounded-xl border-border/40 bg-background/50 px-3 text-xs font-semibold shadow-none">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -365,7 +365,7 @@ export function StudentCatalogClient({
           </div>
 
           {(selectedCategory || availableOnly || localQuery || explicitSort) && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-[11px] font-bold uppercase text-muted-foreground hover:text-destructive transition-colors ml-auto sm:ml-0">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-xs font-semibold text-muted-foreground hover:text-destructive transition-colors ml-auto sm:ml-0">
               Reset
             </Button>
           )}
@@ -424,15 +424,15 @@ export function StudentCatalogClient({
         )}
 
         {books.length === 0 && isSearchSettled && (
-          <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/40 bg-muted/5 px-4 py-20 text-center backdrop-blur-sm">
-            <div className="mb-4 rounded-full bg-primary/5 p-5 text-primary/30 ring-1 ring-primary/10">
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/10 px-4 py-20 text-center">
+            <div className="mb-4 rounded-full bg-primary/5 p-5 text-primary/40 ring-1 ring-primary/10">
               <Search className="h-10 w-10" />
             </div>
             <h3 className="text-xl font-bold tracking-tight text-foreground">No matching books found</h3>
-            <p className="mt-2 max-w-[320px] text-sm text-muted-foreground leading-relaxed">
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
               We couldn&apos;t find any titles matching your current search criteria. Try broadening your terms or clear all filters.
             </p>
-            <Button variant="outline" onClick={clearFilters} className="mt-8 rounded-xl font-bold px-6 border-primary/20 text-primary hover:bg-primary/5">
+            <Button variant="outline" onClick={clearFilters} className="mt-8 rounded-lg font-semibold px-6">
               Clear all filters
             </Button>
           </div>

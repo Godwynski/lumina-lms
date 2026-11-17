@@ -187,11 +187,11 @@ function StudentModalContent({
 
       {/* Metadata Grid */}
       <div className="grid grid-cols-2 gap-2">
-        <MetaTile icon={Hash} label="ISBN" value={<span className="font-mono text-[11px]">{book.isbn || 'N/A'}</span>} variant="compact" />
-        <MetaTile icon={Tag} label="DDC" value={<span className="font-mono text-[11px]">{book.dewey_decimal || 'N/A'}</span>} variant="compact" />
-        <MetaTile icon={Layers} label="Category" value={categoryName || 'Uncategorized'} variant="compact" />
-        <MetaTile icon={MapPin} label="Location" value={book.section || 'General'} variant="compact" />
-        <MetaTile icon={Library} label="Section" value={book.location || book.section || 'Main Floor'} variant="compact" />
+        <MetaTile icon={Hash} label="ISBN" value={<span className="font-mono text-xs">{book.isbn || 'N/A'}</span>} variant="compact" />
+        <MetaTile icon={Tag} label="DDC" value={<span className="font-mono text-xs">{book.dewey_decimal || 'N/A'}</span>} variant="compact" />
+        <MetaTile icon={Library} label="Section" value={book.section || 'General'} variant="compact" />
+        <MetaTile icon={MapPin} label="Shelf Location" value={book.location || 'Main Floor'} variant="compact" />
+        <MetaTile icon={Layers} label="Category" value={categoryName || 'Uncategorized'} variant="compact" className="col-span-2" />
       </div>
 
       {/* Actions */}
@@ -218,9 +218,29 @@ function StudentModalContent({
             {isPending ? 'Cancelling…' : 'Cancel'}
           </Button>
         )}
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-9 px-3 text-xs"
+        >
+          <Link href={`/student-catalog/${book.id}`} onClick={onClose}>
+            Open full page
+          </Link>
+        </Button>
       </div>
 
       }
+
+      {readOnly && (
+        <div className="flex justify-end pt-1">
+          <Button asChild variant="outline" size="sm" className="h-9 px-3 text-xs">
+            <Link href={`/student-catalog/${book.id}`} onClick={onClose}>
+              Open full page
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {/* Cancel confirmation dialog */}
       <CancelReservationDialog

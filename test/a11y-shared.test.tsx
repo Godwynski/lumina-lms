@@ -224,7 +224,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
     const bookHandle = await renderClient(
       <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
         <BreadcrumbNav />
-        <AdminTableShell title="Resource Explorer" description="Details">
+        <AdminTableShell title="Book Details" description="Details">
           <Suspense fallback={<div>Loading</div>}>
             <StudentBookDetailClient
               id="book-1"
@@ -244,7 +244,7 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
     const detailH2Texts = Array.from(bookHandle.container.querySelectorAll('h2')).map((el) =>
       el.textContent?.trim()
     );
-    expect(detailH2Texts).toContain('Resource Explorer');
+    expect(detailH2Texts).toContain('Book Details');
     expect(detailH2Texts).toContain('Refactoring');
   });
 

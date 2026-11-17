@@ -224,15 +224,15 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               variant="stacked"
             />
             <MetaTile
-              icon={MapPin}
-              label="Shelf Location"
+              icon={Library}
+              label="Section"
               value={book.section || 'General'}
               variant="stacked"
             />
             <MetaTile
-              icon={Library}
-              label="Section"
-              value={book.location || book.section || 'Main Floor'}
+              icon={MapPin}
+              label="Shelf Location"
+              value={book.location || 'Main Floor'}
               variant="stacked"
             />
           </div>

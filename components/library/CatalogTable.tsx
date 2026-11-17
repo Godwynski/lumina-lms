@@ -46,16 +46,16 @@ export function CatalogTable({
         return (
           <div className="min-w-0 flex items-center gap-2">
             <div className="min-w-0">
-              <p className="font-bold text-foreground line-clamp-1">{book.title}</p>
+              <p className="font-semibold text-foreground line-clamp-1">{book.title}</p>
               {book.section && (
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{book.section}</p>
+                <p className="text-xs text-muted-foreground">{book.section}</p>
               )}
             </div>
             {reserved && (
               <Badge
                 variant={isReady ? "default" : "outline"}
                 className={cn(
-                  "shrink-0 text-[11px] px-1.5 py-0 h-[18px] gap-1 font-black",
+                  "shrink-0 text-xs px-1.5 py-0 h-5 gap-1 font-semibold",
                   isReady
                     ? "bg-emerald-700 hover:bg-emerald-700 text-white border-transparent"
                     : "border-primary/30 text-primary bg-primary/5"
@@ -93,7 +93,7 @@ export function CatalogTable({
         const isOutOfStock = book.available_copies === 0;
         const total = book.total_copies ?? book.available_copies;
         return (
-          <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[11px] font-black tracking-tight tabular-nums">
+          <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-tight tabular-nums whitespace-nowrap">
             {book.available_copies} / {total}
           </Badge>
         );
@@ -114,7 +114,7 @@ export function CatalogTable({
               holdExpiresAt={reserved?.holdExpiresAt}
               variant="outline"
               size="sm"
-              className="h-7 text-[11px] px-2.5 rounded-lg"
+              className="h-8 text-xs px-2.5 rounded-lg"
               onReserveSuccess={(pos, status, expires) => onReserveSuccess(book.id, pos, status, expires)}
             />
           </div>

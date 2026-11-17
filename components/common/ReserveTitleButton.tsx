@@ -191,7 +191,7 @@ export function ReserveTitleButton({
       ) : (
         <Bookmark className="h-4 w-4" />
       )}
-      {isPending ? 'Processing...' : inQueue ? `Your Queue #${pos || 1}` : 'Reserve to Borrow'}
+      {isPending ? 'Processing...' : inQueue ? `Your Queue #${pos || 1}` : 'Join Waitlist'}
     </Button>
   );
 }
