@@ -66,8 +66,6 @@ vi.mock('@/lib/actions/profile', () => ({
 // Components under test
 import { AuthPageShell } from '@/components/auth/auth-page-shell';
 import { AuthButton } from '@/components/auth/AuthButton';
-import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
-import { UpdatePasswordForm } from '@/components/auth/UpdatePasswordForm';
 import { OnboardingForm } from '@/components/auth/OnboardingForm';
 import { AccountPendingScreen } from '@/components/auth/AccountPendingScreen';
 import { SettingsShell } from '@/components/settings/SettingsShell';
@@ -228,117 +226,6 @@ describe('Auth & Settings UI Components', () => {
       const trigger = container.querySelector('button[aria-label*="Maria Clara"]');
       expect(trigger).toBeInTheDocument();
       expect(trigger).toHaveAttribute('aria-label', 'MC — account menu for Maria Clara');
-    });
-  });
-
-  describe('ForgotPasswordForm', () => {
-    it('shows loading state, sends reset email, and displays confirmation view on success', async () => {
-      let resolveReset!: (value: { error: null }) => void;
-      const resetMock = vi.fn(
-        () =>
-          new Promise<{ error: null }>((resolve) => {
-            resolveReset = resolve;
-          })
-      );
-      mockCreateBrowserClient.mockReturnValue({
-        ...createDefaultBrowserSupabase(),
-        auth: { resetPasswordForEmail: resetMock },
-      });
-
-      const { container } = await renderClient(<ForgotPasswordForm />);
-
-      const emailInput = container.querySelector('#email') as HTMLInputElement;
-      const submitBtn = findButtonByText(container, 'Send reset link')!;
-      expect(submitBtn).toBeDefined();
-
-      await typeIntoInput(emailInput, 'alice@lumina.edu');
-      const form = container.querySelector('form')!;
-
-      await act(async () => {
-        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-      });
-
-      expect(form).toHaveAttribute('aria-busy', 'true');
-      expect(findButtonByText(container, 'Sending link...')).toBeDisabled();
-
-      await act(async () => {
-        resolveReset({ error: null });
-      });
-
-      expect(resetMock).toHaveBeenCalledWith('alice@lumina.edu', {
-        redirectTo: `${window.location.origin}/update-password`,
-      });
-      const statusRegion = container.querySelector('[role="status"]');
-      expect(statusRegion).toHaveTextContent('Check your email');
-      expect(statusRegion).toHaveTextContent('alice@lumina.edu');
-      const links = Array.from(container.querySelectorAll('a[href="/"]'));
-      expect(links.some((a) => a.textContent?.includes('Return to sign in'))).toBe(true);
-    });
-
-    it('displays an alert message and re-enables submission when reset fails', async () => {
-      const resetMock = vi.fn().mockResolvedValue({
-        error: new Error('Rate limit exceeded'),
-      });
-      mockCreateBrowserClient.mockReturnValue({
-        ...createDefaultBrowserSupabase(),
-        auth: { resetPasswordForEmail: resetMock },
-      });
-
-      const { container } = await renderClient(<ForgotPasswordForm />);
-      await typeIntoInput(container.querySelector('#email') as HTMLInputElement, 'bob@lumina.edu');
-      await submitForm(container.querySelector('form'));
-
-      const alert = container.querySelector('[role="alert"]');
-      expect(alert).toHaveTextContent('Rate limit exceeded');
-      expect(findButtonByText(container, 'Send reset link')).not.toBeDisabled();
-    });
-  });
-
-  describe('UpdatePasswordForm', () => {
-    it('toggles password visibility and redirects to /dashboard on update success', async () => {
-      const updateUserMock = vi.fn().mockResolvedValue({ error: null });
-      mockCreateBrowserClient.mockReturnValue({
-        ...createDefaultBrowserSupabase(),
-        auth: { updateUser: updateUserMock },
-      });
-
-      const { container } = await renderClient(<UpdatePasswordForm />);
-      const passwordInput = container.querySelector('#password') as HTMLInputElement;
-      expect(passwordInput.type).toBe('password');
-
-      const toggleBtn = container.querySelector('button[aria-label="Show password"]')!;
-      await clickElement(toggleBtn);
-      expect(passwordInput.type).toBe('text');
-      expect(container.querySelector('button[aria-label="Hide password"]')).toBeInTheDocument();
-
-      await clickElement(container.querySelector('button[aria-label="Hide password"]'));
-      expect(passwordInput.type).toBe('password');
-
-      await typeIntoInput(passwordInput, 'Str0ngPass!23');
-      await submitForm(container.querySelector('form'));
-
-      expect(updateUserMock).toHaveBeenCalledWith({ password: 'Str0ngPass!23' });
-      expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
-    });
-
-    it('renders alert and resets loading state when updateUser returns an error', async () => {
-      const updateUserMock = vi.fn().mockResolvedValue({
-        error: new Error('Password should be at least 6 characters'),
-      });
-      mockCreateBrowserClient.mockReturnValue({
-        ...createDefaultBrowserSupabase(),
-        auth: { updateUser: updateUserMock },
-      });
-
-      const { container } = await renderClient(<UpdatePasswordForm />);
-      await typeIntoInput(container.querySelector('#password') as HTMLInputElement, '123');
-      await submitForm(container.querySelector('form'));
-
-      expect(container.querySelector('[role="alert"]')).toHaveTextContent(
-        'Password should be at least 6 characters'
-      );
-      expect(findButtonByText(container, 'Update password')).not.toBeDisabled();
-      expect(mockRouterPush).not.toHaveBeenCalled();
     });
   });
 

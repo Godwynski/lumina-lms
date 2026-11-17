@@ -80,12 +80,9 @@ vi.mock('@/lib/demo/config', () => ({
 }));
 
 // Components & pages under test
-import ForgotPasswordPage from '@/app/(auth)/forgot-password/page';
-import UpdatePasswordPage from '@/app/(auth)/update-password/page';
 import AuthErrorPage from '@/app/(auth)/error/page';
 import PublicBookDetailPage from '@/app/(public)/book/[id]/page';
 import { PublicBookCover } from '@/components/public/PublicBookCover';
-import { UpdatePasswordForm } from '@/components/auth/UpdatePasswordForm';
 import { Hero } from '@/components/hero';
 import Home from '@/app/page';
 
@@ -138,33 +135,6 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
   afterEach(() => {
     cleanupClients();
     vi.restoreAllMocks();
-  });
-
-  it('/forgot-password and /update-password render single card header inside AuthPageShell with password rules and back link', async () => {
-    const forgot = await renderClient(<ForgotPasswordPage />);
-    expect(forgot.container.querySelectorAll('h1')).toHaveLength(0);
-    expect(forgot.container).toHaveTextContent('Reset your password securely.');
-    expect(forgot.container).toHaveTextContent('© 2026 Lumina LMS');
-    forgot.unmount();
-
-    const updateElement = await UpdatePasswordPage();
-    const update = await renderClient(updateElement);
-    expect(update.container.querySelectorAll('h1')).toHaveLength(0);
-    expect(update.container).toHaveTextContent('Set a new password for your account.');
-    expect(update.container).toHaveTextContent('Password rules:');
-    const backLink = Array.from(update.container.querySelectorAll('a[href="/"]')).find((a) =>
-      a.textContent?.includes('Back to sign in')
-    );
-    expect(backLink).toBeDefined();
-  });
-
-  it('UpdatePasswordForm includes rules helper and Back to sign in link', async () => {
-    const { container } = await renderClient(<UpdatePasswordForm />);
-    expect(container).toHaveTextContent('Password rules:');
-    const backLink = Array.from(container.querySelectorAll('a[href="/"]')).find((a) =>
-      a.textContent?.includes('Back to sign in')
-    );
-    expect(backLink).toBeDefined();
   });
 
   it('/error uses AuthPageShell and derives dynamic subtitle per error code', async () => {

@@ -348,8 +348,6 @@ import RootNotFound from '@/app/not-found';
 import LoginRedirectPage from '@/app/login/page';
 import sitemap from '@/app/sitemap';
 import AuthErrorPage from '@/app/(auth)/error/page';
-import ForgotPasswordPage from '@/app/(auth)/forgot-password/page';
-import UpdatePasswordPage from '@/app/(auth)/update-password/page';
 import PublicBookDetailPage from '@/app/(public)/book/[id]/page';
 
 import {
@@ -522,7 +520,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
     });
   });
 
-  describe('Auth Pages: error, forgot-password, update-password', () => {
+  describe('Auth Pages: error', () => {
     it('renders app/(auth)/error/page.tsx branches for archived, restricted, PKCE, and generic errors', async () => {
       const archived = await renderClient(
         <AuthErrorPage searchParams={Promise.resolve({ error: 'archived_account' })} />
@@ -561,45 +559,6 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         await Promise.resolve();
       });
       expect(generic.container).toHaveTextContent('Error: oauth_failed');
-    });
-
-    it('renders app/(auth)/forgot-password/page.tsx and submits resetPasswordForEmail', async () => {
-      mockResetPasswordForEmail.mockResolvedValue({ error: null });
-      const { container } = await renderClient(<ForgotPasswordPage />);
-
-      expect(container).toHaveTextContent('Reset your password securely.');
-      const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
-      await typeIntoInput(emailInput, 'librarian@alabang.sti.edu.ph');
-
-      const form = container.querySelector('form') as HTMLFormElement;
-      await submitForm(form);
-
-      expect(mockResetPasswordForEmail).toHaveBeenCalledWith('librarian@alabang.sti.edu.ph', {
-        redirectTo: `${window.location.origin}/update-password`,
-      });
-      expect(container).toHaveTextContent('Check your email');
-    });
-
-    it('redirects students from app/(auth)/update-password/page.tsx and renders form for staff', async () => {
-      mockServerGetUser.mockResolvedValue({ data: { user: { id: 'stu-1' } } });
-      mockServerProfileSingle.mockResolvedValue({ data: { role: 'patron' } });
-
-      await expect(UpdatePasswordPage()).rejects.toThrow('NEXT_REDIRECT:/security');
-
-      mockServerGetUser.mockResolvedValue({ data: { user: { id: 'lib-1' } } });
-      mockServerProfileSingle.mockResolvedValue({ data: { role: 'librarian' } });
-      mockUpdateUser.mockResolvedValue({ error: null });
-
-      const element = await UpdatePasswordPage();
-      const { container } = await renderClient(element);
-
-      expect(container).toHaveTextContent('Set a new password for your account.');
-      const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
-      await typeIntoInput(passwordInput, 'StrongPass!123');
-      await submitForm(container.querySelector('form'));
-
-      expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'StrongPass!123' });
-      expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 

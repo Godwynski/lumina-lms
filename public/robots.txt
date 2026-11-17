@@ -22,8 +22,6 @@ Disallow: /users
 Disallow: /callback
 Disallow: /confirm
 Disallow: /error
-Disallow: /forgot-password
-Disallow: /update-password
 Disallow: /api/
 
 # Host
