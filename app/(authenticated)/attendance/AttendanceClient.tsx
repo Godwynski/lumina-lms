@@ -40,6 +40,7 @@ import {
   DialogDescription 
 } from "@/components/ui/dialog";
 import type { AttendanceRecord } from "@/lib/actions/attendance";
+import { isWithinManilaDateRange } from "@/lib/date-range";
 
 const ALL_HISTORY_STEP = 300;
 
@@ -86,6 +87,8 @@ export function AttendanceClient({
   const [personalRecords, setPersonalRecords] = useState(initialPersonal);
 
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [searchQuery, setSearchQuery] = useState("");
 
   // "All History" is loaded in steps. Searching it queries the server so older
@@ -437,18 +440,20 @@ export function AttendanceClient({
     [systemTodayRecords]
   );
 
-  // Filter staff records by tab & search query
+  // Filter staff records by tab & search query, then by the date range on the All tab
   const filteredStaffRecords = useMemo(() => {
-    if (activeTab === 'all' && searchQuery.trim() && allSearchResults) return allSearchResults;
+    const byDate = (rows: AttendanceRecord[]) =>
+      activeTab === 'all' ? rows.filter(r => isWithinManilaDateRange(r.check_in_at, fromDate, toDate)) : rows;
+    if (activeTab === 'all' && searchQuery.trim() && allSearchResults) return byDate(allSearchResults);
     const base = activeTab === 'today' ? systemTodayRecords : systemAllRecords;
-    if (!searchQuery.trim()) return base;
+    if (!searchQuery.trim()) return byDate(base);
     const q = searchQuery.toLowerCase().trim();
-    return base.filter(r => {
+    return byDate(base.filter(r => {
       const name = r.profiles?.full_name?.toLowerCase() || '';
       const sid = r.profiles?.student_id?.toLowerCase() || '';
       return name.includes(q) || sid.includes(q);
-    });
-  }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery, allSearchResults]);
+    }));
+  }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery, allSearchResults, fromDate, toDate]);
 
   const isAllSearch = activeTab === 'all' && searchQuery.trim().length > 0;
   const allWindowFull = isAllSearch
@@ -465,13 +470,25 @@ export function AttendanceClient({
   }, [filteredStaffRecords, activeStaffPage]);
 
   // Paginated personal records (for student view)
-  const totalPersonalItems = personalRecords.length;
+  const datedPersonalRecords = useMemo(
+    () => personalRecords.filter(r => isWithinManilaDateRange(r.check_in_at, fromDate, toDate)),
+    [personalRecords, fromDate, toDate]
+  );
+  const totalPersonalItems = datedPersonalRecords.length;
   const totalPersonalPages = Math.max(1, Math.ceil(totalPersonalItems / PAGE_SIZE));
   const activePersonalPage = Math.min(personalPage, totalPersonalPages);
   const paginatedPersonalRecords = useMemo(() => {
     const start = (activePersonalPage - 1) * PAGE_SIZE;
-    return personalRecords.slice(start, start + PAGE_SIZE);
-  }, [personalRecords, activePersonalPage]);
+    return datedPersonalRecords.slice(start, start + PAGE_SIZE);
+  }, [datedPersonalRecords, activePersonalPage]);
+
+  const dateRangeControls = (
+    <DateRangeFilter
+      from={fromDate}
+      to={toDate}
+      onChange={(from, to) => { setFromDate(from); setToDate(to); setStaffPage(1); setPersonalPage(1); }}
+    />
+  );
 
   const handleExport = async () => {
     if (filteredStaffRecords.length === 0 || isExporting) return;
@@ -629,6 +646,8 @@ export function AttendanceClient({
               </span>
             </button>
           </div>
+
+          {activeTab === 'all' && dateRangeControls}
 
           <div className="hidden sm:flex items-center gap-2 px-2.5 h-9 rounded-xl bg-muted/20 border border-border/15 text-[11px] font-medium text-muted-foreground">
             <span className="flex items-center gap-1">
@@ -960,10 +979,13 @@ export function AttendanceClient({
     <div className="w-full">
       <AdminTableShell
         controls={
-          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1 py-0.5">
-            <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-            All-Time History
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1 py-0.5">
+              <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+              {fromDate || toDate ? 'Filtered History' : 'All-Time History'}
+            </p>
+            {dateRangeControls}
+          </div>
         }
         pagination={
           totalPersonalItems > 0 ? (
@@ -982,6 +1004,26 @@ export function AttendanceClient({
           <AttendanceTable history={paginatedPersonalRecords} isPersonal={true} />
         </Suspense>
       </AdminTableShell>
+    </div>
+  );
+}
+
+function DateRangeFilter({ from, to, onChange }: { from: string; to: string; onChange: (from: string, to: string) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-muted-foreground">
+      <label className="flex items-center gap-1">
+        From
+        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="h-8 w-[140px] text-xs" />
+      </label>
+      <label className="flex items-center gap-1">
+        To
+        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="h-8 w-[140px] text-xs" />
+      </label>
+      {(from || to) && (
+        <Button type="button" variant="ghost" size="sm" className="h-8 text-[11px]" onClick={() => onChange('', '')}>
+          Clear dates
+        </Button>
+      )}
     </div>
   );
 }

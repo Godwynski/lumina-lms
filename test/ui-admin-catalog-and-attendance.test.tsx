@@ -367,6 +367,36 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(handle.container).toHaveTextContent('Still in library');
       expect(handle.container.querySelector('#attendance-card-id')).not.toBeInTheDocument();
     });
+
+    it('filters the personal history by a Manila date range and clears it (P2-ATT-002)', async () => {
+      const personalP = Promise.resolve([
+        makeAttendance({ id: 'new', check_in_at: '2026-11-14T08:30:00Z', check_out_at: '2026-11-14T09:30:00Z' }),
+        makeAttendance({ id: 'old', check_in_at: '2024-03-01T00:30:00Z', check_out_at: '2024-03-01T03:45:00Z' }),
+      ]);
+      let handle!: Awaited<ReturnType<typeof renderClient>>;
+      await act(async () => {
+        handle = await renderClient(
+          <Suspense fallback={<div>Loading...</div>}>
+            <AttendanceClient personalHistoryPromise={personalP} isStaff={false} userId="stu-1" />
+          </Suspense>
+        );
+      });
+      await act(async () => { await personalP; });
+
+      const [fromInput, toInput] = Array.from(handle.container.querySelectorAll<HTMLInputElement>('input[type="date"]'));
+      const rowCount = () => handle.container.querySelectorAll('tbody tr').length;
+      expect(rowCount()).toBe(2);
+
+      await typeIntoInput(fromInput, '2024-03-01');
+      await typeIntoInput(toInput, '2024-03-01');
+      expect(handle.container).toHaveTextContent('Filtered History');
+      expect(rowCount()).toBe(1);
+      expect(handle.container).toHaveTextContent('Mar 01, 2024');
+
+      await clickElement(findButtonByText(handle.container, 'Clear dates'));
+      expect(handle.container).toHaveTextContent('All-Time History');
+      expect(rowCount()).toBe(2);
+    });
   });
 
   describe('PolicyField', () => {
