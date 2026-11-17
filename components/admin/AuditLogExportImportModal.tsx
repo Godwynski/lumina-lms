@@ -419,10 +419,10 @@ export function AuditLogExportImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl md:max-w-2xl bg-background/95 backdrop-blur-md rounded-3xl border border-border/20 shadow-2xl p-0 overflow-hidden transition-all duration-300">
+      <DialogContent className="flex max-h-[85vh] flex-col max-w-xl md:max-w-2xl bg-background/95 backdrop-blur-md rounded-2xl border border-border/40 shadow-2xl p-0 overflow-hidden transition-all duration-300">
         
         {/* Header Section */}
-        <div className="p-6 pb-4 border-b border-border/10 bg-muted/10">
+        <div className="shrink-0 p-6 pb-4 border-b border-border/20 bg-muted/15">
           <DialogTitle className="text-lg font-black tracking-tight text-foreground flex items-center gap-2">
             <Layers className="h-5 w-5 text-primary" />
             Audit Log Operations
@@ -470,31 +470,31 @@ export function AuditLogExportImportModal({
         </div>
 
         {/* Tab Content Panel */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className="flex-1 min-h-0 p-6 overflow-y-auto">
           {effectiveTab === "export" ? (
             <div className="space-y-5 animate-in fade-in duration-200">
               
               {/* Format selection */}
               <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label className="text-xs font-semibold text-muted-foreground">
                   File Output Format
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
                   <button
                     type="button"
                     aria-pressed={exportFormat === "csv"}
                     onClick={() => setExportFormat("csv")}
                     className={cn(
-                      "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all",
+                      "flex h-full items-start gap-3 p-3.5 rounded-xl border text-left transition-all",
                       exportFormat === "csv"
                         ? "bg-primary/[0.04] border-primary text-primary"
-                        : "bg-muted/10 border-border/20 text-muted-foreground hover:bg-muted/20"
+                        : "bg-muted/10 border-border/30 text-muted-foreground hover:bg-muted/20"
                     )}
                   >
-                    <FileSpreadsheet className="h-5 w-5 shrink-0" />
-                    <div>
+                    <FileSpreadsheet className="h-5 w-5 shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="min-w-0">
                       <div className="text-xs font-bold">Spreadsheet CSV</div>
-                      <div className="text-[11px] opacity-70 mt-0.5">Compatible with Excel, Numbers</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Comma-separated</div>
                     </div>
                   </button>
 
@@ -503,16 +503,16 @@ export function AuditLogExportImportModal({
                     aria-pressed={exportFormat === "json"}
                     onClick={() => setExportFormat("json")}
                     className={cn(
-                      "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all",
+                      "flex h-full items-start gap-3 p-3.5 rounded-xl border text-left transition-all",
                       exportFormat === "json"
                         ? "bg-primary/[0.04] border-primary text-primary"
-                        : "bg-muted/10 border-border/20 text-muted-foreground hover:bg-muted/20"
+                        : "bg-muted/10 border-border/30 text-muted-foreground hover:bg-muted/20"
                     )}
                   >
-                    <FileCode className="h-5 w-5 shrink-0" />
-                    <div>
+                    <FileCode className="h-5 w-5 shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="min-w-0">
                       <div className="text-xs font-bold">Developer JSON</div>
-                      <div className="text-[11px] opacity-70 mt-0.5">Structured database format</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Structured JSON</div>
                     </div>
                   </button>
 
@@ -521,16 +521,16 @@ export function AuditLogExportImportModal({
                     aria-pressed={exportFormat === "xlsx"}
                     onClick={() => setExportFormat("xlsx")}
                     className={cn(
-                      "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all col-span-2 sm:col-span-1",
+                      "flex h-full items-start gap-3 p-3.5 rounded-xl border text-left transition-all",
                       exportFormat === "xlsx"
                         ? "bg-primary/[0.04] border-primary text-primary"
-                        : "bg-muted/10 border-border/20 text-muted-foreground hover:bg-muted/20"
+                        : "bg-muted/10 border-border/30 text-muted-foreground hover:bg-muted/20"
                     )}
                   >
-                    <FileSpreadsheet className="h-5 w-5 shrink-0" />
-                    <div>
+                    <FileSpreadsheet className="h-5 w-5 shrink-0 mt-0.5" aria-hidden="true" />
+                    <div className="min-w-0">
                       <div className="text-xs font-bold">Excel XLSX</div>
-                      <div className="text-[11px] opacity-70 mt-0.5">Native MS Excel format</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Excel workbook</div>
                     </div>
                   </button>
                 </div>
@@ -539,30 +539,30 @@ export function AuditLogExportImportModal({
               {/* Columns Selector Checklist */}
               <div className="space-y-2.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                    <Settings className="h-3.5 w-3.5" />
+                  <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                    <Settings className="h-3.5 w-3.5" aria-hidden="true" />
                     Customize Columns ({selectedColumns.length} / {AVAILABLE_COLUMNS.length})
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleSelectAllColumns}
-                      className="text-[11px] font-bold text-primary hover:underline bg-transparent border-0 p-0"
+                      className="text-xs font-semibold text-primary hover:underline bg-transparent border-0 p-0"
                     >
                       Select All
                     </button>
-                    <span className="text-[11px] text-muted-foreground">|</span>
+                    <span className="text-xs text-muted-foreground">|</span>
                     <button
                       type="button"
                       onClick={handleClearAllColumns}
-                      className="text-[11px] font-bold text-muted-foreground hover:text-foreground hover:underline bg-transparent border-0 p-0"
+                      className="text-xs font-semibold text-muted-foreground hover:text-foreground hover:underline bg-transparent border-0 p-0"
                     >
                       Clear
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-4 rounded-3xl bg-muted/10 border border-border/10 max-h-[220px] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-4 rounded-2xl bg-muted/10 border border-border/20">
                   {AVAILABLE_COLUMNS.map((col) => {
                     const isSelected = selectedColumns.includes(col.id);
                     return (
@@ -570,8 +570,8 @@ export function AuditLogExportImportModal({
                       <label
                         key={col.id}
                         className={cn(
-                          "flex items-start gap-2.5 p-2 rounded-xl border border-transparent cursor-pointer transition-all hover:bg-muted/25 select-none",
-                          isSelected ? "bg-muted/10" : "opacity-60"
+                          "flex items-start gap-2.5 p-2 rounded-xl border border-transparent cursor-pointer transition-colors hover:bg-muted/25 select-none",
+                          isSelected ? "bg-muted/15" : "text-muted-foreground"
                         )}
                       >
                         <input

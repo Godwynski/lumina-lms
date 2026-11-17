@@ -180,9 +180,9 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
               aria-pressed={range === r.value}
               onClick={() => applyDates(analyticsDates(r.value), r.value)}
               className={cn(
-                "px-4 py-1.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all",
+                "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all",
                 range === r.value 
-                  ? "bg-foreground text-background shadow-lg scale-[1.02]" 
+                  ? "bg-foreground text-background shadow-sm" 
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
               )}
             >
@@ -190,7 +190,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
             </button>
           ))}
           <details ref={customRef} className="relative">
-            <summary className={cn("list-none cursor-pointer rounded-lg px-4 py-1.5 text-[11px] font-bold", range === 'custom' ? 'bg-foreground text-background' : 'text-muted-foreground')}>Custom</summary>
+            <summary className={cn("list-none cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-semibold", range === 'custom' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>Custom</summary>
             <form className="absolute right-0 top-full z-30 mt-2 w-64 space-y-3 rounded-xl border border-border bg-background p-4 shadow-lg"
               onSubmit={(event) => {
                 event.preventDefault();
@@ -364,15 +364,15 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-3">
-                      <div className="h-1 w-12 bg-muted/20 rounded-full overflow-hidden hidden sm:block">
+                      <div className="h-2 w-16 bg-muted rounded-full overflow-hidden hidden sm:block">
                         <div 
-                          className="h-full bg-primary/40 rounded-full" 
+                          className="h-full bg-primary rounded-full" 
                           style={{ width: `${(book.count / (summary.popularBooks[0]?.count || 1)) * 100}%` }}
                         />
                       </div>
                       <div className="flex items-baseline gap-1 text-foreground">
-                        <span className="font-black text-sm">{book.count}</span>
-                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-tight">borrows</span>
+                        <span className="font-bold text-sm tabular-nums">{book.count}</span>
+                        <span className="text-xs font-medium text-muted-foreground">borrows</span>
                       </div>
                     </div>
                   </button>

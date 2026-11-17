@@ -19,7 +19,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter, DialogClose
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section } from "@/components/settings/SettingsShared";
@@ -159,7 +158,7 @@ export function UserDetailClient({
   const savedForm = profileForm(user);
   const isDirty = formKeys.some(key => !sameField(key, form, savedForm));
 
-  const needsVerification = form.role === "patron" && form.status.toUpperCase() === "ACTIVE" && user.status.toUpperCase() === "PENDING";
+  const needsVerification = !isReadOnly && user.status.toUpperCase() === "PENDING";
 
   const handleUpdateProfile = async () => {
     if (!isDirty || isSaving) return;
@@ -261,6 +260,31 @@ export function UserDetailClient({
   return (
     <SettingsShell isDirty={isDirty}>
       <div className="flex flex-col gap-6 pt-2">
+        {needsVerification && (
+          <div
+            role="status"
+            className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300 mt-0.5" aria-hidden="true" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold text-foreground">Pending identity verification</p>
+                <p className="text-xs text-muted-foreground">
+                  Review this user&apos;s institutional ID and profile details, then approve to activate library access.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setVerificationOpen(true)}
+              className="h-9 shrink-0 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 gap-1.5"
+            >
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              Verify &amp; Approve
+            </Button>
+          </div>
+        )}
+
         <div className="grid gap-6">
 
           {/* ───── Section 1: User Identity & Core Access ───── */}
@@ -413,35 +437,21 @@ export function UserDetailClient({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-[11px] font-bold gap-1.5"
+                      className="h-9 rounded-lg text-xs font-medium gap-1.5"
                       onClick={() => setPermissionsOpen(true)}
                     >
-                      <Key className="h-3 w-3" />
+                      <Key className="h-3.5 w-3.5" aria-hidden="true" />
                       Manage Assistant Permissions
-                    </Button>
-                  )}
-
-                  {needsVerification && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "h-8 text-[11px] font-bold gap-1.5 transition-all border-amber-500/40 text-amber-600 hover:bg-amber-50 ring-2 ring-amber-500/20 animate-pulse"
-                      )}
-                      onClick={() => setVerificationOpen(true)}
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      Verify & Approve
                     </Button>
                   )}
 
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 text-[11px] font-bold gap-1.5"
+                    className="h-9 rounded-lg text-xs font-medium gap-1.5"
                     onClick={() => setSecondaryOpen(true)}
                   >
-                    <AlertCircle className="h-3 w-3" />
+                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
                     Other Information
                   </Button>
 
@@ -449,10 +459,10 @@ export function UserDetailClient({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 text-[11px] font-bold gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                      className="h-9 rounded-lg text-xs font-medium gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
                       onClick={() => setArchiveOpen(true)}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       Archive
                     </Button>
                   )}

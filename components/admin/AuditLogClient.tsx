@@ -34,6 +34,7 @@ import {
   X
 } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -564,9 +565,9 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 variant="default"
                 size="sm"
                 onClick={() => setIsExportImportOpen(true)}
-                className="h-10 rounded-2xl text-[11px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
+                className="h-10 rounded-lg text-xs font-semibold px-4 transition-all w-full sm:w-auto"
               >
-                <Download className="h-3.5 w-3.5 mr-1.5" />
+                <Download className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
                 <span>{canImport ? "Export / Import" : "Export"}</span>
               </Button>
             </div>
@@ -593,22 +594,23 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
       }
     >
       <div className="p-2 sm:p-4">
-
-
         {data?.logs?.length === 0 && (
-          <div className="h-64 flex flex-col items-center justify-center gap-3 bg-muted/5 rounded-[2.5rem] border border-border/10 border-dashed">
-            <div className="h-16 w-16 rounded-full bg-muted/10 flex items-center justify-center border border-border/10">
-              <Search className="h-8 w-8 text-muted-foreground/30" />
-            </div>
-            <div className="text-center">
-              <span className="text-sm font-black uppercase tracking-widest text-foreground block">No Entries Found</span>
-              <span className="text-xs text-muted-foreground font-medium">Try adjusting your search or filters.</span>
-            </div>
-          </div>
+          <EmptyState
+            noCard
+            variant={hasAnyFilterActive ? "no-results" : "first-use"}
+            icon={Search}
+            title="No Entries Found"
+            description="Try adjusting your search or filters."
+            action={
+              hasAnyFilterActive
+                ? { label: "Clear all filters", onClick: handleClearAllFilters }
+                : undefined
+            }
+          />
         )}
 
         {!data && !error && (
-          <div className="space-y-4 pl-4">
+          <div className="space-y-4 p-2">
              {Array.from({ length: 8 }).map((_, i) => (
                <div key={i} className="h-12 w-full bg-muted/10 animate-pulse rounded-lg border border-border/5" />
              ))}
@@ -616,170 +618,355 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
         )}
 
         {data?.logs && data.logs.length > 0 && (
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-              <thead>
-                <tr className="border-b border-border/20 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                  <th scope="col" className="p-3 font-bold w-48">Timestamp (Manila, UTC+8)</th>
-                  <th scope="col" className="p-3 font-bold w-48">Performed by</th>
-                  <th scope="col" className="p-3 font-bold">Action</th>
-                  <th scope="col" className="p-3 font-bold min-w-60">Book / student / copy</th>
-                  <th scope="col" className="p-3 font-bold">Reason</th>
-                  <th scope="col" className="p-3 font-bold text-center">Diff</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/10">
-                {data.logs.map((log) => {
-                  const dateString = log.created_at ? formatManilaTimestamp(log.created_at) : "N/A";
-                  const isExpanded = expandedRowId === log.id;
-                  const details = parseLogDetails(log.details);
-                  const hasDetails = (details && (details.added?.length || details.removed?.length || Object.keys(details).filter(k => !['added', 'removed'].includes(k) && !IGNORED_KEYS.includes(k)).length > 0)) || log.old_value || log.new_value;
+          <>
+            {/* Mobile & Tablet Cards (< 1024px) */}
+            <div className="lg:hidden flex flex-col divide-y divide-border/40">
+              {data.logs.map((log) => {
+                const dateString = log.created_at ? formatManilaTimestamp(log.created_at) : "N/A";
+                const isExpanded = expandedRowId === log.id;
+                const details = parseLogDetails(log.details);
+                const hasDetails =
+                  (details &&
+                    (details.added?.length ||
+                      details.removed?.length ||
+                      Object.keys(details).filter(
+                        (k) => !["added", "removed"].includes(k) && !IGNORED_KEYS.includes(k)
+                      ).length > 0)) ||
+                  log.old_value ||
+                  log.new_value;
 
-                  return (
-                    <React.Fragment key={log.id}>
-                      <tr 
-                        className={cn(
-                          "group hover:bg-muted/5 transition-colors text-xs",
-                          isExpanded && "bg-muted/5"
-                        )}
-                        onClick={() => hasDetails && setExpandedRowId(isExpanded ? null : log.id)}
-                      >
-                        <td className="p-3 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                return (
+                  <div
+                    key={`mobile-${log.id}`}
+                    className={cn(
+                      "p-3.5 space-y-2.5 transition-colors",
+                      isExpanded && "bg-muted/10"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {log.profiles?.full_name || log.profiles?.email || "System"}
+                        </p>
+                        <p className="font-mono text-xs text-muted-foreground whitespace-nowrap">
                           {dateString}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-foreground truncate max-w-[150px]" title={log.profiles?.full_name || log.profiles?.email || log.admin_id}>
-                              {log.profiles?.full_name || log.profiles?.email || "System"}
-                            </span>
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "font-semibold text-xs px-2 py-0.5 rounded-lg border-transparent shrink-0 max-w-[165px] overflow-hidden",
+                          log.action === "create"
+                            ? "status-success"
+                            : log.action === "archive"
+                              ? "status-warning"
+                              : log.action === "delete"
+                                ? "status-danger"
+                                : "bg-primary/10 text-primary"
+                        )}
+                      >
+                        <span className="truncate">{log.action.replace(/_/g, " ")}</span>
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      {log.subject_book_id ? (
+                        <button
+                          type="button"
+                          className="block text-left font-semibold text-primary hover:underline"
+                          onClick={() => setDetailBookId(log.subject_book_id!)}
+                        >
+                          {log.book_title || "View book"}
+                        </button>
+                      ) : (
+                        log.book_title && <span className="block text-foreground/90 font-medium">{log.book_title}</span>
+                      )}
+                      {log.subject_student_id ? (
+                        <Link
+                          className="block text-primary hover:underline"
+                          href={`/users/${log.subject_student_id}`}
+                        >
+                          {log.student_name || "View student"}
+                          {log.student_number ? ` · ${log.student_number}` : ""}
+                        </Link>
+                      ) : (
+                        log.student_name && <span className="block">{log.student_name}</span>
+                      )}
+                      {log.copy_barcode && (
+                        <span className="block font-mono">
+                          {log.copy_barcode}
+                          {log.copy_accession ? ` · ${log.copy_accession}` : ""}
+                        </span>
+                      )}
+                      <span className="block capitalize">{log.entity_type.replace(/_/g, " ")}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <p className="text-xs text-foreground/80 line-clamp-2 min-w-0 flex-1">
+                        {log.reason || <span className="italic text-muted-foreground">No reason</span>}
+                      </p>
+                      {hasDetails ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs font-medium shrink-0 rounded-lg"
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? "Hide" : "View"} details for ${log.action} at ${dateString}`}
+                          onClick={() => setExpandedRowId(isExpanded ? null : log.id)}
+                        >
+                          {isExpanded ? "Hide" : "View"}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic shrink-0">No diff</span>
+                      )}
+                    </div>
+
+                    {isExpanded && hasDetails && (
+                      <div className="bg-muted/20 p-3 border-l-2 border-l-primary rounded-r-xl text-xs space-y-3 mt-2">
+                        {details && (
+                          <div className="space-y-3">
+                            {Array.isArray(details.added) && details.added.length > 0 && (
+                              <div className="space-y-1.5">
+                                <span className="text-2xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  Added Elements
+                                </span>
+                                <div className="grid gap-1.5">
+                                  {details.added.map((item: AuditLogDetailItem, idx: number) => (
+                                    <div key={idx} className="bg-background/80 p-2 rounded-lg border border-border/20 flex flex-col gap-1">
+                                      {typeof item === "object" && item !== null ? (
+                                        Object.entries(item).map(([k, v]) => (
+                                          <div key={k} className="flex gap-2">
+                                            <span className="font-semibold text-xs text-muted-foreground shrink-0">{k.replace(/_/g, " ")}:</span>
+                                            <span className="font-mono text-xs break-all">{formatValue(v)}</span>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="font-mono text-xs">{formatValue(item)}</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {Array.isArray(details.removed) && details.removed.length > 0 && (
+                              <div className="space-y-1.5">
+                                <span className="text-2xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                  Removed Elements
+                                </span>
+                                <div className="grid gap-1.5">
+                                  {details.removed.map((item: AuditLogDetailItem, idx: number) => (
+                                    <div key={idx} className="bg-background/80 p-2 rounded-lg border border-border/20 flex flex-col gap-1 line-through decoration-rose-500/40">
+                                      {typeof item === "object" && item !== null ? (
+                                        Object.entries(item).map(([k, v]) => (
+                                          <div key={k} className="flex gap-2">
+                                            <span className="font-semibold text-xs text-muted-foreground shrink-0">{k.replace(/_/g, " ")}:</span>
+                                            <span className="font-mono text-xs break-all">{formatValue(v)}</span>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="font-mono text-xs">{formatValue(item)}</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {Object.entries(details)
+                              .filter(([k]) => k !== "added" && k !== "removed" && !IGNORED_KEYS.includes(k))
+                              .map(([k, v]) => (
+                                <div key={k} className="flex gap-2">
+                                  <span className="font-semibold text-xs text-muted-foreground shrink-0">{k.replace(/_/g, " ")}:</span>
+                                  <span className="font-mono text-xs break-all">{formatValue(v)}</span>
+                                </div>
+                              ))}
                           </div>
-                        </td>
-                        <td className="p-3">
-                          <Badge variant="outline" className={cn(
-                            "font-bold text-[11px] uppercase tracking-wider px-2 py-0.5 rounded shadow-xs border-transparent",
-                            log.action === "create" ? "status-success" :
-                            log.action === "archive" ? "status-warning" :
-                            log.action === "delete" ? "status-danger" :
-                            "bg-primary/10 text-primary"
-                          )}>
-                            {log.action.replace(/_/g, " ")}
-                          </Badge>
-                        </td>
-                        <td className="p-3 font-medium text-muted-foreground">
-                          <div className="space-y-1 max-w-64">
-                            {log.subject_book_id ? <button type="button" className="block text-left font-semibold text-primary hover:underline" onClick={event => { event.stopPropagation(); setDetailBookId(log.subject_book_id!); }}>{log.book_title || "View book"}</button> : log.book_title && <span className="block">{log.book_title}</span>}
-                            {log.subject_student_id ? <Link className="block text-primary hover:underline" href={`/users/${log.subject_student_id}`} onClick={event => event.stopPropagation()}>{log.student_name || "View student"}{log.student_number ? ` · ${log.student_number}` : ""}</Link> : log.student_name && <span className="block">{log.student_name}</span>}
-                            {log.copy_barcode && <span className="block text-xs">{log.copy_barcode}{log.copy_accession ? ` · ${log.copy_accession}` : ""}</span>}
-                            <span className="block text-xs">{log.entity_type.replace(/_/g, " ")}</span>
+                        )}
+
+                        {(log.old_value || log.new_value) && (
+                          <div>
+                            <span className="text-2xs font-semibold uppercase tracking-wider text-primary mb-1.5 block">Value Changes</span>
+                            <DataDiff oldVal={log.old_value} newVal={log.new_value} />
                           </div>
-                        </td>
-                        <td className="p-3">
-                          <span className="truncate block max-w-[250px] font-medium" title={log.reason || ""}>
-                            {log.reason || <span className="italic">No reason</span>}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          {hasDetails ? (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 px-2 text-[11px] font-bold uppercase tracking-wider hover:bg-background border border-border/10"
-                              aria-expanded={isExpanded}
-                              aria-label={`${isExpanded ? "Hide" : "View"} details for ${log.action} at ${dateString}`}
-                              onClick={(e) => { e.stopPropagation(); setExpandedRowId(isExpanded ? null : log.id); }}
-                            >
-                              {isExpanded ? "Hide" : "View"}
-                            </Button>
-                          ) : (
-                            <span className="text-[11px] text-muted-foreground italic">None</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table (>= 1024px) */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border/20 bg-muted/30 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="px-4 py-3 whitespace-nowrap">Timestamp (Manila, UTC+8)</th>
+                    <th scope="col" className="px-4 py-3 whitespace-nowrap">Performed by</th>
+                    <th scope="col" className="px-4 py-3 whitespace-nowrap">Action</th>
+                    <th scope="col" className="px-4 py-3 whitespace-nowrap">Book / student / copy</th>
+                    <th scope="col" className="px-4 py-3 whitespace-nowrap">Reason</th>
+                    <th scope="col" className="px-4 py-3 text-center whitespace-nowrap">Diff</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/15">
+                  {data.logs.map((log) => {
+                    const dateString = log.created_at ? formatManilaTimestamp(log.created_at) : "N/A";
+                    const isExpanded = expandedRowId === log.id;
+                    const details = parseLogDetails(log.details);
+                    const hasDetails = (details && (details.added?.length || details.removed?.length || Object.keys(details).filter(k => !['added', 'removed'].includes(k) && !IGNORED_KEYS.includes(k)).length > 0)) || log.old_value || log.new_value;
+
+                    return (
+                      <React.Fragment key={log.id}>
+                        <tr 
+                          className={cn(
+                            "group hover:bg-muted/40 transition-colors text-xs",
+                            isExpanded && "bg-muted/20"
                           )}
-                        </td>
-                      </tr>
-                      {isExpanded && hasDetails && (
-                        <tr>
-                          <td colSpan={6} className="p-0 border-b border-border/10">
-                            <div className="bg-muted/10 p-4 border-l-2 border-l-primary mx-3 my-2 rounded-r-xl shadow-inner text-xs space-y-4">
-                              {/* Detailed Lists (Added/Removed) */}
-                              {details && (
-                                <div className="space-y-4">
-                                  {Array.isArray(details.added) && details.added.length > 0 && (
-                                    <div className="space-y-2">
-                                      <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-600/80 flex items-center gap-2">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                                        Added Elements
-                                      </span>
-                                      <div className="grid gap-2">
-                                        {details.added.map((item: AuditLogDetailItem, idx: number) => (
-                                          <div key={idx} className="bg-background/60 p-2.5 rounded-lg border border-border/5 flex flex-col gap-1">
-                                            {typeof item === 'object' && item !== null ? (
-                                              Object.entries(item).map(([k, v]) => (
-                                                <div key={k} className="flex gap-2">
-                                                  <span className="font-bold text-[11px] uppercase text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
-                                                  <span className="font-mono text-[11px] truncate">{formatValue(v)}</span>
-                                                </div>
-                                              ))
-                                            ) : (
-                                              <span className="font-mono text-[11px]">{formatValue(item)}</span>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {Array.isArray(details.removed) && details.removed.length > 0 && (
-                                    <div className="space-y-2">
-                                      <span className="text-[11px] font-black uppercase tracking-[0.1em] text-red-600/80 flex items-center gap-2">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                        Removed Elements
-                                      </span>
-                                      <div className="grid gap-2">
-                                        {details.removed.map((item: AuditLogDetailItem, idx: number) => (
-                                          <div key={idx} className="bg-background/60 p-2.5 rounded-lg border border-border/5 flex flex-col gap-1 line-through decoration-red-500/30">
-                                            {typeof item === 'object' && item !== null ? (
-                                              Object.entries(item).map(([k, v]) => (
-                                                <div key={k} className="flex gap-2">
-                                                  <span className="font-bold text-[11px] uppercase text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
-                                                  <span className="font-mono text-[11px] truncate">{formatValue(v)}</span>
-                                                </div>
-                                              ))
-                                            ) : (
-                                              <span className="font-mono text-[11px]">{formatValue(item)}</span>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Render any other metadata in details */}
-                                  {Object.entries(details)
-                                    .filter(([k]) => k !== 'added' && k !== 'removed' && !IGNORED_KEYS.includes(k))
-                                    .map(([k, v]) => (
-                                      <div key={k} className="flex gap-2 px-1">
-                                        <span className="font-bold text-[11px] uppercase text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
-                                        <span className="font-mono text-[11px]">{formatValue(v)}</span>
-                                      </div>
-                                    ))
-                                  }
-                                </div>
-                              )}
-
-                              {/* Display Data Diff instead of Raw JSON */}
-                              {(log.old_value || log.new_value) && (
-                                <div>
-                                  <span className="text-[11px] font-black uppercase tracking-[0.1em] text-primary/80 mb-2 block">Value Changes</span>
-                                  <DataDiff oldVal={log.old_value} newVal={log.new_value} />
-                                </div>
-                              )}
+                          onClick={() => hasDetails && setExpandedRowId(isExpanded ? null : log.id)}
+                        >
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                            {dateString}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-foreground truncate max-w-[160px]" title={log.profiles?.full_name || log.profiles?.email || log.admin_id}>
+                                {log.profiles?.full_name || log.profiles?.email || "System"}
+                              </span>
                             </div>
                           </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={cn(
+                              "font-semibold text-xs px-2 py-0.5 rounded-lg border-transparent whitespace-nowrap",
+                              log.action === "create" ? "status-success" :
+                              log.action === "archive" ? "status-warning" :
+                              log.action === "delete" ? "status-danger" :
+                              "bg-primary/10 text-primary"
+                            )}>
+                              {log.action.replace(/_/g, " ")}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 font-medium text-muted-foreground">
+                            <div className="space-y-1 max-w-64">
+                              {log.subject_book_id ? <button type="button" className="block text-left font-semibold text-primary hover:underline" onClick={event => { event.stopPropagation(); setDetailBookId(log.subject_book_id!); }}>{log.book_title || "View book"}</button> : log.book_title && <span className="block">{log.book_title}</span>}
+                              {log.subject_student_id ? <Link className="block text-primary hover:underline" href={`/users/${log.subject_student_id}`} onClick={event => event.stopPropagation()}>{log.student_name || "View student"}{log.student_number ? ` · ${log.student_number}` : ""}</Link> : log.student_name && <span className="block">{log.student_name}</span>}
+                              {log.copy_barcode && <span className="block text-xs font-mono">{log.copy_barcode}{log.copy_accession ? ` · ${log.copy_accession}` : ""}</span>}
+                              <span className="block text-xs">{log.entity_type.replace(/_/g, " ")}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="truncate block max-w-[240px] font-medium" title={log.reason || ""}>
+                              {log.reason || <span className="italic text-muted-foreground">No reason</span>}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {hasDetails ? (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-7 px-2.5 text-xs font-medium rounded-lg"
+                                aria-expanded={isExpanded}
+                                aria-label={`${isExpanded ? "Hide" : "View"} details for ${log.action} at ${dateString}`}
+                                onClick={(e) => { e.stopPropagation(); setExpandedRowId(isExpanded ? null : log.id); }}
+                              >
+                                {isExpanded ? "Hide" : "View"}
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">None</span>
+                            )}
+                          </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {isExpanded && hasDetails && (
+                          <tr>
+                            <td colSpan={6} className="p-0 border-b border-border/10">
+                              <div className="bg-muted/15 p-4 border-l-2 border-l-primary mx-3 my-2 rounded-r-xl text-xs space-y-4">
+                                {/* Detailed Lists (Added/Removed) */}
+                                {details && (
+                                  <div className="space-y-4">
+                                    {Array.isArray(details.added) && details.added.length > 0 && (
+                                      <div className="space-y-2">
+                                        <span className="text-2xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                          Added Elements
+                                        </span>
+                                        <div className="grid gap-2">
+                                          {details.added.map((item: AuditLogDetailItem, idx: number) => (
+                                            <div key={idx} className="bg-background/80 p-2.5 rounded-lg border border-border/15 flex flex-col gap-1">
+                                              {typeof item === 'object' && item !== null ? (
+                                                Object.entries(item).map(([k, v]) => (
+                                                  <div key={k} className="flex gap-2">
+                                                    <span className="font-semibold text-xs text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
+                                                    <span className="font-mono text-xs truncate">{formatValue(v)}</span>
+                                                  </div>
+                                                ))
+                                              ) : (
+                                                <span className="font-mono text-xs">{formatValue(item)}</span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {Array.isArray(details.removed) && details.removed.length > 0 && (
+                                      <div className="space-y-2">
+                                        <span className="text-2xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                          Removed Elements
+                                        </span>
+                                        <div className="grid gap-2">
+                                          {details.removed.map((item: AuditLogDetailItem, idx: number) => (
+                                            <div key={idx} className="bg-background/80 p-2.5 rounded-lg border border-border/15 flex flex-col gap-1 line-through decoration-rose-500/30">
+                                              {typeof item === 'object' && item !== null ? (
+                                                Object.entries(item).map(([k, v]) => (
+                                                  <div key={k} className="flex gap-2">
+                                                    <span className="font-semibold text-xs text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
+                                                    <span className="font-mono text-xs truncate">{formatValue(v)}</span>
+                                                  </div>
+                                                ))
+                                              ) : (
+                                                <span className="font-mono text-xs">{formatValue(item)}</span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Render any other metadata in details */}
+                                    {Object.entries(details)
+                                      .filter(([k]) => k !== 'added' && k !== 'removed' && !IGNORED_KEYS.includes(k))
+                                      .map(([k, v]) => (
+                                        <div key={k} className="flex gap-2 px-1">
+                                          <span className="font-semibold text-xs text-muted-foreground w-24 shrink-0">{k.replace(/_/g, ' ')}:</span>
+                                          <span className="font-mono text-xs">{formatValue(v)}</span>
+                                        </div>
+                                      ))
+                                    }
+                                  </div>
+                                )}
+
+                                {/* Display Data Diff instead of Raw JSON */}
+                                {(log.old_value || log.new_value) && (
+                                  <div>
+                                    <span className="text-2xs font-semibold uppercase tracking-wider text-primary mb-2 block">Value Changes</span>
+                                    <DataDiff oldVal={log.old_value} newVal={log.new_value} />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </AdminTableShell>

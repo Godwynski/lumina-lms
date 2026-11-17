@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,15 +76,11 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     setCurrentPage(1);
   }, [debouncedSearch, activeTab]);
 
-  const isInitialMount = React.useRef(true);
+  const queryKey = JSON.stringify([activeTab, debouncedSearch, currentPage]);
+  const lastLoadedKeyRef = React.useRef(JSON.stringify(["all", "", 1]));
   const loadRequestRef = React.useRef(0);
 
-  const loadUsers = useCallback(async (isInitial = false) => {
-    if (isInitial && isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
+  const loadUsers = useCallback(async () => {
     // Only the latest request may update the list; slower older ones are dropped.
     const requestId = ++loadRequestRef.current;
     setIsLoadingUsers(true);
@@ -109,8 +105,10 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   }, [currentPage, debouncedSearch, activeTab, pageSize]);
 
   useEffect(() => {
-    void loadUsers(true);
-  }, [loadUsers]);
+    if (queryKey === lastLoadedKeyRef.current) return;
+    lastLoadedKeyRef.current = queryKey;
+    void loadUsers();
+  }, [queryKey, loadUsers]);
 
   const loadUsersRef = React.useRef(loadUsers);
   useEffect(() => {
@@ -157,8 +155,8 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     },
     {
       header: "ID",
-      className: "w-[120px]",
-      cell: (user) => <span className="font-mono text-xs font-medium">{user.student_id || "No ID"}</span>
+      className: "whitespace-nowrap",
+      cell: (user) => <span className="font-mono text-xs font-medium whitespace-nowrap">{user.student_id || "No ID"}</span>
     },
     {
       header: "Role",
@@ -181,6 +179,16 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     <>
       <AdminTableShell
         className="min-h-[calc(100vh-120px)]"
+        headerActions={
+          (currentRole === "super_admin" || currentRole === "librarian") ? (
+            <Button asChild className="h-10 rounded-lg px-4 text-sm font-semibold">
+              <Link href="/users/new">
+                <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
+                Invite User
+              </Link>
+            </Button>
+          ) : undefined
+        }
         feedback={
           loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
         }

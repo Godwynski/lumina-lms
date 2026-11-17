@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { UsersContent } from "./UsersContent";
 import { getUsers } from "@/lib/actions/users";
 
-export const metadata = { title: "Users" };
+export const metadata = { title: "User Directory" };
 
 const PAGE_SIZE = 12;
 
