@@ -42,6 +42,8 @@ export const AVAILABLE_BOOK_COLUMNS = [
   { id: "section", label: "Section", desc: "Physical shelving cabinet or section code" },
   { id: "tags", label: "Tags", desc: "Tags/subjects linked to the book" },
   { id: "status", label: "Status", desc: "Active or Archived catalog status" },
+  { id: "total_copies", label: "Total Copies", desc: "Number of physical copies owned" },
+  { id: "available_copies", label: "Available Copies", desc: "Copies on the shelf right now" },
   { id: "description", label: "Description", desc: "Book synopsis or descriptive summary" },
   { id: "cover_url", label: "Cover URL", desc: "Full path to the stored cover image" }
 ];
@@ -60,6 +62,8 @@ export interface ExportBook {
   section: string | null;
   is_active: boolean;
   created_at: string;
+  total_copies?: number | null;
+  available_copies?: number | null;
   categories: { name: string } | Array<{ name: string }> | null;
 }
 import { createClient } from "@/lib/supabase/client";
@@ -329,6 +333,8 @@ export function ModernInventoryClient({
       if (selectedExportColumns.includes("section")) row['Section'] = b.section || '';
       if (selectedExportColumns.includes("tags")) row['Tags'] = Array.isArray(b.tags) ? b.tags.join(', ') : '';
       if (selectedExportColumns.includes("status")) row['Status'] = b.is_active ? 'Active' : 'Archived';
+      if (selectedExportColumns.includes("total_copies")) row['Total Copies'] = b.total_copies ?? 0;
+      if (selectedExportColumns.includes("available_copies")) row['Available Copies'] = b.available_copies ?? 0;
       if (selectedExportColumns.includes("description")) row['Description'] = b.description || '';
       if (selectedExportColumns.includes("cover_url")) row['Cover URL'] = b.cover_url || '';
       return row;

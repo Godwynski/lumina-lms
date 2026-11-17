@@ -577,6 +577,13 @@ export function AdminManagementContent({
           </div>
           
           <div className="flex items-center gap-4">
+            {copies.length > 1 && (
+              <QRPrinterModal
+                bookTitle={book.title}
+                triggerLabel="Print all QR"
+                labels={copies.map((c) => ({ qrString: c.qr_string, accessionNumber: c.accession_number }))}
+              />
+            )}
             {canManage && (
               !showAddCopies ? (
                 <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
@@ -685,7 +692,7 @@ export function AdminManagementContent({
                         </Badge>
                       )}
                       <div>
-                        <QRPrinterModal qrString={copy.qr_string} bookTitle={book.title} />
+                        <QRPrinterModal qrString={copy.qr_string} accessionNumber={copy.accession_number} bookTitle={book.title} />
                       </div>
                     </div>
                   </div>

@@ -504,6 +504,32 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       }
     });
 
+    it('prints a sheet with one label per copy, including accession numbers (P5-INV-013)', async () => {
+      const printSpy = vi.fn();
+      vi.stubGlobal('print', printSpy);
+      const { container } = await renderClient(
+        <QRPrinterModal
+          bookTitle="Clean Code"
+          triggerLabel="Print all QR"
+          labels={[{ qrString: 'QR-1', accessionNumber: 'ACC-00001' }, { qrString: 'QR-2', accessionNumber: 'ACC-00002' }]}
+        />
+      );
+      await clickElement(findButtonByText(container, 'Print all QR'));
+      await flushPromises();
+      expect(mockQRToDataURL).toHaveBeenCalledWith('QR-1', { width: 128, margin: 1 });
+      expect(mockQRToDataURL).toHaveBeenCalledWith('QR-2', { width: 128, margin: 1 });
+      expect(document.body).toHaveTextContent('Print 2 QR Labels');
+      expect(document.body.querySelector('img[alt="QR Code for Clean Code (QR-2)"]')).toBeInTheDocument();
+      const sheet = document.body.querySelector('[data-qr-print-sheet="true"]')!;
+      expect(sheet.querySelectorAll('img')).toHaveLength(2);
+      expect(sheet).toHaveTextContent('ACC-00001');
+      expect(sheet).toHaveTextContent('ACC-00002');
+      await clickElement(findButtonByText(document.body, 'Print Labels'));
+      expect(printSpy).toHaveBeenCalledTimes(1);
+      cleanupClients();
+      document.body.innerHTML = '';
+    });
+
     it('closes modal when Cancel is clicked', async () => {
       const { container } = await renderClient(
         <QRPrinterModal qrString="QR-COPY-11" bookTitle="Clean Code" />
@@ -1521,6 +1547,8 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
           section: 'CS',
           is_active: true,
           created_at: '2026-01-01T00:00:00Z',
+          total_copies: 4,
+          available_copies: 3,
           categories: { name: 'CS' },
         },
       ]);
@@ -1591,6 +1619,9 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       const csvBlob = createObjectURLSpy.mock.calls.at(-1)?.[0] as unknown as Blob;
       const csvText = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(csvBlob); });
       expect(csvText).toContain("'=SUM(1,1) QA-CSV-Probe");
+      // Copy counts are part of the report (P5-INV-022)
+      expect(csvText).toContain('Status,Total Copies,Available Copies');
+      expect(csvText).toContain('Active,4,3');
 
       await clickElement(findButtonByText(document.body, 'JSON Data'));
       await flushPromises();

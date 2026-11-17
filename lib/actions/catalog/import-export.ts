@@ -54,6 +54,7 @@ export async function getBooksForExport(filters?: ExportBooksFilters) {
     .select(`
       id, title, author, isbn, dewey_decimal, description, 
       published_year, cover_url, tags, location, section, is_active, created_at,
+      total_copies, available_copies,
       categories(name)
     `);
 
