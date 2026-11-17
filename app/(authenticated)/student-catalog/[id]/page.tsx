@@ -5,7 +5,7 @@ import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { StudentBookDetailClient } from './StudentBookDetailClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata = { title: "Catalog Book Details" };
+export const metadata = { title: "Book Details" };
 
 export function BookDetailSkeleton() {
   return (
@@ -57,7 +57,7 @@ async function StudentBookDetailLoader({ params }: { params: Promise<{ id: strin
 export default function StudentBookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <AdminTableShell 
-      title="Resource Explorer" 
+      title="Book Details" 
       description="Detailed catalog entry, availability status, and location info."
     >
       <Suspense fallback={<BookDetailSkeleton />}>

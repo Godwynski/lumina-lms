@@ -542,8 +542,8 @@ export function AttendanceClient({
           </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 flex-1 lg:justify-end">
-          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:flex-1 lg:justify-end">
+          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 w-full sm:w-auto flex-1 sm:flex-none">
             <div className="relative flex-1 min-w-0 sm:w-52">
               <label htmlFor="attendance-card-id" className="sr-only">Card ID or Patron ID</label>
               <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
@@ -552,7 +552,7 @@ export function AttendanceClient({
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
                 placeholder="Card ID or Patron ID..."
-                className="h-11 sm:h-9 pl-8 pr-3 text-xs bg-background rounded-xl border-border/30"
+                className="h-11 sm:h-9 pl-8 pr-3 text-xs bg-background rounded-lg border-border/40"
                 readOnly={isProcessing}
                 autoComplete="off"
               />
@@ -562,7 +562,7 @@ export function AttendanceClient({
               size="sm"
               disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
               className={cn(
-                "h-11 sm:h-9 px-4 sm:px-3.5 font-semibold text-xs rounded-xl shrink-0",
+                "h-11 sm:h-9 px-4 sm:px-3.5 font-semibold text-xs rounded-lg shrink-0",
                 mode === "in"
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                   : "bg-orange-600 hover:bg-orange-700 text-white"
@@ -576,7 +576,7 @@ export function AttendanceClient({
             <Button
               variant="outline"
               size="sm"
-              className="h-11 sm:h-9 w-full sm:w-auto px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 transition-colors border-border/30 bg-background hover:bg-muted/40"
+              className="h-11 sm:h-9 w-full sm:w-auto justify-center px-3.5 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/40 bg-background hover:bg-muted/40"
               disabled={isProcessing}
             >
               <Camera className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-primary" />
@@ -960,10 +960,10 @@ export function AttendanceClient({
     <div className="w-full">
       <AdminTableShell
         controls={
-          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg border border-border/50">
-            <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1 py-0.5">
+            <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
             All-Time History
-          </div>
+          </p>
         }
         pagination={
           totalPersonalItems > 0 ? (
@@ -1082,49 +1082,49 @@ function AttendanceTable({
         icon: Clock
       }}
       renderMobileRow={(record) => (
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {!isPersonal ? (
               <>
-                <Avatar aria-hidden="true" className="h-10 w-10">
+                <Avatar aria-hidden="true" className="h-10 w-10 shrink-0">
                   <AvatarFallback className="bg-muted text-muted-foreground font-bold">
                     {(record.profiles?.full_name || "S").charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0">
-                  <p className="font-bold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-muted-foreground font-bold uppercase">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm truncate">{record.profiles?.full_name || "Student"}</p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                    <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
                       {record.profiles?.student_id || format(new Date(record.check_in_at), "MMM dd")}
                     </span>
-                    <span className="opacity-20 text-[11px]">•</span>
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <LogIn className="w-2.5 h-2.5 text-emerald-500" />
-                      In: {format(new Date(record.check_in_at), "hh:mm a")}
+                    <span className="text-muted-foreground/40 text-xs" aria-hidden="true">•</span>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                      <LogIn className="w-3 h-3 text-emerald-600 shrink-0" aria-hidden="true" />
+                      <span>In: {format(new Date(record.check_in_at), "hh:mm a")}</span>
                     </div>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="min-w-0">
-                <p className="font-bold text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm">
                   {format(new Date(record.check_in_at), "MMMM dd, yyyy")}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-bold">
-                    <LogIn className="w-2.5 h-2.5 text-emerald-500" />
-                    In: {format(new Date(record.check_in_at), "hh:mm a")}
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium whitespace-nowrap">
+                    <LogIn className="w-3 h-3 text-emerald-600 shrink-0" aria-hidden="true" />
+                    <span>In: {format(new Date(record.check_in_at), "hh:mm a")}</span>
                   </div>
                 </div>
               </div>
             )}
           </div>
-          <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
             {record.check_out_at ? (
               <>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
-                  <LogOut className="w-2.5 h-2.5 text-orange-500" />
-                  Out: {format(new Date(record.check_out_at), "hh:mm a")}
+                <div className="flex items-center gap-1 text-xs text-muted-foreground font-medium whitespace-nowrap">
+                  <LogOut className="w-3 h-3 text-orange-600 shrink-0" aria-hidden="true" />
+                  <span>Out: {format(new Date(record.check_out_at), "hh:mm a")}</span>
                 </div>
                 {record.notes === "No Log Out" && <NoLogOutBadge />}
               </>

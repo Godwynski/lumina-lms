@@ -191,10 +191,8 @@ vi.mock('@/lib/actions/reservations', () => ({
 }));
 
 const mockGetUsers = vi.fn();
-const mockInviteUser = vi.fn();
 vi.mock('@/lib/actions/users', () => ({
   getUsers: (...args: unknown[]) => mockGetUsers(...args),
-  inviteUser: (...args: unknown[]) => mockInviteUser(...args),
 }));
 
 const mockCompressImage = vi.fn();
@@ -372,7 +370,6 @@ import { AddBookClient } from '@/app/(authenticated)/inventory/add/AddBookClient
 import { StudentCatalogClient } from '@/app/(authenticated)/student-catalog/StudentCatalogClient';
 import { StudentBookDetailClient } from '@/app/(authenticated)/student-catalog/[id]/StudentBookDetailClient';
 import { UsersContent } from '@/app/(authenticated)/users/UsersContent';
-import { NewUserClient } from '@/app/(authenticated)/users/new/NewUserClient';
 import UserDetailPage from '@/app/(authenticated)/users/[id]/page';
 import { UserDetailClient } from '@/app/(authenticated)/users/[id]/UserDetailClient';
 import { StreamedNav } from '@/app/(authenticated)/_components/StreamedNav';
@@ -393,7 +390,6 @@ import CirculationLoading from '@/app/(authenticated)/circulation/loading';
 import HistoryLoading from '@/app/(authenticated)/history/loading';
 import AttendanceLoading from '@/app/(authenticated)/attendance/loading';
 import UsersLoading from '@/app/(authenticated)/users/loading';
-import UsersNewLoading from '@/app/(authenticated)/users/new/loading';
 import UsersDetailLoading from '@/app/(authenticated)/users/[id]/loading';
 import AuditLoading from '@/app/(authenticated)/audit/loading';
 import StudentCatalogLoading from '@/app/(authenticated)/student-catalog/loading';
@@ -1105,9 +1101,9 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
     });
   });
 
-  // ─── 5. Users: UsersContent, NewUserClient, UserDetailClient ──────────────
+  // ─── 5. Users: UsersContent, UserDetailClient ──────────────
 
-  describe('UsersContent, NewUserClient & UserDetailClient', () => {
+  describe('UsersContent & UserDetailClient', () => {
     const sampleUser: User = {
       id: 'usr-1',
       name: 'Juan Dela Cruz',
@@ -1171,57 +1167,6 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       await clickElement(findButtonByText(adminRender.container, 'Filter'));
       expect(findButtonByText(document.body, 'Super Admin')).toBeDefined();
-    });
-
-    it('invites a user in NewUserClient and surfaces errors when inviteUser fails', async () => {
-      mockInviteUser.mockResolvedValueOnce({ success: true });
-      const { container } = await renderClient(<NewUserClient currentRole="super_admin" />);
-
-      const emailInput = container.querySelector('input[name="email"]') as HTMLInputElement;
-      const deptInput = container.querySelector('input[name="department"]') as HTMLInputElement;
-      await typeIntoInput(emailInput, 'NEW.User@Alabang.sti.edu.ph');
-      await typeIntoInput(deptInput, 'Information Technology');
-      await submitForm(container.querySelector('form'));
-
-      expect(mockInviteUser).toHaveBeenCalledWith({
-        email: 'new.user@alabang.sti.edu.ph',
-        role: 'patron',
-        patron_type: 'student',
-        department: 'Information Technology',
-      });
-      expect(mockToastSuccess).toHaveBeenCalledWith('Access granted to new.user@alabang.sti.edu.ph');
-      expect(mockRouterPush).toHaveBeenCalledWith('/users');
-
-      mockInviteUser.mockResolvedValueOnce({ success: false, error: 'User already active' });
-      await submitForm(container.querySelector('form'));
-      expect(mockToastError).toHaveBeenCalledWith('User already active');
-
-      // Choosing Faculty hides Academic Program / Department and omits department
-      cleanupClients();
-      mockInviteUser.mockResolvedValueOnce({ success: true });
-      const facRender = await renderClient(<NewUserClient currentRole="librarian" />);
-      const facEmailInput = facRender.container.querySelector('input[name="email"]') as HTMLInputElement;
-      await typeIntoInput(facEmailInput, 'faculty.member@alabang.sti.edu.ph');
-
-      const patronTypeTrigger = facRender.container.querySelector('[aria-label="Patron Type"]') as HTMLButtonElement;
-      await clickElement(patronTypeTrigger);
-      if (patronTypeTrigger.getAttribute('aria-expanded') !== 'true') {
-        await pressKey(patronTypeTrigger, 'Enter');
-      }
-      const facultyOpt = Array.from(document.body.querySelectorAll('[role="option"]')).find((el) =>
-        el.textContent?.trim() === 'Faculty'
-      );
-      expect(facultyOpt).toBeDefined();
-      await clickElement(facultyOpt);
-
-      expect(facRender.container.querySelector('input[name="department"]')).toBeNull();
-      await submitForm(facRender.container.querySelector('form'));
-      expect(mockInviteUser).toHaveBeenCalledWith({
-        email: 'faculty.member@alabang.sti.edu.ph',
-        role: 'patron',
-        patron_type: 'faculty',
-        department: undefined,
-      });
     });
 
     it('updates profile, verifies pending student, manages SA permissions, and enforces librarian read-only in UserDetailClient', async () => {
@@ -1538,7 +1483,6 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       { name: 'history', Component: HistoryLoading },
       { name: 'attendance', Component: AttendanceLoading },
       { name: 'users', Component: UsersLoading },
-      { name: 'users/new', Component: UsersNewLoading },
       { name: 'users/[id]', Component: UsersDetailLoading },
       { name: 'audit', Component: AuditLoading },
       { name: 'student-catalog', Component: StudentCatalogLoading },
@@ -1553,7 +1497,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const { container } = await renderClient(<Component />);
       expect(container.firstElementChild).not.toBeNull();
       if (name === 'student-catalog/[id]') {
-        expect(container).toHaveTextContent('Resource Explorer');
+        expect(container).toHaveTextContent('Book Details');
       } else if (name === 'analytics') {
         expect(container.querySelector('svg.animate-spin')).toBeInTheDocument();
       } else {
@@ -1845,7 +1789,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       );
     });
 
-    it('StudentBookDetailPage renders Resource Explorer shell and forwards book/availability promises', async () => {
+    it('StudentBookDetailPage renders Book Details shell and forwards book/availability promises', async () => {
       const skel = await renderClient(<BookDetailSkeleton />);
       expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
       cleanupClients();

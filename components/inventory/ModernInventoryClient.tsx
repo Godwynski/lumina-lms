@@ -641,19 +641,25 @@ export function ModernInventoryClient({
 
 
   const activeFilterCount = (status !== "ACTIVE" ? 1 : 0) + (categoryId !== "all" ? 1 : 0) + (explicitSort ? 1 : 0);
+  const hasActiveFilters = Boolean(urlQuery.trim() || activeFilterCount > 0);
+  const clearAllFilters = useCallback(() => {
+    setSearchQuery("");
+    pendingQueries.current = [];
+    updateParams({ q: null, categoryId: null, status: null, sort: null });
+  }, [updateParams]);
 
   return (
     <div className="w-full space-y-6 pb-10">
       <div className={cn("space-y-4 sm:space-y-6", isReportPreviewOpen && "print:hidden")}>
-      <div className="sticky top-14 md:top-0 z-30 flex flex-col gap-3 rounded-2xl sm:rounded-3xl border border-border/10 bg-background/85 sm:bg-background/60 p-2 sm:p-2.5 backdrop-blur-2xl transition-all duration-300">
+      <div className="sticky top-14 md:top-0 z-30 flex flex-col gap-3 rounded-2xl border border-border/40 bg-background/85 p-2 sm:p-2.5 backdrop-blur-xl transition-all duration-300">
         <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center gap-2 sm:gap-3 w-full">
           {/* Row 1 on mobile: Search + Primary Add CTA */}
           <div className="flex items-center gap-2 w-full sm:flex-1 min-w-0">
             <form onSubmit={handleSearch} className="relative flex flex-1 min-w-0 items-center gap-2">
               <div className="relative flex-1 min-w-0 group">
                 <Search className={cn(
-                  "absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-all duration-300",
-                  searchQuery ? "text-primary scale-110" : "text-muted-foreground/30"
+                  "absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors",
+                  searchQuery ? "text-primary" : "text-muted-foreground"
                 )} />
                 <input
                   type="search"
@@ -661,14 +667,14 @@ export function ModernInventoryClient({
                   placeholder="Search inventory..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-11 w-full rounded-xl sm:rounded-2xl border border-border/20 bg-muted/5 pl-10 sm:pl-11 pr-10 sm:pr-11 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground"
+                  className="h-11 sm:h-10 w-full rounded-lg border border-border/50 bg-background pl-10 pr-10 text-sm font-medium transition-all focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15 placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={clearSearch}
                     aria-label="Clear search"
-                    className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-90"
+                    className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-2 sm:p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -677,10 +683,10 @@ export function ModernInventoryClient({
             </form>
 
             {canManage && (
-              <Button asChild className="sm:hidden shrink-0 h-11 rounded-xl px-3.5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-                <Link href="/inventory/add" aria-label="Add item">
+              <Button asChild className="sm:hidden shrink-0 h-11 rounded-lg px-3.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                <Link href="/inventory/add" aria-label="Add Book">
                   <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                  <span>Add</span>
+                  <span>Add<span className="sr-only"> Book</span></span>
                 </Link>
               </Button>
             )}
@@ -694,22 +700,22 @@ export function ModernInventoryClient({
                 variant="outline"
                 aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}
                 className={cn(
-                  "h-11 flex-1 sm:flex-none rounded-xl sm:rounded-2xl px-3.5 sm:px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 relative justify-center",
+                  "h-11 sm:h-9 flex-1 sm:flex-none rounded-lg px-3.5 gap-2 border-border/50 bg-background hover:bg-muted/60 text-xs font-medium relative justify-center",
                   activeFilterCount > 0 && "border-primary/30 bg-primary/5 text-primary"
                 )}
               >
-                <SlidersHorizontal className="h-4 w-4 text-primary/80 shrink-0" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Filters</span>
+                <SlidersHorizontal className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
+                <span>Filters</span>
                 {activeFilterCount > 0 && (
-                  <Badge className="sm:absolute sm:-top-1 sm:-right-1 h-5 min-w-5 flex items-center justify-center px-1.5 sm:p-0 rounded-full text-[11px] bg-primary text-primary-foreground sm:border-2 sm:border-background">
+                  <Badge className="sm:absolute sm:-top-1.5 sm:-right-1.5 h-5 min-w-5 flex items-center justify-center px-1.5 sm:px-1 rounded-full text-xs bg-primary text-primary-foreground sm:border-2 sm:border-background">
                     {activeFilterCount}
                   </Badge>
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent showCloseButton={false} side="right" responsiveBottom className="w-full sm:max-w-md border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
+            <SheetContent showCloseButton={false} side="right" responsiveBottom className="w-full sm:max-w-md sm:rounded-l-2xl border-l-border/40 bg-background p-0 overflow-hidden flex flex-col">
               <div className="absolute top-0 right-0 p-3 sm:p-4 z-10">
-                <SheetClose aria-label="Close filters" className="rounded-full h-11 w-11 sm:h-8 sm:w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
+                <SheetClose aria-label="Close filters" className="rounded-lg h-11 w-11 sm:h-8 sm:w-8 flex items-center justify-center bg-muted/40 text-muted-foreground hover:bg-muted transition-colors">
                    <X className="h-4 w-4" />
                 </SheetClose>
               </div>
@@ -722,12 +728,12 @@ export function ModernInventoryClient({
                   <SheetDescription className="text-xs text-muted-foreground font-medium">Refine your search results</SheetDescription>
                 </div>
 
-                <Separator className="bg-border/10" />
+                <Separator className="bg-border/20" />
 
                 <div className="space-y-6">
                   {/* Status Selection */}
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Availability Status</label>
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Availability Status</label>
                     <div className="grid grid-cols-3 gap-2">
                       {(["ACTIVE", "ARCHIVED", "ALL"] as const).map((s) => (
                         <Button
@@ -737,8 +743,8 @@ export function ModernInventoryClient({
                           aria-pressed={status === s}
                           onClick={() => setStatus(s)}
                           className={cn(
-                            "h-11 sm:h-9 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
-                            status === s ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10 hover:bg-muted/10"
+                            "h-11 sm:h-9 rounded-lg text-xs font-medium transition-all",
+                            status === s ? "bg-primary text-primary-foreground" : "bg-background border-border/50 hover:bg-muted/60"
                           )}
                         >
                           {s === "ACTIVE" ? "Visible" : s === "ARCHIVED" ? "Archived" : "All"}
@@ -748,30 +754,30 @@ export function ModernInventoryClient({
                   </div>
 
                   {/* Sort Selection */}
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Sorting Order</label>
+                  <div className="space-y-2.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Sorting Order</label>
                     <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                      <SelectTrigger aria-label="Sorting order" className="min-h-11 h-11 sm:min-h-10 sm:h-10 w-full rounded-lg border border-border/10 bg-muted/5 px-3 text-[11px] font-medium shadow-none focus:ring-0">
+                      <SelectTrigger aria-label="Sorting order" className="min-h-11 h-11 sm:min-h-10 sm:h-10 w-full rounded-lg border border-border/50 bg-background px-3 text-sm font-medium shadow-none focus:ring-0">
                         <div className="flex items-center gap-2">
-                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                           <SelectValue />
                         </div>
                       </SelectTrigger>
-                      <SelectContent className="rounded-lg border-border/10">
+                      <SelectContent className="rounded-lg border-border/40">
                         {urlQuery.trim() && (
-                          <SelectItem value="relevance" className="text-[11px]">Best Match</SelectItem>
+                          <SelectItem value="relevance" className="text-xs">Best Match</SelectItem>
                         )}
-                        <SelectItem value="newest" className="text-[11px]">Recently Added</SelectItem>
-                        <SelectItem value="title_asc" className="text-[11px]">Title A-Z</SelectItem>
-                        <SelectItem value="title_desc" className="text-[11px]">Title Z-A</SelectItem>
-                        <SelectItem value="availability_desc" className="text-[11px]">By Availability</SelectItem>
+                        <SelectItem value="newest" className="text-xs">Recently Added</SelectItem>
+                        <SelectItem value="title_asc" className="text-xs">Title A-Z</SelectItem>
+                        <SelectItem value="title_desc" className="text-xs">Title Z-A</SelectItem>
+                        <SelectItem value="availability_desc" className="text-xs">By Availability</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {/* Categories Selection */}
-                  <div className="space-y-4">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Categories</label>
+                  <div className="space-y-3">
+                    <label className="text-xs font-semibold text-muted-foreground">Categories</label>
                     <div className="flex flex-wrap gap-2">
                       <Button
                         variant={selectedCategoryIds.length === 0 ? "default" : "outline"}
@@ -779,8 +785,8 @@ export function ModernInventoryClient({
                         aria-pressed={selectedCategoryIds.length === 0}
                         onClick={() => setCategoryId("all")}
                         className={cn(
-                          "h-11 sm:h-9 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider transition-all",
-                          selectedCategoryIds.length === 0 ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10"
+                          "h-11 sm:h-9 rounded-lg px-3.5 text-xs font-medium transition-all",
+                          selectedCategoryIds.length === 0 ? "bg-primary text-primary-foreground" : "bg-background border-border/50"
                         )}
                       >
                         All Items
@@ -795,8 +801,8 @@ export function ModernInventoryClient({
                             aria-pressed={isSelected}
                             onClick={() => handleCategoryToggle(cat.id)}
                             className={cn(
-                              "h-11 sm:h-10 rounded-xl px-4 sm:px-5 text-[11px] font-bold uppercase tracking-widest transition-all",
-                              isSelected ? "bg-primary shadow-lg shadow-primary/20" : "bg-muted/5 border-border/10"
+                              "h-11 sm:h-9 rounded-lg px-3.5 text-xs font-medium transition-all",
+                              isSelected ? "bg-primary text-primary-foreground" : "bg-background border-border/50"
                             )}
                           >
                             {cat.name}
@@ -808,10 +814,10 @@ export function ModernInventoryClient({
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 bg-muted/5 border-t border-border/10 flex gap-3">
+              <div className="p-4 sm:p-6 bg-muted/20 border-t border-border/20 flex gap-3">
                 <Button 
                   variant="outline" 
-                  className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest border-border/10"
+                  className="flex-1 h-11 sm:h-10 rounded-lg text-sm font-semibold border-border/50"
                   onClick={() => {
                     // One URL update so later resets don't overwrite earlier ones.
                     updateParams({ categoryId: null, status: null, sort: null });
@@ -820,7 +826,7 @@ export function ModernInventoryClient({
                   Reset All
                 </Button>
                 <SheetClose asChild>
-                  <Button className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                  <Button className="flex-1 h-11 sm:h-10 rounded-lg text-sm font-semibold">
                     Apply Filters
                   </Button>
                 </SheetClose>
@@ -831,9 +837,9 @@ export function ModernInventoryClient({
           {/* Cards / Table View Toggle */}
           <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Inventory view mode" />
 
-          {/* Add Item & Batch Operations Buttons */}
+          {/* Add Book & Batch Operations Buttons */}
           {canManage && (
-            <div className="flex gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <OverflowActionsMenu
                 label="Inventory actions"
                 className="sm:hidden"
@@ -848,8 +854,8 @@ export function ModernInventoryClient({
               />
               <Dialog open={isBatchOpen} onOpenChange={setIsBatchOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" aria-label="Batch operations" className="hidden sm:inline-flex h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 text-[11px] font-bold uppercase tracking-wider">
-                    <Upload className="h-4 w-4 text-primary/80" />
+                  <Button variant="outline" aria-label="Batch operations" className="hidden sm:inline-flex h-9 rounded-lg px-3.5 gap-2 border-border/50 bg-background hover:bg-muted/60 text-xs font-medium">
+                    <Upload className="h-3.5 w-3.5 text-muted-foreground" />
                     <span>Batch Operations</span>
                   </Button>
                 </DialogTrigger>
@@ -1296,10 +1302,10 @@ export function ModernInventoryClient({
                 </DialogContent>
               </Dialog>
 
-              <Button asChild className="hidden sm:inline-flex shrink-0 h-11 rounded-2xl px-5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
-                <Link href="/inventory/add" aria-label="Add item">
-                  <Plus className="mr-2 h-4 w-4 transition-transform group-hover:rotate-90" aria-hidden="true" />
-                  <span>Add Item</span>
+              <Button asChild className="hidden sm:inline-flex shrink-0 h-9 rounded-lg px-4 text-xs sm:text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all group">
+                <Link href="/inventory/add" aria-label="Add Book">
+                  <Plus className="mr-1.5 h-4 w-4 transition-transform group-hover:rotate-90" aria-hidden="true" />
+                  <span>Add Book</span>
                 </Link>
               </Button>
             </div>
@@ -1318,6 +1324,8 @@ export function ModernInventoryClient({
           <InventoryTable
             books={books}
             canManage={canManage}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearAllFilters}
           />
         ) : (
           <InventoryGrid
@@ -1325,6 +1333,8 @@ export function ModernInventoryClient({
             canManage={canManage}
             isStudentView={isStudentView}
             reservations={reservations}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearAllFilters}
           />
         )}
       </div>

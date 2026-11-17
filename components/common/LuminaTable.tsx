@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { type LucideIcon, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { type LucideIcon, Loader2, SearchX } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
+import { EmptyState as EmptyStateView } from "@/components/ui/empty-state";
 
 export interface LuminaColumn<T> {
   header: React.ReactNode;
@@ -19,9 +19,11 @@ interface EmptyState {
   title: string;
   description: string;
   icon?: LucideIcon;
+  variant?: "first-use" | "no-results";
   action?: {
     label: string;
-    onClick: () => void;
+    onClick?: () => void;
+    href?: string;
   };
 }
 
@@ -90,11 +92,11 @@ export function LuminaTable<T extends { id: string | number }>({
     const mainCol = columns.find(c => c.mobileMain) || columns[0];
     return (
       <div className="flex flex-col gap-1">
-        <div className="font-bold">{renderCell(item, mainCol)}</div>
+        <div className="font-semibold">{renderCell(item, mainCol)}</div>
         <div className="grid grid-cols-2 gap-2 mt-2">
           {columns.filter(c => c !== mainCol).map((c, i) => (
-            <div key={i} className="text-[11px]">
-              <span className="text-muted-foreground uppercase block mb-0.5">{c.header}</span>
+            <div key={i} className="text-xs">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">{c.header}</span>
               <div className="font-medium">{renderCell(item, c)}</div>
             </div>
           ))}
@@ -104,6 +106,7 @@ export function LuminaTable<T extends { id: string | number }>({
   };
 
   const mobileRenderer = renderMobileRow || defaultMobileRow;
+  const isEmpty = !isLoading && data.length === 0;
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -111,119 +114,99 @@ export function LuminaTable<T extends { id: string | number }>({
         "w-full overflow-hidden transition-all duration-200",
         noBorder 
           ? "border-none bg-transparent shadow-none" 
-          : "border border-border/40 bg-card/40 rounded-2xl backdrop-blur-sm shadow-sm"
+          : "border border-border/50 bg-card/60 rounded-2xl backdrop-blur-sm shadow-sm"
       )}>
-        {/* ── Mobile view ── */}
-        <div className="md:hidden print:hidden flex flex-col divide-y divide-border/50">
-          {isLoading ? (
-            <div className="p-8 text-center text-sm text-muted-foreground animate-pulse">
-              Loading...
-            </div>
-          ) : data.length > 0 ? (
-            data.map((item) => (
-              <div
-                key={`mobile-${item.id}`}
-                className={cn(
-                  "p-4 transition-colors hover:bg-muted/40",
-                  onRowClick && "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
-                  rowClassName
-                )}
-                onClick={() => onRowClick?.(item)}
-                {...rowKeyboardProps(item, true)}
-              >
-                {mobileRenderer(item)}
-              </div>
-            ))
-          ) : (
-            <div className="p-10 flex flex-col items-center justify-center text-center py-20">
-              {emptyState?.icon && (
-                <div className="mb-4 rounded-2xl bg-muted/20 p-4">
-                  <emptyState.icon size={28} className="text-muted-foreground" />
+        {isEmpty ? (
+          <EmptyStateView
+            noCard
+            variant={emptyState?.variant ?? "no-results"}
+            icon={emptyState?.icon ?? SearchX}
+            title={emptyState?.title || "No matches found"}
+            description={emptyState?.description || "Try adjusting your search or filters."}
+            action={emptyState?.action}
+          />
+        ) : (
+          <>
+            {/* ── Mobile view ── */}
+            <div className="md:hidden print:hidden flex flex-col divide-y divide-border/50">
+              {isLoading ? (
+                <div className="p-8 flex flex-col items-center gap-3 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-xs font-medium text-muted-foreground">Refreshing...</span>
                 </div>
-              )}
-              <h3 className="text-sm font-bold text-foreground mb-1">{emptyState?.title || "No results found"}</h3>
-              <p className="text-xs text-muted-foreground mb-4 max-w-[250px] mx-auto">{emptyState?.description || "Try adjusting your search or filters."}</p>
-              {emptyState?.action && (
-                <Button variant="outline" size="sm" onClick={emptyState.action.onClick} className="h-8 text-[11px] font-bold rounded-xl">
-                  {emptyState.action.label}
-                </Button>
+              ) : (
+                data.map((item) => (
+                  <div
+                    key={`mobile-${item.id}`}
+                    className={cn(
+                      "p-4 transition-colors hover:bg-muted/40",
+                      onRowClick && "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                      rowClassName
+                    )}
+                    onClick={() => onRowClick?.(item)}
+                    {...rowKeyboardProps(item, true)}
+                  >
+                    {mobileRenderer(item)}
+                  </div>
+                ))
               )}
             </div>
-          )}
-        </div>
 
-        {/* ── Desktop table ── */}
-        <table className="hidden md:table print:table w-full text-left text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-border/10 bg-muted/30">
-              {columns.map((col, idx) => (
-                <th
-                  key={`head-${idx}`}
-                  scope="col"
-                  className={cn(
-                    "px-4 py-3 text-[11px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap",
-                    col.headerClassName
-                  )}
-                >
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/10">
-            {isLoading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Refreshing...</span>
-                  </div>
-                </td>
-              </tr>
-            ) : data.length > 0 ? (
-              data.map((item) => (
-                <tr
-                  key={`desktop-${item.id}`}
-                  className={cn(
-                    "transition-colors hover:bg-muted/40 group",
-                    onRowClick && "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
-                    rowClassName
-                  )}
-                  onClick={() => onRowClick?.(item)}
-                  {...rowKeyboardProps(item)}
-                >
+            {/* ── Desktop table ── */}
+            <table className="hidden md:table print:table w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-border/20 bg-muted/30">
                   {columns.map((col, idx) => (
-                    <td
-                      key={`cell-${idx}`}
-                      className={cn("px-4 py-3.5", col.className)}
+                    <th
+                      key={`head-${idx}`}
+                      scope="col"
+                      className={cn(
+                        "px-4 py-3 text-2xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap",
+                        col.headerClassName
+                      )}
                     >
-                      {renderCell(item, col)}
-                    </td>
+                      {col.header}
+                    </th>
                   ))}
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={columns.length}>
-                  <div className="p-10 flex flex-col items-center justify-center text-center py-20">
-                    {emptyState?.icon && (
-                      <div className="mb-4 rounded-2xl bg-muted/20 p-4">
-                        <emptyState.icon size={32} className="text-muted-foreground" />
+              </thead>
+              <tbody className="divide-y divide-border/15">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={columns.length} className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <span className="text-xs font-medium text-muted-foreground">Refreshing...</span>
                       </div>
-                    )}
-                    <h3 className="text-base font-bold text-foreground mb-1">{emptyState?.title || "No results found"}</h3>
-                    <p className="text-sm text-muted-foreground mb-6 max-w-[300px] mx-auto">{emptyState?.description || "Try adjusting your search or filters."}</p>
-                    {emptyState?.action && (
-                      <Button variant="outline" size="sm" onClick={emptyState.action.onClick} className="h-9 px-6 text-xs font-bold rounded-xl shadow-sm">
-                        {emptyState.action.label}
-                      </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                ) : (
+                  data.map((item) => (
+                    <tr
+                      key={`desktop-${item.id}`}
+                      className={cn(
+                        "transition-colors hover:bg-muted/40 group",
+                        onRowClick && "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                        rowClassName
+                      )}
+                      onClick={() => onRowClick?.(item)}
+                      {...rowKeyboardProps(item)}
+                    >
+                      {columns.map((col, idx) => (
+                        <td
+                          key={`cell-${idx}`}
+                          className={cn("px-4 py-3.5", col.className)}
+                        >
+                          {renderCell(item, col)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
       {/* ── Pagination ── */}

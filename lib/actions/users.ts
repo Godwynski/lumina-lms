@@ -1,12 +1,9 @@
 'use server';
 
-import { getMe, normalizeUserRole } from '@/lib/auth-helpers';
+import { getMe } from '@/lib/auth-helpers';
 import { sanitizeFilterInput } from '@/lib/utils';
 import { mapProfileToUser } from '@/lib/utils/mappers';
-import { UserCreateSchema } from '@/lib/validations/api';
 
-import { createSafeAction } from './action-utils';
-import { createAdminClient } from '@/lib/supabase/admin';
 import type { User } from '@/lib/types';
 
 /**
@@ -80,87 +77,3 @@ export async function getUsers(options: {
   const users = (data ?? []).map((row) => mapProfileToUser(row as Record<string, unknown>));
   return { users, total: count ?? 0 };
 }
-
-/**
- * Server action to invite or upgrade a user's role and status with server-side validation,
- * role check, profile update, and audit logging.
- */
-export const inviteUser = createSafeAction(
-  UserCreateSchema,
-  async (input, { supabase, role: requesterRole, userId }) => {
-    const email = input.email.trim().toLowerCase();
-    const requestedRole = normalizeUserRole(input.role) || 'patron';
-    const patronType = input.patron_type ?? 'student';
-    const department = input.department?.trim() || (patronType === 'faculty' ? null : 'General');
-
-    if (requesterRole === 'librarian' && input.role && requestedRole !== 'patron') {
-      throw new Error('Librarians are not allowed to assign roles');
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (profileError) throw profileError;
-    if (!profile) {
-      throw new Error('No account found for that email. They must sign in first.');
-    }
-
-    const targetRole = normalizeUserRole(profile.role) || 'patron';
-
-    if (targetRole === 'super_admin' && requesterRole !== 'super_admin') {
-      throw new Error('Only super administrators can modify a super administrator account');
-    }
-
-    if (requesterRole === 'librarian' && targetRole !== 'patron') {
-      throw new Error('Librarians cannot modify accounts with staff or admin roles');
-    }
-
-    if (requestedRole === 'super_admin' && requesterRole !== 'super_admin') {
-      throw new Error('Only super administrators can assign the super admin role');
-    }
-
-    const isTransfer = requestedRole === 'super_admin' && profile.role !== 'super_admin';
-    if (isTransfer) {
-      const { error: transferError } = await createAdminClient().rpc('transfer_super_admin_ownership', {
-        p_current_admin_id: userId,
-        p_new_admin_id: profile.id
-      });
-      if (transferError) throw transferError;
-    }
-
-    // After a transfer the requester is a librarian, and the profile guard trigger only lets the
-    // super admin edit the super admin's row, so finish that case with the service role.
-    const writer = isTransfer ? createAdminClient() : supabase;
-    const { data: updated, error: updateError } = await writer
-      .from('profiles')
-      .update({
-        role: requestedRole,
-        patron_type: patronType,
-        status: requestedRole === 'super_admin' ? 'ACTIVE' : 'PENDING',
-        department,
-      })
-      .eq('id', profile.id)
-      .select('*')
-      .single();
-
-    if (updateError) throw updateError;
-
-    return [
-      { user: mapProfileToUser(updated as Record<string, unknown>) },
-      {
-        entityId: profile.id,
-        reason: `Invited/Upgraded user ${email} to ${requestedRole} (status set to ${requestedRole === 'super_admin' ? 'active' : 'pending'})`,
-        oldValue: { role: profile.role, status: profile.status, department: profile.department },
-        newValue: { role: updated.role, status: updated.status, department: updated.department },
-      },
-    ];
-  },
-  {
-    allowedRoles: ['super_admin', 'librarian'],
-    auditAction: 'role_updated',
-    auditEntity: 'profile',
-  }
-);

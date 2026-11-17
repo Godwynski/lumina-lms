@@ -4,7 +4,7 @@ import { useState, use, useEffect, useTransition, useCallback, useRef } from "re
 import Image from "next/image";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { BorrowerDetailsModal } from "@/components/common/BorrowerDetailsModal";
-import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer } from "lucide-react";
+import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FineSettlementDialog } from "@/components/common/FineSettlementDialog";
@@ -54,7 +54,7 @@ function ResolutionBadge({ resolution }: { resolution?: FineResolution | null })
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold whitespace-nowrap",
         isCondoned
           ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
           : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
@@ -67,25 +67,30 @@ function ResolutionBadge({ resolution }: { resolution?: FineResolution | null })
 
 function HistoryBookCover({ coverUrl, title }: { coverUrl?: string | null; title?: string }) {
   const [imgError, setImgError] = useState(false);
-
-  if (!coverUrl || imgError) {
-    return (
-      <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30 text-[11px] font-black text-muted-foreground uppercase tracking-widest group-hover:bg-background transition-colors">
-        {title?.charAt(0) || "?"}
-      </div>
-    );
-  }
+  const [loaded, setLoaded] = useState(false);
+  const showImage = Boolean(coverUrl) && !imgError;
 
   return (
-    <div className="relative flex h-10 w-8 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/30 shadow-xs">
-      <Image
-        src={coverUrl}
-        alt={title || "Book cover"}
-        fill
-        className="object-cover"
-        unoptimized
-        onError={() => setImgError(true)}
-      />
+    <div className="relative flex h-10 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-primary/5 text-xs font-bold text-primary/70 uppercase">
+      <span>{title?.charAt(0) || "?"}</span>
+      {showImage && (
+        <Image
+          src={coverUrl!}
+          alt={title || "Book cover"}
+          fill
+          className={cn("object-cover transition-opacity duration-200", loaded ? "opacity-100" : "opacity-0")}
+          unoptimized
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+              setImgError(true);
+            } else {
+              setLoaded(true);
+            }
+          }}
+          onError={() => setImgError(true)}
+        />
+      )}
     </div>
   );
 }
@@ -342,7 +347,7 @@ export default function HistoryContent({
                   onClick={(event) => { event.stopPropagation(); detailTrigger.current = event.currentTarget; setSelectedBorrower(record.profiles); }}>
                   {record.profiles.full_name || "Unknown User"}
                 </button> : <span className="text-xs font-bold">Unknown User</span>}
-                <span className="text-[11px] text-muted-foreground uppercase tracking-tighter">
+                <span className="text-xs text-muted-foreground">
                   {record.profiles?.student_id ||
                     record.profiles?.email?.split("@")[0] ||
                     "No ID"}
@@ -362,14 +367,14 @@ export default function HistoryContent({
           <HistoryBookCover coverUrl={record.books?.cover_url} title={record.books?.title} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="truncate text-sm font-bold text-foreground">
+              <p className="truncate text-sm font-semibold text-foreground">
                 {record.books?.title || "Unknown Title"}
               </p>
               {record.status?.toUpperCase() === 'RETURNED' && (
                 <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
               )}
             </div>
-            <p className="truncate text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            <p className="truncate text-xs text-muted-foreground">
               {record.books?.author || "Internal Entity"}
             </p>
           </div>
@@ -382,7 +387,7 @@ export default function HistoryContent({
           {
             header: "Fine Amount",
             accessor: (record: BorrowingRecord) => (
-              <span className="text-xs font-bold text-foreground tabular-nums">
+              <span className="text-xs font-semibold text-foreground tabular-nums">
                 ₱{Number(record.fine_amount ?? 0).toFixed(2)}
               </span>
             ),
@@ -407,7 +412,7 @@ export default function HistoryContent({
           {
             header: "Settled Date",
             accessor: (record: BorrowingRecord) => (
-              <span className="text-[11px] font-bold text-foreground">
+              <span className="text-xs font-medium text-foreground whitespace-nowrap">
                 {record.fine_settled_at ? formatDate(record.fine_settled_at) : "—"}
               </span>
             ),
@@ -418,8 +423,8 @@ export default function HistoryContent({
             header: "Borrowed",
             accessor: (record: BorrowingRecord) => (
               <div className="flex items-center gap-2">
-                <Calendar size={14} className="text-muted-foreground" />
-                <span className="text-[11px] font-bold text-foreground">{formatDate(record.borrowed_at)}</span>
+                <Calendar size={14} className="text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-foreground whitespace-nowrap">{formatDate(record.borrowed_at)}</span>
               </div>
             ),
           },
@@ -430,14 +435,14 @@ export default function HistoryContent({
               return (
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <Clock size={14} className={cn("text-muted-foreground", overdue && "text-destructive")} />
-                    <span className={cn("text-[11px] font-bold", overdue ? "text-destructive" : "text-foreground")}>
+                    <Clock size={14} className={cn("text-muted-foreground shrink-0", overdue && "text-destructive")} />
+                    <span className={cn("text-xs font-medium whitespace-nowrap", overdue ? "text-destructive font-semibold" : "text-foreground")}>
                       Due {formatDate(record.due_date)}
                     </span>
                   </div>
                   {record.returned_at && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-black text-emerald-600 uppercase tracking-tight">
-                      <CheckCircle2 size={12} strokeWidth={3} />
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                      <CheckCircle2 size={12} strokeWidth={2.5} />
                       Returned {formatDate(record.returned_at)}
                     </div>
                   )}
@@ -460,12 +465,12 @@ export default function HistoryContent({
                   accessor: (record: BorrowingRecord) => {
                     const fine = Number(record.fine_amount ?? 0);
                     if (fine <= 0) {
-                      return <span className="text-[11px] font-bold text-muted-foreground">—</span>;
+                      return <span className="text-xs text-muted-foreground">—</span>;
                     }
                     if (record.fine_settled_at) {
                       return (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground tabular-nums">
+                          <span className="text-xs font-semibold text-foreground tabular-nums">
                             ₱{fine.toFixed(2)}
                           </span>
                           <ResolutionBadge resolution={record.fine_resolution} />
@@ -475,12 +480,12 @@ export default function HistoryContent({
                     const isUnreturned = !record.returned_at;
                     return (
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-black text-destructive tabular-nums">
+                        <span className="text-xs font-bold text-destructive tabular-nums">
                           ₱{fine.toFixed(2)}
                         </span>
                         <span
                           className={cn(
-                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider",
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold whitespace-nowrap",
                             isUnreturned
                               ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
                               : "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
@@ -498,7 +503,7 @@ export default function HistoryContent({
                               e.stopPropagation();
                               setPendingAction({ record });
                             }}
-                            className="min-h-11 sm:min-h-0 sm:h-7 rounded-lg px-3 sm:px-2.5 text-[11px] font-black uppercase tracking-wider print:hidden"
+                            className="min-h-11 sm:min-h-0 sm:h-8 rounded-lg px-3 sm:px-2.5 text-xs font-semibold whitespace-nowrap print:hidden"
                           >
                             {settlingId === record.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -519,8 +524,8 @@ export default function HistoryContent({
 
   const filterControls = (
     <div className="flex flex-col gap-2.5 sm:gap-3 w-full font-sans print:hidden">
-      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2.5 sm:gap-4 w-full">
-        <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 sm:gap-3 w-full">
+        <div className="flex items-center gap-2 w-full lg:max-w-xs">
           <form 
             onSubmit={(e) => {
               e.preventDefault();
@@ -528,18 +533,32 @@ export default function HistoryContent({
             }}
             className="relative flex-1 min-w-0"
           >
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               aria-label="Search borrowing history"
               placeholder="Search timeline, borrower, book, barcode..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              className="h-11 sm:h-10 rounded-xl pl-9 pr-8 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
+              className="h-11 sm:h-10 rounded-xl pl-9 pr-9 bg-background border-border/60 transition-all text-sm [&::-webkit-search-cancel-button]:appearance-none"
             />
-            {isPending && (
-              <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary animate-spin" />
-            )}
+            {isPending ? (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary animate-spin" />
+            ) : localSearch ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Clear search"
+                onClick={() => {
+                  setLocalSearch("");
+                  updateFilters({ q: "", page: 1 });
+                }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 sm:h-7 sm:w-7 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
           </form>
 
           {showExportPrint && (
@@ -564,7 +583,7 @@ export default function HistoryContent({
             />
           )}
         </div>
-        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10 overflow-x-auto no-scrollbar max-w-full">
+        <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-xl border border-border/40 overflow-x-auto no-scrollbar max-w-full sm:w-auto">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.key}
@@ -572,10 +591,10 @@ export default function HistoryContent({
               aria-pressed={statusFilter === tab.key}
               onClick={() => updateFilters({ status: tab.key, resolution: tab.key === "SETTLED" ? effectiveResolution : "", page: 1 })}
               className={cn(
-                "shrink-0 min-h-11 sm:min-h-0 rounded-lg px-3.5 sm:px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                "shrink-0 min-h-11 sm:min-h-0 sm:h-9 rounded-lg px-3.5 sm:px-3 text-xs font-semibold whitespace-nowrap transition-colors",
                 statusFilter === tab.key
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               )}
             >
               {tab.label}
@@ -587,7 +606,7 @@ export default function HistoryContent({
       {(isSettlementsTab || showExportPrint) && (
         <div className={cn("flex flex-wrap items-center justify-between gap-3 pt-0.5", !isSettlementsTab && "hidden sm:flex")}>
           {isSettlementsTab ? (
-            <div className="flex items-center gap-1 p-1 bg-muted/15 rounded-xl border border-border/10 overflow-x-auto no-scrollbar max-w-full" role="group" aria-label="Filter settlements by resolution">
+            <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/40 overflow-x-auto no-scrollbar max-w-full" role="group" aria-label="Filter settlements by resolution">
               {RESOLUTION_FILTERS.map((res) => (
                 <button
                   key={res.key}
@@ -595,9 +614,9 @@ export default function HistoryContent({
                   aria-pressed={effectiveResolution === res.key}
                   onClick={() => updateFilters({ resolution: res.key, page: 1 })}
                   className={cn(
-                    "shrink-0 min-h-11 sm:min-h-0 rounded-lg px-3.5 sm:px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
+                    "shrink-0 min-h-11 sm:min-h-0 sm:h-8 rounded-lg px-3.5 sm:px-3 text-xs font-semibold whitespace-nowrap transition-colors",
                     effectiveResolution === res.key
-                      ? "bg-background text-foreground shadow-xs border border-border/30"
+                      ? "bg-background text-foreground shadow-xs border border-border/40"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -617,7 +636,7 @@ export default function HistoryContent({
                 size="sm"
                 disabled={isExporting}
                 onClick={handleExportXlsx}
-                className="h-9 rounded-xl gap-1.5 text-xs font-bold"
+                className="h-9 rounded-lg gap-1.5 text-xs font-semibold"
               >
                 {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 Export (.xlsx)
@@ -627,7 +646,7 @@ export default function HistoryContent({
                 variant="outline"
                 size="sm"
                 onClick={() => window.print()}
-                className="h-9 rounded-xl gap-1.5 text-xs font-bold"
+                className="h-9 rounded-lg gap-1.5 text-xs font-semibold"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Print

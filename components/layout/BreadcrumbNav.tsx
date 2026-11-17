@@ -16,11 +16,10 @@ const ROUTE_LABELS: Record<string, string> = {
   "users": "User Directory",
   "policies": "System Policies",
   "audit": "Audit Logs",
-  "operations": "Operations",
   "profile": "My Profile",
-  "preferences": "Preferences",
   "security": "Security",
   "attendance": "Attendance Logs",
+  "notifications": "Notifications",
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,8 +38,7 @@ function formatSegment(segment: string, parentSegment?: string) {
 
   // Specific contextual overrides for "new" or "add" segments
   if (segment === "new" || segment === "add") {
-    if (parentSegment === "users") return "Invite User";
-    if (parentSegment === "catalog") return "Add Asset";
+    if (parentSegment === "inventory" || parentSegment === "catalog") return "Add Book";
     return "New Entry";
   }
 
@@ -70,7 +68,7 @@ export function BreadcrumbNav() {
   if (clean === "/dashboard" || clean === "/dashboard/") {
     return (
       <div className="flex items-center gap-2">
-        <h1 className="text-sm font-semibold tracking-tight text-foreground md:text-base">Dashboard</h1>
+        <h1 className="text-base font-bold tracking-tight text-foreground md:text-xl">Dashboard</h1>
       </div>
     );
   }
@@ -115,9 +113,9 @@ export function BreadcrumbNav() {
 
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
-      <h1 className="truncate text-sm font-bold tracking-tight text-foreground md:text-base">{title}</h1>
+      <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-xl">{title}</h1>
       {backHref && backLabel && (
-        <Link href={backHref} className="ml-1 hidden text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary sm:inline-flex items-center gap-1">
+        <Link href={backHref} className="ml-1 hidden text-xs font-medium text-muted-foreground transition-colors hover:text-primary sm:inline-flex items-center gap-1">
           <div className="h-1 w-1 rounded-full bg-border" />
           {backLabel}
         </Link>

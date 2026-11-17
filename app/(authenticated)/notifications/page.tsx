@@ -88,65 +88,50 @@ export default function NotificationsPage() {
   )
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4">
       <Tabs defaultValue="all" className="w-full space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 md:gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <TabsList aria-label="Filter notifications" className="group-data-[orientation=horizontal]/tabs:h-auto">
-              <TabsTrigger value="all" className="min-h-11 md:min-h-0 px-3">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="unread" className="min-h-11 md:min-h-0 px-3">
-                Unread
-                {unreadCount > 0 && (
-                  <span className="ml-2 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-                )}
-                {unreadCount > 0 && <span className="sr-only"> ({unreadCount})</span>}
-              </TabsTrigger>
-              <TabsTrigger value="read" className="min-h-11 md:min-h-0 px-3">
-                History
-              </TabsTrigger>
-            </TabsList>
+        <div className="flex flex-wrap md:flex-nowrap justify-between items-center gap-2.5 md:gap-3">
+          <TabsList aria-label="Filter notifications" className="order-1 group-data-[orientation=horizontal]/tabs:h-auto">
+            <TabsTrigger value="all" className="min-h-11 md:min-h-0 px-3">
+              All
+            </TabsTrigger>
+            <TabsTrigger value="unread" className="min-h-11 md:min-h-0 px-3">
+              Unread
+              {unreadCount > 0 && (
+                <span className="ml-2 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+              )}
+              {unreadCount > 0 && <span className="sr-only"> ({unreadCount})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="read" className="min-h-11 md:min-h-0 px-3">
+              History
+            </TabsTrigger>
+          </TabsList>
 
-            {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={markAllAsRead}
-                className="h-11 md:h-9 shrink-0 rounded-xl px-3 text-xs font-semibold md:hidden"
-              >
-                Clear unread
-              </Button>
-            )}
+          <div className="relative order-3 w-full md:order-2 md:w-64 md:ml-auto group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              type="search"
+              aria-label="Search all notifications"
+              placeholder="Filter events..."
+              className="h-11 md:h-9 pl-9 rounded-lg"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto md:flex-1 md:justify-end">
-            <div className="relative flex-1 md:max-w-xs group w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              <Input
-                type="search"
-                aria-label="Search all notifications"
-                placeholder="Filter events..."
-                className="h-11 md:h-10 pl-9 rounded-xl"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={markAllAsRead}
-                className="hidden md:inline-flex h-10 shrink-0 rounded-xl"
-              >
-                Clear unread
-              </Button>
-            )}
-          </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={markAllAsRead}
+              className="order-2 md:order-3 h-11 md:h-9 shrink-0 rounded-lg px-3 text-xs font-semibold"
+            >
+              Clear unread
+            </Button>
+          )}
         </div>
 
-        <div className="rounded-md border bg-card text-card-foreground shadow-sm">
+        <div className="rounded-xl border border-border/60 bg-card text-card-foreground shadow-xs overflow-hidden">
           <TabsContent value="all" className="m-0 focus-visible:outline-none">
              <NotificationList
                notifications={source}
@@ -154,7 +139,7 @@ export default function NotificationsPage() {
                onMarkRead={handleMarkRead}
                error={listError}
                onRetry={() => void refresh()}
-               emptyMessage={search ? 'No matches found' : undefined}
+               emptyMessage={search ? 'No matches found. Try another search keyword.' : "You're all caught up. Borrowing reminders and hold alerts will appear here."}
              />
              {loadMoreButton}
           </TabsContent>
@@ -165,7 +150,7 @@ export default function NotificationsPage() {
                onMarkRead={handleMarkRead}
                error={listError}
                onRetry={() => void refresh()}
-               emptyMessage={!isSearching && olderUnread > 0 ? 'Load older notifications to see the rest' : 'No unread notifications'}
+               emptyMessage={!isSearching && olderUnread > 0 ? 'Load older notifications to see the rest.' : 'No unread notifications right now.'}
              />
              {loadMoreButton}
           </TabsContent>
@@ -176,7 +161,7 @@ export default function NotificationsPage() {
                onMarkRead={handleMarkRead}
                error={listError}
                onRetry={() => void refresh()}
-               emptyMessage="No historical data"
+               emptyMessage="No read notification history yet."
              />
              {loadMoreButton}
           </TabsContent>

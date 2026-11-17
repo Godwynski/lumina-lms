@@ -12,8 +12,6 @@ import { getMe } from "@/lib/auth-helpers";
 import { isAccessBlocked as checkAccessBlocked, type Profile } from "@/lib/auth/permissions";
 import { redirect } from "next/navigation";
 
-import { Skeleton } from "@/components/ui/skeleton";
-
 export const metadata = {
   title: "STI College Alabang Library | Lumina LMS",
 };
@@ -64,22 +62,16 @@ const QUESTIONS = [
   },
   {
     q: "Where do I check a reservation or a due date?",
-    a: "On your dashboard. Reservations shows Ready for Pickup or your queue position, and Current Borrows shows when each book is due. Past loans are under Borrow History.",
+    a: "On your dashboard. Reservations shows Ready for Pickup or your queue position, and Current Borrows shows when each book is due. Past loans are under My Borrowing.",
   },
 ];
 
 const container = "mx-auto w-full max-w-6xl px-5 sm:px-8";
 
 function SignIn() {
+  const showDemo = isDemoModeEnabled();
   return (
-    <Suspense
-      fallback={
-        <>
-          <Skeleton className="h-12 w-full rounded-lg" />
-          {isDemoModeEnabled() && <Skeleton className="mt-5 h-[8.25rem] w-full rounded-lg opacity-40" />}
-        </>
-      }
-    >
+    <Suspense fallback={<Hero user={null} role={null} showDemo={showDemo} />}>
       <HeroSection />
     </Suspense>
   );
@@ -150,12 +142,12 @@ export default function Home() {
             </div>
           </ScrollProgress>
 
-          <ol className="md:col-start-1">
+          <ol className="md:col-start-1 divide-y divide-border/60">
             {STEPS.map((step, i) => (
-              <li key={step.title} className="flex flex-col justify-center py-6 md:min-h-[40vh] md:py-8">
-                <span className="text-sm font-bold tabular-nums text-muted-foreground">Step {i + 1}</span>
-                <h3 className="mt-1 text-xl font-bold tracking-tight text-foreground">{step.title}</h3>
-                <p className="mt-2 max-w-md text-pretty text-base text-muted-foreground">{step.body}</p>
+              <li key={step.title} className="flex flex-col justify-center py-5 sm:py-6 first:pt-2 last:pb-2">
+                <span className="text-xs font-semibold tabular-nums text-muted-foreground">Step {i + 1}</span>
+                <h3 className="mt-1 text-lg font-bold tracking-tight text-foreground">{step.title}</h3>
+                <p className="mt-1.5 max-w-md text-pretty text-sm sm:text-base text-muted-foreground leading-relaxed">{step.body}</p>
               </li>
             ))}
           </ol>

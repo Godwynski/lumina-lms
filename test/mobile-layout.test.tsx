@@ -800,10 +800,10 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
       await new Promise((r) => setTimeout(r, 30));
     });
 
-    const table = container.querySelector('table');
-    expect(table).toHaveClass('hidden', 'md:table');
+    const desktopTableWrapper = container.querySelector('div.hidden.lg\\:block');
+    expect(desktopTableWrapper?.querySelector('table')).toBeInTheDocument();
 
-    const toggleBtn = container.querySelector('div.md\\:hidden button[aria-expanded]') as HTMLButtonElement;
+    const toggleBtn = container.querySelector('div.lg\\:hidden button[aria-expanded]') as HTMLButtonElement;
     expect(toggleBtn).toBeInTheDocument();
     expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
 

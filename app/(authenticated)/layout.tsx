@@ -98,7 +98,7 @@ export default async function ProtectedLayout({
               <div
                 id="main-content"
                 tabIndex={-1}
-                className="mx-auto mt-2 w-full max-w-[1450px] px-3 py-3 md:mt-0 md:pt-2 md:px-6 md:pb-6 outline-none"
+                className="mx-auto mt-2 w-full max-w-7xl px-3 py-3 md:mt-0 md:pt-2 md:px-6 md:pb-6 outline-none"
               >
                 <NavAnimatePresence>
                   {children}

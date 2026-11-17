@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import {
   QrCode,
+  User,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -74,6 +76,13 @@ export default function DigitalCard({
   );
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "ID";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
 function CardFront({
   fullName,
   cardNumber,
@@ -86,13 +95,15 @@ function CardFront({
   academicYear,
   onQrClick,
 }: Omit<DigitalCardProps, "side">) {
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const statusConfig = {
     active: "status-success",
     pending: "status-warning",
     suspended: "status-danger",
     expired: "status-neutral",
   };
-
+  const initials = getInitials(fullName);
+  const showAvatarImage = Boolean(avatarUrl) && !avatarFailed;
 
   return (
     <div className={cn("flex w-full items-center justify-center", exportMode ? "p-0" : "p-1 sm:p-3")}>
@@ -100,29 +111,31 @@ function CardFront({
         id={cardId}
         className={cn(
           "relative overflow-hidden rounded-none border border-foreground bg-[#e6e6e6]",
-          exportMode ? "max-w-none shadow-none" : "min-h-[260px] sm:min-h-[auto] sm:aspect-[1.586/1] w-full max-w-[560px] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+          exportMode
+            ? "max-w-none shadow-none"
+            : "min-h-[250px] lg:aspect-[1.586/1] w-full max-w-[560px] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
         )}
         style={exportMode ? { width: 560, height: 353 } : undefined}
       >
         <div className={cn(
           "grid items-stretch border-b border-foreground bg-[#0068b3]",
-          exportMode ? "grid-cols-[96px_1fr_auto]" : "grid-cols-[64px_1fr_auto] sm:grid-cols-[96px_1fr_auto]"
+          exportMode ? "grid-cols-[96px_1fr_auto]" : "grid-cols-[64px_1fr_auto] lg:grid-cols-[96px_1fr_auto]"
         )}>
           <div className={cn(
             "flex items-center justify-center border-r border-foreground bg-[#ffdb00]",
-            exportMode ? "p-2" : "p-1 sm:p-2"
+            exportMode ? "p-2" : "p-1 lg:p-2"
           )}>
             <div className="text-center leading-none text-[#004b8c]">
-              <p className={cn("font-black", exportMode ? "text-3xl" : "text-lg sm:text-3xl")}>STI</p>
-              <p className={cn("mt-0.5 font-bold tracking-[0.12em]", exportMode ? "text-[10px]" : "text-[7px] sm:text-[10px]")}>ALABANG</p>
+              <p className={cn("font-black", exportMode ? "text-3xl" : "text-lg lg:text-3xl")}>STI</p>
+              <p className={cn("mt-0.5 font-bold tracking-[0.12em]", exportMode ? "text-[10px]" : "text-[8px] lg:text-[10px]")}>ALABANG</p>
             </div>
           </div>
-          <div className={cn("flex items-center justify-center px-2", exportMode ? "py-3" : "py-2 sm:py-3")}>
-            <h2 className={cn("text-center font-sans font-bold tracking-tight text-white", exportMode ? "text-[26px]" : "text-[clamp(18px,3.5vw,30px)]")}>LIBRARY CARD</h2>
+          <div className={cn("flex items-center justify-center px-2", exportMode ? "py-3" : "py-2 lg:py-3")}>
+            <h2 className={cn("text-center font-sans font-bold tracking-tight text-white", exportMode ? "text-[26px]" : "text-lg sm:text-xl lg:text-[26px]")}>LIBRARY CARD</h2>
           </div>
-          <div className={cn("flex items-start justify-end", exportMode ? "p-2" : "p-1.5 sm:p-2")}>
+          <div className={cn("flex items-start justify-end", exportMode ? "p-2" : "p-1.5 lg:p-2")}>
             {status !== "active" && (
-              <span className={cn("inline-flex rounded border font-semibold uppercase", exportMode ? "px-1.5 py-0.5 text-[10px]" : "px-1.5 py-0.5 text-[9px] sm:text-[10px]", statusConfig[status])}>
+              <span className={cn("inline-flex rounded border font-semibold uppercase", exportMode ? "px-1.5 py-0.5 text-[10px]" : "px-1.5 py-0.5 text-[10px]", statusConfig[status])}>
                 {status}
               </span>
             )}
@@ -130,38 +143,40 @@ function CardFront({
         </div>
 
         <div className={cn(
-          "grid gap-2 p-2",
-          exportMode 
-            ? "h-[calc(100%-72px)] grid-cols-[150px_1fr_102px] gap-4 p-4" 
-            : "h-[calc(100%-52px)] grid-cols-[80px_1fr_68px] sm:h-[calc(100%-72px)] sm:grid-cols-[150px_1fr_102px] sm:gap-4 sm:p-4"
+          "grid items-center",
+          exportMode
+            ? "h-[calc(100%-72px)] grid-cols-[150px_1fr_102px] gap-4 p-4"
+            : "grid-cols-[80px_1fr_72px] gap-2.5 p-2.5 sm:grid-cols-[100px_1fr_84px] sm:gap-3 sm:p-3 lg:h-[calc(100%-72px)] lg:grid-cols-[150px_1fr_102px] lg:gap-4 lg:p-4"
         )}>
           <div className="flex flex-col justify-start">
             <div className={cn(
               "w-full overflow-hidden border border-foreground bg-card",
-              exportMode ? "h-[172px]" : "h-[110px] sm:h-[172px]"
+              exportMode ? "h-[172px]" : "h-[104px] sm:h-[124px] lg:h-[172px]"
             )}>
-              {avatarUrl ? (
+              {showAvatarImage ? (
                 <Image
-                  src={avatarUrl}
+                  src={avatarUrl!}
                   alt={fullName}
                   width={150}
                   height={172}
                   className="h-full w-full object-cover"
                   priority
                   unoptimized
+                  onError={() => setAvatarFailed(true)}
                 />
               ) : (
                 <div className={cn(
-                  "flex h-full w-full items-center justify-center font-semibold text-muted-foreground",
-                  exportMode ? "text-base" : "text-xs sm:text-base"
+                  "flex h-full w-full flex-col items-center justify-center gap-1 bg-primary/10 text-primary",
+                  exportMode ? "text-2xl" : "text-sm sm:text-base lg:text-2xl"
                 )}>
-                  PHOTO
+                  <User className="h-5 w-5 opacity-70 lg:h-6 lg:w-6" aria-hidden="true" />
+                  <span className="font-bold tracking-tight">{initials}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className={cn("flex min-w-0 flex-col justify-center", exportMode ? "gap-5" : "gap-3 sm:gap-5")}>
+          <div className={cn("flex min-w-0 flex-col justify-center", exportMode ? "gap-5" : "gap-2.5 sm:gap-3 lg:gap-5")}>
             <FieldLine label="Name" value={fullName} exportMode={exportMode} />
             <FieldLine label="Program" value={department} exportMode={exportMode} />
             <FieldLine label="Academic Year" exportMode={exportMode} value={academicYear || (() => {
@@ -174,7 +189,7 @@ function CardFront({
             })()} />
           </div>
 
-          <div className={cn("flex flex-col items-center justify-start", exportMode ? "gap-2" : "gap-1.5 sm:gap-2")}>
+          <div className={cn("flex flex-col items-center justify-start", exportMode ? "gap-2" : "gap-1.5 lg:gap-2")}>
             <button
               type="button"
               onClick={onQrClick}
@@ -195,14 +210,14 @@ function CardFront({
                   unoptimized
                 />
               ) : (
-                <div className={cn("flex w-full items-center justify-center", exportMode ? "h-[92px]" : "h-[60px] sm:h-[92px]")}>
+                <div className={cn("flex w-full items-center justify-center", exportMode ? "h-[92px]" : "h-[60px] sm:h-[72px] lg:h-[92px]")}>
                   <QrCode className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
             </button>
             <div className="flex flex-col items-center leading-none">
-              <p className={cn("font-mono font-black tracking-tighter text-foreground break-all text-center", exportMode ? "text-[14px]" : "text-[11px] sm:text-[14px]")}>{cardNumber}</p>
-              <p className={cn("mt-0.5 text-center font-bold uppercase tracking-tight text-foreground", exportMode ? "text-[8px]" : "text-[6px] sm:text-[8px]")}>Scan</p>
+              <p className={cn("font-mono font-bold tracking-tight text-foreground break-all text-center", exportMode ? "text-[14px]" : "text-[10px] sm:text-xs lg:text-[14px]")}>{cardNumber}</p>
+              <p className={cn("mt-0.5 text-center font-bold uppercase tracking-tight text-foreground", exportMode ? "text-[8px]" : "text-[7px] lg:text-[8px]")}>Scan</p>
             </div>
           </div>
         </div>
@@ -213,16 +228,16 @@ function CardFront({
 
 function FieldLine({ label, value, exportMode }: { label: string; value: string; exportMode?: boolean }) {
   return (
-    <div className="flex flex-col items-center">
-      <div className="w-full border-b border-foreground/40 pb-0.5 text-center">
+    <div className="flex flex-col items-center min-w-0">
+      <div className="w-full border-b border-foreground/40 pb-0.5 text-center min-w-0">
         <p className={cn(
-          "font-sans font-bold leading-tight text-foreground whitespace-normal break-words line-clamp-2",
-          exportMode ? "text-[18px]" : "text-[12px] sm:text-[16px] md:text-[18px]"
+          "font-sans font-bold leading-tight text-foreground line-clamp-2",
+          exportMode ? "text-[18px]" : "text-xs sm:text-sm lg:text-[17px]"
         )}>{value}</p>
       </div>
       <p className={cn(
-        "pt-0.5 text-center font-sans font-bold uppercase tracking-widest text-foreground",
-        exportMode ? "text-[11px]" : "text-[9px] sm:text-[11px]"
+        "pt-0.5 text-center font-sans font-bold uppercase tracking-wider text-foreground",
+        exportMode ? "text-[11px]" : "text-[9px] sm:text-[10px] lg:text-[11px]"
       )}>{label}</p>
     </div>
   );

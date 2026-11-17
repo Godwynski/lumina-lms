@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { PackageSearch, Plus } from "lucide-react";
+import { PackageSearch, Plus, SearchX } from "lucide-react";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { getCategoryName } from "@/lib/utils";
 import type { Book } from "@/lib/types";
@@ -12,30 +11,17 @@ import type { Book } from "@/lib/types";
 interface InventoryTableProps {
   books: Book[];
   canManage?: boolean;
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
 }
 
-export function InventoryTable({ books, canManage = true }: InventoryTableProps) {
+export function InventoryTable({
+  books,
+  canManage = true,
+  hasActiveFilters = false,
+  onClearFilters,
+}: InventoryTableProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-
-  if (books.length === 0) {
-    return (
-      <EmptyState
-        icon={PackageSearch}
-        title="Vault is Empty"
-        description="No physical assets were found matching your criteria. Start by populating your catalog."
-        action={
-          canManage
-            ? {
-                href: "/inventory/add",
-                label: "Initialize First Entry",
-                icon: Plus,
-              }
-            : undefined
-        }
-        contentClassName="min-h-[500px]"
-      />
-    );
-  }
 
   const columns: LuminaColumn<Book>[] = [
     {
@@ -43,9 +29,9 @@ export function InventoryTable({ books, canManage = true }: InventoryTableProps)
       mobileMain: true,
       accessor: (book) => (
         <div className="min-w-0">
-          <p className="font-bold text-foreground line-clamp-1">{book.title}</p>
-          {book.section && (
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{book.section}</p>
+          <p className="font-semibold text-foreground line-clamp-1">{book.title}</p>
+          {book.location && (
+            <p className="text-xs text-muted-foreground truncate">{book.location}</p>
           )}
         </div>
       ),
@@ -59,7 +45,7 @@ export function InventoryTable({ books, canManage = true }: InventoryTableProps)
     {
       header: "ISBN",
       accessor: (book) => (
-        <span className="font-mono text-xs text-foreground/80">{book.isbn || "—"}</span>
+        <span className="font-mono text-xs text-foreground/80 whitespace-nowrap">{book.isbn || "—"}</span>
       ),
     },
     {
@@ -73,7 +59,7 @@ export function InventoryTable({ books, canManage = true }: InventoryTableProps)
       accessor: (book) => {
         const total = book.total_copies ?? book.available_copies;
         return (
-          <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+          <span className="font-mono text-xs font-semibold tabular-nums text-foreground whitespace-nowrap">
             {book.available_copies} / {total}
           </span>
         );
@@ -81,12 +67,13 @@ export function InventoryTable({ books, canManage = true }: InventoryTableProps)
     },
     {
       header: "Status",
+      className: "whitespace-nowrap",
       accessor: (book) => {
         if (!book.is_active) {
           return (
             <Badge
               variant="outline"
-              className="rounded-lg px-2 py-0 h-5 text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+              className="whitespace-nowrap rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30"
             >
               Archived
             </Badge>
@@ -94,13 +81,13 @@ export function InventoryTable({ books, canManage = true }: InventoryTableProps)
         }
         if (book.available_copies === 0) {
           return (
-            <Badge variant="destructive" className="rounded-lg px-2 py-0 h-5 text-[11px] font-bold uppercase tracking-wider">
+            <Badge variant="destructive" className="whitespace-nowrap rounded-lg px-2.5 py-0.5 text-xs font-semibold">
               Out of Stock
             </Badge>
           );
         }
         return (
-          <Badge variant="secondary" className="rounded-lg px-2 py-0 h-5 text-[11px] font-bold uppercase tracking-wider bg-primary/10 text-primary">
+          <Badge variant="secondary" className="whitespace-nowrap rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary">
             Available
           </Badge>
         );
@@ -108,12 +95,33 @@ export function InventoryTable({ books, canManage = true }: InventoryTableProps)
     },
   ];
 
+  const emptyState = hasActiveFilters
+    ? {
+        variant: "no-results" as const,
+        icon: SearchX,
+        title: "No matches found",
+        description: "No inventory items match your current search or filters.",
+        action: onClearFilters
+          ? { label: "Clear all filters", onClick: onClearFilters }
+          : undefined,
+      }
+    : {
+        variant: "first-use" as const,
+        icon: PackageSearch,
+        title: "No books in inventory yet",
+        description: "No physical assets have been added to the catalog yet.",
+        action: canManage
+          ? { href: "/inventory/add", label: "Add Book", icon: Plus }
+          : undefined,
+      };
+
   return (
     <>
       <LuminaTable
         data={books}
         columns={columns}
         onRowClick={(book) => setSelectedBook(book)}
+        emptyState={emptyState}
       />
 
       {selectedBook && (

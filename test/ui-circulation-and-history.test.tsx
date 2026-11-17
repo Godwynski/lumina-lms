@@ -1199,7 +1199,7 @@ describe('Circulation & History UI Components', () => {
           hasExistingReservation={false}
         />
       );
-      expect(handle.container).toHaveTextContent('Reserve to Borrow');
+      expect(handle.container).toHaveTextContent('Join Waitlist');
 
       await handle.rerender(
         <ReserveTitleButton

@@ -4,6 +4,7 @@ import { m } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { 
+  BookOpen,
   Sparkles, 
   Ticket,
 } from "lucide-react";
@@ -31,7 +32,9 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
   const [modalOpen, setModalOpen] = useState(false);
   // Derived from the prop so an updated cover shows up; only a failed URL falls back.
   const [failedCover, setFailedCover] = useState<string | null>(null);
-  const imgSrc = book.cover_url && book.cover_url !== failedCover ? book.cover_url : "/images/default-book-cover.png";
+  const [loadedCover, setLoadedCover] = useState<string | null>(null);
+  const activeCover = book.cover_url && book.cover_url !== failedCover ? book.cover_url : null;
+  const isCoverLoaded = Boolean(activeCover && loadedCover === activeCover);
   
   return (
     <m.div
@@ -56,12 +59,12 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                 <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{book.section || "General"}</span>
+                 <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">{book.section || "General"}</span>
                  {reservedInfo && (
                     <Badge
                       variant={isReady ? "default" : "outline"}
                       className={cn(
-                        "shrink-0 text-[11px] px-1.5 py-0 h-[18px] gap-1 font-black",
+                        "shrink-0 text-xs px-1.5 py-0 h-5 gap-1 font-semibold",
                         isReady
                           ? "bg-emerald-700 hover:bg-emerald-700 text-white border-transparent"
                           : "border-primary/30 text-primary bg-primary/5"
@@ -74,22 +77,33 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
               </div>
             </div>
 
-            <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border/40 bg-muted/20 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
-              <Image 
-                src={imgSrc} 
-                alt=""
-                fill 
-                className="object-cover" 
-                sizes="80px"
-                priority={priority}
-                unoptimized
-                onError={() => setFailedCover(book.cover_url ?? null)}
-              />
+            <div className="relative flex h-24 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-primary/5 text-primary/40 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
+              <BookOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {activeCover && (
+                <Image 
+                  src={activeCover} 
+                  alt=""
+                  fill 
+                  className={`object-cover transition-opacity duration-200 ${isCoverLoaded ? "opacity-100" : "opacity-0"}`} 
+                  sizes="80px"
+                  priority={priority}
+                  unoptimized
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+                      setFailedCover(book.cover_url ?? null);
+                    } else {
+                      setLoadedCover(activeCover);
+                    }
+                  }}
+                  onError={() => setFailedCover(book.cover_url ?? null)}
+                />
+              )}
             </div>
           </div>
 
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/30">
-            <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0 h-5 text-[11px] font-black tracking-tight">
+            <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-tight tabular-nums">
               {book.available_copies}<span className="sr-only"> available</span> / {book.total_copies}<span className="sr-only"> total copies</span>
             </Badge>
             
@@ -103,7 +117,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
                 holdExpiresAt={reservedInfo?.holdExpiresAt}
                 variant="outline"
                 size="sm"
-                className="h-7 text-[11px] px-2 rounded-lg"
+                className="h-8 text-xs px-2.5 rounded-lg"
                 onReserveSuccess={onReserveSuccess}
               />
             </div>

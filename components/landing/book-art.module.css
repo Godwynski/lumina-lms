@@ -1,16 +1,17 @@
 /*
- * Every state of the book is a pure function of --p (0 = closed, 1 = open with the ribbon down).
- * --p falls back to 1 (the finished still), so no JS, reduced motion and failed scripts all show the open book.
- * Timeline: cover 0.05-0.25, first page 0.3-0.5, second page 0.5-0.7, ribbon 0.7-1.
+ * Every state of the book is a pure function of --p (0 = initial scroll position, 1 = end of section).
+ * --open maps 0..1 into 0.5..1.0 so the initial state shows an open two-page spread rather than a closed dark board,
+ * while scrolling turns the remaining leaf and draws the bookmark ribbon.
+ * Without JS or with reduced motion, --p falls back to 1 (--open = 1, the finished open spread).
  */
-/* A closed book sits on the right half; slide it so it stays centred until it opens. */
 .shift {
-  transform: translateX(calc((1 - clamp(0, (var(--p, 1) - 0.05) * 5, 1)) * -71px));
+  --open: calc(0.5 + var(--p, 1) * 0.5);
+  transform: translateX(calc((1 - clamp(0, (var(--open) - 0.05) * 5, 1)) * -71px));
 }
 
 /* The curved page block only shows once the cover starts to lift. */
 .spread {
-  opacity: clamp(0, (var(--p, 1) - 0.05) * 12, 1);
+  opacity: clamp(0, (var(--open) - 0.05) * 12, 1);
 }
 
 /* A leaf turning about the spine: its front narrows to nothing, then its back widens on the left. */
@@ -19,14 +20,14 @@
   transform-origin: 160px 0;
 }
 .front {
-  transform: scaleX(clamp(0, 1 - (var(--p, 1) - var(--a)) * 10, 1));
+  transform: scaleX(clamp(0, 1 - (var(--open) - var(--a)) * 10, 1));
 }
 .back {
-  transform: scaleX(clamp(0, (var(--p, 1) - var(--a)) * 10 - 1, 1));
+  transform: scaleX(clamp(0, (var(--open) - var(--a)) * 10 - 1, 1));
 }
 
 /* pathLength is 1, so the ribbon is drawn out of the spine as the offset falls to 0. */
 .ribbon {
   stroke-dasharray: 1;
-  stroke-dashoffset: clamp(0, 1 - (var(--p, 1) - 0.7) * 3.4, 1);
+  stroke-dashoffset: clamp(0, 1 - (var(--open) - 0.7) * 3.4, 1);
 }

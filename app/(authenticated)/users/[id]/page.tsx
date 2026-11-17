@@ -5,7 +5,7 @@ import { UserDetailClient } from "./UserDetailClient";
 import { mapProfileToUser } from "@/lib/utils/mappers";
 import { getBorrowingHistory } from "@/lib/actions/history";
 
-export const metadata = { title: "User details" };
+export const metadata = { title: "User Profile" };
 
 // getMe() is cache()-memoized — reuses auth already fetched by the layout.
 // The profile lookup for the *target* user is the only DB call needed.

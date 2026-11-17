@@ -51,7 +51,7 @@ export function AdminTableShell({
         )}>
           <div className="flex flex-col gap-1.5">
             {title && (
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
                 {title}
               </h2>
             )}
@@ -70,16 +70,16 @@ export function AdminTableShell({
       {feedback}
 
       {controls && (
-        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/5 p-2 rounded-3xl border border-border/5 backdrop-blur-[2px]">
+        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/20 p-2.5 rounded-xl border border-border/50">
           {controls}
         </div>
       )}
 
       <div className={cn(
-        "overflow-hidden transition-all duration-500",
+        "overflow-hidden transition-all duration-300",
         isGhost 
           ? "rounded-none border-none bg-transparent shadow-none" 
-          : "rounded-3xl border border-border/10 bg-card/40 backdrop-blur-sm"
+          : "rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm"
       )}>
         <div className={cn("relative group/table", !isGhost && "overflow-hidden")}>
           <div className={cn(
@@ -96,7 +96,7 @@ export function AdminTableShell({
         {pagination && (
           <div className={cn(
             "p-4",
-            isGhost ? "mt-6" : "border-t border-border/10 bg-muted/10"
+            isGhost ? "mt-6" : "border-t border-border/40 bg-muted/20"
           )}>
             {pagination}
           </div>

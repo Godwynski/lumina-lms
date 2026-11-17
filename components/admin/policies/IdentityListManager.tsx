@@ -176,7 +176,7 @@ export function IdentityListManager({
             <GraduationCap className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               Overview
             </p>
             <h4 className="text-sm font-bold text-foreground tracking-tight">

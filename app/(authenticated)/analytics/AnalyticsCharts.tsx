@@ -83,18 +83,18 @@ export function TrendChart({ data, title, color, onSelect }: TrendChartProps) {
       
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
         {onSelect && (
-          <span className="text-[11px] font-black text-primary group-hover/chart:text-primary transition-all duration-300 uppercase tracking-widest flex items-center gap-1 select-none translate-x-1 group-hover/chart:translate-x-0">
+          <span className="text-xs font-semibold text-primary flex items-center gap-1 select-none">
             View Details →
           </span>
         )}
       </div>
       
       <div className="flex-1 w-full relative z-10 min-h-0">
-        <div className={cn("w-full h-full transition-all duration-1000", !hasData && "grayscale")}>
+        <div className={cn("w-full h-full transition-all duration-300", !hasData && "grayscale")}>
           {mounted && (
             <ResponsiveContainer width="100%" height="100%" debounce={100} minWidth={0} minHeight={0} initialDimension={{ width: 100, height: 100 }}>
               <LineChart onClick={(state) => { if (state.activeTooltipIndex == null) return; const point = data[Number(state.activeTooltipIndex)]; if (point) onSelect?.(point); }} data={ghostData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -102,34 +102,35 @@ export function TrendChart({ data, title, color, onSelect }: TrendChartProps) {
                   strokeDasharray="8 8" 
                   vertical={true} 
                   horizontal={true}
-                  stroke="hsl(var(--border) / 0.1)" 
+                  stroke="hsl(var(--border) / 0.25)" 
                 />
                 <XAxis 
                   dataKey="label" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
-                  dy={15}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 600 }}
+                  dy={12}
                   interval="preserveStartEnd"
                   hide={!hasData}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 600 }}
                   hide={!hasData}
                   domain={[0, 'auto']}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--primary) / 0.2)', strokeWidth: 1 }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--primary) / 0.25)', strokeWidth: 1 }} />
                 
                 <Line 
                   type="monotone" 
                   dataKey="count" 
                   stroke={hasData ? color : 'hsl(var(--muted-foreground) / 0.6)'} 
-                  strokeWidth={3}
-                  dot={hasData ? { r: 3, fill: color, strokeWidth: 0 } : { r: 2, fill: 'hsl(var(--muted-foreground) / 0.5)', strokeWidth: 0 }}
+                  strokeWidth={2.5}
+                  dot={hasData ? { r: 3.5, fill: color, strokeWidth: 0 } : { r: 2, fill: 'hsl(var(--muted-foreground) / 0.5)', strokeWidth: 0 }}
                   activeDot={hasData ? { r: 5, strokeWidth: 0, fill: color } : false}
-                  animationDuration={2000}
+                  connectNulls
+                  isAnimationActive={false}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -154,13 +155,13 @@ interface CategoryPieChartProps {
 }
 
 const CATEGORY_COLORS = [
-  'hsl(var(--primary))', 
-  'hsl(var(--primary) / 0.85)', 
-  'hsl(var(--primary) / 0.7)', 
-  'hsl(var(--primary) / 0.55)', 
-  'hsl(var(--primary) / 0.4)', 
-  'hsl(var(--primary) / 0.25)', 
-  'hsl(var(--primary) / 0.15)'
+  'hsl(var(--primary))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--primary) / 0.55)',
 ];
 
 export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProps) {
@@ -175,17 +176,17 @@ export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProp
 
   return (
     <>
-    <div className="w-full h-[280px] relative flex flex-col border border-border/40 rounded-2xl p-4 bg-muted/[0.02] overflow-hidden transition-all duration-300">
+    <div className="w-full min-h-[280px] relative flex flex-col border border-border/40 rounded-2xl p-4 bg-muted/[0.02] overflow-hidden transition-all duration-300">
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.01] to-transparent pointer-events-none" />
       
       <div className="flex items-center justify-between mb-2 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 transition-all duration-500" />
         </div>
       </div>
 
-      <div className="flex-1 relative z-10 min-h-0">
+      <div className="relative z-10 h-[185px] w-full">
         {mounted && (
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <PieChart>
@@ -193,12 +194,12 @@ export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProp
                 data={hasData ? data : [{ name: 'Empty', value: 1 }]}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={hasData ? 6 : 0}
+                innerRadius={56}
+                outerRadius={78}
+                paddingAngle={hasData ? 4 : 0}
                 onClick={(_, index) => { if (hasData) onSelect?.(data[index].name); }}
                 dataKey="value"
-                animationDuration={1000}
+                isAnimationActive={false}
                 stroke="none"
               >
                 {hasData ? data.map((_, index) => (
@@ -208,7 +209,7 @@ export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProp
                     className="hover:opacity-80 transition-opacity cursor-pointer outline-none"
                   />
                 )) : (
-                  <Cell fill="hsl(var(--muted) / 0.1)" />
+                  <Cell fill="hsl(var(--muted) / 0.25)" />
                 )}
               </Pie>
             </PieChart>
@@ -216,26 +217,26 @@ export function CategoryPieChart({ data, title, onSelect }: CategoryPieChartProp
         )}
         
         {/* Center Label */}
-        <div className="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] flex flex-col items-center pointer-events-none mt-2">
-          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none">
+          <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
             {hasData ? 'Total' : 'No Data'}
           </span>
-          <span className={cn("text-lg font-black text-foreground transition-all duration-700", !hasData && "opacity-40 scale-90")}>
+          <span className={cn("text-lg font-bold text-foreground", !hasData && "text-muted-foreground")}>
             {hasData ? total : '0'}
           </span>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2 min-h-[40px] max-h-[70px] overflow-y-auto custom-scrollbar">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-2 pt-1">
         {hasData ? data.map((entry, index) => (
-          <button type="button" onClick={() => onSelect?.(entry.name)} key={entry.name} className="flex min-h-6 min-w-6 items-center justify-center gap-1.5 rounded hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
-            <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[80px]">{entry.name}</span>
-            <span className="text-[11px] font-black text-foreground/60">{entry.value}</span>
+          <button type="button" onClick={() => onSelect?.(entry.name)} key={entry.name} className="flex min-h-6 min-w-6 items-center justify-center gap-1.5 rounded px-1 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} />
+            <span className="text-xs font-medium text-muted-foreground">{entry.name}</span>
+            <span className="text-xs font-semibold text-foreground tabular-nums">{entry.value}</span>
           </button>
         )) : (
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground italic">Waiting for activity...</span>
+            <span className="text-xs font-medium text-muted-foreground italic">Waiting for activity...</span>
           </div>
         )}
 
@@ -290,13 +291,13 @@ export function PeakHoursBarChart({ data, title, color, onSelect }: PeakHoursBar
     <div className="w-full h-[280px] flex flex-col group/chart border border-border/40 rounded-2xl p-4 bg-muted/[0.02] relative overflow-hidden transition-all duration-300">
       <div className="flex items-center justify-between mb-6 px-1 relative z-10">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">{title}</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
           <div className="h-0.5 w-4 bg-primary/40 group-hover/chart:w-8 transition-all duration-500" />
         </div>
       </div>
       
       <div className="flex-1 w-full relative z-10 min-h-0">
-        <div className={cn("w-full h-full transition-all duration-1000", !hasData && "grayscale")}>
+        <div className={cn("w-full h-full transition-all duration-300", !hasData && "grayscale")}>
           {mounted && (
             <ResponsiveContainer width="100%" height="100%" debounce={100} minWidth={0} minHeight={0}>
               <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -304,19 +305,19 @@ export function PeakHoursBarChart({ data, title, color, onSelect }: PeakHoursBar
                   strokeDasharray="8 8" 
                   vertical={false} 
                   horizontal={true}
-                  stroke="hsl(var(--border) / 0.1)" 
+                  stroke="hsl(var(--border) / 0.25)" 
                 />
                 <XAxis 
                   dataKey="hour" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 600 }}
                   dy={10}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 700 }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 600 }}
                   domain={[0, 'auto']}
                   allowDecimals={false}
                 />
@@ -325,7 +326,7 @@ export function PeakHoursBarChart({ data, title, color, onSelect }: PeakHoursBar
                   dataKey="count" 
                   fill={color} 
                   radius={[4, 4, 0, 0]}
-                  animationDuration={1500}
+                  isAnimationActive={false}
                 />
               </BarChart>
             </ResponsiveContainer>

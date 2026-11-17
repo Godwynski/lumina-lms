@@ -102,21 +102,22 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 rounded-3xl border border-border/40 bg-card/30 p-6 w-full sm:w-64 shadow-sm transition-all hover:bg-card/40 group/avatar">
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/60 bg-muted/20 p-6 w-full sm:w-60 shrink-0 shadow-xs transition-colors hover:bg-muted/30 group/avatar">
       <div className="relative">
-        <Avatar className="h-32 w-32 rounded-3xl border-4 border-background shadow-xl transition-transform duration-500 group-hover/avatar:scale-[1.02]">
+        <Avatar className="h-32 w-32 rounded-2xl border-4 border-background shadow-md transition-transform duration-500 group-hover/avatar:scale-[1.02]">
           <AvatarImage src={avatarUrl || undefined} alt={fullName || "Profile"} className="object-cover" />
-          <AvatarFallback className="rounded-3xl bg-muted text-2xl font-black text-muted-foreground">
+          <AvatarFallback className="rounded-2xl bg-muted text-2xl font-bold text-muted-foreground">
             {(fullName || "U").charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
 
         {/* Upload Overlay */}
-        <button 
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className={cn(
-            "absolute inset-0 flex flex-col items-center justify-center bg-black/75 rounded-3xl opacity-0 group-hover/avatar:opacity-100 focus-visible:opacity-100 transition-all duration-300 backdrop-blur-[2px]",
+            "absolute inset-0 flex flex-col items-center justify-center bg-black/75 rounded-2xl opacity-0 group-hover/avatar:opacity-100 focus-visible:opacity-100 transition-all duration-300 backdrop-blur-[2px]",
             isUploading && "opacity-100 bg-black/60 cursor-not-allowed"
           )}
         >
@@ -124,19 +125,20 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
             <><Loader2 className="h-8 w-8 text-white animate-spin" /><span className="sr-only">Uploading photo</span></>
           ) : (
             <>
-              <Camera className="h-8 w-8 text-white mb-1" />
-              <span className="text-[11px] font-black uppercase tracking-tighter text-white">Change Photo</span>
+              <Camera className="h-7 w-7 text-white mb-1" />
+              <span className="text-xs font-semibold text-white">Change photo</span>
             </>
           )}
         </button>
       </div>
       
-      <div className="text-center">
-        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/80 mb-1">Profile Identity</p>
-        <button 
+      <div className="text-center space-y-1">
+        <p className="text-xs font-semibold text-foreground">Profile Identity</p>
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="text-[11px] text-primary font-bold hover:underline disabled:opacity-50"
+          className="text-xs text-primary font-medium hover:underline disabled:opacity-50"
         >
           {isUploading ? "Processing..." : "Click to update photo"}
         </button>

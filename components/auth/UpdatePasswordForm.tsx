@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { Logo } from "@/components/layout/Logo";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -45,15 +44,13 @@ export function UpdatePasswordForm({
 
   return (
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
-      <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
+      <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm rounded-2xl">
         <CardHeader className="space-y-4 pb-5">
-          <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
-            <Logo size={20} />
-            <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-          </Link>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Set new password</CardTitle>
-            <CardDescription className="text-sm text-muted-foreground">Enter a secure password to complete the reset process.</CardDescription>
+            <CardTitle className="text-xl font-bold tracking-tight text-foreground">Set a new password for your account.</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Enter a secure password to complete the reset process.
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -66,6 +63,7 @@ export function UpdatePasswordForm({
                   autoComplete="new-password"
                   type={showPassword ? "text" : "password"}
                   required
+                  aria-describedby="password-rules"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-11 rounded-lg border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:bg-background focus-visible:ring-ring pr-10"
@@ -81,6 +79,9 @@ export function UpdatePasswordForm({
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </Button>
               </div>
+              <p id="password-rules" className="text-xs text-muted-foreground leading-relaxed">
+                Password rules: at least 6 characters, combining letters, numbers, and symbols.
+              </p>
             </div>
 
             <Button
@@ -93,6 +94,14 @@ export function UpdatePasswordForm({
             </Button>
             {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
           </form>
+
+          <Link
+            href="/"
+            className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft size={14} />
+            Back to sign in
+          </Link>
         </CardContent>
       </Card>
     </div>

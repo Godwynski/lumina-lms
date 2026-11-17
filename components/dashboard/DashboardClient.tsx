@@ -4,15 +4,14 @@ import type { User } from '@supabase/supabase-js';
 import { 
   Library, 
   Users, 
-  ScrollText, 
-  Settings, 
   RefreshCw, 
   BookOpen, 
   UserCheck, 
-  BarChart3, 
   AlertTriangle, 
   ArrowRight, 
-  BookMarked
+  ArrowUpRight,
+  BookMarked,
+  ChevronDown,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { CardLink, CardButton } from '@/components/ui/card-action';
@@ -72,16 +71,30 @@ interface DashboardProps {
 }
 
 function RecentBookCover({ src }: { src?: string | null }) {
-  const [imgSrc, setImgSrc] = useState(src || "/images/default-book-cover.png");
+  const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const imgSrc = failed || !src ? "/images/default-book-cover.png" : src;
+
   return (
-    <Image 
-      src={imgSrc} 
-      alt="" 
-      fill 
-      className="object-cover group-hover:scale-105 transition-transform duration-300" 
-      unoptimized 
-      onError={() => setImgSrc("/images/default-book-cover.png")}
-    />
+    <span className="relative flex h-full w-full items-center justify-center bg-primary/5 text-primary/40">
+      <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <Image
+        src={imgSrc}
+        alt=""
+        fill
+        className={`object-cover group-hover:scale-105 transition-all duration-300 ${loaded || failed || !src ? 'opacity-100' : 'opacity-0'}`}
+        unoptimized
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          if (src && !failed && (img.naturalWidth <= 1 || img.naturalHeight <= 1)) {
+            setFailed(true);
+          } else {
+            setLoaded(true);
+          }
+        }}
+        onError={() => setFailed(true)}
+      />
+    </span>
   );
 }
 
@@ -104,6 +117,7 @@ export function DashboardClient({
   const [supabase] = useState(() => createClient());
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [showStaffCard, setShowStaffCard] = useState(true);
   
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedRefresh = useCallback(() => {
@@ -272,73 +286,6 @@ export function DashboardClient({
     const isReadyHolds = stats.readyHolds > 0;
     const hasActions = isOverdue || isPendingApprovals || isReadyHolds;
 
-    // Filter quick shortcuts dynamically based on role
-    const quickShortcuts = [
-      {
-        title: "Circulation Desk",
-        desc: "Checkout & return books",
-        path: "/circulation",
-        icon: RefreshCw,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: true,
-      },
-      {
-        title: "Book Inventory",
-        desc: "Manage book collections",
-        path: "/inventory",
-        icon: BookMarked,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: true,
-      },
-      {
-        title: "User Directory",
-        desc: "Approve cards & profiles",
-        path: "/users",
-        icon: Users,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: true,
-      },
-      {
-        title: "Visitor Logs",
-        desc: "Track library attendance",
-        path: "/attendance",
-        icon: UserCheck,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: true,
-      },
-      {
-        title: "System Analytics",
-        desc: "View usage statistics",
-        path: "/analytics",
-        icon: BarChart3,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: true,
-      },
-      {
-        title: "Audit Trail",
-        desc: "Track database changes",
-        path: "/audit",
-        icon: ScrollText,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: role === 'super_admin' || role === 'librarian',
-      },
-      {
-        title: "Settings & Policies",
-        desc: "Adjust system parameters",
-        path: "/policies",
-        icon: Settings,
-        color: "group-hover:border-primary/30",
-        iconBg: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-        show: role === 'super_admin',
-      },
-    ].filter(item => item.show);
-
     return (
       <div className="space-y-6 pb-14 overflow-x-hidden relative">
         <LiveActivityTicker />
@@ -349,9 +296,9 @@ export function DashboardClient({
             <div className="flex items-center justify-between border-b border-border/30 pb-2.5">
               <div className="flex items-center gap-2">
                 <div className={`h-1.5 w-1.5 rounded-full ${hasActions ? 'bg-foreground' : 'bg-muted-foreground/30'}`} />
-                <span className="text-xs font-semibold text-foreground">Action Center</span>
+                <span className="text-sm font-semibold text-foreground">Action Center</span>
               </div>
-              <span className="text-[11px] text-muted-foreground font-normal">Pending Tasks</span>
+              <span className="text-xs text-muted-foreground">Pending tasks</span>
             </div>
 
             {!hasActions ? (
@@ -360,7 +307,7 @@ export function DashboardClient({
                 <span>All caught up. No pending administrative actions.</span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
                 {isPendingApprovals && (
                   <CardLink
                     href="/users"
@@ -371,13 +318,13 @@ export function DashboardClient({
                         <Users size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">Card Applications</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        <p className="text-xs font-semibold text-foreground truncate">Card Applications</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           <span className="font-semibold text-foreground">{stats.pendingApprovals}</span> pending review
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
+                    <ArrowRight size={14} className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0 ml-2" />
                   </CardLink>
                 )}
 
@@ -391,13 +338,13 @@ export function DashboardClient({
                         <AlertTriangle size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">Overdue Borrows</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        <p className="text-xs font-semibold text-foreground truncate">Overdue Borrows</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           <span className="font-semibold text-foreground">{stats.overdueBorrows}</span> books outstanding
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
+                    <ArrowRight size={14} className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0 ml-2" />
                   </CardLink>
                 )}
 
@@ -411,13 +358,13 @@ export function DashboardClient({
                         <BookMarked size={15} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">Holds Ready</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                        <p className="text-xs font-semibold text-foreground truncate">Holds Ready</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           <span className="font-semibold text-foreground">{stats.readyHolds}</span> waiting for pickup
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={13} className="text-muted-foreground/40 group-hover:text-foreground transition-colors shrink-0 ml-2" />
+                    <ArrowRight size={14} className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0 ml-2" />
                   </CardLink>
                 )}
               </div>
@@ -428,121 +375,95 @@ export function DashboardClient({
         {/* ==================== SYSTEM METRICS GRID ==================== */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           <CardLink
-            href="/attendance"
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
+            href="/attendance?view=logs"
+            className="border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+              <div className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
                 Today&apos;s Visitors
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <UserCheck size={16} />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-              {stats.attendanceToday}
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight tabular-nums">
+                {stats.attendanceToday}
+              </div>
+              <ArrowUpRight size={15} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" aria-hidden="true" />
             </div>
           </CardLink>
 
           <CardLink
             href="/history?view=logs&status=ACTIVE"
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+              <div className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
                 Active Borrows
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <RefreshCw size={16} />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-              {stats.activeBorrows}
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight tabular-nums">
+                {stats.activeBorrows}
+              </div>
+              <ArrowUpRight size={15} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" aria-hidden="true" />
             </div>
           </CardLink>
 
           <CardLink
             href="/inventory"
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
-                Book Catalog
+              <div className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
+                Inventory
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <BookMarked size={16} />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-              {stats.totalBooks}
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight tabular-nums">
+                {stats.totalBooks}
+              </div>
+              <ArrowUpRight size={15} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" aria-hidden="true" />
             </div>
           </CardLink>
 
           <CardLink
             href="/users"
-            className="border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
+            className="border border-border/40 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer p-4 sm:p-5 flex flex-col justify-between rounded-xl group"
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
-              <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
-                User Profiles
+              <div className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
+                User Directory
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform">
                 <Users size={16} />
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-              {stats.totalUsers}
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight tabular-nums">
+                {stats.totalUsers}
+              </div>
+              <ArrowUpRight size={15} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" aria-hidden="true" />
             </div>
           </CardLink>
         </section>
 
-        {/* ==================== SYSTEM SHORTCUTS GRID ==================== */}
-        <section className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4">
-          {quickShortcuts.map((shortcut) => (
-            <CardLink
-              key={shortcut.path}
-              href={shortcut.path}
-              className={`group border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer p-3 sm:p-4 min-h-14 flex items-center gap-2.5 sm:gap-3.5 rounded-xl ${shortcut.color}`}
-            >
-              <div className={`p-2 sm:p-2.5 rounded-lg transition-all duration-300 shrink-0 ${shortcut.iconBg}`}>
-                <shortcut.icon size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-bold text-foreground/90 truncate">{shortcut.title}</p>
-                <p className="text-[11px] text-muted-foreground truncate mt-0.5 hidden sm:block">{shortcut.desc}</p>
-              </div>
-            </CardLink>
-          ))}
-        </section>
-
-        {/* ==================== MY LIBRARY CARD (ALL ROLES) ==================== */}
-        <section aria-label="My Library Card" className="space-y-3">
-          <Card className="border border-border/20 bg-card/30 backdrop-blur-sm shadow-sm overflow-hidden relative p-5 sm:p-7 rounded-xl">
-            <div className="flex items-center gap-2 border-b border-border/10 pb-3 mb-4">
-              <Library size={14} className="text-primary" />
-              <h2 className="text-xs font-black uppercase tracking-wider text-muted-foreground">My Library Card</h2>
-            </div>
-            {studentCard ? (
-              <MyCardContainer initialData={studentCard} variant="dashboard" />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Library size={36} className="text-muted-foreground/20 mb-2" />
-                <p className="text-sm font-bold text-muted-foreground">No Digital Card Available</p>
-                <p className="text-xs text-muted-foreground mt-1">Your library card is being provisioned.</p>
-              </div>
-            )}
-          </Card>
-        </section>
-
         {/* ==================== RECENTLY CATALOGED BOOKS ==================== */}
         <section className="space-y-3">
-          <div className="border border-border/20 bg-card/30 backdrop-blur-sm rounded-xl p-4 shadow-sm">
-            <div className="flex items-center gap-1.5 border-b border-border/10 pb-3 mb-4">
-              <BookOpen size={12} className="text-primary" />
-              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Recently Cataloged Books</span>
+          <div className="border border-border/40 bg-card rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-border/30 pb-3 mb-4">
+              <BookOpen size={14} className="text-primary" />
+              <h2 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Recently Cataloged Books</h2>
             </div>
             {stats.recentBooks.length === 0 ? (
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest py-4 text-center">No recent additions</p>
+              <p className="text-xs font-medium text-muted-foreground py-4 text-center">No recent additions</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {stats.recentBooks.map((book) => (
@@ -552,16 +473,16 @@ export function DashboardClient({
                       setSelectedBookId(book.id);
                       setModalOpen(true);
                     }}
-                    className="group relative overflow-hidden border border-border/20 bg-card hover:bg-muted/[0.03] shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer flex items-center gap-3 p-3 rounded-xl"
+                    className="group relative overflow-hidden border border-border/30 bg-card hover:bg-muted/20 shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-pointer flex items-center gap-3 p-3 rounded-xl"
                   >
-                    <div className="relative h-12 w-9 shrink-0 rounded bg-muted/20 overflow-hidden ring-1 ring-border/10 group-hover:ring-primary/25 transition-all shadow-sm">
+                    <div className="relative h-12 w-9 shrink-0 rounded bg-muted/30 overflow-hidden ring-1 ring-border/15 group-hover:ring-primary/25 transition-all shadow-sm">
                       <RecentBookCover src={book.cover_url} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-bold text-foreground/95 group-hover:text-primary transition-colors">
+                      <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                         {book.title}
                       </p>
-                      <p className="truncate text-[11px] text-muted-foreground mt-0.5">
+                      <p className="truncate text-xs text-muted-foreground mt-0.5">
                         {book.author}
                       </p>
                     </div>
@@ -570,6 +491,38 @@ export function DashboardClient({
               </div>
             )}
           </div>
+        </section>
+
+        {/* ==================== MY LIBRARY CARD (DEMOTED / COLLAPSIBLE) ==================== */}
+        <section aria-label="My Library Card" className="space-y-3">
+          <Card className="border border-border/40 bg-card/70 shadow-sm overflow-hidden relative p-4 sm:p-6 rounded-xl">
+            <div className={`flex items-center justify-between gap-2 ${showStaffCard ? 'border-b border-border/30 pb-3 mb-4' : ''}`}>
+              <div className="flex items-center gap-2">
+                <Library size={14} className="text-primary" />
+                <h2 className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">My Library Card</h2>
+              </div>
+              <button
+                type="button"
+                aria-expanded={showStaffCard}
+                onClick={() => setShowStaffCard((prev) => !prev)}
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <span>{showStaffCard ? 'Hide card' : 'Show card'}</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showStaffCard ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+            {showStaffCard && (
+              studentCard ? (
+                <MyCardContainer initialData={studentCard} variant="dashboard" />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Library size={36} className="text-muted-foreground/40 mb-2" />
+                  <p className="text-sm font-semibold text-muted-foreground">No Digital Card Available</p>
+                  <p className="text-xs text-muted-foreground mt-1">Your library card is being provisioned.</p>
+                </div>
+              )
+            )}
+          </Card>
         </section>
 
         <BookDetailModal
@@ -626,51 +579,51 @@ export function DashboardClient({
       {isAssistant && (
         <section className="space-y-3">
           <div className="border border-border/20 bg-card/30 backdrop-blur-sm rounded-xl p-4 shadow-sm space-y-3">
-            <div className="flex items-center gap-2 border-b border-border/10 pb-2">
+            <div className="flex items-center gap-2 border-b border-border/20 pb-2">
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Assistant Desk Shortcuts</span>
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Assistant Desk Shortcuts</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {hasCirculationPerm && (
                 <CardLink
                   href="/circulation"
-                  className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
+                  className="group border border-border/30 bg-card hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
                 >
                   <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                     <RefreshCw size={16} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground/90 truncate">Circulation Desk</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Checkout & return books</p>
+                    <p className="text-xs font-semibold text-foreground truncate">Circulation Desk</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">Checkout &amp; return books</p>
                   </div>
                 </CardLink>
               )}
 
               {hasAttendancePerm && (
                 <CardLink
-                  href="/attendance"
-                  className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
+                  href="/attendance?view=logs"
+                  className="group border border-border/30 bg-card hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
                 >
                   <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                     <UserCheck size={16} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground/90 truncate">Attendance Logs</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Scanner & visitor logs</p>
+                    <p className="text-xs font-semibold text-foreground truncate">Attendance Logs</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">Scanner &amp; visitor logs</p>
                   </div>
                 </CardLink>
               )}
 
               <CardLink
                 href="/student-catalog"
-                className="group border border-border/20 bg-card hover:bg-muted/[0.03] hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
+                className="group border border-border/30 bg-card hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer p-4 flex items-center gap-3 rounded-xl shadow-none"
               >
                 <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
                   <BookOpen size={16} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground/90 truncate">Book Catalog</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">Search & explore books</p>
+                  <p className="text-xs font-semibold text-foreground truncate">Catalog</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">Search &amp; explore books</p>
                 </div>
               </CardLink>
             </div>

@@ -50,7 +50,7 @@ function FineResolutionCell({ record }: { record: BorrowingRecord }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-xs font-bold tabular-nums text-foreground">₱{fine.toFixed(2)}</span>
-      <Badge variant="outline" className={`h-5 px-1.5 text-[10px] font-bold uppercase tracking-wider ${badgeTone}`}>
+      <Badge variant="outline" className={`whitespace-nowrap rounded-lg px-2 py-0.5 text-xs font-semibold ${badgeTone}`}>
         {label}
       </Badge>
     </div>

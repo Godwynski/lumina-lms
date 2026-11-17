@@ -76,15 +76,11 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     setCurrentPage(1);
   }, [debouncedSearch, activeTab]);
 
-  const isInitialMount = React.useRef(true);
+  const queryKey = JSON.stringify([activeTab, debouncedSearch, currentPage]);
+  const lastLoadedKeyRef = React.useRef(JSON.stringify(["all", "", 1]));
   const loadRequestRef = React.useRef(0);
 
-  const loadUsers = useCallback(async (isInitial = false) => {
-    if (isInitial && isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
+  const loadUsers = useCallback(async () => {
     // Only the latest request may update the list; slower older ones are dropped.
     const requestId = ++loadRequestRef.current;
     setIsLoadingUsers(true);
@@ -109,8 +105,10 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   }, [currentPage, debouncedSearch, activeTab, pageSize]);
 
   useEffect(() => {
-    void loadUsers(true);
-  }, [loadUsers]);
+    if (queryKey === lastLoadedKeyRef.current) return;
+    lastLoadedKeyRef.current = queryKey;
+    void loadUsers();
+  }, [queryKey, loadUsers]);
 
   const loadUsersRef = React.useRef(loadUsers);
   useEffect(() => {
@@ -157,8 +155,8 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     },
     {
       header: "ID",
-      className: "w-[120px]",
-      cell: (user) => <span className="font-mono text-xs font-medium">{user.student_id || "No ID"}</span>
+      className: "whitespace-nowrap",
+      cell: (user) => <span className="font-mono text-xs font-medium whitespace-nowrap">{user.student_id || "No ID"}</span>
     },
     {
       header: "Role",

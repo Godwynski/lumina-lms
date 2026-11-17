@@ -5,7 +5,7 @@ import { isStaff } from '@/lib/auth/permissions';
 import { AddBookClient } from './AddBookClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const metadata = { title: "Add book" };
+export const metadata = { title: "Add Book" };
 
 async function AddBookGate() {
   const me = await getMe();
