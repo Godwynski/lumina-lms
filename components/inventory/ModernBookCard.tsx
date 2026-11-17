@@ -61,22 +61,22 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
                 <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">by {book.author}</p>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/20 p-1.5 rounded-lg">
-                  <MapPin size={11} className="text-primary/70" />
-                  <span className="font-bold uppercase tracking-widest text-[11px] opacity-70">Location:</span>
-                  <span className="truncate text-foreground/90 font-medium">{book.location || "Central Shelf"}</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-lg">
+                  <MapPin size={12} className="text-primary/80 shrink-0" />
+                  <span className="font-medium text-muted-foreground">Location:</span>
+                  <span className="truncate text-foreground font-medium">{book.location || "Central Shelf"}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-1.5">
-                  <Layers size={11} className="text-primary/70" />
-                  <span className="font-bold uppercase tracking-widest text-[11px] opacity-70">ISBN:</span>
-                  <span className="truncate font-mono text-foreground/80">{book.isbn || "INTERNAL-STOCK"}</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
+                  <Layers size={12} className="text-primary/80 shrink-0" />
+                  <span className="font-medium text-muted-foreground">ISBN:</span>
+                  <span className="truncate font-mono text-foreground/90">{book.isbn || "INTERNAL-STOCK"}</span>
                 </div>
                 {book.dewey_decimal && (
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-1.5">
-                    <Tag size={11} className="text-primary/70" />
-                    <span className="font-bold uppercase tracking-widest text-[11px] opacity-70">DDC:</span>
-                    <span className="truncate font-mono text-foreground/80">{book.dewey_decimal}</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
+                    <Tag size={12} className="text-primary/80 shrink-0" />
+                    <span className="font-medium text-muted-foreground">DDC:</span>
+                    <span className="truncate font-mono text-foreground/90">{book.dewey_decimal}</span>
                   </div>
                 )}
               </div>
@@ -104,22 +104,22 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
           <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/10">
             <div className="flex items-center gap-1.5">
               {!book.is_active ? (
-                <Badge variant="outline" className="rounded-lg px-2 py-0 h-5 text-[11px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border-amber-200">
+                <Badge variant="outline" className="whitespace-nowrap rounded-lg px-2 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30">
                   Archived
                 </Badge>
               ) : (
                 <Badge 
                   variant={isOutOfStock ? "destructive" : "secondary"} 
                   className={cn(
-                    "rounded-lg px-2 py-0 h-5 text-[11px] font-black uppercase tracking-widest transition-all duration-300",
-                    !isOutOfStock && "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                    "whitespace-nowrap rounded-lg px-2 py-0.5 text-xs font-semibold transition-all duration-300",
+                    !isOutOfStock && "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
                   )}
                 >
                   {book.available_copies} / {book.total_copies} In Pool
                 </Badge>
               )}
             </div>
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground transition-colors group-hover:text-primary/40">
+            <span className="text-xs font-medium text-muted-foreground truncate max-w-[120px]">
               {book.section || "General"}
             </span>
           </div>

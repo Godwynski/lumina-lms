@@ -193,13 +193,14 @@ export function AddBookClient() {
               formData={formData}
               onUpdate={updateFormData}
               categories={categories}
+              hideIsbnField
             />
 
             <div className="flex gap-3 pt-6 border-t border-border/30 mt-8">
               <Button 
                 type="submit" 
                 disabled={loading || isbnLoading}
-                className="h-11 flex-1 rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90"
+                className="h-10 flex-1 rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
               >
                 {loading ? 'Processing...' : (
                   <div className="flex items-center gap-2">
@@ -212,7 +213,7 @@ export function AddBookClient() {
                 type="button" 
                 variant="outline"
                 asChild
-                className="h-11 rounded-xl px-8 text-sm font-bold border-border/40 hover:bg-muted transition-colors"
+                className="h-10 rounded-lg px-6 text-sm font-semibold border-border/50 hover:bg-muted transition-colors"
               >
                 <Link href="/inventory">Cancel</Link>
               </Button>

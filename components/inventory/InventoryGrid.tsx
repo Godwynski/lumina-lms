@@ -3,7 +3,7 @@
 import { AnimatePresence, m } from "framer-motion";
 import { ModernBookCard } from "./ModernBookCard";
 import { StudentBookCard } from "@/components/library/StudentBookCard";
-import { PackageSearch, Plus } from "lucide-react";
+import { PackageSearch, Plus, SearchX } from "lucide-react";
 import { Book, Reservation } from "@/lib/types";
 import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
@@ -13,6 +13,8 @@ interface InventoryGridProps {
   canManage?: boolean;
   isStudentView?: boolean;
   reservations?: Reservation[];
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
 }
 
 const MemoizedBookCard = React.memo(ModernBookCard);
@@ -22,7 +24,9 @@ export function InventoryGrid({
   books, 
   canManage = true,
   isStudentView = false,
-  reservations = []
+  reservations = [],
+  hasActiveFilters = false,
+  onClearFilters,
 }: InventoryGridProps) {
   if (books.length === 0) {
     return (
@@ -31,17 +35,32 @@ export function InventoryGrid({
         animate={{ opacity: 1, scale: 1 }}
         className="w-full"
       >
-        <EmptyState
-          icon={PackageSearch}
-          title="Vault is Empty"
-          description="No physical assets were found matching your criteria. Start by populating your catalog."
-          action={canManage ? {
-            href: "/inventory/add",
-            label: "Initialize First Entry",
-            icon: Plus,
-          } : undefined}
-          contentClassName="min-h-[500px]"
-        />
+        {hasActiveFilters ? (
+          <EmptyState
+            variant="no-results"
+            icon={SearchX}
+            title="No matches found"
+            description="No inventory items match your current search or filters."
+            action={onClearFilters ? {
+              label: "Clear all filters",
+              onClick: onClearFilters,
+            } : undefined}
+            contentClassName="min-h-[380px]"
+          />
+        ) : (
+          <EmptyState
+            variant="first-use"
+            icon={PackageSearch}
+            title="No books in inventory yet"
+            description="No physical assets have been added to the catalog yet."
+            action={canManage ? {
+              href: "/inventory/add",
+              label: "Add Book",
+              icon: Plus,
+            } : undefined}
+            contentClassName="min-h-[420px]"
+          />
+        )}
       </m.div>
     );
   }

@@ -460,7 +460,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
   });
 
   describe('QRPrinterModal', () => {
-    it('opens dialog, generates QR code via qrcode.toDataURL, and invokes print + reload', async () => {
+    it('opens dialog, generates QR code via qrcode.toDataURL, and invokes print without mutating body or reloading', async () => {
       const printSpy = vi.fn();
       const reloadSpy = vi.fn();
       vi.stubGlobal('print', printSpy);
@@ -487,7 +487,9 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
 
         await clickElement(findButtonByText(document.body, 'Print Label'));
         expect(printSpy).toHaveBeenCalledTimes(1);
-        expect(reloadSpy).toHaveBeenCalledTimes(1);
+        expect(reloadSpy).not.toHaveBeenCalled();
+        expect(document.body.querySelector('[role="dialog"]')).toBeInTheDocument();
+        expect(document.body.querySelector('[data-qr-print-sheet="true"]')).toBeInTheDocument();
       } finally {
         const origRemoveChild = document.body.removeChild.bind(document.body);
         vi.spyOn(document.body, 'removeChild').mockImplementation(<T extends Node>(child: T): T => {
@@ -1312,8 +1314,8 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
           <InventoryGrid books={[]} canManage={true} />
         </AnimationProvider>
       );
-      expect(handle.container).toHaveTextContent('Vault is Empty');
-      expect(handle.container.querySelector('a[href="/inventory/add"]')).toBeInTheDocument();
+      expect(handle.container).toHaveTextContent('No books in inventory yet');
+      expect(handle.container.querySelector('a[href="/inventory/add"]')).toHaveTextContent('Add Book');
 
       await handle.rerender(
         <AnimationProvider>
@@ -1981,12 +1983,12 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(frontContainer.className).toContain('block');
       expect(backContainer.className).toContain('hidden');
 
-      await clickElement(findButtonByText(container, 'Show back'));
+      await clickElement(findButtonByText(container, 'Show card back'));
       expect(frontContainer.className).toContain('hidden');
       expect(backContainer.className).toContain('block');
-      expect(findButtonByText(container, 'Show front')).toBeDefined();
+      expect(findButtonByText(container, 'Show card front')).toBeDefined();
 
-      await clickElement(findButtonByText(container, 'Show front'));
+      await clickElement(findButtonByText(container, 'Show card front'));
 
       // Expand QR dialog
       await clickElement(container.querySelector('button[aria-label="Expand QR code"]'));
