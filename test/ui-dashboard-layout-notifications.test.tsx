@@ -247,6 +247,7 @@ cjsHtmlToImage.toPng = (...args: unknown[]) => mockToPng(...args);
 // Real component imports
 // ---------------------------------------------------------------------------
 import { ActivitySection } from '@/components/dashboard/ActivitySection';
+import { AnnouncementBanner } from '@/components/dashboard/AnnouncementBanner';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
 import { LiveActivityTicker } from '@/components/dashboard/LiveActivityTicker';
@@ -613,6 +614,32 @@ describe('Dashboard Components', () => {
     expect(container.querySelector('a[href="/history"]')).not.toBeNull();
     const catalogLinks = Array.from(container.querySelectorAll('a[href="/student-catalog"]')).map(a => a.textContent?.trim());
     expect(catalogLinks).toEqual(expect.arrayContaining(['Browse catalog', 'Catalog']));
+  });
+
+  it('AnnouncementBanner shows the newest unread announcement only and hides it after Dismiss (P6-POL-019)', async () => {
+    const sb = makeSupabaseMock({
+      notifications: [
+        makeNotification({ id: 'plain', title: 'Plain system note', type: 'SYSTEM', metadata: {} }),
+        makeNotification({ id: 'ann', title: 'Library closed Friday', type: 'SYSTEM', metadata: { announcement: true } }),
+      ],
+    });
+    mockCreateClient.mockReturnValue(sb);
+    const { container } = await renderClient(<AnnouncementBanner />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(container).toHaveTextContent('Library closed Friday');
+    expect(container).not.toHaveTextContent('Plain system note');
+    await clickElement(container.querySelector('button[aria-label="Dismiss announcement"]'));
+    expect(container).not.toHaveTextContent('Library closed Friday');
+  });
+
+  it('AnnouncementBanner renders nothing when the announcement is already read', async () => {
+    mockCreateClient.mockReturnValue(makeSupabaseMock({
+      notifications: [makeNotification({ id: 'ann', is_read: true, metadata: { announcement: true } })],
+    }));
+    const { container } = await renderClient(<AnnouncementBanner />);
+    await act(async () => { await Promise.resolve(); });
+    expect(container.textContent).toBe('');
   });
 
   it('ActivitySection marks a loan due today with a "Due today" badge, distinct from active and overdue (P2-DSH-003)', async () => {

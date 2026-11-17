@@ -1158,6 +1158,7 @@ describe('Admin & Policies UI Components', () => {
             content: 'Open until 8 PM.',
             type: 'SYSTEM',
             priority: 'high',
+            metadata: { announcement: true },
           }),
         })
       );

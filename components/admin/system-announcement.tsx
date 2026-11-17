@@ -103,8 +103,9 @@ export function SystemAnnouncement({
           target, 
           title: title.trim(), 
           content: content.trim(), 
-          type: 'SYSTEM', 
-          priority: 'high' 
+          type: 'SYSTEM',
+          priority: 'high',
+          metadata: { announcement: true },
         })
       })
 

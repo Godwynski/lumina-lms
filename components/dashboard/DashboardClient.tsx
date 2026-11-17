@@ -31,6 +31,7 @@ import type { BorrowingRecord } from '@/lib/actions/history';
 import { LiveActivityTicker } from './LiveActivityTicker';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { ActivitySection } from './ActivitySection';
+import { AnnouncementBanner } from './AnnouncementBanner';
 import { SupportSection } from './SupportSection';
 import { ROLE_LABELS, getRoleLabel } from '@/components/common/RoleBadge';
 
@@ -631,8 +632,10 @@ export function DashboardClient({
         </section>
       )}
 
+      <AnnouncementBanner />
+
       {/* ==================== PERSONAL ACTIVITY SECTION ==================== */}
-      <ActivitySection 
+      <ActivitySection
         activeBorrows={activeBorrowsList}
         reservations={reservations}
         attendanceLogs={attendanceLogs}
