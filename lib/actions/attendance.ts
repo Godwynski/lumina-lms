@@ -67,8 +67,9 @@ async function getLibraryClosingTime(supabase: SupabaseClient): Promise<string> 
 }
 
 /**
- * Determines whether an open attendance session is stale (from an earlier Manila day
- * or past that day's closing time) and computes GREATEST(check_in_at, closing_time).
+ * Determines whether an open attendance session is stale (from an earlier Manila day) and
+ * computes GREATEST(check_in_at, closing_time) for it. A same-day session stays open after
+ * closing time so evening check-outs and repeat scans behave normally (P4-ATT-003/006).
  */
 function computeStaleAttendanceState(
   checkInIso: string,
@@ -80,7 +81,7 @@ function computeStaleAttendanceState(
   const nowManilaDate = getManilaDateString(new Date(nowMs));
   const closingAtMs = new Date(`${checkInManilaDate}T${closingTimeHHMM}:00+08:00`).getTime();
   const staleCheckOutAt = new Date(Math.max(checkInDate.getTime(), closingAtMs)).toISOString();
-  const isStale = checkInManilaDate < nowManilaDate || nowMs > closingAtMs;
+  const isStale = checkInManilaDate < nowManilaDate;
   return { isStale, staleCheckOutAt };
 }
 

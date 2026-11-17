@@ -703,42 +703,62 @@ describe('attendance server actions', () => {
       expect(customRes.success && customRes.data.outcome).toBe('CHECKED_IN');
     });
 
-    it('closes same-day open record when current Manila time is past closing time and falls back on invalid setting', async () => {
+    it('keeps a same-day session open after closing: evening check-out closes normally and a repeat scan does not duplicate (P4-ATT-003/006)', async () => {
       vi.useFakeTimers();
-      // 2026-06-15 17:05:00 Asia/Manila = 2026-06-15T09:05:00Z
-      vi.setSystemTime(new Date('2026-06-15T09:05:00Z'));
+      // 2026-06-15 18:00 Manila = 10:00Z, past the 17:00 closing time
+      vi.setSystemTime(new Date('2026-06-15T10:00:00Z'));
+      supaMock.setTableResponse('library_cards', {
+        user_id: 'patron-1',
+        profiles: { full_name: 'Maria Clara', status: 'ACTIVE' },
+      });
+      supaMock.setTableResponse('system_settings', { value: '17:00' });
 
+      // Checked in at 17:30 Manila (09:30Z). A second "in" scan must not close it and open another row.
+      const openEvening = createMockQueryBuilder({ id: 'att-evening', check_in_at: '2026-06-15T09:30:00Z' });
+      supaMock.from.mockImplementation((table: string) =>
+        table === 'attendance' ? openEvening : supaMock.getTableBuilder(table)
+      );
+      const again = await recordAttendanceByCard({ cardNumber: 'LIB-1001', mode: 'in', isManual: false });
+      expect(again).toMatchObject({ success: true, data: { outcome: 'ALREADY_IN' } });
+      expect(openEvening.update).not.toHaveBeenCalled();
+      expect(openEvening.insert).not.toHaveBeenCalled();
+
+      // Checking out at 18:00 records the real time, without the No Log Out note.
+      const outBuilder = createMockQueryBuilder(null);
+      let attCalls = 0;
+      supaMock.from.mockImplementation((table: string) => {
+        if (table !== 'attendance') return supaMock.getTableBuilder(table);
+        attCalls += 1;
+        return attCalls === 1 ? openEvening : outBuilder;
+      });
+      const out = await recordAttendanceByCard({ cardNumber: 'LIB-1001', mode: 'out', isManual: false });
+      expect(outBuilder.update).toHaveBeenCalledWith({ check_out_at: '2026-06-15T10:00:00.000Z' });
+      expect(out).toMatchObject({ success: true, data: { outcome: 'CHECKED_OUT', recordedAt: '2026-06-15T10:00:00.000Z' } });
+    });
+
+    it('falls back to 17:00 closing when the setting is invalid when closing a stale record', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-06-15T01:00:00Z')); // 09:00 Manila next day
       supaMock.setTableResponse('library_cards', {
         user_id: 'patron-1',
         profiles: { full_name: 'Maria Clara', status: 'ACTIVE' },
       });
       supaMock.setTableResponse('system_settings', { value: 'invalid-time' });
 
-      const openSameDay = createMockQueryBuilder({
-        id: 'att-same-late',
-        check_in_at: '2026-06-15T01:00:00Z', // 09:00 Manila
-      });
+      const yesterdayOpen = createMockQueryBuilder({ id: 'att-y', check_in_at: '2026-06-14T01:00:00Z' });
       const closeBuilder = createMockQueryBuilder(null);
       const insertBuilder = createMockQueryBuilder(null);
       let attCalls = 0;
       supaMock.from.mockImplementation((table: string) => {
-        if (table === 'attendance') {
-          attCalls += 1;
-          if (attCalls === 1) return openSameDay;
-          if (attCalls === 2) return closeBuilder;
-          return insertBuilder;
-        }
-        return supaMock.getTableBuilder(table);
+        if (table !== 'attendance') return supaMock.getTableBuilder(table);
+        attCalls += 1;
+        return attCalls === 1 ? yesterdayOpen : attCalls === 2 ? closeBuilder : insertBuilder;
       });
 
       const res = await recordAttendanceByCard({ cardNumber: 'LIB-1001', mode: 'in', isManual: false });
       expect(closeBuilder.update).toHaveBeenCalledWith({
-        check_out_at: '2026-06-15T09:00:00.000Z', // fell back to 17:00 Manila
+        check_out_at: '2026-06-14T09:00:00.000Z', // 17:00 Manila on the check-in day
         notes: 'No Log Out',
-      });
-      expect(insertBuilder.insert).toHaveBeenCalledWith({
-        user_id: 'patron-1',
-        check_in_at: '2026-06-15T09:05:00.000Z',
       });
       expect(res.success && res.data.outcome).toBe('CHECKED_IN');
     });
