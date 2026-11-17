@@ -66,11 +66,17 @@ export function ActivitySection({
             <BookOpen className="h-3.5 w-3.5 text-primary" />
             Current Borrows
           </h2>
+          <a href="/history" className="min-h-11 sm:min-h-0 px-1 sm:px-0 text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 whitespace-nowrap">
+            History <ArrowRight size={12} />
+          </a>
         </div>
         {activeBorrows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 border border-dashed border-border/40 rounded-xl bg-muted/10 text-muted-foreground">
             <BookOpen size={24} className="mb-2 text-muted-foreground/60" />
             <p className="text-xs font-medium">No active borrows</p>
+            <a href="/student-catalog" className="mt-2 min-h-11 sm:min-h-0 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+              Browse catalog <ArrowRight size={12} />
+            </a>
           </div>
         ) : (
           <div className="grid gap-2 min-w-0">
@@ -78,6 +84,7 @@ export function ActivitySection({
               const fineOwed = computeOverdueFine(borrow);
               const isReturnedUnsettled = borrow.status === 'RETURNED' && fineOwed > 0 && !borrow.fine_settled_at;
               const isOverdue = !isReturnedUnsettled && (borrow.status === 'OVERDUE' || (mounted && new Date(borrow.due_date) < new Date()));
+              const isDueToday = !isReturnedUnsettled && !isOverdue && mounted && new Date(borrow.due_date).toDateString() === new Date().toDateString();
               return (
                 <CardButton
                   key={borrow.id}
@@ -105,8 +112,11 @@ export function ActivitySection({
                           ₱{fineOwed.toFixed(2)}
                         </span>
                       )}
-                      <Badge variant={isReturnedUnsettled || isOverdue ? 'destructive' : 'outline'} className="text-xs px-2 py-0.5 whitespace-nowrap">
-                        {isReturnedUnsettled ? 'Fine owed' : isOverdue ? 'Overdue' : 'Active'}
+                      <Badge
+                        variant={isReturnedUnsettled || isOverdue ? 'destructive' : 'outline'}
+                        className={`text-xs px-2 py-0.5 whitespace-nowrap ${isDueToday ? 'border-amber-500/40 bg-amber-500/15 text-amber-800 dark:text-amber-300' : ''}`}
+                      >
+                        {isReturnedUnsettled ? 'Fine owed' : isOverdue ? 'Overdue' : isDueToday ? 'Due today' : 'Active'}
                       </Badge>
                     </div>
                   </CardContent>
@@ -124,6 +134,9 @@ export function ActivitySection({
             <Ticket className="h-3.5 w-3.5" />
             Reservations
           </h2>
+          <a href="/student-catalog" className="min-h-11 sm:min-h-0 px-1 sm:px-0 text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 whitespace-nowrap">
+            Catalog <ArrowRight size={12} />
+          </a>
         </div>
 
         {reservations.length === 0 ? (

@@ -55,7 +55,8 @@ const container = "mx-auto w-full max-w-6xl px-5 sm:px-8";
 export default async function Home() {
   const me = await getMe();
   if (me?.user) {
-    const isBlocked = checkAccessBlocked(me.profile as Profile);
+    // Blocked patrons stay here (the protected layout shows them the blocked screen); staff always go in.
+    const isBlocked = checkAccessBlocked(me.profile as Profile) && me.role === "patron";
     if (!isBlocked) redirect("/dashboard");
   }
 

@@ -609,6 +609,35 @@ describe('Dashboard Components', () => {
     expect(container.textContent).toContain('No logs yet');
     const viewAll = container.querySelector('a[href="/attendance"]');
     expect(viewAll).not.toBeNull();
+    // Quick links and the empty-borrows call to action (P2-DSH-004, P2-DSH-007).
+    expect(container.querySelector('a[href="/history"]')).not.toBeNull();
+    const catalogLinks = Array.from(container.querySelectorAll('a[href="/student-catalog"]')).map(a => a.textContent?.trim());
+    expect(catalogLinks).toEqual(expect.arrayContaining(['Browse catalog', 'Catalog']));
+  });
+
+  it('ActivitySection marks a loan due today with a "Due today" badge, distinct from active and overdue (P2-DSH-003)', async () => {
+    const book = { id: 'b', title: 'T', author: 'A', cover_url: null };
+    const make = (id: string, due: Date): BorrowingRecord => ({
+      id, book_copy_id: 'c', user_id: 'u', status: 'ACTIVE', borrowed_at: new Date().toISOString(),
+      due_date: due.toISOString(), returned_at: null, books: { ...book, id: `b-${id}`, title: `Book ${id}` }, profiles: null,
+    });
+    const laterToday = new Date(); laterToday.setHours(23, 59, 0, 0);
+    const nextWeek = new Date(Date.now() + 7 * 864e5);
+    const { container } = await renderClient(
+      <ActivitySection
+        activeBorrows={[make('today', laterToday), make('later', nextWeek)]}
+        reservations={[]}
+        attendanceLogs={[]}
+        onOpenBook={vi.fn()}
+        onCancelReservation={vi.fn()}
+        isPending={false}
+        mounted={true}
+      />
+    );
+    const card = (title: string) => container.querySelector(`[aria-label="Open details for ${title}"]`)!;
+    expect(card('Book today')).toHaveTextContent('Due today');
+    expect(card('Book later')).toHaveTextContent('Active');
+    expect(card('Book later')).not.toHaveTextContent('Due today');
   });
 
   it('ActivitySection renders active/overdue borrows, reservations, attendance durations, and handles interactions', async () => {
@@ -1958,6 +1987,8 @@ describe('Notification Components', () => {
     // Clicking unread item opens details dialog & marks read
     await clickElement(findButtonByText(document.body, 'Hold Ready'));
     expect(document.body.textContent).toContain('Open');
+    // The list closes so Escape reaches the details dialog, not the list (P2-NTF-009).
+    expect(document.body.textContent).not.toContain('Expand Activity Log');
 
     // Close details dialog
     const closeDetailsBtns = Array.from(document.body.querySelectorAll('button')).filter(
@@ -1965,7 +1996,8 @@ describe('Notification Components', () => {
     );
     await clickElement(closeDetailsBtns[closeDetailsBtns.length - 1]);
 
-    // Mark all read
+    // Reopen the list, then mark all read
+    await clickElement(bellBtn);
     const markAllBtn = findButtonByText(document.body, 'Mark all read');
     await clickElement(markAllBtn);
     expect(sb.from).toHaveBeenCalledWith('notifications');

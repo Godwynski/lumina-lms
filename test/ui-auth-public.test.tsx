@@ -237,6 +237,27 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
   });
 
+  it('Home redirects signed-in users to /dashboard except blocked patrons; blocked staff still go in', async () => {
+    const { redirect } = await import('next/navigation');
+    const cases = [
+      { role: 'patron', status: 'ACTIVE', redirects: true },
+      { role: 'patron', status: 'SUSPENDED', redirects: false },
+      { role: 'librarian', status: 'SUSPENDED', redirects: true },
+      { role: 'library_staff', status: 'SUSPENDED', redirects: true },
+    ];
+    for (const c of cases) {
+      vi.mocked(redirect).mockClear();
+      mockGetMe.mockResolvedValue({
+        user: { id: 'u-1' },
+        role: c.role,
+        profile: { id: 'u-1', role: c.role, status: c.status, onboarding_completed: true },
+      });
+      await Home();
+      if (c.redirects) expect(redirect).toHaveBeenCalledWith('/dashboard');
+      else expect(redirect).not.toHaveBeenCalled();
+    }
+  });
+
   it('Hero triggers demo sign-in and navigates to /dashboard', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchSpy);
