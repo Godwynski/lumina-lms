@@ -653,6 +653,33 @@ describe('Catalog & Books Server Actions', () => {
       expect(loanBuilder.in).toHaveBeenCalledWith('status', ['ACTIVE', 'OVERDUE']);
     });
 
+    it('updateBookCopyStatus refuses LOST -> AVAILABLE while a lost loan is open, and allows it once none is', async () => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+
+      queueTableBuilders(serverClientHelper, 'book_copies', [createMockQueryBuilder({ status: 'LOST' }, null)]);
+      serverClientHelper.setTableResponse('borrowing_records', [{ id: 'loan-1' }], null);
+      expect(await updateBookCopyStatus({ id: 'copy-1', status: 'AVAILABLE' })).toEqual({
+        success: false,
+        error: 'This copy is still on a lost loan. Scan it at the return desk to close the loan.',
+      });
+      expect(adminClientHelper.rpc).not.toHaveBeenCalledWith('release_copy', expect.anything());
+      const loanBuilder = serverClientHelper.getTableBuilder('borrowing_records');
+      expect(loanBuilder.eq).toHaveBeenCalledWith('status', 'LOST');
+      expect(loanBuilder.is).toHaveBeenCalledWith('returned_at', null);
+
+      // No open loan (e.g. marked lost from the shelf): allowed
+      queueTableBuilders(serverClientHelper, 'book_copies', [
+        createMockQueryBuilder({ status: 'LOST' }, null),
+        createMockQueryBuilder({ id: 'copy-1', book_id: 'book-1', status: 'AVAILABLE' }, null),
+      ]);
+      serverClientHelper.setTableResponse('borrowing_records', [], null);
+      adminClientHelper.setRpcResponse(null, null, 'release_copy');
+      expect((await updateBookCopyStatus({ id: 'copy-1', status: 'AVAILABLE' })).success).toBe(true);
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-1' });
+      errSpy.mockRestore();
+    });
+
     it('updateBookCopyStatus calls release_copy RPC when returning MAINTENANCE/LOST copy to AVAILABLE, and handles optimistic lock failure', async () => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });

@@ -46,7 +46,7 @@ async function checkUserBorrowingEligibility(
       .from('borrowing_records')
       .select('id, status, due_date, returned_at, fine_amount, fine_settled_at')
       .eq('user_id', userId)
-      .or('status.in.(ACTIVE,OVERDUE),fine_settled_at.is.null'),
+      .or('status.in.(ACTIVE,OVERDUE,LOST),fine_settled_at.is.null'),
     supabase
       .from('system_settings')
       .select('value')
@@ -68,14 +68,16 @@ async function checkUserBorrowingEligibility(
   for (const row of records ?? []) {
     const status = String(row.status ?? '').toUpperCase();
     const dueMs = new Date(row.due_date).getTime();
+    // An unreturned lost book blocks borrowing like an overdue one.
     const isOverdue =
       status === 'OVERDUE' ||
+      (status === 'LOST' && row.returned_at == null) ||
       (status === 'ACTIVE' && !Number.isNaN(dueMs) && dueMs < nowMs);
     if (isOverdue) {
       overdueCount += 1;
     }
 
-    if (row.fine_settled_at == null && (row.fine_amount != null || status === 'ACTIVE' || status === 'OVERDUE')) {
+    if (row.fine_settled_at == null && (row.fine_amount != null || status === 'ACTIVE' || status === 'OVERDUE' || status === 'LOST')) {
       const fine = computeOverdueFine(
         {
           due_date: row.due_date,
@@ -92,6 +94,18 @@ async function checkUserBorrowingEligibility(
   }
 
   return { overdueCount, receivableTotal };
+}
+
+/** Typed entry: staff often key in the accession number printed on the label instead of the QR text. */
+async function toCopyQr(supabase: SupabaseClient, value: string): Promise<string> {
+  const trimmed = value.trim();
+  if (/^QR-/i.test(trimmed)) return trimmed;
+  const { data } = await supabase
+    .from('book_copies')
+    .select('qr_string')
+    .eq('accession_number', trimmed)
+    .maybeSingle();
+  return data?.qr_string ?? trimmed;
 }
 
 function formatBlockErrorMessage(block: BorrowingBlock): string {
@@ -193,9 +207,7 @@ export const resolveScan = createSafeAction(
 
     // 2. Try resolving as Book Copy
     if (expectedType !== 'student') {
-      const { data: copy, error: copyError } = await supabase
-        .from('book_copies')
-        .select(`
+      const copySelect = `
           id,
           qr_string,
           status,
@@ -203,9 +215,21 @@ export const resolveScan = createSafeAction(
           books:book_id (
             title
           )
-        `)
+        `;
+      let { data: copy, error: copyError } = await supabase
+        .from('book_copies')
+        .select(copySelect)
         .eq('qr_string', value)
         .maybeSingle();
+
+      // Typed entry: staff often key in the accession number printed on the label.
+      if (!copy && !copyError) {
+        ({ data: copy, error: copyError } = await supabase
+          .from('book_copies')
+          .select(copySelect)
+          .eq('accession_number', value)
+          .maybeSingle());
+      }
 
       if (copyError) throw new Error(copyError.message);
 
@@ -251,7 +275,8 @@ export const checkoutBook = createSafeAction(
       .optional()
       .nullable(),
   }),
-  async ({ studentCardQr, bookQr, idempotencyKey, previewOnly, isManual, overrideReason }, { supabase, profile: staff, role: staffRole }) => {
+  async ({ studentCardQr, bookQr: rawBookQr, idempotencyKey, previewOnly, isManual, overrideReason }, { supabase, profile: staff, role: staffRole }) => {
+    const bookQr = await toCopyQr(supabase, rawBookQr);
     const trimmedOverride = overrideReason?.trim() || null;
 
     // 1. Pre-validation: Eligibility & Override Check (only if not preview)
@@ -413,7 +438,8 @@ export const returnBook = createSafeAction(
         }
       }
     }),
-  async ({ bookQr, idempotencyKey, previewOnly, isManual, settleFine, resolution, remarks }, { supabase, profile: staff }) => {
+  async ({ bookQr: rawBookQr, idempotencyKey, previewOnly, isManual, settleFine, resolution, remarks }, { supabase, profile: staff }) => {
+    const bookQr = await toCopyQr(supabase, rawBookQr);
     // Find the current borrower to notify them
     let studentUserId: string | null = null;
     let returnCopy: { id: string; book_id: string } | null = null;
@@ -430,7 +456,8 @@ export const returnBook = createSafeAction(
           .from('borrowing_records')
           .select('user_id')
           .eq('book_copy_id', copy.id)
-          .in('status', ['ACTIVE', 'OVERDUE'])
+          .in('status', ['ACTIVE', 'OVERDUE', 'LOST'])
+          .is('returned_at', null)
           .maybeSingle();
         
         if (record) {

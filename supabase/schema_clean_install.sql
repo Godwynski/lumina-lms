@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS public.checkout_idempotency (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     idempotency_key TEXT UNIQUE NOT NULL,
     response JSONB NOT NULL,
+    request_hash TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -216,6 +217,7 @@ CREATE TABLE IF NOT EXISTS public.return_idempotency (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     idempotency_key TEXT UNIQUE NOT NULL,
     response JSONB NOT NULL,
+    request_hash TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -837,6 +839,7 @@ DECLARE
   v_hold_days        INTEGER;
   v_hold_expires_at  TIMESTAMPTZ;
   v_student_name     TEXT;
+  v_book_title       TEXT;
 BEGIN
   -- Lock the copy and read its book_id
   SELECT bc.book_id
@@ -890,6 +893,20 @@ BEGIN
     FROM public.profiles
     WHERE id = v_next_reservation.user_id;
 
+    -- Tell the patron their hold is ready (every path that promotes a hold comes through here).
+    SELECT title INTO v_book_title FROM public.books WHERE id = v_book_id;
+    INSERT INTO public.notifications (user_id, title, content, type, priority, metadata)
+    VALUES (
+      v_next_reservation.user_id,
+      'Reservation Ready for Pickup',
+      format('"%s" is ready for pickup. Please claim it by %s.',
+             COALESCE(v_book_title, 'Your reserved book'),
+             to_char(v_hold_expires_at AT TIME ZONE 'Asia/Manila', 'Mon DD, YYYY')),
+      'RESERVATION',
+      'high',
+      jsonb_build_object('reservationId', v_next_reservation.id, 'bookId', v_book_id, 'holdExpiresAt', v_hold_expires_at)
+    );
+
     RETURN jsonb_build_object(
       'ok',                true,
       'reservation_ready', true,
@@ -931,6 +948,9 @@ DECLARE
     v_expiry         TIMESTAMPTZ;
     v_actor_role     user_role;
     v_max_res        INTEGER;
+    v_fine_rate      NUMERIC;
+    v_overdue_count  INTEGER;
+    v_receivable     NUMERIC;
 BEGIN
     -- Authorization Enforcements:
     -- 1. Require authentication: anonymous callers are prohibited unless executed via service_role.
@@ -955,6 +975,41 @@ BEGIN
     SELECT status INTO v_profile_status FROM public.profiles WHERE id = v_target_id;
     IF UPPER(COALESCE(v_profile_status, '')) <> 'ACTIVE' THEN
         RETURN jsonb_build_object('ok', false, 'code', 'ACCOUNT_INACTIVE', 'message', 'Only active accounts can reserve books.');
+    END IF;
+
+    -- Archived titles are out of circulation (P3-CAT-021).
+    IF EXISTS (SELECT 1 FROM public.books WHERE id = p_book_id AND is_active = false) THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'BOOK_ARCHIVED', 'message', 'This title is archived and cannot be reserved.');
+    END IF;
+
+    -- Same borrowing block as checkout: overdue or lost loans and unpaid fines (GAP-033).
+    SELECT COALESCE(MAX(NULLIF(value, '')::NUMERIC), 5) INTO v_fine_rate
+    FROM public.system_settings WHERE key = 'overdue_fine_per_day';
+
+    SELECT
+        COUNT(*) FILTER (WHERE br.status IN ('OVERDUE', 'LOST') OR (br.status = 'ACTIVE' AND br.due_date < NOW())),
+        COALESCE(SUM(CASE
+            WHEN br.fine_settled_at IS NOT NULL THEN 0
+            WHEN br.fine_amount IS NOT NULL THEN br.fine_amount
+            WHEN br.returned_at IS NULL AND (br.status = 'OVERDUE' OR br.due_date < NOW())
+                THEN GREATEST(1, ((NOW() AT TIME ZONE 'Asia/Manila')::date - (br.due_date AT TIME ZONE 'Asia/Manila')::date)) * COALESCE(v_fine_rate, 5)
+            ELSE 0
+        END), 0)
+    INTO v_overdue_count, v_receivable
+    FROM public.borrowing_records br
+    WHERE br.user_id = v_target_id
+      AND (br.status IN ('ACTIVE', 'OVERDUE', 'LOST') OR br.fine_settled_at IS NULL);
+
+    IF v_overdue_count > 0 OR v_receivable > 0 THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'BORROWING_BLOCKED', 'message',
+            CASE
+                WHEN v_overdue_count > 0 AND v_receivable > 0 THEN
+                    format('User has %s overdue book(s) and ₱%s in unpaid fines. Please settle them before borrowing more.', v_overdue_count, to_char(v_receivable, 'FM999999990.00'))
+                WHEN v_overdue_count > 0 THEN
+                    format('User has %s overdue book(s). Please return them before borrowing more.', v_overdue_count)
+                ELSE
+                    format('User has ₱%s in unpaid fines. Please settle them before borrowing more.', to_char(v_receivable, 'FM999999990.00'))
+            END);
     END IF;
 
     -- Lock the user, then the book, so the per-user hold count below can't race
@@ -1057,13 +1112,18 @@ DECLARE
   v_existing          JSONB;
   v_result            JSONB;
   v_res_id            UUID := NULL;
+  v_request_hash      TEXT := md5(COALESCE(p_card_qr, '') || '|' || COALESCE(p_book_qr, ''));
+  v_stored_hash       TEXT;
 BEGIN
-  -- Idempotency check
+  -- Idempotency check: a replayed key must carry the same card + book (QA idempotency conflict)
   IF NOT p_preview_only AND p_idempotency_key IS NOT NULL THEN
-    SELECT response INTO v_existing
+    SELECT response, request_hash INTO v_existing, v_stored_hash
     FROM public.checkout_idempotency
     WHERE idempotency_key = p_idempotency_key;
     IF FOUND THEN
+      IF v_stored_hash IS NOT NULL AND v_stored_hash <> v_request_hash THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'IDEMPOTENCY_CONFLICT', 'message', 'This request key was already used for a different checkout. Please scan again.');
+      END IF;
       RETURN v_existing || jsonb_build_object('idempotent', true);
     END IF;
   END IF;
@@ -1120,7 +1180,7 @@ BEGIN
   END IF;
 
   -- Lock + fetch the copy
-  SELECT bc.id, bc.book_id, bc.status, b.title
+  SELECT bc.id, bc.book_id, bc.status, b.title, b.is_active
   INTO v_copy
   FROM public.book_copies bc
   JOIN public.books b ON b.id = bc.book_id
@@ -1129,6 +1189,10 @@ BEGIN
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', false, 'code', 'COPY_NOT_FOUND', 'message', 'Book copy not found.');
+  END IF;
+
+  IF NOT COALESCE(v_copy.is_active, true) THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'BOOK_ARCHIVED', 'message', 'This title is archived and cannot be checked out.');
   END IF;
 
   -- Handle RESERVED copies
@@ -1173,7 +1237,7 @@ BEGIN
   -- Fulfill reservation if applicable
   IF v_res_id IS NOT NULL THEN
     UPDATE public.reservations
-    SET status = 'FULFILLED', updated_at = NOW()
+    SET status = 'FULFILLED', fulfilled_at = NOW(), updated_at = NOW()
     WHERE id = v_res_id;
   END IF;
 
@@ -1187,9 +1251,9 @@ BEGIN
 
   IF p_idempotency_key IS NOT NULL THEN
     INSERT INTO public.checkout_idempotency
-      (idempotency_key, response)
+      (idempotency_key, response, request_hash)
     VALUES
-      (p_idempotency_key, v_result)
+      (p_idempotency_key, v_result, v_request_hash)
     ON CONFLICT DO NOTHING;
   END IF;
 
@@ -1216,13 +1280,18 @@ DECLARE
   v_fine_rate         NUMERIC := 5;
   v_overdue_days      INTEGER := 0;
   v_fine_amount       NUMERIC(10,2) := 0;
+  v_request_hash      TEXT := md5(COALESCE(p_book_qr, ''));
+  v_stored_hash       TEXT;
 BEGIN
-  -- Idempotency check
+  -- Idempotency check: a replayed key must carry the same book
   IF NOT p_preview_only AND p_idempotency_key IS NOT NULL THEN
-    SELECT response INTO v_existing
+    SELECT response, request_hash INTO v_existing, v_stored_hash
     FROM public.return_idempotency
     WHERE idempotency_key = p_idempotency_key;
     IF FOUND THEN
+      IF v_stored_hash IS NOT NULL AND v_stored_hash <> v_request_hash THEN
+        RETURN jsonb_build_object('ok', false, 'code', 'IDEMPOTENCY_CONFLICT', 'message', 'This request key was already used for a different return. Please scan again.');
+      END IF;
       RETURN v_existing || jsonb_build_object('idempotent', true);
     END IF;
   END IF;
@@ -1244,7 +1313,7 @@ BEGIN
   INTO v_borrow
   FROM public.borrowing_records br
   LEFT JOIN public.profiles p ON p.id = br.user_id
-  WHERE br.book_copy_id = v_copy.id AND br.status IN ('ACTIVE', 'OVERDUE')
+  WHERE br.book_copy_id = v_copy.id AND br.status IN ('ACTIVE', 'OVERDUE', 'LOST') AND br.returned_at IS NULL
   ORDER BY br.borrowed_at DESC
   LIMIT 1
   FOR UPDATE OF br;
@@ -1338,9 +1407,9 @@ BEGIN
 
   IF p_idempotency_key IS NOT NULL THEN
     INSERT INTO public.return_idempotency
-      (idempotency_key, response)
+      (idempotency_key, response, request_hash)
     VALUES
-      (p_idempotency_key, v_result)
+      (p_idempotency_key, v_result, v_request_hash)
     ON CONFLICT DO NOTHING;
   END IF;
 

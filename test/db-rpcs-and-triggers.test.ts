@@ -74,6 +74,7 @@ async function bootLuminaDb(): Promise<PGlite> {
   await db.exec(SCHEMA_SQL);
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117120000_qa_circulation_fixes.sql'), 'utf8'));
   return db;
 }
 
@@ -1751,5 +1752,157 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
     expect(archAttendance.rows[0].id).toBe(attEligible);
     expect(archAttendance.rows[0].notes).toBe('No Log Out');
     expect(archAttendance.rows[0].archived_at).toBeTruthy();
+  });
+});
+
+describe('QA circulation fixes (20261117120000)', () => {
+  let db: PGlite;
+  let librarian: { id: string; cardNumber: string };
+  let student1: { id: string; cardNumber: string };
+  let student2: { id: string; cardNumber: string };
+
+  beforeEach(async () => {
+    db = await bootLuminaDb();
+    await createUser(db, { email: 'admin@alabang.sti.edu.ph', fullName: 'Admin User' });
+    librarian = await createUser(db, { email: 'lib@alabang.sti.edu.ph', fullName: 'Librarian User', role: 'librarian', status: 'ACTIVE', cardStatus: 'ACTIVE' });
+    student1 = await createUser(db, { email: 'juan.111111@alabang.sti.edu.ph', fullName: 'Juan Dela Cruz', status: 'ACTIVE', cardStatus: 'ACTIVE' });
+    student2 = await createUser(db, { email: 'maria.222222@alabang.sti.edu.ph', fullName: 'Maria Clara', status: 'ACTIVE', cardStatus: 'ACTIVE' });
+  });
+
+  afterAll(async () => {
+    if (db) await db.close();
+  });
+
+  const reserve = (userId: string, bookId: string) =>
+    withRole(db, 'authenticated', userId, (tx) =>
+      tx.query<{ res: Record<string, unknown> }>(`SELECT public.create_reservation_atomic($1, $2) AS res`, [userId, bookId])
+    ).then((r) => r.rows[0].res);
+
+  const checkout = (card: string, qr: string, key: string | null = null) =>
+    db
+      .query<{ res: Record<string, unknown> }>(`SELECT public.process_qr_checkout($1, $2, $3, $4, false) AS res`, [librarian.id, card, qr, key])
+      .then((r) => r.rows[0].res);
+
+  const giveLoan = async (userId: string, copyId: string, status: string, dueOffset: string, fine: number | null = null) => {
+    await db.query(`UPDATE public.book_copies SET status = $2 WHERE id = $1`, [copyId, status === 'LOST' ? 'LOST' : 'BORROWED']);
+    await db.query(
+      `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, status, fine_amount)
+       VALUES ($1, $2, NOW() - interval '30 days', NOW() + $3::interval, $4, $5)`,
+      [userId, copyId, dueOffset, status, fine]
+    );
+  };
+
+  it('returning a borrowed copy promotes the next hold to READY and notifies that patron', async () => {
+    const { bookId, copies } = await createBookWithCopies(db, { title: 'Queued Book' });
+    expect(await checkout(student1.cardNumber, copies[0].qr)).toMatchObject({ ok: true });
+    expect(await reserve(student2.id, bookId)).toMatchObject({ ok: true, status: 'ACTIVE' });
+
+    const ret = await db.query<{ res: Record<string, unknown> }>(`SELECT public.process_qr_return($1, $2, NULL, false) AS res`, [librarian.id, copies[0].qr]);
+    expect(ret.rows[0].res).toMatchObject({ ok: true, reservation_ready: true });
+
+    const notes = await db.query<{ title: string; type: string; priority: string; content: string }>(
+      `SELECT title, type, priority, content FROM public.notifications WHERE user_id = $1`,
+      [student2.id]
+    );
+    expect(notes.rows).toHaveLength(1);
+    expect(notes.rows[0]).toMatchObject({ title: 'Reservation Ready for Pickup', type: 'RESERVATION', priority: 'high' });
+    expect(notes.rows[0].content).toContain('"Queued Book" is ready for pickup');
+    expect((await db.query(`SELECT id FROM public.notifications WHERE user_id = $1`, [student1.id])).rows).toHaveLength(0);
+  });
+
+  it('refuses reservations and checkouts of archived titles', async () => {
+    const { bookId, copies } = await createBookWithCopies(db, { title: 'Archived', isActive: false });
+    expect(await reserve(student1.id, bookId)).toMatchObject({ ok: false, code: 'BOOK_ARCHIVED' });
+    expect(await checkout(student1.cardNumber, copies[0].qr)).toMatchObject({ ok: false, code: 'BOOK_ARCHIVED' });
+    expect((await db.query(`SELECT id FROM public.reservations`)).rows).toHaveLength(0);
+    expect((await db.query(`SELECT id FROM public.borrowing_records`)).rows).toHaveLength(0);
+  });
+
+  it('blocks reservations for overdue loans, lost loans and unpaid fines, with the checkout wording', async () => {
+    const { bookId } = await createBookWithCopies(db, { title: 'Wanted' });
+    const other = await createBookWithCopies(db, { title: 'Held', copyStatuses: ['AVAILABLE', 'AVAILABLE'] });
+
+    // Not yet due: allowed
+    await giveLoan(student1.id, other.copies[0].id, 'ACTIVE', '3 days');
+    expect(await reserve(student1.id, bookId)).toMatchObject({ ok: true });
+    await db.query(`DELETE FROM public.reservations`);
+    await db.query(`UPDATE public.book_copies SET status = 'AVAILABLE' WHERE book_id = $1`, [bookId]);
+
+    // ACTIVE but past due (cron has not flipped it yet) counts as overdue
+    await db.query(`UPDATE public.borrowing_records SET due_date = NOW() - interval '2 days' WHERE user_id = $1`, [student1.id]);
+    const overdue = await reserve(student1.id, bookId);
+    expect(overdue).toMatchObject({ ok: false, code: 'BORROWING_BLOCKED' });
+    expect(overdue.message).toMatch(/^User has 1 overdue book\(s\) and ₱\d+\.00 in unpaid fines\./);
+
+    // LOST loan counts as overdue
+    await giveLoan(student2.id, other.copies[1].id, 'LOST', '5 days', 0);
+    expect(await reserve(student2.id, bookId)).toMatchObject({
+      ok: false,
+      code: 'BORROWING_BLOCKED',
+      message: 'User has 1 overdue book(s). Please return them before borrowing more.',
+    });
+
+    // Returned loan with an unsettled fine
+    await db.query(`DELETE FROM public.borrowing_records`);
+    await db.query(`UPDATE public.book_copies SET status = 'AVAILABLE'`);
+    await db.query(
+      `INSERT INTO public.borrowing_records (user_id, book_copy_id, borrowed_at, due_date, returned_at, status, fine_amount)
+       VALUES ($1, $2, NOW() - interval '20 days', NOW() - interval '6 days', NOW() - interval '1 day', 'RETURNED', 25)`,
+      [student1.id, other.copies[0].id]
+    );
+    expect(await reserve(student1.id, bookId)).toMatchObject({
+      ok: false,
+      code: 'BORROWING_BLOCKED',
+      message: 'User has ₱25.00 in unpaid fines. Please settle them before borrowing more.',
+    });
+
+    // Settled fine: allowed again
+    await db.query(`UPDATE public.borrowing_records SET fine_settled_at = NOW(), fine_resolution = 'PAID'`);
+    expect(await reserve(student1.id, bookId)).toMatchObject({ ok: true });
+  });
+
+  it('checkout of a READY hold sets fulfilled_at', async () => {
+    const { bookId, copies } = await createBookWithCopies(db, { title: 'Hold Me' });
+    const rsv = await reserve(student1.id, bookId);
+    expect(rsv).toMatchObject({ ok: true, status: 'READY' });
+    await db.query(`UPDATE public.reservations SET fulfilled_at = NULL WHERE id = $1`, [rsv.reservation_id]);
+    expect(await checkout(student1.cardNumber, copies[0].qr)).toMatchObject({ ok: true });
+    const row = await db.query<{ status: string; fulfilled: boolean }>(
+      `SELECT status::text, fulfilled_at IS NOT NULL AS fulfilled FROM public.reservations WHERE id = $1`,
+      [rsv.reservation_id]
+    );
+    expect(row.rows[0]).toEqual({ status: 'FULFILLED', fulfilled: true });
+  });
+
+  it('rejects a reused idempotency key with a different card or book, but replays the same request', async () => {
+    const { copies } = await createBookWithCopies(db, { title: 'Twice', copyStatuses: ['AVAILABLE', 'AVAILABLE'] });
+    const first = await checkout(student1.cardNumber, copies[0].qr, 'k-1');
+    expect(first).toMatchObject({ ok: true });
+    expect(await checkout(student1.cardNumber, copies[0].qr, 'k-1')).toMatchObject({ ok: true, idempotent: true, borrowing_id: first.borrowing_id });
+    expect(await checkout(student1.cardNumber, copies[1].qr, 'k-1')).toMatchObject({ ok: false, code: 'IDEMPOTENCY_CONFLICT' });
+    expect(await checkout(student2.cardNumber, copies[0].qr, 'k-1')).toMatchObject({ ok: false, code: 'IDEMPOTENCY_CONFLICT' });
+    expect((await db.query(`SELECT id FROM public.borrowing_records`)).rows).toHaveLength(1);
+
+    const ret = (qr: string) =>
+      db
+        .query<{ res: Record<string, unknown> }>(`SELECT public.process_qr_return($1, $2, 'r-1', false) AS res`, [librarian.id, qr])
+        .then((r) => r.rows[0].res);
+    expect(await ret(copies[0].qr)).toMatchObject({ ok: true });
+    expect(await ret(copies[0].qr)).toMatchObject({ ok: true, idempotent: true });
+    expect(await ret(copies[1].qr)).toMatchObject({ ok: false, code: 'IDEMPOTENCY_CONFLICT' });
+  });
+
+  it('scanning a found LOST copy closes the lost loan, computes the overdue fine and frees the copy', async () => {
+    const { copies } = await createBookWithCopies(db, { title: 'Found Book' });
+    await giveLoan(student1.id, copies[0].id, 'LOST', '-3 days');
+
+    const res = await db.query<{ res: Record<string, unknown> }>(`SELECT public.process_qr_return($1, $2, NULL, false) AS res`, [librarian.id, copies[0].qr]);
+    expect(res.rows[0].res).toMatchObject({ ok: true, student_name: 'Juan Dela Cruz', overdue_days: 3, fine_amount: 15 });
+
+    const loan = await db.query<{ status: string; returned: boolean; fine_amount: string }>(
+      `SELECT status::text, returned_at IS NOT NULL AS returned, fine_amount::text FROM public.borrowing_records`
+    );
+    expect(loan.rows[0]).toEqual({ status: 'RETURNED', returned: true, fine_amount: '15.00' });
+    expect((await db.query<{ status: string }>(`SELECT status FROM public.book_copies WHERE id = $1`, [copies[0].id])).rows[0].status).toBe('AVAILABLE');
   });
 });

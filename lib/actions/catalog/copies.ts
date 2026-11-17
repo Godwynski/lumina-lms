@@ -105,6 +105,21 @@ export const updateBookCopyStatus = createSafeAction(
       throw new Error('This copy is on loan. Use Return first.');
     }
 
+    if (current.status === 'LOST' && status === 'AVAILABLE') {
+      // A found book must go through Return so the lost loan is closed and its fine counted.
+      const { data: openLoans, error: loanLookupError } = await supabase
+        .from('borrowing_records')
+        .select('id')
+        .eq('book_copy_id', id)
+        .eq('status', 'LOST')
+        .is('returned_at', null)
+        .limit(1);
+      if (loanLookupError) throw new Error(loanLookupError.message);
+      if (openLoans?.length) {
+        throw new Error('This copy is still on a lost loan. Scan it at the return desk to close the loan.');
+      }
+    }
+
     if (status === 'AVAILABLE' && current.status !== 'AVAILABLE') {
       // Gives the copy to the next student in the queue, or puts it back on the shelf.
       const { error: releaseError } = await createAdminClient().rpc('release_copy', { p_copy_id: id });

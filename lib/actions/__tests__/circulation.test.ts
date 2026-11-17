@@ -348,7 +348,8 @@ describe('circulation server actions', () => {
       });
 
       expect(res.success).toBe(true);
-      expect(supaMock.from).not.toHaveBeenCalled();
+      // Only the accession-number lookup; no eligibility reads in preview.
+      expect(supaMock.from.mock.calls.map((c) => c[0])).toEqual(['book_copies']);
       expect(adminMock.rpc).toHaveBeenCalledWith('process_qr_checkout', {
         p_librarian_id: 'staff-1',
         p_card_qr: 'LIB-1001',
@@ -491,6 +492,44 @@ describe('circulation server actions', () => {
         error: 'User has 2 overdue book(s). Please return them before borrowing more.',
       });
       expect(adminMock.rpc).not.toHaveBeenCalled();
+    });
+
+    it('counts an unreturned LOST loan as overdue, but not one already returned', async () => {
+      supaMock.setTableResponse('library_cards', { user_id: 'student-1' });
+      supaMock.setTableResponse('profiles', { status: 'ACTIVE', full_name: 'Maria Clara' });
+      const future = new Date(Date.now() + 5 * 86_400_000).toISOString();
+      supaMock.setTableResponse('borrowing_records', [
+        { id: 'b-1', status: 'LOST', due_date: future, returned_at: null, fine_amount: null, fine_settled_at: null },
+      ]);
+
+      expect(await checkoutBook({ studentCardQr: 'LIB-1001', bookQr: 'QR-1' })).toEqual({
+        success: false,
+        error: 'User has 1 overdue book(s). Please return them before borrowing more.',
+      });
+
+      supaMock.setTableResponse('borrowing_records', [
+        { id: 'b-1', status: 'LOST', due_date: future, returned_at: future, fine_amount: null, fine_settled_at: null },
+      ]);
+      adminMock.setRpcResponse({ ok: true, borrowing_id: 'n-1', book_title: 'T', student_name: 'Maria Clara', due_date: future }, null, 'process_qr_checkout');
+      expect((await checkoutBook({ studentCardQr: 'LIB-1001', bookQr: 'QR-1' })).success).toBe(true);
+    });
+
+    it('accepts a typed accession number and sends the copy QR to the RPC; QR- codes skip the lookup', async () => {
+      supaMock.setTableResponse('book_copies', { qr_string: 'QR-77' });
+      adminMock.setRpcResponse({ ok: true, preview: true, book_title: 'T', student_name: 'S', due_date: '2026-12-01T00:00:00Z' }, null, 'process_qr_checkout');
+
+      expect((await checkoutBook({ studentCardQr: 'LIB-1001', bookQr: ' ACC-00077 ', previewOnly: true })).success).toBe(true);
+      expect(adminMock.rpc).toHaveBeenLastCalledWith('process_qr_checkout', expect.objectContaining({ p_book_qr: 'QR-77' }));
+
+      supaMock.from.mockClear();
+      expect((await checkoutBook({ studentCardQr: 'LIB-1001', bookQr: 'qr-5', previewOnly: true })).success).toBe(true);
+      expect(supaMock.from).not.toHaveBeenCalled();
+      expect(adminMock.rpc).toHaveBeenLastCalledWith('process_qr_checkout', expect.objectContaining({ p_book_qr: 'qr-5' }));
+
+      // Unknown value: passed through unchanged so the RPC reports COPY_NOT_FOUND.
+      supaMock.setTableResponse('book_copies', null);
+      await returnBook({ bookQr: 'NOPE', previewOnly: true });
+      expect(adminMock.rpc).toHaveBeenLastCalledWith('process_qr_return', expect.objectContaining({ p_book_qr: 'NOPE' }));
     });
 
     it('detects OVERDUE status, past-due ACTIVE loans, receivable fines, and clean patrons in resolveScan', async () => {
@@ -829,7 +868,7 @@ describe('circulation server actions', () => {
       const res = await returnBook({ bookQr: ' COPY-001 ', previewOnly: true });
 
       expect(res.success).toBe(true);
-      expect(supaMock.from).not.toHaveBeenCalled();
+      expect(supaMock.from.mock.calls.map((c) => c[0])).toEqual(['book_copies']);
       expect(adminMock.rpc).toHaveBeenCalledWith('process_qr_return', {
         p_librarian_id: 'staff-1',
         p_book_qr: 'COPY-001',
