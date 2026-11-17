@@ -28,10 +28,11 @@ export function StatusBanner({
   // State 1: Ready for pickup (held copy)
   if (availability.isReady) {
     const deadline = availability.holdExpiresAt
-      ? new Date(availability.holdExpiresAt).toLocaleDateString(undefined, {
+      ? new Date(availability.holdExpiresAt).toLocaleDateString('en-US', {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
+          timeZone: 'Asia/Manila',
         })
       : null;
 

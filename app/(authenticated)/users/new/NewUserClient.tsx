@@ -125,11 +125,11 @@ export function NewUserClient({ currentRole }: { currentRole?: string }) {
               />
             </FieldGroup>
           )}
-          <div className="pt-4 border-t mt-6 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => router.push('/users')} disabled={isSaving}>
+          <div className="pt-4 border-t mt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => router.push('/users')} disabled={isSaving} className="h-11 sm:h-10 w-full sm:w-auto rounded-xl sm:rounded-lg">
               Cancel
             </Button>
-            <Button type="submit" disabled={!inviteEmail.trim() || isSaving}>
+            <Button type="submit" disabled={!inviteEmail.trim() || isSaving} className="h-11 sm:h-10 w-full sm:w-auto rounded-xl sm:rounded-lg">
               {isSaving ? "Sending..." : "Send Invitation"}
             </Button>
           </div>

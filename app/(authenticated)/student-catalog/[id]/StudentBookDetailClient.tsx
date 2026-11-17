@@ -136,7 +136,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5">
+    <div className="p-0 md:p-6 space-y-5">
 
       {/* ── Status Banner ── */}
       <StatusBanner book={book} availability={availability} variant="full" />
@@ -244,10 +244,11 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               <div>
                 <p className="text-xs font-black text-emerald-700">
                   Pick up by{' '}
-                  {new Date(availability.holdExpiresAt).toLocaleDateString(undefined, {
+                  {new Date(availability.holdExpiresAt).toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
+                    timeZone: 'Asia/Manila',
                   })}
                 </p>
                 <p className="mt-0.5 text-[11px] text-emerald-600/70">
@@ -264,9 +265,10 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               <p className="text-xs font-bold text-amber-700">
                 A copy is expected to be returned by{' '}
                 <span className="font-black">
-                  {new Date(availability.nextAvailableDate).toLocaleDateString(undefined, {
+                  {new Date(availability.nextAvailableDate).toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
+                    timeZone: 'Asia/Manila',
                   })}
                 </span>
                 . Reserve now to be first in line.
@@ -275,7 +277,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5">
             <ReserveTitleButton
               bookId={id}
               isAvailable={isAvailable}
@@ -285,7 +287,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               holdExpiresAt={availability.holdExpiresAt}
               nextAvailableDate={availability.nextAvailableDate}
               onReserveSuccess={handleReserveSuccess}
-              className="h-11 px-6 text-sm shadow-md"
+              className="h-11 w-full sm:w-auto px-6 text-sm shadow-md"
             />
             {availability.hasReservation && (
               <Button
@@ -293,7 +295,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
                 size="default"
                 disabled={isPending}
                 onClick={() => setCancelDialogOpen(true)}
-                className="h-11 px-5 text-sm text-destructive border-destructive/30 hover:bg-destructive/5"
+                className="h-11 w-full sm:w-auto px-5 text-sm text-destructive border-destructive/30 hover:bg-destructive/5"
               >
                 {isPending ? 'Cancelling…' : 'Cancel Reservation'}
               </Button>

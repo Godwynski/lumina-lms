@@ -83,8 +83,8 @@ export function CategoryItem({
             </Field>
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5 min-w-0">
               <h3 className="text-sm font-semibold text-foreground tracking-tight group-hover:text-primary transition-colors">
                 {category.name}
               </h3>
@@ -94,12 +94,12 @@ export function CategoryItem({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2.5">
-              <span className="font-mono text-[11px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0">
+              <span className="font-mono text-[11px] font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10 shrink-0">
                 {category.slug}
               </span>
               {category.description && (
-                <p className="text-xs text-muted-foreground truncate max-w-[400px]">
+                <p className="text-xs text-muted-foreground line-clamp-2 sm:truncate sm:max-w-[400px] min-w-0">
                   {category.description}
                 </p>
               )}
@@ -108,7 +108,7 @@ export function CategoryItem({
         )}
       </div>
 
-      <div className="flex items-center gap-1.5 ml-4 shrink-0">
+      <div className="flex items-center gap-1.5 ml-2 sm:ml-4 shrink-0">
         {!isBulkEditing && onEdit && onArchive && (
           <TooltipProvider>
             <Tooltip>
@@ -118,7 +118,7 @@ export function CategoryItem({
                   onClick={() => onEdit(category)}
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                   aria-label="Edit category"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
@@ -137,7 +137,7 @@ export function CategoryItem({
                     onClick={() => onArchive(category.id)}
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                    className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all"
                     aria-label="Archive category"
                   >
                     <Archive className="h-3.5 w-3.5" />
@@ -155,7 +155,7 @@ export function CategoryItem({
                     onClick={() => onRestore && onRestore(category.id)}
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                    className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
                     aria-label="Restore category"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />

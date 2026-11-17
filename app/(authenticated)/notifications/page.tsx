@@ -88,47 +88,61 @@ export default function NotificationsPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end gap-4">
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={markAllAsRead}
-          >
-            Clear unread
-          </Button>
-        )}
-      </div>
-
+    <div className="space-y-4 md:space-y-6">
       <Tabs defaultValue="all" className="w-full space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <TabsList aria-label="Filter notifications">
-            <TabsTrigger value="all">
-              All
-            </TabsTrigger>
-            <TabsTrigger value="unread">
-              Unread
-              {unreadCount > 0 && (
-                <span className="ml-2 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-              )}
-              {unreadCount > 0 && <span className="sr-only"> ({unreadCount})</span>}
-            </TabsTrigger>
-            <TabsTrigger value="read">
-              History
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 md:gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <TabsList aria-label="Filter notifications" className="group-data-[orientation=horizontal]/tabs:h-auto">
+              <TabsTrigger value="all" className="min-h-11 md:min-h-0 px-3">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="unread" className="min-h-11 md:min-h-0 px-3">
+                Unread
+                {unreadCount > 0 && (
+                  <span className="ml-2 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                )}
+                {unreadCount > 0 && <span className="sr-only"> ({unreadCount})</span>}
+              </TabsTrigger>
+              <TabsTrigger value="read" className="min-h-11 md:min-h-0 px-3">
+                History
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="relative flex-1 md:max-w-xs group w-full">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              type="search"
-              aria-label="Search all notifications"
-              placeholder="Filter events..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={markAllAsRead}
+                className="h-11 md:h-9 shrink-0 rounded-xl px-3 text-xs font-semibold md:hidden"
+              >
+                Clear unread
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 w-full md:w-auto md:flex-1 md:justify-end">
+            <div className="relative flex-1 md:max-w-xs group w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Input
+                type="search"
+                aria-label="Search all notifications"
+                placeholder="Filter events..."
+                className="h-11 md:h-10 pl-9 rounded-xl"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={markAllAsRead}
+                className="hidden md:inline-flex h-10 shrink-0 rounded-xl"
+              >
+                Clear unread
+              </Button>
+            )}
           </div>
         </div>
 

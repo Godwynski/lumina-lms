@@ -5,10 +5,20 @@ import {
   Search,
   X,
   ChevronDown,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -255,12 +265,17 @@ export function StudentCatalogClient({
     updateParams({ q: null, category: null, available: null, sort: null, page: 1 });
   };
 
+  const mobileActiveFilterCount =
+    (selectedIds.length > 0 ? 1 : 0) +
+    (availableOnly ? 1 : 0) +
+    (explicitSort ? 1 : 0);
+
   return (
     <AdminTableShell
       variant="ghost"
       controls={
-        <div className="flex w-full flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[240px]">
+        <div className="flex w-full flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-3">
+          <div className="relative w-full md:flex-1 md:min-w-[240px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
             <Input
               type="search"
@@ -274,14 +289,14 @@ export function StudentCatalogClient({
                   pushQuery(localQuery);
                 }
               }}
-              className="h-10 pl-9 pr-10 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20"
+              className="h-11 md:h-10 pl-9 pr-11 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20"
             />
             {localQuery && (
               <Button 
                 variant="ghost" 
                 size="icon"
                 aria-label="Clear search"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-foreground"
                 onClick={() => { setLocalQuery(''); pushQuery(''); }}
               >
                 <X className="h-3.5 w-3.5" />
@@ -289,7 +304,118 @@ export function StudentCatalogClient({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 py-1">
+          {/* Mobile compact filter + view bar */}
+          <div className="flex md:hidden items-center justify-between gap-2 w-full">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label={mobileActiveFilterCount > 0 ? `Catalog filters (${mobileActiveFilterCount} active)` : "Catalog filters"}
+                  className={cn(
+                    "h-11 flex-1 min-w-0 rounded-xl border-border/40 bg-background/50 px-3.5 justify-between text-xs font-bold shadow-none",
+                    mobileActiveFilterCount > 0 && "border-primary/30 bg-primary/5 text-primary"
+                  )}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>Filters &amp; Sort</span>
+                  </span>
+                  {mobileActiveFilterCount > 0 && (
+                    <Badge className="ml-2 h-5 min-w-5 px-1.5 rounded-full text-[11px] bg-primary text-primary-foreground">
+                      {mobileActiveFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" responsiveBottom className="p-0 overflow-hidden flex flex-col">
+                <div className="p-5 pb-4 border-b border-border/10">
+                  <SheetTitle className="text-lg font-bold">Catalog Filters</SheetTitle>
+                  <SheetDescription className="text-xs text-muted-foreground">
+                    Filter by availability, category, or change sort order.
+                  </SheetDescription>
+                </div>
+
+                <div className="p-5 space-y-6 flex-1 overflow-y-auto">
+                  <div className="space-y-2.5">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground block">Availability</span>
+                    <Button
+                      type="button"
+                      variant={availableOnly ? 'default' : 'outline'}
+                      onClick={handleAvailableToggle}
+                      aria-pressed={availableOnly}
+                      className="h-11 w-full justify-between rounded-xl px-4 text-xs font-bold"
+                    >
+                      <span>Available copies only</span>
+                      <span>{availableOnly ? 'On' : 'Off'}</span>
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground block">Sort by</span>
+                    <Select value={sortBy} onValueChange={handleSortChange}>
+                      <SelectTrigger aria-label="Sort books (mobile)" className="min-h-11 h-11 w-full rounded-xl border-border/40 bg-background/50 px-3 text-xs font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hasQuery && <SelectItem value="relevance">Best Match</SelectItem>}
+                        <SelectItem value="newest">Recently Added</SelectItem>
+                        <SelectItem value="title">Title A-Z</SelectItem>
+                        <SelectItem value="author">Author</SelectItem>
+                        <SelectItem value="availability">Availability</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground block">Categories</span>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant={selectedIds.length === 0 ? 'default' : 'outline'}
+                        aria-pressed={selectedIds.length === 0}
+                        onClick={handleCatClear}
+                        className="h-11 rounded-xl px-4 text-xs font-bold"
+                      >
+                        All Categories
+                      </Button>
+                      {categories.map((category) => {
+                        const isSelected = selectedIds.includes(category.id);
+                        return (
+                          <Button
+                            key={category.id}
+                            type="button"
+                            variant={isSelected ? 'default' : 'outline'}
+                            aria-pressed={isSelected}
+                            onClick={() => handleCatToggle(category.id)}
+                            className="h-11 rounded-xl px-4 text-xs font-bold"
+                          >
+                            {category.name}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-border/10 bg-muted/5 flex gap-3">
+                  <Button type="button" variant="outline" onClick={clearFilters} className="h-11 flex-1 rounded-xl text-xs font-bold">
+                    Reset
+                  </Button>
+                  <SheetClose asChild>
+                    <Button type="button" className="h-11 flex-1 rounded-xl text-xs font-bold">
+                      Done
+                    </Button>
+                  </SheetClose>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Catalog view mode (mobile)" />
+          </div>
+
+          {/* Desktop inline filter + sort bar */}
+          <div className="hidden md:flex flex-wrap items-center gap-2 py-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -365,7 +491,7 @@ export function StudentCatalogClient({
           </div>
 
           {(selectedCategory || availableOnly || localQuery || explicitSort) && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-[11px] font-bold uppercase text-muted-foreground hover:text-destructive transition-colors ml-auto sm:ml-0">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="hidden md:inline-flex h-9 px-3 text-[11px] font-bold uppercase text-muted-foreground hover:text-destructive transition-colors">
               Reset
             </Button>
           )}

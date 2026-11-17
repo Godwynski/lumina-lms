@@ -10,6 +10,7 @@ import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { analyticsDates, validateDates, type AnalyticsDates } from '@/lib/analytics-dates';
 import { buildAnalyticsWorkbook } from '@/lib/analytics-export';
 import { Button } from '@/components/ui/button';
+import { OverflowActionsMenu } from '@/components/common/OverflowActionsMenu';
 import { AnalyticsDetailModal } from './AnalyticsDetailModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -147,8 +148,8 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
         <p className="text-xs text-muted-foreground">Date Range: {loadedDates.from} – {loadedDates.to}</p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2 px-1 print:hidden">
-        <div className="flex items-center gap-2">
+      <div className="relative flex items-center justify-between sm:justify-end gap-2 px-0 sm:px-1 print:hidden">
+        <div className="hidden sm:flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -172,7 +173,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
           </Button>
         </div>
 
-        <div className="flex bg-muted/40 p-1 rounded-xl border border-border/60">
+        <div className="grid grid-cols-4 sm:flex flex-1 sm:flex-none min-w-0 bg-muted/40 p-1 rounded-xl border border-border/60">
           {RANGES.map((r) => (
             <button
               key={r.value}
@@ -180,18 +181,18 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
               aria-pressed={range === r.value}
               onClick={() => applyDates(analyticsDates(r.value), r.value)}
               className={cn(
-                "px-4 py-1.5 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all",
+                "min-h-11 sm:min-h-0 px-1.5 sm:px-4 py-1.5 text-[11px] font-black uppercase tracking-tight sm:tracking-widest rounded-lg transition-all whitespace-nowrap text-center",
                 range === r.value 
-                  ? "bg-foreground text-background shadow-lg scale-[1.02]" 
+                  ? "bg-foreground text-background shadow-sm sm:shadow-lg" 
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
               )}
             >
               {r.label}
             </button>
           ))}
-          <details ref={customRef} className="relative">
-            <summary className={cn("list-none cursor-pointer rounded-lg px-4 py-1.5 text-[11px] font-bold", range === 'custom' ? 'bg-foreground text-background' : 'text-muted-foreground')}>Custom</summary>
-            <form className="absolute right-0 top-full z-30 mt-2 w-64 space-y-3 rounded-xl border border-border bg-background p-4 shadow-lg"
+          <details ref={customRef} className="sm:relative flex">
+            <summary className={cn("list-none cursor-pointer rounded-lg min-h-11 sm:min-h-0 w-full flex items-center justify-center px-1.5 sm:px-4 py-1.5 text-[11px] font-bold whitespace-nowrap", range === 'custom' ? 'bg-foreground text-background' : 'text-muted-foreground')}>Custom</summary>
+            <form className="absolute right-0 top-full z-30 mt-2 w-[min(16rem,calc(100vw-2rem))] sm:w-64 space-y-3 rounded-xl border border-border bg-background p-4 shadow-lg"
               onSubmit={(event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
@@ -202,10 +203,30 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
               <label className="block text-xs">From<input type="date" name="from" required value={draft.from} onChange={e => setDraft({ ...draft, from: e.target.value })} className="mt-1 block w-full rounded-md border border-border bg-background p-2 text-sm" /></label>
               <label className="block text-xs">To<input type="date" name="to" required min={draft.from} value={draft.to} onChange={e => setDraft({ ...draft, to: e.target.value })} className="mt-1 block w-full rounded-md border border-border bg-background p-2 text-sm" /></label>
               {dateError && <p role="alert" className="text-xs text-destructive">{dateError}</p>}
-              <button type="submit" className="w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">Apply</button>
+              <button type="submit" className="w-full min-h-10 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">Apply</button>
             </form>
           </details>
         </div>
+
+        <OverflowActionsMenu
+          label="Analytics report actions"
+          className="sm:hidden"
+          actions={[
+            {
+              id: "export-analytics",
+              label: isExporting ? "Exporting..." : "Export (.xlsx)",
+              icon: Download,
+              disabled: !summary || isLoadingSummary || isExporting,
+              onSelect: () => void handleExportXlsx(),
+            },
+            {
+              id: "print-analytics",
+              label: "Print",
+              icon: Printer,
+              onSelect: () => window.print(),
+            },
+          ]}
+        />
       </div>
       {range === 'custom' && <div className="flex justify-end gap-3 text-xs text-muted-foreground">
         <span>{dates.from} – {dates.to}</span>
@@ -352,14 +373,14 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
                     }}
                     className="w-full text-left flex items-center justify-between py-5 px-6 hover:bg-primary/[0.04] transition-colors group focus:outline-none focus:bg-primary/[0.04]"
                   >
-                    <div className="flex items-center gap-4 min-w-0">
-                      <span className="text-[11px] font-black text-muted-foreground w-4 group-hover:text-primary/40 transition-colors">0{i + 1}</span>
-                      <div className="min-w-0">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <span className="text-[11px] font-black text-muted-foreground w-4 shrink-0 group-hover:text-primary/40 transition-colors">0{i + 1}</span>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{book.title}</p>
                         {/* Author (and ISBN) tell apart books that share a title. */}
                         <p className="text-xs text-muted-foreground truncate">
                           {book.author ? `by ${book.author}` : 'Unknown author'}
-                          {book.isbn && <span className="font-mono"> · ISBN {book.isbn}</span>}
+                          {book.isbn && <span className="font-mono block sm:inline truncate"> · ISBN {book.isbn}</span>}
                         </p>
                       </div>
                     </div>

@@ -497,19 +497,19 @@ export function DashboardClient({
         </section>
 
         {/* ==================== SYSTEM SHORTCUTS GRID ==================== */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
+        <section className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4">
           {quickShortcuts.map((shortcut) => (
             <CardLink
               key={shortcut.path}
               href={shortcut.path}
-              className={`group border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer p-3.5 sm:p-4 flex items-center gap-3.5 rounded-xl ${shortcut.color}`}
+              className={`group border border-border/20 bg-card/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-all cursor-pointer p-3 sm:p-4 min-h-14 flex items-center gap-2.5 sm:gap-3.5 rounded-xl ${shortcut.color}`}
             >
-              <div className={`p-2.5 rounded-lg transition-all duration-300 shrink-0 ${shortcut.iconBg}`}>
+              <div className={`p-2 sm:p-2.5 rounded-lg transition-all duration-300 shrink-0 ${shortcut.iconBg}`}>
                 <shortcut.icon size={18} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground/90 truncate">{shortcut.title}</p>
-                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{shortcut.desc}</p>
+                <p className="text-xs sm:text-sm font-bold text-foreground/90 truncate">{shortcut.title}</p>
+                <p className="text-[11px] text-muted-foreground truncate mt-0.5 hidden sm:block">{shortcut.desc}</p>
               </div>
             </CardLink>
           ))}

@@ -78,7 +78,7 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="relative h-10 w-10 rounded-xl transition-all hover:scale-[1.02] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 data-[state=open]:bg-slate-100"
+            className="relative h-11 w-11 md:h-10 md:w-10 rounded-xl transition-all hover:scale-[1.02] hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 data-[state=open]:bg-slate-100"
             aria-label={`${initials} — account menu for ${name}`}
           >
           <Avatar className="h-10 w-10 rounded-xl border border-slate-300">

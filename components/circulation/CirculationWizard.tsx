@@ -131,9 +131,9 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   };
 
   return (
-    <div className="w-full space-y-6 pb-12">
+    <div className="w-full space-y-3 sm:space-y-6 pb-12">
       {/* Centered Compact Stepper */}
-      <div className="bg-card/30 border border-border/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+      <div className="bg-card/30 border border-border/10 rounded-2xl p-3 sm:p-6 backdrop-blur-sm">
         <CirculationStepper
           steps={steps}
           currentStep={step}
@@ -142,13 +142,13 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
         />
       </div>
 
-      <div className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
+      <div className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-3.5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
         {/* Header Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-8 pb-6 border-b border-border/20">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 sm:mb-8 sm:pb-6 border-b border-border/20">
           <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/10">
             <Button
               variant={mode === 'checkout' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
+              className="h-11 sm:h-8 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
               aria-pressed={mode === 'checkout'}
               disabled={isCommitting}
               onClick={() => mode !== 'checkout' && handleSwitchMode('checkout')}
@@ -157,7 +157,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
             </Button>
             <Button
               variant={mode === 'return' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
+              className="h-11 sm:h-8 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
               aria-pressed={mode === 'return'}
               disabled={isCommitting}
               onClick={() => mode !== 'return' && handleSwitchMode('return')}
@@ -171,7 +171,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-2 rounded-lg text-muted-foreground transition-colors"
+              className="h-11 sm:h-8 gap-1.5 sm:gap-2 rounded-lg text-muted-foreground transition-colors"
               disabled={!canNavigate}
               onClick={() => goToStep(step - 1)}
             >
@@ -182,7 +182,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
           {!isConfirmed && (reachedStep > 1 || isProcessing) && <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="h-11 sm:h-8 gap-1.5 sm:gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             disabled={isCommitting}
             onClick={handleReset}
           >

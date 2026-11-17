@@ -39,7 +39,7 @@ export const Section = memo(({
   hideHeaderOnMobile?: boolean 
 }) => {
   return (
-    <div className={cn("space-y-4", hideHeaderOnMobile && "md:mt-4")}>
+    <div className={cn("space-y-4 min-w-0", hideHeaderOnMobile && "md:mt-4")}>
       {title && Icon && (
         <div className={cn(
           "flex items-center gap-2 border-b border-border/40 pb-3",
@@ -308,7 +308,7 @@ export function ArchiveLogsTool() {
               type="button"
               variant={cutoffDate === opt.value ? "default" : "outline"}
               size="sm"
-              className="h-7 rounded-lg text-[11px]"
+              className="min-h-11 h-11 sm:min-h-0 sm:h-7 rounded-lg text-[11px]"
               onClick={() => setCutoffDate(opt.value)}
             >
               {opt.label}

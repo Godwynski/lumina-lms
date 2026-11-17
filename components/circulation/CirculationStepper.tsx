@@ -60,7 +60,7 @@ export function CirculationStepper({ steps, currentStep, reachedStep = currentSt
                 </div>
                 
                 <span className={cn(
-                  "text-sm font-medium text-center transition-colors max-w-[80px] sm:max-w-[120px] leading-tight",
+                  "text-xs sm:text-sm font-medium text-center transition-colors max-w-[76px] sm:max-w-[120px] leading-tight",
                   active || done ? "text-foreground" : "text-muted-foreground"
                 )}>
                   {step.label}

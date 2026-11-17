@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Section } from "@/components/settings/SettingsShared";
 import { FieldGroup } from "@/components/common/FieldGroup";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 import { UserBorrowingHistorySection, type UserBorrowingHistoryData } from "@/components/users/UserBorrowingHistorySection";
 import { createClient } from "@/lib/supabase/client";
 import { mapProfileToUser } from "@/lib/utils/mappers";
@@ -260,8 +261,8 @@ export function UserDetailClient({
 
   return (
     <SettingsShell isDirty={isDirty}>
-      <div className="flex flex-col gap-6 pt-2">
-        <div className="grid gap-6">
+      <div className="flex flex-col gap-6 pt-2 min-w-0">
+        <div className="grid gap-6 min-w-0">
 
           {/* ───── Section 1: User Identity & Core Access ───── */}
           <Section title="User Profile" icon={UserIcon} hideHeaderOnMobile>
@@ -302,7 +303,7 @@ export function UserDetailClient({
               </div>
 
               {/* Right Column: Information & Controls */}
-              <div className="flex-1 space-y-6">
+              <div className="flex-1 min-w-0 space-y-6">
                 {/* Information Fields */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FieldGroup label="Display Name">
@@ -413,10 +414,10 @@ export function UserDetailClient({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-[11px] font-bold gap-1.5"
+                      className="h-11 sm:h-8 text-[11px] font-bold gap-1.5 rounded-xl sm:rounded-md"
                       onClick={() => setPermissionsOpen(true)}
                     >
-                      <Key className="h-3 w-3" />
+                      <Key className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                       Manage Assistant Permissions
                     </Button>
                   )}
@@ -426,19 +427,43 @@ export function UserDetailClient({
                       variant="outline"
                       size="sm"
                       className={cn(
-                        "h-8 text-[11px] font-bold gap-1.5 transition-all border-amber-500/40 text-amber-600 hover:bg-amber-50 ring-2 ring-amber-500/20 animate-pulse"
+                        "h-11 sm:h-8 text-[11px] font-bold gap-1.5 rounded-xl sm:rounded-md transition-all border-amber-500/40 text-amber-600 hover:bg-amber-50 ring-2 ring-amber-500/20 animate-pulse"
                       )}
                       onClick={() => setVerificationOpen(true)}
                     >
-                      <CheckCircle2 className="h-3 w-3" />
+                      <CheckCircle2 className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                       Verify & Approve
                     </Button>
                   )}
 
+                  <OverflowActionsMenu
+                    label="More user actions"
+                    className="sm:hidden ml-auto"
+                    actions={[
+                      {
+                        id: "other-info",
+                        label: "Other Information",
+                        icon: AlertCircle,
+                        onSelect: () => setSecondaryOpen(true),
+                      },
+                      ...(isAdmin
+                        ? [
+                            {
+                              id: "archive-user",
+                              label: "Archive",
+                              icon: Trash2,
+                              destructive: true,
+                              onSelect: () => setArchiveOpen(true),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 text-[11px] font-bold gap-1.5"
+                    className="hidden sm:inline-flex h-8 text-[11px] font-bold gap-1.5"
                     onClick={() => setSecondaryOpen(true)}
                   >
                     <AlertCircle className="h-3 w-3" />
@@ -449,7 +474,7 @@ export function UserDetailClient({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 text-[11px] font-bold gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                      className="hidden sm:inline-flex h-8 text-[11px] font-bold gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
                       onClick={() => setArchiveOpen(true)}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -462,14 +487,14 @@ export function UserDetailClient({
           </Section>
 
           {/* ───── Save Footer ───── */}
-          <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-4 mt-2 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-background shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-primary/10 bg-primary/5 p-4 mt-2 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-background shadow-sm shrink-0">
                 <UserCheck className="h-4 w-4 text-primary" />
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 min-w-0">
                 <p className="text-xs font-bold text-foreground">{isDirty ? "Pending Changes" : "No Unsaved Changes"}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground truncate">
                   Role <span className="text-foreground font-medium">{getRoleLabel(form.role)}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
                 </p>
               </div>
@@ -477,7 +502,7 @@ export function UserDetailClient({
             <Button
               onClick={handleUpdateProfile}
               disabled={isSaving || !isDirty}
-              className="h-10 rounded-lg px-8 font-bold shadow-md transition-all active:scale-95"
+              className="h-11 sm:h-10 w-full sm:w-auto rounded-xl sm:rounded-lg px-8 font-bold shadow-md transition-all active:scale-95 shrink-0"
             >
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>

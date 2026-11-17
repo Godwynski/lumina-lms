@@ -313,7 +313,7 @@ export function PolicyLayout({
                 key={item.id}
                 onClick={() => handleCategoryClick(item.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
+                  "min-h-11 flex items-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
                   activeCategory === item.id 
                     ? "bg-primary text-primary-foreground border-primary shadow-sm" 
                     : "bg-card/50 text-muted-foreground border-border/40 hover:border-primary/20"
@@ -476,7 +476,7 @@ export function PolicyLayout({
 
       {/* ── Floating Review Bar ───────────────────────────────── */}
       {canEdit && conflictKeys.length > 0 && (
-        <div role="alert" className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md">
+        <div role="alert" className="fixed bottom-32 sm:bottom-28 left-1/2 -translate-x-1/2 z-50 px-3 sm:px-4 w-full max-w-md">
           <div className="rounded-2xl border border-amber-500/30 bg-background/95 p-4 shadow-2xl backdrop-blur-xl space-y-3">
             <div className="flex items-start gap-2.5">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
@@ -491,10 +491,10 @@ export function PolicyLayout({
               </p>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => resolveConflicts("server")}>
+              <Button variant="outline" size="sm" className="h-10 sm:h-9" onClick={() => resolveConflicts("server")}>
                 Use their value
               </Button>
-              <Button size="sm" onClick={() => resolveConflicts("mine")}>
+              <Button size="sm" className="h-10 sm:h-9" onClick={() => resolveConflicts("mine")}>
                 Keep my edit
               </Button>
             </div>
@@ -502,29 +502,29 @@ export function PolicyLayout({
         </div>
       )}
       {canEdit && changedKeys.length > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-sm animate-in slide-in-from-bottom-8 duration-500">
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/10 bg-background/90 p-2 pl-5 shadow-2xl backdrop-blur-xl">
+        <div className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 px-3 sm:px-4 w-full max-w-sm animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 rounded-2xl border border-primary/10 bg-background/95 sm:bg-background/90 p-3 sm:p-2 sm:pl-5 shadow-2xl backdrop-blur-xl">
              <div className="flex items-center gap-2.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[11px] font-bold uppercase tracking-widest text-foreground/70">
                   {changedKeys.length} unsaved changes
                 </span>
              </div>
-             <div className="flex items-center gap-2">
+             <div className="flex items-center gap-2 w-full sm:w-auto">
                <Button
                   variant="outline"
                   onClick={() => {
                     discardEdits();
                     toast.success("All unsaved changes discarded");
                   }}
-                  className="h-9 rounded-xl px-4 text-[11px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
+                  className="h-11 sm:h-9 flex-1 sm:flex-none rounded-xl px-4 text-[11px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
                >
                   Discard
                </Button>
                <Button
                   onClick={() => setIsCommitModalOpen(true)}
                   disabled={conflictKeys.length > 0 || invalidKeys.length > 0}
-                  className="h-9 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
+                  className="h-11 sm:h-9 flex-1 sm:flex-none rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
                >
                   Review Changes
                </Button>

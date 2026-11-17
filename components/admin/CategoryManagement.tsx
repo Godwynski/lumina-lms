@@ -215,7 +215,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
   return (
     <div className="w-full space-y-8 p-1">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
             <Layers className="h-5 w-5" />
@@ -230,9 +230,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {isBulkEditing ? (
-            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto animate-in fade-in slide-in-from-right-4 duration-500">
               {changedIds.length > 0 && (
                 <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-bold uppercase tracking-wider text-primary">
                   {changedIds.length} Pending Mods
@@ -245,7 +245,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                       variant="ghost"
                       onClick={resetBulkEdit}
                       disabled={loading}
-                      className="h-9 px-4 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all"
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-4 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all"
                     >
                       <X className="h-4 w-4 mr-2" />
                       Discard
@@ -261,7 +261,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                     <Button
                       onClick={handleBulkSave}
                       disabled={loading || changedIds.length === 0}
-                      className="h-9 px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                       Save Changes
@@ -274,14 +274,14 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
               </TooltipProvider>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="outline"
                       onClick={() => setIsBulkEditing(true)}
-                      className="h-9 px-4 rounded-xl text-xs font-semibold border-border/20 bg-muted/5 text-muted-foreground hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-3.5 sm:px-4 rounded-xl text-xs font-semibold border-border/20 bg-muted/5 text-muted-foreground hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
                     >
                       <Edit3 className="h-4 w-4 mr-2" />
                       Bulk Management
@@ -296,7 +296,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                   <TooltipTrigger asChild>
                     <Button
                       onClick={() => openDialog()}
-                      className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-3.5 sm:px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
                     >
                       <Plus className="h-4 w-4" />
                       Add Category
@@ -323,7 +323,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 min-w-0">
           {(isBulkEditing ? draftCategories : categories).map((category) => (
             <CategoryItem
               key={category.id}

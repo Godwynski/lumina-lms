@@ -72,7 +72,7 @@ export function ScanStep({
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Scanning tips" className="h-8 w-8 rounded-full text-muted-foreground">
+                            <Button variant="ghost" size="icon" aria-label="Scanning tips" className="h-11 w-11 sm:h-8 sm:w-8 shrink-0 rounded-full text-muted-foreground">
                                 <HelpCircle className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
@@ -112,7 +112,7 @@ export function ScanStep({
                             <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-9 rounded-xl border-border/40 font-semibold text-xs tracking-wide"
+                                className="h-11 sm:h-9 rounded-xl border-border/40 font-semibold text-xs tracking-wide"
                                 onClick={() => startScanner()}
                                 disabled={isInitializing}
                             >
@@ -136,7 +136,7 @@ export function ScanStep({
                             <Button 
                                 variant="secondary" 
                                 size="icon" 
-                                className={`h-9 w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10 ${!hasMultipleCameras ? 'invisible' : ''}`}
+                                className={`h-11 w-11 sm:h-9 sm:w-9 rounded-xl backdrop-blur-md bg-background/60 border border-white/10 ${!hasMultipleCameras ? 'invisible' : ''}`}
                                 onClick={switchCamera}
                                 aria-label="Switch camera"
                                 title="Switch Camera"
@@ -146,7 +146,7 @@ export function ScanStep({
 
                             <Button 
                                 variant="destructive" 
-                                className="h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[11px] font-bold uppercase tracking-wider"
+                                className="h-11 sm:h-9 rounded-xl px-4 backdrop-blur-md bg-destructive/90 text-[11px] font-bold uppercase tracking-wider"
                                 onClick={() => stopCamera()}
                             >
                                 Stop camera

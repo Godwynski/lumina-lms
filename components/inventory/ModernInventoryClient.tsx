@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { ViewModeToggle, resolveViewMode } from "@/components/common/ViewModeToggle";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 import {
   buildImportTemplateWorkbook,
   filterValidImportBooks,
@@ -643,62 +644,78 @@ export function ModernInventoryClient({
 
   return (
     <div className="w-full space-y-6 pb-10">
-      <div className={cn("space-y-6", isReportPreviewOpen && "print:hidden")}>
-      <div className="sticky top-0 z-30 flex flex-col gap-4 rounded-3xl border border-border/10 bg-background/60 p-2.5 backdrop-blur-2xl transition-all duration-300">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full">
-          {/* Search Box */}
-          <form onSubmit={handleSearch} className="relative flex flex-1 items-center gap-2">
-            <div className="relative flex-1 group">
-              <Search className={cn(
-                "absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-all duration-300",
-                searchQuery ? "text-primary scale-110" : "text-muted-foreground/30"
-              )} />
-              <input
-                type="search"
-                aria-label="Search inventory"
-                placeholder="Search inventory..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-2xl border border-border/20 bg-muted/5 pl-11 pr-11 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  aria-label="Clear search"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-90"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </form>
+      <div className={cn("space-y-4 sm:space-y-6", isReportPreviewOpen && "print:hidden")}>
+      <div className="sticky top-14 md:top-0 z-30 flex flex-col gap-3 rounded-2xl sm:rounded-3xl border border-border/10 bg-background/85 sm:bg-background/60 p-2 sm:p-2.5 backdrop-blur-2xl transition-all duration-300">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center gap-2 sm:gap-3 w-full">
+          {/* Row 1 on mobile: Search + Primary Add CTA */}
+          <div className="flex items-center gap-2 w-full sm:flex-1 min-w-0">
+            <form onSubmit={handleSearch} className="relative flex flex-1 min-w-0 items-center gap-2">
+              <div className="relative flex-1 min-w-0 group">
+                <Search className={cn(
+                  "absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 transition-all duration-300",
+                  searchQuery ? "text-primary scale-110" : "text-muted-foreground/30"
+                )} />
+                <input
+                  type="search"
+                  aria-label="Search inventory"
+                  placeholder="Search inventory..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-11 w-full rounded-xl sm:rounded-2xl border border-border/20 bg-muted/5 pl-10 sm:pl-11 pr-10 sm:pr-11 text-sm font-medium transition-all focus:border-primary/30 focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/5 placeholder:text-muted-foreground"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    aria-label="Clear search"
+                    className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </form>
 
+            {canManage && (
+              <Button asChild className="sm:hidden shrink-0 h-11 rounded-xl px-3.5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
+                <Link href="/inventory/add" aria-label="Add item">
+                  <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  <span>Add</span>
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          {/* Row 2 on mobile: Filters + View Toggle + Secondary Overflow */}
+          <div className="flex items-center justify-between gap-2 w-full sm:flex-wrap lg:w-auto lg:flex-nowrap shrink-0">
           <Sheet>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
                 aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}
-                className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 relative"
+                className={cn(
+                  "h-11 flex-1 sm:flex-none rounded-xl sm:rounded-2xl px-3.5 sm:px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 relative justify-center",
+                  activeFilterCount > 0 && "border-primary/30 bg-primary/5 text-primary"
+                )}
               >
-                <SlidersHorizontal className="h-4 w-4 text-primary/80" />
-                <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wider">Filters</span>
+                <SlidersHorizontal className="h-4 w-4 text-primary/80 shrink-0" />
+                <span className="text-[11px] font-bold uppercase tracking-wider">Filters</span>
                 {activeFilterCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 rounded-full text-[11px] bg-primary text-primary-foreground border-2 border-background">
+                  <Badge className="sm:absolute sm:-top-1 sm:-right-1 h-5 min-w-5 flex items-center justify-center px-1.5 sm:p-0 rounded-full text-[11px] bg-primary text-primary-foreground sm:border-2 sm:border-background">
                     {activeFilterCount}
                   </Badge>
                 )}
               </Button>
             </SheetTrigger>
-            <SheetContent showCloseButton={false} side="right" className="w-full sm:max-w-md rounded-l-3xl border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
-              <div className="absolute top-0 right-0 p-4 z-10">
-                <SheetClose aria-label="Close filters" className="rounded-full h-8 w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
+            <SheetContent showCloseButton={false} side="right" responsiveBottom className="w-full sm:max-w-md border-l-border/10 bg-background p-0 overflow-hidden flex flex-col">
+              <div className="absolute top-0 right-0 p-3 sm:p-4 z-10">
+                <SheetClose aria-label="Close filters" className="rounded-full h-11 w-11 sm:h-8 sm:w-8 flex items-center justify-center bg-muted/20 text-muted-foreground hover:bg-muted transition-colors">
                    <X className="h-4 w-4" />
                 </SheetClose>
               </div>
 
-              <div className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
-                <div className="space-y-1">
+              <div className="p-5 sm:p-8 space-y-6 sm:space-y-8 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="space-y-1 pr-10">
                   <SheetTitle className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
                     Filters
                   </SheetTitle>
@@ -720,7 +737,7 @@ export function ModernInventoryClient({
                           aria-pressed={status === s}
                           onClick={() => setStatus(s)}
                           className={cn(
-                            "h-9 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
+                            "h-11 sm:h-9 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
                             status === s ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10 hover:bg-muted/10"
                           )}
                         >
@@ -734,7 +751,7 @@ export function ModernInventoryClient({
                   <div className="space-y-3">
                     <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Sorting Order</label>
                     <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                      <SelectTrigger aria-label="Sorting order" className="h-10 w-full rounded-lg border border-border/10 bg-muted/5 px-3 text-[11px] font-medium shadow-none focus:ring-0">
+                      <SelectTrigger aria-label="Sorting order" className="min-h-11 h-11 sm:min-h-10 sm:h-10 w-full rounded-lg border border-border/10 bg-muted/5 px-3 text-[11px] font-medium shadow-none focus:ring-0">
                         <div className="flex items-center gap-2">
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
                           <SelectValue />
@@ -762,7 +779,7 @@ export function ModernInventoryClient({
                         aria-pressed={selectedCategoryIds.length === 0}
                         onClick={() => setCategoryId("all")}
                         className={cn(
-                          "h-9 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider transition-all",
+                          "h-11 sm:h-9 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider transition-all",
                           selectedCategoryIds.length === 0 ? "bg-primary text-primary-foreground" : "bg-muted/5 border-border/10"
                         )}
                       >
@@ -778,7 +795,7 @@ export function ModernInventoryClient({
                             aria-pressed={isSelected}
                             onClick={() => handleCategoryToggle(cat.id)}
                             className={cn(
-                              "h-10 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest transition-all",
+                              "h-11 sm:h-10 rounded-xl px-4 sm:px-5 text-[11px] font-bold uppercase tracking-widest transition-all",
                               isSelected ? "bg-primary shadow-lg shadow-primary/20" : "bg-muted/5 border-border/10"
                             )}
                           >
@@ -791,7 +808,7 @@ export function ModernInventoryClient({
                 </div>
               </div>
 
-              <div className="p-6 bg-muted/5 border-t border-border/10 flex gap-3">
+              <div className="p-4 sm:p-6 bg-muted/5 border-t border-border/10 flex gap-3">
                 <Button 
                   variant="outline" 
                   className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-widest border-border/10"
@@ -817,11 +834,23 @@ export function ModernInventoryClient({
           {/* Add Item & Batch Operations Buttons */}
           {canManage && (
             <div className="flex gap-2 shrink-0">
+              <OverflowActionsMenu
+                label="Inventory actions"
+                className="sm:hidden"
+                actions={[
+                  {
+                    id: "batch-operations",
+                    label: "Batch Operations",
+                    icon: Upload,
+                    onSelect: () => setIsBatchOpen(true),
+                  },
+                ]}
+              />
               <Dialog open={isBatchOpen} onOpenChange={setIsBatchOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" aria-label="Batch operations" className="h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 text-[11px] font-bold uppercase tracking-wider">
+                  <Button variant="outline" aria-label="Batch operations" className="hidden sm:inline-flex h-11 rounded-2xl px-4 gap-2 border-border/20 bg-muted/5 hover:bg-background transition-all active:scale-95 text-[11px] font-bold uppercase tracking-wider">
                     <Upload className="h-4 w-4 text-primary/80" />
-                    <span className="hidden sm:inline">Batch Operations</span>
+                    <span>Batch Operations</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className={cn("w-full sm:max-w-2xl rounded-3xl border border-border/10 bg-background/95 backdrop-blur-xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-[9999]", isReportPreviewOpen && "print:hidden")}>
@@ -836,39 +865,39 @@ export function ModernInventoryClient({
                   </DialogHeader>
                   
                   {/* Beautiful Glassmorphic Tab Selectors */}
-                  <div className="flex gap-1 p-1 rounded-xl bg-muted/20 border border-border/5 mb-6">
+                  <div className="flex gap-1 p-1 rounded-xl bg-muted/20 border border-border/5 mb-4 sm:mb-6">
                     <button
                       aria-pressed={activeTab === "import"}
                       onClick={() => setActiveTab("import")}
                       className={cn(
-                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
+                        "flex-1 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
                         activeTab === "import" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      <Upload className="h-3.5 w-3.5" />
-                      Import Sheet
+                      <Upload className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">Import Sheet</span>
                     </button>
                     <button
                       aria-pressed={activeTab === "isbn"}
                       onClick={() => setActiveTab("isbn")}
                       className={cn(
-                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
+                        "flex-1 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
                         activeTab === "isbn" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      <Play className="h-3.5 w-3.5" />
-                      ISBN Fallback
+                      <Play className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">ISBN Fallback</span>
                     </button>
                     <button
                       aria-pressed={activeTab === "export"}
                       onClick={() => setActiveTab("export")}
                       className={cn(
-                        "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2",
+                        "flex-1 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
                         activeTab === "export" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      <Download className="h-3.5 w-3.5" />
-                      Export Data
+                      <Download className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">Export Data</span>
                     </button>
                   </div>
 
@@ -1267,14 +1296,15 @@ export function ModernInventoryClient({
                 </DialogContent>
               </Dialog>
 
-              <Button asChild className="shrink-0 h-11 rounded-2xl px-5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
+              <Button asChild className="hidden sm:inline-flex shrink-0 h-11 rounded-2xl px-5 text-[11px] font-black uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 group">
                 <Link href="/inventory/add" aria-label="Add item">
-                  <Plus className="sm:mr-2 h-4 w-4 transition-transform group-hover:rotate-90" aria-hidden="true" />
-                  <span className="hidden sm:inline">Add Item</span>
+                  <Plus className="mr-2 h-4 w-4 transition-transform group-hover:rotate-90" aria-hidden="true" />
+                  <span>Add Item</span>
                 </Link>
               </Button>
             </div>
           )}
+          </div>
         </div>
       </div>
       <div className={cn("transition-opacity duration-200", isPending && "opacity-50 pointer-events-none")}>

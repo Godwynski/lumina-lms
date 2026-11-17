@@ -23,6 +23,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { type UserRole } from "@/lib/auth-helpers";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { CompactPagination } from "@/components/ui/compact-pagination";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 
 interface HistoryContentProps {
   historyPromise: Promise<{ records: BorrowingRecord[]; totalCount: number }>;
@@ -497,7 +498,7 @@ export default function HistoryContent({
                               e.stopPropagation();
                               setPendingAction({ record });
                             }}
-                            className="h-7 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-wider print:hidden"
+                            className="min-h-11 sm:min-h-0 sm:h-7 rounded-lg px-3 sm:px-2.5 text-[11px] font-black uppercase tracking-wider print:hidden"
                           >
                             {settlingId === record.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -517,29 +518,53 @@ export default function HistoryContent({
   ];
 
   const filterControls = (
-    <div className="flex flex-col gap-3 w-full font-sans print:hidden">
-      <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            updateFilters({ q: localSearch, page: 1 });
-          }}
-          className="relative w-full sm:max-w-xs"
-        >
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-          <Input
-            type="search"
-            aria-label="Search borrowing history"
-            placeholder="Search timeline, borrower, book, barcode..."
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            className="h-10 rounded-xl pl-9 pr-8 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
-          />
-          {isPending && (
-            <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary animate-spin" />
+    <div className="flex flex-col gap-2.5 sm:gap-3 w-full font-sans print:hidden">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2.5 sm:gap-4 w-full">
+        <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateFilters({ q: localSearch, page: 1 });
+            }}
+            className="relative flex-1 min-w-0"
+          >
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+            <Input
+              type="search"
+              aria-label="Search borrowing history"
+              placeholder="Search timeline, borrower, book, barcode..."
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              className="h-11 sm:h-10 rounded-xl pl-9 pr-8 bg-muted/10 border-border/40 focus:bg-background transition-all text-xs font-bold"
+            />
+            {isPending && (
+              <Loader2 className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-primary animate-spin" />
+            )}
+          </form>
+
+          {showExportPrint && (
+            <OverflowActionsMenu
+              label="History report actions"
+              className="sm:hidden"
+              actions={[
+                {
+                  id: "export-history",
+                  label: isExporting ? "Exporting..." : "Export (.xlsx)",
+                  icon: Download,
+                  disabled: isExporting,
+                  onSelect: () => void handleExportXlsx(),
+                },
+                {
+                  id: "print-history",
+                  label: "Print",
+                  icon: Printer,
+                  onSelect: () => window.print(),
+                },
+              ]}
+            />
           )}
-        </form>
-        <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10">
+        </div>
+        <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/10 overflow-x-auto no-scrollbar max-w-full">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.key}
@@ -547,9 +572,9 @@ export default function HistoryContent({
               aria-pressed={statusFilter === tab.key}
               onClick={() => updateFilters({ status: tab.key, resolution: tab.key === "SETTLED" ? effectiveResolution : "", page: 1 })}
               className={cn(
-                "rounded-lg px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all",
+                "shrink-0 min-h-11 sm:min-h-0 rounded-lg px-3.5 sm:px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                 statusFilter === tab.key
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               )}
             >
@@ -560,9 +585,9 @@ export default function HistoryContent({
       </div>
 
       {(isSettlementsTab || showExportPrint) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className={cn("flex flex-wrap items-center justify-between gap-3 pt-0.5", !isSettlementsTab && "hidden sm:flex")}>
           {isSettlementsTab ? (
-            <div className="flex flex-wrap items-center gap-1 p-1 bg-muted/15 rounded-xl border border-border/10" role="group" aria-label="Filter settlements by resolution">
+            <div className="flex items-center gap-1 p-1 bg-muted/15 rounded-xl border border-border/10 overflow-x-auto no-scrollbar max-w-full" role="group" aria-label="Filter settlements by resolution">
               {RESOLUTION_FILTERS.map((res) => (
                 <button
                   key={res.key}
@@ -570,7 +595,7 @@ export default function HistoryContent({
                   aria-pressed={effectiveResolution === res.key}
                   onClick={() => updateFilters({ resolution: res.key, page: 1 })}
                   className={cn(
-                    "rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
+                    "shrink-0 min-h-11 sm:min-h-0 rounded-lg px-3.5 sm:px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                     effectiveResolution === res.key
                       ? "bg-background text-foreground shadow-xs border border-border/30"
                       : "text-muted-foreground hover:text-foreground"
@@ -585,7 +610,7 @@ export default function HistoryContent({
           )}
 
           {showExportPrint && (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"

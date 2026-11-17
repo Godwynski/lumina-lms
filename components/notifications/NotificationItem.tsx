@@ -146,7 +146,7 @@ export const NotificationItem = memo(({
               e.stopPropagation()
               onMarkRead(notification.id)
             }}
-            className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-80 group-hover:opacity-100"
+            className="h-11 w-11 sm:h-7 sm:w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-80 group-hover:opacity-100"
             title="Mark as read"
             aria-label={`Mark "${notification.title}" as read`}
           >

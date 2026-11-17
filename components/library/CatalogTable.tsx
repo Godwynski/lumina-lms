@@ -114,7 +114,7 @@ export function CatalogTable({
               holdExpiresAt={reserved?.holdExpiresAt}
               variant="outline"
               size="sm"
-              className="h-7 text-[11px] px-2.5 rounded-lg"
+              className="min-h-10 md:h-7 text-[11px] px-3 md:px-2.5 rounded-lg"
               onReserveSuccess={(pos, status, expires) => onReserveSuccess(book.id, pos, status, expires)}
             />
           </div>

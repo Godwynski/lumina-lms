@@ -69,7 +69,7 @@ export function CompactPagination({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-xl hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-20"
+            className="h-11 w-11 sm:h-8 sm:w-8 rounded-xl hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-20"
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}
             aria-label="Previous page"
@@ -86,7 +86,7 @@ export function CompactPagination({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-xl hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-20"
+            className="h-11 w-11 sm:h-8 sm:w-8 rounded-xl hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-20"
             onClick={() => onPageChange(Math.min(totalPages, page + 1))}
             disabled={page >= totalPages}
             aria-label="Next page"

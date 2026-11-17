@@ -99,7 +99,7 @@ export default function PublicBookDetailPage({ params }: { params: Promise<{ id:
       <Button
         asChild
         variant="ghost"
-        className="flex items-center text-muted-foreground hover:text-foreground mb-6 px-0"
+        className="flex min-h-11 sm:min-h-10 items-center text-muted-foreground hover:text-foreground mb-6 px-0"
       >
         <Link href="/">
           <ChevronLeft className="w-5 h-5 mr-1" />

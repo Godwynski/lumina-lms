@@ -27,10 +27,10 @@ export function ViewModeToggle({ value, onChange, ariaLabel = "View mode" }: Vie
         size="sm"
         aria-pressed={value === "cards"}
         onClick={() => onChange("cards")}
-        className="h-9 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+        className="h-11 min-w-11 sm:h-9 sm:min-w-0 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
       >
-        <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="hidden sm:inline">Cards</span>
+        <LayoutGrid className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+        <span className="sr-only sm:not-sr-only">Cards</span>
       </Button>
       <Button
         type="button"
@@ -38,10 +38,10 @@ export function ViewModeToggle({ value, onChange, ariaLabel = "View mode" }: Vie
         size="sm"
         aria-pressed={value === "table"}
         onClick={() => onChange("table")}
-        className="h-9 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
+        className="h-11 min-w-11 sm:h-9 sm:min-w-0 rounded-xl px-3 gap-1.5 text-[11px] font-bold uppercase tracking-wider"
       >
-        <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="hidden sm:inline">Table</span>
+        <Table2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+        <span className="sr-only sm:not-sr-only">Table</span>
       </Button>
     </div>
   );

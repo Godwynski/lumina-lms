@@ -10,13 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import Link from "next/link";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
@@ -185,42 +185,43 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
         }
         controls={(
-          <>
-            <div className="relative w-full sm:max-w-md">
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1 min-w-0 sm:max-w-md">
               <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 aria-label="Search users by name or email"
                 placeholder="Search by name or email"
-                className="pl-9"
+                className="h-11 sm:h-10 pl-9 rounded-xl"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
-              <DialogTrigger asChild>
+            <Sheet open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
+              <SheetTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 px-3 gap-2"
+                  className="h-11 sm:h-9 px-3.5 sm:px-3 gap-2 shrink-0 rounded-xl"
                   aria-label={activeTab !== "all" ? `Filter users (${roleFilterLabels[activeTab]})` : "Filter users"}
                 >
                   <Filter size={14} aria-hidden="true" />
-                  <span className="hidden sm:inline">Filter</span>
+                  <span>Filter</span>
                   {activeTab !== "all" && (
                     <Badge variant="secondary" className="h-5 px-1.5 text-[11px] min-w-5 justify-center">
-                      {roleFilterLabels[activeTab]}
+                      <span className="sm:hidden">1</span>
+                      <span className="hidden sm:inline">{roleFilterLabels[activeTab]}</span>
                     </Badge>
                   )}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[400px]">
-                <DialogHeader>
-                  <DialogTitle>Filter Users</DialogTitle>
-                  <DialogDescription>
+              </SheetTrigger>
+              <SheetContent side="right" responsiveBottom className="sm:max-w-[400px] p-0 overflow-hidden flex flex-col">
+                <SheetHeader className="p-5 pb-3 border-b border-border/10">
+                  <SheetTitle>Filter Users</SheetTitle>
+                  <SheetDescription>
                     Filter the user directory by role, pending review, or archive status.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-2 py-4">
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="grid gap-2 p-5 overflow-y-auto">
                   {visibleTabs.map((tab) => (
                     <Button
                       key={tab}
@@ -230,16 +231,16 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                       }}
                       variant={activeTab === tab ? "default" : "outline"}
                       aria-pressed={activeTab === tab}
-                      className="justify-start h-10 px-4 text-sm"
+                      className="justify-start h-11 sm:h-10 px-4 text-sm rounded-xl"
                     >
                       {roleFilterLabels[tab]}
                     </Button>
                   ))}
                 </div>
-              </DialogContent>
-            </Dialog>
-            <div className="flex-1" />
-          </>
+              </SheetContent>
+            </Sheet>
+            <div className="hidden sm:block flex-1" />
+          </div>
         )}
         pagination={
           !isLoadingUsers && totalUsers > 0 ? (

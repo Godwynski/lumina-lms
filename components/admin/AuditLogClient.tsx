@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { AdminTableShell } from "./AdminTableShell";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 
 const AuditLogExportImportModal = dynamic(
   () => import("./AuditLogExportImportModal").then((mod) => mod.AuditLogExportImportModal),
@@ -524,13 +525,14 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 placeholder="Search records, names, or actions…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-8 h-10 border border-border/20 bg-muted/5 rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
+                className="pl-9 pr-10 h-11 sm:h-10 border border-border/20 bg-muted/5 rounded-xl sm:rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2 sm:p-0.5"
+                  aria-label="Clear search"
                   title="Clear search"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -538,13 +540,13 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <div className="flex items-center justify-between sm:justify-start gap-2 w-full lg:w-auto">
               {/* Advanced Filters Trigger Button (Opens Modal) */}
               <Button
                 variant={activeAdvancedFilterCount > 0 ? "secondary" : "outline"}
                 onClick={() => setShowAdvancedFilters(true)}
                 className={cn(
-                  "h-10 rounded-2xl border border-border/20 px-3.5 text-xs font-medium flex items-center gap-2 transition-all",
+                  "h-11 sm:h-10 flex-1 sm:flex-none rounded-xl sm:rounded-2xl border border-border/20 px-3.5 text-xs font-medium flex items-center justify-center gap-2 transition-all",
                   activeAdvancedFilterCount > 0 
                     ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15" 
                     : "bg-muted/5 hover:bg-muted/10 text-muted-foreground hover:text-foreground"
@@ -560,11 +562,24 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 )}
               </Button>
 
+              <OverflowActionsMenu
+                label="Audit log actions"
+                className="sm:hidden"
+                actions={[
+                  {
+                    id: "export-import-audit",
+                    label: canImport ? "Export / Import" : "Export",
+                    icon: Download,
+                    onSelect: () => setIsExportImportOpen(true),
+                  },
+                ]}
+              />
+
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => setIsExportImportOpen(true)}
-                className="h-10 rounded-2xl text-[11px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto"
+                className="hidden sm:inline-flex h-10 rounded-2xl text-[11px] font-bold uppercase tracking-wider px-3.5 transition-all hover:scale-[1.02] active:scale-95 w-auto"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 <span>{canImport ? "Export / Import" : "Export"}</span>
@@ -576,7 +591,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
             {studentId && <AuditSubjectChip kind="student" label="Student" value={studentId} onRemove={() => updateFilters({ studentId: "" })} />}
             {copyId && <AuditSubjectChip kind="copy" label="Copy" value={copyId} bookId={bookId} onRemove={() => updateFilters({ copyId: "" })} />}
             {userId && <AuditSubjectChip kind="actor" label="Performed by" value={userId} onRemove={() => updateFilters({ userId: "" })} />}
-            {[["query", debouncedSearch, "Search"], ["entityType", entityType === "all" ? "" : entityType, "Entity"], ["actionType", actionType === "all" ? "" : actionType, "Action"], ["startDate", startDate, "From"], ["endDate", endDate, "To"]].filter(([, value]) => value).map(([key, value, label]) => <button type="button" key={key} className="rounded-lg border px-3 py-1.5 text-xs hover:bg-muted" aria-label={`Remove ${label.toLowerCase()} filter`} onClick={() => { updateFilters({ [key]: "" }); if (key === "query") setSearch(""); }}>{label}: {value.replaceAll("_", " ")} <span aria-hidden="true">×</span></button>)}
+            {[["query", debouncedSearch, "Search"], ["entityType", entityType === "all" ? "" : entityType, "Entity"], ["actionType", actionType === "all" ? "" : actionType, "Action"], ["startDate", startDate, "From"], ["endDate", endDate, "To"]].filter(([, value]) => value).map(([key, value, label]) => <button type="button" key={key} className="min-h-11 sm:min-h-0 rounded-lg border px-3 py-1.5 text-xs hover:bg-muted" aria-label={`Remove ${label.toLowerCase()} filter`} onClick={() => { updateFilters({ [key]: "" }); if (key === "query") setSearch(""); }}>{label}: {value.replaceAll("_", " ")} <span aria-hidden="true">×</span></button>)}
           </div>}
           <p role="status" className="text-xs text-muted-foreground">{error ? "Unable to load records. Adjust the filters or reload to retry." : data ? `${data.total.toLocaleString()} matching records` : "Loading records…"}</p>
         </div>
@@ -616,7 +631,106 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
         )}
 
         {data?.logs && data.logs.length > 0 && (
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <>
+            <div className="space-y-3 md:hidden">
+              {data.logs.map((log) => {
+                const dateString = log.created_at ? formatManilaTimestamp(log.created_at) : "N/A";
+                const isExpanded = expandedRowId === log.id;
+                const details = parseLogDetails(log.details);
+                const hasDetails = Boolean((details && (details.added?.length || details.removed?.length || Object.keys(details).filter(k => !['added', 'removed'].includes(k) && !IGNORED_KEYS.includes(k)).length > 0)) || log.old_value || log.new_value);
+
+                return (
+                  <div
+                    key={log.id}
+                    className={cn(
+                      "rounded-2xl border border-border/20 bg-card/70 p-3.5 space-y-2.5 text-xs",
+                      isExpanded && "border-primary/30 bg-muted/10"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="font-bold text-foreground truncate">
+                          {log.profiles?.full_name || log.profiles?.email || "System"}
+                        </p>
+                        <p className="font-mono text-[11px] text-muted-foreground">
+                          {dateString}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className={cn(
+                        "shrink-0 font-bold text-[11px] uppercase tracking-wider px-2 py-0.5 rounded shadow-xs border-transparent",
+                        log.action === "create" ? "status-success" :
+                        log.action === "archive" ? "status-warning" :
+                        log.action === "delete" ? "status-danger" :
+                        "bg-primary/10 text-primary"
+                      )}>
+                        {log.action.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-1 text-muted-foreground min-w-0">
+                      {log.subject_book_id ? (
+                        <button type="button" className="inline-flex min-h-11 items-center text-left font-semibold text-primary hover:underline" onClick={() => setDetailBookId(log.subject_book_id!)}>
+                          {log.book_title || "View book"}
+                        </button>
+                      ) : log.book_title && (
+                        <span className="block font-medium text-foreground">{log.book_title}</span>
+                      )}
+                      {log.subject_student_id ? (
+                        <Link className="inline-flex min-h-11 items-center text-primary hover:underline" href={`/users/${log.subject_student_id}`}>
+                          {log.student_name || "View student"}{log.student_number ? ` · ${log.student_number}` : ""}
+                        </Link>
+                      ) : log.student_name && (
+                        <span className="block">{log.student_name}</span>
+                      )}
+                      {log.copy_barcode && (
+                        <span className="block">{log.copy_barcode}{log.copy_accession ? ` · ${log.copy_accession}` : ""}</span>
+                      )}
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <span className="text-[11px] uppercase tracking-wider font-semibold">{log.entity_type.replace(/_/g, " ")}</span>
+                        {hasDetails && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-11 px-3 text-[11px] font-bold uppercase tracking-wider rounded-xl"
+                            aria-expanded={isExpanded}
+                            aria-label={`${isExpanded ? "Hide" : "View"} details for ${log.action} at ${dateString}`}
+                            onClick={() => setExpandedRowId(isExpanded ? null : log.id)}
+                          >
+                            {isExpanded ? "Hide" : "View"}
+                          </Button>
+                        )}
+                      </div>
+                      {log.reason && (
+                        <p className="text-xs text-muted-foreground break-words pt-1 border-t border-border/10">
+                          {log.reason}
+                        </p>
+                      )}
+                    </div>
+
+                    {isExpanded && hasDetails && (
+                      <div className="bg-muted/10 p-3 border-l-2 border-l-primary rounded-r-xl text-xs space-y-3">
+                        {(log.old_value || log.new_value) && (
+                          <div>
+                            <span className="text-[11px] font-black uppercase tracking-[0.1em] text-primary/80 mb-2 block">Value Changes</span>
+                            <DataDiff oldVal={log.old_value} newVal={log.new_value} />
+                          </div>
+                        )}
+                        {details && Object.entries(details)
+                          .filter(([k]) => k !== 'added' && k !== 'removed' && !IGNORED_KEYS.includes(k))
+                          .map(([k, v]) => (
+                            <div key={k} className="flex flex-col gap-0.5">
+                              <span className="font-bold text-[11px] uppercase text-muted-foreground">{k.replace(/_/g, ' ')}:</span>
+                              <span className="font-mono text-[11px] break-all">{formatValue(v)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <table className="hidden md:table w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-border/20 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
                   <th scope="col" className="p-3 font-bold w-48">Timestamp (Manila, UTC+8)</th>
@@ -780,6 +894,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 })}
               </tbody>
             </table>
+          </>
         )}
       </div>
     </AdminTableShell>

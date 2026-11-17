@@ -146,7 +146,7 @@ export function ActivitySection({
                     </div>
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <button type="button" aria-label={`Cancel reservation for ${res.books?.title || 'this book'}`} onClick={() => onCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="text-[11px] font-bold text-muted-foreground hover:text-destructive flex items-center gap-1 disabled:opacity-30">
+                      <button type="button" aria-label={`Cancel reservation for ${res.books?.title || 'this book'}`} onClick={() => onCancelReservation(res.id, res.books?.title || 'Unknown Book')} disabled={isPending} className="min-h-11 sm:min-h-0 px-2 sm:px-0 text-[11px] font-bold text-muted-foreground hover:text-destructive inline-flex items-center gap-1 disabled:opacity-30">
                         <XCircle size={12} /> Cancel
                       </button>
                     </div>
@@ -165,7 +165,7 @@ export function ActivitySection({
             <Clock className="h-3 w-3 text-primary" />
             Recent Attendance
           </h2>
-          <a href="/attendance" className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
+          <a href="/attendance" className="min-h-11 sm:min-h-0 px-1 sm:px-0 text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1">
             View All <ArrowRight size={10} />
           </a>
         </div>

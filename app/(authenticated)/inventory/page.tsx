@@ -17,7 +17,7 @@ export default function InventoryPage({
   searchParams: Promise<{ page?: string; q?: string; stock?: string; categoryId?: string; status?: string; sort?: string }>;
 }) {
   return (
-    <div className="space-y-4 pb-14 overflow-x-hidden relative">
+    <div className="space-y-4 pb-14 overflow-x-clip relative">
       <LiveActivityTicker />
       <Suspense fallback={<CatalogSkeleton />}>
         <InventoryDataWrapper searchParams={searchParams} />

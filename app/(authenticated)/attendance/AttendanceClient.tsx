@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
@@ -493,18 +494,18 @@ export function AttendanceClient({
   const scannerControls = (
     <div className="flex flex-col gap-3 w-full">
       {/* Band 1: Gate Desk Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-border/25 bg-muted/20 p-2.5">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 rounded-2xl border border-border/25 bg-muted/20 p-2 sm:p-2.5">
         <div
           role="group"
           aria-label="Attendance mode"
-          className="inline-flex items-center gap-1 bg-background/80 p-1 rounded-xl border border-border/20 self-start sm:self-auto"
+          className="grid grid-cols-2 sm:inline-flex items-center gap-1 bg-background/80 p-1 rounded-xl border border-border/20 w-full sm:w-auto sm:self-start lg:self-auto"
         >
           <button
             type="button"
             onClick={() => setMode("in")}
             aria-pressed={mode === "in"}
             className={cn(
-              "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+              "h-11 sm:h-7 px-3 sm:px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center justify-center gap-1.5 border",
               mode === "in"
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
                 : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
@@ -524,7 +525,7 @@ export function AttendanceClient({
             onClick={() => setMode("out")}
             aria-pressed={mode === "out"}
             className={cn(
-              "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
+              "h-11 sm:h-7 px-3 sm:px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center justify-center gap-1.5 border",
               mode === "out"
                 ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
                 : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
@@ -541,9 +542,9 @@ export function AttendanceClient({
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 flex-1 sm:justify-end">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 flex-1 lg:justify-end">
           <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 flex-1 sm:flex-none">
-            <div className="relative flex-1 sm:w-52">
+            <div className="relative flex-1 min-w-0 sm:w-52">
               <label htmlFor="attendance-card-id" className="sr-only">Card ID or Patron ID</label>
               <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
               <Input
@@ -551,7 +552,7 @@ export function AttendanceClient({
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
                 placeholder="Card ID or Patron ID..."
-                className="h-9 pl-8 pr-3 text-xs bg-background rounded-xl border-border/30"
+                className="h-11 sm:h-9 pl-8 pr-3 text-xs bg-background rounded-xl border-border/30"
                 readOnly={isProcessing}
                 autoComplete="off"
               />
@@ -561,7 +562,7 @@ export function AttendanceClient({
               size="sm"
               disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
               className={cn(
-                "h-9 px-3.5 font-semibold text-xs rounded-xl shrink-0",
+                "h-11 sm:h-9 px-4 sm:px-3.5 font-semibold text-xs rounded-xl shrink-0",
                 mode === "in"
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                   : "bg-orange-600 hover:bg-orange-700 text-white"
@@ -575,10 +576,10 @@ export function AttendanceClient({
             <Button
               variant="outline"
               size="sm"
-              className="h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 transition-colors border-border/30 bg-background hover:bg-muted/40"
+              className="h-11 sm:h-9 w-full sm:w-auto px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 transition-colors border-border/30 bg-background hover:bg-muted/40"
               disabled={isProcessing}
             >
-              <Camera className="w-3.5 h-3.5 text-primary" />
+              <Camera className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-primary" />
               <span>Start camera</span>
             </Button>
           </DialogTrigger>
@@ -586,15 +587,15 @@ export function AttendanceClient({
       </div>
 
       {/* Band 2: Log Tabs, Live Status & Search/Export */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 w-full">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/15">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center justify-between gap-2.5 w-full min-w-0">
+        <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
+          <div className="inline-flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/15 flex-1 sm:flex-none">
             <button
               type="button"
               onClick={() => setActiveTab('today')}
               aria-pressed={activeTab === 'today'}
               className={cn(
-                "h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                "flex-1 sm:flex-none justify-center h-11 sm:h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
                 activeTab === 'today' 
                   ? "bg-background text-foreground shadow-sm font-bold" 
                   : "text-muted-foreground hover:text-foreground"
@@ -613,7 +614,7 @@ export function AttendanceClient({
               onClick={() => setActiveTab('all')}
               aria-pressed={activeTab === 'all'}
               className={cn(
-                "h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
+                "flex-1 sm:flex-none justify-center h-11 sm:h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
                 activeTab === 'all' 
                   ? "bg-background text-foreground shadow-sm font-bold" 
                   : "text-muted-foreground hover:text-foreground"
@@ -629,7 +630,7 @@ export function AttendanceClient({
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-2.5 h-9 rounded-xl bg-muted/20 border border-border/15 text-[11px] font-medium text-muted-foreground">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 h-9 rounded-xl bg-muted/20 border border-border/15 text-[11px] font-medium text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <strong className="text-foreground">{activeCount}</strong> active
@@ -637,10 +638,32 @@ export function AttendanceClient({
             <span className="text-border/60">•</span>
             <span><strong className="text-foreground">{completedTodayCount}</strong> completed</span>
           </div>
+
+          <OverflowActionsMenu
+            label="Attendance log actions"
+            className="sm:hidden"
+            actions={[
+              {
+                id: "export-attendance",
+                label: isExporting ? "Exporting..." : "Export (.xlsx)",
+                icon: Download,
+                disabled: isExporting || filteredStaffRecords.length === 0,
+                onSelect: () => void handleExport(),
+              },
+            ]}
+          />
         </div>
 
-        <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:justify-end">
-          <div className="relative flex-1 sm:w-56">
+        <div className="flex items-center justify-between gap-2 sm:hidden px-1 text-[11px] font-medium text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <strong className="text-foreground">{activeCount}</strong> active today
+          </span>
+          <span><strong className="text-foreground">{completedTodayCount}</strong> completed</span>
+        </div>
+
+        <div className="flex items-center gap-2 flex-1 min-w-0 sm:flex-initial sm:justify-end">
+          <div className="relative flex-1 min-w-0 sm:w-56">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               type="search"
@@ -648,7 +671,7 @@ export function AttendanceClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search patron or ID..."
-              className="h-9 pl-8 pr-3 text-xs bg-background/50 rounded-xl border-border/25"
+              className="h-11 sm:h-9 pl-8 pr-3 text-xs bg-background/50 rounded-xl border-border/25"
             />
           </div>
 
@@ -656,7 +679,7 @@ export function AttendanceClient({
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 border-border/30 hover:bg-muted/40"
+            className="hidden sm:inline-flex h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 border-border/30 hover:bg-muted/40"
             disabled={isExporting || filteredStaffRecords.length === 0}
             onClick={() => void handleExport()}
           >
