@@ -33,6 +33,10 @@ vi.mock('next/navigation', () => ({
   redirect: (url: string) => mockRedirect(url),
 }));
 
+vi.mock('next/headers', () => ({
+  cookies: async () => ({ get: () => undefined }),
+}));
+
 vi.mock('next/image', () => ({
   default: ({
     src,
@@ -373,7 +377,7 @@ import { UsersContent } from '@/app/(authenticated)/users/UsersContent';
 import UserDetailPage from '@/app/(authenticated)/users/[id]/page';
 import { UserDetailClient } from '@/app/(authenticated)/users/[id]/UserDetailClient';
 import { StreamedNav } from '@/app/(authenticated)/_components/StreamedNav';
-import { StreamedUserNav } from '@/app/(authenticated)/_components/StreamedUserNav';
+import ProtectedLayout from '@/app/(authenticated)/layout';
 import { SWRProvider } from '@/app/(authenticated)/_components/SWRProvider';
 import NavAnimatePresence from '@/app/(authenticated)/NavAnimatePresence';
 import DashboardLoading from '@/app/(authenticated)/dashboard/DashboardLoading';
@@ -436,6 +440,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       auth: {
         resetPasswordForEmail: (...args: unknown[]) => mockResetPasswordForEmail(...args),
         updateUser: (...args: unknown[]) => mockUpdateUser(...args),
+        getSession: async () => ({ data: { session: null } }),
       },
     });
     mockGetCategories.mockResolvedValue([
@@ -1372,7 +1377,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
   // ─── 6. Authenticated Layout Helpers ──────────────────────────────────────
 
-  describe('StreamedNav, StreamedUserNav, SWRProvider, NavAnimatePresence & DashboardLoading', () => {
+  describe('StreamedNav, authenticated shell, SWRProvider, NavAnimatePresence & DashboardLoading', () => {
     it('StreamedNav returns null when unauthenticated and renders ProtectedNav when authenticated', async () => {
       mockGetMe.mockResolvedValueOnce(null);
       expect(await StreamedNav()).toBeNull();
@@ -1409,10 +1414,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent('Audit Logs');
     });
 
-    it('StreamedUserNav returns null when unauthenticated and renders UserNav when authenticated', async () => {
-      mockGetMe.mockResolvedValueOnce(null);
-      expect(await StreamedUserNav()).toBeNull();
-
+    it('authenticated shell keeps the account menu in the sidebar only, not in the mobile header', async () => {
       const user = { id: 'u-2', email: 'student@alabang.sti.edu.ph', user_metadata: {} };
       const profile = {
         id: 'u-2',
@@ -1425,21 +1427,25 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         address: null,
         phone: null,
       };
-      mockGetMe.mockResolvedValueOnce({ user, profile, role: 'patron' });
+      mockGetMe.mockResolvedValue({ user, profile, role: 'patron' });
+      mockGetPreferences.mockResolvedValue({});
 
-      const userNavEl = await StreamedUserNav();
-      const { container } = await renderClient(
-        <PreferencesProvider
-          initialPreferences={{ compact: true }}
-          initialRole="patron"
-          initialProfile={profile}
-        >
-          {userNavEl}
-        </PreferencesProvider>
+      const shell = await ProtectedLayout({ children: <p>Page body</p> });
+      const { container } = await renderClient(<Suspense fallback={null}>{shell}</Suspense>);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(container).toHaveTextContent('Page body');
+      // The mobile header keeps the sidebar trigger...
+      expect(container.querySelector('[data-sidebar="trigger"]')).toBeInTheDocument();
+      // ...but no longer carries its own avatar/account button (UserNav labels it with the name).
+      expect(container.querySelector('button[aria-label*="Maria Clara"]')).toBeNull();
+      // The sidebar footer is the single account menu.
+      const accountMenus = Array.from(container.querySelectorAll('button')).filter((b) =>
+        b.textContent?.includes('Account menu for Maria Clara')
       );
-      const trigger = container.querySelector('button[aria-label*="Maria Clara"]');
-      expect(trigger).toBeInTheDocument();
-      expect(trigger).toHaveTextContent('MC');
+      expect(accountMenus).toHaveLength(1);
     });
 
     it('SWRProvider configures expected SWR defaults and NavAnimatePresence renders children', async () => {

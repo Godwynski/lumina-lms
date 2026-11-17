@@ -20,10 +20,6 @@ vi.mock('@/app/(authenticated)/_components/StreamedNav', () => ({
   StreamedNav: () => null,
 }));
 
-vi.mock('@/app/(authenticated)/_components/StreamedUserNav', () => ({
-  StreamedUserNav: () => null,
-}));
-
 vi.mock('@/app/(authenticated)/_components/SWRProvider', () => ({
   SWRProvider: ({ children }: { children: unknown }) => children,
 }));

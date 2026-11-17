@@ -4,7 +4,6 @@ import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
 import { MainHeader } from "@/components/layout/MainHeader";
 import { StreamedNav } from "./_components/StreamedNav";
-import { StreamedUserNav } from "./_components/StreamedUserNav";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
@@ -87,7 +86,6 @@ export default async function ProtectedLayout({
                 </div>
                 <div className="ml-1.5 shrink-0 flex items-center gap-1">
                   <NotificationBell />
-                  <StreamedUserNav />
                 </div>
               </div>
 
