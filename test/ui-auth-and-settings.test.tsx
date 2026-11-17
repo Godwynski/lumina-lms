@@ -61,6 +61,7 @@ vi.mock('@/lib/actions/onboarding', () => ({
 const mockUpdateAvatarUrl = vi.fn();
 vi.mock('@/lib/actions/profile', () => ({
   updateAvatarUrl: (...args: unknown[]) => mockUpdateAvatarUrl(...args),
+  removeAvatar: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 // Components under test

@@ -60,3 +60,23 @@ export async function updateAvatarUrl(url: string) {
   revalidatePath('/profile');
   return { success: true };
 }
+
+/** Clears the current user's profile photo (P2-PRF-006). */
+export async function removeAvatar() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: null, updated_at: new Date().toISOString() })
+    .eq('id', user.id);
+  if (error) {
+    console.error("Error removing avatar:", error);
+    throw new Error("Failed to remove profile picture.");
+  }
+
+  await logAuditActivity(user.id, "profile", user.id, "avatar_removed", "Removed profile picture.", {});
+  revalidatePath('/profile');
+  return { success: true };
+}

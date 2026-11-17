@@ -33,7 +33,7 @@ vi.mock('@/lib/library-card-assets.server', () => ({
 
 import { getUsers } from '@/lib/actions/users';
 import { getAcademicPrograms, submitOnboarding } from '@/lib/actions/onboarding';
-import { updateAvatarUrl } from '@/lib/actions/profile';
+import { updateAvatarUrl, removeAvatar } from '@/lib/actions/profile';
 import { createSafeAction } from '@/lib/actions/action-utils';
 import { z } from 'zod';
 
@@ -399,6 +399,24 @@ describe('Users, Onboarding & Profile Server Actions', () => {
 
       serverClientHelper.setTableResponse('profiles', null, { message: 'DB error' });
       await expect(updateAvatarUrl(validUrl)).rejects.toThrow('Failed to update profile picture.');
+      errSpy.mockRestore();
+    });
+
+    it('removeAvatar requires a session, clears only the caller avatar, audits, and surfaces DB errors (P2-PRF-006)', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+      await expect(removeAvatar()).rejects.toThrow('Unauthorized');
+
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1', email: 'u1@school.edu' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', null, null);
+      expect(await removeAvatar()).toEqual({ success: true });
+      const builder = serverClientHelper.getTableBuilder('profiles');
+      expect(builder.update).toHaveBeenCalledWith(expect.objectContaining({ avatar_url: null }));
+      expect(builder.eq).toHaveBeenCalledWith('id', 'user-1');
+      expect(mockLogAuditActivity).toHaveBeenCalledWith('user-1', 'profile', 'user-1', 'avatar_removed', 'Removed profile picture.', {});
+
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      serverClientHelper.setTableResponse('profiles', null, { message: 'DB error' });
+      await expect(removeAvatar()).rejects.toThrow('Failed to remove profile picture.');
       errSpy.mockRestore();
     });
   });

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
-import { updateAvatarUrl } from "@/lib/actions/profile";
+import { updateAvatarUrl, removeAvatar } from "@/lib/actions/profile";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ImageCropper } from "./ImageCropper";
@@ -107,6 +107,27 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
     }
   };
 
+  const handleRemove = async () => {
+    if (!window.confirm("Remove your profile photo?")) return;
+    try {
+      setIsUploading(true);
+      await removeAvatar();
+      // Delete the uploaded photos; card.webp stays (the server owns it).
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: files } = await supabase.storage.from("avatars").list(user.id);
+        const photos = (files ?? []).filter((f) => /^\d+\.jpg$/.test(f.name)).map((f) => `${user.id}/${f.name}`);
+        if (photos.length > 0) await supabase.storage.from("avatars").remove(photos);
+      }
+      router.refresh();
+      toast.success("Profile picture removed.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove profile picture.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/60 bg-muted/20 p-6 w-full sm:w-60 shrink-0 shadow-xs transition-colors hover:bg-muted/30 group/avatar">
       <div className="relative">
@@ -148,6 +169,15 @@ export function AvatarManager({ initialAvatarUrl, fullName }: AvatarManagerProps
         >
           {isUploading ? "Processing..." : "Click to update photo"}
         </button>
+        {rawAvatarUrl && !isUploading && (
+          <button
+            type="button"
+            onClick={() => void handleRemove()}
+            className="block w-full text-xs text-muted-foreground font-medium hover:text-destructive hover:underline"
+          >
+            Remove photo
+          </button>
+        )}
       </div>
 
       <input 
