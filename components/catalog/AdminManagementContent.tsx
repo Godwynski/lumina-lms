@@ -659,8 +659,6 @@ export function AdminManagementContent({
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                           <span className={cn("font-medium", statusCfg.color)}>{statusCfg.label}</span>
-                          <span className="opacity-20">•</span>
-                          <span className="font-mono opacity-60">ID: {copy.id.split('-')[0]}</span>
                         </div>
                       </div>
                     </div>

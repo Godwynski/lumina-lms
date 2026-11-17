@@ -185,7 +185,7 @@ export async function getBookPublicDetails(bookId: string) {
     const me = await getMe();
     if (me?.isStaff) {
       const { data, error } = await me.supabase.from('books')
-        .select('id, title, author, isbn, description, category_id, tags, section, location, cover_url, total_copies, available_copies, categories(name)')
+        .select('id, title, author, isbn, description, dewey_decimal, category_id, tags, section, location, cover_url, total_copies, available_copies, categories(name)')
         .eq('id', bookId).maybeSingle();
       if (error) throw new Error(error.message);
       book = data;
@@ -210,7 +210,7 @@ export async function getBookAdminDetails(bookId: string) {
     supabase
       .from('book_copies')
       .select(`
-        id, book_id, status, condition, qr_string, created_at,
+        id, book_id, status, condition, qr_string, accession_number, created_at,
         reservations!copy_id (
           id,
           status,

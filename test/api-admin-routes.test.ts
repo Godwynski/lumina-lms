@@ -898,6 +898,36 @@ describe("Admin API Route Handlers", () => {
       expect(okPut.status).toBe(200);
       expect(await okPut.json()).toEqual(updatedCat);
 
+      // Archiving (PUT is_active=false) or DELETE is refused while active books use the category
+      catBuilder.single.mockResolvedValueOnce({ data: existingCat, error: null });
+      supabase.setTableResponse("books", null, null, 3);
+      const inUsePut = await categoryByIdPut(
+        new Request("http://localhost/api/admin/categories/cat-1", { method: "PUT", body: JSON.stringify({ is_active: false }) }),
+        { params }
+      );
+      expect(inUsePut.status).toBe(409);
+      expect((await inUsePut.json()).error).toBe("3 active books use this category. Move them to another category first.");
+      const booksBuilder = supabase.getTableBuilder("books");
+      expect(booksBuilder.eq).toHaveBeenCalledWith("category_id", "cat-1");
+      expect(booksBuilder.eq).toHaveBeenCalledWith("is_active", true);
+
+      const inUseDel = await categoryByIdDelete(
+        new Request("http://localhost/api/admin/categories/cat-1", { method: "DELETE" }),
+        { params }
+      );
+      expect(inUseDel.status).toBe(409);
+
+      // Unused category archives fine
+      catBuilder.single
+        .mockResolvedValueOnce({ data: existingCat, error: null })
+        .mockResolvedValueOnce({ data: { ...existingCat, is_active: false }, error: null });
+      supabase.setTableResponse("books", null, null, 0);
+      const archivePut = await categoryByIdPut(
+        new Request("http://localhost/api/admin/categories/cat-1", { method: "PUT", body: JSON.stringify({ is_active: false }) }),
+        { params }
+      );
+      expect(archivePut.status).toBe(200);
+
       // DELETE happy path + DB error
       supabase.setTableResponse("categories", null, null);
       const okDel = await categoryByIdDelete(

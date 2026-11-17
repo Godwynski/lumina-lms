@@ -1294,6 +1294,19 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
     );
     expect(isbnRes.rows.map((r) => r.id)).toEqual([authorMatch.bookId]);
 
+    // ISBN typed without hyphens, with spaces, or as a partial run still matches the hyphenated record
+    for (const typed of ['9780134757599', '978 0 13 475759 9', '0134757599', '47575']) {
+      const res = await withRole(db, 'anon', null, (tx) =>
+        tx.query<{ id: string }>(`SELECT id FROM public.search_book_ids($1, 'ACTIVE', NULL, NULL, false, 0, 10)`, [typed])
+      );
+      expect(res.rows.map((r) => r.id)).toEqual([authorMatch.bookId]);
+    }
+    // A non-ISBN word does not trigger the digits-only match
+    const wordRes = await withRole(db, 'anon', null, (tx) =>
+      tx.query<{ id: string }>(`SELECT id FROM public.search_book_ids('xyzzy', 'ACTIVE', NULL, NULL, false, 0, 10)`)
+    );
+    expect(wordRes.rows).toHaveLength(0);
+
     // Short query (<3 chars) matches title only (ignores author 'Clean Author')
     const shortRes = await withRole(db, 'anon', null, (tx) =>
       tx.query<{ id: string }>(

@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { toSlug } from "@/lib/utils";
 import { CategoryUpdateSchema } from "@/lib/validations/api";
 import { logAuditActivity } from "@/lib/audit";
 import { withAuthApi } from "@/lib/api-utils";
+
+/** Archiving a category still used by active books would hide them from the category filter (P6-POL-015). */
+async function inUseResponse(supabase: SupabaseClient, id: string) {
+  const { count, error } = await supabase
+    .from("books")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", id)
+    .eq("is_active", true);
+  if (error) throw error;
+  if (!count) return null;
+  return NextResponse.json(
+    { error: `${count} active ${count === 1 ? "book uses" : "books use"} this category. Move them to another category first.` },
+    { status: 409 }
+  );
+}
 
 export const GET = withAuthApi(async (_request, { supabase, params }) => {
   try {
@@ -71,6 +87,11 @@ export const PUT = withAuthApi(async (request, { supabase, user, params }) => {
       return NextResponse.json({ error: "name and slug are required" }, { status: 400 });
     }
 
+    if (existing.is_active && is_active === false) {
+      const blocked = await inUseResponse(supabase, id);
+      if (blocked) return blocked;
+    }
+
     const { data, error } = await supabase
       .from("categories")
       .update({
@@ -117,6 +138,9 @@ export const PUT = withAuthApi(async (request, { supabase, user, params }) => {
 export const DELETE = withAuthApi(async (_request, { supabase, user, params }) => {
   try {
     const { id } = await params;
+
+    const blocked = await inUseResponse(supabase, id);
+    if (blocked) return blocked;
 
     const { error } = await supabase
       .from("categories")

@@ -81,8 +81,8 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
               <BookOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
               {activeCover && (
                 <Image 
-                  src={activeCover} 
-                  alt=""
+                  src={activeCover}
+                  alt={`Cover of ${book.title}`}
                   fill 
                   className={`object-cover transition-opacity duration-200 ${isCoverLoaded ? "opacity-100" : "opacity-0"}`} 
                   sizes="80px"

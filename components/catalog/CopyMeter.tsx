@@ -6,15 +6,17 @@ import { cn } from '@/lib/utils';
 interface CopyMeterProps {
   available: number;
   total: number;
+  /** Copies in repair or lost; not counted as borrowed. */
+  outOfService?: number;
   className?: string;
 }
 
 /**
  * Visual progress meter illustrating the ratio of available copies on shelf versus borrowed copies.
  */
-export function CopyMeter({ available, total, className }: CopyMeterProps) {
+export function CopyMeter({ available, total, outOfService = 0, className }: CopyMeterProps) {
   const pct = total === 0 ? 0 : Math.round((available / total) * 100);
-  const borrowed = Math.max(0, total - available);
+  const borrowed = Math.max(0, total - available - outOfService);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -37,6 +39,12 @@ export function CopyMeter({ available, total, className }: CopyMeterProps) {
           <span className="h-2 w-2 rounded-full bg-amber-400 inline-block" />
           {borrowed} borrowed
         </span>
+        {outOfService > 0 && (
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-muted-foreground/50 inline-block" />
+            {outOfService} unavailable
+          </span>
+        )}
       </div>
     </div>
   );

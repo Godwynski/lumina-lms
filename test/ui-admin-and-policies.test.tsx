@@ -1068,10 +1068,19 @@ describe('Admin & Policies UI Components', () => {
       expect(handle.container).toHaveTextContent('History');
       expect(mockToastSuccess).toHaveBeenCalledWith('Category added successfully');
 
-      // Archive first category
+      // Archive first category: asks first, and does nothing when declined
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false);
       const archiveBtns = handle.container.querySelectorAll('button[aria-label="Archive category"]');
+      const putsBefore = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT').length;
       await clickElement(archiveBtns[0]);
+      expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Archive "'));
+      expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT').length).toBe(putsBefore);
+      expect(mockToastSuccess).not.toHaveBeenCalledWith('Category archived');
+
+      confirmSpy.mockReturnValueOnce(true);
+      await clickElement(handle.container.querySelectorAll('button[aria-label="Archive category"]')[0]);
       expect(mockToastSuccess).toHaveBeenCalledWith('Category archived');
+      confirmSpy.mockRestore();
 
       // Restore second category
       const restoreBtns = handle.container.querySelectorAll('button[aria-label="Restore category"]');

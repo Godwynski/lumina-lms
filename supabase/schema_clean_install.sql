@@ -2636,6 +2636,9 @@ AS $$
             OR lower(b.title) LIKE '%' || q.esc || '%'
             OR lower(coalesce(b.author, '')) LIKE '%' || q.esc || '%'
             OR lower(coalesce(b.isbn, '')) LIKE '%' || q.esc || '%'
+            -- ISBN typed with hyphens or spaces (P3-CAT-004)
+            OR (q.isbn_key ~ '^[0-9]{4,}x?$'
+                AND regexp_replace(lower(coalesce(b.isbn, '')), '[^0-9a-z]', '', 'g') LIKE '%' || q.isbn_key || '%')
         END
       )
       AND (p_status = 'ALL'

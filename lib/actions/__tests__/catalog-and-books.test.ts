@@ -717,6 +717,8 @@ describe('Catalog & Books Server Actions', () => {
         null
       );
 
+      serverClientHelper.setTableResponse('book_copies', null, null, 2);
+
       const res = await getBookPublicDetails('book-1');
       expect(res.book).toEqual(book);
       expect(res.availability).toEqual({
@@ -726,7 +728,13 @@ describe('Catalog & Books Server Actions', () => {
         queuePosition: null,
         holdExpiresAt: '2026-12-02T00:00:00Z',
         reservationId: 'res-1',
+        outOfServiceCount: 2,
       });
+      // The modal needs description and DDC (P3-CAT-017); maintenance/lost copies are counted (P3-CAT-019)
+      expect(safeClientHelper.getTableBuilder('books').select).toHaveBeenCalledWith(expect.stringContaining('description, dewey_decimal'));
+      const copyCount = serverClientHelper.getTableBuilder('book_copies');
+      expect(copyCount.eq).toHaveBeenCalledWith('book_id', 'book-1');
+      expect(copyCount.in).toHaveBeenCalledWith('status', ['MAINTENANCE', 'LOST']);
 
       // Archived book is hidden for students, visible to staff via fallback query, and propagates DB error
       safeClientHelper.setTableResponse('books', null, null);
@@ -781,6 +789,7 @@ describe('Catalog & Books Server Actions', () => {
 
       const details = await getBookAdminDetails('book-1');
       expect(details.book.id).toBe('book-1');
+      expect(serverClientHelper.getTableBuilder('book_copies').select).toHaveBeenCalledWith(expect.stringContaining('accession_number'));
       expect(details.copies[0].reservation).toEqual({
         id: 'r-ready',
         status: 'READY',

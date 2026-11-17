@@ -121,6 +121,8 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   };
 
   const handleArchive = async (id: string) => {
+    const name = categories.find((c) => c.id === id)?.name ?? "this category";
+    if (!window.confirm(`Archive "${name}"? It will be hidden from the catalog filters.`)) return;
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/categories/${id}`, {
@@ -129,7 +131,10 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
         body: JSON.stringify({ is_active: false }),
       });
 
-      if (!response.ok) throw new Error("Failed to archive category");
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Failed to archive category");
+      }
 
       setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
       setDraftCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));

@@ -391,7 +391,15 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         VALID_USER_UUID
       );
 
+      // Default lists queued and ready holds; ?status narrows; anything else is rejected (P4-CIR-022)
+      expect(supabase.getTableBuilder("reservations").in).toHaveBeenLastCalledWith("status", ["READY", "ACTIVE"]);
       setupAuth(supabase, "librarian", "ACTIVE", VALID_USER_UUID);
+      supabase.setTableResponse("reservations", [{ id: "r2", status: "READY" }]);
+      const readyRes = await reservationsGet(new Request("http://localhost/api/circulation/reservations?status=ready"));
+      expect(readyRes.status).toBe(200);
+      expect(supabase.getTableBuilder("reservations").in).toHaveBeenLastCalledWith("status", ["READY"]);
+      expect((await reservationsGet(new Request("http://localhost/api/circulation/reservations?status=CANCELLED"))).status).toBe(400);
+
       supabase.setTableResponse("reservations", null, { message: "Query error" });
       const errRes = await reservationsGet(
         new Request(`http://localhost/api/circulation/reservations?userId=${OTHER_USER_UUID}`)

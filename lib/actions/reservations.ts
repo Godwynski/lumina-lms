@@ -46,13 +46,21 @@ export async function getBookAvailabilityStatus(bookId: string) {
     }
   }
 
+  // 3. Copies in repair or lost: not on loan, so no return will free them (P3-CAT-019)
+  const { count: outOfService } = await supabase
+    .from('book_copies')
+    .select('id', { count: 'exact', head: true })
+    .eq('book_id', bookId)
+    .in('status', ['MAINTENANCE', 'LOST']);
+
   return {
     nextAvailableDate,
     hasReservation,
     isReady,
     queuePosition,
     holdExpiresAt,
-    reservationId: userRes?.id || null
+    reservationId: userRes?.id || null,
+    outOfServiceCount: outOfService ?? 0,
   };
 }
 

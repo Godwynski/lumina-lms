@@ -29,7 +29,7 @@ import { cn, getCategoryName } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { AdminManagementContent } from './AdminManagementContent';
-import type { BookDetail, AvailabilityStatus } from './types';
+import { isOutOfService, type BookDetail, type AvailabilityStatus } from './types';
 import { CopyMeter } from './CopyMeter';
 import { MetaTile } from './MetaTile';
 import { StatusBanner } from './StatusBanner';
@@ -147,6 +147,7 @@ function StudentModalContent({
             {availability.isReady ? '✦ Ready'
               : availability.hasReservation ? `Queue #${availability.queuePosition ?? 1}`
               : isAvailable ? 'On Shelf'
+              : isOutOfService(book, availability) ? 'Unavailable'
               : 'Fully Borrowed'}
           </div>
         </div>
@@ -176,13 +177,13 @@ function StudentModalContent({
         </div>
       </div>
 
-      {readOnly && <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
         {book.description || 'No description available.'}
-      </p>}
+      </p>
 
       {/* Copy Meter */}
       <div className="rounded-xl border border-border/30 bg-card/20 p-3 backdrop-blur-sm">
-        <CopyMeter available={book.available_copies} total={book.total_copies} />
+        <CopyMeter available={book.available_copies} total={book.total_copies} outOfService={availability.outOfServiceCount} />
       </div>
 
       {/* Metadata Grid */}
@@ -196,7 +197,7 @@ function StudentModalContent({
 
       {/* Actions */}
       {!readOnly && <div className="flex flex-wrap items-center gap-2 pt-1">
-        <ReserveTitleButton
+        {(availability.hasReservation || !isOutOfService(book, availability)) && <ReserveTitleButton
           bookId={book.id}
           isAvailable={isAvailable}
           hasExistingReservation={availability.hasReservation}
@@ -206,7 +207,7 @@ function StudentModalContent({
           nextAvailableDate={availability.nextAvailableDate}
           onReserveSuccess={handleReserveSuccess}
           className="h-9 px-4 text-xs shadow-sm flex-1"
-        />
+        />}
         {availability.hasReservation && (
           <Button
             variant="outline"

@@ -119,8 +119,13 @@ export const GET = withAuthApi(async (request, { supabase, user, profile }) => {
     const searchParams = new URL(request.url).searchParams;
     const bookId = searchParams.get("bookId");
     const userId = searchParams.get("userId");
+    const status = searchParams.get("status")?.toUpperCase();
+    if (status && status !== "ACTIVE" && status !== "READY") {
+      return NextResponse.json({ error: "status must be ACTIVE or READY" }, { status: 400 });
+    }
 
-    let query = supabase.from("reservations").select("*").eq("status", "ACTIVE");
+    // Open holds: queued (ACTIVE) and waiting at the desk (READY) (P4-CIR-022)
+    let query = supabase.from("reservations").select("*").in("status", status ? [status] : ["READY", "ACTIVE"]);
 
     if (bookId) {
       query = query.eq("book_id", bookId);

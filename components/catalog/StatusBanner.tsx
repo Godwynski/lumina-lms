@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { Sparkles, Ticket, CheckCircle2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { BookDetail, AvailabilityStatus } from './types';
+import { isOutOfService, type BookDetail, type AvailabilityStatus } from './types';
 
 export interface StatusBannerProps {
-  book: Pick<BookDetail, 'available_copies'>;
+  book: Pick<BookDetail, 'available_copies'> & Partial<Pick<BookDetail, 'total_copies'>>;
   availability: AvailabilityStatus;
   variant?: 'compact' | 'full';
   className?: string;
@@ -132,7 +132,24 @@ export function StatusBanner({
     );
   }
 
-  // State 4: Currently unavailable
+  // State 4: every copy is in repair or lost
+  if (isOutOfService({ available_copies: book.available_copies, total_copies: book.total_copies ?? 0 }, availability)) {
+    return (
+      <div className={cn(
+        "flex items-center gap-3 border border-border/40 bg-muted/30",
+        isCompact ? "rounded-xl px-3 py-2.5" : "rounded-2xl px-4 py-4",
+        className
+      )}>
+        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-black text-foreground uppercase tracking-tight">Temporarily Unavailable</p>
+          <p className="text-[11px] font-bold text-muted-foreground mt-0.5">All copies are under maintenance. Please check back later.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // State 5: Currently unavailable
   const returnDate = availability.nextAvailableDate
     ? new Date(availability.nextAvailableDate).toLocaleDateString(undefined, {
         month: 'short',

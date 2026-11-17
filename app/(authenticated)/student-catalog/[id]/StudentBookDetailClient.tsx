@@ -22,7 +22,7 @@ import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { BookDetail, AvailabilityStatus } from '@/components/catalog/types';
+import { isOutOfService, type BookDetail, type AvailabilityStatus } from '@/components/catalog/types';
 import { StatusBanner } from '@/components/catalog/StatusBanner';
 import { CopyMeter } from '@/components/catalog/CopyMeter';
 import { MetaTile } from '@/components/catalog/MetaTile';
@@ -206,7 +206,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
 
           {/* Copy Meter */}
           <div className="rounded-2xl border border-border/40 bg-card/20 p-4 shadow-none backdrop-blur-sm">
-            <CopyMeter available={book.available_copies} total={book.total_copies} />
+            <CopyMeter available={book.available_copies} total={book.total_copies} outOfService={availability.outOfServiceCount} />
           </div>
 
           {/* Metadata Grid */}
@@ -278,7 +278,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5">
-            <ReserveTitleButton
+            {(availability.hasReservation || !isOutOfService(book, availability)) && <ReserveTitleButton
               bookId={id}
               isAvailable={isAvailable}
               hasExistingReservation={availability.hasReservation}
@@ -288,7 +288,7 @@ export function StudentBookDetailClient({ bookPromise, availabilityPromise, id }
               nextAvailableDate={availability.nextAvailableDate}
               onReserveSuccess={handleReserveSuccess}
               className="h-11 w-full sm:w-auto px-6 text-sm shadow-md"
-            />
+            />}
             {availability.hasReservation && (
               <Button
                 variant="outline"
