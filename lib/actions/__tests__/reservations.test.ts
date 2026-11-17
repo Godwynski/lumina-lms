@@ -91,6 +91,7 @@ describe('reservations server actions', () => {
         queuePosition: null,
         holdExpiresAt: null,
         reservationId: null,
+        outOfServiceCount: 0,
       });
     });
 
@@ -108,6 +109,7 @@ describe('reservations server actions', () => {
         queuePosition: null,
         holdExpiresAt: null,
         reservationId: null,
+        outOfServiceCount: 0,
       });
     });
 
@@ -133,6 +135,7 @@ describe('reservations server actions', () => {
         queuePosition: 3,
         holdExpiresAt: null,
         reservationId: 'res-active-1',
+        outOfServiceCount: 0,
       });
     });
 
@@ -155,6 +158,7 @@ describe('reservations server actions', () => {
         queuePosition: null,
         holdExpiresAt: '2026-06-18T17:00:00Z',
         reservationId: 'res-ready-1',
+        outOfServiceCount: 0,
       });
     });
   });

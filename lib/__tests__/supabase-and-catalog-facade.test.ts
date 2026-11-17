@@ -577,6 +577,7 @@ describe('lib/actions/catalog facade', () => {
         queuePosition: null,
         holdExpiresAt: null,
         reservationId: null,
+        outOfServiceCount: 0,
       },
     });
 

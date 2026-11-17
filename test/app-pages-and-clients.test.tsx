@@ -212,6 +212,7 @@ const mockGetUserBorrowingHistory = vi.fn().mockResolvedValue({ success: true, d
 vi.mock('@/lib/actions/history', () => ({
   getBorrowingHistory: (...args: unknown[]) => mockGetBorrowingHistory(...args),
   getUserBorrowingHistory: (...args: unknown[]) => mockGetUserBorrowingHistory(...args),
+  getBorrowerDetails: vi.fn().mockResolvedValue({ success: false }),
 }));
 
 const mockXlsxWriteFile = vi.fn();
