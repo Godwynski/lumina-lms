@@ -36,7 +36,7 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-import { getBorrowingHistory, exportBorrowingHistory, settleBorrowingFine, getUserBorrowingHistory } from '@/lib/actions/history';
+import { getBorrowingHistory, exportBorrowingHistory, settleBorrowingFine, getUserBorrowingHistory, getBorrowerDetails } from '@/lib/actions/history';
 
 const VALID_RECORD_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -830,6 +830,39 @@ describe('history server actions', () => {
         p_status: null,
         p_search: null,
       });
+    });
+  });
+
+  describe('getBorrowerDetails (P4-HIS-002)', () => {
+    const BORROWER = '22222222-2222-4222-8222-222222222222';
+
+    it('returns contact fields, card number and a loan summary for circulation staff', async () => {
+      const past = new Date(Date.now() - 3 * 864e5).toISOString();
+      const future = new Date(Date.now() + 3 * 864e5).toISOString();
+      supaMock.setTableResponse('profiles', { phone: '0917', department: 'BSIT' });
+      supaMock.setTableResponse('library_cards', { card_number: 'LIB-001' });
+      supaMock.setTableResponse('borrowing_records', [
+        { status: 'ACTIVE', due_date: future, returned_at: null, fine_amount: null, fine_settled_at: null },
+        { status: 'OVERDUE', due_date: past, returned_at: null, fine_amount: 15, fine_settled_at: null },
+        { status: 'RETURNED', due_date: past, returned_at: past, fine_amount: 10, fine_settled_at: null },
+      ]);
+
+      const res = await getBorrowerDetails({ userId: BORROWER });
+      expect(res).toEqual({
+        success: true,
+        data: { phone: '0917', department: 'BSIT', cardNumber: 'LIB-001', activeLoans: 2, overdueLoans: 1, unpaidFines: 25 },
+      });
+      expect(supaMock.getTableBuilder('borrowing_records').eq).toHaveBeenCalledWith('user_id', BORROWER);
+    });
+
+    it('rejects patrons and staff without circulation permission, and invalid ids', async () => {
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { role: 'patron' }));
+      expect((await getBorrowerDetails({ userId: BORROWER })).success).toBe(false);
+
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { role: 'library_staff', hasCirculationPerm: false }));
+      expect((await getBorrowerDetails({ userId: BORROWER })).success).toBe(false);
+
+      expect((await getBorrowerDetails({ userId: 'not-a-uuid' })).success).toBe(false);
     });
   });
 });

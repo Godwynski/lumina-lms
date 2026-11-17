@@ -63,6 +63,7 @@ vi.mock('@/lib/actions/reservations', () => ({
 vi.mock('@/lib/actions/history', () => ({
   settleBorrowingFine: vi.fn(),
   exportBorrowingHistory: vi.fn(),
+  getBorrowerDetails: vi.fn().mockResolvedValue({ success: false, error: 'not needed' }),
 }));
 
 vi.mock('@/lib/supabase/client', () => ({

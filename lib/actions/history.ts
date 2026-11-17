@@ -446,6 +446,37 @@ export const settleBorrowingFine = createSafeAction(
   }
 );
 
+/** Contact details and a loan summary for the borrower modal (P4-HIS-002). */
+export const getBorrowerDetails = createSafeAction(
+  z.object({ userId: z.string().uuid() }),
+  async ({ userId }, { supabase }) => {
+    const [{ data: profile }, { data: card }, { data: loans }] = await Promise.all([
+      supabase.from("profiles").select("phone, department").eq("id", userId).maybeSingle(),
+      supabase.from("library_cards").select("card_number").eq("user_id", userId).maybeSingle(),
+      supabase
+        .from("borrowing_records")
+        .select("status, due_date, returned_at, fine_amount, fine_settled_at")
+        .eq("user_id", userId)
+        .or("status.in.(ACTIVE,OVERDUE),and(fine_settled_at.is.null,fine_amount.gt.0)"),
+    ]);
+    const now = Date.now();
+    const rows = loans ?? [];
+    const open = rows.filter(r => r.status === "ACTIVE" || r.status === "OVERDUE");
+    return {
+      phone: profile?.phone ?? null,
+      department: profile?.department ?? null,
+      cardNumber: card?.card_number ?? null,
+      activeLoans: open.length,
+      overdueLoans: open.filter(r => r.status === "OVERDUE" || new Date(r.due_date).getTime() < now).length,
+      unpaidFines: rows.filter(r => !r.fine_settled_at).reduce((sum, r) => sum + computeOverdueFine(r), 0),
+    };
+  },
+  {
+    allowedRoles: ["super_admin", "librarian", "library_staff"],
+    allowedPermissions: ["manage_circulation"],
+  }
+);
+
 export const getUserBorrowingHistory = createSafeAction(
   z.object({
     userId: z.string().min(1),

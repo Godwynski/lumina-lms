@@ -63,6 +63,10 @@ const mockExportBorrowingHistory = vi.fn();
 vi.mock('@/lib/actions/history', () => ({
   settleBorrowingFine: (...args: unknown[]) => mockSettleBorrowingFine(...args),
   exportBorrowingHistory: (...args: unknown[]) => mockExportBorrowingHistory(...args),
+  getBorrowerDetails: async () => ({
+    success: true,
+    data: { phone: '0917-555-0101', department: 'BSIT', cardNumber: 'LIB-2024-0001', activeLoans: 2, overdueLoans: 1, unpaidFines: 35 },
+  }),
 }));
 
 const mockXlsxWriteFile = vi.fn();
@@ -957,6 +961,12 @@ describe('Circulation & History UI Components', () => {
       const borrowerBtn = handle.container.querySelector('button[aria-label="View borrower: Maria Clara"]');
       await clickElement(borrowerBtn);
       expect(document.body).toHaveTextContent('2024-0001');
+      await act(async () => { await Promise.resolve(); });
+      // Card number, phone, department and loan summary (P4-HIS-002)
+      expect(document.body).toHaveTextContent('LIB-2024-0001');
+      expect(document.body).toHaveTextContent('0917-555-0101');
+      expect(document.body).toHaveTextContent('BSIT');
+      expect(document.body).toHaveTextContent('2 active, 1 overdue, ₱35.00 unpaid fines');
       expect(document.body.querySelector('a[href="/users/user-1"]')).toBeInTheDocument();
       await clickElement(findButtonByExactText(document.body, 'Close'));
 
