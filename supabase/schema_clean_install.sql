@@ -2009,8 +2009,9 @@ CREATE POLICY "Librarians can insert book_copies" ON public.book_copies
   FOR INSERT TO authenticated
   WITH CHECK (public.is_manager());
 
-CREATE POLICY "Book copies are viewable by everyone" ON public.book_copies
-  FOR SELECT TO public
+-- Signed-in users only: anon must not read QR strings (GAP-027)
+CREATE POLICY "Book copies are viewable by signed-in users" ON public.book_copies
+  FOR SELECT TO authenticated
   USING (true);
 
 CREATE POLICY "Librarians can update book_copies" ON public.book_copies
@@ -2133,6 +2134,10 @@ CREATE POLICY "Users can update own notifications" ON public.notifications
   USING ((SELECT auth.uid()) = user_id)
   WITH CHECK ((SELECT auth.uid()) = user_id);
 
+CREATE POLICY "Users can delete own notifications" ON public.notifications
+  FOR DELETE TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
+
 -- profiles Policies
 CREATE POLICY "Users can view own profile, staff can view all" ON public.profiles
   FOR SELECT TO authenticated
@@ -2169,8 +2174,8 @@ CREATE POLICY "Staff can manage return idempotency" ON public.return_idempotency
   WITH CHECK (public.is_staff());
 
 -- system_settings Policies
-CREATE POLICY "System settings are viewable by everyone" ON public.system_settings
-  FOR SELECT TO public
+CREATE POLICY "System settings are viewable by signed-in users" ON public.system_settings
+  FOR SELECT TO authenticated
   USING (true);
 
 CREATE POLICY "Admins can insert system settings" ON public.system_settings

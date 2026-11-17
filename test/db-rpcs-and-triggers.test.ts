@@ -75,6 +75,7 @@ async function bootLuminaDb(): Promise<PGlite> {
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117120000_qa_circulation_fixes.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117130000_rls_tightening.sql'), 'utf8'));
   return db;
 }
 

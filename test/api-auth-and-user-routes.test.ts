@@ -934,6 +934,19 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
         expect.objectContaining({ status: "SUSPENDED" })
       );
 
+      // Profile statuses that cards do not have are mapped to a valid card status (GAP-029)
+      for (const [profileStatus, cardStatus] of [["inactive", "SUSPENDED"], ["graduated", "EXPIRED"], ["deleted", "ARCHIVED"], ["active", "ACTIVE"]]) {
+        profilesBuilder.single
+          .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE", email: "adm@alabang.sti.edu.ph" }, error: null })
+          .mockResolvedValueOnce({ data: targetProfile, error: null });
+        adminSupabase.setTableResponse("profiles", { ...targetProfile, status: profileStatus.toUpperCase() });
+        const res = await usersPatch(
+          new Request("http://localhost/api/users", { method: "PATCH", body: JSON.stringify({ id: "stu-1", status: profileStatus }) })
+        );
+        expect(res.status).toBe(200);
+        expect(adminSupabase.getTableBuilder("library_cards").update).toHaveBeenLastCalledWith(expect.objectContaining({ status: cardStatus }));
+      }
+
       // Transfer super_admin ownership
       const libTarget = {
         id: "lib-9",

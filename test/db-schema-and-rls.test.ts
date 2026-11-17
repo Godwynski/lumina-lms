@@ -796,8 +796,10 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       const booksRes = await withRole(db, role, uid, (tx) => tx.query<{ id: string }>(`SELECT id FROM public.books`));
       expect(booksRes.rows.map((r) => r.id)).toEqual([activeBookId]);
 
+      // book_copies (QR strings): signed-in users only (GAP-027)
       const copiesRes = await withRole(db, role, uid, (tx) => tx.query<{ id: string }>(`SELECT id FROM public.book_copies`));
-      expect(copiesRes.rows.length).toBeGreaterThanOrEqual(2);
+      if (role === 'anon') expect(copiesRes.rows).toHaveLength(0);
+      else expect(copiesRes.rows.length).toBeGreaterThanOrEqual(2);
 
       const catsRes = await withRole(db, role, uid, (tx) => tx.query<{ id: string }>(`SELECT id FROM public.categories`));
       expect(catsRes.rows).toHaveLength(1);
@@ -1027,6 +1029,17 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
       tx.query(`UPDATE public.notifications SET is_read = true WHERE id = $1 RETURNING id`, [student2NotifId])
     );
     expect(s1UpdOtherNotif.rows).toHaveLength(0);
+    // delete: only own rows (the "Clear read" button); anon deletes nothing
+    expect((await withRole(db, 'anon', null, (tx) => tx.query(`DELETE FROM public.notifications RETURNING id`))).rows).toHaveLength(0);
+    const s1DelOther = await withRole(db, 'authenticated', student1Id, (tx) =>
+      tx.query(`DELETE FROM public.notifications WHERE id = $1 RETURNING id`, [student2NotifId])
+    );
+    expect(s1DelOther.rows).toHaveLength(0);
+    const s1DelOwn = await withRole(db, 'authenticated', student1Id, (tx) =>
+      tx.query<{ id: string }>(`DELETE FROM public.notifications WHERE id = $1 RETURNING id`, [student1NotifId])
+    );
+    expect(s1DelOwn.rows.map((r) => r.id)).toEqual([student1NotifId]);
+    expect((await db.query(`SELECT id FROM public.notifications WHERE id = $1`, [student2NotifId])).rows).toHaveLength(1);
     await expectRoleFailure(
       db,
       'authenticated',
@@ -1062,8 +1075,9 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_logs`))).rows).toHaveLength(3);
     expect((await withRole(db, 'authenticated', superAdminId, (tx) => tx.query(`SELECT id FROM public.audit_log_records`))).rows).toHaveLength(3);
 
-    // system_settings: everyone reads; anon/student/library_staff cannot write; librarian & super_admin can write
-    expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT key FROM public.system_settings`))).rows.length).toBeGreaterThanOrEqual(4);
+    // system_settings: signed-in users read, anon reads nothing (GAP-027); anon/student/library_staff cannot write; librarian & super_admin can write
+    expect((await withRole(db, 'anon', null, (tx) => tx.query(`SELECT key FROM public.system_settings`))).rows).toHaveLength(0);
+    expect((await withRole(db, 'authenticated', student1Id, (tx) => tx.query(`SELECT key FROM public.system_settings`))).rows.length).toBeGreaterThanOrEqual(4);
     await expectRoleFailure(db, 'anon', null, `INSERT INTO public.system_settings (key, value) VALUES ('blocked', '1')`);
     await expectRoleFailure(db, 'authenticated', student1Id, `INSERT INTO public.system_settings (key, value) VALUES ('blocked', '1')`);
     await expectRoleFailure(db, 'authenticated', saId, `INSERT INTO public.system_settings (key, value) VALUES ('blocked', '1')`);

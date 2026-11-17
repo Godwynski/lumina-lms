@@ -212,11 +212,13 @@ export const PATCH = withAuthApi(
       return apiError(updateError.message, "DATABASE_ERROR", 400);
     }
 
-    // Sync library card status if membership status changed
-    // Sync library card status if profile status is updated
+    // Sync library card status. Cards have fewer statuses than profiles, so map the rest (GAP-029).
     if (updates.status) {
-      const cardStatus = (updates.status as string).toUpperCase();
-      
+      const profileStatus = (updates.status as string).toUpperCase();
+      const cardStatus =
+        ({ INACTIVE: "SUSPENDED", GRADUATED: "EXPIRED", DELETED: "ARCHIVED" } as Record<string, string>)[profileStatus] ??
+        profileStatus;
+
       const { error: cardSyncError } = await admin
         .from("library_cards")
         .update({ 
