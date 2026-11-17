@@ -30,6 +30,8 @@ export function NotificationBell() {
 
   const handleOpen = (notification: Notification) => {
     if (!notification.is_read) markAsRead(notification.id)
+    // Close the list first: two stacked dialogs made Escape hit the list instead of the details.
+    setMenuOpen(false)
     setSelected(notification)
   }
 

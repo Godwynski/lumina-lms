@@ -233,6 +233,22 @@ export function useNotificationsState(enabled = true) {
     }
   }, [supabase])
 
+  // Deletes the caller's read notifications (RLS limits the delete to their own rows).
+  const clearRead = useCallback(async () => {
+    const userId = userIdRef.current
+    if (!supabase || !userId) return
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .eq('is_read', true)
+    if (error) {
+      toast.error('Failed to clear notifications')
+    } else {
+      setNotifications(prev => prev.filter(n => !n.is_read))
+    }
+  }, [supabase])
+
   const refresh = useCallback(async () => {
     // Use cached userId instead of re-fetching from auth endpoint
     const userId = userIdRef.current
@@ -254,6 +270,7 @@ export function useNotificationsState(enabled = true) {
     searchNotifications,
     markAsRead,
     markAllAsRead,
+    clearRead,
     refresh,
   }), [
     notifications,
@@ -267,6 +284,7 @@ export function useNotificationsState(enabled = true) {
     searchNotifications,
     markAsRead,
     markAllAsRead,
+    clearRead,
     refresh,
   ])
 }

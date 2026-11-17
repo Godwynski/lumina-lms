@@ -500,6 +500,25 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       ).toBe(400);
     });
 
+    it("rejects content over 2000 characters and accepts exactly 2000 (SEC-041)", async () => {
+      setupAuth(supabase, "super_admin", "ACTIVE", VALID_USER_UUID);
+      supabase.setRpcResponse(1, null, "send_bulk_notifications_by_target");
+      const post = (content: string) =>
+        bulkNotificationsPost(
+          new Request("http://localhost/api/notifications/bulk", {
+            method: "POST",
+            body: JSON.stringify({ target: "all", title: "Notice", content }),
+          })
+        );
+
+      const tooLong = await post("x".repeat(2001));
+      expect(tooLong.status).toBe(400);
+      expect((await tooLong.json()).error).toMatch(/2000 characters/);
+      expect(supabase.rpc).not.toHaveBeenCalledWith("send_bulk_notifications_by_target", expect.anything());
+
+      expect((await post("x".repeat(2000))).status).toBe(200);
+    });
+
     it("broadcasts via RPC for target='all' and target='students' without duplicate sender copy", async () => {
       setupAuth(supabase, "super_admin", "ACTIVE", VALID_USER_UUID);
       supabase.setRpcResponse(42, null, "send_bulk_notifications_by_target");

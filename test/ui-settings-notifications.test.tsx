@@ -64,6 +64,10 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 function makeNotificationsSupabaseMock({
   notifications = [] as Array<{
     id: string;
@@ -77,6 +81,7 @@ function makeNotificationsSupabaseMock({
     created_at: string;
   }>,
   unreadCount = 0,
+  onDelete = vi.fn() as (filters: Array<[string, unknown]>) => void,
 } = {}) {
   const channelObj = {
     on: vi.fn().mockReturnThis(),
@@ -84,13 +89,20 @@ function makeNotificationsSupabaseMock({
   };
 
   const makeQuery = () => {
-    const state = { head: false, orFilter: '' };
+    const state = { head: false, orFilter: '', deleting: false, filters: [] as Array<[string, unknown]> };
     const builder: Record<string, unknown> = {
       select: (_cols?: string, opts?: { count?: string; head?: boolean }) => {
         state.head = Boolean(opts?.head);
         return builder;
       },
-      eq: () => builder,
+      delete: () => {
+        state.deleting = true;
+        return builder;
+      },
+      eq: (col: string, val: unknown) => {
+        state.filters.push([col, val]);
+        return builder;
+      },
       lt: () => builder,
       or: (f: string) => {
         state.orFilter = f;
@@ -100,6 +112,10 @@ function makeNotificationsSupabaseMock({
       limit: () => builder,
       update: () => builder,
       then: (resolve: (val: unknown) => void) => {
+        if (state.deleting) {
+          onDelete(state.filters);
+          return Promise.resolve({ error: null }).then(resolve);
+        }
         if (state.head) {
           return Promise.resolve({ count: unreadCount, error: null }).then(resolve);
         }
@@ -312,5 +328,45 @@ describe('B7 — Settings, Policies, Profile & Notifications UI', () => {
       vi.advanceTimersByTime(350);
     });
     expect(popHandle.container).toHaveTextContent('Book Overdue');
+  });
+
+  it('NotificationsPage filters by type, opens details with priority, and Clear read deletes only own read rows after confirm', async () => {
+    const base = { user_id: 'user-1', metadata: {}, created_at: new Date().toISOString() };
+    const onDelete = vi.fn();
+    const sb = makeNotificationsSupabaseMock({
+      notifications: [
+        { ...base, id: 'n-1', title: 'Book Overdue', content: 'Return it.', type: 'OVERDUE', priority: 'high', is_read: true },
+        { ...base, id: 'n-2', title: 'Hold Ready', content: 'Pick it up.', type: 'RESERVATION', priority: 'medium', is_read: false },
+        { ...base, id: 'n-3', title: 'Library Closed', content: 'Holiday.', type: 'SYSTEM', priority: 'low', is_read: true },
+      ],
+      unreadCount: 1,
+      onDelete,
+    });
+    mockCreateBrowserClient.mockReturnValue(sb);
+    const handle = await renderClient(<NotificationsPage />);
+    await act(async () => { await Promise.resolve(); });
+
+    // Type filter: Reservation shows only the hold notification.
+    const trigger = handle.container.querySelector('[aria-label="Filter by type"]') as HTMLElement;
+    expect(trigger).not.toBeNull();
+    await clickElement(trigger);
+    const option = Array.from(document.querySelectorAll('[role="option"]')).find(o => o.textContent === 'Reservation');
+    await clickElement(option as HTMLElement);
+    expect(handle.container).toHaveTextContent('Hold Ready');
+    expect(handle.container).not.toHaveTextContent('Library Closed');
+
+    // Clicking a row opens the details dialog with its priority.
+    const row = Array.from(handle.container.querySelectorAll('[role="button"], button')).find(b => b.textContent?.includes('Hold Ready'));
+    await clickElement(row as HTMLElement);
+    expect(document.body).toHaveTextContent('medium priority');
+
+    // Clear read: cancel does nothing, confirm deletes the caller's read rows.
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const clearRead = () => Array.from(handle.container.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Clear read');
+    await clickElement(clearRead()!);
+    expect(onDelete).not.toHaveBeenCalled();
+    await clickElement(clearRead()!);
+    expect(onDelete).toHaveBeenCalledWith([['user_id', 'user-1'], ['is_read', true]]);
+    confirmSpy.mockRestore();
   });
 });

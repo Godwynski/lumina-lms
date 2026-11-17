@@ -41,6 +41,11 @@ export function NotificationDetailsDialog({ notification, onClose }: Notificatio
                   <Icon className="h-3.5 w-3.5" />
                   {shown.type.replace(/_/g, ' ')}
                 </span>
+                {shown.priority && (
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {shown.priority} priority
+                  </span>
+                )}
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(shown.created_at), { addSuffix: true })}
                 </span>

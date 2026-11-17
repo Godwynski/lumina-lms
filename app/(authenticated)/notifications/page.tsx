@@ -4,8 +4,16 @@ import React from 'react'
 import { Search } from 'lucide-react'
 import { useNotifications, type Notification } from '@/hooks/use-notifications'
 import { NotificationList } from '@/components/notifications/NotificationList'
+import { NotificationDetailsDialog } from '@/components/notifications/NotificationDetailsDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const TYPE_GROUPS: Record<string, Notification['type'][]> = {
+  circulation: ['CIRCULATION', 'DUE_SOON', 'OVERDUE'],
+  reservation: ['RESERVATION', 'RESERVATION_EXPIRED'],
+  system: ['SYSTEM', 'ACCOUNT'],
+}
 import {
   Tabs,
   TabsContent,
@@ -20,6 +28,7 @@ export default function NotificationsPage() {
     olderUnread,
     markAsRead,
     markAllAsRead,
+    clearRead,
     loading,
     error,
     refresh,
@@ -30,6 +39,8 @@ export default function NotificationsPage() {
   } = useNotifications()
 
   const [search, setSearch] = React.useState('')
+  const [typeFilter, setTypeFilter] = React.useState('all')
+  const [selected, setSelected] = React.useState<Notification | null>(null)
   // Server results for the current search; null when not searching.
   const [searchResults, setSearchResults] = React.useState<Notification[] | null>(null)
   const [searching, setSearching] = React.useState(false)
@@ -67,8 +78,19 @@ export default function NotificationsPage() {
     setSearchResults(prev => prev?.map(n => (n.id === id ? { ...n, is_read: true } : n)) ?? null)
   }, [markAsRead])
 
+  const handleOpen = React.useCallback((n: Notification) => {
+    if (!n.is_read) handleMarkRead(n.id)
+    setSelected(n)
+  }, [handleMarkRead])
+
+  const handleClearRead = () => {
+    if (window.confirm('Delete all read notifications? This cannot be undone.')) void clearRead()
+  }
+
   const isSearching = searchResults !== null || searching
-  const source = searchResults ?? notifications
+  const allowedTypes = TYPE_GROUPS[typeFilter]
+  const source = (searchResults ?? notifications).filter(n => !allowedTypes || allowedTypes.includes(n.type))
+  const hasRead = notifications.some(n => n.is_read)
   const unreadNotifications = source.filter(n => !n.is_read)
   const readNotifications = source.filter(n => n.is_read)
   const listLoading = loading || searching
@@ -119,6 +141,18 @@ export default function NotificationsPage() {
             />
           </div>
 
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger aria-label="Filter by type" className="order-2 md:order-3 h-11 md:h-9 w-auto shrink-0 rounded-lg text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="circulation">Circulation</SelectItem>
+              <SelectItem value="reservation">Reservation</SelectItem>
+              <SelectItem value="system">System</SelectItem>
+            </SelectContent>
+          </Select>
+
           {unreadCount > 0 && (
             <Button
               variant="outline"
@@ -129,6 +163,16 @@ export default function NotificationsPage() {
               Clear unread
             </Button>
           )}
+          {hasRead && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearRead}
+              className="order-2 md:order-3 h-11 md:h-9 shrink-0 rounded-lg px-2 sm:px-3 text-xs font-semibold"
+            >
+              Clear read
+            </Button>
+          )}
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card text-card-foreground shadow-xs overflow-hidden">
@@ -137,6 +181,7 @@ export default function NotificationsPage() {
                notifications={source}
                loading={listLoading}
                onMarkRead={handleMarkRead}
+               onOpen={handleOpen}
                error={listError}
                onRetry={() => void refresh()}
                emptyMessage={search ? 'No matches found. Try another search keyword.' : "You're all caught up. Borrowing reminders and hold alerts will appear here."}
@@ -148,6 +193,7 @@ export default function NotificationsPage() {
                notifications={unreadNotifications}
                loading={listLoading}
                onMarkRead={handleMarkRead}
+               onOpen={handleOpen}
                error={listError}
                onRetry={() => void refresh()}
                emptyMessage={!isSearching && olderUnread > 0 ? 'Load older notifications to see the rest.' : 'No unread notifications right now.'}
@@ -159,6 +205,7 @@ export default function NotificationsPage() {
                notifications={readNotifications}
                loading={listLoading}
                onMarkRead={handleMarkRead}
+               onOpen={handleOpen}
                error={listError}
                onRetry={() => void refresh()}
                emptyMessage="No read notification history yet."
@@ -167,6 +214,7 @@ export default function NotificationsPage() {
           </TabsContent>
         </div>
       </Tabs>
+      <NotificationDetailsDialog notification={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }
