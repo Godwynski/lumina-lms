@@ -2,7 +2,7 @@ import { getMe } from '@/lib/auth-helpers';
 import { UserPermissions } from '@/lib/types';
 import { redirect } from 'next/navigation';
 
-export const metadata = { title: "Library Circulation" };
+export const metadata = { title: "Circulation Desk" };
 
 async function CirculationGuard({ children }: { children: React.ReactNode }) {
   const me = await getMe();

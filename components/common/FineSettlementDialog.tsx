@@ -64,7 +64,13 @@ export function FineSettlementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent
+        className="sm:max-w-2xl rounded-2xl"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          (event.currentTarget as HTMLElement).focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -73,7 +79,7 @@ export function FineSettlementDialog({
         <Field className="space-y-1.5 py-1">
           <div className="flex items-center justify-between">
             <Label>Remarks</Label>
-            <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+            <span className="text-xs font-medium text-muted-foreground tabular-nums">
               {remarks.length}/500
             </span>
           </div>
@@ -96,40 +102,48 @@ export function FineSettlementDialog({
           )}
         </Field>
 
-        <DialogFooter className="flex-wrap gap-2 sm:gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={isSubmitting}
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          {allowReturnOnly && onReturnOnly && (
+        <DialogFooter className="flex-col-reverse gap-2.5 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
               disabled={isSubmitting}
-              onClick={onReturnOnly}
+              onClick={() => onOpenChange(false)}
             >
-              Return Only (Pay Later)
+              Cancel
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isSubmitting}
-            onClick={handleCondoned}
-          >
-            Mark as Condoned
-          </Button>
-          <Button
-            type="button"
-            disabled={isSubmitting}
-            onClick={handlePaid}
-          >
-            Mark as Paid (₱{Number(fineAmount).toFixed(2)})
-          </Button>
+            {allowReturnOnly && onReturnOnly && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSubmitting}
+                onClick={onReturnOnly}
+              >
+                Return Only (Pay Later)
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={isSubmitting}
+              onClick={handleCondoned}
+            >
+              Mark as Condoned
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isSubmitting}
+              onClick={handlePaid}
+            >
+              Mark as Paid (₱{Number(fineAmount).toFixed(2)})
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

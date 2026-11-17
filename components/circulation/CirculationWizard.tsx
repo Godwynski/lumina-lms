@@ -142,13 +142,14 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
         />
       </div>
 
-      <div className="bg-card/50 border border-border/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
+      <div className="bg-card/50 border border-border/40 rounded-2xl p-5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
         {/* Header Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-8 pb-6 border-b border-border/20">
-          <div className="flex items-center gap-1.5 bg-muted/30 p-1 rounded-xl border border-border/10">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-6 pb-5 border-b border-border/40">
+          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
             <Button
               variant={mode === 'checkout' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
+              size="sm"
+              className="h-9 rounded-lg px-4 text-xs font-semibold"
               aria-pressed={mode === 'checkout'}
               disabled={isCommitting}
               onClick={() => mode !== 'checkout' && handleSwitchMode('checkout')}
@@ -157,7 +158,8 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
             </Button>
             <Button
               variant={mode === 'return' ? 'default' : 'ghost'}
-              className="h-7 rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider"
+              size="sm"
+              className="h-9 rounded-lg px-4 text-xs font-semibold"
               aria-pressed={mode === 'return'}
               disabled={isCommitting}
               onClick={() => mode !== 'return' && handleSwitchMode('return')}
@@ -166,28 +168,28 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
             </Button>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
           {step > 1 && !isConfirmed && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-2 rounded-lg text-muted-foreground transition-colors"
+              className="h-9 gap-1.5 rounded-lg text-xs font-semibold text-muted-foreground transition-colors"
               disabled={!canNavigate}
               onClick={() => goToStep(step - 1)}
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Back</span>
+              <span>Back</span>
             </Button>
           )}
           {!isConfirmed && (reachedStep > 1 || isProcessing) && <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="h-9 gap-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             disabled={isCommitting}
             onClick={handleReset}
           >
             <RefreshCcw className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Start over</span>
+            <span>Start over</span>
           </Button>}
           </div>
         </div>
@@ -226,7 +228,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                   {showOverrideForm && canOverrideBlock ? (
                     <div className="space-y-3 pt-1">
                       <div className="space-y-1.5">
-                        <Label htmlFor={overrideFieldId} className="text-xs font-bold uppercase tracking-wider">
+                        <Label htmlFor={overrideFieldId} className="text-sm font-medium">
                           Override reason
                         </Label>
                         <Textarea
@@ -241,7 +243,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                           aria-invalid={Boolean(overrideError)}
                           className="min-h-24"
                         />
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                           <span>Minimum 10 characters required.</span>
                           <span className="tabular-nums">{overrideDraft.trim().length}/300</span>
                         </div>
@@ -256,14 +258,14 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                           type="button"
                           variant="outline"
                           onClick={handleReset}
-                          className="rounded-xl px-5 h-10 text-[11px] font-bold uppercase tracking-wider"
+                          className="rounded-lg px-5 h-10"
                         >
                           Start over
                         </Button>
                         <Button
                           type="button"
                           onClick={handleOverrideContinue}
-                          className="rounded-xl px-6 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                          className="rounded-lg px-6 h-10"
                         >
                           Continue
                         </Button>
@@ -275,7 +277,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                         type="button"
                         variant="outline"
                         onClick={handleReset}
-                        className="rounded-xl px-5 h-10 text-[11px] font-bold uppercase tracking-wider"
+                        className="rounded-lg px-5 h-10"
                       >
                         Start over
                       </Button>
@@ -286,7 +288,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                             setShowOverrideForm(true);
                             setOverrideError(null);
                           }}
-                          className="rounded-xl px-6 h-10 gap-2 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                          className="rounded-lg px-6 h-10 gap-2"
                         >
                           <ShieldAlert className="h-3.5 w-3.5" />
                           Override
@@ -299,7 +301,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                 <div className="flex justify-end pt-6">
                   <Button
                     onClick={() => goToStep(2)}
-                    className="rounded-xl px-8 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                    className="rounded-lg px-8 h-10"
                   >
                     Continue
                   </Button>
@@ -318,10 +320,15 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                         : 'Scan item QR code to begin.')
                     : `${activeStudent?.fullName} verified. Scan the QR on the physical item.`
                 }
+                label={
+                  step === 1
+                    ? (mode === 'checkout' ? 'Card or Patron ID' : 'Item QR code')
+                    : 'Item QR code'
+                }
                 placeholder={
                   step === 1
-                    ? (mode === 'checkout' ? 'Enter Card ID' : 'Enter Item QR')
-                    : 'Enter Item QR'
+                    ? (mode === 'checkout' ? 'e.g. DEMO-STU-001' : 'e.g. BK-0001-01')
+                    : 'e.g. BK-0001-01'
                 }
                 onScan={handleScan}
                 isProcessing={isProcessing}
@@ -347,7 +354,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                   <Button 
                     onClick={handleConfirmClick} 
                     disabled={isProcessing}
-                    className="rounded-xl px-8 h-10 bg-primary text-[11px] font-bold uppercase tracking-wider"
+                    className="rounded-lg px-8 h-10"
                   >
                     {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
                   </Button>
