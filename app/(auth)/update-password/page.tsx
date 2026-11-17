@@ -25,11 +25,8 @@ export default async function UpdatePasswordPage() {
   }
 
   return (
-    <AuthPageShell
-      title="Set a new password for your account."
-      description="Use a strong password with letters, numbers, and symbols to maintain account security."
-    >
-      <Suspense fallback={<div className="h-96 w-full animate-pulse rounded-xl bg-slate-200" />}>
+    <AuthPageShell>
+      <Suspense fallback={<div className="h-80 w-full animate-pulse rounded-2xl bg-muted" />}>
         <UpdatePasswordForm />
       </Suspense>
     </AuthPageShell>

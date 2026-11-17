@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState } from "react";
 import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
-import { Logo } from "@/components/layout/Logo";
 import {
   Card,
   CardContent,
@@ -48,11 +47,6 @@ export function ForgotPasswordForm({
     <div className={cn("mx-auto w-full max-w-md", className)} {...props}>
       <Card className="overflow-hidden border-border bg-card text-foreground shadow-sm">
         <CardHeader className="space-y-4 pb-5">
-          <Link href="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity md:hidden">
-            <Logo size={20} />
-            <span className="text-lg font-bold tracking-tight text-foreground">Lumina LMS</span>
-          </Link>
-          
           {success ? (
             <div role="status" className="flex flex-col items-center justify-center pt-4 pb-2 animate-in zoom-in duration-300">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
@@ -66,9 +60,9 @@ export function ForgotPasswordForm({
             </div>
           ) : (
             <div className="space-y-1">
-              <CardTitle className="text-2xl font-bold tracking-tight text-foreground">Reset password</CardTitle>
+              <CardTitle className="text-xl font-bold tracking-tight text-foreground">Reset your password securely.</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Enter your email to receive a password reset link.
+                Enter your email address and we will send a link to reset your password.
               </CardDescription>
             </div>
           )}

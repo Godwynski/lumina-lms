@@ -108,7 +108,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>
-            <div className="relative flex justify-center text-2xs font-bold uppercase tracking-widest">
+            <div className="relative flex justify-center text-2xs font-semibold uppercase tracking-wider">
               <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
             </div>
           </div>
@@ -121,7 +121,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
                   key={item.email}
                   type="button"
                   variant="outline"
-                  className="h-11 justify-start gap-2.5 px-3.5 text-2xs font-bold uppercase tracking-wider text-muted-foreground"
+                  className="h-11 justify-start gap-2.5 px-3.5 text-xs font-medium text-foreground"
                   onClick={() => signInDemo(item.email)}
                   disabled={isLoading}
                 >

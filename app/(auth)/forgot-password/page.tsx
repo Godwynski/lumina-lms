@@ -9,11 +9,8 @@ export const metadata = {
 
 export default function ForgotPasswordPage() {
   return (
-    <AuthPageShell
-      title="Reset your password securely."
-      description="Enter your email address and we will send a verification link to complete the reset process."
-    >
-      <Suspense fallback={<div className="h-96 w-full animate-pulse rounded-xl bg-slate-200" />}>
+    <AuthPageShell>
+      <Suspense fallback={<div className="h-80 w-full animate-pulse rounded-2xl bg-muted" />}>
         <ForgotPasswordForm />
       </Suspense>
     </AuthPageShell>

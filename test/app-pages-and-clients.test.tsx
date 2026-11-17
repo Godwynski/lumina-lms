@@ -1553,7 +1553,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const { container } = await renderClient(<Component />);
       expect(container.firstElementChild).not.toBeNull();
       if (name === 'student-catalog/[id]') {
-        expect(container).toHaveTextContent('Resource Explorer');
+        expect(container).toHaveTextContent('Book Details');
       } else if (name === 'analytics') {
         expect(container.querySelector('svg.animate-spin')).toBeInTheDocument();
       } else {
@@ -1845,7 +1845,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       );
     });
 
-    it('StudentBookDetailPage renders Resource Explorer shell and forwards book/availability promises', async () => {
+    it('StudentBookDetailPage renders Book Details shell and forwards book/availability promises', async () => {
       const skel = await renderClient(<BookDetailSkeleton />);
       expect(skel.container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
       cleanupClients();
