@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
-import { Search, Filter, UserPlus } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,16 +179,6 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     <>
       <AdminTableShell
         className="min-h-[calc(100vh-120px)]"
-        headerActions={
-          (currentRole === "super_admin" || currentRole === "librarian") ? (
-            <Button asChild className="h-10 rounded-lg px-4 text-sm font-semibold">
-              <Link href="/users/new">
-                <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-                Invite User
-              </Link>
-            </Button>
-          ) : undefined
-        }
         feedback={
           loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
         }

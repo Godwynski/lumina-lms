@@ -38,7 +38,6 @@ function formatSegment(segment: string, parentSegment?: string) {
 
   // Specific contextual overrides for "new" or "add" segments
   if (segment === "new" || segment === "add") {
-    if (parentSegment === "users") return "Invite User";
     if (parentSegment === "inventory" || parentSegment === "catalog") return "Add Book";
     return "New Entry";
   }

@@ -100,7 +100,6 @@ vi.mock('recharts', () => {
   };
 });
 
-import NewUserPage, { NewUserContent } from '@/app/(authenticated)/users/new/page';
 import { UsersContent } from '@/app/(authenticated)/users/UsersContent';
 import { UserDetailClient } from '@/app/(authenticated)/users/[id]/UserDetailClient';
 import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
@@ -134,28 +133,7 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('F26: /users/new redirects patron, library_staff, and unauthenticated users, and allows librarian/super_admin', async () => {
-    // Also verify the page wrapper contains NewUserContent inside Suspense
-    const pageEl = NewUserPage();
-    expect(pageEl).toBeTruthy();
-
-    mockGetMe.mockResolvedValueOnce(null);
-    await expect(NewUserContent()).rejects.toThrow('NEXT_REDIRECT:/');
-
-    mockGetMe.mockResolvedValueOnce({ role: 'patron' });
-    await expect(NewUserContent()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
-
-    mockGetMe.mockResolvedValueOnce({ role: 'library_staff' });
-    await expect(NewUserContent()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
-
-    mockGetMe.mockResolvedValueOnce({ role: 'librarian' });
-    const libEl = await NewUserContent();
-    const { container } = await renderClient(libEl);
-    expect(container).toHaveTextContent('Access Details');
-    expect(container).toHaveTextContent('Send Invitation');
-  });
-
-  it('F27: UsersContent renders Invite User link, nowrap IDs, and avoids initial Refreshing spinner under StrictMode', async () => {
+  it('F27: UsersContent has no Invite User action, renders nowrap IDs, and avoids initial Refreshing spinner under StrictMode', async () => {
     const sampleUsers: User[] = [
       {
         id: 'u-1',
@@ -185,7 +163,8 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
 
     expect(mockGetUsers).not.toHaveBeenCalled();
     expect(container).not.toHaveTextContent('Refreshing...');
-    expect(container.querySelector('a[href="/users/new"]')).toHaveTextContent('Invite User');
+    expect(container.querySelector('a[href="/users/new"]')).toBeNull();
+    expect(container).not.toHaveTextContent('Invite User');
 
     const idSpan = Array.from(container.querySelectorAll('table span')).find(
       (s) => s.textContent === 'FAC-DEMO.GALANG'

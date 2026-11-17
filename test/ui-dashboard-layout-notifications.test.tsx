@@ -1354,14 +1354,14 @@ describe('Layout Components', () => {
     expect(container.querySelector('a')?.getAttribute('href')).toBe('/inventory');
     expect(container.querySelector('a')?.textContent).toContain('Inventory');
 
-    // /users/new
+    // An unmapped "new" segment falls back to the generic label
     mockPathname = '/users/new';
     await rerender(
       <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="super_admin">
         <BreadcrumbNav />
       </PreferencesProvider>
     );
-    expect(container.querySelector('h1')?.textContent).toBe('Invite User');
+    expect(container.querySelector('h1')?.textContent).toBe('New Entry');
 
     // /history?view=logs as librarian -> Borrowing Logs
     mockPathname = '/history';
