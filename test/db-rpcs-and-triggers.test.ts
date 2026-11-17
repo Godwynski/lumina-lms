@@ -76,6 +76,7 @@ async function bootLuminaDb(): Promise<PGlite> {
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117120000_qa_circulation_fixes.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117130000_rls_tightening.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117140000_history_sort.sql'), 'utf8'));
   return db;
 }
 
@@ -853,6 +854,34 @@ describe('get_borrowing_history_v2', () => {
     // LOST returns only LOST
     const lostRes = await queryStatus('LOST');
     expect(lostRes.rows.map((r) => r.id)).toEqual([recLostId]);
+  });
+
+  it('orders by an allowlisted p_sort column and ignores unknown values', async () => {
+    const run = (sort: string | null) =>
+      withRole(db, 'authenticated', sa.id, (tx) =>
+        tx.query<{ id: string; due_date: string; title: string }>(
+          `SELECT h.id, h.due_date::text, lower(b.title) AS title
+             FROM public.get_borrowing_history_v2(NULL, 1, 50, 'all', NULL, NULL, $1) h
+             JOIN public.book_copies bc ON bc.id = h.book_copy_id
+             JOIN public.books b ON b.id = bc.book_id`,
+          [sort]
+        )
+      );
+    const isSorted = (xs: string[], desc = false) =>
+      xs.every((x, i) => i === 0 || (desc ? xs[i - 1] >= x : xs[i - 1] <= x));
+
+    const dueAsc = (await run('due_asc')).rows;
+    const dueDesc = (await run('due_desc')).rows;
+    expect(dueAsc).toHaveLength(7);
+    expect(isSorted(dueAsc.map((r) => r.due_date))).toBe(true);
+    expect(isSorted(dueDesc.map((r) => r.due_date), true)).toBe(true);
+    expect(dueAsc[0].due_date).not.toBe(dueAsc[6].due_date);
+
+    const titleAsc = (await run('title_asc')).rows;
+    expect(isSorted(titleAsc.map((r) => r.title))).toBe(true);
+
+    const defaultOrder = (await run(null)).rows.map((r) => r.id);
+    expect((await run('nonsense; DROP TABLE books')).rows.map((r) => r.id)).toEqual(defaultOrder);
   });
 
   it('supports pagination, search (borrower/title/ISBN/QR/dates), and patron self-scoping vs staff full view', async () => {

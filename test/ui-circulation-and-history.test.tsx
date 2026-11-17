@@ -661,6 +661,30 @@ describe('Circulation & History UI Components', () => {
       expect(mockRouterReplace).toHaveBeenCalledWith('/history?status=SETTLED&page=1', { scroll: false });
     });
 
+    it('sorts by column headers, toggling asc/desc in the URL (P4-HIS-005)', async () => {
+      const first = await renderHistory({ records: [makeRecord()] });
+      const sortBtn = (c: HTMLElement, label: string) =>
+        c.querySelector<HTMLButtonElement>(`button[aria-label^="Sort by ${label}"]`)!;
+      for (const label of ['Borrower', 'Resource', 'Borrowed', 'Timeline']) {
+        expect(sortBtn(first.container, label)).not.toBeNull();
+      }
+      await clickElement(sortBtn(first.container, 'Resource'));
+      expect(mockRouterReplace).toHaveBeenLastCalledWith('/history?sort=title_asc&page=1', { scroll: false });
+      first.unmount();
+
+      mockSearchParamsString = 'sort=title_asc';
+      try {
+        const { container } = await renderHistory({ records: [makeRecord()] });
+        expect(sortBtn(container, 'Resource').getAttribute('aria-label')).toBe('Sort by Resource (ascending)');
+        await clickElement(sortBtn(container, 'Resource'));
+        expect(mockRouterReplace).toHaveBeenLastCalledWith('/history?sort=title_desc&page=1', { scroll: false });
+        await clickElement(sortBtn(container, 'Timeline'));
+        expect(mockRouterReplace).toHaveBeenLastCalledWith('/history?sort=due_asc&page=1', { scroll: false });
+      } finally {
+        mockSearchParamsString = '';
+      }
+    });
+
     it('omits the Penalty column when statusFilter === "ACTIVE"', async () => {
       const { container } = await renderHistory({
         records: [makeRecord({ status: 'ACTIVE', due_date: '2099-12-31T00:00:00Z', fine_amount: 0 })],

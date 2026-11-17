@@ -4,7 +4,7 @@ import { useState, use, useEffect, useTransition, useCallback, useRef } from "re
 import Image from "next/image";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { BorrowerDetailsModal } from "@/components/common/BorrowerDetailsModal";
-import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer, X } from "lucide-react";
+import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FineSettlementDialog } from "@/components/common/FineSettlementDialog";
@@ -337,11 +337,25 @@ export default function HistoryContent({
     }
   };
 
+  const currentSort = searchParams.get("sort") || "";
+  const sortHeader = (label: string, key: string) => {
+    const dir = currentSort === `${key}_asc` ? "ascending" : currentSort === `${key}_desc` ? "descending" : null;
+    const Icon = dir === "ascending" ? ArrowUp : dir === "descending" ? ArrowDown : ArrowUpDown;
+    return (
+      <button type="button"
+        aria-label={`Sort by ${label}${dir ? ` (${dir})` : ""}`}
+        onClick={() => updateFilters({ sort: dir === "ascending" ? `${key}_desc` : `${key}_asc`, page: 1 })}
+        className="inline-flex items-center gap-1 uppercase hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+        {label}<Icon size={12} aria-hidden="true" className={dir ? "text-foreground" : "opacity-50"} />
+      </button>
+    );
+  };
+
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged
       ? [
           {
-            header: "Borrower",
+            header: sortHeader("Borrower", "patron"),
             accessor: (record: BorrowingRecord) => (
               <div className="flex flex-col">
                 {record.profiles ? <button type="button"
@@ -361,7 +375,7 @@ export default function HistoryContent({
         ]
       : []),
     {
-      header: "Resource",
+      header: sortHeader("Resource", "title"),
       accessor: (record) => (
         <button type="button" disabled={!record.books?.id}
           aria-label={`View book details: ${record.books?.title || "Unknown Title"}`}
@@ -423,7 +437,7 @@ export default function HistoryContent({
         ]
       : [
           {
-            header: "Borrowed",
+            header: sortHeader("Borrowed", "borrowed"),
             accessor: (record: BorrowingRecord) => (
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-muted-foreground shrink-0" />
@@ -432,7 +446,7 @@ export default function HistoryContent({
             ),
           },
           {
-            header: "Timeline",
+            header: sortHeader("Timeline", "due"),
             accessor: (record: BorrowingRecord) => {
               const overdue = isOverdue(record);
               return (

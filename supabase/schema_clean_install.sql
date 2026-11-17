@@ -2391,7 +2391,8 @@ CREATE OR REPLACE FUNCTION public.get_borrowing_history_v2(
   p_page_size int DEFAULT 10,
   p_status text DEFAULT NULL,
   p_search text DEFAULT NULL,
-  p_resolution text DEFAULT NULL
+  p_resolution text DEFAULT NULL,
+  p_sort text DEFAULT NULL
 )
 RETURNS TABLE (
   id uuid,
@@ -2563,6 +2564,14 @@ BEGIN
     COUNT(*) OVER() AS total_count
   FROM filtered f
   ORDER BY
+    -- Column sorting from the history table (P4-HIS-005); unknown values fall through to the default order
+    CASE WHEN p_sort = 'borrowed_asc' THEN f.borrowed_at END ASC,
+    CASE WHEN p_sort = 'due_asc' THEN f.due_date END ASC,
+    CASE WHEN p_sort = 'due_desc' THEN f.due_date END DESC,
+    CASE WHEN p_sort = 'title_asc' THEN lower(f.book_title) END ASC,
+    CASE WHEN p_sort = 'title_desc' THEN lower(f.book_title) END DESC,
+    CASE WHEN p_sort = 'patron_asc' THEN lower(f.profile_name) END ASC,
+    CASE WHEN p_sort = 'patron_desc' THEN lower(f.profile_name) END DESC,
     CASE
       WHEN UPPER(COALESCE(p_status, '')) = 'CURRENT' THEN
         CASE
@@ -2581,8 +2590,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text, text) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_borrowing_history_v2(uuid, int, int, text, text, text, text) TO authenticated, service_role;
 
 -- Ranked book search ("Best match"). See migrations/20261106120000_search_book_ids_ranked.sql.
 CREATE OR REPLACE FUNCTION public.search_book_ids(

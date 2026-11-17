@@ -69,6 +69,10 @@ interface HistoryRpcRow {
   profile_student_id?: string | null;
 }
 
+const HISTORY_SORTS = new Set([
+  'borrowed_asc', 'borrowed_desc', 'due_asc', 'due_desc', 'title_asc', 'title_desc', 'patron_asc', 'patron_desc',
+]);
+
 export async function getBorrowingHistory(
   userId: string | null,
   page: number = 1,
@@ -76,7 +80,8 @@ export async function getBorrowingHistory(
   statusFilter?: string,
   searchQuery?: string,
   preFetchedSupabase?: SupabaseClient,
-  resolutionFilter?: string
+  resolutionFilter?: string,
+  sort?: string
 ) {
   const supabase = preFetchedSupabase || await createClient();
 
@@ -93,6 +98,9 @@ export async function getBorrowingHistory(
       };
       if (resolutionFilter && resolutionFilter !== 'all') {
         rpcParams.p_resolution = resolutionFilter.toUpperCase();
+      }
+      if (sort && HISTORY_SORTS.has(sort)) {
+        rpcParams.p_sort = sort;
       }
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_borrowing_history_v2', rpcParams);
 

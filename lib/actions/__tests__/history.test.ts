@@ -723,6 +723,18 @@ describe('history server actions', () => {
     });
   });
 
+  describe('sort', () => {
+    it('passes allowlisted p_sort and drops unknown values', async () => {
+      supaMock.setRpcResponse([], null, 'get_borrowing_history_v2');
+      await getBorrowingHistory(null, 1, 10, 'all', undefined, undefined, undefined, 'title_desc');
+      expect(supaMock.rpc).toHaveBeenLastCalledWith('get_borrowing_history_v2', expect.objectContaining({ p_sort: 'title_desc' }));
+
+      await getBorrowingHistory(null, 1, 10, 'all', undefined, undefined, undefined, 'id; drop');
+      const params = supaMock.rpc.mock.calls.at(-1)?.[1] as Record<string, unknown>;
+      expect(params).not.toHaveProperty('p_sort');
+    });
+  });
+
   describe('resolutionFilter & exportBorrowingHistory', () => {
     it('passes p_resolution to RPC and applies fine_resolution filter in fallback', async () => {
       supaMock.setRpcResponse([], null, 'get_borrowing_history_v2');

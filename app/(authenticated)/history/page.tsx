@@ -50,9 +50,10 @@ export default function HistoryPage({
 async function HistoryPageContent({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string; resolution?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; resolution?: string; q?: string; view?: string; sort?: string }>;
 }) {
   const params = await searchParams;
+  const sort = params.sort || "";
   const page = parseInt(params.page || "1", 10);
   const status = params.status || "all";
   const resolution = params.resolution || "all";
@@ -70,7 +71,7 @@ async function HistoryPageContent({
   const showAllLogs = isStaff || (hasCirculationPerm && view === "logs");
   const userId = showAllLogs ? null : me.user.id;
 
-  const historyPromise = getBorrowingHistory(userId, page, 10, status, q, undefined, resolution);
+  const historyPromise = getBorrowingHistory(userId, page, 10, status, q, undefined, resolution, sort);
 
   return (
     <HistoryContent
