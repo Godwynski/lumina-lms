@@ -85,7 +85,7 @@ async function PublicBookDetailLoader({ params }: { params: Promise<{ id: string
         )}
 
         <div className="pt-2">
-          <Button asChild className="h-10 rounded-lg font-semibold">
+          <Button asChild className="min-h-11 sm:min-h-0 sm:h-10 w-full sm:w-auto rounded-lg font-semibold">
             <Link href="/">
               Sign in to Reserve
               <ArrowRight className="ml-2 h-4 w-4" />

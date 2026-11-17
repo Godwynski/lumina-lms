@@ -274,7 +274,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
               </TooltipProvider>
             </div>
           ) : (
-            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

@@ -20,10 +20,19 @@ const mockRouter = {
 };
 let mockSearchParams = new URLSearchParams('');
 
+const mockNotFound = vi.fn(() => {
+  throw new Error('NEXT_NOT_FOUND');
+});
+const mockRedirect = vi.fn((url: string) => {
+  throw new Error(`NEXT_REDIRECT:${url}`);
+});
+
 vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
   useSearchParams: () => mockSearchParams,
   usePathname: () => '/student-catalog',
+  notFound: () => mockNotFound(),
+  redirect: (url: string) => mockRedirect(url),
 }));
 
 vi.mock('next/image', () => ({
@@ -116,6 +125,11 @@ vi.mock('@/lib/actions/catalog', () => ({
 const mockMarkAsRead = vi.fn();
 const mockMarkAllAsRead = vi.fn();
 const mockRefreshNotifs = vi.fn();
+const mockGetMe = vi.fn();
+vi.mock('@/lib/auth-helpers', () => ({
+  getMe: () => mockGetMe(),
+}));
+
 const mockUseNotifications = vi.fn();
 vi.mock('@/hooks/use-notifications', () => ({
   useNotifications: () => mockUseNotifications(),
@@ -139,6 +153,7 @@ import { CategoryManagement } from '@/components/admin/CategoryManagement';
 import { StatusBanner } from '@/components/catalog/StatusBanner';
 import { CompactPagination } from '@/components/ui/compact-pagination';
 import NotificationsPage from '@/app/(authenticated)/notifications/page';
+import UserDetailPage from '@/app/(authenticated)/users/[id]/page';
 import type { Book, Category, ProfileData, User } from '@/lib/types';
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -391,6 +406,14 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     expect(batchMenuItem).toBeDefined();
     await clickElement(batchMenuItem);
     expect(document.body).toHaveTextContent('Batch Catalog Operations');
+
+    const isbnTabBtn = findButtonByText(document.body, 'ISBN Fallback')!;
+    const exportTabBtn = findButtonByText(document.body, 'Export Data')!;
+    expect(findButtonByText(document.body, 'Import Sheet')).toHaveAttribute('aria-pressed', 'true');
+    await clickElement(isbnTabBtn);
+    expect(isbnTabBtn).toHaveAttribute('aria-pressed', 'true');
+    await clickElement(exportTabBtn);
+    expect(exportTabBtn).toHaveAttribute('aria-pressed', 'true');
 
     await pressKey(document.body.querySelector('[role="dialog"]') as HTMLElement, 'Escape');
     managedHandle.unmount();
@@ -828,5 +851,21 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     await clickElement(nextBtn);
     expect(onPageChange).toHaveBeenNthCalledWith(1, 1);
     expect(onPageChange).toHaveBeenNthCalledWith(2, 3);
+  });
+
+  it('UserDetailPage rejects non-UUID segments like "new" with notFound() instead of querying Postgres', async () => {
+    mockGetMe.mockResolvedValueOnce({
+      role: 'super_admin',
+      user: { id: 'sa-1' },
+      profile: { id: 'sa-1', role: 'super_admin', status: 'ACTIVE' },
+      supabase: {},
+    });
+    const tree = UserDetailPage({ params: Promise.resolve({ id: 'new' }) }) as React.ReactElement<{
+      children: React.ReactElement<{ children: React.ReactElement<{ params: Promise<{ id: string }> }> }>;
+    }>;
+    const loaderEl = tree.props.children.props.children;
+    const loaderFn = loaderEl.type as unknown as (props: { params: Promise<{ id: string }> }) => Promise<unknown>;
+    await expect(loaderFn(loaderEl.props)).rejects.toThrow('NEXT_NOT_FOUND');
+    expect(mockNotFound).toHaveBeenCalledTimes(1);
   });
 });

@@ -90,19 +90,19 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="all" className="w-full space-y-4">
-        <div className="flex flex-wrap md:flex-nowrap justify-between items-center gap-2.5 md:gap-3">
+        <div className="flex flex-wrap md:flex-nowrap justify-between items-center gap-1.5 sm:gap-2 md:gap-3">
           <TabsList aria-label="Filter notifications" className="order-1 group-data-[orientation=horizontal]/tabs:h-auto">
-            <TabsTrigger value="all" className="min-h-11 md:min-h-0 px-3">
+            <TabsTrigger value="all" className="min-h-11 min-w-[44px] md:min-w-0 md:min-h-0 px-2 sm:px-3 text-xs sm:text-sm">
               All
             </TabsTrigger>
-            <TabsTrigger value="unread" className="min-h-11 md:min-h-0 px-3">
+            <TabsTrigger value="unread" className="min-h-11 md:min-h-0 px-2 sm:px-3 text-xs sm:text-sm">
               Unread
               {unreadCount > 0 && (
-                <span className="ml-2 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                <span className="ml-1.5 sm:ml-2 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
               )}
               {unreadCount > 0 && <span className="sr-only"> ({unreadCount})</span>}
             </TabsTrigger>
-            <TabsTrigger value="read" className="min-h-11 md:min-h-0 px-3">
+            <TabsTrigger value="read" className="min-h-11 md:min-h-0 px-2 sm:px-3 text-xs sm:text-sm">
               History
             </TabsTrigger>
           </TabsList>
@@ -124,7 +124,7 @@ export default function NotificationsPage() {
               variant="outline"
               size="sm"
               onClick={markAllAsRead}
-              className="order-2 md:order-3 h-11 md:h-9 shrink-0 rounded-lg px-3 text-xs font-semibold"
+              className="order-2 md:order-3 h-11 md:h-9 shrink-0 rounded-lg px-2 sm:px-3 text-xs font-semibold"
             >
               Clear unread
             </Button>

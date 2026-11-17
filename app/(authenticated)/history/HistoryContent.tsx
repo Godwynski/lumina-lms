@@ -591,7 +591,7 @@ export default function HistoryContent({
               aria-pressed={statusFilter === tab.key}
               onClick={() => updateFilters({ status: tab.key, resolution: tab.key === "SETTLED" ? effectiveResolution : "", page: 1 })}
               className={cn(
-                "shrink-0 min-h-11 sm:min-h-0 sm:h-9 rounded-lg px-3.5 sm:px-3 text-xs font-semibold whitespace-nowrap transition-colors",
+                "shrink-0 min-h-11 min-w-[44px] sm:min-w-0 sm:min-h-0 sm:h-9 rounded-lg px-3.5 sm:px-3 text-xs font-semibold whitespace-nowrap transition-colors",
                 statusFilter === tab.key
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

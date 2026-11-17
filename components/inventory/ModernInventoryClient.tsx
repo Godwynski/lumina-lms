@@ -859,7 +859,7 @@ export function ModernInventoryClient({
                     <span>Batch Operations</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className={cn("w-full sm:max-w-2xl rounded-3xl border border-border/10 bg-background/95 backdrop-blur-xl p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-[9999]", isReportPreviewOpen && "print:hidden")}>
+                <DialogContent className={cn("w-full sm:max-w-2xl rounded-3xl border border-border/10 bg-background/95 backdrop-blur-xl p-4 sm:p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] z-[9999]", isReportPreviewOpen && "print:hidden")}>
                   <DialogHeader className="pb-4">
                     <DialogTitle className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
                       <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -871,12 +871,12 @@ export function ModernInventoryClient({
                   </DialogHeader>
                   
                   {/* Beautiful Glassmorphic Tab Selectors */}
-                  <div className="flex gap-1 p-1 rounded-xl bg-muted/20 border border-border/5 mb-4 sm:mb-6">
+                  <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 rounded-xl bg-muted/20 border border-border/5 mb-4 sm:mb-6">
                     <button
                       aria-pressed={activeTab === "import"}
                       onClick={() => setActiveTab("import")}
                       className={cn(
-                        "flex-1 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
+                        "flex-1 min-w-0 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
                         activeTab === "import" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -887,7 +887,7 @@ export function ModernInventoryClient({
                       aria-pressed={activeTab === "isbn"}
                       onClick={() => setActiveTab("isbn")}
                       className={cn(
-                        "flex-1 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
+                        "flex-1 min-w-0 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
                         activeTab === "isbn" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -898,7 +898,7 @@ export function ModernInventoryClient({
                       aria-pressed={activeTab === "export"}
                       onClick={() => setActiveTab("export")}
                       className={cn(
-                        "flex-1 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
+                        "flex-1 min-w-0 min-h-11 sm:min-h-0 py-2 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2",
                         activeTab === "export" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
                       )}
                     >

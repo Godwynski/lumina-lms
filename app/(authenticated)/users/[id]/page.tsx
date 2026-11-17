@@ -7,6 +7,8 @@ import { getBorrowingHistory } from "@/lib/actions/history";
 
 export const metadata = { title: "User Profile" };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // getMe() is cache()-memoized — reuses auth already fetched by the layout.
 // The profile lookup for the *target* user is the only DB call needed.
 function buildUserDetailPromise(userId: string) {
@@ -15,6 +17,7 @@ function buildUserDetailPromise(userId: string) {
     if (me.role !== "super_admin" && me.role !== "librarian") {
       redirect("/dashboard");
     }
+    if (!UUID_RE.test(userId)) notFound();
     const { supabase } = me;
 
     const [{ data, error }, history] = await Promise.all([
