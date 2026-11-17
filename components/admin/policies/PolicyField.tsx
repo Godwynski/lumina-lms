@@ -152,68 +152,69 @@ export function PolicyField({
   }
 
   return (
-    <div className="py-8 first:pt-0 border-b border-border/5 last:border-0 group animate-in fade-in slide-in-from-top-1 duration-500">
+    <div className="py-6 first:pt-0 border-b border-border/50 last:border-0 group animate-in fade-in slide-in-from-top-1 duration-500">
       <div className={cn(
-        "flex flex-col gap-8",
+        "flex flex-col gap-6",
         !isComplex && "md:flex-row md:items-start justify-between"
       )}>
-        <div className="space-y-3 flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-muted/15 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/15 transition-all duration-300 border border-border/5 group-hover:border-primary/20 shadow-sm">
+        <div className="space-y-2 flex-1 min-w-0">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-xl bg-muted/40 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors border border-border/50 group-hover:border-primary/20 shrink-0">
               <Icon size={18} />
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-foreground leading-none">{labelText}</h3>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <button type="button" aria-label={`About ${labelText}`} className="grid size-6 place-items-center rounded text-muted-foreground hover:text-primary cursor-help">
-                      <HelpCircle size={12} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[280px] p-0 overflow-hidden rounded-2xl border-border/20 shadow-2xl backdrop-blur-xl bg-background/95">
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center gap-2 pb-2 border-b border-border/10">
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Information</span>
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground leading-snug">{labelText}</h3>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <button type="button" aria-label={`About ${labelText}`} className="grid size-6 shrink-0 place-items-center rounded text-muted-foreground hover:text-primary cursor-help">
+                        <HelpCircle size={13} />
+                      </button>
+                    </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[280px] p-0 overflow-hidden rounded-xl border-border shadow-xl bg-background">
+                    <div className="p-3.5 space-y-2.5">
+                      <div className="pb-1.5 border-b border-border/50">
+                        <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">Policy guidance</span>
                       </div>
-                      <p className="text-[11px] font-medium text-foreground/80 leading-relaxed">{config.description}</p>
+                      <p className="text-xs text-foreground/90 leading-relaxed">{config.description}</p>
                       {validation?.type === "number" && (
-                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest">
-                          Limit: {validation.min ?? 0} - {validation.max ?? '∞'}
+                        <p className="text-xs font-semibold text-primary">
+                          Allowed range: {validation.min ?? 0} – {validation.max ?? '∞'}
                         </p>
                       )}
                       {validation?.type === "time" && (
-                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest">
+                        <p className="text-xs font-semibold text-primary">
                           Format: 24-hour HH:MM
                         </p>
                       )}
                       {config.example && (
-                        <div className="bg-muted/10 p-3 rounded-lg border border-border/10">
-                          <p className="text-[11px] text-muted-foreground leading-relaxed italic font-medium">&ldquo;{config.example}&rdquo;</p>
+                        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/50">
+                          <p className="text-xs text-muted-foreground leading-relaxed">{config.example}</p>
                         </div>
                       )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
+                </div>
+                {value !== initialValue && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 border border-primary/20 animate-in zoom-in-95 duration-300">
+                    <Zap className="h-3 w-3 text-primary" />
+                    <span className="text-xs font-medium text-primary">Modified</span>
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] truncate">{policyKey}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">{config.description}</p>
             </div>
-
-            {value !== initialValue && (
-              <div className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-500">
-                <Zap className="h-2.5 w-2.5 text-primary" />
-                <span className="text-[11px] font-bold uppercase text-primary tracking-widest">Modified</span>
-              </div>
-            )}
           </div>
         </div>
 
         <div className={cn(
           "shrink-0",
-          !isComplex ? "md:w-48" : "pt-4"
+          !isComplex ? "md:w-52" : "pt-2"
         )}>
           {isSlider ? (
-            <div className="flex items-center gap-5 px-1">
+            <div className="flex items-center gap-4 px-1">
               <Slider
                 min={validation?.min ?? 0}
                 max={validation?.max ?? 50}
@@ -224,8 +225,8 @@ export function PolicyField({
                 disabled={loading || disabled}
                 className="flex-1"
               />
-              <div className="h-10 w-14 rounded-lg bg-muted/10 flex items-center justify-center border border-border/40">
-                <span className="text-[11px] font-black tabular-nums text-primary">
+              <div className="h-10 w-14 rounded-lg bg-muted/30 flex items-center justify-center border border-border/60">
+                <span className="text-xs font-semibold tabular-nums text-primary">
                   {value || "0"}
                 </span>
               </div>
@@ -272,13 +273,13 @@ export function PolicyField({
                 onBlur={() => { if (!fieldError) setDraft(null); }}
                 disabled={loading || disabled}
                 className={cn(
-                  "h-10 rounded-lg border-border/40 bg-muted/5 text-[11px] font-black tracking-widest uppercase focus:ring-0 transition-all shadow-sm",
-                  unit ? "pr-16" : "pr-3",
+                  "h-10 rounded-lg border-border bg-background text-sm font-medium transition-all shadow-xs",
+                  unit ? "pr-20" : "pr-3",
                   fieldError && "border-destructive focus-visible:ring-destructive/30"
                 )}
               />
               {unit && (
-                <span aria-hidden="true" className="absolute right-8 top-1/2 -translate-y-1/2 text-[11px] font-bold text-muted-foreground pointer-events-none uppercase tracking-wider">
+                <span aria-hidden="true" className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
                   {unit}
                 </span>
               )}

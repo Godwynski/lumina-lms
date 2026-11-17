@@ -113,11 +113,11 @@ export function SupportFAQManager({
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between px-2">
-        <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+        <div className="space-y-0.5">
+          <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             Knowledge Base
           </p>
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+          <p className="text-xs font-medium text-muted-foreground">
             {currentFaqs.length} entries registered
           </p>
         </div>
@@ -129,9 +129,9 @@ export function SupportFAQManager({
                   onClick={startAdd}
                   variant="ghost"
                   size="sm"
-                  className="h-9 rounded-xl gap-2 text-primary hover:bg-primary/5 text-[11px] font-bold uppercase tracking-widest transition-all"
+                  className="h-9 rounded-lg gap-2 text-primary hover:bg-primary/5 text-xs font-semibold transition-all"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3.5 w-3.5" />
                   Add Entry
                 </Button>
               </TooltipTrigger>

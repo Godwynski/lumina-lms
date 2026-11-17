@@ -214,27 +214,27 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
   };
 
   return (
-    <div className="w-full space-y-8 p-1">
-      <div className="flex items-center justify-between">
+    <div className="w-full space-y-6 p-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
               Overview
             </p>
-            <h2 className="text-sm font-bold text-foreground tracking-tight">
+            <h2 className="text-sm font-semibold text-foreground tracking-tight">
               {categories.length} Registered {categories.length === 1 ? 'Category' : 'Categories'}
             </h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {isBulkEditing ? (
-            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex items-center gap-2.5 animate-in fade-in slide-in-from-right-4 duration-500">
               {changedIds.length > 0 && (
-                <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-bold uppercase tracking-wider text-primary">
+                <div className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
                   {changedIds.length} Pending Mods
                 </div>
               )}
@@ -245,9 +245,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                       variant="ghost"
                       onClick={resetBulkEdit}
                       disabled={loading}
-                      className="h-9 px-4 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all"
+                      className="h-9 px-3.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
                     >
-                      <X className="h-4 w-4 mr-2" />
+                      <X className="h-4 w-4 mr-1.5" />
                       Discard
                     </Button>
                   </TooltipTrigger>
@@ -261,9 +261,9 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                     <Button
                       onClick={handleBulkSave}
                       disabled={loading || changedIds.length === 0}
-                      className="h-9 px-5 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                      className="h-9 px-4 rounded-lg text-xs font-semibold shadow-sm transition-all"
                     >
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
                       Save Changes
                     </Button>
                   </TooltipTrigger>
@@ -274,16 +274,16 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
               </TooltipProvider>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="outline"
                       onClick={() => setIsBulkEditing(true)}
-                      className="h-9 px-4 rounded-xl text-xs font-semibold border-border/20 bg-muted/5 text-muted-foreground hover:text-foreground hover:bg-muted/10 hover:border-border/40 transition-all shadow-xs"
+                      className="h-9 px-3.5 rounded-lg text-xs font-medium border-border hover:bg-muted/40 transition-all"
                     >
-                      <Edit3 className="h-4 w-4 mr-2" />
+                      <Edit3 className="h-4 w-4 mr-1.5" />
                       Bulk Management
                     </Button>
                   </TooltipTrigger>
@@ -296,7 +296,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                   <TooltipTrigger asChild>
                     <Button
                       onClick={() => openDialog()}
-                      className="h-9 px-4 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                      className="h-9 px-4 rounded-lg text-xs font-semibold shadow-sm transition-all"
                     >
                       <Plus className="h-4 w-4" />
                       Add Category
@@ -313,12 +313,12 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
       </div>
 
       {categories.length === 0 ? (
-        <div className="rounded-[2.5rem] border border-dashed border-border/20 bg-muted/[0.02] p-16 text-center group hover:bg-muted/[0.04] transition-all duration-700">
-          <div className="h-20 w-20 rounded-[2rem] bg-muted/5 flex items-center justify-center text-muted-foreground mx-auto mb-6 group-hover:scale-110 group-hover:text-primary/30 group-hover:bg-primary/5 transition-all duration-700">
-            <Layers className="h-10 w-10" />
+        <div className="rounded-2xl border border-dashed border-border/60 bg-muted/10 p-12 text-center">
+          <div className="h-14 w-14 rounded-xl bg-muted/40 flex items-center justify-center text-muted-foreground mx-auto mb-4">
+            <Layers className="h-7 w-7" />
           </div>
-          <h3 className="text-sm font-black text-foreground/60 group-hover:text-foreground transition-colors mb-2">No categories defined</h3>
-          <p className="text-xs text-muted-foreground font-medium max-w-[280px] mx-auto leading-relaxed">
+          <h3 className="text-sm font-semibold text-foreground mb-1">No categories defined</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
             Initialize your organization&apos;s classification system by adding your first category.
           </p>
         </div>

@@ -290,8 +290,8 @@ export function PolicyLayout({
     <div className="w-full pb-12">
 
       <div className="grid gap-8 lg:grid-cols-[220px_1fr] items-start">
-        {/* Mobile Category Navigation */}
-        <div 
+        {/* Mobile & Tablet Category Navigation (wraps cleanly without clipping) */}
+        <div
           ref={navScrollRef}
           onWheel={(e) => {
             if (e.deltaY !== 0) {
@@ -303,23 +303,24 @@ export function PolicyLayout({
           onMouseLeave={handleMouseLeaveOrUp}
           onMouseMove={handleMouseMove}
           className={cn(
-            "lg:hidden -mx-4 px-4 overflow-x-auto no-scrollbar pb-2",
-            isDragging ? "cursor-grabbing" : "cursor-grab"
+            "lg:hidden pb-1",
+            isDragging ? "cursor-grabbing" : ""
           )}
         >
-          <div className="flex gap-2 min-w-max">
+          <div className="flex flex-wrap gap-2">
             {sidebarItems.map(item => (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => handleCategoryClick(item.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap border",
+                  "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap border",
                   activeCategory === item.id 
                     ? "bg-primary text-primary-foreground border-primary shadow-sm" 
-                    : "bg-card/50 text-muted-foreground border-border/40 hover:border-primary/20"
+                    : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
                 )}
               >
-                <item.icon size={12} className="shrink-0" />
+                <item.icon size={14} className="shrink-0" />
                 {item.label}
               </button>
             ))}
@@ -327,19 +328,20 @@ export function PolicyLayout({
         </div>
 
         {/* Desktop Sidebar Navigation */}
-        <aside className="hidden lg:block space-y-8 sticky top-12 max-h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar pr-2">
+        <aside className="hidden lg:block space-y-6 sticky top-12 max-h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar pr-2">
           {Object.entries(groupedSidebar).map(([group, items]) => (
-            <div key={group} className="space-y-2">
-              <p className="px-4 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+            <div key={group} className="space-y-1.5">
+              <p className="px-3 text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
                 {group}
               </p>
               <div className="space-y-0.5">
                 {items.map(item => (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => handleCategoryClick(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all group relative",
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all group relative",
                       activeCategory === item.id 
                         ? "text-primary font-semibold bg-primary/5" 
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -350,9 +352,9 @@ export function PolicyLayout({
                     )}
                     <item.icon size={16} className={cn(
                       "shrink-0 transition-colors",
-                      activeCategory === item.id ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground"
+                      activeCategory === item.id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                     )} />
-                    <span className="flex-1 text-left font-bold uppercase tracking-widest text-[11px]">{item.label}</span>
+                    <span className="flex-1 text-left">{item.label}</span>
                   </button>
                 ))}
               </div>
@@ -365,22 +367,22 @@ export function PolicyLayout({
            <div className="max-w-3xl">
              <TooltipProvider>
               {activeCategory === "broadcasts" ? (
-                <div className="space-y-12">
-                  <section className="space-y-6">
-                    <div className="flex items-center justify-between">
+                <div className="space-y-10">
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                           <Megaphone className="h-4 w-4 text-primary" />
                         </div>
                         <div>
                           <h4 className="text-sm font-semibold text-foreground">Global Announcement</h4>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
                         </div>
                       </div>
                       {isAnnouncementDirty && (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 animate-in zoom-in-95 duration-200">
-                          <AlertTriangle className="h-3 w-3" />
-                          <span className="text-[11px] font-bold uppercase tracking-wider">Unsaved Draft</span>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 animate-in zoom-in-95 duration-200">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <span className="text-xs font-medium">Unsaved Draft</span>
                         </div>
                       )}
                     </div>
@@ -395,14 +397,14 @@ export function PolicyLayout({
                     </div>
                   </section>
 
-                  <section className="space-y-6">
+                  <section className="space-y-4">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                         <ShieldCheck className="h-4 w-4 text-primary" />
                       </div>
                       <div>
                         <h4 className="text-sm font-semibold text-foreground">Trigger Policies</h4>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">Set the rules for automated system alerts and borrowing reminders.</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">Set the rules for automated system alerts and borrowing reminders.</p>
                       </div>
                     </div>
                     <div className="space-y-0">
@@ -429,16 +431,16 @@ export function PolicyLayout({
                 </div>
               ) : activeCategory === "lifecycle" ? (
                 <div className="space-y-6">
-                  <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
                     <AnnualResetTool />
                   </div>
-                  <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
                     <ArchiveLogsTool />
                   </div>
-                  <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
                     <RunMaintenanceTool />
                   </div>
-                  <div className="p-6 rounded-2xl border border-border/40 bg-muted/5">
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
                     <TestEmailTool />
                   </div>
                 </div>
@@ -457,10 +459,10 @@ export function PolicyLayout({
                     />
                   ))}
                   {activeCategory === "reservations" && (
-                    <div className="mt-12 pt-12 border-t border-border/40">
+                    <div className="mt-10 pt-10 border-t border-border/50">
                       <div className="mb-6">
                         <h4 className="text-sm font-semibold text-foreground">Simulation Engine</h4>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">Preview the impact of reservation policies on system throughput.</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">Preview the impact of reservation policies on system throughput.</p>
                       </div>
                       <PolicySimulationPanel formData={formData} />
                     </div>
@@ -502,11 +504,11 @@ export function PolicyLayout({
         </div>
       )}
       {canEdit && changedKeys.length > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-sm animate-in slide-in-from-bottom-8 duration-500">
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/10 bg-background/90 p-2 pl-5 shadow-2xl backdrop-blur-xl">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/95 p-2.5 pl-4 shadow-2xl backdrop-blur-xl">
              <div className="flex items-center gap-2.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span className="text-[11px] font-bold uppercase tracking-widest text-foreground/70">
+                <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                <span className="text-xs font-medium text-foreground">
                   {changedKeys.length} unsaved changes
                 </span>
              </div>
@@ -517,14 +519,14 @@ export function PolicyLayout({
                     discardEdits();
                     toast.success("All unsaved changes discarded");
                   }}
-                  className="h-9 rounded-xl px-4 text-[11px] font-bold uppercase tracking-widest border-border/40 hover:bg-muted/50 transition-all"
+                  className="h-9 rounded-lg px-3.5 text-xs font-medium border-border hover:bg-muted/50 transition-all"
                >
                   Discard
                </Button>
                <Button
                   onClick={() => setIsCommitModalOpen(true)}
                   disabled={conflictKeys.length > 0 || invalidKeys.length > 0}
-                  className="h-9 rounded-xl px-5 text-[11px] font-bold uppercase tracking-widest shadow-sm active:scale-[0.98] transition-all"
+                  className="h-9 rounded-lg px-4 text-xs font-semibold shadow-sm active:scale-[0.98] transition-all"
                >
                   Review Changes
                </Button>
@@ -542,13 +544,13 @@ export function PolicyLayout({
         loading={loading}
       />
       <Dialog open={pendingCategory !== null} onOpenChange={(open) => { if (!open) setPendingCategory(null); }}>
-        <DialogContent className="sm:max-w-[400px] border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
-          <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="h-11 w-11 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/10">
+        <DialogContent className="sm:max-w-md border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
+          <div className="p-6 space-y-5">
+            <div className="flex items-center justify-between pr-8">
+              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
                 <AlertTriangle className="h-5 w-5" />
               </div>
-              <div className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-[11px] font-bold uppercase tracking-wider text-destructive border border-destructive/10">
+              <div className="px-2.5 py-0.5 rounded-lg bg-destructive/10 text-xs font-medium text-destructive border border-destructive/20">
                 Unsaved Changes
               </div>
             </div>
@@ -570,7 +572,7 @@ export function PolicyLayout({
             <Button
               variant="outline"
               onClick={() => setPendingCategory(null)}
-              className="flex-1 h-10 rounded-lg text-xs font-semibold uppercase tracking-wider border-border/60 hover:bg-muted/40 transition-all"
+              className="flex-1 h-10 rounded-lg text-sm font-medium border-border hover:bg-muted/40 transition-all"
             >
               Cancel
             </Button>
@@ -587,7 +589,7 @@ export function PolicyLayout({
                   toast.success("Changes discarded");
                 }
               }}
-              className="flex-1 h-10 rounded-lg text-xs font-semibold uppercase tracking-wider shadow-sm transition-all"
+              className="flex-1 h-10 rounded-lg text-sm font-semibold shadow-sm transition-all"
             >
               Discard & Move
             </Button>
