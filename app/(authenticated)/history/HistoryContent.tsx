@@ -265,7 +265,8 @@ export default function HistoryContent({
 
   const isSettlementsTab = statusFilter.toUpperCase() === "SETTLED";
   const isOverdueTab = statusFilter.toUpperCase() === "OVERDUE";
-  const showExportPrint = isOverdueTab || isSettlementsTab;
+  // Every tab can be exported or printed (P2-HIS-006, P4-HIS-006).
+  const showExportPrint = true;
 
   const handleExportXlsx = async () => {
     setIsExporting(true);
@@ -320,11 +321,13 @@ export default function HistoryContent({
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
-      const sheetTitle = isSettlementsTab ? "Settlements" : "Overdue & Receivables";
+      const sheetTitle = isSettlementsTab ? "Settlements" : isOverdueTab ? "Overdue & Receivables" : "Borrowing History";
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetTitle);
       const filename = isSettlementsTab
         ? "lumina_fine_settlements.xlsx"
-        : "lumina_overdue_receivables.xlsx";
+        : isOverdueTab
+          ? "lumina_overdue_receivables.xlsx"
+          : "lumina_borrowing_history.xlsx";
       XLSX.writeFile(workbook, filename);
       toast.success(`Exported ${rows.length} record(s) to Excel.`);
     } catch (err: unknown) {

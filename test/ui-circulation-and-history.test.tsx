@@ -824,6 +824,17 @@ describe('Circulation & History UI Components', () => {
       expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_overdue_receivables.xlsx');
     });
 
+    it('lets a patron export their own history from the All tab (personal scope, history filename) (P2-HIS-006)', async () => {
+      const rec = makeRecord({ id: 'rec-own', fine_amount: 0 });
+      mockExportBorrowingHistory.mockResolvedValueOnce({ success: true, data: { records: [rec], totalCount: 1 } });
+      const { container } = await renderHistory({ records: [rec], statusFilter: 'all', userRole: 'patron', totalCount: 1 });
+
+      await clickElement(findButtonByText(container, 'Export (.xlsx)'));
+      await act(async () => { await Promise.resolve(); });
+      expect(mockExportBorrowingHistory).toHaveBeenCalledWith({ status: 'all', resolution: 'all', search: '', scope: 'personal' });
+      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_borrowing_history.xlsx');
+    });
+
     it('shows Paid/Condoned badge when fine_settled_at is set, hides action buttons for student role, and refreshes on realtime callback', async () => {
       const realtimeCallbacks: Array<() => void> = [];
       const mockChannel = {

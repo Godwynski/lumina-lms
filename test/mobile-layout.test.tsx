@@ -478,7 +478,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     });
   });
 
-  it('HistoryContent mobile overflow menu appears on Overdue/Settlements, fires Export/Print, and hides on Active', async () => {
+  it('HistoryContent mobile overflow menu appears on every tab and fires Export/Print', async () => {
     const printSpy = vi.fn();
     vi.stubGlobal('print', printSpy);
     mockExportBorrowingHistory.mockResolvedValue({
@@ -515,7 +515,8 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(activeHandle.container.querySelector('button[aria-label="History report actions"]')).toBeNull();
+    // Export/print is available on every tab now (P4-HIS-006).
+    expect(activeHandle.container.querySelector('button[aria-label="History report actions"]')).not.toBeNull();
     activeHandle.unmount();
 
     const overdueHandle = await renderClient(
