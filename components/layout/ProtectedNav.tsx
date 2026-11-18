@@ -39,7 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
@@ -142,12 +142,7 @@ export function ProtectedNav({
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [accountFooter, setAccountFooter] = useState<HTMLDivElement | null>(null);
-
-
-  const handleSignOut = async () => {
-    setLogoutDialogOpen(false);
-    await logout();
-  };
+  const accountTrigger = useRef<HTMLButtonElement>(null);
 
   const name = currentProfile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const email = user?.email || "";
@@ -371,6 +366,7 @@ export function ProtectedNav({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
+                  ref={accountTrigger}
                   size="lg"
                   closeOnMobile={false}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
@@ -395,6 +391,9 @@ export function ProtectedNav({
                 side="bottom"
                 align="end"
                 sideOffset={4}
+                onCloseAutoFocus={(event) => {
+                  if (logoutDialogOpen) event.preventDefault();
+                }}
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1.8 py-1.5 text-left text-sm">
@@ -440,10 +439,7 @@ export function ProtectedNav({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer font-semibold text-red-600 focus:text-red-600"
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    setLogoutDialogOpen(true);
-                  }}
+                  onSelect={() => setLogoutDialogOpen(true)}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -453,51 +449,48 @@ export function ProtectedNav({
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-          <DialogContent className="max-w-sm rounded-xl p-5">
-            <DialogHeader>
-              <DialogTitle className="text-base">Log out?</DialogTitle>
-              <DialogDescription>
-                You will be signed out of your current session.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" className="h-9 rounded-lg" onClick={() => setLogoutDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                className="h-9 rounded-lg"
-                onClick={handleSignOut}
-                disabled={isLoggingOut}
-              >
-                Log out
-              </Button>
-            </DialogFooter>
+        <Dialog
+          open={logoutDialogOpen}
+          onOpenChange={(open) => {
+            if (!isLoggingOut) setLogoutDialogOpen(open);
+          }}
+        >
+          <DialogContent
+            portalContainer={isMobile ? accountFooter : undefined}
+            showCloseButton={!isLoggingOut}
+            onCloseAutoFocus={(event) => {
+              if (accountTrigger.current) {
+                event.preventDefault();
+                accountTrigger.current.focus();
+              }
+            }}
+            className="max-w-sm rounded-xl p-5"
+          >
+            {isLoggingOut ? (
+              <DialogHeader className="items-center py-4 text-center">
+                <Loader2 aria-hidden="true" className="mb-2 size-8 text-primary motion-safe:animate-spin" />
+                <DialogTitle>Logging out...</DialogTitle>
+                <DialogDescription>Ending your current session.</DialogDescription>
+              </DialogHeader>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-base">Log out?</DialogTitle>
+                  <DialogDescription>You will be signed out of your current session.</DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" className="h-11 rounded-lg sm:h-9" onClick={() => setLogoutDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" className="h-11 rounded-lg sm:h-9" onClick={logout}>
+                    Log out
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </SidebarFooter>
-
-      {isLoggingOut && (
-        <Dialog open={isLoggingOut}>
-          <DialogContent className="border-none bg-transparent p-0 shadow-none outline-none ring-0 focus:ring-0 [&>button]:hidden">
-            <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl animate-in fade-in duration-500">
-              <div className="flex flex-col items-center gap-6 p-8 rounded-2xl bg-card border shadow-2xl scale-110 animate-in zoom-in-95 duration-300">
-                <div className="relative">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
-                  <Loader2 className="absolute inset-0 h-12 w-12 animate-spin text-primary [animation-duration:3s]" />
-                </div>
-                <DialogHeader className="flex flex-col items-center gap-2">
-                  <DialogTitle className="text-2xl font-bold tracking-tight">Logging out...</DialogTitle>
-                  <DialogDescription className="text-sm text-muted-foreground font-medium text-center balance">
-                    Ending your current session safely.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
       <SidebarRail />
     </Sidebar>
   );

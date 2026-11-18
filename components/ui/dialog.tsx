@@ -51,15 +51,17 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  portalContainer,
   onOpenAutoFocus,
   onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  portalContainer?: HTMLElement | null
 }) {
   const opener = React.useRef<HTMLElement | null>(null)
   return (
-    <DialogPortal data-slot="dialog-portal">
+    <DialogPortal data-slot="dialog-portal" container={portalContainer}>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"

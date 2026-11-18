@@ -98,9 +98,11 @@ vi.mock('next/image', () => ({
   },
 }));
 
+const mockSignOut = vi.fn().mockResolvedValue({ error: null });
+
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
-    auth: { signOut: vi.fn().mockResolvedValue({ error: null }) },
+    auth: { signOut: mockSignOut },
     channel: () => ({
       on: function () { return this; },
       subscribe: vi.fn(),
@@ -387,6 +389,65 @@ describe('B1 Shell, Nav & Tokens', () => {
     profileLink?.addEventListener('click', event => event.preventDefault(), { once: true });
     await clickElement(profileLink);
     expect(container.querySelector('[data-sidebar="trigger"]')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('keeps mobile logout confirmation and progress inside the sidebar, and can cancel or retry', async () => {
+    mockMobileViewport = true;
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 });
+    const { container } = await renderClient(
+      <PreferencesProvider
+        initialPreferences={{ theme: 'light' }}
+        initialRole="patron"
+        initialProfile={makeProfile({ role: 'patron', status: 'ACTIVE' })}
+      >
+        <SidebarProvider>
+          <SidebarTrigger />
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    await clickElement(container.querySelector('[data-sidebar="trigger"]'));
+
+    const sidebar = document.body.querySelector('[data-mobile="true"]')!;
+    const account = sidebar.querySelector<HTMLButtonElement>('[data-sidebar="footer"] button')!;
+    const openConfirmation = async () => {
+      await act(async () => {
+        account.focus();
+        account.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      });
+      const logout = Array.from(sidebar.querySelectorAll('[role="menuitem"]'))
+        .find((item) => item.textContent?.trim() === 'Log out');
+      await clickElement(logout);
+      const dialog = sidebar.querySelector('[data-slot="dialog-content"]');
+      expect(dialog).toHaveAccessibleName('Log out?');
+      expect(sidebar.querySelector('[role="menu"]')).toBeNull();
+      return dialog!;
+    };
+
+    let confirmation = await openConfirmation();
+    expect(mockSignOut).not.toHaveBeenCalled();
+    await clickElement(Array.from(confirmation.querySelectorAll('button')).find((button) => button.textContent === 'Cancel'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(sidebar.querySelector('[data-slot="dialog-content"]')).toBeNull();
+    expect(account).toHaveFocus();
+    expect(mockSignOut).not.toHaveBeenCalled();
+
+    let rejectSignOut!: (reason: Error) => void;
+    mockSignOut.mockReturnValueOnce(new Promise((_, reject) => { rejectSignOut = reject; }));
+    confirmation = await openConfirmation();
+    await clickElement(Array.from(confirmation.querySelectorAll('button')).find((button) => button.textContent === 'Log out'));
+    expect(sidebar.querySelector('[data-slot="dialog-content"]')).toHaveAccessibleName('Logging out...');
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+
+    const logoutError = new Error('Unable to sign out');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await act(async () => { rejectSignOut(logoutError); });
+      expect(consoleError).toHaveBeenCalledWith('Error during logout:', logoutError);
+      expect(sidebar.querySelector('[data-slot="dialog-content"]')).toHaveAccessibleName('Log out?');
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('UserNav displays canonical My Profile and Security links in account dropdown', async () => {
