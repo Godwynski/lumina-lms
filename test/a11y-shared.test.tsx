@@ -78,7 +78,6 @@ import { StudentBookDetailClient } from '@/app/(authenticated)/student-catalog/[
 import { LiveActivityTicker } from '@/components/dashboard/LiveActivityTicker';
 import { CategoryDialog } from '@/components/admin/categories/CategoryDialog';
 import { PersonalInfoForm } from '@/components/settings/profile/PersonalInfoForm';
-import { SecuritySection } from '@/components/settings/sections/SecuritySection';
 import { CategoryPieChart } from '@/app/(authenticated)/analytics/AnalyticsCharts';
 import type { BookDetail, AvailabilityStatus } from '@/components/catalog/types';
 
@@ -317,14 +316,6 @@ describe('A11y fixes (shared, layout, dashboard, settings)', () => {
       expect(btn).not.toBeNull();
       expect(btn?.className).toContain('size-6');
     }
-
-    cleanupClients();
-
-    const securityHandle = await renderClient(<SecuritySection role="patron" />);
-    const secBtn = securityHandle.container.querySelector('button');
-    expect(secBtn).not.toBeNull();
-    expect(secBtn).toHaveAttribute('aria-label', 'Identity & Access info');
-    expect(secBtn?.className).toContain('size-6');
 
     cleanupClients();
 

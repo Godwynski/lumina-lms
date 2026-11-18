@@ -378,15 +378,12 @@ import { StudentBookDetailClient } from '@/app/(authenticated)/student-catalog/[
 import { UsersContent } from '@/app/(authenticated)/users/UsersContent';
 import UserDetailPage from '@/app/(authenticated)/users/[id]/page';
 import { UserDetailClient } from '@/app/(authenticated)/users/[id]/UserDetailClient';
-import { StreamedNav } from '@/app/(authenticated)/_components/StreamedNav';
 import ProtectedLayout from '@/app/(authenticated)/layout';
 import { SWRProvider } from '@/app/(authenticated)/_components/SWRProvider';
-import NavAnimatePresence from '@/app/(authenticated)/NavAnimatePresence';
 import DashboardLoading from '@/app/(authenticated)/dashboard/DashboardLoading';
 
 import { BatchTaskProvider } from '@/components/providers/BatchTaskProvider';
 import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
-import { SidebarProvider } from '@/components/ui/sidebar';
 
 import AuthenticatedLoading from '@/app/(authenticated)/loading';
 import DashboardRouteLoading from '@/app/(authenticated)/dashboard/loading';
@@ -403,7 +400,6 @@ import StudentCatalogDetailLoading from '@/app/(authenticated)/student-catalog/[
 import PoliciesLoading from '@/app/(authenticated)/policies/loading';
 import AnalyticsLoading from '@/app/(authenticated)/analytics/loading';
 import ProfileLoading from '@/app/(authenticated)/profile/loading';
-import SecurityLoading from '@/app/(authenticated)/security/loading';
 
 import type { Book, Category, User } from '@/lib/types';
 import type { AnalyticsSummary } from '@/lib/actions/analytics';
@@ -1346,11 +1342,13 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
   // ─── 6. Authenticated Layout Helpers ──────────────────────────────────────
 
-  describe('StreamedNav, authenticated shell, SWRProvider, NavAnimatePresence & DashboardLoading', () => {
-    it('StreamedNav returns null when unauthenticated and renders ProtectedNav when authenticated', async () => {
+  describe('Authenticated shell, SWRProvider & DashboardLoading', () => {
+    it('redirects unauthenticated visitors before rendering the shell', async () => {
       mockGetMe.mockResolvedValueOnce(null);
-      expect(await StreamedNav()).toBeNull();
+      await expect(ProtectedLayout({ children: <p>Page body</p> })).rejects.toThrow('NEXT_REDIRECT:/');
+    });
 
+    it('renders the administrative navigation for a super admin', async () => {
       const user = { id: 'u-1', email: 'admin@alabang.sti.edu.ph', user_metadata: {} };
       const profile = {
         id: 'u-1',
@@ -1366,18 +1364,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       mockGetMe.mockResolvedValueOnce({ user, profile, role: 'super_admin' });
       mockGetPreferences.mockResolvedValueOnce({ compact: true });
 
-      const navEl = await StreamedNav();
-      expect(navEl).not.toBeNull();
-
-      const { container } = await renderClient(
-        <PreferencesProvider
-          initialPreferences={{ compact: true }}
-          initialRole="super_admin"
-          initialProfile={profile}
-        >
-          <SidebarProvider defaultOpen={true}>{navEl}</SidebarProvider>
-        </PreferencesProvider>
-      );
+      const shell = await ProtectedLayout({ children: <p>Page body</p> });
+      const { container } = await renderClient(shell);
       expect(container).toHaveTextContent('Dashboard');
       expect(container).toHaveTextContent('User Directory');
       expect(container).toHaveTextContent('Audit Logs');
@@ -1435,9 +1423,11 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         b.textContent?.includes('Account menu for Maria Clara')
       );
       expect(accountMenus).toHaveLength(1);
+      expect(mockGetMe).toHaveBeenCalledTimes(1);
+      expect(mockGetPreferences).toHaveBeenCalledTimes(1);
     });
 
-    it('SWRProvider configures expected SWR defaults and NavAnimatePresence renders children', async () => {
+    it('SWRProvider configures expected SWR defaults', async () => {
       function SwrInspector() {
         const config = useSWRConfig();
         return (
@@ -1450,9 +1440,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
       const { container } = await renderClient(
         <SWRProvider>
-          <NavAnimatePresence>
-            <SwrInspector />
-          </NavAnimatePresence>
+          <SwrInspector />
         </SWRProvider>
       );
       expect(container.querySelector('[data-testid="swr-values"]')).toHaveTextContent(
@@ -1485,7 +1473,6 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       { name: 'policies', Component: PoliciesLoading },
       { name: 'analytics', Component: AnalyticsLoading },
       { name: 'profile', Component: ProfileLoading },
-      { name: 'security', Component: SecurityLoading },
     ];
 
     it.each(loadingComponents)('renders $name/loading.tsx cleanly', async ({ name, Component }) => {

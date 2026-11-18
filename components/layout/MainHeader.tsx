@@ -9,11 +9,7 @@ import { cn } from "@/lib/utils"
 
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 
-interface MainHeaderProps {
-  userNav?: React.ReactNode;
-}
-
-export function MainHeader({ userNav }: MainHeaderProps) {
+export function MainHeader() {
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
 
@@ -45,14 +41,8 @@ export function MainHeader({ userNav }: MainHeaderProps) {
         <BreadcrumbNav />
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="shrink-0">
         <NotificationBell />
-        {userNav && (
-          <div className="hidden items-center gap-3 md:flex">
-            <div className="mx-1 h-8 w-px bg-border/20" />
-            {userNav}
-          </div>
-        )}
       </div>
     </header>
   )

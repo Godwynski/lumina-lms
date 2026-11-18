@@ -18,7 +18,6 @@ const ROUTE_LABELS: Record<string, string> = {
   "policies": "System Policies",
   "audit": "Audit Logs",
   "profile": "My Profile",
-  "security": "Security",
   "attendance": "Attendance Logs",
   "notifications": "Notifications",
 };

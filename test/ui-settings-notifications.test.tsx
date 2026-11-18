@@ -49,7 +49,6 @@ import { PolicyField } from '@/components/admin/policies/PolicyField';
 import { PolicyLayout } from '@/components/admin/policies/PolicyLayout';
 import { PersonalInfoForm } from '@/components/settings/profile/PersonalInfoForm';
 import { ProfileSection } from '@/components/settings/sections/ProfileSection';
-import { SecuritySection } from '@/components/settings/sections/SecuritySection';
 import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotificationsPage from '@/app/(authenticated)/notifications/page';
@@ -242,7 +241,7 @@ describe('B7 — Settings, Policies, Profile & Notifications UI', () => {
     expect(container).toHaveTextContent('read-only');
   });
 
-  it('ProfileSection and SecuritySection render shared Profile/Security cross-link tabs', async () => {
+  it('explains school-managed credentials directly on the patron profile', async () => {
     const profileHandle = await renderClient(
       <PreferencesProvider initialPreferences={{ loaded: true }}>
         <ProfileSection
@@ -261,18 +260,9 @@ describe('B7 — Settings, Policies, Profile & Notifications UI', () => {
       </PreferencesProvider>
     );
 
-    const profileNav = profileHandle.container.querySelector('nav[aria-label="Account settings"]');
-    expect(profileNav).not.toBeNull();
-    expect(profileNav?.querySelector('a[href="/profile"]')).toHaveAttribute('aria-current', 'page');
-    expect(profileNav?.querySelector('a[href="/security"]')).not.toHaveAttribute('aria-current');
+    expect(profileHandle.container.querySelector('a[href="/security"]')).toBeNull();
+    expect(profileHandle.container).toHaveTextContent('Your account credentials are managed by the school system.');
 
-    profileHandle.unmount();
-
-    const securityHandle = await renderClient(<SecuritySection role="patron" />);
-    const securityNav = securityHandle.container.querySelector('nav[aria-label="Account settings"]');
-    expect(securityNav).not.toBeNull();
-    expect(securityNav?.querySelector('a[href="/security"]')).toHaveAttribute('aria-current', 'page');
-    expect(securityNav?.querySelector('a[href="/profile"]')).not.toHaveAttribute('aria-current');
   });
 
   it('NotificationsPage renders inline Clear unread when unread > 0, omits it when 0, and shows empty guidance', async () => {

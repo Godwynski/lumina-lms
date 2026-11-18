@@ -18,7 +18,6 @@ import {
   UserCheck,
   History,
   BarChart3,
-  Shield,
 } from "lucide-react";
 
 
@@ -39,7 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
@@ -96,8 +95,6 @@ const NAV_ITEMS: GroupedNavItem[] = [
   { group: "admin", href: "/policies", label: "System Policies", icon: Settings, minRole: "librarian", permissionKey: "view_admin_dashboard" },
   { group: "admin", href: "/audit", label: "Audit Logs", icon: ScrollText, minRole: "librarian", permissionKey: "view_admin_dashboard" },
 ];
-const SETTINGS_PATHS = ["/profile", "/security", "/policies"];
-
 function NavLinkStatus() {
   const { pending } = useLinkStatus();
 
@@ -116,17 +113,7 @@ function NavLinkStatus() {
   );
 }
 
-export function ProtectedNav({
-  role: _initialRole,
-  user,
-  profile: _initialProfile,
-  preferences: _initialPreferences,
-}: {
-  role?: string | null;
-  user?: User | null;
-  profile?: Profile | null;
-  preferences?: Record<string, unknown>;
-}) {
+export function ProtectedNav({ user }: { user?: User | null }) {
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
@@ -155,36 +142,12 @@ export function ProtectedNav({
     .toUpperCase()
     .slice(0, 2);
 
-  const currentTab = useMemo(() => {
-    const segments = pathname.split("/").filter(Boolean);
-    return segments[segments.length - 1] || "profile";
-  }, [pathname]);
-
-
   const userData = useMemo(() => ({
     name,
     email,
     avatarUrl,
     initials
   }), [name, email, avatarUrl, initials]);
-
-  const isActive = useCallback((href: string) => {
-    const pathWithoutQuery = pathname.split("?")[0];
-    const hrefBase = href.split("?")[0];
-
-    if (href === "/dashboard") return pathWithoutQuery === "/dashboard";
-
-    if (SETTINGS_PATHS.includes(hrefBase)) {
-      return pathWithoutQuery === hrefBase;
-    }
-
-    if (href.includes("?tab=")) {
-      const hrefTab = href.split("?tab=")[1].split("&")[0];
-      return pathWithoutQuery === hrefBase && currentTab === hrefTab;
-    }
-
-    return pathWithoutQuery.startsWith(hrefBase);
-  }, [pathname, currentTab]);
 
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
@@ -288,7 +251,8 @@ export function ProtectedNav({
           href: item.href,
           label: item.label,
           icon: item.icon,
-          isActive: isActive(item.href)
+          isActive: pathname === item.href ||
+            (item.href !== "/dashboard" && item.href !== "/policies" && pathname.startsWith(`${item.href}/`))
         });
       }
     });
@@ -300,7 +264,7 @@ export function ProtectedNav({
         items: items.filter(i => i.group === group.key),
       }))
       .filter(group => group.items.length > 0);
-  }, [visibleItems, currentRole, hasCirculationPerm, hasAttendancePerm, pathname, viewParam, isActive]);
+  }, [visibleItems, currentRole, hasCirculationPerm, hasAttendancePerm, pathname, viewParam]);
 
 
   return (
@@ -421,18 +385,6 @@ export function ProtectedNav({
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>My Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link 
-                      href="/security" 
-                      className="flex w-full cursor-pointer items-center" 
-                      onClick={() => {
-                        if (isMobile) setOpenMobile(false);
-                      }}
-                    >
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>Security</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

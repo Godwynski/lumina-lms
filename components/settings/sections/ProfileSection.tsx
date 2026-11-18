@@ -2,14 +2,12 @@
 
 import { UserCheck, Shield } from "lucide-react";
 import { Section } from "../SettingsShared";
-import { AccountTabs } from "../AccountTabs";
 import { AvatarManager } from "../profile/AvatarManager";
 import { PersonalInfoForm } from "../profile/PersonalInfoForm";
 import { getRoleLabel } from "@/components/common/RoleBadge";
 
 interface ProfileSectionProps {
   role: string;
-  preferences?: Record<string, unknown>;
   initialProfile: {
     full_name: string | null;
     avatar_url: string | null;
@@ -26,8 +24,6 @@ interface ProfileSectionProps {
 export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
   return (
     <div className="w-full max-w-3xl pb-12 space-y-6">
-      <AccountTabs active="profile" />
-
       <Section>
         <div className="grid gap-6">
           {/* Profile Section Content */}
@@ -67,8 +63,12 @@ export function ProfileSection({ role, initialProfile }: ProfileSectionProps) {
                   <Shield className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Security Status</p>
-                  <p className="text-xs font-medium text-muted-foreground">Verified</p>
+                  <h2 className="text-sm font-semibold text-foreground">Account Access</h2>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {role === "patron"
+                      ? "Your account credentials are managed by the school system. Contact the administrator for security concerns."
+                      : "Your account credentials and access permissions are managed by the system. Contact an administrator if you need changes."}
+                  </p>
                 </div>
               </div>
             </div>

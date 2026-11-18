@@ -138,6 +138,21 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: '/settings/security',
+        destination: '/profile',
+        permanent: true,
+      },
+      {
+        source: '/security',
+        destination: '/profile',
+        permanent: true,
+      },
+      {
+        source: '/operations',
+        destination: '/profile',
+        permanent: true,
+      },
+      {
         source: '/settings/:tab',
         destination: '/:tab',
         permanent: true,

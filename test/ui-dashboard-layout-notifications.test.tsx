@@ -1496,15 +1496,14 @@ describe('Layout Components', () => {
     expect(container.firstElementChild?.className).toContain('custom-logo');
   });
 
-  it('MainHeader renders BreadcrumbNav, NotificationBell, userNav, and toggles collapsed brand visibility', async () => {
+  it('MainHeader renders BreadcrumbNav and NotificationBell, and toggles collapsed brand visibility', async () => {
     const { container, rerender } = await renderClient(
       <SidebarProvider open={true}>
-        <MainHeader userNav={<div data-testid="user-nav-slot">UserSlot</div>} />
+        <MainHeader />
       </SidebarProvider>
     );
 
     expect(container.textContent).toContain('Dashboard');
-    expect(container.textContent).toContain('UserSlot');
     expect(container.querySelector('header button[data-sidebar="trigger"]')).toHaveAccessibleName('Toggle Sidebar');
     expect(
       container.querySelector('button[aria-label="Notifications"]')
@@ -1515,7 +1514,7 @@ describe('Layout Components', () => {
     // Collapsed state reveals brand
     await rerender(
       <SidebarProvider open={false}>
-        <MainHeader userNav={<div data-testid="user-nav-slot">UserSlot</div>} />
+        <MainHeader />
       </SidebarProvider>
     );
     const brandWrapperCollapsed = container.querySelector(
@@ -1930,7 +1929,7 @@ describe('Layout Components', () => {
     const profileLink = document.body.querySelector('a[href="/profile"]');
     const securityLink = document.body.querySelector('a[href="/security"]');
     expect(profileLink).toHaveAttribute('data-prefetch', 'auto');
-    expect(securityLink).toHaveAttribute('data-prefetch', 'auto');
+    expect(securityLink).toBeNull();
 
     const logoutItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (el) => el.textContent?.includes('Log out')

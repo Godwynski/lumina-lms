@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
 import { MainHeader } from "@/components/layout/MainHeader";
-import { StreamedNav } from "./_components/StreamedNav";
+import { ProtectedNav } from "@/components/layout/ProtectedNav";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
-import NavAnimatePresence from "./NavAnimatePresence";
 import { SWRProvider } from "./_components/SWRProvider";
 import { BatchTaskProvider } from "@/components/providers/BatchTaskProvider";
 import { cookies } from "next/headers";
@@ -71,7 +70,7 @@ export default async function ProtectedLayout({
             >
               Skip to main content
             </a>
-            <StreamedNav />
+            <ProtectedNav user={me.user} />
 
             <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
               <MainHeader />
@@ -82,9 +81,7 @@ export default async function ProtectedLayout({
                 tabIndex={-1}
                 className="mx-auto mt-2 w-full max-w-7xl px-3 py-3 md:mt-0 md:pt-2 md:px-6 md:pb-6 outline-none"
               >
-                <NavAnimatePresence>
-                  {children}
-                </NavAnimatePresence>
+                {children}
               </div>
             </SidebarInset>
             </SidebarProvider>

@@ -118,7 +118,6 @@ vi.mock('@/lib/logger', () => ({
 import { ProtectedNav } from '@/components/layout/ProtectedNav';
 import { BreadcrumbNav } from '@/components/layout/BreadcrumbNav';
 import { UserNav } from '@/components/layout/UserNav';
-import { AccountTabs } from '@/components/settings/AccountTabs';
 import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
@@ -341,7 +340,26 @@ describe('B1 Shell, Nav & Tokens', () => {
     }
   });
 
-  it('ProtectedNav keeps account footer visible inside mobile drawer at 375px with My Profile and Security links', async () => {
+  it('marks the Catalog link active on a book detail route and clears it on a similarly named route', async () => {
+    const nav = () => (
+      <PreferencesProvider initialRole="patron" initialPreferences={{}}>
+        <SidebarProvider>
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+
+    mockPathname = '/student-catalog/book-id';
+    const { container, rerender } = await renderClient(nav());
+    const catalogLink = container.querySelector('a[href="/student-catalog"]');
+    expect(catalogLink).toHaveAttribute('aria-current', 'location');
+
+    mockPathname = '/student-catalog-preview';
+    await rerender(nav());
+    expect(catalogLink).not.toHaveAttribute('aria-current');
+  });
+
+  it('ProtectedNav keeps the My Profile link available inside the mobile drawer at 375px', async () => {
     mockMobileViewport = true;
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 });
     const { container } = await renderClient(
@@ -383,7 +401,7 @@ describe('B1 Shell, Nav & Tokens', () => {
     const menu = mobileSheet!.querySelector('[role="menu"]');
     const profileLink = menu?.querySelector('a[href="/profile"]');
     expect(profileLink).toHaveTextContent('My Profile');
-    expect(menu?.querySelector('a[href="/security"]')).toHaveTextContent('Security');
+    expect(menu?.querySelector('a[href="/security"]')).toBeNull();
     expect(menu?.querySelector('a[href="/users"]')).toBeNull();
 
     profileLink?.addEventListener('click', event => event.preventDefault(), { once: true });
@@ -450,7 +468,7 @@ describe('B1 Shell, Nav & Tokens', () => {
     }
   });
 
-  it('UserNav displays canonical My Profile and Security links in account dropdown', async () => {
+  it('UserNav displays My Profile in the account dropdown', async () => {
     const { container } = await renderClient(
       <PreferencesProvider
         initialPreferences={{ theme: 'light' }}
@@ -472,19 +490,7 @@ describe('B1 Shell, Nav & Tokens', () => {
     const securityLink = document.body.querySelector('a[href="/security"]');
     expect(profileLink?.textContent).toContain('My Profile');
     expect(profileLink?.textContent).not.toContain('Profile Settings');
-    expect(securityLink?.textContent).toContain('Security');
-  });
-
-  it('AccountTabs exposes both settings destinations and identifies the active page', async () => {
-    const { container, rerender } = await renderClient(<AccountTabs active="profile" />);
-    const profile = container.querySelector('a[href="/profile"]');
-    const security = container.querySelector('a[href="/security"]');
-    expect(profile).toHaveAccessibleName('My Profile');
-    expect(security).toHaveAccessibleName('Security');
-    expect(profile).toHaveAttribute('aria-current', 'page');
-    await rerender(<AccountTabs active="security" />);
-    expect(profile).not.toHaveAttribute('aria-current');
-    expect(security).toHaveAttribute('aria-current', 'page');
+    expect(securityLink).toBeNull();
   });
 
   it('BreadcrumbNav formats /inventory/add as Add Book and /policies as System Policies', async () => {

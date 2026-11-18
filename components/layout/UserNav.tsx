@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogOut, Settings, Shield, Loader2 } from "lucide-react";
+import { LogOut, Settings, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useLogout } from "@/hooks/use-logout";
@@ -111,12 +111,6 @@ export function UserNav({ user, profile: initialProfile, role: initialRole }: Us
               <Link href="/profile" className="flex w-full cursor-pointer items-center">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>My Profile</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/security" className="flex w-full cursor-pointer items-center">
-                <Shield className="mr-2 h-4 w-4" />
-                <span>Security</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>

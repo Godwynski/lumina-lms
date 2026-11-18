@@ -1,29 +1,18 @@
-import { getMe, getPreferences } from "@/lib/auth-helpers";
+import { getMe } from "@/lib/auth-helpers";
 import { ProfileSection } from "@/components/settings/sections/ProfileSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 export const metadata = { title: "My Profile" };
 
-// getMe() is cache()-memoized — reuses auth already fetched by the layout
-function buildProfilePromise() {
-  return getMe().then(async (me) => {
-    if (!me) redirect("/");
-    const { user, profile } = me;
-    return { user, profile };
-  });
-}
-
 async function ProfileContent() {
-  const [{ profile }, preferences] = await Promise.all([
-    buildProfilePromise(),
-    getPreferences()
-  ]);
+  const me = await getMe();
+  if (!me) redirect("/");
+  const { profile } = me;
 
   return (
     <ProfileSection
       role={profile?.role || "patron"}
-      preferences={preferences}
       initialProfile={{
         full_name: profile?.full_name || null,
         avatar_url: profile?.avatar_url || null,

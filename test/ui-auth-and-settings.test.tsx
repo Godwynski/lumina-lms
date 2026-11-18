@@ -82,7 +82,6 @@ import { ImageCropper } from '@/components/settings/profile/ImageCropper';
 import { AvatarManager } from '@/components/settings/profile/AvatarManager';
 import { PersonalInfoForm } from '@/components/settings/profile/PersonalInfoForm';
 import { ProfileSection } from '@/components/settings/sections/ProfileSection';
-import { SecuritySection } from '@/components/settings/sections/SecuritySection';
 import { PoliciesSection } from '@/components/settings/sections/PoliciesSection';
 import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
 import { DEFAULT_POLICIES } from '@/lib/actions/policy-constants';
@@ -1039,7 +1038,7 @@ describe('Auth & Settings UI Components', () => {
     });
   });
 
-  describe('PersonalInfoForm, ProfileSection & SecuritySection', () => {
+  describe('PersonalInfoForm & ProfileSection', () => {
     it('PersonalInfoForm renders student academic program and fallback labels for missing fields', async () => {
       const handle = await renderClient(
         <PersonalInfoForm
@@ -1088,7 +1087,7 @@ describe('Auth & Settings UI Components', () => {
       expect(handle.container).not.toHaveTextContent('Academic Program');
     });
 
-    it('ProfileSection composes AvatarManager, PersonalInfoForm, membership role, and security badge', async () => {
+    it('ProfileSection shows the member role and explains how staff access is managed', async () => {
       const { container } = await renderClient(
         <PreferencesProvider initialPreferences={{ loaded: true }}>
           <ProfileSection
@@ -1110,18 +1109,11 @@ describe('Auth & Settings UI Components', () => {
       expect(container).toHaveTextContent('Admin User');
       expect(container).toHaveTextContent('Current Membership');
       expect(container).toHaveTextContent('Super Admin');
-      expect(container).toHaveTextContent('Security Status');
-      expect(container).toHaveTextContent('Verified');
+      expect(container).toHaveTextContent('Account Access');
+      expect(container).toHaveTextContent('Your account credentials and access permissions are managed by the system.');
+      expect(container.querySelector('a[href="/security"]')).toBeNull();
     });
 
-    it('SecuritySection renders role-specific credential management text', async () => {
-      const handle = await renderClient(<SecuritySection role="patron" />);
-      expect(handle.container).toHaveTextContent('Identity & Access');
-      expect(handle.container).toHaveTextContent('managed by the school system');
-
-      await handle.rerender(<SecuritySection role="librarian" />);
-      expect(handle.container).toHaveTextContent('credentials and access permissions are managed by the system');
-    });
   });
 
   describe('PoliciesSection', () => {
