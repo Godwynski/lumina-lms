@@ -69,6 +69,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { Role, Profile, NavItem, hasPermission } from "@/lib/auth/permissions";
+import { getReportDatasets } from "@/lib/auth/report-access";
 
 type NavGroupKey = "daily" | "records" | "manage" | "admin";
 
@@ -151,6 +152,7 @@ export function ProtectedNav({ user }: { user?: User | null }) {
 
   const visibleItems = useMemo(() => {
     return NAV_ITEMS.filter(item => {
+      if (item.href === "/analytics") return getReportDatasets(currentRole, currentProfile).length > 0;
       // Core Permission Check (Role Rank + Specific Permission Key)
       return hasPermission(currentRole, item, currentProfile);
     });
@@ -247,7 +249,7 @@ export function ProtectedNav({ user }: { user?: User | null }) {
         }
       } else {
         items.push({
-          group: item.group,
+          group: item.href === "/analytics" && currentRole === "library_staff" ? "records" : item.group,
           href: item.href,
           label: item.label,
           icon: item.icon,

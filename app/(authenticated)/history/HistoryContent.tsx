@@ -115,6 +115,7 @@ export default function HistoryContent({
   resolutionFilter,
   searchQuery,
   userRole,
+  userId,
 }: HistoryContentProps) {
   const { records, totalCount } = use(historyPromise);
   const [selectedBook, setSelectedBook] = useState<BorrowingRecord["books"]>(null);
@@ -261,12 +262,11 @@ export default function HistoryContent({
   const isPrivileged =
     userRole === "super_admin" ||
     userRole === "librarian" ||
-    (userRole === "library_staff" && viewParam === "logs");
+    (userRole === "library_staff" && viewParam === "logs" && !userId);
 
   const isSettlementsTab = statusFilter.toUpperCase() === "SETTLED";
   const isOverdueTab = statusFilter.toUpperCase() === "OVERDUE";
-  // Every tab can be exported or printed (P2-HIS-006, P4-HIS-006).
-  const showExportPrint = true;
+  const showExportPrint = !isPrivileged;
 
   const handleExportXlsx = async () => {
     setIsExporting(true);
@@ -275,7 +275,7 @@ export default function HistoryContent({
         status: statusFilter,
         resolution: effectiveResolution,
         search: searchQuery,
-        scope: isPrivileged ? "logs" : "personal",
+        scope: "personal",
       });
       if (!res.success) {
         toast.error(res.error || "Failed to export records");
@@ -298,13 +298,6 @@ export default function HistoryContent({
                 : "Paid"
               : "Receivable";
         return {
-          ...(isPrivileged
-            ? {
-                Borrower: r.profiles?.full_name || "Unknown User",
-                "Patron ID": r.profiles?.student_id || "—",
-                Email: r.profiles?.email || "—",
-              }
-            : {}),
           "Book Title": r.books?.title || "Unknown Title",
           Author: r.books?.author || "—",
           "Copy QR": r.copy_qr || "—",

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useRef, useEffect, useMemo, useCallback, Suspense } from "react";
+import { use, useState, useRef, useEffect, useMemo, useCallback, Suspense, type FormEvent, type KeyboardEvent } from "react";
 import { recordAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +17,13 @@ import {
   RefreshCw,
   QrCode,
   Search,
-  AlertTriangle,
-  Check,
-  Download
+  ChevronDown,
+  AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
-import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
@@ -43,26 +41,47 @@ import type { AttendanceRecord } from "@/lib/actions/attendance";
 import { isWithinManilaDateRange } from "@/lib/date-range";
 
 const ALL_HISTORY_STEP = 300;
+const INITIAL_HISTORY_REQUEST = { search: '', from: '', to: '', limit: ALL_HISTORY_STEP };
+const EMPTY_HISTORY: AttendanceRecord[] = [];
+const dateLabelFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
+});
 
-export function buildAttendanceExportRows(records: AttendanceRecord[]) {
-  return records.map((record) => {
-    const isNoLogOut = record.notes === "No Log Out";
-    return {
-      Patron: record.profiles?.full_name || "Patron",
-      "Patron ID": record.profiles?.student_id || "—",
-      Date: format(new Date(record.check_in_at), "yyyy-MM-dd"),
-      "Check In": format(new Date(record.check_in_at), "hh:mm a"),
-      "Check Out": record.check_out_at
-        ? format(new Date(record.check_out_at), "hh:mm a")
-        : "Still in library",
-      Status: isNoLogOut
-        ? "No Log Out"
-        : record.check_out_at
-          ? "Completed"
-          : "Active",
-      Notes: record.notes || "",
-    };
-  });
+function sameHistoryFilters(first: typeof INITIAL_HISTORY_REQUEST, second: typeof INITIAL_HISTORY_REQUEST) {
+  return first.search === second.search && first.from === second.from && first.to === second.to;
+}
+
+type AttendanceMode = "in" | "out";
+
+const ATTENDANCE_MODES = [
+  { value: "in", label: "Check-In", Icon: LogIn },
+  { value: "out", label: "Check-Out", Icon: LogOut },
+] as const;
+
+function AttendanceModeControl({ label, mode, onChange }: {
+  label: string;
+  mode: AttendanceMode;
+  onChange: (mode: AttendanceMode) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="grid w-full shrink-0 grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:w-fit">
+      {ATTENDANCE_MODES.map(({ value, label, Icon }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onChange(value)}
+          aria-pressed={mode === value}
+          className={cn(
+            "inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors xl:h-10",
+            mode === value ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground hover:bg-background hover:text-foreground",
+          )}
+        >
+          <Icon className="size-4 shrink-0" aria-hidden="true" />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function AttendanceClient({ 
@@ -83,24 +102,38 @@ export function AttendanceClient({
   const initialPersonal = use(personalHistoryPromise);
 
   const [systemTodayRecords, setSystemTodayRecords] = useState(initialSystemToday);
-  const [systemAllRecords, setSystemAllRecords] = useState(initialSystemAll);
   const [personalRecords, setPersonalRecords] = useState(initialPersonal);
 
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [searchQuery, setSearchQuery] = useState("");
-
-  // "All History" is loaded in steps. Searching it queries the server so older
-  // records beyond the loaded window can still be found.
-  const [allLimit, setAllLimit] = useState(ALL_HISTORY_STEP);
-  const allLimitRef = useRef(ALL_HISTORY_STEP);
-  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
-  const [allSearchResults, setAllSearchResults] = useState<AttendanceRecord[] | null>(null);
-  const [isSearchingAll, setIsSearchingAll] = useState(false);
-  const searchRequestRef = useRef(0);
+  const [historyRequest, setHistoryRequest] = useState(INITIAL_HISTORY_REQUEST);
+  const [historyResponse, setHistoryResponse] = useState({
+    request: INITIAL_HISTORY_REQUEST, records: initialSystemAll, failed: false,
+  });
+  const latestHistoryRequest = useRef(INITIAL_HISTORY_REQUEST);
+  const historyFetchId = useRef<symbol | null>(null);
+  const fetchStaffHistory = useCallback(async (request = latestHistoryRequest.current) => {
+    const fetchId = Symbol();
+    historyFetchId.current = fetchId;
+    const { search, from, to, limit } = request;
+    try {
+      const records = await getAttendanceHistory(undefined, {
+        range: 'all', limit,
+        ...(search && { search }),
+        ...((from || to) && { dateRange: { from: from || undefined, to: to || undefined } }),
+      });
+      if (fetchId === historyFetchId.current) setHistoryResponse({ request, records, failed: false });
+    } catch {
+      if (fetchId === historyFetchId.current) setHistoryResponse((previous) => ({
+        request,
+        records: sameHistoryFilters(previous.request, request) ? previous.records : [],
+        failed: true,
+      }));
+    }
+  }, []);
   const [cardNumber, setCardNumber] = useState("");
-  const [mode, setMode] = useState<"in" | "out">("in");
+  const [mode, setMode] = useState<AttendanceMode>("in");
   const [blockedCheckIns, setBlockedCheckIns] = useState<
     Array<{ userId: string; userName: string; identifiers: string[] }>
   >([]);
@@ -109,7 +142,6 @@ export function AttendanceClient({
     userName: string;
     message: string;
   } | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
@@ -253,12 +285,11 @@ export function AttendanceClient({
         }
 
         // Instantly refresh records so local state updates immediately without waiting for websocket
-        const [freshToday, freshAll] = await Promise.all([
+        const [freshToday] = await Promise.all([
           getAttendanceHistory(undefined, { range: "today" }),
-          getAttendanceHistory(undefined, { range: "all", limit: allLimitRef.current }),
+          fetchStaffHistory(),
         ]);
         setSystemTodayRecords(freshToday);
-        setSystemAllRecords(freshAll);
       } else {
         playScanCue("error");
         if (!isManual && session === scannerSession.current) setLastResult(result.error);
@@ -272,7 +303,7 @@ export function AttendanceClient({
       processingRef.current = false;
       setIsProcessing(false);
     }
-  }, [mode, isIdentifierBlockedForCheckIn, playScanCue, systemTodayRecords]);
+  }, [mode, isIdentifierBlockedForCheckIn, playScanCue, systemTodayRecords, fetchStaffHistory]);
 
   // Unified camera scanner using useScanner
   const {
@@ -321,13 +352,12 @@ export function AttendanceClient({
       inFlight = true;
       try {
         if (isStaff) {
-          const [freshToday, freshAll] = await Promise.all([
+          const [freshToday] = await Promise.all([
             getAttendanceHistory(undefined, { range: 'today' }),
-            getAttendanceHistory(undefined, { range: 'all', limit: allLimitRef.current }),
+            fetchStaffHistory(),
           ]);
           if (cancelled) return;
           setSystemTodayRecords(freshToday);
-          setSystemAllRecords(freshAll);
         } else {
           const freshPersonal = await getAttendanceHistory(userId);
           if (cancelled) return;
@@ -371,52 +401,18 @@ export function AttendanceClient({
       if (timer) clearTimeout(timer);
       void supabase.removeChannel(channel);
     };
-  }, [isStaff, userId]);
+  }, [isStaff, userId, fetchStaffHistory]);
 
-  // Reset staff page when switching tabs or typing search
   useEffect(() => {
-    setStaffPage(1);
-  }, [activeTab, searchQuery]);
-
-  // Server-side search for All History (debounced; older responses ignored).
-  useEffect(() => {
-    const q = searchQuery.trim();
-    const requestId = ++searchRequestRef.current;
-    if (!isStaff || activeTab !== 'all' || !q) {
-      setAllSearchResults(null);
-      setIsSearchingAll(false);
-      return;
-    }
-    setIsSearchingAll(true);
-    const timer = setTimeout(async () => {
-      try {
-        const results = await getAttendanceHistory(undefined, { range: 'all', limit: allLimit, search: q });
-        if (requestId === searchRequestRef.current) setAllSearchResults(results);
-      } catch {
-        if (requestId === searchRequestRef.current) {
-          toast.error("Couldn't search attendance history.", { id: "attendance-search-error" });
-        }
-      } finally {
-        if (requestId === searchRequestRef.current) setIsSearchingAll(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [isStaff, activeTab, searchQuery, allLimit]);
-
-  const loadOlderHistory = async () => {
-    const nextLimit = allLimitRef.current + ALL_HISTORY_STEP;
-    setIsLoadingOlder(true);
-    try {
-      const records = await getAttendanceHistory(undefined, { range: 'all', limit: nextLimit });
-      allLimitRef.current = nextLimit;
-      setAllLimit(nextLimit);
-      setSystemAllRecords(records);
-    } catch {
-      toast.error("Couldn't load older records. Please try again.");
-    } finally {
-      setIsLoadingOlder(false);
-    }
-  };
+    if (!isStaff) return;
+    latestHistoryRequest.current = historyRequest;
+    const timer = historyRequest.search ? setTimeout(() => void fetchStaffHistory(historyRequest), 300) : undefined;
+    if (historyRequest !== INITIAL_HISTORY_REQUEST && !historyRequest.search) void fetchStaffHistory(historyRequest);
+    return () => {
+      historyFetchId.current = null;
+      clearTimeout(timer);
+    };
+  }, [isStaff, historyRequest, fetchStaffHistory]);
 
   // Auto-start scanner when modal opens; teardown camera when modal closes
   useEffect(() => {
@@ -440,25 +436,11 @@ export function AttendanceClient({
     [systemTodayRecords]
   );
 
-  // Filter staff records by tab & search query, then by the date range on the All tab
-  const filteredStaffRecords = useMemo(() => {
-    const byDate = (rows: AttendanceRecord[]) =>
-      activeTab === 'all' ? rows.filter(r => isWithinManilaDateRange(r.check_in_at, fromDate, toDate)) : rows;
-    if (activeTab === 'all' && searchQuery.trim() && allSearchResults) return byDate(allSearchResults);
-    const base = activeTab === 'today' ? systemTodayRecords : systemAllRecords;
-    if (!searchQuery.trim()) return byDate(base);
-    const q = searchQuery.toLowerCase().trim();
-    return byDate(base.filter(r => {
-      const name = r.profiles?.full_name?.toLowerCase() || '';
-      const sid = r.profiles?.student_id?.toLowerCase() || '';
-      return name.includes(q) || sid.includes(q);
-    }));
-  }, [activeTab, systemTodayRecords, systemAllRecords, searchQuery, allSearchResults, fromDate, toDate]);
-
-  const isAllSearch = activeTab === 'all' && searchQuery.trim().length > 0;
-  const allWindowFull = isAllSearch
-    ? (allSearchResults?.length ?? 0) >= allLimit
-    : systemAllRecords.length >= allLimit;
+  const historyMatches = sameHistoryFilters(historyResponse.request, historyRequest);
+  const filteredStaffRecords = historyMatches ? historyResponse.records : EMPTY_HISTORY;
+  const historyLoading = historyRequest !== historyResponse.request;
+  const historyFailed = !historyLoading && historyResponse.failed;
+  const historyWindowFull = filteredStaffRecords.length >= historyResponse.request.limit;
 
   // Paginated staff records
   const totalStaffItems = filteredStaffRecords.length;
@@ -486,235 +468,60 @@ export function AttendanceClient({
     <DateRangeFilter
       from={fromDate}
       to={toDate}
-      onChange={(from, to) => { setFromDate(from); setToDate(to); setStaffPage(1); setPersonalPage(1); }}
+      onChange={(from, to) => { setFromDate(from); setToDate(to); setPersonalPage(1); }}
     />
   );
 
-  const handleExport = async () => {
-    if (filteredStaffRecords.length === 0 || isExporting) return;
-    setIsExporting(true);
-    try {
-      const XLSX = await import("xlsx");
-      const rows = buildAttendanceExportRows(filteredStaffRecords);
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Logs");
-      XLSX.writeFile(workbook, "lumina_attendance_logs.xlsx");
-      toast.success(`Exported ${rows.length} attendance record(s).`);
-    } catch {
-      toast.error("Failed to export attendance logs.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const scannerControls = (
-    <div className="flex flex-col gap-3 w-full">
-      {/* Band 1: Gate Desk Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 rounded-2xl border border-border/25 bg-muted/20 p-2 sm:p-2.5">
-        <div
-          role="group"
-          aria-label="Attendance mode"
-          className="grid grid-cols-2 sm:inline-flex items-center gap-1 bg-background/80 p-1 rounded-xl border border-border/20 w-full sm:w-auto sm:self-start lg:self-auto"
+    <div className="flex w-full min-w-0 flex-col gap-3 px-1 py-1 sm:px-2">
+      <div role="group" aria-label="Record attendance" className="flex min-w-0 flex-col gap-2.5 xl:flex-row xl:items-center xl:gap-4">
+        <AttendanceModeControl label="Attendance mode" mode={mode} onChange={setMode} />
+
+        <form
+          aria-label="Log attendance"
+          onSubmit={handleManualSubmit}
+          className="grid w-full min-w-0 flex-1 grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center xl:w-auto"
         >
-          <button
-            type="button"
-            onClick={() => setMode("in")}
-            aria-pressed={mode === "in"}
-            className={cn(
-              "h-11 sm:h-7 px-3 sm:px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center justify-center gap-1.5 border",
-              mode === "in"
-                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
-                : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-            )}
-          >
-            <LogIn className="w-3.5 h-3.5 shrink-0" />
-            <span>Check-In</span>
-            {mode === "in" && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
-                <Check className="w-2.5 h-2.5" aria-hidden="true" />
-                Active
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("out")}
-            aria-pressed={mode === "out"}
-            className={cn(
-              "h-11 sm:h-7 px-3 sm:px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center justify-center gap-1.5 border",
-              mode === "out"
-                ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
-                : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-            )}
-          >
-            <LogOut className="w-3.5 h-3.5 shrink-0" />
-            <span>Check-Out</span>
-            {mode === "out" && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
-                <Check className="w-2.5 h-2.5" aria-hidden="true" />
-                Active
-              </span>
-            )}
-          </button>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:flex-1 lg:justify-end">
-          <form aria-label="Log attendance" onSubmit={handleManualSubmit} className="flex items-center gap-1.5 w-full sm:w-auto flex-1 sm:flex-none">
-            <div className="relative flex-1 min-w-0 sm:w-52">
-              <label htmlFor="attendance-card-id" className="sr-only">Card ID or Patron ID</label>
-              <ScanLine className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-              <Input
-                id="attendance-card-id"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-                placeholder="Card ID or Patron ID..."
-                className="h-11 sm:h-9 pl-8 pr-3 text-xs bg-background rounded-lg border-border/40"
-                readOnly={isProcessing}
-                autoComplete="off"
-              />
-            </div>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
-              className={cn(
-                "h-11 sm:h-9 px-4 sm:px-3.5 font-semibold text-xs rounded-lg shrink-0",
-                mode === "in"
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  : "bg-orange-600 hover:bg-orange-700 text-white"
-              )}
-            >
-              {isProcessing ? "Recording…" : mode === "in" ? "Check-In" : "Check-Out"}
-            </Button>
-          </form>
-
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 sm:h-9 w-full sm:w-auto justify-center px-3.5 text-xs font-semibold rounded-lg shrink-0 gap-1.5 transition-colors border-border/40 bg-background hover:bg-muted/40"
-              disabled={isProcessing}
-            >
-              <Camera className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-primary" />
-              <span>Start camera</span>
-            </Button>
-          </DialogTrigger>
-        </div>
-      </div>
-
-      {/* Band 2: Log Tabs, Live Status & Search/Export */}
-      <div className="flex w-full min-w-0 flex-col justify-between gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-          <div className="inline-flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/15 flex-1 sm:flex-none">
-            <button
-              type="button"
-              onClick={() => setActiveTab('today')}
-              aria-pressed={activeTab === 'today'}
-              className={cn(
-                "flex-1 sm:flex-none justify-center h-11 sm:h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
-                activeTab === 'today' 
-                  ? "bg-background text-foreground shadow-sm font-bold" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <span>Today</span>
-              <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none",
-                activeTab === 'today' ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              )}>
-                {systemTodayRecords.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              aria-pressed={activeTab === 'all'}
-              className={cn(
-                "flex-1 sm:flex-none justify-center h-11 sm:h-8 px-3 text-[11px] font-semibold rounded-lg transition-all flex items-center gap-1.5",
-                activeTab === 'all' 
-                  ? "bg-background text-foreground shadow-sm font-bold" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <span>All History</span>
-              <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none",
-                activeTab === 'all' ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              )}>
-                {systemAllRecords.length}
-              </span>
-            </button>
-          </div>
-
-          {activeTab === 'all' && dateRangeControls}
-
-          <div className="hidden sm:flex items-center gap-2 px-2.5 h-9 rounded-xl bg-muted/20 border border-border/15 text-[11px] font-medium text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <strong className="text-foreground">{activeCount}</strong> active
-            </span>
-            <span className="text-border/60">•</span>
-            <span><strong className="text-foreground">{completedTodayCount}</strong> completed</span>
-          </div>
-
-          <OverflowActionsMenu
-            label="Attendance log actions"
-            className="lg:hidden"
-            actions={[
-              {
-                id: "export-attendance",
-                label: isExporting ? "Exporting..." : "Export (.xlsx)",
-                icon: Download,
-                disabled: isExporting || filteredStaffRecords.length === 0,
-                onSelect: () => void handleExport(),
-              },
-            ]}
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-2 sm:hidden px-1 text-[11px] font-medium text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <strong className="text-foreground">{activeCount}</strong> active today
-          </span>
-          <span><strong className="text-foreground">{completedTodayCount}</strong> completed</span>
-        </div>
-
-        <div className="flex items-center gap-2 flex-1 min-w-0 sm:flex-initial sm:justify-end">
-          <div className="relative flex-1 min-w-0 sm:w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="relative min-w-0 min-[380px]:col-span-2 sm:col-span-1">
+            <label htmlFor="attendance-card-id" className="sr-only">Card ID or Patron ID</label>
+            <ScanLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
-              type="search"
-              aria-label="Search attendance by patron name or ID"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search patron or ID..."
-              className="h-11 sm:h-9 pl-8 pr-3 text-xs bg-background/50 rounded-xl border-border/25"
+              id="attendance-card-id"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(e.target.value)}
+              placeholder="Card ID or Patron ID"
+              className="h-11 pl-9 xl:h-10"
+              readOnly={isProcessing}
+              autoComplete="off"
             />
           </div>
-
           <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="hidden h-9 shrink-0 gap-1.5 rounded-xl border-border/30 px-3.5 text-xs font-semibold hover:bg-muted/40 lg:inline-flex"
-            disabled={isExporting || filteredStaffRecords.length === 0}
-            onClick={() => void handleExport()}
+            type="submit"
+            disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
+            className="h-11 px-3 shadow-none xl:h-10 xl:px-4"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>{isExporting ? "Exporting..." : "Export (.xlsx)"}</span>
+            {isProcessing ? "Recording…" : mode === "in" ? "Record check-in" : "Record check-out"}
           </Button>
-        </div>
+          <DialogTrigger asChild>
+            <Button type="button" variant="outline" className="h-11 px-3 shadow-none xl:h-10 xl:px-4" disabled={isProcessing}>
+              <Camera aria-hidden="true" />
+              Scan with camera
+            </Button>
+          </DialogTrigger>
+        </form>
       </div>
+
+      <p role="status" aria-label="Today’s attendance status" className="text-xs tabular-nums text-muted-foreground">
+        <span>{activeCount} open</span>{' · '}<span>{completedTodayCount} closed today</span>
+      </p>
 
       {alreadyInWarning && (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs status-warning"
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+            <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
             <span>
               <strong>{alreadyInWarning.message}</strong> — {alreadyInWarning.userName} must check out before checking in again.
             </span>
@@ -724,7 +531,7 @@ export function AttendanceClient({
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 text-xs border-amber-500/40 hover:bg-amber-500/20"
+              className="h-11 text-xs xl:h-9"
               onClick={() => setMode("out")}
             >
               Switch to Check-Out
@@ -732,6 +539,24 @@ export function AttendanceClient({
           )}
         </div>
       )}
+
+      <AttendanceHistoryFilters
+        search={searchQuery}
+        from={historyRequest.from}
+        to={historyRequest.to}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          const search = value.trim();
+          if (search === historyRequest.search) return;
+          setStaffPage(1);
+          setHistoryRequest((request) => ({ ...request, search, limit: ALL_HISTORY_STEP }));
+        }}
+        onDateChange={(from, to) => {
+          if (from === historyRequest.from && to === historyRequest.to) return;
+          setStaffPage(1);
+          setHistoryRequest((request) => ({ ...request, from, to, limit: ALL_HISTORY_STEP }));
+        }}
+      />
     </div>
   );
 
@@ -769,54 +594,11 @@ export function AttendanceClient({
                   Gate Attendance Scanner
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Active mode: {mode === "in" ? "Check-In" : "Check-Out"}. Read a card, then confirm below.
+                  Scan a card, then confirm the attendance action.
                 </DialogDescription>
               </DialogHeader>
 
-              <div
-                role="group"
-                aria-label="Scanner attendance mode"
-                className="inline-flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/20"
-              >
-                <button
-                  type="button"
-                  onClick={() => setMode("in")}
-                  aria-pressed={mode === "in"}
-                  className={cn(
-                    "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
-                    mode === "in"
-                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm dark:bg-emerald-600 dark:border-emerald-500"
-                      : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-                  )}
-                >
-                  <LogIn className="w-3.5 h-3.5 shrink-0" />
-                  <span>Check-In</span>
-                  {mode === "in" && (
-                    <span className="text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
-                      Active
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("out")}
-                  aria-pressed={mode === "out"}
-                  className={cn(
-                    "h-7 px-2.5 text-xs font-bold rounded-lg transition-all inline-flex items-center gap-1.5 border",
-                    mode === "out"
-                      ? "bg-orange-600 text-white border-orange-600 shadow-sm dark:bg-orange-600 dark:border-orange-500"
-                      : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-                  )}
-                >
-                  <LogOut className="w-3.5 h-3.5 shrink-0" />
-                  <span>Check-Out</span>
-                  {mode === "out" && (
-                    <span className="text-[10px] uppercase tracking-wider bg-white/20 px-1.5 py-0.5 rounded font-extrabold">
-                      Active
-                    </span>
-                  )}
-                </button>
-              </div>
+              <AttendanceModeControl label="Scanner attendance mode" mode={mode} onChange={setMode} />
 
               <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/15 bg-muted/20 shadow-inner my-2">
                 <div 
@@ -918,12 +700,7 @@ export function AttendanceClient({
                   <Button type="button" variant="outline" disabled={isProcessing} onClick={() => { pendingScanRef.current = null; setPendingScan(null); }}>Discard</Button>
                   <Button
                     type="button"
-                    className={cn(
-                      "flex-1",
-                      mode === "in"
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                        : "bg-orange-600 hover:bg-orange-700 text-white"
-                    )}
+                    className="h-11 flex-1 shadow-none"
                     disabled={isProcessing || isPendingScanCheckInBlocked}
                     onClick={() => void processScan(pendingScan, false, mode)}
                   >
@@ -939,34 +716,33 @@ export function AttendanceClient({
               </div>
             </DialogContent>
 
+          {historyFailed && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3">
+              <p role="alert" className="text-sm text-destructive">Couldn&apos;t load attendance records.</p>
+              <Button type="button" variant="outline" className="h-11 xl:h-10" onClick={() => setHistoryRequest((request) => ({ ...request }))}>Retry</Button>
+            </div>
+          )}
+          {historyLoading && !historyMatches ? (
+            <TableLoadingSkeleton />
+          ) : (!historyFailed || totalStaffItems > 0) && (
+            <Suspense fallback={<TableLoadingSkeleton />}>
+              <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
+            </Suspense>
+          )}
           <p role="status" className="sr-only">
-            {searchQuery.trim() && !isSearchingAll ? `${totalStaffItems} matching attendance records` : ""}
+            {!historyLoading && !historyFailed ? `${totalStaffItems} matching attendance records loaded` : ''}
           </p>
-          <Suspense fallback={<TableLoadingSkeleton />}>
-            <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
-          </Suspense>
-
-          {activeTab === 'all' && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-border/10 text-[11px] text-muted-foreground" aria-live="polite">
-              <span>
-                {isSearchingAll
-                  ? "Searching all history..."
-                  : isAllSearch
-                    ? `Search covers the latest ${allLimit.toLocaleString()} matching records.`
-                    : `Showing the latest ${systemAllRecords.length.toLocaleString()} records.`}
-              </span>
-              {allWindowFull && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-[11px]"
-                  disabled={isLoadingOlder}
-                  onClick={() => void loadOlderHistory()}
-                >
-                  {isLoadingOlder ? "Loading..." : "Load older records"}
-                </Button>
-              )}
+          {historyWindowFull && !historyFailed && (
+            <div className="flex justify-end border-t border-border px-4 py-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 xl:h-10"
+                disabled={historyLoading}
+                onClick={() => setHistoryRequest((request) => ({ ...request, limit: request.limit + ALL_HISTORY_STEP }))}
+              >
+                {historyLoading && historyRequest.limit > historyResponse.request.limit ? 'Loading…' : 'Load older records'}
+              </Button>
             </div>
           )}
         </AdminTableShell>
@@ -1008,19 +784,138 @@ export function AttendanceClient({
   );
 }
 
+function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChange }: {
+  search: string;
+  from: string;
+  to: string;
+  onSearchChange: (value: string) => void;
+  onDateChange: (from: string, to: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [draftFrom, setDraftFrom] = useState('');
+  const [draftTo, setDraftTo] = useState('');
+  const [dateError, setDateError] = useState('');
+  const toggle = useRef<HTMLButtonElement>(null);
+  const toInput = useRef<HTMLInputElement>(null);
+  const start = from ? new Date(`${from}T00:00:00Z`) : null;
+  const end = to ? new Date(`${to}T00:00:00Z`) : null;
+  const hasRange = Boolean(start || end);
+  let label = 'Date range';
+  if (start && end) label = dateLabelFormatter.formatRange(start, end);
+  else if (start) label = `From ${dateLabelFormatter.format(start)}`;
+  else if (end) label = `Through ${dateLabelFormatter.format(end)}`;
+
+  function closeDates() {
+    setIsOpen(false);
+    toggle.current?.focus();
+  }
+
+  function applyDates(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (draftFrom && draftTo && draftFrom > draftTo) {
+      setDateError('Enter a To date on or after the From date.');
+      toInput.current?.focus();
+      return;
+    }
+    onDateChange(draftFrom, draftTo);
+    closeDates();
+  }
+
+  function closeOnEscape(event: KeyboardEvent) {
+    if (event.key !== 'Escape' || !isOpen) return;
+    event.preventDefault();
+    closeDates();
+  }
+
+  return (
+    <div
+      role="group"
+      aria-label="Attendance record filters"
+      className="min-w-0 space-y-2 border-t border-border pt-3"
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="relative min-w-0 basis-full min-[420px]:min-w-48 min-[420px]:flex-1 sm:max-w-80">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            type="search"
+            aria-label="Search attendance by patron name or ID"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search patron or ID"
+            className="h-11 pl-9 xl:h-10"
+          />
+        </div>
+        <Button
+          ref={toggle}
+          type="button"
+          variant="outline"
+          aria-controls="attendance-history-dates"
+          aria-expanded={isOpen}
+          aria-label={hasRange ? `Date range: ${label}` : undefined}
+          className={cn('h-11 max-w-full px-3 shadow-none xl:h-10', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
+          onKeyDown={closeOnEscape}
+          onClick={() => {
+            if (!isOpen) {
+              setDraftFrom(from);
+              setDraftTo(to);
+              setDateError('');
+            }
+            setIsOpen(!isOpen);
+          }}
+        >
+          <CalendarIcon aria-hidden="true" />
+          <span className="min-w-0 truncate" title={hasRange ? label : undefined}>{label}</span>
+          <ChevronDown className={cn(isOpen && 'rotate-180')} aria-hidden="true" />
+        </Button>
+      </div>
+      <div id="attendance-history-dates" hidden={!isOpen}>
+        <form
+          aria-label="Date range"
+          onSubmit={applyDates}
+          onKeyDown={closeOnEscape}
+          className="grid min-w-0 items-end gap-2 min-[380px]:grid-cols-2 sm:flex sm:flex-wrap"
+        >
+          <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground">
+            From
+            <Input type="date" value={draftFrom} max="9999-12-31" className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10"
+              onChange={(event) => { setDraftFrom(event.target.value); setDateError(''); }} />
+          </label>
+          <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground">
+            To
+            <Input ref={toInput} type="date" value={draftTo} max="9999-12-31" className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10"
+              aria-invalid={Boolean(dateError)} aria-describedby={dateError ? 'attendance-history-date-error' : undefined}
+              onChange={(event) => { setDraftTo(event.target.value); setDateError(''); }} />
+          </label>
+          <div className="flex justify-end gap-2 min-[380px]:col-span-2">
+            {(hasRange || draftFrom || draftTo) && (
+              <Button type="button" variant="ghost" className="h-11 xl:h-10" onClick={() => { onDateChange('', ''); closeDates(); }}>
+                Clear dates
+              </Button>
+            )}
+            <Button type="submit" className="h-11 shadow-none xl:h-10" disabled={!hasRange && !draftFrom && !draftTo}>Apply</Button>
+          </div>
+          {dateError && (
+            <p id="attendance-history-date-error" role="alert" className="col-span-full w-full text-xs text-destructive">{dateError}</p>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function DateRangeFilter({ from, to, onChange }: { from: string; to: string; onChange: (from: string, to: string) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-muted-foreground">
-      <label className="flex items-center gap-1">
+    <div role="group" aria-label="Date range" className="grid min-w-0 grid-cols-2 items-end gap-x-2 gap-y-1 text-xs font-medium text-muted-foreground sm:flex sm:flex-wrap">
+      <label className="grid min-w-0 gap-1">
         From
-        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="h-11 w-[140px] text-xs lg:h-8" />
+        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10" />
       </label>
-      <label className="flex items-center gap-1">
+      <label className="grid min-w-0 gap-1">
         To
-        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="h-11 w-[140px] text-xs lg:h-8" />
+        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10" />
       </label>
       {(from || to) && (
-        <Button type="button" variant="ghost" size="sm" className="h-11 text-[11px] lg:h-8" onClick={() => onChange('', '')}>
+        <Button type="button" variant="ghost" size="sm" className="col-span-2 h-11 justify-self-start xl:h-10" onClick={() => onChange('', '')}>
           Clear dates
         </Button>
       )}

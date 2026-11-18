@@ -3,6 +3,7 @@ import { getDashboardStats } from "@/lib/actions/dashboard";
 import { getAnalyticsSummary } from "@/lib/actions/analytics";
 import { analyticsDates } from "@/lib/analytics-dates";
 import { getMe } from "@/lib/auth-helpers";
+import { getReportDatasets } from "@/lib/auth/report-access";
 import { AnalyticsClient } from "./AnalyticsClient";
 import { Loader2 } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -17,8 +18,9 @@ export default async function AnalyticsPage() {
   
   const { role } = me;
 
+  if (!getReportDatasets(role, me.profile).length) redirect('/dashboard');
   if (role !== 'super_admin' && role !== 'librarian') {
-    redirect('/dashboard');
+    redirect('/analytics/reports');
   }
 
   const initialDates = analyticsDates('30d');

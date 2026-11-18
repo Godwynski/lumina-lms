@@ -727,9 +727,11 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         await Promise.resolve();
       });
 
-      expect(container).toHaveTextContent('42');
-      expect(container).toHaveTextContent('520');
-      expect(container).toHaveTextContent('180');
+      expect(container).toHaveTextContent('Visits10Check-ins in selected period');
+      expect([...container.querySelectorAll('h1')].filter(heading => heading.textContent === 'Analytics')).toHaveLength(0);
+      expect(container).toHaveTextContent('Loans issued5Loans in selected period');
+      expect(container).toHaveTextContent('Inventory520Current catalog total');
+      expect(container).toHaveTextContent('Active loans14Currently out');
       expect(container).toHaveTextContent('Dune');
       expect(mockGetAnalyticsSummary).toHaveBeenCalledWith(
         '30d',
@@ -775,7 +777,9 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       vi.stubGlobal('print', printSpy);
       mockXlsxWriteFile.mockClear();
 
-      await clickElement(findButtonByText(errRender.container, 'Export (.xlsx)'));
+      const menu = errRender.container.querySelector('[aria-label="Analytics report actions"]');
+      await pressKey(menu, 'Enter');
+      await clickElement([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent?.includes('Export (.xlsx)')));
       await vi.waitFor(() => {
         expect(mockXlsxWriteFile).toHaveBeenCalledWith(
           expect.objectContaining({ SheetNames: ['Summary', 'High Demand'] }),
@@ -783,7 +787,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         );
       });
 
-      await clickElement(findButtonByText(errRender.container, 'Print'));
+      await pressKey(menu, 'Enter');
+      await clickElement([...document.querySelectorAll('[role="menuitem"]')].find(item => item.textContent?.includes('Print overview')));
       expect(printSpy).toHaveBeenCalledTimes(1);
     });
   });
@@ -1537,8 +1542,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, { range: 'today' });
       expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, { range: 'all', limit: 300 });
       expect(mockGetAttendanceHistory).toHaveBeenCalledWith('lib-1');
-      expect(staffRender.container).toHaveTextContent('Today');
-      expect(staffRender.container).toHaveTextContent('All History');
+      expect(findButtonByText(staffRender.container, 'Date range')).toHaveAttribute('aria-expanded', 'false');
+      expect(staffRender.container.querySelector('[aria-label="Attendance period"]')).not.toBeInTheDocument();
       cleanupClients();
 
       // 4. Student assistant with manage_attendance & view=logs vs deactivated SA
@@ -1555,7 +1560,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await act(async () => {
         await Promise.resolve();
       });
-      expect(saRender.container).toHaveTextContent('All History');
+      expect(findButtonByText(saRender.container, 'Date range')).toHaveAttribute('aria-expanded', 'false');
       cleanupClients();
 
       vi.clearAllMocks();
@@ -2143,19 +2148,21 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       },
     });
 
-    it('renders staff Today/All History tabs, search, manual check-in/out, load older, and camera modal flows', async () => {
+    it('shows staff history by default and supports search, recording, loading older records, and camera flows', async () => {
       const todayRecords = [
         makeRecord('1', 'Juan Dela Cruz', '2024-0001', false),
         makeRecord('2', 'Maria Santos', '2024-0002', true),
       ];
-      // 300 records so allWindowFull === true -> shows "Load older records"
+      // A full 300-record window offers access to older records.
       const allRecords = Array.from({ length: 300 }, (_, i) =>
         makeRecord(`a-${i}`, `Patron ${i}`, `2024-${1000 + i}`, i % 2 === 0)
       );
 
       mockGetAttendanceHistory.mockImplementation(
-        async (_uid?: string, opts?: { range?: string }) =>
-          opts?.range === 'all' ? allRecords : todayRecords
+        async (_uid?: string, opts?: { range?: string; search?: string }) => {
+          if (opts?.search === 'Maria') return [todayRecords[1]];
+          return opts?.range === 'all' ? allRecords : todayRecords;
+        }
       );
 
       const { container } = await renderClient(
@@ -2173,19 +2180,22 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         await Promise.resolve();
       });
 
-      expect(container).toHaveTextContent('Juan Dela Cruz');
+      expect(container).toHaveTextContent('Patron 0');
       expect(container).toHaveTextContent('Still in library');
-      expect(container).toHaveTextContent('1 active');
-      expect(container).toHaveTextContent('1 completed');
+      expect(container.querySelector('[aria-label="Today’s attendance status"]')).toHaveTextContent('1 open · 1 closed today');
 
-      // Filter Today tab by search
+      // Search the complete history through the server.
       const searchInput = container.querySelector(
         'input[aria-label="Search attendance by patron name or ID"]'
       ) as HTMLInputElement;
+      vi.useFakeTimers();
       await typeIntoInput(searchInput, 'Maria');
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      vi.useRealTimers();
       expect(container).toHaveTextContent('Maria Santos');
-      expect(container).not.toHaveTextContent('Juan Dela Cruz');
+      expect(container).not.toHaveTextContent('Patron 0');
       await typeIntoInput(searchInput, '');
+      expect(container).toHaveTextContent('Patron 0');
 
       // Manual card entry: success IN, error result, and rejection
       mockRecordAttendanceByCard.mockResolvedValueOnce({
@@ -2233,13 +2243,11 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         id: 'attendance-toast-err',
       });
 
-      // Switch to All History tab -> Load older records + server-side debounced search
-      await clickElement(findButtonByText(container, 'All History'));
-      expect(container).toHaveTextContent('Showing the latest 300 records.');
-
       mockGetAttendanceHistory.mockResolvedValueOnce([...allRecords, makeRecord('older-1', 'Older User', '2020-0001', true)]);
       await clickElement(findButtonByText(container, 'Load older records'));
       expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, { range: 'all', limit: 600 });
+      expect(container).toHaveTextContent('Showing 1-10 of 301');
+      expect(findButtonByText(container, 'Load older records')).toBeUndefined();
 
       vi.useFakeTimers();
       mockGetAttendanceHistory.mockResolvedValueOnce([makeRecord('s-1', 'Searched User', '2024-7777', true)]);
@@ -2250,7 +2258,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       vi.useRealTimers();
       expect(mockGetAttendanceHistory).toHaveBeenCalledWith(undefined, {
         range: 'all',
-        limit: 600,
+        limit: 300,
         search: 'Searched',
       });
       expect(container).toHaveTextContent('Searched User');

@@ -815,16 +815,8 @@ describe('Circulation & History UI Components', () => {
       expect(mockRouterReplace).toHaveBeenCalledWith('/history?status=SETTLED&resolution=CONDONED&page=1', { scroll: false });
     });
 
-    it('renders Export (.xlsx) and Print buttons on Overdue and Settlements tabs and exports all filtered rows', async () => {
-      const printSpy = vi.fn();
-      vi.stubGlobal('print', printSpy);
-
+    it('keeps Overdue and Settlements in Borrowing Logs without duplicating Analytics report actions', async () => {
       const overdueRecord = makeRecord({ id: 'rec-exp-1', fine_amount: 35, fine_settled_at: null });
-      mockExportBorrowingHistory.mockResolvedValueOnce({
-        success: true,
-        data: { records: [overdueRecord], totalCount: 25 },
-      });
-
       const { container } = await renderHistory({
         records: [overdueRecord],
         statusFilter: 'OVERDUE',
@@ -832,24 +824,11 @@ describe('Circulation & History UI Components', () => {
         totalCount: 25,
       });
 
-      const exportBtn = findButtonByText(container, 'Export (.xlsx)');
-      const printBtn = findButtonByText(container, 'Print');
-      expect(exportBtn).toBeDefined();
-      expect(printBtn).toBeDefined();
-
-      await clickElement(printBtn);
-      expect(printSpy).toHaveBeenCalledTimes(1);
-
-      await clickElement(exportBtn);
-      await act(async () => { await Promise.resolve(); });
-      expect(mockExportBorrowingHistory).toHaveBeenCalledWith({
-        status: 'OVERDUE',
-        resolution: 'all',
-        search: '',
-        scope: 'logs',
-      });
-      expect(mockXlsxJsonToSheet).toHaveBeenCalled();
-      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_overdue_receivables.xlsx');
+      expect(findButtonByText(container, 'Export (.xlsx)')).toBeUndefined();
+      expect(findButtonByText(container, 'Print')).toBeUndefined();
+      expect(container.querySelector('[aria-label="History report actions"]')).toBeNull();
+      expect(findButtonByExactText(container, 'Overdue')).toHaveAttribute('aria-pressed', 'true');
+      expect(findButtonByExactText(container, 'Settlements')).toBeInTheDocument();
     });
 
     it('lets a patron export their own history from the All tab (personal scope, history filename) (P2-HIS-006)', async () => {

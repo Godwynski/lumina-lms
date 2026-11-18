@@ -1616,6 +1616,7 @@ describe('Layout Components', () => {
     expect(container.textContent).toContain('My Attendance');
     expect(container.textContent).not.toContain('Audit Logs');
     expect(container.textContent).not.toContain('Inventory');
+    expect(container.querySelector('a[href="/analytics"]')).toBeNull();
 
     const catalogLink = container.querySelector('a[href="/student-catalog"]');
     expect(catalogLink?.getAttribute('aria-current')).toBe('page');
@@ -1691,6 +1692,9 @@ describe('Layout Components', () => {
     );
     expect(container.textContent).not.toContain('Inventory');
     expect(container.textContent).toContain('Catalog');
+    expect(container.querySelector('a[href="/analytics"]')).toBeInTheDocument();
+    expect(container.querySelector('a[href="/attendance?view=logs"]')).toBeInTheDocument();
+    expect(container.querySelector('a[href="/history?view=logs"]')).toBeInTheDocument();
 
     await rerender(
       <PreferencesProvider
@@ -1711,6 +1715,7 @@ describe('Layout Components', () => {
     );
     expect(container.textContent).toContain('Inventory');
     expect(container.textContent).toContain('Catalog');
+    expect(container.querySelector('a[href="/analytics"]')).toBeNull();
 
     // Suspended library_staff with manage_inventory=true does NOT see Inventory
     await rerender(

@@ -246,6 +246,7 @@ describe('B1 Shell, Nav & Tokens', () => {
       'Borrowing Logs',
       'My Attendance',
       'Attendance Logs',
+      'Analytics',
     ]);
 
     // library_staff with manage_inventory=true shows Manage group with Inventory only

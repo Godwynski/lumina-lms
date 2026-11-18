@@ -3,7 +3,7 @@
 import { use, useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, BookOpen, Library, UserCircle2, Download, Printer, Loader2 } from 'lucide-react';
+import { Clock, BookOpen, Library, FileBarChart, Download, Printer } from 'lucide-react';
 import { TrendChart, CategoryPieChart, PeakHoursBarChart, ChartSkeleton } from './AnalyticsCharts';
 import { getAnalyticsSummary, type AnalyticsSummary, type AnalyticsRange, type AnalyticsSelection } from '@/lib/actions/analytics';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
@@ -46,6 +46,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
   const [range, setRange] = useState<AnalyticsRange | 'custom'>('30d');
   const [dates, setDates] = useState<AnalyticsDates>(() => initialDates ?? analyticsDates('30d'));
   const [loadedDates, setLoadedDates] = useState(dates);
+  const isPeriodCurrent = dates.from === loadedDates.from && dates.to === loadedDates.to;
   const [draft, setDraft] = useState(dates);
   const [dateError, setDateError] = useState('');
   const customRef = useRef<HTMLDetailsElement>(null);
@@ -142,38 +143,40 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-5 animate-in fade-in duration-700">
       <div className="hidden print:block mb-4 border-b pb-2">
         <h1 className="text-lg font-bold">Lumina LMS — Analytics &amp; High Demand Catalog</h1>
         <p className="text-xs text-muted-foreground">Date Range: {loadedDates.from} – {loadedDates.to}</p>
       </div>
 
-      <div className="relative flex min-w-0 flex-wrap items-center justify-between gap-2 lg:justify-end print:hidden">
-        <div className="hidden flex-wrap items-center gap-2 lg:flex">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleExportXlsx}
-            disabled={!summary || isLoadingSummary || isExporting}
-            className="h-9 rounded-xl gap-1.5 text-xs font-bold"
-          >
-            {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            Export (.xlsx)
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="h-9 rounded-xl gap-1.5 text-xs font-bold"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Print
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 sm:order-2">
+          <OverflowActionsMenu
+            label="Analytics report actions"
+            triggerText="Overview actions"
+            actions={[
+              {
+                id: "export-analytics",
+                label: isExporting ? "Exporting..." : "Export (.xlsx)",
+                icon: Download,
+                disabled: !summary || isLoadingSummary || isExporting,
+                onSelect: () => void handleExportXlsx(),
+              },
+              {
+                id: "print-analytics",
+                label: "Print overview",
+                icon: Printer,
+                onSelect: () => window.print(),
+              },
+            ]}
+          />
+          <Button asChild className="h-11">
+            <Link href={`/analytics/reports?from=${dates.from}&to=${dates.to}`}>
+              <FileBarChart aria-hidden="true" /> Build report
+            </Link>
           </Button>
         </div>
-
-        <div className="grid min-w-0 flex-1 grid-cols-4 rounded-xl border border-border/60 bg-muted/40 p-1 lg:flex lg:flex-none">
+        <div className="relative grid min-w-0 max-w-md flex-1 basis-full grid-cols-4 rounded-xl border border-border/60 bg-muted/40 p-1 sm:order-1 sm:basis-auto lg:flex lg:flex-none">
           {RANGES.map((r) => (
             <button
               key={r.value}
@@ -207,26 +210,6 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
             </form>
           </details>
         </div>
-
-        <OverflowActionsMenu
-          label="Analytics report actions"
-          className="lg:hidden"
-          actions={[
-            {
-              id: "export-analytics",
-              label: isExporting ? "Exporting..." : "Export (.xlsx)",
-              icon: Download,
-              disabled: !summary || isLoadingSummary || isExporting,
-              onSelect: () => void handleExportXlsx(),
-            },
-            {
-              id: "print-analytics",
-              label: "Print",
-              icon: Printer,
-              onSelect: () => window.print(),
-            },
-          ]}
-        />
       </div>
       {range === 'custom' && <div className="flex justify-end gap-3 text-xs text-muted-foreground">
         <span>{dates.from} – {dates.to}</span>
@@ -237,32 +220,32 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { 
-            label: "Daily Traffic", 
-            value: stats.attendanceToday, 
+            label: "Visits",
+            value: isPeriodCurrent && summary ? summary.attendanceTrends.reduce((total, item) => total + item.count, 0) : "—",
             icon: Clock, 
-            desc: "Check-ins today",
+            desc: "Check-ins in selected period",
             href: "/attendance"
           },
           { 
-            label: "Active Borrows", 
-            value: stats.activeBorrows, 
+            label: "Loans issued",
+            value: isPeriodCurrent && summary ? summary.borrowingTrends.reduce((total, item) => total + item.count, 0) : "—",
             icon: BookOpen, 
-            desc: "Currently out",
-            href: "/history?status=ACTIVE"
+            desc: "Loans in selected period",
+            href: "/history?view=logs"
           },
           { 
             label: "Inventory", 
             value: stats.totalBooks, 
             icon: Library, 
-            desc: "Total volumes",
+            desc: "Current catalog total",
             href: "/inventory"
           },
           { 
-            label: "Members", 
-            value: stats.totalUsers, 
-            icon: UserCircle2, 
-            desc: "Registered users",
-            href: "/users"
+            label: "Active loans",
+            value: stats.activeBorrows,
+            icon: BookOpen,
+            desc: "Currently out",
+            href: "/history?view=logs&status=ACTIVE"
           },
         ].map((stat, i) => (
           <Link 

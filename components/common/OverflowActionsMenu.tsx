@@ -23,6 +23,7 @@ export interface OverflowAction {
 interface OverflowActionsMenuProps {
   actions: OverflowAction[];
   label?: string;
+  triggerText?: string;
   className?: string;
   align?: "start" | "center" | "end";
 }
@@ -34,6 +35,7 @@ interface OverflowActionsMenuProps {
 export function OverflowActionsMenu({
   actions,
   label = "More actions",
+  triggerText,
   className,
   align = "end",
 }: OverflowActionsMenuProps) {
@@ -45,14 +47,16 @@ export function OverflowActionsMenu({
         <Button
           type="button"
           variant="outline"
-          size="icon"
+          size={triggerText ? "default" : "icon"}
           aria-label={label}
           className={cn(
-            "h-11 w-11 shrink-0 rounded-xl border-border/30 bg-background/60 shadow-none hover:bg-muted/30",
+            "h-11 shrink-0 rounded-xl border-border/30 bg-background/60 shadow-none hover:bg-muted/30",
+            !triggerText && "w-11",
             className
           )}
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          {triggerText}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="min-w-[12rem] rounded-xl p-1.5">

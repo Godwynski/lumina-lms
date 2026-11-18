@@ -438,7 +438,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     expect(staffHandle.container.querySelector('a[href="/inventory/add"]')).toBeNull();
   });
 
-  it('AttendanceClient mobile overflow menu triggers Export (.xlsx)', async () => {
+  it('Attendance Logs retain search on mobile without an export menu', async () => {
     const todayRecords = [
       {
         id: 'att-1',
@@ -465,63 +465,12 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
       await Promise.resolve();
     });
 
-    const overflowTrigger = container.querySelector(
-      'button[aria-label="Attendance log actions"]'
-    ) as HTMLButtonElement;
-    await pressKey(overflowTrigger, 'Enter');
-
-    const exportItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((el) =>
-      el.textContent?.includes('Export (.xlsx)')
-    ) as HTMLElement;
-    await clickElement(exportItem);
-
-    await vi.waitFor(() => {
-      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_attendance_logs.xlsx');
-    });
+    expect(container.querySelector('[aria-label="Search attendance by patron name or ID"]')).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="Attendance log actions"]')).toBeNull();
   });
 
-  it('HistoryContent mobile overflow menu appears on every tab and fires Export/Print', async () => {
-    const printSpy = vi.fn();
-    vi.stubGlobal('print', printSpy);
-    mockExportBorrowingHistory.mockResolvedValue({
-      success: true,
-      data: {
-        records: [
-          {
-            id: 'rec-1',
-            borrowed_at: '2026-10-01T00:00:00Z',
-            due_date: '2026-10-15T00:00:00Z',
-            returned_at: null,
-            status: 'OVERDUE',
-            fine_amount: 40,
-            fine_settled_at: null,
-            books: { id: 'b-1', title: 'Clean Code', author: 'Martin', cover_url: null },
-            profiles: { full_name: 'Ana', student_id: '2026-1', email: 'ana@lumina.edu' },
-          },
-        ],
-        totalCount: 1,
-      },
-    });
-
-    const activeHandle = await renderClient(
-      <Suspense fallback={<div>Loading</div>}>
-        <HistoryContent
-          historyPromise={Promise.resolve({ records: [], totalCount: 0 })}
-          page={1}
-          statusFilter="ACTIVE"
-          searchQuery=""
-          userRole="librarian"
-        />
-      </Suspense>
-    );
-    await act(async () => {
-      await Promise.resolve();
-    });
-    // Export/print is available on every tab now (P4-HIS-006).
-    expect(activeHandle.container.querySelector('button[aria-label="History report actions"]')).not.toBeNull();
-    activeHandle.unmount();
-
-    const overdueHandle = await renderClient(
+  it('shows Borrowing Logs controls on mobile without duplicate report actions', async () => {
+    const { container } = await renderClient(
       <Suspense fallback={<div>Loading</div>}>
         <HistoryContent
           historyPromise={Promise.resolve({ records: [], totalCount: 0 })}
@@ -532,30 +481,11 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
         />
       </Suspense>
     );
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await act(async () => { await Promise.resolve(); });
 
-    const trigger = overdueHandle.container.querySelector(
-      'button[aria-label="History report actions"]'
-    ) as HTMLButtonElement;
-    expect(trigger).toBeInTheDocument();
-
-    await pressKey(trigger, 'Enter');
-    const printItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((el) =>
-      el.textContent?.includes('Print')
-    ) as HTMLElement;
-    await clickElement(printItem);
-    expect(printSpy).toHaveBeenCalledTimes(1);
-
-    await pressKey(trigger, 'Enter');
-    const exportItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((el) =>
-      el.textContent?.includes('Export (.xlsx)')
-    ) as HTMLElement;
-    await clickElement(exportItem);
-    await vi.waitFor(() => {
-      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_overdue_receivables.xlsx');
-    });
+    expect(container.querySelector('[aria-label="Search borrowing history"]')).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="History report actions"]')).toBeNull();
+    expect(container).toHaveTextContent('Settlements');
   });
 
   it('AnalyticsClient mobile overflow menu fires Export (.xlsx) and Print handlers', async () => {
@@ -589,6 +519,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
       await Promise.resolve();
     });
 
+    expect(container.querySelector('a[href^="/analytics/reports"]')).toHaveTextContent('Build report');
     const trigger = container.querySelector('button[aria-label="Analytics report actions"]') as HTMLButtonElement;
     await pressKey(trigger, 'Enter');
     await clickElement(

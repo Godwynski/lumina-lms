@@ -42,6 +42,8 @@ export interface AttendanceActionResult {
 const RECENT_CHECKIN_WINDOW_MS = 60_000;
 const DEFAULT_CLOSING_TIME = "17:00";
 const STALE_CHECKOUT_NOTES = "No Log Out";
+const attendanceDateRange = z.object({ from: z.iso.date().optional(), to: z.iso.date().optional() })
+  .refine(({ from, to }) => !from || !to || from <= to);
 
 function getManilaDateString(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -340,7 +342,7 @@ export const recordAttendanceByCard = createSafeAction(
 
 export async function getAttendanceHistory(
   userId?: string, 
-  options?: { range?: 'today' | 'all'; limit?: number; search?: string }
+  options?: { range?: 'today' | 'all'; limit?: number; search?: string; dateRange?: { from?: string; to?: string } }
 ) {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -356,17 +358,25 @@ export async function getAttendanceHistory(
   const PAGE_SIZE = 1000;
   const MAX_ROWS = 10000;
 
+  let dates: z.infer<typeof attendanceDateRange> | undefined;
+  if (options?.dateRange !== undefined) {
+    if (!isStaff || userId) throw new Error("Forbidden");
+    const parsed = attendanceDateRange.safeParse(options.dateRange);
+    if (!parsed.success) throw new Error("Invalid date range");
+    dates = parsed.data;
+  }
+
   // If no userId provided and is staff, show system records (today or all)
   if (!userId && isStaff) {
-    const range = options?.range || 'today';
-    const manilaStr = range === 'today'
-      ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
-      : null;
+    const range = options?.range ?? (dates ? 'all' : 'today');
+    const today = range === 'today' ? getManilaDateString(new Date()) : '';
+    const from = dates?.from && dates.from > today ? dates.from : today;
+    const end = dates?.to ? new Date(`${dates.to}T00:00:00+08:00`) : null;
+    if (end) end.setUTCDate(end.getUTCDate() + 1);
+    const search = options?.search?.replace(/[,()%*\\:]/g, " ").trim();
+    const limit = options?.limit ? Math.min(options.limit, MAX_ROWS) : MAX_ROWS;
 
-    if (options?.limit) {
-      // Strip characters that have meaning in PostgREST filter syntax.
-      const search = options.search?.replace(/[,()%*\\:]/g, " ").trim();
-
+    const staffQuery = () => {
       let query = supabase
         .from("attendance")
         .select(
@@ -375,9 +385,8 @@ export async function getAttendanceHistory(
             : "id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)"
         );
 
-      if (manilaStr) {
-        query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
-      }
+      if (from) query = query.gte("check_in_at", `${from}T00:00:00+08:00`);
+      if (end) query = query.lt("check_in_at", end.toISOString());
 
       if (search) {
         query = query.or(`full_name.ilike.%${search}%,student_id.ilike.%${search}%`, {
@@ -385,35 +394,23 @@ export async function getAttendanceHistory(
         });
       }
 
-      const { data, error } = await query
+      return query
         .order("check_in_at", { ascending: false })
-        .limit(options.limit);
-
-      if (error) throw error;
-      return (data || []).map(record => ({
-        ...record,
-        profiles: Array.isArray(record.profiles) ? record.profiles[0] : record.profiles
-      })) as unknown as AttendanceRecord[];
-    }
+        .order("id", { ascending: false });
+    };
 
     const allData: Record<string, unknown>[] = [];
-    for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
-      let query = supabase
-        .from("attendance")
-        .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)");
-
-      if (manilaStr) {
-        query = query.gte("check_in_at", `${manilaStr}T00:00:00+08:00`);
-      }
-
-      const { data: pageData, error } = await query
-        .order("check_in_at", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+    for (let offset = 0; offset < limit; offset += PAGE_SIZE) {
+      const batchSize = Math.min(PAGE_SIZE, limit - offset);
+      const query = staffQuery();
+      const { data: pageData, error } = await (limit <= PAGE_SIZE
+        ? query.limit(limit)
+        : query.range(offset, offset + batchSize - 1));
 
       if (error) throw error;
       const batch = (pageData || []) as Record<string, unknown>[];
       allData.push(...batch);
-      if (batch.length < PAGE_SIZE) break;
+      if (batch.length < batchSize) break;
     }
 
     return allData.map(record => ({

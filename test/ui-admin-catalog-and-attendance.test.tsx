@@ -62,7 +62,7 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockCreateClient(),
 }));
 
-import { AttendanceClient, buildAttendanceExportRows } from '@/app/(authenticated)/attendance/AttendanceClient';
+import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
 import type { AttendanceRecord } from '@/lib/actions/attendance';
 import { PolicyField } from '@/components/admin/policies/PolicyField';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -105,6 +105,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
 
   afterEach(() => {
     cleanupClients();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -156,27 +157,29 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const checkInModeBtn = findButtonByText(modeGroup, 'Check-In')!;
       const checkOutModeBtn = findButtonByText(modeGroup, 'Check-Out')!;
       expect(checkInModeBtn).toHaveAttribute('aria-pressed', 'true');
-      expect(checkInModeBtn).toHaveTextContent('Active');
-      expect(checkInModeBtn.className).toContain('bg-emerald-600');
+      expect(checkInModeBtn).toHaveTextContent(/^Check-In$/);
+      expect(checkInModeBtn).toHaveClass('text-primary');
       expect(checkOutModeBtn).toHaveAttribute('aria-pressed', 'false');
-      expect(checkOutModeBtn).not.toHaveTextContent('Active');
 
       const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
       expect(cardInput).toBeInTheDocument();
       const label = container.querySelector('label[for="attendance-card-id"]');
       expect(label).toHaveTextContent('Card ID or Patron ID');
-      expect(container).toHaveTextContent('Start camera');
-      expect(container).toHaveTextContent('Today');
-      expect(container).toHaveTextContent('All History');
-      expect(container).toHaveTextContent('active');
-      expect(container).toHaveTextContent('completed');
+      expect(container).toHaveTextContent('Scan with camera');
+      expect(findButtonByText(container, 'Date range')).toHaveAttribute('aria-expanded', 'false');
+      const submit = cardInput.form?.querySelector('button[type="submit"]');
+      expect(submit).toHaveTextContent('Record check-in');
+      expect(submit).toHaveClass('bg-primary');
+      expect(submit).toBeDisabled();
 
       // Switch to Check-Out mode
       await clickElement(checkOutModeBtn);
       expect(checkOutModeBtn).toHaveAttribute('aria-pressed', 'true');
-      expect(checkOutModeBtn).toHaveTextContent('Active');
-      expect(checkOutModeBtn.className).toContain('bg-orange-600');
+      expect(checkOutModeBtn).toHaveTextContent(/^Check-Out$/);
+      expect(checkOutModeBtn).toHaveClass('text-primary');
       expect(checkInModeBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(submit).toHaveTextContent('Record check-out');
+      expect(submit).toHaveClass('bg-primary');
 
       const updatedRecord = makeAttendance({
         id: 'att-2',
@@ -253,7 +256,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       // Switching to Check-Out enables submission so staff can check Maria Clara out
       await clickElement(checkOutModeBtn);
       expect(submitBtn).not.toBeDisabled();
-      expect(submitBtn).toHaveTextContent('Check-Out');
+      expect(submitBtn).toHaveTextContent('Record check-out');
 
       mockRecordAttendanceByCard.mockResolvedValueOnce({
         success: true,
@@ -279,7 +282,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(submitBtn).not.toBeDisabled();
     });
 
-    it('renders No Log Out badge in logs table and includes it in the xlsx export', async () => {
+    it('keeps attendance status and search in the logs while report actions live in Analytics', async () => {
       const autoClosedRecord = makeAttendance({
         id: 'att-auto',
         check_in_at: '2026-11-13T09:00:00Z',
@@ -296,33 +299,15 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const { container } = await renderStaffAttendance([autoClosedRecord, normalRecord], [autoClosedRecord, normalRecord]);
       expect(container).toHaveTextContent('No Log Out');
 
-      const exportRows = buildAttendanceExportRows([autoClosedRecord, normalRecord]);
-      expect(exportRows[0]).toMatchObject({
-        Patron: 'Maria Clara',
-        Status: 'No Log Out',
-        Notes: 'No Log Out',
-      });
-      expect(exportRows[1]).toMatchObject({
-        Status: 'Completed',
-        Notes: '',
-      });
-
-      const exportBtn = findButtonByText(container, 'Export (.xlsx)')!;
-      expect(exportBtn).toBeDefined();
-      await clickElement(exportBtn);
-
-      expect(mockXlsxJsonToSheet).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ Status: 'No Log Out', Notes: 'No Log Out' }),
-        ])
-      );
-      expect(mockXlsxWriteFile).toHaveBeenCalledWith(expect.anything(), 'lumina_attendance_logs.xlsx');
+      expect(container.querySelector('[aria-label="Search attendance by patron name or ID"]')).toBeInTheDocument();
+      expect(findButtonByText(container, 'Export (.xlsx)')).toBeUndefined();
+      expect(container.querySelector('[aria-label="Attendance log actions"]')).toBeNull();
     });
 
     it('opens Gate Attendance Scanner modal and restores focus to trigger on Escape', async () => {
       const { container } = await renderStaffAttendance();
 
-      const trigger = findButtonByText(container, 'Start camera')!;
+      const trigger = findButtonByText(container, 'Scan with camera')!;
       expect(trigger).toBeDefined();
       // DialogContent checks getClientRects().length before restoring focus; simulate visible geometry in jsdom
       trigger.getClientRects = () =>
@@ -336,6 +321,12 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const dialog = document.body.querySelector('[role="dialog"]');
       expect(dialog).toBeInTheDocument();
       expect(document.body).toHaveTextContent('Gate Attendance Scanner');
+      const scannerMode = dialog?.querySelector('[aria-label="Scanner attendance mode"]')!;
+      const scannerOut = findButtonByText(scannerMode, 'Check-Out')!;
+      await clickElement(scannerOut);
+      expect(scannerOut).toHaveAttribute('aria-pressed', 'true');
+      expect(scannerOut).toHaveClass('text-primary');
+      expect(scannerOut).toHaveTextContent(/^Check-Out$/);
 
       await pressKey(dialog, 'Escape');
       await act(async () => {
@@ -343,6 +334,86 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       });
       expect(document.body.querySelector('[role="dialog"]')).not.toBeInTheDocument();
       expect(document.activeElement).toBe(trigger);
+      expect(findButtonByText(container.querySelector('[aria-label="Attendance mode"]')!, 'Check-Out')).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('opens all history by default and applies or clears dates from a disclosure', async () => {
+      const open = makeAttendance({ id: 'open', check_in_at: '2026-11-13T16:00:00Z' });
+      const closed = makeAttendance({ id: 'closed', check_in_at: '2026-11-14T02:00:00Z', check_out_at: '2026-11-14T03:00:00Z' });
+      const older = makeAttendance({ id: 'older', check_in_at: '2026-11-12T05:00:00Z', profiles: { full_name: 'Earlier Patron' } });
+      const archive = makeAttendance({ id: 'archive', check_in_at: '2024-03-01T05:00:00Z', profiles: { full_name: 'Matching Patron' } });
+      const all = [open, closed, older];
+      const { container } = await renderStaffAttendance([open, closed], all);
+      const summary = container.querySelectorAll('[aria-label="Today’s attendance status"]');
+      expect(summary).toHaveLength(1);
+      expect(summary[0]).toHaveTextContent('1 open · 1 closed today');
+      expect(findButtonByText(container, 'Today')).toBeUndefined();
+      expect(findButtonByText(container, 'All History')).toBeUndefined();
+      expect(container.querySelector('tbody')).toHaveTextContent('Earlier Patron');
+      const filters = container.querySelector('[aria-label="Attendance record filters"]')!;
+      const toggle = findButtonByText(filters, 'Date range')!;
+      const search = filters.querySelector<HTMLInputElement>('input[type="search"]')!;
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await clickElement(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      const [from, to] = container.querySelectorAll<HTMLInputElement>('input[type="date"]');
+      expect(from).toBeVisible();
+      await typeIntoInput(from, '2024-03-02');
+      await typeIntoInput(to, '2024-03-01');
+      await submitForm(from.form!);
+      expect(container.querySelector('[role="alert"]')).toHaveTextContent('To date on or after the From date');
+      expect(mockGetAttendanceHistory).not.toHaveBeenCalled();
+      expect(container.querySelector('tbody')).toHaveTextContent('Earlier Patron');
+
+      await typeIntoInput(from, '2024-03-01');
+      mockGetAttendanceHistory.mockResolvedValueOnce([archive]);
+      await submitForm(from.form!);
+      await vi.waitFor(() => expect(container.querySelector('tbody')).toHaveTextContent('Matching Patron'));
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(toggle).toHaveTextContent('Mar 1, 2024');
+      expect(from).not.toBeVisible();
+      expect(document.activeElement).toBe(toggle);
+      expect(mockGetAttendanceHistory).toHaveBeenLastCalledWith(undefined, { range: 'all', limit: 300, dateRange: { from: '2024-03-01', to: '2024-03-01' } });
+
+      vi.useFakeTimers();
+      mockGetAttendanceHistory.mockResolvedValueOnce([]);
+      await typeIntoInput(search, 'Earlier Patron');
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(mockGetAttendanceHistory).toHaveBeenLastCalledWith(undefined, {
+        range: 'all', limit: 300, search: 'Earlier Patron', dateRange: { from: '2024-03-01', to: '2024-03-01' },
+      });
+      expect(container).toHaveTextContent('No logs found');
+      expect(container).not.toHaveTextContent('Matching Patron');
+      mockGetAttendanceHistory.mockResolvedValueOnce([older]);
+      await clickElement(toggle);
+      await clickElement(findButtonByText(container, 'Clear dates'));
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(container.querySelector('tbody')).toHaveTextContent('Earlier Patron');
+      expect(toggle).toHaveTextContent('Date range');
+      expect(search).toHaveValue('Earlier Patron');
+    });
+
+    it('retries a failed date lookup and discards draft changes on Escape', async () => {
+      const record = makeAttendance();
+      const { container } = await renderStaffAttendance([record], [record]);
+      const toggle = findButtonByText(container, 'Date range')!;
+      await clickElement(toggle);
+      const from = container.querySelector<HTMLInputElement>('input[type="date"]')!;
+      await typeIntoInput(from, '2026-11-13');
+      await pressKey(from, 'Escape');
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(document.activeElement).toBe(toggle);
+      await clickElement(toggle);
+      expect(from).toHaveValue('');
+      await typeIntoInput(from, '2026-11-14');
+      mockGetAttendanceHistory.mockRejectedValueOnce(new Error('Network failure'));
+      await submitForm(from.form!);
+      await vi.waitFor(() => expect(container.querySelector('[role="alert"]:not([hidden])')).toHaveTextContent("Couldn't load attendance records"));
+      mockGetAttendanceHistory.mockResolvedValueOnce([record]);
+      await clickElement(findButtonByText(container, 'Retry'));
+      await vi.waitFor(() => expect(container.querySelector('tbody')).toHaveTextContent('Maria Clara'));
+      expect(findButtonByText(container, 'Retry')).toBeUndefined();
+      expect(mockGetAttendanceHistory).toHaveBeenLastCalledWith(undefined, { range: 'all', limit: 300, dateRange: { from: '2026-11-14' } });
     });
 
     it('renders personal student view with All-Time History and Still in library badge', async () => {
@@ -366,6 +437,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(handle.container).toHaveTextContent('All-Time History');
       expect(handle.container).toHaveTextContent('Still in library');
       expect(handle.container.querySelector('#attendance-card-id')).not.toBeInTheDocument();
+      expect(findButtonByText(handle.container, 'Date range')).toBeUndefined();
     });
 
     it('filters the personal history by a Manila date range and clears it (P2-ATT-002)', async () => {

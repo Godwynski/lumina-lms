@@ -237,6 +237,9 @@ body [data-sonner-toaster][data-sonner-theme="light"] {
 }
 
 @media print {
+  body:has(> #report-print) > :not(#report-print) {
+    display: none !important;
+  }
   [data-slot="sidebar"],
   [data-sidebar="sidebar"],
   [data-slot="dialog-overlay"],

@@ -843,6 +843,53 @@ describe('attendance server actions', () => {
   });
 
   describe('getAttendanceHistory', () => {
+    it('applies Manila date bounds and patron search before the staff history limit', async () => {
+      const older = { id: 'older', check_in_at: '2024-03-01T15:59:59.999Z', user_id: 'patron-1', check_out_at: null };
+      supaMock.setTableResponse('attendance', [older]);
+
+      expect(await getAttendanceHistory(undefined, {
+        range: 'all', limit: 300, search: '2024-0001', dateRange: { from: '2024-03-01', to: '2024-03-01' },
+      })).toMatchObject([older]);
+
+      const query = supaMock.getTableBuilder('attendance');
+      expect(query.gte).toHaveBeenCalledWith('check_in_at', '2024-03-01T00:00:00+08:00');
+      expect(query.lt).toHaveBeenCalledWith('check_in_at', '2024-03-01T16:00:00.000Z');
+      expect(query.or).toHaveBeenCalledWith('full_name.ilike.%2024-0001%,student_id.ilike.%2024-0001%', { referencedTable: 'profiles' });
+      expect(query.gte.mock.invocationCallOrder[0]).toBeLessThan(query.limit.mock.invocationCallOrder[0]);
+      expect(query.lt.mock.invocationCallOrder[0]).toBeLessThan(query.limit.mock.invocationCallOrder[0]);
+    });
+
+    it('fetches the next database batch with the same one-sided filter', async () => {
+      const first = createMockQueryBuilder(Array.from({ length: 1000 }, (_, i) => ({ id: `current-${i}` })));
+      const second = createMockQueryBuilder([{ id: 'older' }]);
+      supaMock.from.mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+      const rows = await getAttendanceHistory(undefined, { range: 'all', limit: 1200, dateRange: { to: '2024-02-29' } });
+      expect(rows).toHaveLength(1001);
+      expect(rows.at(-1)?.id).toBe('older');
+      expect(first.range).toHaveBeenCalledWith(0, 999);
+      expect(second.range).toHaveBeenCalledWith(1000, 1199);
+      for (const query of [first, second]) {
+        expect(query.lt).toHaveBeenCalledWith('check_in_at', '2024-02-29T16:00:00.000Z');
+        expect(query.gte).not.toHaveBeenCalled();
+      }
+    });
+
+    it('rejects impossible or reversed dates and blocks staff date filters without attendance access', async () => {
+      for (const dateRange of [{ from: '2026-02-29' }, { from: '2024-03-02', to: '2024-03-01' }]) {
+        await expect(getAttendanceHistory(undefined, { range: 'all', limit: 25, dateRange })).rejects.toThrow('Invalid date range');
+      }
+      for (const profile of [
+        { role: 'patron' },
+        { role: 'library_staff', manageAttendance: false },
+        { role: 'library_staff', isDeactivatedSA: true },
+      ] as const) {
+        mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client, profile));
+        await expect(getAttendanceHistory(undefined, { range: 'all', limit: 25, dateRange: { from: '2024-03-01' } })).rejects.toThrow('Forbidden');
+      }
+      expect(supaMock.from).not.toHaveBeenCalled();
+    });
+
     it('throws Unauthorized when unauthenticated and Forbidden when a student queries another user', async () => {
       mockGetMe.mockResolvedValue(null);
       await expect(getAttendanceHistory()).rejects.toThrow('Unauthorized');

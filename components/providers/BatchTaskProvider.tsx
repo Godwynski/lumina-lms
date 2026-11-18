@@ -34,6 +34,7 @@ const dismissedKey = "catalog-import-dismissed-job";
 const isActive = (item: ImportItem) => ["queued", "processing", "retry"].includes(item.status);
 const needsReview = (item: ImportItem) => item.status === "review" || (item.status === "complete" && (item.metadata_status !== "complete" || item.cover_status !== "complete"));
 const activeJob = (job: ImportJob) => job.items.some(isActive);
+const jobNeedsAttention = (job: ImportJob) => job.items.some(item => item.status === "failed" || needsReview(item));
 const itemLabel = (item: ImportItem) => item.isbn || item.title || "No ISBN";
 
 async function request(url: string, body?: object) {
@@ -86,7 +87,7 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
       const finished = next.filter(job => !activeJob(job) && previousJobs.current.some(previous => previous.id === job.id && activeJob(previous)));
       if (finished.length) {
         startTransition(() => router.refresh());
-        const warning = finished.some(job => job.items.some(item => item.status === "failed" || needsReview(item)));
+        const warning = finished.some(jobNeedsAttention);
         if (warning) toast.warning("Catalog import finished with items needing attention. Review metadata and covers.");
         else toast.success("Catalog import complete. Metadata and covers are ready.");
       }
@@ -130,7 +131,9 @@ export function BatchTaskProvider({ children }: { children: ReactNode }) {
     return () => { clearInterval(timer); window.removeEventListener("focus", resume); };
   }, [hasActiveJobs, hasReadyItems, refreshJobs, wakeWorker]);
 
-  const selectedJob = jobs.find(candidate => candidate.id === selectedId) || jobs.find(activeJob) || jobs[0];
+  const latestJob = jobs[0];
+  const selectedJob = jobs.find(candidate => candidate.id === selectedId) || jobs.find(activeJob)
+    || (latestJob && jobNeedsAttention(latestJob) ? latestJob : undefined);
   const job = canManageImports && selectedJob?.id !== dismissedId ? selectedJob : undefined;
   const items = job?.items || [];
   const processing = !!job && activeJob(job);

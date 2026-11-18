@@ -473,8 +473,9 @@ describe('P1 Server Data & Caching Optimizations', () => {
     // Server-prefetched summary and stats are rendered immediately
     expect(container).toHaveTextContent('Dune');
     expect(container).toHaveTextContent('Frank Herbert');
-    expect(container).toHaveTextContent('42');
-    expect(container).toHaveTextContent('520');
+    expect(container).toHaveTextContent('Visits10Check-ins in selected period');
+    expect(container).toHaveTextContent('Loans issued5Loans in selected period');
+    expect(container).toHaveTextContent('Inventory520Current catalog total');
     // Only the 1 server RPC call ran — no extra client round-trip after hydration!
     const rpcCallsBeforeSwitch = serverSupa.rpc.mock.calls.filter(
       ([fn]) => fn === 'get_analytics_summary_window'

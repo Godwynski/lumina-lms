@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { BatchTaskProvider, useBatchTask } from '@/components/providers/BatchTaskProvider';
+import { toast } from 'sonner';
 
 const { refresh, preferences } = vi.hoisted(() => ({ refresh: vi.fn(), preferences: { role: 'librarian', profile: { status: 'ACTIVE' } } }));
 vi.mock('@/components/providers/PreferencesProvider', () => ({ usePreferences: () => preferences }));
@@ -52,6 +53,15 @@ it('polls an unfinished job and stops polling once it finishes', async () => {
   const count = fetchMock.mock.calls.length;
   await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
   expect(fetchMock).toHaveBeenCalledTimes(count);
+});
+
+it('keeps a job already completed before the page opened out of the global banner and toast', async () => {
+  vi.mocked(toast.success).mockClear();
+  jobs = [{ id: 'job1', label: 'ISBN import', items: [{ ...item, status: 'complete', cover_status: 'complete' }] }];
+  await act(async () => root.render(<BatchTaskProvider><Probe /></BatchTaskProvider>));
+  expect(host.querySelector('aside')).toBeNull();
+  expect(toast.success).not.toHaveBeenCalled();
+  expect(host.querySelector('[data-testid="processing"]')).toHaveTextContent('false');
 });
 
 
