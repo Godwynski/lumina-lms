@@ -132,6 +132,8 @@ const mockRouter = {
 };
 let mockPathname = '/dashboard';
 let mockSearchParamsString = '';
+let mockPendingHref: string | undefined;
+const MockLinkHref = React.createContext<string | undefined>(undefined);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
@@ -140,18 +142,21 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
+  useLinkStatus: () => ({ pending: React.useContext(MockLinkHref) === mockPendingHref && mockPendingHref !== undefined }),
   default: ({
     href,
     children,
-    prefetch: _prefetch,
+    prefetch,
     ...props
   }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     href: string;
-    prefetch?: boolean;
+    prefetch?: boolean | 'auto' | null;
   }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
+    <MockLinkHref.Provider value={href}>
+      <a href={href} data-prefetch={prefetch ?? 'auto'} {...props}>
+        {children}
+      </a>
+    </MockLinkHref.Provider>
   ),
 }));
 
@@ -1735,7 +1740,47 @@ describe('Layout Components', () => {
     await clickElement(cancelDialogBtn);
   });
 
-  it('ProtectedNav supports library_staff split history/attendance links, prefetching, mobile close, and logout confirmation', async () => {
+  it('ProtectedNav uses default prefetching and shows pending feedback on the requested link', async () => {
+    const nav = () => (
+      <PreferencesProvider
+        initialPreferences={{}}
+        initialRole="patron"
+        initialProfile={makeProfile({ role: 'patron', status: 'ACTIVE' })}
+      >
+        <SidebarProvider>
+          <ProtectedNav user={makeUser()} />
+        </SidebarProvider>
+      </PreferencesProvider>
+    );
+    const { container, rerender } = await renderClient(nav());
+    const catalog = container.querySelector('nav a[href="/student-catalog"]')!;
+    const history = container.querySelector('nav a[href="/history"]')!;
+    expect(catalog.getAttribute('data-prefetch')).toBe('auto');
+    expect(container.querySelector('nav [role="status"]')?.textContent ?? '').toBe('');
+    expect(container.querySelector('nav a[href="/inventory"]')).toBeNull();
+
+    const updatePendingLink = async (href?: string) => {
+      mockPendingHref = href;
+      await rerender(nav());
+    };
+
+    try {
+      await updatePendingLink('/student-catalog');
+      expect(catalog.querySelector('[role="status"]')).toHaveTextContent('Loading page');
+      expect(history.querySelector('[role="status"]')).toBeEmptyDOMElement();
+
+      await updatePendingLink('/history');
+      expect(catalog.querySelector('[role="status"]')).toBeEmptyDOMElement();
+      expect(history.querySelector('[role="status"]')).toHaveTextContent('Loading page');
+
+      await updatePendingLink();
+      expect(history.querySelector('[role="status"]')).toBeEmptyDOMElement();
+    } finally {
+      mockPendingHref = undefined;
+    }
+  });
+
+  it('ProtectedNav supports library_staff split history/attendance links, mobile close, and logout confirmation', async () => {
     const sb = makeSupabaseMock();
     mockCreateClient.mockReturnValue(sb);
 
@@ -1773,23 +1818,25 @@ describe('Layout Components', () => {
     const logsLink = container.querySelector('a[href="/history?view=logs"]') as HTMLAnchorElement;
     expect(logsLink.getAttribute('aria-current')).toBe('page');
 
-    // Hover triggers router.prefetch on logo and nav links
+    // Let Next prefetch the loading boundary without starting another full fetch on hover.
     const logoLink = container.querySelector('a[href="/dashboard"]') as HTMLAnchorElement;
     await act(async () => {
       logoLink.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
       logsLink.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
-    expect(mockRouterPrefetch).toHaveBeenCalledWith('/dashboard');
-    expect(mockRouterPrefetch).toHaveBeenCalledWith('/history?view=logs');
+    expect(logoLink.dataset.prefetch).toBe('auto');
+    expect(logsLink.dataset.prefetch).toBe('auto');
+    expect(mockRouterPrefetch).not.toHaveBeenCalled();
 
-    // Open dropdown, hover My Profile to prefetch, then confirm Log out
+    // Account links use the same default strategy.
     const accountTrigger = findButtonByText(container, 'Ada Lovelace');
     await openRadixPopup(accountTrigger!);
     const profileLink = document.body.querySelector('a[href="/profile"]') as HTMLAnchorElement;
     await act(async () => {
       profileLink.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
-    expect(mockRouterPrefetch).toHaveBeenCalledWith('/profile');
+    expect(profileLink.dataset.prefetch).toBe('auto');
+    expect(mockRouterPrefetch).not.toHaveBeenCalled();
 
     const logoutMenuItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (el) => el.textContent?.includes('Log out')
@@ -1872,7 +1919,9 @@ describe('Layout Components', () => {
     expect(document.body.textContent).toContain('librarian');
     expect(document.body.textContent).toContain('grace@alabang.sti.edu.ph');
     const profileLink = document.body.querySelector('a[href="/profile"]');
-    expect(profileLink).not.toBeNull();
+    const securityLink = document.body.querySelector('a[href="/security"]');
+    expect(profileLink).toHaveAttribute('data-prefetch', 'auto');
+    expect(securityLink).toHaveAttribute('data-prefetch', 'auto');
 
     const logoutItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (el) => el.textContent?.includes('Log out')

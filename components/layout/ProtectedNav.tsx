@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link, { useLinkStatus } from "next/link";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
@@ -98,6 +98,24 @@ const NAV_ITEMS: GroupedNavItem[] = [
 ];
 const SETTINGS_PATHS = ["/profile", "/security", "/policies"];
 
+function NavLinkStatus() {
+  const { pending } = useLinkStatus();
+
+  return (
+    <span
+      role="status"
+      className="ml-auto size-4 shrink-0 group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:bottom-0 group-data-[collapsible=icon]:right-0 group-data-[collapsible=icon]:size-3"
+    >
+      {pending && (
+        <>
+          <Loader2 aria-hidden="true" className="size-full motion-safe:animate-spin" />
+          <span className="sr-only">Loading page</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export function ProtectedNav({
   role: _initialRole,
   user,
@@ -109,7 +127,6 @@ export function ProtectedNav({
   profile?: Profile | null;
   preferences?: Record<string, unknown>;
 }) {
-  const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
@@ -179,12 +196,6 @@ export function ProtectedNav({
       return hasPermission(currentRole, item, currentProfile);
     });
   }, [currentRole, currentProfile]);
-
-  const handlePrefetch = useCallback((href: string) => {
-    if (href && href !== '#' && !href.startsWith('javascript:')) {
-      router.prefetch(href);
-    }
-  }, [router]);
 
   // ── Memoised nav-item list (previously an un-memoised IIFE) ─────────────
   const viewParam = mounted ? searchParams.get("view") : null;
@@ -305,8 +316,6 @@ export function ProtectedNav({
         <SidebarTrigger className="hidden md:flex h-8 w-8 shrink-0 items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors group-data-[collapsible=icon]:flex" />
         <Link 
           href="/dashboard" 
-          prefetch={true}
-          onMouseEnter={() => handlePrefetch("/dashboard")}
           className="flex items-center gap-3 shrink-0 group-data-[collapsible=icon]:hidden" 
 
         >
@@ -337,15 +346,14 @@ export function ProtectedNav({
                         href={item.href}
                         aria-label={item.label}
                         aria-current={item.isActive ? (pathname === item.href.split('?')[0] ? 'page' : 'location') : undefined}
-                        prefetch={true}
-                        className="flex items-center w-full group-data-[collapsible=icon]:justify-center" 
+                        className="relative flex items-center w-full group-data-[collapsible=icon]:justify-center"
                         onClick={() => {
                           if (isMobile) setOpenMobile(false);
                         }}
-                        onMouseEnter={() => handlePrefetch(item.href)}
                       >
                         {item.icon && <item.icon className="shrink-0" />}
                         <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+                        <NavLinkStatus />
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -404,12 +412,10 @@ export function ProtectedNav({
                   <DropdownMenuItem asChild>
                     <Link 
                       href="/profile" 
-                      prefetch={true}
                       className="flex w-full cursor-pointer items-center" 
                       onClick={() => {
                         if (isMobile) setOpenMobile(false);
                       }}
-                      onMouseEnter={() => handlePrefetch("/profile")}
                     >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>My Profile</span>
@@ -418,12 +424,10 @@ export function ProtectedNav({
                   <DropdownMenuItem asChild>
                     <Link 
                       href="/security" 
-                      prefetch={true}
                       className="flex w-full cursor-pointer items-center" 
                       onClick={() => {
                         if (isMobile) setOpenMobile(false);
                       }}
-                      onMouseEnter={() => handlePrefetch("/security")}
                     >
                       <Shield className="mr-2 h-4 w-4" />
                       <span>Security</span>
