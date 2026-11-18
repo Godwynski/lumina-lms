@@ -199,16 +199,13 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-11 sm:h-9 px-3.5 sm:px-3 gap-2 shrink-0 rounded-xl"
+                  className="h-11 shrink-0 gap-2 rounded-xl px-3.5 lg:hidden"
                   aria-label={activeTab !== "all" ? `Filter users (${roleFilterLabels[activeTab]})` : "Filter users"}
                 >
                   <Filter size={14} aria-hidden="true" />
                   <span>Filter</span>
                   {activeTab !== "all" && (
-                    <Badge variant="secondary" className="h-5 px-1.5 text-[11px] min-w-5 justify-center">
-                      <span className="sm:hidden">1</span>
-                      <span className="hidden sm:inline">{roleFilterLabels[activeTab]}</span>
-                    </Badge>
+                    <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-[11px]">1</Badge>
                   )}
                 </Button>
               </SheetTrigger>
@@ -237,7 +234,19 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                 </div>
               </SheetContent>
             </Sheet>
-            <div className="hidden sm:block flex-1" />
+            <select
+              aria-label="Filter users by role or status"
+              className="hidden h-10 max-w-full rounded-xl border border-input bg-background px-3 text-sm lg:block"
+              value={activeTab}
+              onChange={(event) => {
+                const tab = visibleTabs.find((value) => value === event.currentTarget.value);
+                if (tab) setActiveTab(tab);
+              }}
+            >
+              {visibleTabs.map((tab) => (
+                <option key={tab} value={tab}>{roleFilterLabels[tab]}</option>
+              ))}
+            </select>
           </div>
         )}
         pagination={

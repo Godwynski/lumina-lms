@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import {
@@ -115,6 +116,7 @@ vi.mock('@/lib/logger', () => ({
 import { ProtectedNav } from '@/components/layout/ProtectedNav';
 import { BreadcrumbNav } from '@/components/layout/BreadcrumbNav';
 import { UserNav } from '@/components/layout/UserNav';
+import { AccountTabs } from '@/components/settings/AccountTabs';
 import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
@@ -366,9 +368,25 @@ describe('B1 Shell, Nav & Tokens', () => {
     expect(footer?.textContent).toContain('ada@alabang.sti.edu.ph');
 
     const accountBtn = footer!.querySelector('button') as HTMLElement;
-    await openRadixPopup(accountBtn);
-    expect(document.body.querySelector('a[href="/profile"]')?.textContent).toContain('My Profile');
-    expect(document.body.querySelector('a[href="/security"]')?.textContent).toContain('Security');
+    await act(async () => {
+      accountBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        pointerType: 'touch',
+        button: 0,
+      }));
+      accountBtn.click();
+    });
+    expect(container.querySelector('[data-sidebar="trigger"]')).toHaveAttribute('aria-expanded', 'true');
+    const menu = mobileSheet!.querySelector('[role="menu"]');
+    const profileLink = menu?.querySelector('a[href="/profile"]');
+    expect(profileLink).toHaveTextContent('My Profile');
+    expect(menu?.querySelector('a[href="/security"]')).toHaveTextContent('Security');
+    expect(menu?.querySelector('a[href="/users"]')).toBeNull();
+
+    profileLink?.addEventListener('click', event => event.preventDefault(), { once: true });
+    await clickElement(profileLink);
+    expect(container.querySelector('[data-sidebar="trigger"]')).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('UserNav displays canonical My Profile and Security links in account dropdown', async () => {
@@ -394,6 +412,18 @@ describe('B1 Shell, Nav & Tokens', () => {
     expect(profileLink?.textContent).toContain('My Profile');
     expect(profileLink?.textContent).not.toContain('Profile Settings');
     expect(securityLink?.textContent).toContain('Security');
+  });
+
+  it('AccountTabs exposes both settings destinations and identifies the active page', async () => {
+    const { container, rerender } = await renderClient(<AccountTabs active="profile" />);
+    const profile = container.querySelector('a[href="/profile"]');
+    const security = container.querySelector('a[href="/security"]');
+    expect(profile).toHaveAccessibleName('My Profile');
+    expect(security).toHaveAccessibleName('Security');
+    expect(profile).toHaveAttribute('aria-current', 'page');
+    await rerender(<AccountTabs active="security" />);
+    expect(profile).not.toHaveAttribute('aria-current');
+    expect(security).toHaveAttribute('aria-current', 'page');
   });
 
   it('BreadcrumbNav formats /inventory/add as Add Book and /policies as System Policies', async () => {

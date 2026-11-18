@@ -390,6 +390,8 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     });
 
     // Active filter count badge = 2 (status=ARCHIVED + categoryId=cat-1)
+    expect(managedHandle.container.querySelector('input[aria-label="Search inventory"]')).toHaveAttribute('placeholder', 'Search books');
+    expect(managedHandle.container.querySelectorAll('a[aria-label="Add Book"]')).toHaveLength(1);
     const filtersBtn = managedHandle.container.querySelector('button[aria-label="Filters (2 active)"]')!;
     expect(filtersBtn).toHaveTextContent('2');
 
@@ -641,6 +643,15 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     await clickElement(findButtonByText(document.body, 'Pending Review'));
     expect(mockGetUsers).toHaveBeenCalledWith(expect.objectContaining({ tab: 'review' }));
     expect(findButtonByText(libHandle.container, 'Filter')).toHaveTextContent('1');
+
+    const inlineFilter = libHandle.container.querySelector<HTMLSelectElement>('select[aria-label="Filter users by role or status"]')!;
+    expect(inlineFilter).toHaveValue('review');
+    expect(Array.from(inlineFilter.options, option => option.label)).not.toContain('Super Admin');
+    await act(async () => {
+      inlineFilter.value = 'all';
+      inlineFilter.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ tab: 'all' }));
   });
 
   it('UserDetailClient mobile overflow menu shows Archive only for super_admin and hides it for librarian', async () => {
@@ -718,7 +729,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     expect(adminItem.textContent?.trim()).toBe('Export / Import');
   });
 
-  it('CategoryManagement header stacks cleanly and keeps Bulk Management + Add Category interactive', async () => {
+  it('CategoryManagement keeps Add Category available and starts bulk editing from the compact menu', async () => {
     const { container } = await renderClient(
       <CategoryManagement initialCategories={[{ id: 'c1', name: 'Science', slug: 'science', is_active: true }]} />
     );
@@ -727,12 +738,19 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     expect(addBtn).toBeInTheDocument();
     expect(bulkBtn).toBeInTheDocument();
 
-    await clickElement(bulkBtn);
-    expect(findButtonByText(container, 'Save Changes')).toBeInTheDocument();
+    await clickElement(addBtn);
+    expect(document.body.querySelector('[role="dialog"]')).toHaveTextContent('Add Category');
+    await pressKey(document.activeElement, 'Escape');
+
+    await pressKey(container.querySelector('button[aria-label="Category actions"]'), 'Enter');
+    const menuItem = document.body.querySelector('[role="menuitem"]');
+    expect(menuItem).toHaveTextContent('Bulk Management');
+    await clickElement(menuItem);
+    expect(findButtonByText(container, 'Save Changes')).toBeDisabled();
     expect(findButtonByText(container, 'Discard')).toBeInTheDocument();
   });
 
-  it('NotificationsPage renders Clear unread inline with TabsList and calls markAllAsRead', async () => {
+  it('NotificationsPage keeps search available and can clear unread from the compact actions menu', async () => {
     mockUseNotifications.mockReturnValue({
       notifications: [
         {
@@ -763,7 +781,11 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     const { container } = await renderClient(<NotificationsPage />);
     const clearBtn = findButtonByText(container, 'Clear unread')!;
     expect(clearBtn).toBeInTheDocument();
-    await clickElement(clearBtn);
+    expect(container.querySelector('input[aria-label="Search all notifications"]')).toBeInTheDocument();
+    await pressKey(container.querySelector('button[aria-label="Notification actions"]'), 'Enter');
+    const menuItem = document.body.querySelector('[role="menuitem"]');
+    expect(menuItem).toHaveTextContent('Clear unread');
+    await clickElement(menuItem);
     expect(mockMarkAllAsRead).toHaveBeenCalledTimes(1);
   });
 
@@ -827,7 +849,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     const desktopTableWrapper = container.querySelector('div.hidden.lg\\:block');
     expect(desktopTableWrapper?.querySelector('table')).toBeInTheDocument();
 
-    const toggleBtn = container.querySelector('div.lg\\:hidden button[aria-expanded]') as HTMLButtonElement;
+    const toggleBtn = container.querySelector('[role="list"][aria-label="Audit entries"] button[aria-expanded]') as HTMLButtonElement;
     expect(toggleBtn).toBeInTheDocument();
     expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
 

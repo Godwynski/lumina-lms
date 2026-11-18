@@ -565,7 +565,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
 
               <OverflowActionsMenu
                 label="Audit log actions"
-                className="sm:hidden"
+                className="lg:hidden"
                 actions={[
                   {
                     id: "export-import-audit",
@@ -580,7 +580,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 variant="default"
                 size="sm"
                 onClick={() => setIsExportImportOpen(true)}
-                className="hidden sm:inline-flex h-10 rounded-lg text-xs font-semibold px-4 transition-all w-auto"
+                className="hidden h-10 w-auto rounded-lg px-4 text-xs font-semibold transition-all lg:inline-flex"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
                 <span>{canImport ? "Export / Import" : "Export"}</span>
@@ -635,7 +635,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
         {data?.logs && data.logs.length > 0 && (
           <>
             {/* Mobile & Tablet Cards (< 1024px) */}
-            <div className="lg:hidden flex flex-col divide-y divide-border/40">
+            <div role="list" aria-label="Audit entries" className="lg:hidden flex flex-col divide-y divide-border/40">
               {data.logs.map((log) => {
                 const dateString = log.created_at ? formatManilaTimestamp(log.created_at) : "N/A";
                 const isExpanded = expandedRowId === log.id;
@@ -653,6 +653,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 return (
                   <div
                     key={`mobile-${log.id}`}
+                    role="listitem"
                     className={cn(
                       "p-3.5 space-y-2.5 transition-colors",
                       isExpanded && "bg-muted/10"

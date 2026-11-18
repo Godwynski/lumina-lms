@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Search } from 'lucide-react'
+import { OverflowActionsMenu } from '@/components/common/OverflowActionsMenu'
 import { useNotifications, type Notification } from '@/hooks/use-notifications'
 import { NotificationList } from '@/components/notifications/NotificationList'
 import { NotificationDetailsDialog } from '@/components/notifications/NotificationDetailsDialog'
@@ -112,8 +113,8 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="all" className="w-full space-y-4">
-        <div className="flex flex-wrap md:flex-nowrap justify-between items-center gap-1.5 sm:gap-2 md:gap-3">
-          <TabsList aria-label="Filter notifications" className="order-1 group-data-[orientation=horizontal]/tabs:h-auto">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <TabsList aria-label="Filter notifications" className="group-data-[orientation=horizontal]/tabs:h-auto">
             <TabsTrigger value="all" className="min-h-11 min-w-[44px] md:min-w-0 md:min-h-0 px-2 sm:px-3 text-xs sm:text-sm">
               All
             </TabsTrigger>
@@ -129,7 +130,15 @@ export default function NotificationsPage() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="relative order-3 w-full md:order-2 md:w-64 md:ml-auto group">
+          <OverflowActionsMenu
+            label="Notification actions"
+            className="ml-auto lg:hidden"
+            actions={[
+              ...(unreadCount > 0 ? [{ id: 'clear-unread', label: 'Clear unread', onSelect: markAllAsRead }] : []),
+              ...(hasRead ? [{ id: 'clear-read', label: 'Clear read', onSelect: handleClearRead }] : []),
+            ]}
+          />
+          <div className="relative w-full min-w-0 lg:ml-auto lg:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               type="search"
@@ -142,7 +151,7 @@ export default function NotificationsPage() {
           </div>
 
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger aria-label="Filter by type" className="order-2 md:order-3 h-11 md:h-9 w-auto shrink-0 rounded-lg text-xs">
+            <SelectTrigger aria-label="Filter by type" className="h-11 w-auto max-w-full shrink-0 rounded-lg text-xs lg:h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -158,7 +167,7 @@ export default function NotificationsPage() {
               variant="outline"
               size="sm"
               onClick={markAllAsRead}
-              className="order-2 md:order-3 h-11 md:h-9 shrink-0 rounded-lg px-2 sm:px-3 text-xs font-semibold"
+              className="hidden h-9 shrink-0 rounded-lg px-3 text-xs font-semibold lg:inline-flex"
             >
               Clear unread
             </Button>
@@ -168,7 +177,7 @@ export default function NotificationsPage() {
               variant="outline"
               size="sm"
               onClick={handleClearRead}
-              className="order-2 md:order-3 h-11 md:h-9 shrink-0 rounded-lg px-2 sm:px-3 text-xs font-semibold"
+              className="hidden h-9 shrink-0 rounded-lg px-3 text-xs font-semibold lg:inline-flex"
             >
               Clear read
             </Button>

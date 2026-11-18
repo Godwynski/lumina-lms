@@ -1402,6 +1402,7 @@ describe('Layout Components', () => {
     expect(container.querySelector('h1')?.textContent).toBe('Book Details');
     const backLink = container.querySelector('a');
     expect(backLink?.getAttribute('href')).toBe('/student-catalog');
+    expect(backLink).toHaveAccessibleName('Back to Catalog');
     expect(backLink?.textContent).toContain('Catalog');
 
     // /catalog/add redirects back link to /inventory
@@ -1443,6 +1444,13 @@ describe('Layout Components', () => {
       </PreferencesProvider>
     );
     expect(container.querySelector('h1')?.textContent).toBe('Attendance Logs');
+
+    await rerender(
+      <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="patron">
+        <BreadcrumbNav />
+      </PreferencesProvider>
+    );
+    expect(container.querySelector('h1')?.textContent).toBe('My Attendance');
 
     // parentSegment === 'history' with view=logs as librarian -> back link Borrowing Logs
     mockPathname = '/history/entry-1';
@@ -1497,6 +1505,7 @@ describe('Layout Components', () => {
 
     expect(container.textContent).toContain('Dashboard');
     expect(container.textContent).toContain('UserSlot');
+    expect(container.querySelector('header button[data-sidebar="trigger"]')).toHaveAccessibleName('Toggle Sidebar');
     expect(
       container.querySelector('button[aria-label="Notifications"]')
     ).not.toBeNull();

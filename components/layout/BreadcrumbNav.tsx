@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
 import { useSearchParamsLite } from "@/hooks/use-search-params-lite";
@@ -54,12 +55,7 @@ function formatSegment(segment: string, parentSegment?: string) {
     .join(" ");
 }
 
-/**
- * The page title is the heading only once per page. The mobile and desktop headers both render this
- * component, so the duplicate passes sHeading={false} to get a plain text title.
- */
-export function BreadcrumbNav({ asHeading = true }: { asHeading?: boolean } = {}) {
-  const Title = asHeading ? "h1" : "span";
+export function BreadcrumbNav() {
   const pathname = usePathname();
   const searchParams = useSearchParamsLite();
   const { role } = usePreferences();
@@ -73,7 +69,7 @@ export function BreadcrumbNav({ asHeading = true }: { asHeading?: boolean } = {}
   if (clean === "/dashboard" || clean === "/dashboard/") {
     return (
       <div className="flex items-center gap-2">
-        <Title className="text-base font-bold tracking-tight text-foreground md:text-xl">Dashboard</Title>
+        <h1 className="text-base font-bold tracking-tight text-foreground md:text-xl">Dashboard</h1>
       </div>
     );
   }
@@ -117,14 +113,20 @@ export function BreadcrumbNav({ asHeading = true }: { asHeading?: boolean } = {}
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
-      <Title className="truncate text-base font-bold tracking-tight text-foreground md:text-xl">{title}</Title>
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1 lg:gap-3">
       {backHref && backLabel && (
-        <Link href={backHref} className="ml-1 hidden text-xs font-medium text-muted-foreground transition-colors hover:text-primary sm:inline-flex items-center gap-1">
-          <div className="h-1 w-1 rounded-full bg-border" />
-          {backLabel}
+        <Link
+          href={backHref}
+          aria-label={`Back to ${backLabel}`}
+          className="inline-flex size-11 shrink-0 items-center justify-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground lg:w-auto lg:px-2"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4 shrink-0" />
+          <span className="hidden whitespace-nowrap lg:inline">{backLabel}</span>
         </Link>
       )}
+      <h1 className="line-clamp-2 min-w-0 break-words text-base font-bold leading-tight tracking-tight text-foreground md:text-xl md:leading-tight">
+        {title}
+      </h1>
     </nav>
   );
 }

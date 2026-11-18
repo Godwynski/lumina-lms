@@ -358,7 +358,8 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
 
     const table = container.querySelector('table')!;
     expect(table.className).not.toContain('min-w-[1000px]');
-    expect(container.querySelector('.lg\\:hidden')).toHaveTextContent('Elena Reyes');
+    const cards = container.querySelector('[role="list"][aria-label="Audit entries"]');
+    expect(cards?.querySelector('[role="listitem"]')).toHaveTextContent('Elena Reyes');
 
     cleanupClients();
 

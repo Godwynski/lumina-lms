@@ -1,6 +1,6 @@
 "use client"
 
-import { useSidebar } from "@/components/ui/sidebar"
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Logo } from "@/components/layout/Logo"
 import Link from "next/link"
 import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav"
@@ -18,11 +18,12 @@ export function MainHeader({ userNav }: MainHeaderProps) {
   const isCollapsed = state === "collapsed"
 
   return (
-    <header className="sticky top-0 z-40 hidden md:flex h-16 shrink-0 items-center gap-4 border-b border-border/20 bg-background/60 backdrop-blur-2xl px-6 transition-all duration-300">
-      <div className="flex items-center flex-1 overflow-hidden">
+    <header className="sticky top-0 z-40 flex min-h-14 min-w-0 shrink-0 items-center gap-1 border-b border-border bg-background/90 px-2.5 backdrop-blur-md md:min-h-16 md:gap-4 md:border-border/20 md:bg-background/60 md:px-6 md:backdrop-blur-2xl print:hidden">
+      <SidebarTrigger className="size-11 shrink-0 md:hidden" />
+      <div className="flex min-w-0 flex-1 items-center">
         <div inert={!isCollapsed}
           className={cn(
-            "flex items-center gap-5 transition-all duration-500 ease-in-out",
+            "hidden items-center gap-5 overflow-hidden transition-all duration-500 ease-in-out lg:flex",
             isCollapsed 
               ? "max-w-[240px] opacity-100 translate-x-0 mr-6" 
               : "max-w-0 opacity-0 -translate-x-8 mr-0 pointer-events-none"
@@ -41,21 +42,17 @@ export function MainHeader({ userNav }: MainHeaderProps) {
           <div className="h-5 w-[1px] bg-border/20 mx-1" />
         </div>
 
-        <div className="flex-1 truncate">
-          <div className="text-xs font-semibold tracking-wide">
-            <BreadcrumbNav />
-          </div>
-        </div>
+        <BreadcrumbNav />
+      </div>
 
-        <div className="flex items-center gap-3">
-          <NotificationBell />
-          {userNav && (
-            <>
-              <div className="h-8 w-[1px] bg-border/20 mx-1" />
-              {userNav}
-            </>
-          )}
-        </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <NotificationBell />
+        {userNav && (
+          <div className="hidden items-center gap-3 md:flex">
+            <div className="mx-1 h-8 w-px bg-border/20" />
+            {userNav}
+          </div>
+        )}
       </div>
     </header>
   )

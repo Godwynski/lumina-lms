@@ -46,10 +46,10 @@ export function AdminTableShell({
     <div className={cn("flex w-full min-w-0 flex-col gap-4", className)}>
       {(title || headerActions) && (
         <div className={cn(
-          "flex flex-col gap-4 pb-2 sm:flex-row sm:items-end sm:justify-between",
+          "flex min-w-0 flex-col gap-3 pb-2 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between",
           !isGhost && "border-b border-border/5 pb-6"
         )}>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             {title && (
               <h2 className="text-2xl font-bold tracking-tight text-foreground">
                 {title}
@@ -70,7 +70,7 @@ export function AdminTableShell({
       {feedback}
 
       {controls && (
-        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center bg-muted/20 p-2.5 rounded-xl border border-border/50">
+        <div className="relative z-10 flex min-w-0 flex-col gap-3 rounded-xl border border-border/50 bg-muted/20 p-2.5 lg:flex-row lg:flex-wrap lg:items-center">
           {controls}
         </div>
       )}

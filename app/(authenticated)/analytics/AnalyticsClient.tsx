@@ -148,8 +148,8 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
         <p className="text-xs text-muted-foreground">Date Range: {loadedDates.from} – {loadedDates.to}</p>
       </div>
 
-      <div className="relative flex items-center justify-between sm:justify-end gap-2 px-0 sm:px-1 print:hidden">
-        <div className="hidden sm:flex items-center gap-2">
+      <div className="relative flex min-w-0 flex-wrap items-center justify-between gap-2 lg:justify-end print:hidden">
+        <div className="hidden flex-wrap items-center gap-2 lg:flex">
           <Button
             type="button"
             variant="outline"
@@ -173,7 +173,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
           </Button>
         </div>
 
-        <div className="grid grid-cols-4 sm:flex flex-1 sm:flex-none min-w-0 bg-muted/40 p-1 rounded-xl border border-border/60">
+        <div className="grid min-w-0 flex-1 grid-cols-4 rounded-xl border border-border/60 bg-muted/40 p-1 lg:flex lg:flex-none">
           {RANGES.map((r) => (
             <button
               key={r.value}
@@ -210,7 +210,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
 
         <OverflowActionsMenu
           label="Analytics report actions"
-          className="sm:hidden"
+          className="lg:hidden"
           actions={[
             {
               id: "export-analytics",

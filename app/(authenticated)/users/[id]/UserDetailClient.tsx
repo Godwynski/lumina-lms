@@ -451,7 +451,7 @@ export function UserDetailClient({
 
                   <OverflowActionsMenu
                     label="More user actions"
-                    className="sm:hidden ml-auto"
+                    className="ml-auto lg:hidden"
                     actions={[
                       {
                         id: "other-info",
@@ -476,7 +476,7 @@ export function UserDetailClient({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="hidden sm:inline-flex h-9 rounded-lg text-xs font-medium gap-1.5"
+                    className="hidden h-9 gap-1.5 rounded-lg text-xs font-medium lg:inline-flex"
                     onClick={() => setSecondaryOpen(true)}
                   >
                     <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -487,7 +487,7 @@ export function UserDetailClient({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="hidden sm:inline-flex h-9 rounded-lg text-xs font-medium gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                      className="ml-auto hidden h-9 gap-1.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive lg:inline-flex"
                       onClick={() => setArchiveOpen(true)}
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />

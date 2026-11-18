@@ -1419,6 +1419,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
       const shell = await ProtectedLayout({ children: <p>Page body</p> });
       const { container } = await renderClient(<Suspense fallback={null}>{shell}</Suspense>);
+      expect(container.querySelectorAll('header h1')).toHaveLength(1);
+      expect(container.querySelectorAll('button[aria-label="Notifications"]')).toHaveLength(1);
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });

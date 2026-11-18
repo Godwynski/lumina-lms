@@ -604,7 +604,7 @@ export function AttendanceClient({
       </div>
 
       {/* Band 2: Log Tabs, Live Status & Search/Export */}
-      <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center justify-between gap-2.5 w-full min-w-0">
+      <div className="flex w-full min-w-0 flex-col justify-between gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
           <div className="inline-flex items-center bg-muted/40 p-0.5 rounded-xl border border-border/15 flex-1 sm:flex-none">
             <button
@@ -660,7 +660,7 @@ export function AttendanceClient({
 
           <OverflowActionsMenu
             label="Attendance log actions"
-            className="sm:hidden"
+            className="lg:hidden"
             actions={[
               {
                 id: "export-attendance",
@@ -698,7 +698,7 @@ export function AttendanceClient({
             type="button"
             variant="outline"
             size="sm"
-            className="hidden sm:inline-flex h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 gap-1.5 border-border/30 hover:bg-muted/40"
+            className="hidden h-9 shrink-0 gap-1.5 rounded-xl border-border/30 px-3.5 text-xs font-semibold hover:bg-muted/40 lg:inline-flex"
             disabled={isExporting || filteredStaffRecords.length === 0}
             onClick={() => void handleExport()}
           >
@@ -1013,14 +1013,14 @@ function DateRangeFilter({ from, to, onChange }: { from: string; to: string; onC
     <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-muted-foreground">
       <label className="flex items-center gap-1">
         From
-        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="h-8 w-[140px] text-xs" />
+        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="h-11 w-[140px] text-xs lg:h-8" />
       </label>
       <label className="flex items-center gap-1">
         To
-        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="h-8 w-[140px] text-xs" />
+        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="h-11 w-[140px] text-xs lg:h-8" />
       </label>
       {(from || to) && (
-        <Button type="button" variant="ghost" size="sm" className="h-8 text-[11px]" onClick={() => onChange('', '')}>
+        <Button type="button" variant="ghost" size="sm" className="h-11 text-[11px] lg:h-8" onClick={() => onChange('', '')}>
           Clear dates
         </Button>
       )}

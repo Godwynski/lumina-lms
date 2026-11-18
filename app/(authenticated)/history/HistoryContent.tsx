@@ -541,7 +541,7 @@ export default function HistoryContent({
 
   const filterControls = (
     <div className="flex flex-col gap-2.5 sm:gap-3 w-full font-sans print:hidden">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 sm:gap-3 w-full">
+      <div className="flex w-full min-w-0 flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
         <div className="flex items-center gap-2 w-full lg:max-w-xs">
           <form 
             onSubmit={(e) => {
@@ -581,7 +581,7 @@ export default function HistoryContent({
           {showExportPrint && (
             <OverflowActionsMenu
               label="History report actions"
-              className="sm:hidden"
+              className="lg:hidden"
               actions={[
                 {
                   id: "export-history",
@@ -621,7 +621,7 @@ export default function HistoryContent({
       </div>
 
       {(isSettlementsTab || showExportPrint) && (
-        <div className={cn("flex flex-wrap items-center justify-between gap-3 pt-0.5", !isSettlementsTab && "hidden sm:flex")}>
+        <div className={cn("flex flex-wrap items-center justify-between gap-3 pt-0.5", !isSettlementsTab && "hidden lg:flex")}>
           {isSettlementsTab ? (
             <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/40 overflow-x-auto no-scrollbar max-w-full" role="group" aria-label="Filter settlements by resolution">
               {RESOLUTION_FILTERS.map((res) => (
@@ -646,7 +646,7 @@ export default function HistoryContent({
           )}
 
           {showExportPrint && (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden flex-wrap items-center gap-2 lg:flex">
               <Button
                 type="button"
                 variant="outline"

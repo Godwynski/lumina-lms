@@ -305,7 +305,7 @@ export function StudentCatalogClient({
           </div>
 
           {/* Mobile compact filter + view bar */}
-          <div className="flex md:hidden items-center justify-between gap-2 w-full">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
                 <Button
@@ -415,7 +415,7 @@ export function StudentCatalogClient({
           </div>
 
           {/* Desktop inline filter + sort bar */}
-          <div className="hidden md:flex flex-wrap items-center gap-2 py-1">
+          <div className="hidden flex-wrap items-center gap-2 py-1 lg:flex">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 

@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
 import { MainHeader } from "@/components/layout/MainHeader";
 import { StreamedNav } from "./_components/StreamedNav";
 import { getMe, getPreferences } from "@/lib/auth-helpers";
 import { redirect } from "next/navigation";
 import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 import NavAnimatePresence from "./NavAnimatePresence";
 import { SWRProvider } from "./_components/SWRProvider";
@@ -76,20 +74,6 @@ export default async function ProtectedLayout({
             <StreamedNav />
 
             <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
-              {/* Mobile header */}
-              <div className="md:hidden sticky top-0 z-40 flex w-full h-14 shrink-0 items-center justify-between border-b border-border bg-background/90 backdrop-blur-md px-2.5 shadow-sm">
-                <div className="flex flex-1 items-center gap-2 overflow-hidden min-w-0">
-                  <SidebarTrigger className="h-11 w-11 shrink-0" />
-                  <div className="truncate text-sm font-semibold tracking-tight">
-                    <BreadcrumbNav asHeading={false} />
-                  </div>
-                </div>
-                <div className="ml-1.5 shrink-0 flex items-center gap-1">
-                  <NotificationBell />
-                </div>
-              </div>
-
-              {/* Desktop header */}
               <MainHeader />
 
               {/* Page content */}

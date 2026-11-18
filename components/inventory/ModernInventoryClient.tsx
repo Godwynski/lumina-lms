@@ -656,10 +656,10 @@ export function ModernInventoryClient({
   return (
     <div className="w-full space-y-6 pb-10">
       <div className={cn("space-y-4 sm:space-y-6", isReportPreviewOpen && "print:hidden")}>
-      <div className="sticky top-14 md:top-0 z-30 flex flex-col gap-3 rounded-2xl border border-border/40 bg-background/85 p-2 sm:p-2.5 backdrop-blur-xl transition-all duration-300">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap sm:items-center gap-2 sm:gap-3 w-full">
+      <div className="sticky top-14 z-30 flex flex-col gap-3 rounded-2xl border border-border/40 bg-background/85 p-2 backdrop-blur-xl transition-all duration-300 sm:p-2.5 md:top-16">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           {/* Row 1 on mobile: Search + Primary Add CTA */}
-          <div className="flex items-center gap-2 w-full sm:flex-1 min-w-0">
+          <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:flex-[1_1_16rem]">
             <form onSubmit={handleSearch} className="relative flex flex-1 min-w-0 items-center gap-2">
               <div className="relative flex-1 min-w-0 group">
                 <Search className={cn(
@@ -669,10 +669,13 @@ export function ModernInventoryClient({
                 <input
                   type="search"
                   aria-label="Search inventory"
-                  placeholder="Search inventory..."
+                  placeholder="Search books"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-11 sm:h-10 w-full rounded-lg border border-border/50 bg-background pl-10 pr-10 text-sm font-medium transition-all focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15 placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none"
+                  className={cn(
+                    "h-11 w-full rounded-lg border border-border/50 bg-background pl-10 text-sm font-medium transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15 sm:h-10 [&::-webkit-search-cancel-button]:appearance-none",
+                    searchQuery ? "pr-10" : "pr-3"
+                  )}
                 />
                 {searchQuery && (
                   <button
@@ -688,17 +691,17 @@ export function ModernInventoryClient({
             </form>
 
             {canManage && (
-              <Button asChild className="sm:hidden shrink-0 h-11 rounded-lg px-3.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+              <Button asChild className="h-11 shrink-0 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 lg:h-10">
                 <Link href="/inventory/add" aria-label="Add Book">
                   <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                  <span>Add<span className="sr-only"> Book</span></span>
+                  <span>Add<span className="hidden lg:inline"> Book</span></span>
                 </Link>
               </Button>
             )}
           </div>
 
           {/* Row 2 on mobile: Filters + View Toggle + Secondary Overflow */}
-          <div className="flex items-center justify-between gap-2 w-full sm:flex-wrap lg:w-auto lg:flex-nowrap shrink-0">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 lg:w-auto">
           <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -847,7 +850,7 @@ export function ModernInventoryClient({
             <div className="flex items-center gap-2 shrink-0">
               <OverflowActionsMenu
                 label="Inventory actions"
-                className="sm:hidden"
+                className="lg:hidden"
                 actions={[
                   {
                     id: "batch-operations",
@@ -859,7 +862,7 @@ export function ModernInventoryClient({
               />
               <Dialog open={isBatchOpen} onOpenChange={setIsBatchOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" aria-label="Batch operations" className="hidden sm:inline-flex h-9 rounded-lg px-3.5 gap-2 border-border/50 bg-background hover:bg-muted/60 text-xs font-medium">
+                  <Button variant="outline" aria-label="Batch operations" className="hidden h-9 gap-2 rounded-lg border-border/50 bg-background px-3.5 text-xs font-medium hover:bg-muted/60 lg:inline-flex">
                     <Upload className="h-3.5 w-3.5 text-muted-foreground" />
                     <span>Batch Operations</span>
                   </Button>
@@ -1307,12 +1310,6 @@ export function ModernInventoryClient({
                 </DialogContent>
               </Dialog>
 
-              <Button asChild className="hidden sm:inline-flex shrink-0 h-9 rounded-lg px-4 text-xs sm:text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all group">
-                <Link href="/inventory/add" aria-label="Add Book">
-                  <Plus className="mr-1.5 h-4 w-4 transition-transform group-hover:rotate-90" aria-hidden="true" />
-                  <span>Add Book</span>
-                </Link>
-              </Button>
             </div>
           )}
           </div>

@@ -511,6 +511,7 @@ const sidebarMenuButtonVariants = cva(
 
 function SidebarMenuButton({
   asChild = false,
+  closeOnMobile = true,
   isActive = false,
   variant = "default",
   size = "default",
@@ -519,6 +520,7 @@ function SidebarMenuButton({
   ...props
 }: React.ComponentProps<"button"> & {
   asChild?: boolean
+  closeOnMobile?: boolean
   isActive?: boolean
   tooltip?: string | React.ComponentProps<typeof TooltipContent>
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
@@ -527,7 +529,7 @@ function SidebarMenuButton({
 
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (event) => {
     props.onClick?.(event)
-    if (!event.defaultPrevented && isMobile) {
+    if (!event.defaultPrevented && isMobile && closeOnMobile) {
       setOpenMobile(false)
     }
   }

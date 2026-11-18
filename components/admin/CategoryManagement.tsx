@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Layers, Edit3, Save, X, Loader2 } from "lucide-react";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
 import { CategoryItem } from "./categories/CategoryItem";
 import { CategoryDialog } from "./categories/CategoryDialog";
 
@@ -220,7 +221,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
 
   return (
     <div className="w-full space-y-6 p-1">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
             <Layers className="h-5 w-5" />
@@ -235,7 +236,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
           {isBulkEditing ? (
             <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto animate-in fade-in slide-in-from-right-4 duration-500">
               {changedIds.length > 0 && (
@@ -279,14 +280,14 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
               </TooltipProvider>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="outline"
                       onClick={() => setIsBulkEditing(true)}
-                      className="h-11 sm:h-9 flex-1 sm:flex-none px-3.5 rounded-lg text-xs font-medium border-border hover:bg-muted/40 transition-all"
+                      className="hidden h-9 rounded-lg px-3.5 text-xs font-medium border-border hover:bg-muted/40 transition-all lg:inline-flex"
                     >
                       <Edit3 className="h-4 w-4 mr-1.5" />
                       Bulk Management
@@ -301,7 +302,7 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                   <TooltipTrigger asChild>
                     <Button
                       onClick={() => openDialog()}
-                      className="h-11 sm:h-9 flex-1 sm:flex-none px-4 rounded-lg text-xs font-semibold shadow-sm transition-all"
+                      className="h-11 flex-1 rounded-lg px-4 text-xs font-semibold shadow-sm transition-all lg:h-9 lg:flex-none"
                     >
                       <Plus className="h-4 w-4" />
                       Add Category
@@ -312,6 +313,16 @@ export function CategoryManagement({ initialCategories }: { initialCategories: C
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              <OverflowActionsMenu
+                label="Category actions"
+                className="lg:hidden"
+                actions={[{
+                  id: "bulk-management",
+                  label: "Bulk Management",
+                  icon: Edit3,
+                  onSelect: () => setIsBulkEditing(true),
+                }]}
+              />
             </div>
           )}
         </div>

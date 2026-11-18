@@ -141,6 +141,7 @@ export function ProtectedNav({
   const currentProfile = profile as Profile | null;
   const { logout, isLoggingOut } = useLogout();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [accountFooter, setAccountFooter] = useState<HTMLDivElement | null>(null);
 
 
   const handleSignOut = async () => {
@@ -364,13 +365,14 @@ export function ProtectedNav({
         </nav>
       </SidebarContent>
 
-      <SidebarFooter className="mt-auto border-t border-sidebar-border bg-sidebar p-2 flex">
+      <SidebarFooter ref={isMobile ? setAccountFooter : undefined} className="mt-auto border-t border-sidebar-border bg-sidebar p-2 flex">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
+                  closeOnMobile={false}
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar aria-hidden="true" className="h-8 w-8 rounded-lg">
@@ -388,6 +390,7 @@ export function ProtectedNav({
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
+                portalContainer={isMobile ? accountFooter : undefined}
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
                 side="bottom"
                 align="end"

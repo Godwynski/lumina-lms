@@ -17,7 +17,7 @@ export function AccountTabs({ active }: AccountTabsProps) {
   return (
     <nav
       aria-label="Account settings"
-      className="inline-flex items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1"
+      className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-muted/30 p-1"
     >
       {tabs.map((tab) => {
         const Icon = tab.icon;
@@ -28,7 +28,7 @@ export function AccountTabs({ active }: AccountTabsProps) {
             href={tab.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-all",
+              "inline-flex h-11 items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-all lg:h-9",
               isActive
                 ? "bg-background text-foreground shadow-xs border border-border/60"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
