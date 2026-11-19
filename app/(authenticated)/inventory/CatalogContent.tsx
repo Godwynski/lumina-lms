@@ -16,7 +16,7 @@ interface CatalogContentProps {
 
 export function CatalogSkeleton() {
   return (
-    <div className="w-full space-y-4 pb-5 md:pb-7 animate-pulse">
+    <div className="space-y-4 animate-pulse">
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm h-16 w-full" />
       <div className="rounded-xl border border-border bg-card p-4 shadow-sm h-12 w-1/2" />
       <div className="space-y-2 mt-4">
@@ -35,13 +35,11 @@ export function CatalogContent({ dataPromise, categories, canManage }: CatalogCo
   const totalCount = data?.count || 0;
   
   return (
-    <div className="w-full">
-      <ModernInventoryClient 
-        books={books || []} 
-        totalItems={totalCount} 
-        categories={categories}
-        canManage={canManage}
-      />
-    </div>
+    <ModernInventoryClient
+      books={books}
+      totalItems={totalCount}
+      categories={categories}
+      canManage={canManage}
+    />
   );
 }

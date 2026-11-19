@@ -13,15 +13,9 @@ export function SettingsShell({
   children 
 }: SettingsShellProps) {
   return (
-    <div className="w-full pb-20 md:pb-8">
+    <div className="min-w-0">
       <NavigationGuard isDirty={isDirty} />
-      
-      <div className="grid w-full grid-cols-1 items-start gap-4 lg:gap-6">
-        {/* Plain div: the app shell already provides the page's <main> landmark. */}
-        <div className="min-w-0">
-          {children}
-        </div>
-      </div>
+      {children}
     </div>
   );
 }

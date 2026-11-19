@@ -10,11 +10,9 @@ export const metadata = {
 // Synchronous page shell — responds immediately.
 export default function AuditPage() {
   return (
-    <div className="space-y-6 w-full">
-      <Suspense fallback={<AuditSkeleton />}>
-        <AuditAuthGate />
-      </Suspense>
-    </div>
+    <Suspense fallback={<AuditSkeleton />}>
+      <AuditAuthGate />
+    </Suspense>
   );
 }
 
@@ -28,9 +26,7 @@ async function AuditAuthGate() {
   }
 
   return (
-    <div className="w-full">
-      <AuditLogClient userRole={role} />
-    </div>
+    <AuditLogClient userRole={role} />
   );
 }
 

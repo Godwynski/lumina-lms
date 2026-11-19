@@ -149,37 +149,41 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       return handle;
     }
 
-    it('renders accessible #attendance-card-id input, Check-In/Check-Out mode buttons, and submits explicit mode', async () => {
-      const { container } = await renderStaffAttendance();
+    async function chooseManualMode(root: ParentNode, label: string) {
+      const trigger = root.querySelector('button[aria-label="Change attendance action"]')!;
+      await pressKey(trigger, 'Enter');
+      const items = [...document.body.querySelectorAll('[role="menuitemradio"]')];
+      const item = items.find((entry) => entry.textContent === label);
+      expect(item).toBeInTheDocument();
+      await clickElement(item);
+    }
 
-      const modeGroup = container.querySelector('[role="group"][aria-label="Attendance mode"]')!;
-      expect(modeGroup).toBeInTheDocument();
-      const checkInModeBtn = findButtonByText(modeGroup, 'Check-In')!;
-      const checkOutModeBtn = findButtonByText(modeGroup, 'Check-Out')!;
-      expect(checkInModeBtn).toHaveAttribute('aria-pressed', 'true');
-      expect(checkInModeBtn).toHaveTextContent(/^Check-In$/);
-      expect(checkInModeBtn).toHaveClass('text-primary');
-      expect(checkOutModeBtn).toHaveAttribute('aria-pressed', 'false');
+    it('uses a split action to choose check-out without submitting and records the active mode on form submit', async () => {
+      const { container } = await renderStaffAttendance();
 
       const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
       expect(cardInput).toBeInTheDocument();
       const label = container.querySelector('label[for="attendance-card-id"]');
-      expect(label).toHaveTextContent('Card ID or Patron ID');
-      expect(container).toHaveTextContent('Scan with camera');
+      expect(label).toHaveTextContent('Card or patron ID');
+      expect(findButtonByText(container, 'Scan QR')).toBeEnabled();
       expect(findButtonByText(container, 'Date range')).toHaveAttribute('aria-expanded', 'false');
       const submit = cardInput.form?.querySelector('button[type="submit"]');
-      expect(submit).toHaveTextContent('Record check-in');
+      expect(submit).toHaveTextContent(/^Check in$/);
       expect(submit).toHaveClass('bg-primary');
       expect(submit).toBeDisabled();
+      const menuTrigger = container.querySelector('button[aria-label="Change attendance action"]');
+      expect(menuTrigger).toBeEnabled();
+      expect(menuTrigger).toHaveAttribute('type', 'button');
 
-      // Switch to Check-Out mode
-      await clickElement(checkOutModeBtn);
-      expect(checkOutModeBtn).toHaveAttribute('aria-pressed', 'true');
-      expect(checkOutModeBtn).toHaveTextContent(/^Check-Out$/);
-      expect(checkOutModeBtn).toHaveClass('text-primary');
-      expect(checkInModeBtn).toHaveAttribute('aria-pressed', 'false');
-      expect(submit).toHaveTextContent('Record check-out');
-      expect(submit).toHaveClass('bg-primary');
+      await chooseManualMode(container, 'Check out');
+      expect(submit).toHaveTextContent(/^Check out$/);
+      expect(submit).toBeDisabled();
+      await typeIntoInput(cardInput, 'LIB-1001');
+      await chooseManualMode(container, 'Check in');
+      await chooseManualMode(container, 'Check out');
+      expect(submit).toBeEnabled();
+      expect(cardInput.value).toBe('LIB-1001');
+      expect(mockRecordAttendanceByCard).not.toHaveBeenCalled();
 
       const updatedRecord = makeAttendance({
         id: 'att-2',
@@ -199,7 +203,6 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       });
       mockGetAttendanceHistory.mockResolvedValue([updatedRecord]);
 
-      await typeIntoInput(cardInput, 'LIB-1001');
       await submitForm(cardInput.closest('form'));
 
       expect(mockRecordAttendanceByCard).toHaveBeenCalledWith({
@@ -214,11 +217,34 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(cardInput.value).toBe('');
     });
 
+    it('discloses manual entry without losing a draft or disabling camera access', async () => {
+      const { container } = await renderStaffAttendance();
+      const disclosure = findButtonByText(container, 'Manual entry')!;
+      const camera = findButtonByText(container, 'Scan QR')!;
+      expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+      const form = container.querySelector('form[aria-label="Log attendance"]')!;
+      expect(disclosure).toHaveAttribute('aria-controls', form.id);
+      const field = form.querySelector('input')!;
+      await clickElement(disclosure);
+      expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+      expect(document.activeElement).toBe(field);
+      await typeIntoInput(field, 'LIB-1001');
+      await clickElement(disclosure);
+      expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+      expect(camera).toBeEnabled();
+      const filters = container.querySelector('[aria-label="Attendance record filters"]')!;
+      const search = filters.querySelector('input[type="search"]');
+      expect(search).toHaveAttribute('placeholder', 'Search logs');
+      expect(camera.compareDocumentPosition(disclosure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(form.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(filters.querySelector('form[aria-label="Date range"]')).not.toBeVisible();
+      await clickElement(disclosure);
+      expect(field).toHaveValue('LIB-1001');
+      expect(mockRecordAttendanceByCard).not.toHaveBeenCalled();
+    });
+
     it('shows ALREADY_IN warning and disables Check-In for that person until they check out', async () => {
       const { container } = await renderStaffAttendance();
-      const modeGroup = container.querySelector('[role="group"][aria-label="Attendance mode"]')!;
-      const checkOutModeBtn = findButtonByText(modeGroup, 'Check-Out')!;
-      const checkInModeBtn = findButtonByText(modeGroup, 'Check-In')!;
       const cardInput = container.querySelector('#attendance-card-id') as HTMLInputElement;
       const form = cardInput.closest('form')!;
       const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
@@ -254,9 +280,9 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(submitBtn).toBeDisabled();
 
       // Switching to Check-Out enables submission so staff can check Maria Clara out
-      await clickElement(checkOutModeBtn);
+      await clickElement(findButtonByText(alert!, 'Switch to Check-Out'));
       expect(submitBtn).not.toBeDisabled();
-      expect(submitBtn).toHaveTextContent('Record check-out');
+      expect(submitBtn).toHaveTextContent(/^Check out$/);
 
       mockRecordAttendanceByCard.mockResolvedValueOnce({
         success: true,
@@ -277,7 +303,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
 
       // Warning cleared and Check-In for LIB-1001 is no longer blocked
       expect(container.querySelector('[role="alert"]')).not.toBeInTheDocument();
-      await clickElement(checkInModeBtn);
+      await chooseManualMode(container, 'Check in');
       await typeIntoInput(cardInput, 'LIB-1001');
       expect(submitBtn).not.toBeDisabled();
     });
@@ -307,7 +333,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
     it('opens Gate Attendance Scanner modal and restores focus to trigger on Escape', async () => {
       const { container } = await renderStaffAttendance();
 
-      const trigger = findButtonByText(container, 'Scan with camera')!;
+      const trigger = findButtonByText(container, 'Scan QR')!;
       expect(trigger).toBeDefined();
       // DialogContent checks getClientRects().length before restoring focus; simulate visible geometry in jsdom
       trigger.getClientRects = () =>
@@ -334,7 +360,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       });
       expect(document.body.querySelector('[role="dialog"]')).not.toBeInTheDocument();
       expect(document.activeElement).toBe(trigger);
-      expect(findButtonByText(container.querySelector('[aria-label="Attendance mode"]')!, 'Check-Out')).toHaveAttribute('aria-pressed', 'true');
+      expect(container.querySelector('form[aria-label="Log attendance"] button[type="submit"]')).toHaveTextContent(/^Check out$/);
     });
 
     it('opens all history by default and applies or clears dates from a disclosure', async () => {
@@ -344,9 +370,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const archive = makeAttendance({ id: 'archive', check_in_at: '2024-03-01T05:00:00Z', profiles: { full_name: 'Matching Patron' } });
       const all = [open, closed, older];
       const { container } = await renderStaffAttendance([open, closed], all);
-      const summary = container.querySelectorAll('[aria-label="Today’s attendance status"]');
-      expect(summary).toHaveLength(1);
-      expect(summary[0]).toHaveTextContent('1 open · 1 closed today');
+      expect(container).not.toHaveTextContent('closed today');
       expect(findButtonByText(container, 'Today')).toBeUndefined();
       expect(findButtonByText(container, 'All History')).toBeUndefined();
       expect(container.querySelector('tbody')).toHaveTextContent('Earlier Patron');
@@ -437,6 +461,8 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(handle.container).toHaveTextContent('All-Time History');
       expect(handle.container).toHaveTextContent('Still in library');
       expect(handle.container.querySelector('#attendance-card-id')).not.toBeInTheDocument();
+      expect(findButtonByText(handle.container, 'Manual entry')).toBeUndefined();
+      expect(findButtonByText(handle.container, 'Scan QR')).toBeUndefined();
       expect(findButtonByText(handle.container, 'Date range')).toBeUndefined();
     });
 

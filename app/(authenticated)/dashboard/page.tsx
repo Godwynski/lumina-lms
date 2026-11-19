@@ -20,10 +20,8 @@ export default function ProtectedPage({
   }>;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <Suspense fallback={<DashboardLoading />}>
-        <DashboardContent searchParams={searchParams} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent searchParams={searchParams} />
+    </Suspense>
   );
 }

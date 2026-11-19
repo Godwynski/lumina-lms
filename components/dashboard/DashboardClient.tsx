@@ -288,7 +288,7 @@ export function DashboardClient({
     const hasActions = isOverdue || isPendingApprovals || isReadyHolds;
 
     return (
-      <div className="space-y-6 pb-14 overflow-x-hidden relative">
+      <div className="relative flex flex-col gap-6 overflow-x-hidden">
         <LiveActivityTicker />
 
         {/* ==================== ACTION CENTER ==================== */}
@@ -545,7 +545,7 @@ export function DashboardClient({
   const hasAttendancePerm = !!profileData?.permissions?.manage_attendance;
 
   return (
-    <div className="space-y-6 pb-14 overflow-x-clip relative">
+    <div className="relative flex flex-col gap-6 overflow-x-clip">
       <LiveActivityTicker />
 
       {/* ==================== LIBRARY CARD CONTAINER ==================== */}

@@ -2015,7 +2015,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
 
       // Error banner shown with Retry
       const alert = container.querySelector('[role="alert"]');
-      expect(alert).toHaveTextContent("Couldn't load your card QR.");
+      expect(alert).toHaveTextContent("The card service couldn't load your QR. Try again.");
       await clickElement(findButtonByText(container, 'Retry'));
       await flushPromises();
       expect(container.querySelector('[role="alert"]')).toBeNull();

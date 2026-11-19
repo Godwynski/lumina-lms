@@ -111,7 +111,7 @@ export default function NotificationsPage() {
   )
 
   return (
-    <div className="space-y-4">
+    <>
       <Tabs defaultValue="all" className="w-full space-y-4">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <TabsList aria-label="Filter notifications" className="group-data-[orientation=horizontal]/tabs:h-auto">
@@ -224,6 +224,6 @@ export default function NotificationsPage() {
         </div>
       </Tabs>
       <NotificationDetailsDialog notification={selected} onClose={() => setSelected(null)} />
-    </div>
+    </>
   )
 }

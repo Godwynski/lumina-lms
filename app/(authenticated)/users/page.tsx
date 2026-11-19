@@ -35,11 +35,9 @@ export default function UsersPage() {
   const usersPromise = buildUsersPromise();
 
   return (
-    <div className="space-y-6">
-      <Suspense fallback={<UsersSkeleton />}>
-        <UserPageWrapper usersPromise={usersPromise} />
-      </Suspense>
-    </div>
+    <Suspense fallback={<UsersSkeleton />}>
+      <UserPageWrapper usersPromise={usersPromise} />
+    </Suspense>
   );
 }
 

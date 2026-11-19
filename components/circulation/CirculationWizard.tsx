@@ -131,7 +131,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   };
 
   return (
-    <div className="w-full space-y-3 sm:space-y-6 pb-12">
+    <div className="w-full space-y-3 sm:space-y-6">
       {/* Centered Compact Stepper */}
       <div className="bg-card/30 border border-border/10 rounded-2xl p-3 sm:p-6 backdrop-blur-sm">
         <CirculationStepper

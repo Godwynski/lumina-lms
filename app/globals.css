@@ -127,6 +127,10 @@ body [data-sonner-toaster][data-sonner-theme="light"] {
 }
 
 @layer utilities {
+  .app-content-frame {
+    @apply mx-auto w-full min-w-0 max-w-7xl px-3 md:px-6;
+  }
+
   .status-success {
     border-color: hsl(var(--status-success) / 0.35);
     background-color: hsl(var(--status-success) / 0.15);

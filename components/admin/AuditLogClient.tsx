@@ -516,7 +516,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
       <AdminTableShell
       className="min-h-[calc(100vh-140px)]"
       controls={
-        <div className="flex flex-col gap-3 w-full p-1">
+        <div className="flex flex-col gap-3 w-full">
           {/* Top Control Bar */}
           <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:items-center justify-between w-full">
             <div className="relative flex-1 w-full lg:max-w-xs xl:max-w-sm 2xl:max-w-md">

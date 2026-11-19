@@ -3,6 +3,13 @@
 import { use, useState, useRef, useEffect, useMemo, useCallback, Suspense, type FormEvent, type KeyboardEvent } from "react";
 import { recordAttendanceByCard, getAttendanceHistory } from "@/lib/actions/attendance";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
@@ -39,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import type { AttendanceRecord } from "@/lib/actions/attendance";
 import { isWithinManilaDateRange } from "@/lib/date-range";
+import toolbarStyles from "./AttendanceToolbar.module.css";
 
 const ALL_HISTORY_STEP = 300;
 const INITIAL_HISTORY_REQUEST = { search: '', from: '', to: '', limit: ALL_HISTORY_STEP };
@@ -134,6 +142,9 @@ export function AttendanceClient({
   }, []);
   const [cardNumber, setCardNumber] = useState("");
   const [mode, setMode] = useState<AttendanceMode>("in");
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
+  const cardInput = useRef<HTMLInputElement>(null);
+  const focusCardAfterModeChange = useRef(false);
   const [blockedCheckIns, setBlockedCheckIns] = useState<
     Array<{ userId: string; userName: string; identifiers: string[] }>
   >([]);
@@ -333,6 +344,10 @@ export function AttendanceClient({
     void processScan(cardNumber.trim(), true, mode);
   };
 
+  useEffect(() => {
+    if (manualEntryOpen) cardInput.current?.focus();
+  }, [manualEntryOpen]);
+
   // Realtime subscription to refresh attendance logs across tabs automatically
   useEffect(() => {
     const supabase = createClient();
@@ -426,16 +441,6 @@ export function AttendanceClient({
     }
   }, [isScannerOpen, startScanner, stopCamera]);
 
-  // Compute active & completed stats for today
-  const activeCount = useMemo(() => 
-    systemTodayRecords.filter(r => !r.check_out_at).length, 
-    [systemTodayRecords]
-  );
-  const completedTodayCount = useMemo(() => 
-    systemTodayRecords.filter(r => !!r.check_out_at).length, 
-    [systemTodayRecords]
-  );
-
   const historyMatches = sameHistoryFilters(historyResponse.request, historyRequest);
   const filteredStaffRecords = historyMatches ? historyResponse.records : EMPTY_HISTORY;
   const historyLoading = historyRequest !== historyResponse.request;
@@ -473,47 +478,108 @@ export function AttendanceClient({
   );
 
   const scannerControls = (
-    <div className="flex w-full min-w-0 flex-col gap-3 px-1 py-1 sm:px-2">
-      <div role="group" aria-label="Record attendance" className="flex min-w-0 flex-col gap-2.5 xl:flex-row xl:items-center xl:gap-4">
-        <AttendanceModeControl label="Attendance mode" mode={mode} onChange={setMode} />
-
-        <form
-          aria-label="Log attendance"
-          onSubmit={handleManualSubmit}
-          className="grid w-full min-w-0 flex-1 grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center xl:w-auto"
-        >
-          <div className="relative min-w-0 min-[380px]:col-span-2 sm:col-span-1">
-            <label htmlFor="attendance-card-id" className="sr-only">Card ID or Patron ID</label>
-            <ScanLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="attendance-card-id"
-              value={cardNumber}
-              onChange={(e) => setCardNumber(e.target.value)}
-              placeholder="Card ID or Patron ID"
-              className="h-11 pl-9 xl:h-10"
-              readOnly={isProcessing}
-              autoComplete="off"
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
-            className="h-11 px-3 shadow-none xl:h-10 xl:px-4"
-          >
-            {isProcessing ? "Recording…" : mode === "in" ? "Record check-in" : "Record check-out"}
-          </Button>
+    <div className={cn("flex w-full min-w-0 flex-col gap-2", toolbarStyles.container)}>
+      <div className={cn("grid min-w-0 items-start gap-x-4 gap-y-2", toolbarStyles.groups)}>
+        <div role="group" aria-label="Record attendance" className="flex min-w-0 flex-wrap items-center gap-2">
           <DialogTrigger asChild>
-            <Button type="button" variant="outline" className="h-11 px-3 shadow-none xl:h-10 xl:px-4" disabled={isProcessing}>
+            <Button type="button" variant="outline" className="h-11 shrink-0 px-3 shadow-none" disabled={isProcessing}>
               <Camera aria-hidden="true" />
-              Scan with camera
+              Scan QR
             </Button>
           </DialogTrigger>
-        </form>
-      </div>
 
-      <p role="status" aria-label="Today’s attendance status" className="text-xs tabular-nums text-muted-foreground">
-        <span>{activeCount} open</span>{' · '}<span>{completedTodayCount} closed today</span>
-      </p>
+          <Button
+            type="button"
+            variant="outline"
+            aria-controls="attendance-manual-entry"
+            aria-expanded={manualEntryOpen}
+            onClick={() => setManualEntryOpen(!manualEntryOpen)}
+            className={cn("h-11 shrink-0 px-3 shadow-none", toolbarStyles.manualToggle)}
+          >
+            Manual entry
+            <ChevronDown aria-hidden="true" className={cn(manualEntryOpen && "rotate-180")} />
+          </Button>
+
+          <form
+            id="attendance-manual-entry"
+            aria-label="Log attendance"
+            onSubmit={handleManualSubmit}
+            className={cn(
+              "w-full min-w-0 flex-col gap-2",
+              toolbarStyles.manualForm,
+              manualEntryOpen ? "flex" : "hidden",
+            )}
+          >
+            <div className="relative min-w-0 flex-1">
+              <label htmlFor="attendance-card-id" className="sr-only">Card or patron ID</label>
+              <ScanLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                ref={cardInput}
+                id="attendance-card-id"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                placeholder="Card or patron ID"
+                className="h-11 pl-9"
+                readOnly={isProcessing}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex shrink-0 self-start">
+              <Button
+                type="submit"
+                disabled={isProcessing || !cardNumber.trim() || isManualCheckInBlocked}
+                className="h-11 min-w-24 rounded-r-none px-3 shadow-none focus-visible:z-10"
+              >
+                {isProcessing ? "Recording…" : mode === "in" ? "Check in" : "Check out"}
+              </Button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    aria-label="Change attendance action"
+                    disabled={isProcessing}
+                    className="size-11 rounded-l-none border-l border-primary-foreground/25 px-0 shadow-none focus-visible:z-10"
+                  >
+                    <ChevronDown aria-hidden="true" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
+                  if (!focusCardAfterModeChange.current) return;
+                  focusCardAfterModeChange.current = false;
+                  event.preventDefault();
+                  cardInput.current?.focus();
+                }}>
+                  <DropdownMenuRadioGroup value={mode} onValueChange={(value) => {
+                    focusCardAfterModeChange.current = true;
+                    setMode(value === "out" ? "out" : "in");
+                  }}>
+                    <DropdownMenuRadioItem value="in" className="min-h-11">Check in</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="out" className="min-h-11">Check out</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </form>
+        </div>
+
+        <AttendanceHistoryFilters
+          search={searchQuery}
+          from={historyRequest.from}
+          to={historyRequest.to}
+          onSearchChange={(value) => {
+            setSearchQuery(value);
+            const search = value.trim();
+            if (search === historyRequest.search) return;
+            setStaffPage(1);
+            setHistoryRequest((request) => ({ ...request, search, limit: ALL_HISTORY_STEP }));
+          }}
+          onDateChange={(from, to) => {
+            if (from === historyRequest.from && to === historyRequest.to) return;
+            setStaffPage(1);
+            setHistoryRequest((request) => ({ ...request, from, to, limit: ALL_HISTORY_STEP }));
+          }}
+        />
+      </div>
 
       {alreadyInWarning && (
         <div
@@ -532,31 +598,13 @@ export function AttendanceClient({
               size="sm"
               variant="outline"
               className="h-11 text-xs xl:h-9"
-              onClick={() => setMode("out")}
+              onClick={() => { setMode("out"); setManualEntryOpen(true); }}
             >
               Switch to Check-Out
             </Button>
           )}
         </div>
       )}
-
-      <AttendanceHistoryFilters
-        search={searchQuery}
-        from={historyRequest.from}
-        to={historyRequest.to}
-        onSearchChange={(value) => {
-          setSearchQuery(value);
-          const search = value.trim();
-          if (search === historyRequest.search) return;
-          setStaffPage(1);
-          setHistoryRequest((request) => ({ ...request, search, limit: ALL_HISTORY_STEP }));
-        }}
-        onDateChange={(from, to) => {
-          if (from === historyRequest.from && to === historyRequest.to) return;
-          setStaffPage(1);
-          setHistoryRequest((request) => ({ ...request, from, to, limit: ALL_HISTORY_STEP }));
-        }}
-      />
     </div>
   );
 
@@ -752,35 +800,33 @@ export function AttendanceClient({
 
   // Personal View (Student)
   return (
-    <div className="w-full">
-      <AdminTableShell
-        controls={
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1 py-0.5">
-              <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-              {fromDate || toDate ? 'Filtered History' : 'All-Time History'}
-            </p>
-            {dateRangeControls}
-          </div>
-        }
-        pagination={
-          totalPersonalItems > 0 ? (
-            <CompactPagination
-              page={activePersonalPage}
-              totalItems={totalPersonalItems}
-              pageSize={PAGE_SIZE}
-              onPageChange={setPersonalPage}
-              variant="ghost"
-            />
-          ) : null
-        }
-        className="max-w-none animate-in fade-in-50 duration-300"
-      >
-        <Suspense fallback={<TableLoadingSkeleton />}>
-          <AttendanceTable history={paginatedPersonalRecords} isPersonal={true} />
-        </Suspense>
-      </AdminTableShell>
-    </div>
+    <AdminTableShell
+      controls={
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1 py-0.5">
+            <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+            {fromDate || toDate ? 'Filtered History' : 'All-Time History'}
+          </p>
+          {dateRangeControls}
+        </div>
+      }
+      pagination={
+        totalPersonalItems > 0 ? (
+          <CompactPagination
+            page={activePersonalPage}
+            totalItems={totalPersonalItems}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPersonalPage}
+            variant="ghost"
+          />
+        ) : null
+      }
+      className="max-w-none animate-in fade-in-50 duration-300"
+    >
+      <Suspense fallback={<TableLoadingSkeleton />}>
+        <AttendanceTable history={paginatedPersonalRecords} isPersonal={true} />
+      </Suspense>
+    </AdminTableShell>
   );
 }
 
@@ -831,18 +877,18 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
     <div
       role="group"
       aria-label="Attendance record filters"
-      className="min-w-0 space-y-2 border-t border-border pt-3"
+      className="flex min-w-0 flex-col gap-2"
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="relative min-w-0 basis-full min-[420px]:min-w-48 min-[420px]:flex-1 sm:max-w-80">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             type="search"
             aria-label="Search attendance by patron name or ID"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search patron or ID"
-            className="h-11 pl-9 xl:h-10"
+            placeholder="Search logs"
+            className="h-11 pl-9"
           />
         </div>
         <Button
@@ -852,7 +898,7 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
           aria-controls="attendance-history-dates"
           aria-expanded={isOpen}
           aria-label={hasRange ? `Date range: ${label}` : undefined}
-          className={cn('h-11 max-w-full px-3 shadow-none xl:h-10', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
+          className={cn('h-11 max-w-[52%] shrink-0 px-3 shadow-none', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
           onKeyDown={closeOnEscape}
           onClick={() => {
             if (!isOpen) {
@@ -877,22 +923,22 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
         >
           <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground">
             From
-            <Input type="date" value={draftFrom} max="9999-12-31" className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10"
+            <Input type="date" value={draftFrom} max="9999-12-31" className="h-11 w-full min-w-0 px-2 sm:w-36"
               onChange={(event) => { setDraftFrom(event.target.value); setDateError(''); }} />
           </label>
           <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground">
             To
-            <Input ref={toInput} type="date" value={draftTo} max="9999-12-31" className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10"
+            <Input ref={toInput} type="date" value={draftTo} max="9999-12-31" className="h-11 w-full min-w-0 px-2 sm:w-36"
               aria-invalid={Boolean(dateError)} aria-describedby={dateError ? 'attendance-history-date-error' : undefined}
               onChange={(event) => { setDraftTo(event.target.value); setDateError(''); }} />
           </label>
           <div className="flex justify-end gap-2 min-[380px]:col-span-2">
             {(hasRange || draftFrom || draftTo) && (
-              <Button type="button" variant="ghost" className="h-11 xl:h-10" onClick={() => { onDateChange('', ''); closeDates(); }}>
+              <Button type="button" variant="ghost" className="h-11" onClick={() => { onDateChange('', ''); closeDates(); }}>
                 Clear dates
               </Button>
             )}
-            <Button type="submit" className="h-11 shadow-none xl:h-10" disabled={!hasRange && !draftFrom && !draftTo}>Apply</Button>
+            <Button type="submit" className="h-11 shadow-none" disabled={!hasRange && !draftFrom && !draftTo}>Apply</Button>
           </div>
           {dateError && (
             <p id="attendance-history-date-error" role="alert" className="col-span-full w-full text-xs text-destructive">{dateError}</p>

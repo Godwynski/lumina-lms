@@ -509,7 +509,7 @@ export function StudentCatalogClient({
       }
     >
       <p className="sr-only" role="status">{isSearchSettled ? `${totalBooks} ${totalBooks === 1 ? "book" : "books"} found.` : "Searching..."}</p>
-      <div className={cn("transition-opacity w-full pb-10", isPending && "opacity-50")}>
+      <div className={cn("w-full transition-opacity", isPending && "opacity-50")}>
         {viewMode === 'table' ? (
           books.length > 0 ? (
             <CatalogTable

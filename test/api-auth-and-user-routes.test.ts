@@ -389,6 +389,10 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       expect(
         (await assetsRefreshPost(new Request("http://localhost/api/my-card/assets-refresh", { method: "POST" }))).status
       ).toBe(403);
+      expect(
+        (await assetsStatusGet(new Request("http://localhost/api/my-card/assets-status"))).status
+      ).toBe(403);
+      expect(mockEnsureStaticLibraryCardAssets).not.toHaveBeenCalled();
     });
 
     it("POST /assets-refresh forces QR regeneration and handles thrown errors", async () => {

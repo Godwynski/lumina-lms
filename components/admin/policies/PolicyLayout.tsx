@@ -287,7 +287,7 @@ export function PolicyLayout({
   };
 
   return (
-    <div className="w-full pb-12">
+    <div className={cn("w-full", canEdit && changedKeys.length > 0 && "pb-24 sm:pb-16")}>
 
       <div className="grid gap-8 lg:grid-cols-[220px_1fr] items-start">
         {/* Mobile & Tablet Category Navigation (wraps cleanly without clipping) */}

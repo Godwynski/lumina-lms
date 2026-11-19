@@ -1,0 +1,27 @@
+.container {
+  container: attendance-toolbar / inline-size;
+}
+
+@container attendance-toolbar (min-width: 24rem) {
+  .groups .manualForm {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@container attendance-toolbar (min-width: 36rem) {
+  .groups .manualToggle {
+    display: none;
+  }
+
+  .groups .manualForm {
+    display: flex;
+    flex: 1 1 0%;
+  }
+}
+
+@container attendance-toolbar (min-width: 48rem) {
+  .groups {
+    grid-template-columns: minmax(0, 3fr) minmax(19rem, 2fr);
+  }
+}

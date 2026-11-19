@@ -5,8 +5,8 @@ import { analyticsDates } from "@/lib/analytics-dates";
 import { getMe } from "@/lib/auth-helpers";
 import { getReportDatasets } from "@/lib/auth/report-access";
 import { AnalyticsClient } from "./AnalyticsClient";
-import { Loader2 } from "lucide-react";
 import { redirect } from "next/navigation";
+import AnalyticsLoading from "./loading";
 
 export const metadata = {
   title: "Analytics",
@@ -28,19 +28,13 @@ export default async function AnalyticsPage() {
   const initialSummaryPromise = getAnalyticsSummary('30d', initialDates).catch(() => null);
   
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <Suspense fallback={
-        <div className="flex items-center justify-center p-20">
-           <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-        </div>
-      }>
-        <AnalyticsClient 
-          statsPromise={statsPromise}
-          initialSummaryPromise={initialSummaryPromise}
-          initialDates={initialDates}
-          role={role}
-        />
-      </Suspense>
-    </div>
+    <Suspense fallback={<AnalyticsLoading />}>
+      <AnalyticsClient
+        statsPromise={statsPromise}
+        initialSummaryPromise={initialSummaryPromise}
+        initialDates={initialDates}
+        role={role}
+      />
+    </Suspense>
   );
 }

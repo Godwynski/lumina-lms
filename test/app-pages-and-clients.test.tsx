@@ -1374,6 +1374,13 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent('Dashboard');
       expect(container).toHaveTextContent('User Directory');
       expect(container).toHaveTextContent('Audit Logs');
+      const content = container.querySelector<HTMLElement>('#main-content');
+      expect(container.querySelector('a[href="#main-content"]')).toHaveTextContent('Skip to main content');
+      expect(content).toHaveAttribute('tabindex', '-1');
+      expect(content).toHaveTextContent('Page body');
+      expect(content).toHaveClass('app-content-frame');
+      expect(container.querySelector('main > header .app-content-frame h1')).toBeInTheDocument();
+      expect(container.querySelectorAll('main')).toHaveLength(1);
     });
 
     it.each(['SUSPENDED', 'INACTIVE', 'GRADUATED', 'DELETED', 'ARCHIVED'])('blocks %s patrons before rendering the shell', async (status) => {
@@ -1587,8 +1594,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const gateEl = AuditPage();
-      const gateSuspense = (gateEl.props as { children: React.ReactElement }).children;
-      const gateChild = (gateSuspense.props as { children: React.ReactElement }).children;
+      expect(gateEl.type).toBe(Suspense);
+      const gateChild = (gateEl.props as { children: React.ReactElement }).children;
       const GateFn = gateChild.type as () => Promise<React.ReactElement>;
 
       // student & library_staff redirect to /dashboard?error=unauthorized
@@ -1645,7 +1652,9 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       // InventoryPage gate: rejects without manage_inventory (including circulation/attendance-only), patron, and suspended staff with permission; allows active staff with manage_inventory
       const invEl = InventoryPage({ searchParams: Promise.resolve({}) });
       const invChildren = (invEl.props as { children: React.ReactElement[] }).children;
+      expect(invEl.type).toBe(React.Fragment);
       const invSuspense = invChildren[1];
+      expect(invSuspense.type).toBe(Suspense);
       const invChild = (invSuspense.props as { children: React.ReactElement }).children;
       const InvGate = invChild.type as (p: { searchParams: Promise<Record<string, string>> }) => Promise<React.ReactElement>;
 
@@ -1724,8 +1733,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
       // Default params -> sortBy 'newest'
       const pageEl1 = StudentCatalogPage({ searchParams: Promise.resolve({}) });
-      const suspense1 = (pageEl1.props as { children: React.ReactElement }).children;
-      const loaderEl1 = (suspense1.props as { children: React.ReactElement }).children;
+      expect(pageEl1.type).toBe(Suspense);
+      const loaderEl1 = (pageEl1.props as { children: React.ReactElement }).children;
       const Loader1 = loaderEl1.type as (p: { searchParams: Promise<Record<string, string>> }) => Promise<React.ReactElement>;
       const clientEl1 = await Loader1({ searchParams: Promise.resolve({}) });
       expect(mockGetPublicBooksCached).toHaveBeenCalledWith('', '', '', false, 1, 16, 'newest');
@@ -1845,16 +1854,14 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       // 1. Unauthenticated -> redirect('/')
       mockGetMe.mockResolvedValueOnce(null);
       const unauthEl = UsersPage();
-      const unauthSuspense = (unauthEl.props as { children: React.ReactElement }).children;
-      const unauthWrapper = (unauthSuspense.props as { children: React.ReactElement }).children;
+      const unauthWrapper = (unauthEl.props as { children: React.ReactElement }).children;
       const unauthPromise = (unauthWrapper.props as { usersPromise: Promise<unknown> }).usersPromise;
       await expect(unauthPromise).rejects.toThrow('NEXT_REDIRECT:/');
 
       // 2. Student -> redirect('/dashboard')
       mockGetMe.mockResolvedValueOnce({ role: 'patron' });
       const studentEl = UsersPage();
-      const studentSuspense = (studentEl.props as { children: React.ReactElement }).children;
-      const studentWrapper = (studentSuspense.props as { children: React.ReactElement }).children;
+      const studentWrapper = (studentEl.props as { children: React.ReactElement }).children;
       const studentPromise = (studentWrapper.props as { usersPromise: Promise<unknown> }).usersPromise;
       await expect(studentPromise).rejects.toThrow('NEXT_REDIRECT:/dashboard');
 
@@ -2182,7 +2189,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
       expect(container).toHaveTextContent('Patron 0');
       expect(container).toHaveTextContent('Still in library');
-      expect(container.querySelector('[aria-label="Today’s attendance status"]')).toHaveTextContent('1 open · 1 closed today');
+      expect(container).not.toHaveTextContent('closed today');
 
       // Search the complete history through the server.
       const searchInput = container.querySelector(

@@ -2,6 +2,7 @@ import { getMe } from "@/lib/auth-helpers";
 import { PoliciesSection } from "@/components/settings/sections/PoliciesSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import PoliciesLoading from "./loading";
 
 export const metadata = { title: "System Policies" };
 
@@ -42,10 +43,8 @@ async function PoliciesPageContent() {
 
 export default function PoliciesPage() {
   return (
-    <div className="w-full">
-      <Suspense fallback={<div className="p-8 animate-pulse space-y-4"><div className="h-8 w-48 bg-muted rounded" /><div className="h-64 w-full bg-muted rounded" /></div>}>
-        <PoliciesPageContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={<PoliciesLoading />}>
+      <PoliciesPageContent />
+    </Suspense>
   );
 }

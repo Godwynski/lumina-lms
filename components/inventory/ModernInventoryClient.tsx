@@ -654,9 +654,9 @@ export function ModernInventoryClient({
   }, [updateParams]);
 
   return (
-    <div className="w-full space-y-6 pb-10">
-      <div className={cn("space-y-4 sm:space-y-6", isReportPreviewOpen && "print:hidden")}>
-      <div className="sticky top-14 z-30 flex flex-col gap-3 rounded-2xl border border-border/40 bg-background/85 p-2 backdrop-blur-xl transition-all duration-300 sm:p-2.5 md:top-16">
+    <div className="relative space-y-6 overflow-x-clip">
+      <div className={cn("space-y-4", isReportPreviewOpen && "print:hidden")}>
+      <div className="sticky top-14 z-30 flex flex-col gap-3 rounded-2xl border border-border/40 bg-background/85 p-2.5 backdrop-blur-xl transition-all duration-300 md:top-16">
         <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           {/* Row 1 on mobile: Search + Primary Add CTA */}
           <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:flex-[1_1_16rem]">

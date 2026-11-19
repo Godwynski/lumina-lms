@@ -102,11 +102,18 @@ const captureCardPng = async (node: HTMLElement) => {
 };
 
 type AssetStatusResponse = {
-  qr_url: string;
-  profile_url: string;
+  qr_url: string | null;
+  profile_url: string | null;
   qr_exists: boolean;
   profile_exists: boolean;
-  ready: boolean;
+};
+
+const qrErrors: Record<number, { message: string; canRetry: boolean }> = {
+  400: { message: "Your library ID is missing. Contact the library desk.", canRetry: false },
+  401: { message: "Your session ended. Sign in again to load your card QR.", canRetry: false },
+  403: { message: "Your account can't access this card QR. Contact the library desk.", canRetry: false },
+  404: { message: "The card service is unavailable. Try again or contact the library desk.", canRetry: true },
+  500: { message: "The card service couldn't load your QR. Try again.", canRetry: true },
 };
 
 export default function MyCardContainer({ initialData, variant = "page" }: MyCardContainerProps) {
@@ -135,7 +142,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
-  const [assetError, setAssetError] = useState(false);
+  const [assetError, setAssetError] = useState<{ message: string; canRetry: boolean } | null>(null);
   const assetRequestRef = useRef(0);
 
   useEffect(() => {
@@ -146,25 +153,36 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
   const checkAssets = useCallback(async () => {
     const requestId = ++assetRequestRef.current;
     setIsLoadingAssets(true);
-    setAssetError(false);
+    setAssetError(null);
     try {
       const response = await fetch("/api/my-card/assets-status", {
         method: "GET",
         cache: "no-store",
       });
-      if (!response.ok) throw new Error(`Status ${response.status}`);
+      if (!response.ok) {
+        if (requestId === assetRequestRef.current) setAssetError(qrErrors[response.status] ?? qrErrors[500]);
+        return;
+      }
 
       const status = (await response.json()) as AssetStatusResponse;
       if (requestId !== assetRequestRef.current) return;
 
+      const qrUrl = status.qr_exists ? status.qr_url : null;
+      if (!qrUrl) {
+        setAssetError({
+          message: "Your card QR isn't ready yet. Try again or contact the library desk.",
+          canRetry: true,
+        });
+      }
+
       setAssets((current) => ({
         ...current,
-        qrUrl: status.qr_exists ? status.qr_url : current.qrUrl,
+        qrUrl: qrUrl || current.qrUrl,
         avatarUrl:
           status.profile_exists && status.profile_url ? status.profile_url : current.avatarUrl,
       }));
     } catch {
-      if (requestId === assetRequestRef.current) setAssetError(true);
+      if (requestId === assetRequestRef.current) setAssetError(qrErrors[500]);
     } finally {
       if (requestId === assetRequestRef.current) setIsLoadingAssets(false);
     }
@@ -207,7 +225,7 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
         studentId: payload.student_id ?? current.studentId,
         cardNumber: payload.student_id ?? current.cardNumber,
       }));
-      setAssetError(false);
+      setAssetError(null);
       toast.success("Card assets refreshed successfully!");
     } catch {
       toast.error("An error occurred while refreshing assets.");
@@ -408,10 +426,12 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
         {assetError && !data.qrUrl && (
           <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            <span>Couldn&apos;t load your card QR.</span>
-            <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void checkAssets()}>
-              Retry
-            </Button>
+            <span>{assetError.message}</span>
+            {assetError.canRetry && (
+              <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void checkAssets()}>
+                Retry
+              </Button>
+            )}
           </div>
         )}
 
@@ -562,10 +582,12 @@ export default function MyCardContainer({ initialData, variant = "page" }: MyCar
 
           {assetError && !data.qrUrl && (
             <div role="alert" className="flex w-full items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive sm:w-auto">
-              <span>Couldn&apos;t load your card QR.</span>
-              <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void checkAssets()}>
-                Retry
-              </Button>
+              <span>{assetError.message}</span>
+              {assetError.canRetry && (
+                <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => void checkAssets()}>
+                  Retry
+                </Button>
+              )}
             </div>
           )}
 

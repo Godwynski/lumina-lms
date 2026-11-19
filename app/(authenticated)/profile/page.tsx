@@ -2,6 +2,7 @@ import { getMe } from "@/lib/auth-helpers";
 import { ProfileSection } from "@/components/settings/sections/ProfileSection";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import ProfileLoading from "./loading";
 
 export const metadata = { title: "My Profile" };
 
@@ -29,10 +30,8 @@ async function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <div className="space-y-6 w-full">
-      <Suspense fallback={<div className="p-8 animate-pulse space-y-8"><div className="h-8 w-48 bg-muted rounded" /><div className="h-96 w-full bg-muted rounded" /></div>}>
-        <ProfileContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={<ProfileLoading />}>
+      <ProfileContent />
+    </Suspense>
   );
 }
