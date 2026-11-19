@@ -149,34 +149,8 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
         <p className="text-xs text-muted-foreground">Date Range: {loadedDates.from} – {loadedDates.to}</p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 print:hidden">
-        <div className="flex flex-wrap items-center gap-2 sm:order-2">
-          <OverflowActionsMenu
-            label="Analytics report actions"
-            triggerText="Overview actions"
-            actions={[
-              {
-                id: "export-analytics",
-                label: isExporting ? "Exporting..." : "Export (.xlsx)",
-                icon: Download,
-                disabled: !summary || isLoadingSummary || isExporting,
-                onSelect: () => void handleExportXlsx(),
-              },
-              {
-                id: "print-analytics",
-                label: "Print overview",
-                icon: Printer,
-                onSelect: () => window.print(),
-              },
-            ]}
-          />
-          <Button asChild className="h-11">
-            <Link href={`/analytics/reports?from=${dates.from}&to=${dates.to}`}>
-              <FileBarChart aria-hidden="true" /> Build report
-            </Link>
-          </Button>
-        </div>
-        <div className="relative grid min-w-0 max-w-md flex-1 basis-full grid-cols-4 rounded-xl border border-border/60 bg-muted/40 p-1 sm:order-1 sm:basis-auto lg:flex lg:flex-none">
+      <div className="app-toolbar app-toolbar-row justify-between print:hidden">
+        <div className="app-toolbar-segments relative grid flex-1 basis-full grid-cols-4 sm:basis-auto sm:flex-none">
           {RANGES.map((r) => (
             <button
               key={r.value}
@@ -209,6 +183,32 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
               <button type="submit" className="w-full min-h-10 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">Apply</button>
             </form>
           </details>
+        </div>
+        <div className="app-toolbar-row">
+          <OverflowActionsMenu
+            label="Analytics report actions"
+            triggerText="Overview actions"
+            actions={[
+              {
+                id: "export-analytics",
+                label: isExporting ? "Exporting..." : "Export (.xlsx)",
+                icon: Download,
+                disabled: !summary || isLoadingSummary || isExporting,
+                onSelect: () => void handleExportXlsx(),
+              },
+              {
+                id: "print-analytics",
+                label: "Print overview",
+                icon: Printer,
+                onSelect: () => window.print(),
+              },
+            ]}
+          />
+          <Button asChild className="app-toolbar-control h-11">
+            <Link href={`/analytics/reports?from=${dates.from}&to=${dates.to}`}>
+              <FileBarChart aria-hidden="true" /> Build report
+            </Link>
+          </Button>
         </div>
       </div>
       {range === 'custom' && <div className="flex justify-end gap-3 text-xs text-muted-foreground">

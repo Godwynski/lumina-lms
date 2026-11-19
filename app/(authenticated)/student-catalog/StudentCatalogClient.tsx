@@ -3,13 +3,11 @@
 import { useState, use, useEffect, useTransition, useCallback, useRef } from 'react';
 import {
   Search,
-  X,
   ChevronDown,
   SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Sheet,
@@ -32,11 +30,13 @@ import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { StudentBookCard } from '@/components/library/StudentBookCard';
 import { CatalogTable } from '@/components/library/CatalogTable';
-import { ViewModeToggle, resolveViewMode, type CatalogViewMode } from '@/components/common/ViewModeToggle';
+import { ViewModeToggle, replaceViewModeInUrl, resolveViewMode, type CatalogViewMode } from '@/components/common/ViewModeToggle';
+import { ToolbarSearchField } from '@/components/common/ToolbarSearchField';
 import { usePreferences } from '@/components/providers/PreferencesProvider';
 import { AnimatePresence, m } from 'framer-motion';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { createClient } from '@/lib/supabase/client';
+import { BOOK_SORT_OPTIONS, bookColumnSort, normalizeBookSort, parseBookSort, type BookSortParam } from '@/lib/catalog-sort';
 
 
 
@@ -62,11 +62,9 @@ interface StudentCatalogClientProps {
     categoryId: string;
     availableOnly: boolean;
     page: number;
-    sortBy: CatalogSort;
+    sortBy: BookSortParam;
   };
 }
-
-type CatalogSort = 'relevance' | 'title' | 'author' | 'availability' | 'newest';
 
 export function StudentCatalogClient({ 
   booksPromise, 
@@ -163,18 +161,17 @@ export function StudentCatalogClient({
   const [localQuery, setLocalQuery] = useState(initialFilters.q);
   // Queries this component pushed that the URL hasn't caught up with yet.
   const pendingQueries = useRef<string[]>([]);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [page, setPage] = useState(initialFilters.page);
   const pageSize = 16;
 
   const [selectedCategory, setSelectedCategory] = useState(initialFilters.categoryId);
   const [availableOnly, setAvailableOnly] = useState(initialFilters.availableOnly);
   // An explicit Sort choice wins; otherwise searches show "Best match" first.
-  const explicitSort = searchParams.get('sort') as CatalogSort | null;
   const hasQuery = urlQuery.trim().length > 0;
-  const sortBy: CatalogSort = explicitSort && (explicitSort !== 'relevance' || hasQuery)
-    ? explicitSort
-    : (hasQuery ? 'relevance' : 'newest');
-
+  const explicitSort = parseBookSort(searchParams.get('sort'), hasQuery);
+  const sortBy = normalizeBookSort(explicitSort ?? (hasQuery ? 'relevance' : 'newest'));
+  const sortOptions = BOOK_SORT_OPTIONS.filter(({ value }) => value !== 'relevance' || hasQuery);
 
   const books = initialData.books || [];
   const totalBooks = initialData.total || 0;
@@ -219,16 +216,19 @@ export function StudentCatalogClient({
     setLocalQuery(urlQuery);
   }, [urlQuery]);
 
-  const pushQuery = useCallback((raw: string) => {
+  const pushQuery = useCallback((raw: string, sort?: string) => {
+    clearTimeout(searchDebounce.current);
     const q = raw.trim();
     if (q !== urlQuery) pendingQueries.current.push(q);
-    updateParams({ q: q || null, page: 1 });
+    updateParams({ q: q || null, ...(sort ? { sort } : {}), page: 1 });
   }, [urlQuery, updateParams]);
 
   // Debounce search input for realtime as-you-type search
   useEffect(() => {
-    if (localQuery.trim() === urlQuery.trim()) return;
+    const q = localQuery.trim();
+    if (q === urlQuery.trim() || q === pendingQueries.current.at(-1)) return;
     const timer = setTimeout(() => pushQuery(localQuery), 300);
+    searchDebounce.current = timer;
     return () => clearTimeout(timer);
   }, [localQuery, urlQuery, pushQuery]);
 
@@ -252,11 +252,12 @@ export function StudentCatalogClient({
     updateParams({ category: null, page: 1 });
   };
   const handleAvailableToggle = () => updateParams({ available: !availableOnly ? 'true' : null, page: 1 });
-  const handleSortChange = (val: string) => updateParams({ sort: val });
+  const handleSortChange = (sort: string) => pushQuery(localQuery, sort);
   const handlePageChange = (p: number) => updateParams({ page: p });
   const viewMode = resolveViewMode(searchParams.get('view'), preferences.catalogView);
   const setViewMode = (nextView: CatalogViewMode) => {
-    updateParams({ view: nextView });
+    if (nextView === viewMode) return;
+    replaceViewModeInUrl(nextView);
     void updatePreferences({ catalogView: nextView });
   };
 
@@ -274,38 +275,25 @@ export function StudentCatalogClient({
     <AdminTableShell
       variant="ghost"
       controls={
-        <div className="flex w-full flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-3">
-          <div className="relative w-full md:flex-1 md:min-w-[240px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
-            <Input
-              type="search"
-              aria-label="Search the catalog"
+        <div className="app-toolbar-row w-full">
+          <div className="app-toolbar-search basis-full lg:basis-52">
+            <ToolbarSearchField
+              label="Search the catalog"
               placeholder="Search by title, author, or ISBN..."
               value={localQuery}
-              onChange={(e) => setLocalQuery(e.target.value)}
+              onChange={setLocalQuery}
+              onClear={() => { setLocalQuery(''); pushQuery(''); }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   pushQuery(localQuery);
                 }
               }}
-              className="h-11 md:h-10 pl-9 pr-11 md:pr-10 rounded-xl border-border/40 bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20 [&::-webkit-search-cancel-button]:appearance-none"
             />
-            {localQuery && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                aria-label="Clear search"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 md:h-7 md:w-7 rounded-lg text-muted-foreground hover:text-foreground"
-                onClick={() => { setLocalQuery(''); pushQuery(''); }}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            )}
           </div>
 
           {/* Mobile compact filter + view bar */}
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 lg:hidden">
+          <div className="app-toolbar-row flex-1 lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
                 <Button
@@ -313,7 +301,7 @@ export function StudentCatalogClient({
                   variant="outline"
                   aria-label={mobileActiveFilterCount > 0 ? `Catalog filters (${mobileActiveFilterCount} active)` : "Catalog filters"}
                   className={cn(
-                    "h-11 flex-1 min-w-0 rounded-xl border-border/40 bg-background/50 px-3.5 justify-between text-xs font-bold shadow-none",
+                    "app-toolbar-control flex-1 min-w-0 justify-between border-border/50 bg-background px-3.5",
                     mobileActiveFilterCount > 0 && "border-primary/30 bg-primary/5 text-primary"
                   )}
                 >
@@ -354,15 +342,11 @@ export function StudentCatalogClient({
                   <div className="space-y-2.5">
                     <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground block">Sort by</span>
                     <Select value={sortBy} onValueChange={handleSortChange}>
-                      <SelectTrigger aria-label="Sort books (mobile)" className="min-h-11 h-11 w-full rounded-xl border-border/40 bg-background/50 px-3 text-xs font-bold">
+                      <SelectTrigger aria-label="Sort books (mobile)" className="app-toolbar-control min-h-11 w-full border-border/50 bg-background">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {hasQuery && <SelectItem value="relevance">Best Match</SelectItem>}
-                        <SelectItem value="newest">Recently Added</SelectItem>
-                        <SelectItem value="title">Title A-Z</SelectItem>
-                        <SelectItem value="author">Author</SelectItem>
-                        <SelectItem value="availability">Availability</SelectItem>
+                        {sortOptions.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -411,22 +395,21 @@ export function StudentCatalogClient({
               </SheetContent>
             </Sheet>
 
-            <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Catalog view mode (mobile)" />
           </div>
 
           {/* Desktop inline filter + sort bar */}
-          <div className="hidden flex-wrap items-center gap-2 py-1 lg:flex">
+          <div className="hidden lg:contents">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-9 min-w-[140px] rounded-xl border-border/40 bg-background/50 text-xs font-semibold shadow-none hover:bg-muted/10 justify-between px-3",
+                    "app-toolbar-control max-w-full justify-between border-border/50 bg-background px-3",
                     selectedIds.length > 0 && "border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
                   )}
                 >
-                  <span>
+                  <span className="truncate">
                     {selectedIds.length === 0 
                       ? "All Categories" 
                       : selectedIds.length === 1 
@@ -465,33 +448,28 @@ export function StudentCatalogClient({
               onClick={handleAvailableToggle}
               aria-pressed={availableOnly}
               className={cn(
-                "h-9 px-4 rounded-xl text-xs font-semibold transition-all",
-                availableOnly ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shadow-none" : "border-border/40 bg-background/50 text-muted-foreground shadow-none"
+                "app-toolbar-control px-3",
+                availableOnly ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" : "border-border/50 bg-background"
               )}
             >
               Available
             </Button>
 
-            <div className="h-6 w-[1px] bg-border/40 mx-1 hidden sm:block" />
-
             <Select value={sortBy} onValueChange={handleSortChange}>
-              <SelectTrigger aria-label="Sort books" className="h-9 w-[140px] rounded-xl border-border/40 bg-background/50 px-3 text-xs font-semibold shadow-none">
+              <SelectTrigger aria-label="Sort books" className="app-toolbar-control min-h-11 min-w-36 border-border/50 bg-background">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {hasQuery && <SelectItem value="relevance">Best Match</SelectItem>}
-                <SelectItem value="newest">Recently Added</SelectItem>
-                <SelectItem value="title">Title A-Z</SelectItem>
-                <SelectItem value="author">Author</SelectItem>
-                <SelectItem value="availability">Availability</SelectItem>
+                {sortOptions.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
               </SelectContent>
             </Select>
 
-            <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Catalog view mode" />
           </div>
 
+          <ViewModeToggle value={viewMode} onChange={setViewMode} ariaLabel="Catalog view mode" />
+
           {(selectedCategory || availableOnly || localQuery || explicitSort) && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="hidden md:inline-flex h-9 px-3 text-xs font-semibold text-muted-foreground hover:text-destructive transition-colors ml-auto sm:ml-0">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="app-toolbar-control hidden px-3 text-muted-foreground lg:inline-flex">
               Reset
             </Button>
           )}
@@ -517,6 +495,7 @@ export function StudentCatalogClient({
               reservedBooksMap={reservedBooksMap}
               onReserveSuccess={handleReserveSuccess}
               onCancelSuccess={handleCancelSuccess}
+              columnSort={(column) => bookColumnSort(sortBy, column, handleSortChange)}
             />
           ) : null
         ) : (

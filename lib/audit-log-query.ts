@@ -19,6 +19,7 @@ const filtersSchema = z.object({
   userId: z.string().uuid().optional(),
   startDate: z.string().date().optional(),
   endDate: z.string().date().optional(),
+  sort: z.enum(['newest', 'oldest']).default('newest'),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 }).refine(v => !v.startDate || !v.endDate || v.startDate <= v.endDate, 'Start date must precede end date.');
@@ -30,8 +31,9 @@ export function parseAuditFilters(params: URLSearchParams) {
 /** Screen and exports must interpret the same filters identically. */
 export function auditLogQuery(supabase: SupabaseClient, params: URLSearchParams, count = false) {
   const filters = parseAuditFilters(params);
+  const ascending = filters.sort === 'oldest';
   let query = supabase.from('audit_log_records').select('*', count ? { count: 'exact' } : undefined)
-    .order('created_at', { ascending: false }).order('id', { ascending: false });
+    .order('created_at', { ascending }).order('id', { ascending });
   const entity = params.get('entityType');
   if (entity && entity !== 'all') {
     const aliases: Record<string, string[]> = {

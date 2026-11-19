@@ -11,6 +11,12 @@ export function resolveViewMode(urlView: string | null, savedView: unknown): Cat
   return savedView === "table" ? "table" : "cards";
 }
 
+export function replaceViewModeInUrl(mode: CatalogViewMode) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("view", mode);
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
 interface ViewModeToggleProps {
   value: CatalogViewMode;
   onChange: (mode: CatalogViewMode) => void;
@@ -20,7 +26,7 @@ interface ViewModeToggleProps {
 /** Shared Cards / Table segmented view toggle for Inventory and Catalog screens. */
 export function ViewModeToggle({ value, onChange, ariaLabel = "View mode" }: ViewModeToggleProps) {
   return (
-    <div role="group" aria-label={ariaLabel} className="flex items-center rounded-xl border border-border/60 bg-muted/30 p-1 shrink-0">
+    <div role="group" aria-label={ariaLabel} className="app-toolbar-segments flex shrink-0">
       <Button
         type="button"
         variant={value === "cards" ? "default" : "ghost"}

@@ -70,7 +70,7 @@ export function AdminTableShell({
       {feedback}
 
       {controls && (
-        <div className="relative z-10 flex min-w-0 flex-col gap-3 rounded-xl border border-border/50 bg-muted/20 p-2.5 lg:flex-row lg:flex-wrap lg:items-center">
+        <div className="app-toolbar relative z-10">
           {controls}
         </div>
       )}

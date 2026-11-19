@@ -237,6 +237,10 @@ describe('Circulation & History UI Components', () => {
   });
 
   describe('CirculationWizard', () => {
+    afterEach(() => {
+      window.history.replaceState(null, '', '/');
+    });
+
     it('opens Overdue Penalty Settlement dialog when returning overdue copy (fineAmount > 0) and supports Return Only vs Mark as Paid vs Mark as Condoned', async () => {
       mockSearchParamsString = 'mode=return';
       mockReturnBook.mockResolvedValueOnce({
@@ -415,7 +419,7 @@ describe('Circulation & History UI Components', () => {
       expect(container).toHaveTextContent('Checkout Complete');
     });
 
-    it('supports Back navigation, Continue from MemberPreview, stepper step clicks, mode switching, and Start over reset', async () => {
+    it('supports Back navigation, Continue from MemberPreview, stepper step clicks, and Start over reset', async () => {
       mockResolveScan.mockResolvedValueOnce({
         success: true,
         data: {
@@ -437,22 +441,36 @@ describe('Circulation & History UI Components', () => {
       });
 
       const { container } = await renderClient(<CirculationWizard />);
+      const stage = container.querySelector('section')!;
+      const cancel = vi.fn();
+      const animate = vi.fn(() => ({ cancel }));
+      Object.assign(stage, { animate });
 
       // Scan student -> reaches Step 2
       const input = container.querySelector('#circulation-code') as HTMLInputElement;
       await typeIntoInput(input, 'CARD-777');
+      expect(animate).not.toHaveBeenCalled();
       await submitForm(input.closest('form'));
       expect(container).toHaveTextContent('Melchora Aquino');
       expect(container).toHaveTextContent('Scan item');
+      expect(document.activeElement).toBe(container.querySelector('#circulation-code'));
+      expect(animate).toHaveBeenCalledTimes(1);
+      expect(animate).toHaveBeenCalledWith(
+        [{ opacity: 0.75 }, { opacity: 1 }],
+        expect.objectContaining({ duration: 140 }),
+      );
 
       // Click Back -> goes to Step 1 reviewingStudent state with Continue button
       await clickElement(findButtonByText(container, 'Back'));
       expect(container).toHaveTextContent('Continue');
       expect(container.querySelector('#circulation-code')).toBeNull();
+      expect(document.activeElement).toBe(stage);
+      expect(cancel).toHaveBeenCalledTimes(1);
 
       // Click Continue -> returns to Step 2
       await clickElement(findButtonByText(container, 'Continue'));
       expect(container).toHaveTextContent('Scan item');
+      expect(document.activeElement).toBe(container.querySelector('#circulation-code'));
 
       // Scan book -> reaches Step 3 (Review Checkout)
       const bookInput = container.querySelector('#circulation-code') as HTMLInputElement;
@@ -470,14 +488,79 @@ describe('Circulation & History UI Components', () => {
       await clickElement(findButtonByText(container, 'Start over'));
       expect(container).toHaveTextContent('Scan library card');
       expect(container).not.toHaveTextContent('Melchora Aquino');
+      expect(document.activeElement).toBe(container.querySelector('#circulation-code'));
+      expect(container.querySelector('section')).toBe(stage);
+      expect(animate).toHaveBeenCalledTimes(6);
+      expect(cancel).toHaveBeenCalledTimes(5);
+    });
 
-      // Switch mode to Return and back to Checkout
+    it('switches modes in place, clears the active form, and focuses the new scan field without scrolling', async () => {
+      window.history.replaceState(null, '', '/circulation?mode=checkout');
+      const historyLength = window.history.length;
+      const handle = await renderClient(<CirculationWizard />);
+      const modeControls = handle.container.querySelector('[role="group"][aria-label="Circulation mode"]')!;
+      expect(modeControls).toBeInTheDocument();
+      const checkoutButton = findButtonByExactText(modeControls, 'Checkout')!;
+      const returnButton = findButtonByExactText(modeControls, 'Return')!;
+      const checkoutStep = handle.container.querySelector('[aria-current="step"]')!;
+      expect(modeControls.compareDocumentPosition(checkoutStep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const stage = handle.container.querySelector('section');
+      const cancel = vi.fn();
+      const animate = vi.fn(() => ({ cancel }));
+      Object.assign(stage!, { animate });
+      const checkoutInput = handle.container.querySelector<HTMLInputElement>('#circulation-code')!;
+      await typeIntoInput(checkoutInput, 'UNSUBMITTED-CARD');
+
+      const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+      try {
+        await clickElement(returnButton);
+        const returnInput = handle.container.querySelector<HTMLInputElement>('#circulation-code')!;
+        expect(returnButton).toHaveAttribute('aria-pressed', 'true');
+        expect(handle.container.querySelector('section')).toBe(stage);
+        expect(handle.container.querySelector('[role="group"][aria-label="Circulation mode"]')).toBe(modeControls);
+        expect(findButtonByExactText(handle.container, 'Checkout')).toBe(checkoutButton);
+        expect(findButtonByExactText(handle.container, 'Return')).toBe(returnButton);
+        expect(handle.container.querySelector('[aria-current="step"]')).toHaveTextContent('Book / Item');
+        expect(returnInput).toHaveValue('');
+        expect(document.activeElement).toBe(returnInput);
+        expect(focus.mock.calls).toEqual([[{ preventScroll: true }]]);
+        expect(window.location.search).toBe('?mode=return');
+        expect(window.history.length).toBe(historyLength);
+        expect(mockRouterReplace).not.toHaveBeenCalled();
+        expect(animate).toHaveBeenCalledTimes(1);
+
+        await clickElement(checkoutButton);
+        await clickElement(returnButton);
+        expect(document.activeElement).toBe(handle.container.querySelector('#circulation-code'));
+        expect(animate).toHaveBeenCalledTimes(3);
+        expect(cancel).toHaveBeenCalledTimes(2);
+
+        handle.unmount();
+        expect(cancel).toHaveBeenCalledTimes(3);
+        mockSearchParamsString = window.location.search;
+        const reloaded = await renderClient(<CirculationWizard />);
+        expect(findButtonByExactText(reloaded.container, 'Return')).toHaveAttribute('aria-pressed', 'true');
+        expect(reloaded.container).toHaveTextContent('Scan item');
+
+        await clickElement(findButtonByExactText(reloaded.container, 'Checkout'));
+        expect(reloaded.container).toHaveTextContent('Scan library card');
+        expect(window.location.search).toBe('?mode=checkout');
+      } finally {
+        focus.mockRestore();
+      }
+    });
+
+    it('switches modes and focuses the scanner with reduced motion enabled', async () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(prefers-reduced-motion: reduce)' }));
+      const { container } = await renderClient(<CirculationWizard />);
+      const animate = vi.fn();
+      Object.assign(container.querySelector('section')!, { animate });
+
       await clickElement(findButtonByExactText(container, 'Return'));
-      expect(mockRouterReplace).toHaveBeenCalledWith('?mode=return');
-      expect(container).toHaveTextContent('Scan item');
 
-      await clickElement(findButtonByExactText(container, 'Checkout'));
-      expect(mockRouterReplace).toHaveBeenCalledWith('?mode=checkout');
+      expect(container.querySelector('section')).toHaveTextContent('Scan item');
+      expect(document.activeElement).toBe(container.querySelector('#circulation-code'));
+      expect(animate).not.toHaveBeenCalled();
     });
 
     it('shows borrowing block panel at step 1 after card scan: library_staff sees only Start over', async () => {
@@ -668,6 +751,9 @@ describe('Circulation & History UI Components', () => {
       for (const label of ['Borrower', 'Resource', 'Borrowed', 'Timeline']) {
         expect(sortBtn(first.container, label)).not.toBeNull();
       }
+      expect(sortBtn(first.container, 'Borrowed')).toHaveAttribute('aria-label', 'Sort by Borrowed (descending)');
+      await clickElement(sortBtn(first.container, 'Borrowed'));
+      expect(mockRouterReplace).toHaveBeenLastCalledWith('/history?sort=borrowed_asc&page=1', { scroll: false });
       await clickElement(sortBtn(first.container, 'Resource'));
       expect(mockRouterReplace).toHaveBeenLastCalledWith('/history?sort=title_asc&page=1', { scroll: false });
       first.unmount();
@@ -682,6 +768,21 @@ describe('Circulation & History UI Components', () => {
         expect(mockRouterReplace).toHaveBeenLastCalledWith('/history?sort=due_asc&page=1', { scroll: false });
       } finally {
         mockSearchParamsString = '';
+      }
+    });
+
+    it('applies a pending search with a header sort in one navigation', async () => {
+      const { container } = await renderHistory({ records: [makeRecord()] });
+      vi.useFakeTimers();
+      try {
+        await typeIntoInput(container.querySelector<HTMLInputElement>('input[aria-label="Search borrowing history"]'), 'new query');
+        await clickElement(container.querySelector('button[aria-label="Sort by Resource"]'));
+        await act(async () => vi.advanceTimersByTimeAsync(300));
+        expect(mockRouterReplace).toHaveBeenCalledTimes(1);
+        const url = new URL(mockRouterReplace.mock.calls[0][0], 'http://localhost');
+        expect(Object.fromEntries(url.searchParams)).toMatchObject({ q: 'new query', sort: 'title_asc', page: '1' });
+      } finally {
+        vi.useRealTimers();
       }
     });
 

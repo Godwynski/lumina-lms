@@ -211,7 +211,7 @@ describe('B7 — Settings, Policies, Profile & Notifications UI', () => {
       />
     );
 
-    const pillWrapper = container.querySelector('.flex.flex-wrap.gap-2');
+    const pillWrapper = container.querySelector('[role="group"][aria-label="Policy categories"]');
     expect(pillWrapper).not.toBeNull();
     expect(pillWrapper).toHaveTextContent('Categories');
     expect(pillWrapper).toHaveTextContent('Lifecycle');

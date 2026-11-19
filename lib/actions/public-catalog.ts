@@ -3,9 +3,7 @@
 import { createSafeClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
 import { fetchBooksCore, fetchCategoriesCore } from './books-core';
-
-/** 'relevance' = "Best match": title matches first (only used with a search query). */
-type CatalogSort = 'relevance' | 'title' | 'author' | 'availability' | 'newest';
+import { getBookOrdering, normalizeBookSort, type BookSort, type BookSortParam } from '@/lib/catalog-sort';
 
 // Data fetching function for search, intended to be wrapped by cache
 async function fetchPublicBooks(
@@ -15,7 +13,7 @@ async function fetchPublicBooks(
   availableOnly: boolean = false,
   page: number = 1,
   limit: number = 20,
-  sortBy: CatalogSort = 'title'
+  sort: BookSort = 'title_asc'
 ) {
   return fetchBooksCore({
     query,
@@ -24,8 +22,7 @@ async function fetchPublicBooks(
     availableOnly,
     page,
     pageSize: limit,
-    sortBy: sortBy === 'newest' ? 'created_at' : sortBy,
-    sortOrder: (sortBy === 'availability' || sortBy === 'newest') ? 'desc' : 'asc'
+    ...getBookOrdering(sort, Boolean(query.trim())),
   }, 'id, title, author, isbn, category_id, tags, section, cover_url, total_copies, available_copies, categories(name)');
 }
 
@@ -37,12 +34,13 @@ export async function getPublicBooksCached(
   availableOnly: boolean = false,
   page: number = 1,
   limit: number = 20,
-  sortBy: CatalogSort = 'title'
+  sortBy: BookSortParam = 'title'
 ) {
+  const sort = normalizeBookSort(sortBy);
   return unstable_cache(
-    () => fetchPublicBooks(query, categoryId, section, availableOnly, page, limit, sortBy),
+    () => fetchPublicBooks(query, categoryId, section, availableOnly, page, limit, sort),
     // Dynamic cache key — each unique combination of params is cached separately
-    ['public-books', query, categoryId ?? '', section ?? '', String(availableOnly), String(page), String(limit), sortBy],
+    ['public-books', query, categoryId ?? '', section ?? '', String(availableOnly), String(page), String(limit), sort],
     { revalidate: 60, tags: ['public-books'] }
   )();
 }

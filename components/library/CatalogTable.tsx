@@ -8,6 +8,7 @@ import { ReserveTitleButton } from "@/components/common/ReserveTitleButton";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { cn, getCategoryName } from "@/lib/utils";
 import type { Book } from "@/lib/types";
+import type { BookSortColumn } from "@/lib/catalog-sort";
 
 export interface CatalogReservationInfo {
   status: string;
@@ -25,6 +26,7 @@ interface CatalogTableProps {
     holdExpiresAt?: string | null
   ) => void;
   onCancelSuccess: (bookId: string) => void;
+  columnSort?: (column: BookSortColumn) => LuminaColumn<Book>["sort"];
 }
 
 /** Tabular catalog view matching Inventory's table mode with inline reservation controls. */
@@ -33,12 +35,14 @@ export function CatalogTable({
   reservedBooksMap,
   onReserveSuccess,
   onCancelSuccess,
+  columnSort,
 }: CatalogTableProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
   const columns: LuminaColumn<Book>[] = [
     {
       header: "Title",
+      sort: columnSort?.("title"),
       mobileMain: true,
       accessor: (book) => {
         const reserved = reservedBooksMap.get(book.id);
@@ -71,6 +75,7 @@ export function CatalogTable({
     },
     {
       header: "Author",
+      sort: columnSort?.("author"),
       accessor: (book) => (
         <span className="text-xs font-medium text-muted-foreground">{book.author}</span>
       ),
@@ -89,6 +94,7 @@ export function CatalogTable({
     },
     {
       header: "Copies (Avail / Total)",
+      sort: columnSort?.("availability"),
       accessor: (book) => {
         const isOutOfStock = book.available_copies === 0;
         const total = book.total_copies ?? book.available_copies;

@@ -4,7 +4,7 @@ import { Camera, QrCode, ScanLine, RefreshCcw, HelpCircle, Loader2, RefreshCw } 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScanner } from '@/hooks/use-scanner';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Label, Field } from "@/components/ui/label";
 import {
   Tooltip,
@@ -33,8 +33,13 @@ export function ScanStep({
   actionLabel
 }: ScanStepProps) {
   const [manualValue, setManualValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const entryHintId = useId();
   const fieldLabel = label ?? placeholder;
+
+  useEffect(() => {
+    inputRef.current?.focus({ preventScroll: true });
+  }, [fieldLabel]);
 
   const {
     cameraOpen,
@@ -103,7 +108,7 @@ export function ScanStep({
             <Input
               aria-describedby={entryHintId}
               id="circulation-code"
-              autoFocus
+              ref={inputRef}
               value={manualValue}
               onChange={(e) => setManualValue(e.target.value.toUpperCase())}
               placeholder={placeholder}
@@ -176,7 +181,7 @@ export function ScanStep({
         <div
           className={
             showCameraPreview
-              ? 'relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/60 bg-muted/20'
+              ? 'relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-2xl border border-border/60 bg-muted/20 motion-safe:animate-in motion-safe:fade-in-75 motion-safe:duration-150'
               : 'hidden'
           }
         >

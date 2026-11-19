@@ -522,7 +522,7 @@ export function UserDetailClient({
           </div>
 
           {(isAdmin || isLibrarian) && (
-            <UserBorrowingHistorySection userId={user.id} initialHistory={initialHistory} />
+            <UserBorrowingHistorySection key={user.id} userId={user.id} initialHistory={initialHistory} />
           )}
 
         </div>

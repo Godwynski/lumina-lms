@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { logger } from '@/lib/logger';
 import { resolveScan, checkoutBook, returnBook } from '@/lib/actions/circulation';
 import { toast } from 'sonner';
@@ -48,7 +48,6 @@ export const RETURN_STEPS = [
  * for the multi-step library circulation checkout/return wizard.
  */
 export function useCirculationWizard() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const initialMode = searchParams.get('mode') === 'return' ? 'return' : 'checkout';
 
@@ -59,6 +58,7 @@ export function useCirculationWizard() {
   const [pendingReturn, setPendingReturn] = useState<PendingReturn | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
+  const committingRef = useRef(false);
   // Bumped on reset/mode switch. Async results from an older generation are
   // dropped so they can't repopulate a cleared wizard or the wrong mode.
   const generationRef = useRef(0);
@@ -107,12 +107,14 @@ export function useCirculationWizard() {
   }, []);
 
   const switchMode = useCallback((newMode: FlowMode) => {
+    if (committingRef.current || newMode === mode) return false;
+    const url = new URL(window.location.href);
+    url.searchParams.set('mode', newMode);
+    window.history.replaceState(null, '', url);
     setMode(newMode);
     handleReset();
-    const params = new URLSearchParams(searchParams);
-    params.set('mode', newMode);
-    router.replace(`?${params.toString()}`);
-  }, [handleReset, router, searchParams]);
+    return true;
+  }, [handleReset, mode]);
 
   const processScan = async (value: string, isManual: boolean = false): Promise<boolean> => {
     const gen = generationRef.current;
@@ -207,6 +209,8 @@ export function useCirculationWizard() {
     resolution?: 'PAID' | 'CONDONED',
     remarks?: string
   ) => {
+    if (committingRef.current) return;
+    committingRef.current = true;
     const gen = generationRef.current;
     const isStale = () => gen !== generationRef.current;
     setIsProcessing(true);
@@ -284,6 +288,7 @@ export function useCirculationWizard() {
       const message = err instanceof Error ? err.message : 'Network failure during confirmation.';
       toast.error(message);
     } finally {
+      committingRef.current = false;
       setIsCommitting(false);
       if (!isStale()) setIsProcessing(false);
     }

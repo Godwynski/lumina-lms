@@ -77,6 +77,8 @@ async function bootLuminaDb(): Promise<PGlite> {
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117120000_qa_circulation_fixes.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117130000_rls_tightening.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117140000_history_sort.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119050000_stable_borrowing_history_sort.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119043439_books_sort_indexes.sql'), 'utf8'));
   return db;
 }
 
@@ -1042,6 +1044,18 @@ describe('get_borrowing_history_v2', () => {
       recPastDueActiveId,
       recActiveId,
     ]);
+
+    await db.query(
+      "UPDATE public.borrowing_records SET borrowed_at = NOW() - interval '1 day' WHERE id = $1",
+      [recActiveId],
+    );
+    const newest = await withRole(db, 'authenticated', student1.id, (tx) =>
+      tx.query<{ id: string }>(
+        `SELECT id FROM public.get_borrowing_history_v2($1, 1, 1, 'CURRENT', NULL, NULL, 'borrowed_desc')`,
+        [student1.id],
+      ),
+    );
+    expect(newest.rows.map((row) => row.id)).toEqual([recActiveId]);
   });
 });
 
@@ -1344,6 +1358,45 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
       )
     );
     expect(shortRes.rows.map((r) => r.id)).toEqual([exactTitle.bookId, containsTitle.bookId]);
+  });
+
+  it('serves both sort directions from book indexes and paginates the filtered rows within RLS', async () => {
+    const category = await db.query<{ id: string }>(
+      `INSERT INTO public.categories (name, slug) VALUES ('Catalog Sort', 'catalog-sort') RETURNING id`
+    );
+    const categoryId = category.rows[0].id;
+    const sameAuthorA = await createBookWithCopies(db, { title: 'Clean Code', author: 'Martin', categoryId });
+    const sameAuthorB = await createBookWithCopies(db, { title: 'Clean Architecture', author: 'Martin', categoryId });
+    const archived = await createBookWithCopies(db, { title: 'Clean Archived', author: 'Adams', categoryId, isActive: false });
+    await createBookWithCopies(db, { title: 'Clean Other Category', author: 'Adams' });
+    const [firstId, secondId] = [sameAuthorA.bookId, sameAuthorB.bookId].sort();
+
+    for (const [userId, expected] of [[student1.id, secondId], [librarian.id, firstId]]) {
+      const page = await withRole(db, 'authenticated', userId, (tx) => tx.query<{ id: string }>(
+        `SELECT id FROM public.books WHERE category_id = $1 AND title ILIKE '%clean%' AND available_copies > 0
+         ORDER BY author ASC, id ASC LIMIT 1 OFFSET 1`,
+        [categoryId]
+      ));
+      expect(page.rows).toEqual([{ id: expected }]);
+    }
+    const staffFirst = await withRole(db, 'authenticated', librarian.id, (tx) => tx.query<{ id: string }>(
+      `SELECT id FROM public.books WHERE category_id = $1 ORDER BY author ASC, id ASC LIMIT 1`,
+      [categoryId]
+    ));
+    expect(staffFirst.rows).toEqual([{ id: archived.bookId }]);
+
+    await db.transaction(async (tx) => {
+      // Force the planner to consider ordered access on the small test fixture.
+      await tx.exec('SET LOCAL enable_seqscan = off');
+      for (const column of ['title', 'author', 'available_copies', 'created_at']) {
+        for (const direction of ['ASC', 'DESC']) {
+          const plan = await tx.query<{ 'QUERY PLAN': string }>(
+            `EXPLAIN SELECT id FROM public.books ORDER BY ${column} ${direction}, id ${direction} LIMIT 2`
+          );
+          expect(plan.rows.map((row) => row['QUERY PLAN']).join('\n')).toContain(`books_${column}_id_idx`);
+        }
+      }
+    });
   });
 
   it('transfer_super_admin_ownership transfers singleton ownership atomically and rejects unauthorized callers', async () => {

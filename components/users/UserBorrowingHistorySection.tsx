@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { Section } from "@/components/settings/SettingsShared";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
+import { TableSortSelect, type TableSortDirection } from "@/components/common/TableSort";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { getUserBorrowingHistory, type BorrowingRecord } from "@/lib/actions/history";
@@ -14,6 +15,15 @@ export interface UserBorrowingHistoryData {
 }
 
 const PAGE_SIZE = 10;
+const SORT_OPTIONS = [
+  { value: "borrowed_desc", label: "Borrowed · Newest" },
+  { value: "borrowed_asc", label: "Borrowed · Oldest" },
+  { value: "due_asc", label: "Due · Earliest" },
+  { value: "due_desc", label: "Due · Latest" },
+  { value: "title_asc", label: "Title · A–Z" },
+  { value: "title_desc", label: "Title · Z–A" },
+] as const;
+type BorrowerSort = typeof SORT_OPTIONS[number]["value"];
 
 function formatHistoryDate(dateStr: string | null) {
   if (!dateStr) return "—";
@@ -65,37 +75,26 @@ export function UserBorrowingHistorySection({
   initialHistory?: UserBorrowingHistoryData;
 }) {
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<BorrowerSort>("borrowed_desc");
   const [records, setRecords] = useState<BorrowingRecord[]>(initialHistory?.records ?? []);
   const [totalCount, setTotalCount] = useState<number>(initialHistory?.totalCount ?? 0);
   const [isLoading, setIsLoading] = useState(!initialHistory);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const skipInitialFetchRef = useRef(Boolean(initialHistory));
-
   useEffect(() => {
-    setPage(1);
-    if (initialHistory) {
+    const requestId = ++requestIdRef.current;
+    if (initialHistory && page === 1 && sort === "borrowed_desc") {
       setRecords(initialHistory.records);
       setTotalCount(initialHistory.totalCount);
       setIsLoading(false);
       setError(null);
-      skipInitialFetchRef.current = true;
-    } else {
-      skipInitialFetchRef.current = false;
-    }
-  }, [userId, initialHistory]);
-
-  useEffect(() => {
-    if (skipInitialFetchRef.current && page === 1) {
-      skipInitialFetchRef.current = false;
       return;
     }
 
-    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setError(null);
 
-    void getUserBorrowingHistory({ userId, page, pageSize: PAGE_SIZE })
+    void getUserBorrowingHistory({ userId, page, pageSize: PAGE_SIZE, ...(sort === "borrowed_desc" ? {} : { sort }) })
       .then((res) => {
         if (requestId !== requestIdRef.current) return;
         if (res.success) {
@@ -114,11 +113,24 @@ export function UserBorrowingHistorySection({
           setIsLoading(false);
         }
       });
-  }, [userId, page]);
+  }, [userId, page, sort, initialHistory]);
+
+  function changeSort(next: string) {
+    const option = SORT_OPTIONS.find((item) => item.value === next);
+    if (!option || option.value === sort) return;
+    setSort(option.value);
+    setPage(1);
+  }
+
+  function columnSort(key: "title" | "borrowed" | "due") {
+    const direction: TableSortDirection | undefined = sort === `${key}_asc` ? "asc" : sort === `${key}_desc` ? "desc" : undefined;
+    return { direction, onToggle: () => changeSort(`${key}_${direction === "asc" ? "desc" : "asc"}`) };
+  }
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     {
       header: "Title",
+      sort: columnSort("title"),
       mobileMain: true,
       accessor: (record) => (
         <div className="min-w-0">
@@ -133,12 +145,14 @@ export function UserBorrowingHistorySection({
     },
     {
       header: "Borrowed",
+      sort: columnSort("borrowed"),
       accessor: (record) => (
         <span className="text-xs text-foreground whitespace-nowrap">{formatHistoryDate(record.borrowed_at)}</span>
       ),
     },
     {
       header: "Due",
+      sort: columnSort("due"),
       accessor: (record) => (
         <span className="text-xs text-foreground whitespace-nowrap">{formatHistoryDate(record.due_date)}</span>
       ),
@@ -168,20 +182,23 @@ export function UserBorrowingHistorySection({
           {error}
         </p>
       )}
-      <LuminaTable
-        data={records}
-        columns={columns}
-        isLoading={isLoading}
-        totalCount={totalCount}
-        page={page}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
-        emptyState={{
-          icon: BookOpen,
-          title: "No borrowing history",
-          description: "This patron has no recorded book loans.",
-        }}
-      />
+      <TableSortSelect value={sort} onChange={changeSort} options={[...SORT_OPTIONS]} className="mb-2 md:hidden" />
+      <div aria-busy={isLoading}>
+        <LuminaTable
+          data={records}
+          columns={columns}
+          isLoading={isLoading && records.length === 0}
+          totalCount={totalCount}
+          page={page}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+          emptyState={{
+            icon: BookOpen,
+            title: "No borrowing history",
+            description: "This patron has no recorded book loans.",
+          }}
+        />
+      </div>
     </Section>
   );
 }

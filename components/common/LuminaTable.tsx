@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { type LucideIcon, Loader2, SearchX } from "lucide-react";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { EmptyState as EmptyStateView } from "@/components/ui/empty-state";
+import { SortableTableHeader, type TableSortDirection } from "./TableSort";
 
 export interface LuminaColumn<T> {
   header: React.ReactNode;
@@ -13,6 +14,7 @@ export interface LuminaColumn<T> {
   className?: string;
   headerClassName?: string;
   mobileMain?: boolean;
+  sort?: { direction?: TableSortDirection; onToggle: () => void };
 }
 
 interface EmptyState {
@@ -160,12 +162,13 @@ export function LuminaTable<T extends { id: string | number }>({
                     <th
                       key={`head-${idx}`}
                       scope="col"
+                      aria-sort={col.sort?.direction === "asc" ? "ascending" : col.sort?.direction === "desc" ? "descending" : undefined}
                       className={cn(
                         "px-4 py-3 text-2xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap",
                         col.headerClassName
                       )}
                     >
-                      {col.header}
+                      {col.sort ? <SortableTableHeader {...col.sort}>{col.header}</SortableTableHeader> : col.header}
                     </th>
                   ))}
                 </tr>

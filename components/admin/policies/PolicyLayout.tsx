@@ -303,11 +303,11 @@ export function PolicyLayout({
           onMouseLeave={handleMouseLeaveOrUp}
           onMouseMove={handleMouseMove}
           className={cn(
-            "lg:hidden pb-1",
+            "app-toolbar lg:hidden",
             isDragging ? "cursor-grabbing" : ""
           )}
         >
-          <div className="flex flex-wrap gap-2">
+          <div role="group" aria-label="Policy categories" className="app-toolbar-row">
             {sidebarItems.map(item => (
               <button
                 key={item.id}

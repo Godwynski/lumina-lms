@@ -1,19 +1,16 @@
 import * as React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderClient, cleanupClients, clickElement } from './helpers/render';
+import { renderClient, cleanupClients, clickElement, typeIntoInput } from './helpers/render';
 
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const mockRouterRefresh = vi.fn();
-let mockSearchParamsString = '';
+const mockRouter = { push: mockRouterPush, replace: mockRouterReplace, refresh: mockRouterRefresh };
+let mockSearchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-    replace: mockRouterReplace,
-    refresh: mockRouterRefresh,
-  }),
-  useSearchParams: () => new URLSearchParams(mockSearchParamsString),
+  useRouter: () => mockRouter,
+  useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock('next/image', () => ({
@@ -81,6 +78,7 @@ import { BatchTaskProvider } from '@/components/providers/BatchTaskProvider';
 import { PreferencesProvider } from '@/components/providers/PreferencesProvider';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { ModernInventoryClient } from '@/components/inventory/ModernInventoryClient';
+import { StudentCatalogClient } from '@/app/(authenticated)/student-catalog/StudentCatalogClient';
 import { QRPrinterModal } from '@/components/qr-printer-modal';
 import { AddBookClient } from '@/app/(authenticated)/inventory/add/AddBookClient';
 import type { Book, Category, ProfileData } from '@/lib/types';
@@ -134,7 +132,7 @@ function makeProfile(): ProfileData {
 
 describe('B5 Inventory & Add Book UI', () => {
   beforeEach(() => {
-    mockSearchParamsString = '';
+    mockSearchParams = new URLSearchParams();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
     mockRouterRefresh.mockReset();
@@ -197,7 +195,7 @@ describe('B5 Inventory & Add Book UI', () => {
   });
 
   it('ModernInventoryClient shows Add Book CTA and clears filters from filtered table empty state (F16, F40)', async () => {
-    mockSearchParamsString = 'q=zzzznonexistent9999&view=table';
+    mockSearchParams = new URLSearchParams('q=zzzznonexistent9999&view=table');
     const categories: Category[] = [{ id: 'cat-1', name: 'Computer Science' }];
 
     const { container } = await renderClient(
@@ -223,6 +221,186 @@ describe('B5 Inventory & Add Book UI', () => {
     );
     await clickElement(clearBtn!);
     expect(mockRouterReplace).toHaveBeenCalledWith('?view=table', { scroll: false });
+  });
+
+  it('sorts Inventory from a table header, preserves filters, and resets pagination for read-only staff', async () => {
+    mockSearchParams = new URLSearchParams('q=Design&categoryId=cat-1&status=ARCHIVED&view=table&page=3&sort=author_asc');
+    const inventory = () => (
+      <AnimationProvider>
+        <PreferencesProvider initialPreferences={{ inventoryView: 'table' }} initialRole="library_staff">
+          <BatchTaskProvider>
+            <ModernInventoryClient books={[makeBook()]} totalItems={35} categories={[]} canManage={false} />
+          </BatchTaskProvider>
+        </PreferencesProvider>
+      </AnimationProvider>
+    );
+    const { container, rerender } = await renderClient(inventory());
+    const authorHeader = () => Array.from(container.querySelectorAll('th')).find((cell) => cell.textContent?.includes('Author'));
+    expect(authorHeader()).toHaveAttribute('aria-sort', 'ascending');
+    expect(container.querySelector('a[href="/inventory/add"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Batch operations"]')).toBeNull();
+
+    await clickElement(authorHeader()?.querySelector('button'));
+    expect(mockRouterReplace).toHaveBeenCalledWith('?q=Design&categoryId=cat-1&status=ARCHIVED&view=table&sort=author_desc', { scroll: false });
+
+    mockSearchParams = new URLSearchParams('q=Design&categoryId=cat-1&status=ARCHIVED&view=table&sort=author_desc');
+    await rerender(inventory());
+    expect(authorHeader()).toHaveAttribute('aria-sort', 'descending');
+    const copiesHeader = Array.from(container.querySelectorAll('th')).find((cell) => cell.textContent?.includes('Copies'));
+    await clickElement(copiesHeader?.querySelector('button'));
+    expect(mockRouterReplace).toHaveBeenLastCalledWith('?q=Design&categoryId=cat-1&status=ARCHIVED&view=table&sort=availability_desc', { scroll: false });
+  });
+
+  it('uses legacy Catalog sort links in the table and reflects the new order when switching to cards', async () => {
+    mockSearchParams = new URLSearchParams('view=table&q=Design&category=cat-1&available=true&page=2&sort=title');
+    const booksPromise = Promise.resolve({ books: [makeBook()], total: 35, hasMore: true });
+    const categoriesPromise: Promise<Category[]> = Promise.resolve([{ id: 'cat-1', name: 'Computer Science' }]);
+    const reservationsPromise = Promise.resolve([]);
+    function catalog() {
+      return (
+        <AnimationProvider>
+          <PreferencesProvider initialPreferences={{ catalogView: 'cards' }} initialRole="patron">
+            <React.Suspense fallback={<div>Loading</div>}>
+              <StudentCatalogClient
+                booksPromise={booksPromise}
+                categoriesPromise={categoriesPromise}
+                reservationsPromise={reservationsPromise}
+                initialFilters={{ q: 'Design', page: 2, categoryId: 'cat-1', availableOnly: true, sortBy: 'title' }}
+              />
+            </React.Suspense>
+          </PreferencesProvider>
+        </AnimationProvider>
+      );
+    }
+    const { container, rerender } = await renderClient(catalog());
+    const titleHeader = Array.from(container.querySelectorAll('th')).find((cell) => cell.textContent?.includes('Title'));
+    expect(titleHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(container.querySelector('[aria-label="Sort books"]')).toHaveTextContent('Title A-Z');
+
+    await clickElement(titleHeader?.querySelector('button'));
+    expect(mockRouterReplace).toHaveBeenCalledWith('?view=table&q=Design&category=cat-1&available=true&sort=title_desc', { scroll: false });
+
+    mockSearchParams = new URLSearchParams('view=cards&q=Design&category=cat-1&available=true&sort=title_desc');
+    await rerender(catalog());
+    expect(container.querySelector('table')).toBeNull();
+    expect(container.querySelector('[aria-label="Sort books"]')).toHaveTextContent('Title Z-A');
+
+    mockSearchParams = new URLSearchParams('view=cards&q=Design&sort=constructor');
+    await rerender(catalog());
+    expect(container.querySelector('[aria-label="Sort books"]')).toHaveTextContent('Best Match');
+  });
+
+  it('matches Catalog search styling and keeps Inventory search usable for read-only staff', async () => {
+    const books = [makeBook()];
+    const { container: inventory } = await renderClient(
+      <AnimationProvider>
+        <PreferencesProvider initialPreferences={{ inventoryView: 'table' }} initialRole="library_staff">
+          <BatchTaskProvider>
+            <ModernInventoryClient books={books} totalItems={1} categories={[]} canManage={false} />
+          </BatchTaskProvider>
+        </PreferencesProvider>
+      </AnimationProvider>
+    );
+    const { container: catalog } = await renderClient(
+      <AnimationProvider>
+        <PreferencesProvider initialPreferences={{ catalogView: 'table' }} initialRole="patron">
+          <React.Suspense fallback={<div>Loading</div>}>
+            <StudentCatalogClient
+              booksPromise={Promise.resolve({ books, total: 1, hasMore: false })}
+              categoriesPromise={Promise.resolve([])}
+              reservationsPromise={Promise.resolve([])}
+              initialFilters={{ q: '', page: 1, categoryId: '', availableOnly: false, sortBy: 'newest' }}
+            />
+          </React.Suspense>
+        </PreferencesProvider>
+      </AnimationProvider>
+    );
+    const inventorySearch = inventory.querySelector<HTMLInputElement>('input[type="search"][aria-label="Search inventory"]');
+    const catalogSearch = catalog.querySelector<HTMLInputElement>('input[type="search"][aria-label="Search the catalog"]');
+    const getClear = (container: HTMLElement) => container.querySelector('button[aria-label="Clear search"]');
+
+    expect(inventorySearch).toHaveAttribute('placeholder', 'Search books');
+    expect(catalogSearch).toHaveAttribute('placeholder', 'Search by title, author, or ISBN...');
+    expect(inventorySearch?.className).toBe(catalogSearch?.className);
+    expect(inventorySearch?.previousElementSibling?.getAttribute('class')).toBe(catalogSearch?.previousElementSibling?.getAttribute('class'));
+    expect(getClear(inventory)).toBeNull();
+    expect(getClear(catalog)).toBeNull();
+    expect(inventory.querySelector('a[href="/inventory/add"]')).toBeNull();
+
+    vi.useFakeTimers();
+    try {
+      await typeIntoInput(inventorySearch, 'Design');
+      await typeIntoInput(catalogSearch, 'Design');
+      expect(inventorySearch?.className).toBe(catalogSearch?.className);
+      expect(inventorySearch?.previousElementSibling?.getAttribute('class')).toBe(catalogSearch?.previousElementSibling?.getAttribute('class'));
+      expect(getClear(inventory)).toHaveAttribute('type', 'button');
+      expect(getClear(inventory)?.className).toBe(getClear(catalog)?.className);
+
+      await clickElement(getClear(inventory));
+      expect(inventorySearch).toHaveValue('');
+      expect(getClear(inventory)).toBeNull();
+      expect(mockRouterReplace).toHaveBeenCalledExactlyOnceWith('?', { scroll: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['Inventory', 'categoryId=cat-1&status=ARCHIVED'],
+    ['Catalog', 'category=cat-1&available=true'],
+  ] as const)('submits pending %s search text with the sort in one navigation', async (screen, filters) => {
+    const startingParams = `view=table&${filters}&q=Old&page=2`;
+    mockSearchParams = new URLSearchParams(startingParams);
+    const books = [makeBook()];
+    const categories: Category[] = [{ id: 'cat-1', name: 'Computer Science' }];
+    const inventory = screen === 'Inventory';
+    const role = inventory ? 'library_staff' : 'patron';
+    const booksPromise = Promise.resolve({ books, total: 35, hasMore: true });
+    const categoriesPromise = Promise.resolve(categories);
+    const reservationsPromise = Promise.resolve([]);
+    const screenUi = () => (
+      <AnimationProvider>
+        <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole={role}>
+          <BatchTaskProvider>
+            {inventory ? (
+              <ModernInventoryClient books={books} totalItems={35} categories={categories} canManage={false} />
+            ) : (
+              <React.Suspense fallback={<div>Loading</div>}>
+                <StudentCatalogClient
+                  booksPromise={booksPromise}
+                  categoriesPromise={categoriesPromise}
+                  reservationsPromise={reservationsPromise}
+                  initialFilters={{ q: 'Old', page: 2, categoryId: 'cat-1', availableOnly: true, sortBy: 'relevance' }}
+                />
+              </React.Suspense>
+            )}
+          </BatchTaskProvider>
+        </PreferencesProvider>
+      </AnimationProvider>
+    );
+    const { container, rerender } = await renderClient(screenUi());
+    const search = container.querySelector<HTMLInputElement>('input[type="search"]');
+    vi.useFakeTimers();
+    try {
+      await typeIntoInput(search, '  Clean Code  ');
+      expect(mockRouterReplace).not.toHaveBeenCalled();
+      await clickElement(container.querySelector('th button[aria-label^="Sort by Author"]'));
+
+      // Re-render with the old URL before the navigation resolves.
+      mockSearchParams = new URLSearchParams(startingParams);
+      await rerender(screenUi());
+      await React.act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      expect(mockRouterReplace).toHaveBeenCalledExactlyOnceWith(
+        `?view=table&${filters}&q=Clean+Code&sort=author_asc`, { scroll: false }
+      );
+
+      mockSearchParams = new URLSearchParams(`view=table&${filters}&q=Clean+Code&sort=author_asc`);
+      await rerender(screenUi());
+      expect(search).toHaveValue('  Clean Code  ');
+      expect(container.querySelector('th[aria-sort="ascending"]')).toHaveTextContent('Author');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('QRPrinterModal prints via print portal without mutating document.body or reloading (F18)', async () => {

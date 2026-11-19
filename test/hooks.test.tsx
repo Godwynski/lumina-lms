@@ -115,6 +115,10 @@ describe('Custom Hooks Behavioral Suite', () => {
   });
 
   describe('useCirculationWizard', () => {
+    afterEach(() => {
+      window.history.replaceState(null, '', '/');
+    });
+
     function WizardHarness({
       onState,
     }: {
@@ -418,7 +422,8 @@ describe('Custom Hooks Behavioral Suite', () => {
       expect(api.activeStudent).toBeNull();
     });
 
-    it('switches mode, ignores stale async scan results after reset, and surfaces thrown errors', async () => {
+    it('updates only the mode query parameter and ignores a scan still resolving from the prior mode', async () => {
+      window.history.replaceState(null, '', '/circulation?source=desk#scanner');
       let api!: ReturnType<typeof useCirculationWizard>;
       await renderClient(<WizardHarness onState={(s) => { api = s; }} />);
 
@@ -436,8 +441,12 @@ describe('Custom Hooks Behavioral Suite', () => {
       await act(async () => {
         api.switchMode('return');
       });
-      expect(mockRouterReplace).toHaveBeenCalledWith('?mode=return');
+      expect(window.location.pathname + window.location.search + window.location.hash)
+        .toBe('/circulation?source=desk&mode=return#scanner');
+      expect(mockRouterReplace).not.toHaveBeenCalled();
+      expect(mockRouterPush).not.toHaveBeenCalled();
       expect(api.mode).toBe('return');
+      expect(api.isProcessing).toBe(false);
 
       // Resolve stale checkout scan; should be dropped
       let result = true;
@@ -461,6 +470,51 @@ describe('Custom Hooks Behavioral Suite', () => {
       });
       expect(result).toBe(false);
       expect(mockToastError).toHaveBeenCalledWith('Network down', { id: 'circulation-error-toast' });
+    });
+
+    it('keeps the return review and mode URL in place while the transaction commits', async () => {
+      window.history.replaceState(null, '', '/circulation?mode=return');
+      mockSearchParamsString = window.location.search;
+      let api!: ReturnType<typeof useCirculationWizard>;
+      await renderClient(<WizardHarness onState={(state) => { api = state; }} />);
+
+      mockReturnBook.mockResolvedValueOnce({
+        success: true,
+        data: { book_title: 'Design Patterns', student_name: 'Juan Dela Cruz' },
+      });
+      await act(async () => {
+        await api.processScan('BK-RETURN', true);
+      });
+      const draft = api.pendingReturn;
+      let resolveCommit!: (result: { success: true; data: { reservation_ready: boolean; reserved_for: string } }) => void;
+      mockReturnBook.mockImplementationOnce(() => new Promise((resolve) => { resolveCommit = resolve; }));
+      let confirmation!: Promise<void>;
+
+      act(() => {
+        confirmation = api.confirmAction();
+        void api.confirmAction();
+        api.switchMode('checkout');
+      });
+      expect(api.isCommitting).toBe(true);
+      expect(mockReturnBook).toHaveBeenCalledTimes(2);
+      expect(api.mode).toBe('return');
+      expect(api.pendingReturn).toBe(draft);
+      expect(window.location.search).toBe('?mode=return');
+
+      await act(async () => {
+        resolveCommit({ success: true, data: { reservation_ready: true, reserved_for: 'Maria Clara' } });
+        await confirmation;
+      });
+      expect(api.isConfirmed).toBe(true);
+      expect(api.reservationData.studentName).toBe('Maria Clara');
+
+      act(() => {
+        api.switchMode('checkout');
+      });
+      expect(api.isConfirmed).toBe(false);
+      expect(api.pendingReturn).toBeNull();
+      expect(api.reservationData).toEqual({ ready: false });
+      expect(window.location.search).toBe('?mode=checkout');
     });
   });
 

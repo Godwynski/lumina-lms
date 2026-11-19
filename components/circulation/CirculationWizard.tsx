@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -60,6 +60,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [overrideDraft, setOverrideDraft] = useState('');
   const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const overrideFieldId = useId();
 
   const goToStep = (id: number) => {
@@ -73,13 +74,15 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   const handleReset = () => {
     setViewStep(null);
     setSession(n => n + 1);
+    setIsSettleModalOpen(false);
     clearOverrideDraft();
     resetWizard();
   };
   const handleSwitchMode = (next: typeof mode) => {
+    if (!switchMode(next)) return;
     setViewStep(null);
+    setIsSettleModalOpen(false);
     clearOverrideDraft();
-    switchMode(next);
   };
   // A successful scan produces a fresh draft, so resume at the furthest step.
   const handleScan: typeof processScan = async (value, isManual) => {
@@ -105,22 +108,35 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
     }
   };
 
-  // When a step replaces the focused control, move focus to the new stage.
-  // Preserve normal route-entry focus and keep failed scans in the current field.
   const stageRef = useRef<HTMLElement>(null);
-  const stageKey = `${mode}-${step}`;
-  const previousStage = useRef(stageKey);
-  useEffect(() => {
-    if (previousStage.current !== stageKey) {
-      previousStage.current = stageKey;
-      stageRef.current?.focus();
-    }
+  const stageKey = `${mode}:${step}:${session}:${isBlockedPendingOverride}:${showOverrideForm}`;
+  const previousAnimationStage = useRef(stageKey);
+  useLayoutEffect(() => {
+    if (previousAnimationStage.current === stageKey) return;
+    previousAnimationStage.current = stageKey;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    // Animate the new panel in place without delaying input or measuring layout.
+    const animation = stageRef.current?.animate?.(
+      [{ opacity: 0.75 }, { opacity: 1 }],
+      { duration: 140, easing: 'ease-out' },
+    );
+    return () => animation?.cancel();
   }, [stageKey]);
+
+  // Scan steps focus their input. For other steps, announce the changed panel.
+  const previousStage = useRef({ mode, stageKey });
+  useEffect(() => {
+    const previous = previousStage.current;
+    previousStage.current = { mode, stageKey };
+    const stage = stageRef.current;
+    if (previous.mode === mode && previous.stageKey !== stageKey && stage && !stage.contains(document.activeElement)) {
+      stage.focus({ preventScroll: true });
+    }
+  }, [mode, stageKey]);
   const stageLabel = isConfirmed
     ? (mode === 'checkout' ? 'Checkout complete' : 'Return complete')
     : `Step ${step} of ${steps.length}: ${steps[step - 1].label}`;
-
-  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
 
   const handleConfirmClick = () => {
     if (mode === 'return' && (pendingReturn?.fineAmount ?? 0) > 0) {
@@ -132,8 +148,59 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
 
   return (
     <div className="w-full space-y-3 sm:space-y-6">
-      {/* Centered Compact Stepper */}
-      <div className="bg-card/30 border border-border/10 rounded-2xl p-3 sm:p-6 backdrop-blur-sm">
+      <div className="app-toolbar app-toolbar-row justify-between">
+        <div role="group" aria-label="Circulation mode" className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant={mode === 'checkout' ? 'default' : 'ghost'}
+            className="app-toolbar-control w-24"
+            aria-pressed={mode === 'checkout'}
+            disabled={isCommitting}
+            onClick={() => handleSwitchMode('checkout')}
+          >
+            Checkout
+          </Button>
+          <Button
+            type="button"
+            variant={mode === 'return' ? 'default' : 'ghost'}
+            className="app-toolbar-control w-24"
+            aria-pressed={mode === 'return'}
+            disabled={isCommitting}
+            onClick={() => handleSwitchMode('return')}
+          >
+            Return
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          {step > 1 && !isConfirmed && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="app-toolbar-control gap-1.5 text-muted-foreground"
+              disabled={!canNavigate}
+              onClick={() => goToStep(step - 1)}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back</span>
+            </Button>
+          )}
+          {!isConfirmed && (reachedStep > 1 || isProcessing) && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="app-toolbar-control gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              disabled={isCommitting}
+              onClick={handleReset}
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              <span>Start over</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="p-3 sm:py-4">
         <CirculationStepper
           steps={steps}
           currentStep={step}
@@ -142,58 +209,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
         />
       </div>
 
-      <div className="bg-card/50 border border-border/40 rounded-2xl p-3.5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
-        {/* Header Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 sm:mb-6 sm:pb-5 border-b border-border/40">
-          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
-            <Button
-              variant={mode === 'checkout' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-11 sm:h-9 rounded-lg px-4 text-xs font-semibold"
-              aria-pressed={mode === 'checkout'}
-              disabled={isCommitting}
-              onClick={() => mode !== 'checkout' && handleSwitchMode('checkout')}
-            >
-              Checkout
-            </Button>
-            <Button
-              variant={mode === 'return' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-11 sm:h-9 rounded-lg px-4 text-xs font-semibold"
-              aria-pressed={mode === 'return'}
-              disabled={isCommitting}
-              onClick={() => mode !== 'return' && handleSwitchMode('return')}
-            >
-              Return
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-          {step > 1 && !isConfirmed && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-11 sm:h-9 gap-1.5 rounded-lg text-xs font-semibold text-muted-foreground transition-colors"
-              disabled={!canNavigate}
-              onClick={() => goToStep(step - 1)}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back</span>
-            </Button>
-          )}
-          {!isConfirmed && (reachedStep > 1 || isProcessing) && <Button
-            variant="ghost"
-            size="sm"
-            className="h-11 sm:h-9 gap-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            disabled={isCommitting}
-            onClick={handleReset}
-          >
-            <RefreshCcw className="h-3.5 w-3.5" />
-            <span>Start over</span>
-          </Button>}
-          </div>
-        </div>
-
+      <div className="relative rounded-2xl border border-border/40 bg-card/50 p-3.5 sm:p-7 md:p-8">
         <section ref={stageRef} tabIndex={-1} aria-label={stageLabel} className="scroll-mt-6 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
           {isConfirmed ? (
             <SuccessStep 

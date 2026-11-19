@@ -41,7 +41,7 @@ export function CirculationStepper({ steps, currentStep, reachedStep = currentSt
               >
                 <div 
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border bg-background transition-colors duration-200 shrink-0",
+                    "flex h-8 w-8 items-center justify-center rounded-full border bg-background transition-colors shrink-0",
                     clickable && "group-hover:border-primary group-hover:text-primary",
                     done 
                       ? "bg-primary/10 border-primary text-primary" 
@@ -70,7 +70,7 @@ export function CirculationStepper({ steps, currentStep, reachedStep = currentSt
               {!isLast && (
                 <div className="flex-1 flex items-center px-2 pt-4">
                   <div className={cn(
-                    "h-[1.5px] w-full rounded-full transition-colors duration-300",
+                    "h-[1.5px] w-full rounded-full transition-colors",
                     done ? "bg-primary" : "bg-border/60"
                   )} />
                 </div>

@@ -156,6 +156,10 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const item = items.find((entry) => entry.textContent === label);
       expect(item).toBeInTheDocument();
       await clickElement(item);
+      await vi.waitFor(() => {
+        expect(trigger).toHaveAttribute('aria-expanded', 'false');
+        expect(document.activeElement).toBe(root.querySelector('#attendance-card-id'));
+      });
     }
 
     it('uses a split action to choose check-out without submitting and records the active mode on form submit', async () => {
@@ -440,6 +444,37 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(mockGetAttendanceHistory).toHaveBeenLastCalledWith(undefined, { range: 'all', limit: 300, dateRange: { from: '2026-11-14' } });
     });
 
+    it('keeps staff search and dates, resets pagination, and requests a newly sorted database window', async () => {
+      const initial = Array.from({ length: 12 }, (_, index) => makeAttendance({ id: `attendance-${index}` }));
+      const oldest = makeAttendance({ id: 'older', profiles: { full_name: 'Oldest matching patron' } });
+      const { container } = await renderStaffAttendance([], initial);
+      const filters = container.querySelector('[aria-label="Attendance record filters"]')!;
+      expect(mockGetAttendanceHistory).not.toHaveBeenCalled();
+
+      vi.useFakeTimers();
+      mockGetAttendanceHistory.mockResolvedValue(initial);
+      await typeIntoInput(filters.querySelector<HTMLInputElement>('input[type="search"]'), 'match');
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      await clickElement(findButtonByText(filters, 'Date range'));
+      const from = filters.querySelector<HTMLInputElement>('input[type="date"]')!;
+      await typeIntoInput(from, '2025-01-01');
+      await submitForm(from.form!);
+      await clickElement(container.querySelector('[aria-label="Next page"]'));
+      expect(container.querySelector('[aria-label="Page 2 of 2"]')).toBeInTheDocument();
+      mockGetAttendanceHistory.mockClear();
+      const pending = Promise.withResolvers<AttendanceRecord[]>();
+      mockGetAttendanceHistory.mockReturnValueOnce(pending.promise);
+      await clickElement(container.querySelector('th button[aria-label="Sort by Check Out"]'));
+      expect(mockGetAttendanceHistory).toHaveBeenCalledExactlyOnceWith(undefined, {
+        range: 'all', limit: 300, search: 'match', sort: 'checkout-desc', dateRange: { from: '2025-01-01' },
+      });
+      expect(container.querySelector('[aria-busy="true"] tbody tr')).toHaveTextContent('Maria Clara');
+      await act(async () => { pending.resolve([oldest, ...initial]); });
+      expect(container.querySelector('tbody tr')).toHaveTextContent('Oldest matching patron');
+      expect(container.querySelector('[aria-label="Page 1 of 2"]')).toBeInTheDocument();
+      expect(container.querySelector('th[aria-sort="descending"]')).toHaveTextContent('Check Out');
+    });
+
     it('renders personal student view with All-Time History and Still in library badge', async () => {
       const personalP = Promise.resolve([makeAttendance({ check_out_at: null })]);
       let handle!: Awaited<ReturnType<typeof renderClient>>;
@@ -494,6 +529,44 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       await clickElement(findButtonByText(handle.container, 'Clear dates'));
       expect(handle.container).toHaveTextContent('All-Time History');
       expect(rowCount()).toBe(2);
+    });
+
+    it('orders the full personal date result before slicing and keeps open sessions last both ways', async () => {
+      const personalP = Promise.resolve([
+        ...Array.from({ length: 11 }, (_, index) => {
+          const day = String(12 - index).padStart(2, '0');
+          return makeAttendance({ id: day, check_in_at: `2026-11-${day}T00:00:00Z`, check_out_at: `2026-11-${day}T02:00:00Z` });
+        }),
+        makeAttendance({ id: 'open', check_in_at: '2026-11-01T00:00:00Z' }),
+        makeAttendance({ id: 'outside-filter', check_in_at: '2024-03-01T00:30:00Z', check_out_at: '2024-03-01T01:30:00Z' }),
+      ]);
+      const { container } = await renderClient(
+        <Suspense fallback={<div>Loading...</div>}>
+          <AttendanceClient personalHistoryPromise={personalP} userId="stu-1" />
+        </Suspense>,
+      );
+      await act(async () => { await personalP; });
+      await typeIntoInput(container.querySelector<HTMLInputElement>('input[type="date"]'), '2026-11-01');
+      await clickElement(container.querySelector('[aria-label="Next page"]'));
+      expect(container.querySelector('[aria-label="Page 2 of 2"]')).toBeInTheDocument();
+
+      const sort = container.querySelector<HTMLSelectElement>('select[aria-label="Sort by"]')!;
+      await act(async () => {
+        sort.value = 'checkout-asc';
+        sort.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(container.querySelector('tbody tr')).toHaveTextContent('Nov 02, 2026');
+      expect(container.querySelector('th[aria-sort="ascending"]')).toHaveTextContent('Check Out');
+      expect(container.querySelector('[aria-label="Page 1 of 2"]')).toBeInTheDocument();
+      expect(container.querySelector('tbody')).not.toHaveTextContent('Still in library');
+
+      await clickElement(container.querySelector('th[aria-sort="ascending"] button'));
+      expect(container.querySelector('tbody tr')).toHaveTextContent('Nov 12, 2026');
+      expect(container.querySelector('th[aria-sort="descending"]')).toHaveTextContent('Check Out');
+      expect(container.querySelector('tbody')).not.toHaveTextContent('Still in library');
+      await clickElement(container.querySelector('[aria-label="Next page"]'));
+      expect(Array.from(container.querySelectorAll('tbody tr')).at(-1)).toHaveTextContent('Still in library');
+      expect(mockGetAttendanceHistory).not.toHaveBeenCalled();
     });
   });
 

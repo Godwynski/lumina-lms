@@ -78,9 +78,99 @@ describe('isOutOfService', () => {
 });
 
 describe('StudentBookCard', () => {
-  it('gives an uploaded cover descriptive alt text', async () => {
-    const book = { ...baseBook, cover_url: '/covers/x.png', available_copies: 1, total_copies: 1 } as unknown as Book;
+  const defaultCover = '/images/default-book-cover.png';
+  const remoteCover = 'https://covers.example.test/book.png';
+
+  async function renderCard(coverUrl: string | null) {
+    const book = { ...baseBook, cover_url: coverUrl, available_copies: 1, total_copies: 1 } as unknown as Book;
     await act(async () => root.render(<StudentBookCard book={book} />));
-    expect(document.querySelector('img')).toHaveAttribute('alt', 'Cover of Clean Systems');
+  }
+
+  async function loadCover(image: HTMLImageElement, width: number, height: number) {
+    Object.defineProperties(image, {
+      naturalWidth: { value: width },
+      naturalHeight: { value: height },
+    });
+    await act(async () => image.dispatchEvent(new Event('load')));
+  }
+
+  function expectDefaultCover(image: HTMLImageElement) {
+    const request = new URL(image.src);
+    expect(request.pathname).toBe('/_next/image');
+    expect(request.searchParams.get('url')).toBe(defaultCover);
+    expect(image).toHaveAttribute('sizes', '64px');
+  }
+
+  it('keeps a valid remote cover lazy and reveals it after loading', async () => {
+    await renderCard(remoteCover);
+    const image = el.querySelector('img')!;
+    expect(image).toHaveAttribute('src', remoteCover);
+    expect(image).toHaveAttribute('alt', 'Cover of Clean Systems');
+    expect(image).toHaveAttribute('loading', 'lazy');
+    expect(image).toHaveClass('opacity-0');
+
+    await loadCover(image, 300, 450);
+    expect(el.querySelector('img')).toHaveAttribute('src', remoteCover);
+    expect(el.querySelector('img')).toHaveClass('opacity-100');
+  });
+
+  it.each([null, '', '   '])('uses the local default for a missing or blank cover (%j)', async (coverUrl) => {
+    await renderCard(coverUrl);
+    const image = el.querySelector('img')!;
+    expectDefaultCover(image);
+    expect(image).toHaveAttribute('loading', 'lazy');
+
+    await loadCover(image, 300, 450);
+    expectDefaultCover(el.querySelector('img')!);
+    expect(el.querySelector('img')).toHaveClass('opacity-100');
+  });
+
+  it('replaces a broken remote cover with the local default', async () => {
+    await renderCard(remoteCover);
+    await act(async () => el.querySelector('img')!.dispatchEvent(new Event('error')));
+    expectDefaultCover(el.querySelector('img')!);
+  });
+
+  it.each([[1, 1], [1, 20], [20, 1]])('replaces a %i by %i remote image with the local default', async (width, height) => {
+    await renderCard(remoteCover);
+    await loadCover(el.querySelector('img')!, width, height);
+    expectDefaultCover(el.querySelector('img')!);
+  });
+
+  it('keeps the book icon when the local default fails', async () => {
+    await renderCard(null);
+    const image = el.querySelector('img')!;
+    expectDefaultCover(image);
+    const coverFrame = image.parentElement!;
+
+    await act(async () => image.dispatchEvent(new Event('error')));
+    expect(coverFrame.querySelector('img')).toBeNull();
+    expect(coverFrame.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+  });
+
+  it('tries a replacement cover after an earlier URL fails', async () => {
+    await renderCard(remoteCover);
+    await act(async () => el.querySelector('img')!.dispatchEvent(new Event('error')));
+    expectDefaultCover(el.querySelector('img')!);
+
+    const replacementCover = 'https://covers.example.test/replacement.png';
+    await renderCard(replacementCover);
+    await loadCover(el.querySelector('img')!, 300, 450);
+    expect(el.querySelector('img')).toHaveAttribute('src', replacementCover);
+    expect(el.querySelector('img')).toHaveClass('opacity-100');
+  });
+
+  it('waits for a replacement to load when the earlier cover finishes decoding late', async () => {
+    await renderCard(remoteCover);
+    const image = el.querySelector('img')!;
+    const decode = Promise.withResolvers<void>();
+    Object.defineProperty(image, 'decode', { value: () => decode.promise });
+    await loadCover(image, 300, 450);
+
+    const replacementCover = 'https://covers.example.test/replacement.png';
+    await renderCard(replacementCover);
+    await act(async () => decode.resolve());
+    expect(el.querySelector('img')).toHaveAttribute('src', replacementCover);
+    expect(el.querySelector('img')).toHaveClass('opacity-0');
   });
 });

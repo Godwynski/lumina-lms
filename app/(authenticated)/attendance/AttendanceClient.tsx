@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
+import { TableSortSelect } from "@/components/common/TableSort";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { CompactPagination } from "@/components/ui/compact-pagination";
@@ -44,19 +45,31 @@ import {
   DialogTitle, 
   DialogDescription 
 } from "@/components/ui/dialog";
-import type { AttendanceRecord } from "@/lib/actions/attendance";
+import type { AttendanceRecord, AttendanceSort } from "@/lib/actions/attendance";
 import { isWithinManilaDateRange } from "@/lib/date-range";
 import toolbarStyles from "./AttendanceToolbar.module.css";
 
 const ALL_HISTORY_STEP = 300;
-const INITIAL_HISTORY_REQUEST = { search: '', from: '', to: '', limit: ALL_HISTORY_STEP };
-const EMPTY_HISTORY: AttendanceRecord[] = [];
+type PersonalSort = Exclude<AttendanceSort, `patron-${string}`>;
+const DEFAULT_SORT = 'checkin-desc';
+const INITIAL_HISTORY_REQUEST = { search: '', from: '', to: '', limit: ALL_HISTORY_STEP, sort: DEFAULT_SORT as AttendanceSort };
+const personalSortOptions: { value: PersonalSort; label: string }[] = [
+  { value: 'checkin-desc', label: 'Check-in (newest)' },
+  { value: 'checkin-asc', label: 'Check-in (oldest)' },
+  { value: 'checkout-desc', label: 'Check-out (newest)' },
+  { value: 'checkout-asc', label: 'Check-out (oldest)' },
+];
+const staffSortOptions: { value: AttendanceSort; label: string }[] = [
+  ...personalSortOptions,
+  { value: 'patron-asc', label: 'Patron (A–Z)' },
+  { value: 'patron-desc', label: 'Patron (Z–A)' },
+];
 const dateLabelFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
 });
 
-function sameHistoryFilters(first: typeof INITIAL_HISTORY_REQUEST, second: typeof INITIAL_HISTORY_REQUEST) {
-  return first.search === second.search && first.from === second.from && first.to === second.to;
+function sameHistoryQuery(first: typeof INITIAL_HISTORY_REQUEST, second: typeof INITIAL_HISTORY_REQUEST) {
+  return first.search === second.search && first.from === second.from && first.to === second.to && first.sort === second.sort;
 }
 
 type AttendanceMode = "in" | "out";
@@ -111,6 +124,7 @@ export function AttendanceClient({
 
   const [systemTodayRecords, setSystemTodayRecords] = useState(initialSystemToday);
   const [personalRecords, setPersonalRecords] = useState(initialPersonal);
+  const [personalSort, setPersonalSort] = useState<PersonalSort>(DEFAULT_SORT);
 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -124,18 +138,19 @@ export function AttendanceClient({
   const fetchStaffHistory = useCallback(async (request = latestHistoryRequest.current) => {
     const fetchId = Symbol();
     historyFetchId.current = fetchId;
-    const { search, from, to, limit } = request;
+    const { search, from, to, limit, sort } = request;
     try {
       const records = await getAttendanceHistory(undefined, {
         range: 'all', limit,
         ...(search && { search }),
         ...((from || to) && { dateRange: { from: from || undefined, to: to || undefined } }),
+        ...(sort !== DEFAULT_SORT && { sort }),
       });
       if (fetchId === historyFetchId.current) setHistoryResponse({ request, records, failed: false });
     } catch {
       if (fetchId === historyFetchId.current) setHistoryResponse((previous) => ({
         request,
-        records: sameHistoryFilters(previous.request, request) ? previous.records : [],
+        records: sameHistoryQuery(previous.request, request) ? previous.records : [],
         failed: true,
       }));
     }
@@ -418,15 +433,22 @@ export function AttendanceClient({
     };
   }, [isStaff, userId, fetchStaffHistory]);
 
+  const trimmedSearch = searchQuery.trim();
+  const appliedSearch = historyRequest.search;
+  useEffect(() => {
+    if (!isStaff || trimmedSearch === appliedSearch) return;
+    const timer = setTimeout(() => {
+      setStaffPage(1);
+      setHistoryRequest((request) => ({ ...request, search: trimmedSearch, limit: ALL_HISTORY_STEP }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [isStaff, trimmedSearch, appliedSearch]);
+
   useEffect(() => {
     if (!isStaff) return;
     latestHistoryRequest.current = historyRequest;
-    const timer = historyRequest.search ? setTimeout(() => void fetchStaffHistory(historyRequest), 300) : undefined;
-    if (historyRequest !== INITIAL_HISTORY_REQUEST && !historyRequest.search) void fetchStaffHistory(historyRequest);
-    return () => {
-      historyFetchId.current = null;
-      clearTimeout(timer);
-    };
+    if (historyRequest !== INITIAL_HISTORY_REQUEST) void fetchStaffHistory(historyRequest);
+    return () => { historyFetchId.current = null; };
   }, [isStaff, historyRequest, fetchStaffHistory]);
 
   // Auto-start scanner when modal opens; teardown camera when modal closes
@@ -441,9 +463,8 @@ export function AttendanceClient({
     }
   }, [isScannerOpen, startScanner, stopCamera]);
 
-  const historyMatches = sameHistoryFilters(historyResponse.request, historyRequest);
-  const filteredStaffRecords = historyMatches ? historyResponse.records : EMPTY_HISTORY;
   const historyLoading = historyRequest !== historyResponse.request;
+  const filteredStaffRecords = historyResponse.records;
   const historyFailed = !historyLoading && historyResponse.failed;
   const historyWindowFull = filteredStaffRecords.length >= historyResponse.request.limit;
 
@@ -457,10 +478,20 @@ export function AttendanceClient({
   }, [filteredStaffRecords, activeStaffPage]);
 
   // Paginated personal records (for student view)
-  const datedPersonalRecords = useMemo(
-    () => personalRecords.filter(r => isWithinManilaDateRange(r.check_in_at, fromDate, toDate)),
-    [personalRecords, fromDate, toDate]
-  );
+  const datedPersonalRecords = useMemo(() => {
+    const records = personalRecords.filter(r => isWithinManilaDateRange(r.check_in_at, fromDate, toDate));
+    if (personalSort === DEFAULT_SORT) return records;
+    const field = personalSort.startsWith('checkout') ? 'check_out_at' : 'check_in_at';
+    const direction = personalSort.endsWith('asc') ? 1 : -1;
+    return records.sort((first, second) => {
+      const firstTime = first[field];
+      const secondTime = second[field];
+      if (!firstTime && secondTime) return 1;
+      if (firstTime && !secondTime) return -1;
+      const timestampOrder = firstTime && secondTime ? direction * (Date.parse(firstTime) - Date.parse(secondTime)) : 0;
+      return timestampOrder || second.id.localeCompare(first.id);
+    });
+  }, [personalRecords, fromDate, toDate, personalSort]);
   const totalPersonalItems = datedPersonalRecords.length;
   const totalPersonalPages = Math.max(1, Math.ceil(totalPersonalItems / PAGE_SIZE));
   const activePersonalPage = Math.min(personalPage, totalPersonalPages);
@@ -468,6 +499,16 @@ export function AttendanceClient({
     const start = (activePersonalPage - 1) * PAGE_SIZE;
     return datedPersonalRecords.slice(start, start + PAGE_SIZE);
   }, [datedPersonalRecords, activePersonalPage]);
+
+  const applyStaffSort = (sort: AttendanceSort) => {
+    setStaffPage(1);
+    setHistoryRequest((request) => ({ ...request, search: trimmedSearch, sort, limit: ALL_HISTORY_STEP }));
+  };
+
+  const applyPersonalSort = (sort: PersonalSort) => {
+    setPersonalPage(1);
+    setPersonalSort(sort);
+  };
 
   const dateRangeControls = (
     <DateRangeFilter
@@ -480,9 +521,9 @@ export function AttendanceClient({
   const scannerControls = (
     <div className={cn("flex w-full min-w-0 flex-col gap-2", toolbarStyles.container)}>
       <div className={cn("grid min-w-0 items-start gap-x-4 gap-y-2", toolbarStyles.groups)}>
-        <div role="group" aria-label="Record attendance" className="flex min-w-0 flex-wrap items-center gap-2">
+        <div role="group" aria-label="Record attendance" className="app-toolbar-row">
           <DialogTrigger asChild>
-            <Button type="button" variant="outline" className="h-11 shrink-0 px-3 shadow-none" disabled={isProcessing}>
+            <Button type="button" variant="outline" className="app-toolbar-control shrink-0 px-3" disabled={isProcessing}>
               <Camera aria-hidden="true" />
               Scan QR
             </Button>
@@ -494,7 +535,7 @@ export function AttendanceClient({
             aria-controls="attendance-manual-entry"
             aria-expanded={manualEntryOpen}
             onClick={() => setManualEntryOpen(!manualEntryOpen)}
-            className={cn("h-11 shrink-0 px-3 shadow-none", toolbarStyles.manualToggle)}
+            className={cn("app-toolbar-control shrink-0 px-3", toolbarStyles.manualToggle)}
           >
             Manual entry
             <ChevronDown aria-hidden="true" className={cn(manualEntryOpen && "rotate-180")} />
@@ -519,7 +560,7 @@ export function AttendanceClient({
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
                 placeholder="Card or patron ID"
-                className="h-11 pl-9"
+                className="app-toolbar-control pl-9"
                 readOnly={isProcessing}
                 autoComplete="off"
               />
@@ -566,17 +607,19 @@ export function AttendanceClient({
           search={searchQuery}
           from={historyRequest.from}
           to={historyRequest.to}
+          sort={historyRequest.sort}
           onSearchChange={(value) => {
             setSearchQuery(value);
-            const search = value.trim();
-            if (search === historyRequest.search) return;
-            setStaffPage(1);
-            setHistoryRequest((request) => ({ ...request, search, limit: ALL_HISTORY_STEP }));
+            if (!value.trim() && appliedSearch) {
+              setStaffPage(1);
+              setHistoryRequest((request) => ({ ...request, search: '', limit: ALL_HISTORY_STEP }));
+            }
           }}
+          onSortChange={applyStaffSort}
           onDateChange={(from, to) => {
             if (from === historyRequest.from && to === historyRequest.to) return;
             setStaffPage(1);
-            setHistoryRequest((request) => ({ ...request, from, to, limit: ALL_HISTORY_STEP }));
+            setHistoryRequest((request) => ({ ...request, search: trimmedSearch, from, to, limit: ALL_HISTORY_STEP }));
           }}
         />
       </div>
@@ -770,15 +813,17 @@ export function AttendanceClient({
               <Button type="button" variant="outline" className="h-11 xl:h-10" onClick={() => setHistoryRequest((request) => ({ ...request }))}>Retry</Button>
             </div>
           )}
-          {historyLoading && !historyMatches ? (
-            <TableLoadingSkeleton />
-          ) : (!historyFailed || totalStaffItems > 0) && (
-            <Suspense fallback={<TableLoadingSkeleton />}>
-              <AttendanceTable history={paginatedStaffRecords} isPersonal={false} />
-            </Suspense>
-          )}
+          <div aria-busy={historyLoading || undefined}>
+            {historyLoading && !totalStaffItems ? (
+              <TableLoadingSkeleton />
+            ) : (!historyFailed || totalStaffItems > 0) && (
+              <Suspense fallback={<TableLoadingSkeleton />}>
+                <AttendanceTable history={paginatedStaffRecords} sort={historyRequest.sort} onSortChange={applyStaffSort} />
+              </Suspense>
+            )}
+          </div>
           <p role="status" className="sr-only">
-            {!historyLoading && !historyFailed ? `${totalStaffItems} matching attendance records loaded` : ''}
+            {historyLoading ? 'Loading attendance records…' : !historyFailed ? `${totalStaffItems} matching attendance records loaded` : ''}
           </p>
           {historyWindowFull && !historyFailed && (
             <div className="flex justify-end border-t border-border px-4 py-3">
@@ -789,7 +834,9 @@ export function AttendanceClient({
                 disabled={historyLoading}
                 onClick={() => setHistoryRequest((request) => ({ ...request, limit: request.limit + ALL_HISTORY_STEP }))}
               >
-                {historyLoading && historyRequest.limit > historyResponse.request.limit ? 'Loading…' : 'Load older records'}
+                {historyLoading && historyRequest.limit > historyResponse.request.limit
+                  ? 'Loading…'
+                  : historyRequest.sort === DEFAULT_SORT ? 'Load older records' : 'Load more records'}
               </Button>
             </div>
           )}
@@ -802,12 +849,14 @@ export function AttendanceClient({
   return (
     <AdminTableShell
       controls={
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="app-toolbar-row">
           <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-1 py-0.5">
             <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
             {fromDate || toDate ? 'Filtered History' : 'All-Time History'}
           </p>
           {dateRangeControls}
+          <TableSortSelect className="md:hidden" value={personalSort} options={personalSortOptions}
+            onChange={(value) => applyPersonalSort(value as PersonalSort)} />
         </div>
       }
       pagination={
@@ -824,18 +873,21 @@ export function AttendanceClient({
       className="max-w-none animate-in fade-in-50 duration-300"
     >
       <Suspense fallback={<TableLoadingSkeleton />}>
-        <AttendanceTable history={paginatedPersonalRecords} isPersonal={true} />
+        <AttendanceTable history={paginatedPersonalRecords} sort={personalSort}
+          onSortChange={(value) => applyPersonalSort(value as PersonalSort)} isPersonal />
       </Suspense>
     </AdminTableShell>
   );
 }
 
-function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChange }: {
+function AttendanceHistoryFilters({ search, from, to, sort, onSearchChange, onDateChange, onSortChange }: {
   search: string;
   from: string;
   to: string;
+  sort: AttendanceSort;
   onSearchChange: (value: string) => void;
   onDateChange: (from: string, to: string) => void;
+  onSortChange: (sort: AttendanceSort) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState('');
@@ -880,7 +932,7 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
       className="flex min-w-0 flex-col gap-2"
     >
       <div className="flex min-w-0 items-center gap-2">
-        <div className="relative min-w-0 flex-1">
+        <div className="app-toolbar-search">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             type="search"
@@ -888,7 +940,7 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search logs"
-            className="h-11 pl-9"
+            className="app-toolbar-control pl-9"
           />
         </div>
         <Button
@@ -898,7 +950,7 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
           aria-controls="attendance-history-dates"
           aria-expanded={isOpen}
           aria-label={hasRange ? `Date range: ${label}` : undefined}
-          className={cn('h-11 max-w-[52%] shrink-0 px-3 shadow-none', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
+          className={cn('app-toolbar-control max-w-[52%] shrink-0 px-3', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
           onKeyDown={closeOnEscape}
           onClick={() => {
             if (!isOpen) {
@@ -914,6 +966,8 @@ function AttendanceHistoryFilters({ search, from, to, onSearchChange, onDateChan
           <ChevronDown className={cn(isOpen && 'rotate-180')} aria-hidden="true" />
         </Button>
       </div>
+      <TableSortSelect className="self-start md:hidden" value={sort} options={staffSortOptions}
+        onChange={(value) => onSortChange(value as AttendanceSort)} />
       <div id="attendance-history-dates" hidden={!isOpen}>
         <form
           aria-label="Date range"
@@ -954,11 +1008,11 @@ function DateRangeFilter({ from, to, onChange }: { from: string; to: string; onC
     <div role="group" aria-label="Date range" className="grid min-w-0 grid-cols-2 items-end gap-x-2 gap-y-1 text-xs font-medium text-muted-foreground sm:flex sm:flex-wrap">
       <label className="grid min-w-0 gap-1">
         From
-        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10" />
+        <Input type="date" value={from} max={to || undefined} onChange={e => onChange(e.target.value, to)} className="app-toolbar-control w-full min-w-0 px-2 sm:w-36" />
       </label>
       <label className="grid min-w-0 gap-1">
         To
-        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="h-11 w-full min-w-0 px-2 sm:w-36 xl:h-10" />
+        <Input type="date" value={to} min={from || undefined} onChange={e => onChange(from, e.target.value)} className="app-toolbar-control w-full min-w-0 px-2 sm:w-36" />
       </label>
       {(from || to) && (
         <Button type="button" variant="ghost" size="sm" className="col-span-2 h-11 justify-self-start xl:h-10" onClick={() => onChange('', '')}>
@@ -980,17 +1034,27 @@ function TableLoadingSkeleton() {
 
 function AttendanceTable({ 
   history, 
+  sort,
+  onSortChange,
   isPersonal = false
 }: { 
   history: AttendanceRecord[],
+  sort: AttendanceSort,
+  onSortChange: (sort: AttendanceSort) => void,
   isPersonal?: boolean
 }) {
   const columns = useMemo<LuminaColumn<AttendanceRecord>[]>(() => {
     const cols: LuminaColumn<AttendanceRecord>[] = [];
+    const columnSort = (field: 'patron' | 'checkin' | 'checkout') => {
+      const direction = sort === `${field}-asc` ? 'asc' : sort === `${field}-desc` ? 'desc' : undefined;
+      const next = direction === 'asc' || (!direction && field !== 'patron') ? 'desc' : 'asc';
+      return { direction, onToggle: () => onSortChange(`${field}-${next}`) } as const;
+    };
     
     if (!isPersonal) {
       cols.push({
         header: "User",
+        sort: columnSort('patron'),
         cell: (record) => (
           <div className="flex items-center gap-3">
             <Avatar aria-hidden="true" className="h-8 w-8">
@@ -1023,6 +1087,7 @@ function AttendanceTable({
     cols.push(
       {
         header: "Check In",
+        sort: columnSort('checkin'),
         className: "w-[120px]",
         cell: (record) => (
           <div className="flex items-center gap-1.5 text-xs font-medium">
@@ -1033,6 +1098,7 @@ function AttendanceTable({
       },
       {
         header: "Check Out",
+        sort: columnSort('checkout'),
         className: "w-[210px]",
         cell: (record) => (
           <div className="flex items-center gap-1.5 flex-wrap text-xs font-medium">
@@ -1051,7 +1117,7 @@ function AttendanceTable({
     );
 
     return cols;
-  }, [isPersonal]);
+  }, [isPersonal, sort, onSortChange]);
 
   return (
     <LuminaTable

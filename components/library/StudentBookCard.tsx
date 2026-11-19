@@ -14,6 +14,8 @@ import { ReserveTitleButton } from "@/components/common/ReserveTitleButton";
 import { cn } from "@/lib/utils";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 
+const DEFAULT_COVER = "/images/default-book-cover.png";
+
 interface StudentBookCardProps {
   book: Book;
   priority?: boolean;
@@ -32,9 +34,19 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
   const [modalOpen, setModalOpen] = useState(false);
   // Derived from the prop so an updated cover shows up; only a failed URL falls back.
   const [failedCover, setFailedCover] = useState<string | null>(null);
+  const [defaultCoverFailed, setDefaultCoverFailed] = useState(false);
   const [loadedCover, setLoadedCover] = useState<string | null>(null);
-  const activeCover = book.cover_url && book.cover_url !== failedCover ? book.cover_url : null;
-  const isCoverLoaded = Boolean(activeCover && loadedCover === activeCover);
+  const coverUrl = book.cover_url?.trim();
+  const activeCover = coverUrl && coverUrl !== failedCover ? coverUrl : DEFAULT_COVER;
+  const isCoverLoaded = loadedCover === activeCover;
+
+  const handleCoverError = () => {
+    if (activeCover === DEFAULT_COVER) {
+      setDefaultCoverFailed(true);
+    } else {
+      setFailedCover(activeCover);
+    }
+  };
   
   return (
     <m.div
@@ -79,24 +91,25 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
 
             <div className="relative flex h-24 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-primary/5 text-primary/40 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">
               <BookOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
-              {activeCover && (
+              {(activeCover !== DEFAULT_COVER || !defaultCoverFailed) && (
                 <Image 
+                  key={activeCover}
                   src={activeCover}
                   alt={`Cover of ${book.title}`}
                   fill 
                   className={`object-cover transition-opacity duration-200 ${isCoverLoaded ? "opacity-100" : "opacity-0"}`} 
-                  sizes="80px"
+                  sizes="64px"
                   priority={priority}
-                  unoptimized
+                  unoptimized={activeCover !== DEFAULT_COVER}
                   onLoad={(e) => {
                     const img = e.currentTarget;
                     if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
-                      setFailedCover(book.cover_url ?? null);
+                      handleCoverError();
                     } else {
                       setLoadedCover(activeCover);
                     }
                   }}
-                  onError={() => setFailedCover(book.cover_url ?? null)}
+                  onError={handleCoverError}
                 />
               )}
             </div>

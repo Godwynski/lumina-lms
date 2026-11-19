@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createClient } from '@supabase/supabase-js';
 import { createMockSupabaseClient, createMockQueryBuilder } from '@/test/mocks/supabase';
 
 const mockGetMe = vi.fn();
@@ -843,6 +844,47 @@ describe('attendance server actions', () => {
   });
 
   describe('getAttendanceHistory', () => {
+    it.each([
+      ['patron-asc', 'profiles(full_name)', true],
+      ['checkin-asc', 'check_in_at', true],
+      ['checkout-asc', 'check_out_at', true],
+      ['checkout-desc', 'check_out_at', false],
+    ] as const)('orders filtered staff records by %s before the database limit', async (sort, column, ascending) => {
+      supaMock.setTableResponse('attendance', []);
+      await getAttendanceHistory(undefined, { range: 'all', limit: 300, search: 'Maria', sort });
+      const query = supaMock.getTableBuilder('attendance');
+      expect(query.order).toHaveBeenNthCalledWith(1, column, { ascending, nullsFirst: false });
+      expect(query.order).toHaveBeenLastCalledWith('id', { ascending: false });
+      expect(query.or).toHaveBeenCalledWith('full_name.ilike.%Maria%,student_id.ilike.%Maria%', { referencedTable: 'profiles' });
+      expect(query.order.mock.invocationCallOrder.at(-1)).toBeLessThan(query.limit.mock.invocationCallOrder[0]);
+      expect(query.limit).toHaveBeenCalledExactlyOnceWith(300);
+    });
+
+    it('sends the patron relationship as a top-level PostgREST sort in a single request', async () => {
+      const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json([]));
+      const client = createClient('https://attendance.example.invalid', 'test-key', {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+        global: { fetch },
+      });
+      mockGetMe.mockResolvedValue({ ...makeAuthContext(supaMock.client), supabase: client });
+
+      await getAttendanceHistory(undefined, { range: 'all', limit: 300, sort: 'patron-desc', search: 'Maria' });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+      const url = new URL(String(fetch.mock.calls[0][0]));
+      expect(url.searchParams.get('order')).toBe('profiles(full_name).desc.nullslast,id.desc');
+      expect(url.searchParams.get('profiles.order')).toBeNull();
+      expect(url.searchParams.get('profiles.or')).toBe('(full_name.ilike.%Maria%,student_id.ilike.%Maria%)');
+      expect(url.searchParams.get('limit')).toBe('300');
+    });
+
+    it('rejects invalid sorts and prevents non-managers from using the staff sort request', async () => {
+      await expect(getAttendanceHistory(undefined, { sort: 'profiles(secret)' })).rejects.toThrow('Invalid attendance sort');
+      mockGetMe.mockResolvedValue(makeAuthContext(supaMock.client, { role: 'patron' }));
+      await expect(getAttendanceHistory(undefined, { sort: 'patron-asc' })).rejects.toThrow('Forbidden');
+      expect(supaMock.from).not.toHaveBeenCalled();
+    });
+
     it('applies Manila date bounds and patron search before the staff history limit', async () => {
       const older = { id: 'older', check_in_at: '2024-03-01T15:59:59.999Z', user_id: 'patron-1', check_out_at: null };
       supaMock.setTableResponse('attendance', [older]);

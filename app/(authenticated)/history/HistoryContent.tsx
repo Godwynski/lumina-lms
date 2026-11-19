@@ -4,7 +4,7 @@ import { useState, use, useEffect, useTransition, useCallback, useRef } from "re
 import Image from "next/image";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { BorrowerDetailsModal } from "@/components/common/BorrowerDetailsModal";
-import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Search, BookOpen, Clock, CheckCircle2, Calendar, Loader2, Download, Printer, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FineSettlementDialog } from "@/components/common/FineSettlementDialog";
@@ -19,6 +19,7 @@ import {
   settleBorrowingFine,
 } from "@/lib/actions/history";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
+import { TableSortSelect, type TableSortDirection } from "@/components/common/TableSort";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { type UserRole } from "@/lib/auth-helpers";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
@@ -131,6 +132,8 @@ export default function HistoryContent({
     ? "all"
     : (resolutionFilter ?? searchParams.get("resolution") ?? "all").toUpperCase();
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submittedSearch = useRef<string | null>(null);
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ record: BorrowingRecord } | null>(null);
@@ -138,6 +141,7 @@ export default function HistoryContent({
 
   // Keep local search in sync if URL query changes externally
   useEffect(() => {
+    submittedSearch.current = null;
     setLocalSearch(searchQuery);
   }, [searchQuery]);
 
@@ -187,7 +191,7 @@ export default function HistoryContent({
       params.set("status", statusFilter);
     }
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === "all" || value === "") {
+      if ((key !== "q" && value === "all") || value === "") {
         params.delete(key);
       } else {
         params.set(key, value.toString());
@@ -200,12 +204,27 @@ export default function HistoryContent({
 
   // Debounced auto-search on typing (300ms) with zero UI freezing
   useEffect(() => {
-    if (localSearch === searchQuery) return;
+    if (localSearch === searchQuery || localSearch === submittedSearch.current) return;
     const timer = setTimeout(() => {
+      searchTimer.current = null;
+      submittedSearch.current = localSearch;
       updateFilters({ q: localSearch, page: 1 });
     }, 300);
-    return () => clearTimeout(timer);
+    searchTimer.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (searchTimer.current === timer) searchTimer.current = null;
+    };
   }, [localSearch, searchQuery, updateFilters]);
+
+  function updateWithSearch(updates: Record<string, string | number>) {
+    if (searchTimer.current !== null) {
+      clearTimeout(searchTimer.current);
+      searchTimer.current = null;
+    }
+    submittedSearch.current = localSearch;
+    updateFilters({ ...updates, ...(localSearch !== searchQuery ? { q: localSearch } : {}) });
+  }
 
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr);
 
@@ -330,25 +349,42 @@ export default function HistoryContent({
     }
   };
 
-  const currentSort = searchParams.get("sort") || "";
-  const sortHeader = (label: string, key: string) => {
-    const dir = currentSort === `${key}_asc` ? "ascending" : currentSort === `${key}_desc` ? "descending" : null;
-    const Icon = dir === "ascending" ? ArrowUp : dir === "descending" ? ArrowDown : ArrowUpDown;
-    return (
-      <button type="button"
-        aria-label={`Sort by ${label}${dir ? ` (${dir})` : ""}`}
-        onClick={() => updateFilters({ sort: dir === "ascending" ? `${key}_desc` : `${key}_asc`, page: 1 })}
-        className="inline-flex items-center gap-1 uppercase hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-        {label}<Icon size={12} aria-hidden="true" className={dir ? "text-foreground" : "opacity-50"} />
-      </button>
-    );
+  const isPriorityOrder = statusFilter.toUpperCase() === "CURRENT";
+  const defaultSort = isSettlementsTab || isPriorityOrder ? "" : "borrowed_desc";
+  const currentSort = searchParams.get("sort") || defaultSort;
+  const sortOptions = [
+    ...(isPriorityOrder ? [{ value: "", label: "Priority order" }] : []),
+    ...(isSettlementsTab ? [{ value: "", label: "Default order" }] : [
+      { value: "borrowed_desc", label: "Borrowed · Newest" },
+      { value: "borrowed_asc", label: "Borrowed · Oldest" },
+      { value: "due_asc", label: "Due · Earliest" },
+      { value: "due_desc", label: "Due · Latest" },
+    ]),
+    { value: "title_asc", label: "Resource · A–Z" },
+    { value: "title_desc", label: "Resource · Z–A" },
+    ...(isPrivileged ? [
+      { value: "patron_asc", label: "Borrower · A–Z" },
+      { value: "patron_desc", label: "Borrower · Z–A" },
+    ] : []),
+  ];
+  const changeSort = (sort: string) => updateWithSearch({ sort, page: 1 });
+  const sortDirection = (key: string): TableSortDirection | undefined => {
+    return currentSort === `${key}_asc` ? "asc" : currentSort === `${key}_desc` ? "desc" : undefined;
   };
+  const toggleSort = (key: string) => changeSort(`${key}_${sortDirection(key) === "asc" ? "desc" : "asc"}`);
+  const changeStatus = (status: string) => updateFilters({
+    status,
+    resolution: status === "SETTLED" ? effectiveResolution : "",
+    ...(status === "SETTLED" && /^(borrowed|due)_/.test(currentSort) ? { sort: "" } : {}),
+    page: 1,
+  });
 
   const columns: LuminaColumn<BorrowingRecord>[] = [
     ...(isPrivileged
       ? [
           {
-            header: sortHeader("Borrower", "patron"),
+            header: "Borrower",
+            sort: { direction: sortDirection("patron"), onToggle: () => toggleSort("patron") },
             accessor: (record: BorrowingRecord) => (
               <div className="flex flex-col">
                 {record.profiles ? <button type="button"
@@ -368,7 +404,8 @@ export default function HistoryContent({
         ]
       : []),
     {
-      header: sortHeader("Resource", "title"),
+      header: "Resource",
+      sort: { direction: sortDirection("title"), onToggle: () => toggleSort("title") },
       accessor: (record) => (
         <button type="button" disabled={!record.books?.id}
           aria-label={`View book details: ${record.books?.title || "Unknown Title"}`}
@@ -430,7 +467,8 @@ export default function HistoryContent({
         ]
       : [
           {
-            header: sortHeader("Borrowed", "borrowed"),
+            header: "Borrowed",
+            sort: { direction: sortDirection("borrowed"), onToggle: () => toggleSort("borrowed") },
             accessor: (record: BorrowingRecord) => (
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="text-muted-foreground shrink-0" />
@@ -439,7 +477,8 @@ export default function HistoryContent({
             ),
           },
           {
-            header: sortHeader("Timeline", "due"),
+            header: "Timeline",
+            sort: { direction: sortDirection("due"), onToggle: () => toggleSort("due") },
             accessor: (record: BorrowingRecord) => {
               const overdue = isOverdue(record);
               return (
@@ -534,12 +573,12 @@ export default function HistoryContent({
 
   const filterControls = (
     <div className="flex flex-col gap-2.5 sm:gap-3 w-full font-sans print:hidden">
-      <div className="flex w-full min-w-0 flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-        <div className="flex items-center gap-2 w-full lg:max-w-xs">
+      <div className="app-toolbar-row">
+        <div className="app-toolbar-search flex items-center gap-2 max-sm:basis-full">
           <form 
             onSubmit={(e) => {
               e.preventDefault();
-              updateFilters({ q: localSearch, page: 1 });
+              updateWithSearch({ q: localSearch, page: 1 });
             }}
             className="relative flex-1 min-w-0"
           >
@@ -550,7 +589,7 @@ export default function HistoryContent({
               placeholder="Search timeline, borrower, book, barcode..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              className="h-11 sm:h-10 rounded-xl pl-9 pr-9 bg-background border-border/60 transition-all text-sm [&::-webkit-search-cancel-button]:appearance-none"
+              className="app-toolbar-control h-11 pl-9 pr-9 border-border/50 [&::-webkit-search-cancel-button]:appearance-none"
             />
             {isPending ? (
               <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary animate-spin" />
@@ -593,13 +632,27 @@ export default function HistoryContent({
             />
           )}
         </div>
-        <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-xl border border-border/40 overflow-x-auto no-scrollbar max-w-full sm:w-auto">
+        <select
+          aria-label="Borrowing status"
+          value={statusFilter}
+          onChange={(event) => changeStatus(event.currentTarget.value)}
+          className="app-toolbar-control max-w-full border border-border bg-background pl-3 pr-7 lg:hidden"
+        >
+          {STATUS_TABS.map((tab) => <option key={tab.key} value={tab.key}>{tab.key === "all" ? "All statuses" : tab.label}</option>)}
+        </select>
+        <TableSortSelect
+          value={sortOptions.some(option => option.value === currentSort) ? currentSort : defaultSort}
+          onChange={changeSort}
+          options={sortOptions}
+          className="md:hidden"
+        />
+        <div role="group" aria-label="Borrowing status" className="app-toolbar-segments hidden lg:flex">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               aria-pressed={statusFilter === tab.key}
-              onClick={() => updateFilters({ status: tab.key, resolution: tab.key === "SETTLED" ? effectiveResolution : "", page: 1 })}
+              onClick={() => changeStatus(tab.key)}
               className={cn(
                 "shrink-0 min-h-11 min-w-[44px] sm:min-w-0 sm:min-h-0 sm:h-9 rounded-lg px-3.5 sm:px-3 text-xs font-semibold whitespace-nowrap transition-colors",
                 statusFilter === tab.key
@@ -616,7 +669,7 @@ export default function HistoryContent({
       {(isSettlementsTab || showExportPrint) && (
         <div className={cn("flex flex-wrap items-center justify-between gap-3 pt-0.5", !isSettlementsTab && "hidden lg:flex")}>
           {isSettlementsTab ? (
-            <div className="flex items-center gap-1 p-1 bg-muted/20 rounded-xl border border-border/40 overflow-x-auto no-scrollbar max-w-full" role="group" aria-label="Filter settlements by resolution">
+            <div className="app-toolbar-segments flex-wrap" role="group" aria-label="Filter settlements by resolution">
               {RESOLUTION_FILTERS.map((res) => (
                 <button
                   key={res.key}
@@ -646,7 +699,7 @@ export default function HistoryContent({
                 size="sm"
                 disabled={isExporting}
                 onClick={handleExportXlsx}
-                className="h-9 rounded-lg gap-1.5 text-xs font-semibold"
+                className="app-toolbar-control gap-1.5"
               >
                 {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 Export (.xlsx)
@@ -656,7 +709,7 @@ export default function HistoryContent({
                 variant="outline"
                 size="sm"
                 onClick={() => window.print()}
-                className="h-9 rounded-lg gap-1.5 text-xs font-semibold"
+                className="app-toolbar-control gap-1.5"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Print

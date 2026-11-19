@@ -733,6 +733,18 @@ describe('history server actions', () => {
       const params = supaMock.rpc.mock.calls.at(-1)?.[1] as Record<string, unknown>;
       expect(params).not.toHaveProperty('p_sort');
     });
+
+    it('keeps date sorting on fallback and fails explicitly when a joined sort is unavailable', async () => {
+      supaMock.setRpcResponse(null, { message: 'rpc failed' }, 'get_borrowing_history_v2');
+      supaMock.setTableResponse('borrowing_records', [], null, 0);
+      await getBorrowingHistory('stu-1', 2, 10, 'all', undefined, undefined, undefined, 'due_asc');
+      const builder = supaMock.getTableBuilder('borrowing_records');
+      expect(builder.order).toHaveBeenCalledWith('due_date', { ascending: true });
+      expect(builder.range).toHaveBeenCalledWith(10, 19);
+      await expect(getBorrowingHistory('stu-1', 1, 10, 'all', undefined, undefined, undefined, 'title_asc'))
+        .rejects.toThrow('Unable to apply the selected borrowing history sort');
+      expect(builder.range).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('resolutionFilter & exportBorrowingHistory', () => {
@@ -791,6 +803,23 @@ describe('history server actions', () => {
   });
 
   describe('getUserBorrowingHistory (WP5 #9)', () => {
+    it('passes a permitted sort to the paginated history RPC', async () => {
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'lib-1', role: 'librarian' }));
+      supaMock.setRpcResponse([], null, 'get_borrowing_history_v2');
+      const result = await getUserBorrowingHistory({ userId: 'patron-1', page: 2, sort: 'due_desc' });
+      expect(result.success).toBe(true);
+      expect(supaMock.rpc).toHaveBeenCalledWith('get_borrowing_history_v2', expect.objectContaining({
+        p_user_id: 'patron-1', p_page: 2, p_sort: 'due_desc',
+      }));
+    });
+
+    it('rejects unsupported borrower history sorts before querying', async () => {
+      mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'lib-1', role: 'librarian' }));
+      const result = await getUserBorrowingHistory({ userId: 'patron-1', sort: 'patron_asc' as 'title_asc' });
+      expect(result.success).toBe(false);
+      expect(supaMock.rpc).not.toHaveBeenCalled();
+    });
+
     it('allows librarian and super_admin and denies library_staff and student', async () => {
       mockGetMe.mockResolvedValueOnce(makeStaffContext(supaMock.client, { id: 'sa-1', role: 'library_staff' }));
       expect(await getUserBorrowingHistory({ userId: 'patron-1', page: 1 })).toEqual({

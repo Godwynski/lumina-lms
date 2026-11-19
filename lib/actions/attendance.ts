@@ -340,9 +340,20 @@ export const recordAttendanceByCard = createSafeAction(
 
 
 
+const staffAttendanceSorts = {
+  'checkin-desc': ['check_in_at', false],
+  'checkin-asc': ['check_in_at', true],
+  'checkout-desc': ['check_out_at', false],
+  'checkout-asc': ['check_out_at', true],
+  'patron-asc': ['profiles(full_name)', true],
+  'patron-desc': ['profiles(full_name)', false],
+} as const;
+
+export type AttendanceSort = keyof typeof staffAttendanceSorts;
+
 export async function getAttendanceHistory(
   userId?: string, 
-  options?: { range?: 'today' | 'all'; limit?: number; search?: string; dateRange?: { from?: string; to?: string } }
+  options?: { range?: 'today' | 'all'; limit?: number; search?: string; dateRange?: { from?: string; to?: string }; sort?: string }
 ) {
   const me = await getMe();
   if (!me) throw new Error("Unauthorized");
@@ -357,6 +368,11 @@ export async function getAttendanceHistory(
 
   const PAGE_SIZE = 1000;
   const MAX_ROWS = 10000;
+  const sort = options?.sort ?? 'checkin-desc';
+  if (options?.sort !== undefined) {
+    if (!isStaff || userId) throw new Error('Forbidden');
+    if (!Object.hasOwn(staffAttendanceSorts, sort)) throw new Error('Invalid attendance sort');
+  }
 
   let dates: z.infer<typeof attendanceDateRange> | undefined;
   if (options?.dateRange !== undefined) {
@@ -376,6 +392,7 @@ export async function getAttendanceHistory(
     const search = options?.search?.replace(/[,()%*\\:]/g, " ").trim();
     const limit = options?.limit ? Math.min(options.limit, MAX_ROWS) : MAX_ROWS;
 
+    const [sortColumn, ascending] = staffAttendanceSorts[sort as AttendanceSort];
     const staffQuery = () => {
       let query = supabase
         .from("attendance")
@@ -395,7 +412,7 @@ export async function getAttendanceHistory(
       }
 
       return query
-        .order("check_in_at", { ascending: false })
+        .order(sortColumn, { ascending, nullsFirst: false })
         .order("id", { ascending: false });
     };
 
@@ -432,6 +449,7 @@ export async function getAttendanceHistory(
       .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)")
       .eq("user_id", targetId)
       .order("check_in_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(options.limit);
 
     if (error) throw error;
@@ -448,6 +466,7 @@ export async function getAttendanceHistory(
       .select("id, check_in_at, check_out_at, user_id, notes, profiles(full_name, student_id)")
       .eq("user_id", targetId)
       .order("check_in_at", { ascending: false })
+      .order("id", { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
 
     if (error) throw error;

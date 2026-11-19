@@ -1321,6 +1321,25 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(libRender.container).toHaveTextContent('Domain-Driven Design');
       expect(libRender.container).toHaveTextContent('Condoned');
 
+      mockGetUserBorrowingHistory.mockResolvedValueOnce({ success: true, data: page1History });
+      const dueSort = libRender.container.querySelector('button[aria-label^="Sort by Due"]');
+      await clickElement(dueSort);
+      expect(mockGetUserBorrowingHistory).toHaveBeenLastCalledWith({
+        userId: 'patron-9', page: 1, pageSize: 10, sort: 'due_asc',
+      });
+      expect(dueSort?.closest('th')).toHaveAttribute('aria-sort', 'ascending');
+      expect(libRender.container).toHaveTextContent('Refactoring');
+
+      mockGetUserBorrowingHistory.mockClear();
+      mockGetUserBorrowingHistory.mockResolvedValueOnce({ success: true, data: page1History });
+      await libRender.rerender(
+        <UserDetailClient initialUser={patronUser} currentRole="librarian" initialHistory={{ ...page1History }} />,
+      );
+      expect(mockGetUserBorrowingHistory).toHaveBeenCalledExactlyOnceWith({
+        userId: 'patron-9', page: 1, pageSize: 10, sort: 'due_asc',
+      });
+      expect(dueSort?.closest('th')).toHaveAttribute('aria-sort', 'ascending');
+
       // Hidden/denied for library_staff (library staff)
       cleanupClients();
       mockGetUserBorrowingHistory.mockClear();
@@ -2509,8 +2528,16 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
 
       const tableBtn = findButtonByText(container, 'Table');
       expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
-      await clickElement(tableBtn);
-      expect(mockRouterReplace).toHaveBeenCalledWith('?view=table', { scroll: false });
+      const previousUrl = window.location.href;
+      window.history.replaceState(null, '', '/student-catalog?available=true&page=2#results');
+      try {
+        await clickElement(tableBtn);
+        expect(window.location.search).toBe('?available=true&page=2&view=table');
+        expect(window.location.hash).toBe('#results');
+        expect(mockRouterReplace).not.toHaveBeenCalled();
+      } finally {
+        window.history.replaceState(null, '', previousUrl);
+      }
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/ui-preferences',
         expect.objectContaining({

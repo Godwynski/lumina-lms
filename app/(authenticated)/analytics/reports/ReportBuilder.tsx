@@ -299,15 +299,15 @@ export function ReportBuilder({ datasets, accountId, initialDates }: {
 
   return <>
     <div className="space-y-5 print:hidden">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-4">
+      <div className="app-toolbar app-toolbar-row items-end justify-between">
         <div className="min-w-0 flex-1 basis-52 sm:max-w-lg">
-          <Field label="Report title"><Input maxLength={100} value={config.title} onChange={event => setConfig({ ...config, title: event.target.value })} /></Field>
+          <Field label="Report title"><Input className="app-toolbar-control h-11" maxLength={100} value={config.title} onChange={event => setConfig({ ...config, title: event.target.value })} /></Field>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={saveTemplate} disabled={!valid || exporting || !!templateAction}>
+          <Button type="button" variant="outline" className="app-toolbar-control h-11" onClick={saveTemplate} disabled={!valid || exporting || !!templateAction}>
             {selectedTemplate ? "Update template" : "Save template"}
           </Button>
-          <Button type="button" onClick={() => void exportReport()} disabled={!shownReport || exporting}>
+          <Button type="button" className="app-toolbar-control h-11" onClick={() => void exportReport()} disabled={!shownReport || exporting}>
             <Download aria-hidden="true" /> {exporting ? "Preparing report…" : format === "pdf" ? "Print / Save PDF" : `Download ${formats[format]}`}
           </Button>
         </div>

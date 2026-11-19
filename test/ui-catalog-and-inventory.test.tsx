@@ -1799,8 +1799,15 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       await flushPromises();
       const tableBtn = findButtonByText(container, 'Table');
       expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
-      await clickElement(tableBtn);
-      expect(mockRouterReplace).toHaveBeenCalledWith('?view=table', { scroll: false });
+      const previousUrl = window.location.href;
+      window.history.replaceState(null, '', '/inventory?categoryId=cs&page=2');
+      try {
+        await clickElement(tableBtn);
+        expect(window.location.search).toBe('?categoryId=cs&page=2&view=table');
+        expect(mockRouterReplace).not.toHaveBeenCalled();
+      } finally {
+        window.history.replaceState(null, '', previousUrl);
+      }
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/ui-preferences',
         expect.objectContaining({

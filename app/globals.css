@@ -131,6 +131,26 @@ body [data-sonner-toaster][data-sonner-theme="light"] {
     @apply mx-auto w-full min-w-0 max-w-7xl px-3 md:px-6;
   }
 
+  .app-toolbar {
+    @apply min-w-0 rounded-xl border border-border/50 bg-muted/20 p-2.5;
+  }
+
+  .app-toolbar-row {
+    @apply flex min-w-0 flex-wrap items-center gap-2;
+  }
+
+  .app-toolbar-search {
+    @apply relative min-w-0 flex-1 basis-52;
+  }
+
+  .app-toolbar-control {
+    @apply h-11 min-h-11 rounded-lg text-sm shadow-none;
+  }
+
+  .app-toolbar-segments {
+    @apply min-h-11 min-w-0 items-center gap-1 rounded-lg border border-border/50 bg-muted/30 px-1 py-0.5;
+  }
+
   .status-success {
     border-color: hsl(var(--status-success) / 0.35);
     background-color: hsl(var(--status-success) / 0.15);

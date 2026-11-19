@@ -113,7 +113,7 @@ export default function NotificationsPage() {
   return (
     <>
       <Tabs defaultValue="all" className="w-full space-y-4">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="app-toolbar app-toolbar-row">
           <TabsList aria-label="Filter notifications" className="group-data-[orientation=horizontal]/tabs:h-auto">
             <TabsTrigger value="all" className="min-h-11 min-w-[44px] md:min-w-0 md:min-h-0 px-2 sm:px-3 text-xs sm:text-sm">
               All
@@ -138,20 +138,20 @@ export default function NotificationsPage() {
               ...(hasRead ? [{ id: 'clear-read', label: 'Clear read', onSelect: handleClearRead }] : []),
             ]}
           />
-          <div className="relative w-full min-w-0 lg:ml-auto lg:w-64">
+          <div className="app-toolbar-search max-sm:basis-full lg:ml-auto lg:max-w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               type="search"
               aria-label="Search all notifications"
               placeholder="Filter events..."
-              className="h-11 md:h-9 pl-9 rounded-lg"
+              className="app-toolbar-control h-11 pl-9 border-border/50"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger aria-label="Filter by type" className="h-11 w-auto max-w-full shrink-0 rounded-lg text-xs lg:h-9">
+            <SelectTrigger aria-label="Filter by type" className="app-toolbar-control h-11 w-auto max-w-full shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -167,7 +167,7 @@ export default function NotificationsPage() {
               variant="outline"
               size="sm"
               onClick={markAllAsRead}
-              className="hidden h-9 shrink-0 rounded-lg px-3 text-xs font-semibold lg:inline-flex"
+              className="app-toolbar-control hidden h-11 shrink-0 px-3 lg:inline-flex"
             >
               Clear unread
             </Button>
@@ -177,7 +177,7 @@ export default function NotificationsPage() {
               variant="outline"
               size="sm"
               onClick={handleClearRead}
-              className="hidden h-9 shrink-0 rounded-lg px-3 text-xs font-semibold lg:inline-flex"
+              className="app-toolbar-control hidden h-11 shrink-0 px-3 lg:inline-flex"
             >
               Clear read
             </Button>

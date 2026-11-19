@@ -7,6 +7,7 @@ import { BookSchema } from '@/lib/validations/catalog';
 import { logger } from '@/lib/logger';
 import { assertStaffCatalogAccess } from './auth';
 import { fetchBooksCore } from '@/lib/actions/books-core';
+import { getBookOrdering } from '@/lib/catalog-sort';
 
 /**
  * Retrieves a paginated list of books with optional filtering and search.
@@ -20,16 +21,8 @@ export async function getBooks(
   status: 'ACTIVE' | 'ARCHIVED' | 'ALL' = 'ACTIVE'
 ) {
   const supabase = await assertStaffCatalogAccess(true);
-  const [sortBy, sortOrder] = ({
-    relevance: ['relevance', 'asc'],
-    newest: ['created_at', 'desc'],
-    title_desc: ['title', 'desc'],
-    availability_desc: ['availability', 'desc'],
-    availability_asc: ['availability', 'asc'],
-  } as const)[sort as 'newest'] ?? (['title', 'asc'] as const);
-
   const { books, total } = await fetchBooksCore(
-    { query, categoryId, page, pageSize, sortBy, sortOrder, status },
+    { query, categoryId, page, pageSize, status, ...getBookOrdering(sort, Boolean(query.trim())) },
     '*, categories!left(name)',
     supabase
   );

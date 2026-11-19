@@ -81,17 +81,12 @@ export async function fetchBooksCore(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  if (sortBy === 'author') {
-    dbQuery = dbQuery.order('author', { ascending: sortOrder === 'asc' });
-  } else if (sortBy === 'availability') {
-    dbQuery = dbQuery.order('available_copies', { ascending: sortOrder === 'asc' });
-  } else if (sortBy === 'created_at') {
-    dbQuery = dbQuery.order('created_at', { ascending: sortOrder === 'asc' });
-  } else {
-    dbQuery = dbQuery.order('title', { ascending: sortOrder === 'asc' });
-  }
-
-  const { data, count, error } = await dbQuery.range(from, to);
+  const sortColumn = sortBy === 'availability' ? 'available_copies' : sortBy === 'relevance' ? 'title' : sortBy;
+  const ascending = sortOrder === 'asc';
+  const { data, count, error } = await dbQuery
+    .order(sortColumn, { ascending })
+    .order('id', { ascending })
+    .range(from, to);
     
   if (error) throw new Error(error.message);
   

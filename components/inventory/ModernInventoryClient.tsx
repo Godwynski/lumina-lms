@@ -5,7 +5,6 @@ import { useTransition, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus, 
-  Search, 
   X, 
   ArrowUpDown, 
   SlidersHorizontal,
@@ -21,8 +20,9 @@ import {
   Eye
 } from "lucide-react";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import { ViewModeToggle, resolveViewMode } from "@/components/common/ViewModeToggle";
+import { ViewModeToggle, replaceViewModeInUrl, resolveViewMode } from "@/components/common/ViewModeToggle";
 import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
+import { ToolbarSearchField } from "@/components/common/ToolbarSearchField";
 import {
   buildImportTemplateWorkbook,
   filterValidImportBooks,
@@ -72,6 +72,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { InventoryGrid } from "./InventoryGrid";
 import { InventoryTable } from "./InventoryTable";
+import { BOOK_SORT_OPTIONS, bookColumnSort, normalizeBookSort, parseBookSort } from "@/lib/catalog-sort";
 import { InventoryReportPreview } from "./InventoryReportPreview";
 import { Book, Category, Reservation } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -127,11 +128,10 @@ export function ModernInventoryClient({
   // Derived values from URL
   const urlQuery = searchParams.get("q") || "";
   // An explicit Sort choice wins; otherwise searches show "Best match" first.
-  const explicitSort = searchParams.get("sort") as "relevance" | "newest" | "title_asc" | "title_desc" | "availability_desc" | "availability_asc" | null;
   const hasQuery = urlQuery.trim().length > 0;
-  const sortBy = explicitSort && (explicitSort !== "relevance" || hasQuery)
-    ? explicitSort
-    : (hasQuery ? "relevance" : "newest");
+  const explicitSort = parseBookSort(searchParams.get("sort"), hasQuery);
+  const sortBy = normalizeBookSort(explicitSort ?? (hasQuery ? "relevance" : "newest"));
+  const sortOptions = BOOK_SORT_OPTIONS.filter(({ value }) => value !== "relevance" || hasQuery);
   const status = (searchParams.get("status")?.toUpperCase() as "ACTIVE" | "ARCHIVED" | "ALL") || "ACTIVE";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const categoryId = searchParams.get("categoryId") || "all";
@@ -140,6 +140,7 @@ export function ModernInventoryClient({
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   // Queries this component pushed that the URL hasn't caught up with yet.
   const pendingQueries = useRef<string[]>([]);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pageSize = 12;
 
   // Batch Operations States
@@ -613,18 +614,20 @@ export function ModernInventoryClient({
     updateParams({ categoryId: val || "all" });
   };
   const setCategoryId = (id: string) => updateParams({ categoryId: id });
-  const setSortBy = (sort: typeof sortBy) => updateParams({ sort });
   const setStatus = (s: typeof status) => updateParams({ status: s });
   const setPage = (p: number) => updateParams({ page: p });
   const setViewMode = (nextView: "cards" | "table") => {
-    updateParams({ view: nextView });
+    if (nextView === viewMode) return;
+    replaceViewModeInUrl(nextView);
     void updatePreferences({ inventoryView: nextView });
   };
-  const pushQuery = useCallback((raw: string) => {
+  const pushQuery = useCallback((raw: string, sort?: string) => {
+    clearTimeout(searchDebounce.current);
     const q = raw.trim();
     if (q !== urlQuery) pendingQueries.current.push(q);
-    updateParams({ q: q || null });
+    updateParams({ q: q || null, ...(sort ? { sort } : {}) });
   }, [urlQuery, updateParams]);
+  const setSortBy = (sort: string) => pushQuery(searchQuery, sort);
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     pushQuery(searchQuery);
@@ -636,8 +639,10 @@ export function ModernInventoryClient({
 
   // Debounce search input for realtime as-you-type search
   useEffect(() => {
-    if (searchQuery.trim() === urlQuery.trim()) return;
+    const q = searchQuery.trim();
+    if (q === urlQuery.trim() || q === pendingQueries.current.at(-1)) return;
     const timer = setTimeout(() => pushQuery(searchQuery), 300);
+    searchDebounce.current = timer;
     return () => clearTimeout(timer);
   }, [searchQuery, urlQuery, pushQuery]);
 
@@ -656,66 +661,46 @@ export function ModernInventoryClient({
   return (
     <div className="relative space-y-6 overflow-x-clip">
       <div className={cn("space-y-4", isReportPreviewOpen && "print:hidden")}>
-      <div className="sticky top-14 z-30 flex flex-col gap-3 rounded-2xl border border-border/40 bg-background/85 p-2.5 backdrop-blur-xl transition-all duration-300 md:top-16">
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <div className="app-toolbar sticky top-14 z-30 bg-background/95 backdrop-blur-xl md:top-16">
+        <div className="app-toolbar-row w-full">
           {/* Row 1 on mobile: Search + Primary Add CTA */}
-          <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:flex-[1_1_16rem]">
-            <form onSubmit={handleSearch} className="relative flex flex-1 min-w-0 items-center gap-2">
-              <div className="relative flex-1 min-w-0 group">
-                <Search className={cn(
-                  "absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors",
-                  searchQuery ? "text-primary" : "text-muted-foreground"
-                )} />
-                <input
-                  type="search"
-                  aria-label="Search inventory"
-                  placeholder="Search books"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={cn(
-                    "h-11 w-full rounded-lg border border-border/50 bg-background pl-10 text-sm font-medium transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15 sm:h-10 [&::-webkit-search-cancel-button]:appearance-none",
-                    searchQuery ? "pr-10" : "pr-3"
-                  )}
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    aria-label="Clear search"
-                    className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-2 sm:p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+          <div className="flex min-w-0 basis-full items-center gap-2 lg:flex-1 lg:basis-52">
+            <form onSubmit={handleSearch} className="app-toolbar-search">
+              <ToolbarSearchField
+                label="Search inventory"
+                placeholder="Search books"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClear={clearSearch}
+              />
             </form>
 
             {canManage && (
-              <Button asChild className="h-11 shrink-0 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 lg:h-10">
+              <Button asChild className="app-toolbar-control shrink-0 px-3.5">
                 <Link href="/inventory/add" aria-label="Add Book">
                   <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                  <span>Add<span className="hidden lg:inline"> Book</span></span>
+                  <span>Add<span className="hidden sm:inline"> Book</span></span>
                 </Link>
               </Button>
             )}
           </div>
 
           {/* Row 2 on mobile: Filters + View Toggle + Secondary Overflow */}
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 lg:w-auto">
+          <div className="app-toolbar-row flex-1 lg:flex-none">
           <Sheet>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
                 aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}
                 className={cn(
-                  "h-11 sm:h-9 flex-1 sm:flex-none rounded-lg px-3.5 gap-2 border-border/50 bg-background hover:bg-muted/60 text-xs font-medium relative justify-center",
+                  "app-toolbar-control flex-1 justify-center gap-2 border-border/50 bg-background px-3.5 lg:flex-none",
                   activeFilterCount > 0 && "border-primary/30 bg-primary/5 text-primary"
                 )}
               >
                 <SlidersHorizontal className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
                 <span>Filters</span>
                 {activeFilterCount > 0 && (
-                  <Badge className="sm:absolute sm:-top-1.5 sm:-right-1.5 h-5 min-w-5 flex items-center justify-center px-1.5 sm:px-1 rounded-full text-xs bg-primary text-primary-foreground sm:border-2 sm:border-background">
+                  <Badge className="h-5 min-w-5 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
                     {activeFilterCount}
                   </Badge>
                 )}
@@ -764,21 +749,15 @@ export function ModernInventoryClient({
                   {/* Sort Selection */}
                   <div className="space-y-2.5">
                     <label className="text-xs font-semibold text-muted-foreground">Sorting Order</label>
-                    <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                      <SelectTrigger aria-label="Sorting order" className="min-h-11 h-11 sm:min-h-10 sm:h-10 w-full rounded-lg border border-border/50 bg-background px-3 text-sm font-medium shadow-none focus:ring-0">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger aria-label="Sorting order" className="app-toolbar-control min-h-11 w-full border-border/50 bg-background">
                         <div className="flex items-center gap-2">
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                           <SelectValue />
                         </div>
                       </SelectTrigger>
                       <SelectContent className="rounded-lg border-border/40">
-                        {urlQuery.trim() && (
-                          <SelectItem value="relevance" className="text-xs">Best Match</SelectItem>
-                        )}
-                        <SelectItem value="newest" className="text-xs">Recently Added</SelectItem>
-                        <SelectItem value="title_asc" className="text-xs">Title A-Z</SelectItem>
-                        <SelectItem value="title_desc" className="text-xs">Title Z-A</SelectItem>
-                        <SelectItem value="availability_desc" className="text-xs">By Availability</SelectItem>
+                        {sortOptions.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -850,7 +829,7 @@ export function ModernInventoryClient({
             <div className="flex items-center gap-2 shrink-0">
               <OverflowActionsMenu
                 label="Inventory actions"
-                className="lg:hidden"
+                className="app-toolbar-control lg:hidden"
                 actions={[
                   {
                     id: "batch-operations",
@@ -862,7 +841,7 @@ export function ModernInventoryClient({
               />
               <Dialog open={isBatchOpen} onOpenChange={setIsBatchOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" aria-label="Batch operations" className="hidden h-9 gap-2 rounded-lg border-border/50 bg-background px-3.5 text-xs font-medium hover:bg-muted/60 lg:inline-flex">
+                  <Button variant="outline" aria-label="Batch operations" className="app-toolbar-control hidden gap-2 border-border/50 bg-background px-3.5 lg:inline-flex">
                     <Upload className="h-3.5 w-3.5 text-muted-foreground" />
                     <span>Batch Operations</span>
                   </Button>
@@ -1328,6 +1307,7 @@ export function ModernInventoryClient({
             canManage={canManage}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearAllFilters}
+            columnSort={(column) => bookColumnSort(sortBy, column, setSortBy)}
           />
         ) : (
           <InventoryGrid

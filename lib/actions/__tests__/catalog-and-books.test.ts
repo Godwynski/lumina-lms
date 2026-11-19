@@ -425,6 +425,31 @@ describe('Catalog & Books Server Actions', () => {
       expect(b.range).toHaveBeenCalledWith(5, 9);
     });
 
+    it('orders filtered inventory by author and a unique tiebreaker before requesting the page', async () => {
+      setAuthUser(
+        serverClientHelper,
+        { id: 'staff-1' },
+        { id: 'staff-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_inventory: true } }
+      );
+      serverClientHelper.setTableResponse('books', [{ id: 'b2', title: 'Clean', author: 'Adams' }], null, 3);
+
+      expect(await getBooks('Clean', 'category-1', 2, 1, 'author_desc', 'ARCHIVED')).toEqual({
+        data: [{ id: 'b2', title: 'Clean', author: 'Adams' }],
+        count: 3,
+      });
+      const books = serverClientHelper.getTableBuilder('books');
+      expect(books.eq).toHaveBeenCalledWith('is_active', false);
+      expect(books.in).toHaveBeenCalledWith('category_id', ['category-1']);
+      expect(books.or).toHaveBeenCalledWith('title.ilike.%Clean%,author.ilike.%Clean%,isbn.ilike.%Clean%');
+      expect(books.order.mock.calls).toEqual([
+        ['author', { ascending: false }],
+        ['id', { ascending: false }],
+      ]);
+      expect(books.range).toHaveBeenCalledExactlyOnceWith(1, 1);
+      expect(books.order.mock.invocationCallOrder.at(-1)).toBeLessThan(books.range.mock.invocationCallOrder[0]);
+      expect(serverClientHelper.rpc).not.toHaveBeenCalled();
+    });
+
     it('createBook validates inputs and enforces RBAC', async () => {
       setAuthUser(serverClientHelper, null, null);
       expect(await createBook({ bookData: validBookData, copiesCount: 1 })).toEqual({
@@ -821,7 +846,7 @@ describe('Catalog & Books Server Actions', () => {
       errSpy.mockRestore();
     });
 
-    it('getBooksForExport applies query, categoryId, status, and sort filters when provided', async () => {
+    it.each([['title_desc', 'title'], ['author_desc', 'author']])('getBooksForExport applies filters and the %s sort', async (sort, column) => {
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
       const filtered = [{ id: 'b2', title: 'Clean Architecture' }];
       serverClientHelper.setTableResponse('books', filtered, null);
@@ -830,7 +855,7 @@ describe('Catalog & Books Server Actions', () => {
         query: 'Clean',
         categoryId: 'cat-1,cat-2',
         status: 'ARCHIVED',
-        sort: 'title_desc',
+        sort,
       });
 
       expect(res).toEqual(filtered);
@@ -838,7 +863,10 @@ describe('Catalog & Books Server Actions', () => {
       expect(booksBuilder.eq).toHaveBeenCalledWith('is_active', false);
       expect(booksBuilder.or).toHaveBeenCalledWith(expect.stringContaining('title.ilike.%Clean%'));
       expect(booksBuilder.in).toHaveBeenCalledWith('category_id', ['cat-1', 'cat-2']);
-      expect(booksBuilder.order).toHaveBeenCalledWith('title', { ascending: false });
+      expect(booksBuilder.order.mock.calls).toEqual([
+        [column, { ascending: false }],
+        ['id', { ascending: false }],
+      ]);
     });
 
     it('batchImportBooks rejects > 500 rows and propagates initial duplicate-check DB errors', async () => {
@@ -1083,6 +1111,32 @@ describe('Catalog & Books Server Actions', () => {
       const b = safeClientHelper.getTableBuilder('books');
       expect(b.order).toHaveBeenCalledWith('created_at', { ascending: false });
       expect(b.gt).toHaveBeenCalledWith('available_copies', 0);
+    });
+
+    it.each([
+      ['title', 'title', true],
+      ['title_desc', 'title', false],
+      ['author_asc', 'author', true],
+      ['author_desc', 'author', false],
+      ['availability_desc', 'available_copies', false],
+      ['availability_asc', 'available_copies', true],
+    ] as const)('orders the filtered public result for %s with a stable page boundary', async (sort, column, ascending) => {
+      safeClientHelper.setTableResponse('books', [{ id: 'public-2', title: 'Public' }], null, 3);
+
+      expect(await getPublicBooksCached('Pub', 'cat-1', 'General', true, 2, 1, sort)).toEqual({
+        books: [{ id: 'public-2', title: 'Public' }],
+        total: 3,
+        hasMore: true,
+      });
+      const books = safeClientHelper.getTableBuilder('books');
+      expect(books.eq).toHaveBeenCalledWith('is_active', true);
+      expect(books.in).toHaveBeenCalledWith('category_id', ['cat-1']);
+      expect(books.eq).toHaveBeenCalledWith('section', 'General');
+      expect(books.gt).toHaveBeenCalledWith('available_copies', 0);
+      expect(books.order.mock.calls).toEqual([[column, { ascending }], ['id', { ascending }]]);
+      expect(books.range).toHaveBeenCalledExactlyOnceWith(1, 1);
+      expect(safeClientHelper.from).toHaveBeenCalledExactlyOnceWith('books');
+      expect(safeClientHelper.rpc).not.toHaveBeenCalled();
     });
 
     it('getPublicBookById fetches active book by ID and throws on error', async () => {

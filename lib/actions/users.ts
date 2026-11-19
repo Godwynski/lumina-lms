@@ -6,6 +6,18 @@ import { mapProfileToUser } from '@/lib/utils/mappers';
 
 import type { User } from '@/lib/types';
 
+const directorySorts = {
+  recent: ['created_at', false],
+  'name-asc': ['full_name', true],
+  'name-desc': ['full_name', false],
+  'id-asc': ['student_id', true],
+  'id-desc': ['student_id', false],
+  'program-asc': ['department', true],
+  'program-desc': ['department', false],
+} as const;
+
+export type UserDirectorySort = keyof typeof directorySorts;
+
 /**
  * Server action to fetch paginated and filtered users for management.
  * Enforces role restrictions (librarians cannot see super_admins).
@@ -15,6 +27,7 @@ export async function getUsers(options: {
   search?: string;
   page?: number;
   pageSize?: number;
+  sort?: string;
 } = {}): Promise<{ users: User[]; total: number }> {
   const me = await getMe();
   if (!me) {
@@ -67,9 +80,14 @@ export async function getUsers(options: {
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
+  const sort = options.sort;
+  const [sortColumn, ascending] = sort && Object.hasOwn(directorySorts, sort)
+    ? directorySorts[sort as UserDirectorySort]
+    : directorySorts.recent;
 
   const { data, error, count } = await queryBuilder
-    .order('created_at', { ascending: false })
+    .order(sortColumn, { ascending, nullsFirst: false })
+    .order('id', { ascending: false })
     .range(from, to);
 
   if (error) throw error;

@@ -362,6 +362,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_super_admin_idx ON public.profiles(role) W
 
 -- Mandatory Foreign Key B-Tree Indexes (prevents sequential scans on joins and parent deletes)
 CREATE INDEX IF NOT EXISTS books_category_id_idx ON public.books(category_id);
+CREATE INDEX IF NOT EXISTS books_title_id_idx ON public.books (title, id);
+CREATE INDEX IF NOT EXISTS books_author_id_idx ON public.books (author, id);
+CREATE INDEX IF NOT EXISTS books_available_copies_id_idx ON public.books (available_copies, id);
+CREATE INDEX IF NOT EXISTS books_created_at_id_idx ON public.books (created_at, id);
 CREATE INDEX IF NOT EXISTS book_copies_book_id_idx ON public.book_copies(book_id);
 CREATE INDEX IF NOT EXISTS borrowing_records_user_id_idx ON public.borrowing_records(user_id);
 CREATE INDEX IF NOT EXISTS borrowing_records_book_copy_id_idx ON public.borrowing_records(book_copy_id);
@@ -2566,6 +2570,7 @@ BEGIN
   ORDER BY
     -- Column sorting from the history table (P4-HIS-005); unknown values fall through to the default order
     CASE WHEN p_sort = 'borrowed_asc' THEN f.borrowed_at END ASC,
+    CASE WHEN p_sort = 'borrowed_desc' THEN f.borrowed_at END DESC,
     CASE WHEN p_sort = 'due_asc' THEN f.due_date END ASC,
     CASE WHEN p_sort = 'due_desc' THEN f.due_date END DESC,
     CASE WHEN p_sort = 'title_asc' THEN lower(f.book_title) END ASC,
@@ -2584,7 +2589,8 @@ BEGIN
       ELSE 0
     END ASC,
     CASE WHEN UPPER(COALESCE(p_status, '')) = 'CURRENT' THEN f.due_date ELSE NULL END ASC,
-    f.borrowed_at DESC
+    f.borrowed_at DESC,
+    f.id DESC
   LIMIT p_page_size
   OFFSET v_offset;
 END;

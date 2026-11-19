@@ -42,7 +42,7 @@ export function OverflowActionsMenu({
   if (actions.length === 0) return null;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
@@ -50,7 +50,7 @@ export function OverflowActionsMenu({
           size={triggerText ? "default" : "icon"}
           aria-label={label}
           className={cn(
-            "h-11 shrink-0 rounded-xl border-border/30 bg-background/60 shadow-none hover:bg-muted/30",
+            "app-toolbar-control h-11 shrink-0 border-border/50 bg-background hover:bg-muted/40",
             !triggerText && "w-11",
             className
           )}

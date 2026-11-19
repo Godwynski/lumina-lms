@@ -43,6 +43,26 @@ describe('B2 Shared Table & States', () => {
     vi.clearAllMocks();
   });
 
+  it('shows sort state on the active column and keeps mobile card labels plain', async () => {
+    const onSort = vi.fn();
+    const { container } = await renderClient(
+      <LuminaTable
+        data={[{ id: '1', title: 'Clean Code', status: 'Available' }]}
+        columns={[
+          { header: 'Title', accessor: 'title', sort: { direction: 'desc', onToggle: onSort } },
+          { header: 'Status', accessor: 'status' },
+        ]}
+      />,
+    );
+    const sortButton = container.querySelector('th button[aria-label="Sort by Title (descending)"]');
+    expect(sortButton?.closest('th')).toHaveAttribute('aria-sort', 'descending');
+    expect(container.querySelectorAll('th[aria-sort]')).toHaveLength(1);
+    expect(container.querySelector('th:last-child button')).toBeNull();
+    expect(container.querySelectorAll('button[aria-label^="Sort by Title"]')).toHaveLength(1);
+    await clickElement(sortButton);
+    expect(onSort).toHaveBeenCalledOnce();
+  });
+
   it('LuminaTable hides <thead> when data is empty and renders EmptyState inside container', async () => {
     const onClear = vi.fn();
     const { container, rerender } = await renderClient(

@@ -3,6 +3,7 @@ import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-
 import { getMyReservations } from '@/lib/actions/reservations';
 import { StudentCatalogClient } from './StudentCatalogClient';
 import { Skeleton } from '@/components/ui/skeleton';
+import { parseBookSort } from '@/lib/catalog-sort';
 
 export function CatalogSkeletonView() {
   return (
@@ -66,10 +67,7 @@ async function StudentCatalogLoader({
   const page = parseInt(params.page || '1', 10);
   // The Sort dropdown's choice wins; otherwise searches rank by best match.
   const hasQuery = q.trim().length > 0;
-  const requestedSort = params.sort as 'relevance' | 'title' | 'author' | 'availability' | 'newest' | undefined;
-  const sortBy = requestedSort && (requestedSort !== 'relevance' || hasQuery)
-    ? requestedSort
-    : (hasQuery ? 'relevance' : 'newest');
+  const sortBy = parseBookSort(params.sort, hasQuery) ?? (hasQuery ? 'relevance' : 'newest');
   const pageSize = 16;
 
   // All three fire concurrently — none are awaited here

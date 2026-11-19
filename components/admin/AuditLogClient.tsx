@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -41,6 +41,12 @@ import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { AdminTableShell } from "./AdminTableShell";
 import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
+import { SortableTableHeader, TableSortSelect } from "@/components/common/TableSort";
+
+const timestampSortOptions = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+];
 
 const AuditLogExportImportModal = dynamic(
   () => import("./AuditLogExportImportModal").then((mod) => mod.AuditLogExportImportModal),
@@ -406,15 +412,21 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
   const updateFilters = useCallback((changes: Record<string, string>) => {
     const params = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(changes)) {
-      if (value && value !== "all") params.set(key, value); else params.delete(key);
+      if (value && (key === "query" || value !== "all")) params.set(key, value); else params.delete(key);
     }
     if (!("page" in changes)) params.delete("page");
     window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
   }, []);
   const page = Math.max(1, Math.floor(Number(urlFilters.get("page"))) || 1);
   const setPage = (value: number) => updateFilters({ page: value === 1 ? "" : String(value) });
+  const sort = urlFilters.get("sort") === "oldest" ? "oldest" : "newest";
   const [search, setSearch] = useState(urlFilters.get("query") || "");
   const debouncedSearch = urlFilters.get("query") || "";
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const setSort = (value: string) => {
+    clearTimeout(searchTimer.current);
+    updateFilters({ sort: value === "oldest" ? value : "", query: search });
+  };
   const setDebouncedSearch = useCallback((query: string) => updateFilters({ query }), [updateFilters]);
   const entityType = urlFilters.get("entityType") || "all";
   const setEntityType = (entityType: string) => updateFilters({ entityType });
@@ -472,6 +484,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
     const timer = setTimeout(() => {
       if (search !== (new URLSearchParams(window.location.search).get("query") || "")) setDebouncedSearch(search);
     }, 400);
+    searchTimer.current = timer;
     return () => clearTimeout(timer);
   }, [search, setDebouncedSearch]);
 
@@ -481,6 +494,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
     const params = new URLSearchParams({
       limit: pageSize.toString(),
       offset: ((page - 1) * pageSize).toString(),
+      ...(sort === "oldest" && { sort }),
       ...(debouncedSearch && { query: debouncedSearch }),
       ...(entityType !== "all" && { entityType }),
       ...(actionType !== "all" && { actionType }),
@@ -492,14 +506,14 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
       ...(userId && { userId }),
     });
     return params.toString();
-  }, [page, debouncedSearch, entityType, actionType, startDate, endDate, bookId, studentId, copyId, userId]);
+  }, [page, sort, debouncedSearch, entityType, actionType, startDate, endDate, bookId, studentId, copyId, userId]);
 
-  const { data, error, mutate } = useSWR<{
+  const { data, error, isLoading, mutate } = useSWR<{
     logs: AuditLog[];
     total: number;
   }>(`/api/admin/audit-logs?${queryParams}`, fetcher, {
     revalidateOnFocus: false,
-    keepPreviousData: false,
+    keepPreviousData: true,
   });
 
   useEffect(() => {
@@ -517,16 +531,15 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
       className="min-h-[calc(100vh-140px)]"
       controls={
         <div className="flex flex-col gap-3 w-full">
-          {/* Top Control Bar */}
-          <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:items-center justify-between w-full">
-            <div className="relative flex-1 w-full lg:max-w-xs xl:max-w-sm 2xl:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+          <div className="app-toolbar-row w-full">
+            <div className="app-toolbar-search lg:max-w-md">
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input 
                 aria-label="Search audit records"
                 placeholder="Search records, names, or actions…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-10 h-11 sm:h-10 border border-border/20 bg-muted/5 rounded-xl sm:rounded-2xl text-xs font-medium w-full transition-all focus-visible:ring-4 focus-visible:ring-primary/5"
+                className="app-toolbar-control pl-9 pr-10"
               />
               {search && (
                 <button
@@ -541,20 +554,17 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
               )}
             </div>
             
-            <div className="flex items-center justify-between sm:justify-start gap-2 w-full lg:w-auto">
-              {/* Advanced Filters Trigger Button (Opens Modal) */}
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Button
                 variant={activeAdvancedFilterCount > 0 ? "secondary" : "outline"}
                 onClick={() => setShowAdvancedFilters(true)}
                 className={cn(
-                  "h-11 sm:h-10 flex-1 sm:flex-none rounded-xl sm:rounded-2xl border border-border/20 px-3.5 text-xs font-medium flex items-center justify-center gap-2 transition-all",
-                  activeAdvancedFilterCount > 0 
-                    ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15" 
-                    : "bg-muted/5 hover:bg-muted/10 text-muted-foreground hover:text-foreground"
+                  "app-toolbar-control gap-2 px-3.5",
+                  activeAdvancedFilterCount > 0 && "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15"
                 )}
                 title="Open Advanced Filters Modal"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <SlidersHorizontal aria-hidden="true" />
                 <span>Filters</span>
                 {activeAdvancedFilterCount > 0 && (
                   <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center">
@@ -562,6 +572,8 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                   </span>
                 )}
               </Button>
+
+              <TableSortSelect value={sort} onChange={setSort} options={timestampSortOptions} className="lg:hidden" />
 
               <OverflowActionsMenu
                 label="Audit log actions"
@@ -580,7 +592,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 variant="default"
                 size="sm"
                 onClick={() => setIsExportImportOpen(true)}
-                className="hidden h-10 w-auto rounded-lg px-4 text-xs font-semibold transition-all lg:inline-flex"
+                className="app-toolbar-control hidden px-4 lg:inline-flex"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
                 <span>{canImport ? "Export / Import" : "Export"}</span>
@@ -594,7 +606,9 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
             {userId && <AuditSubjectChip kind="actor" label="Performed by" value={userId} onRemove={() => updateFilters({ userId: "" })} />}
             {[["query", debouncedSearch, "Search"], ["entityType", entityType === "all" ? "" : entityType, "Entity"], ["actionType", actionType === "all" ? "" : actionType, "Action"], ["startDate", startDate, "From"], ["endDate", endDate, "To"]].filter(([, value]) => value).map(([key, value, label]) => <button type="button" key={key} className="min-h-11 sm:min-h-0 rounded-lg border px-3 py-1.5 text-xs hover:bg-muted" aria-label={`Remove ${label.toLowerCase()} filter`} onClick={() => { updateFilters({ [key]: "" }); if (key === "query") setSearch(""); }}>{label}: {value.replaceAll("_", " ")} <span aria-hidden="true">×</span></button>)}
           </div>}
-          <p role="status" className="text-xs text-muted-foreground">{error ? "Unable to load records. Adjust the filters or reload to retry." : data ? `${data.total.toLocaleString()} matching records` : "Loading records…"}</p>
+          <p role="status" className={error ? "text-xs text-destructive" : "sr-only"}>
+            {error ? "Unable to load records. Adjust the filters or reload to retry." : isLoading || !data ? "Loading records…" : `${data.total.toLocaleString()} matching records`}
+          </p>
         </div>
       }
       pagination={
@@ -608,8 +622,8 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
         ) : null
       }
     >
-      <div className="p-2 sm:p-4">
-        {data?.logs?.length === 0 && (
+      <div className="p-2 sm:p-4" aria-busy={isLoading || undefined}>
+        {!isLoading && data?.logs?.length === 0 && (
           <EmptyState
             noCard
             variant={hasAnyFilterActive ? "no-results" : "first-use"}
@@ -624,7 +638,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
           />
         )}
 
-        {!data && !error && (
+        {(!data || (isLoading && data.logs.length === 0)) && !error && (
           <div className="space-y-4 p-2">
              {Array.from({ length: 8 }).map((_, i) => (
                <div key={i} className="h-12 w-full bg-muted/10 animate-pulse rounded-lg border border-border/5" />
@@ -820,7 +834,11 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/20 bg-muted/30 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th scope="col" className="px-4 py-3 whitespace-nowrap">Timestamp (Manila, UTC+8)</th>
+                    <th scope="col" className="px-4 py-3 whitespace-nowrap" aria-sort={sort === "oldest" ? "ascending" : "descending"}>
+                      <SortableTableHeader direction={sort === "oldest" ? "asc" : "desc"} onToggle={() => setSort(sort === "oldest" ? "newest" : "oldest")}>
+                        Timestamp (Manila, UTC+8)
+                      </SortableTableHeader>
+                    </th>
                     <th scope="col" className="px-4 py-3 whitespace-nowrap">Performed by</th>
                     <th scope="col" className="px-4 py-3 whitespace-nowrap">Action</th>
                     <th scope="col" className="px-4 py-3 whitespace-nowrap">Book / student / copy</th>

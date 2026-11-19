@@ -8,6 +8,7 @@ import { logAuditActivity } from '@/lib/audit';
 import { revalidateTag } from 'next/cache';
 import { assertStaffCatalogAccess } from './auth';
 import { getOrCreateCategoryByName } from './categories';
+import { getBookOrdering } from '@/lib/catalog-sort';
 
 export interface ImportBookRow {
   title?: string;
@@ -81,18 +82,10 @@ export async function getBooksForExport(filters?: ExportBooksFilters) {
       }
     }
 
-    const sort = filters.sort || 'title_asc';
-    if (sort === 'newest') {
-      dbQuery = dbQuery.order('created_at', { ascending: false });
-    } else if (sort === 'title_desc') {
-      dbQuery = dbQuery.order('title', { ascending: false });
-    } else if (sort === 'availability_desc') {
-      dbQuery = dbQuery.order('available_copies', { ascending: false });
-    } else if (sort === 'availability_asc') {
-      dbQuery = dbQuery.order('available_copies', { ascending: true });
-    } else {
-      dbQuery = dbQuery.order('title');
-    }
+    const { sortBy, sortOrder } = getBookOrdering(filters.sort || 'title_asc', false);
+    const sortColumn = sortBy === 'availability' ? 'available_copies' : sortBy === 'relevance' ? 'title' : sortBy;
+    const ascending = sortOrder === 'asc';
+    dbQuery = dbQuery.order(sortColumn, { ascending }).order('id', { ascending });
   } else {
     dbQuery = dbQuery.order('title');
   }

@@ -23,8 +23,20 @@ it('combines exact subject, actor, date and action filters identically for scree
   expect(builder.eq.mock.calls).toEqual(screenFilters);
 });
 
-it.each<Record<string, string>>([{ bookId: 'not-a-uuid' }, { limit: '99999' }, { offset: '-1' }, { startDate: '2026-11-13', endDate: '2026-11-01' }])('rejects invalid filters %j', filters => {
+it.each<Record<string, string>>([{ bookId: 'not-a-uuid' }, { limit: '99999' }, { offset: '-1' }, { sort: 'reason-asc' }, { startDate: '2026-11-13', endDate: '2026-11-01' }])('rejects invalid filters %j', filters => {
   expect(() => parseAuditFilters(new URLSearchParams(filters))).toThrow();
+});
+
+it.each([[undefined, false], ['oldest', true], ['newest', false]] as const)('orders audit timestamps and ties consistently for %s', (sort, ascending) => {
+  const helper = createMockSupabaseClient();
+  const params = new URLSearchParams({ actionType: 'create' });
+  if (sort) params.set('sort', sort);
+  auditLogQuery(helper.client as unknown as SupabaseClient, params, true).range(20, 39);
+  const query = helper.getTableBuilder('audit_log_records');
+  expect(query.or).toHaveBeenCalledWith('action.ilike.create%,action.ilike.insert%,action.ilike.%created');
+  expect(query.order.mock.calls).toEqual([['created_at', { ascending }], ['id', { ascending }]]);
+  expect(query.order.mock.invocationCallOrder.at(-1)).toBeLessThan(query.range.mock.invocationCallOrder[0]);
+  expect(query.range).toHaveBeenCalledExactlyOnceWith(20, 39);
 });
 
 it('quotes search punctuation and treats wildcards literally', () => {

@@ -5,6 +5,7 @@ import { isStaff } from '@/lib/auth/permissions';
 import { redirect } from 'next/navigation';
 import { LiveActivityTicker } from '@/components/dashboard/LiveActivityTicker';
 import { CatalogContent, CatalogSkeleton } from './CatalogContent';
+import { parseBookSort } from '@/lib/catalog-sort';
 
 export const metadata = {
   title: 'Inventory',
@@ -57,9 +58,7 @@ async function InventoryDataWrapper({
   const categoriesPromise = getCategories();
   // The Sort dropdown's choice wins; otherwise searches rank by best match.
   const hasQuery = q.trim().length > 0;
-  const sort = params.sort && (params.sort !== 'relevance' || hasQuery)
-    ? params.sort
-    : (hasQuery ? 'relevance' : 'newest');
+  const sort = parseBookSort(params.sort, hasQuery) ?? (hasQuery ? 'relevance' : 'newest');
   const dataPromise = getBooks(q, categoryId || undefined, page, 12, sort, status);
 
   return (

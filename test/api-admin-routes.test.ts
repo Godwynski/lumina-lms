@@ -188,7 +188,7 @@ describe("Admin API Route Handlers", () => {
 
       setupAuth(supabase, "patron");
       expect(
-        (await auditLogsGet(new NextRequest("http://localhost/api/admin/audit-logs"))).status
+        (await auditLogsGet(new NextRequest("http://localhost/api/admin/audit-logs?sort=oldest"))).status
       ).toBe(403);
 
       setupAuth(supabase, "library_staff");
@@ -246,12 +246,13 @@ describe("Admin API Route Handlers", () => {
 
       const res = await auditLogsGet(
         new NextRequest(
-          `http://localhost/api/admin/audit-logs?entityType=policy&actionType=update&startDate=2026-01-01&endDate=2026-01-31&userId=${userId}&bookId=${bookId}&studentId=${studentId}&copyId=${copyId}&query=${encodeURIComponent("al(ice):_50%")}`
+          `http://localhost/api/admin/audit-logs?sort=oldest&entityType=policy&actionType=update&startDate=2026-01-01&endDate=2026-01-31&userId=${userId}&bookId=${bookId}&studentId=${studentId}&copyId=${copyId}&query=${encodeURIComponent("al(ice):_50%")}`
         )
       );
 
       expect(res.status).toBe(200);
       const auditBuilder = supabase.getTableBuilder("audit_log_records");
+      expect(auditBuilder.order.mock.calls).toEqual([["created_at", { ascending: true }], ["id", { ascending: true }]]);
       expect(auditBuilder.in).toHaveBeenCalledWith("entity_type", [
         "policy",
         "settings",
@@ -306,6 +307,11 @@ describe("Admin API Route Handlers", () => {
         new NextRequest("http://localhost/api/admin/audit-logs?startDate=2026-02-01&endDate=2026-01-01")
       );
       expect(badDatesRes.status).toBe(400);
+      const badSortRes = await auditLogsGet(
+        new NextRequest("http://localhost/api/admin/audit-logs?sort=reason-asc")
+      );
+      expect(badSortRes.status).toBe(400);
+      expect(supabase.from).not.toHaveBeenCalledWith("audit_log_records");
     });
 
     it("returns 500 on database error and 499 on AbortError", async () => {

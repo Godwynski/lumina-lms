@@ -73,6 +73,28 @@ describe('Users, Onboarding & Profile Server Actions', () => {
   });
 
   describe('getUsers (lib/actions/users.ts)', () => {
+    it.each([
+      ['name-asc', 'full_name', true], ['name-desc', 'full_name', false],
+      ['id-asc', 'student_id', true], ['id-desc', 'student_id', false],
+      ['program-asc', 'department', true], ['program-desc', 'department', false],
+      ['invalid-order', 'created_at', false],
+    ] as const)('orders the filtered directory by %s before the database range', async (sort, column, ascending) => {
+      const actor = createMockQueryBuilder({ id: 'librarian-1', role: 'librarian', status: 'ACTIVE' });
+      const rows = createMockQueryBuilder([], null, 0);
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'librarian-1' } }, error: null });
+      queueProfileBuilders(serverClientHelper, [actor, rows]);
+
+      await getUsers({ tab: 'archived', search: 'Alice', page: 2, pageSize: 12, sort });
+
+      expect(rows.eq).toHaveBeenCalledWith('status', 'ARCHIVED');
+      expect(rows.neq).toHaveBeenCalledWith('role', 'super_admin');
+      expect(rows.or).toHaveBeenCalledWith('full_name.ilike.%Alice%,email.ilike.%Alice%,student_id.ilike.%Alice%');
+      expect(rows.order).toHaveBeenNthCalledWith(1, column, { ascending, nullsFirst: false });
+      expect(rows.order).toHaveBeenLastCalledWith('id', { ascending: false });
+      expect(rows.order.mock.invocationCallOrder.at(-1)).toBeLessThan(rows.range.mock.invocationCallOrder[0]);
+      expect(rows.range).toHaveBeenCalledExactlyOnceWith(12, 23);
+    });
+
     it('throws Unauthorized when unauthenticated and Forbidden for student or library_staff', async () => {
       setAuthUser(serverClientHelper, null, null);
       await expect(getUsers()).rejects.toThrow('Unauthorized');

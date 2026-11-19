@@ -229,6 +229,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     // Open via keyboard Enter
     await pressKey(trigger, 'Enter');
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(document.body).not.toHaveAttribute('data-scroll-locked');
 
     const menuItems = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
     expect(menuItems.map((m) => m.textContent?.trim())).toEqual([
@@ -521,6 +522,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
 
     expect(container.querySelector('a[href^="/analytics/reports"]')).toHaveTextContent('Build report');
     const trigger = container.querySelector('button[aria-label="Analytics report actions"]') as HTMLButtonElement;
+    trigger.focus();
     await pressKey(trigger, 'Enter');
     await clickElement(
       Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((el) =>
@@ -529,18 +531,24 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     );
     expect(printSpy).toHaveBeenCalledTimes(1);
 
+    await vi.waitFor(() => {
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      expect(document.body.querySelector('[role="menu"]')).toBeNull();
+      expect(trigger).toHaveFocus();
+    });
     await pressKey(trigger, 'Enter');
-    await clickElement(
-      Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((el) =>
-        el.textContent?.includes('Export (.xlsx)')
-      ) as HTMLElement
+    await vi.waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'true'));
+    const exportAction = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((el) =>
+      el.textContent?.includes('Export (.xlsx)')
     );
+    expect(exportAction).toBeInTheDocument();
+    await clickElement(exportAction);
     await vi.waitFor(() => {
       expect(mockXlsxWriteFile).toHaveBeenCalled();
     });
   });
 
-  it('UsersContent mobile filter sheet enforces role gating and shows active badge count', async () => {
+  it('UsersContent uses one labeled filter control and keeps its filters when sorting the directory', async () => {
     mockGetUsers.mockResolvedValue({ users: [], total: 0 });
     const sampleUser: User = {
       id: 'u-1',
@@ -560,7 +568,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     const libHandle = await renderClient(
       <Suspense fallback={<div>Loading</div>}>
         <UsersContent
-          usersPromise={Promise.resolve({ users: [sampleUser], count: 1 })}
+          usersPromise={Promise.resolve({ users: [sampleUser], count: 24 })}
           currentRole="librarian"
         />
       </Suspense>
@@ -569,20 +577,28 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
       await Promise.resolve();
     });
 
-    await clickElement(findButtonByText(libHandle.container, 'Filter'));
+    await clickElement(libHandle.container.querySelector('[aria-label="Next page"]'));
+    expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+    const filterButton = findButtonByText(libHandle.container, 'Filters');
+    await clickElement(filterButton);
     expect(findButtonByText(document.body, 'Super Admin')).toBeUndefined();
     await clickElement(findButtonByText(document.body, 'Pending Review'));
-    expect(mockGetUsers).toHaveBeenCalledWith(expect.objectContaining({ tab: 'review' }));
-    expect(findButtonByText(libHandle.container, 'Filter')).toHaveTextContent('1');
+    expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ tab: 'review', page: 1 }));
+    expect(filterButton).toHaveTextContent('Pending Review');
+    expect(libHandle.container.querySelector('select[aria-label="Filter users by role or status"]')).toBeNull();
 
-    const inlineFilter = libHandle.container.querySelector<HTMLSelectElement>('select[aria-label="Filter users by role or status"]')!;
-    expect(inlineFilter).toHaveValue('review');
-    expect(Array.from(inlineFilter.options, option => option.label)).not.toContain('Super Admin');
+    const sort = libHandle.container.querySelector<HTMLSelectElement>('select[aria-label="Sort by"]')!;
     await act(async () => {
-      inlineFilter.value = 'all';
-      inlineFilter.dispatchEvent(new Event('change', { bubbles: true }));
+      sort.value = 'program-asc';
+      sort.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ tab: 'all' }));
+    expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ tab: 'review', sort: 'program-asc', page: 1 }));
+    await clickElement(filterButton);
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(findButtonByText(dialog, 'Pending Review')).toHaveAttribute('aria-pressed', 'true');
+    await clickElement(findButtonByText(dialog, 'All'));
+    expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ tab: 'all', sort: 'program-asc' }));
+    expect(filterButton).toHaveTextContent(/^Filters$/);
   });
 
   it('UserDetailClient mobile overflow menu shows Archive only for super_admin and hides it for librarian', async () => {

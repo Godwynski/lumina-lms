@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { useState, useMemo, useEffect, useCallback, use } from "react";
-import { Search, Filter } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { CompactPagination } from "@/components/ui/compact-pagination";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -20,14 +19,24 @@ import {
 import Link from "next/link";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
+import { TableSortSelect } from "@/components/common/TableSort";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { RoleBadge, ROLE_LABELS } from "@/components/common/RoleBadge";
 import { bustAvatarCache } from "@/lib/utils/avatar-cache";
 import type { UserRole } from "@/lib/auth-helpers";
 import type { User } from "@/lib/types";
-import { getUsers } from "@/lib/actions/users";
+import { getUsers, type UserDirectorySort } from "@/lib/actions/users";
 export type { User };
 
+const sortOptions: { value: UserDirectorySort; label: string }[] = [
+  { value: "recent", label: "Newest users" },
+  { value: "name-asc", label: "Name (A–Z)" },
+  { value: "name-desc", label: "Name (Z–A)" },
+  { value: "id-asc", label: "ID (ascending)" },
+  { value: "id-desc", label: "ID (descending)" },
+  { value: "program-asc", label: "Program (A–Z)" },
+  { value: "program-desc", label: "Program (Z–A)" },
+];
 
 interface UsersContentProps {
   usersPromise: Promise<{ users: User[]; count: number }>;
@@ -44,6 +53,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalUsers, setTotalUsers] = useState(initialData.count);
   const [activeTab, setActiveTab] = useState<"all" | "super_admin" | "librarian" | "library_staff" | "patron" | "review" | "archived">("all");
+  const [sort, setSort] = useState<UserDirectorySort>("recent");
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const pageSize = 12;
@@ -68,16 +78,16 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    if (searchQuery === debouncedSearch) return;
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [debouncedSearch, searchQuery]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, activeTab]);
-
-  const queryKey = JSON.stringify([activeTab, debouncedSearch, currentPage]);
-  const lastLoadedKeyRef = React.useRef(JSON.stringify(["all", "", 1]));
+  const queryKey = JSON.stringify([activeTab, debouncedSearch, currentPage, sort]);
+  const lastLoadedKeyRef = React.useRef(JSON.stringify(["all", "", 1, "recent"]));
   const loadRequestRef = React.useRef(0);
 
   const loadUsers = useCallback(async () => {
@@ -91,6 +101,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
         search: debouncedSearch,
         page: currentPage,
         pageSize,
+        ...(sort !== "recent" && { sort }),
       });
       if (requestId !== loadRequestRef.current) return;
 
@@ -102,7 +113,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     } finally {
       if (requestId === loadRequestRef.current) setIsLoadingUsers(false);
     }
-  }, [currentPage, debouncedSearch, activeTab, pageSize]);
+  }, [currentPage, debouncedSearch, activeTab, pageSize, sort]);
 
   useEffect(() => {
     if (queryKey === lastLoadedKeyRef.current) return;
@@ -137,43 +148,58 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
     };
   }, [supabase]);
 
-  const columns = useMemo<LuminaColumn<User>[]>(() => [
-    {
-      header: "User",
-      cell: (user) => (
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <Link href={`/users/${user.id}`} className="block truncate font-medium text-foreground underline-offset-2 hover:underline after:absolute after:inset-0">{user.name}</Link>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+  const applySort = useCallback((value: UserDirectorySort) => {
+    setSort(value);
+    setDebouncedSearch(searchQuery);
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const columns = useMemo<LuminaColumn<User>[]>(() => {
+    const columnSort = (field: "name" | "id" | "program") => {
+      const direction = sort === `${field}-asc` ? "asc" : sort === `${field}-desc` ? "desc" : undefined;
+      return { direction, onToggle: () => applySort(`${field}-${direction === "asc" ? "desc" : "asc"}`) } as const;
+    };
+    return [
+      {
+        header: "User",
+        sort: columnSort("name"),
+        cell: (user) => (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
+              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <Link href={`/users/${user.id}`} className="block truncate font-medium text-foreground underline-offset-2 hover:underline after:absolute after:inset-0">{user.name}</Link>
+              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            </div>
           </div>
-        </div>
-      )
-    },
-    {
-      header: "ID",
-      className: "whitespace-nowrap",
-      cell: (user) => <span className="font-mono text-xs font-medium whitespace-nowrap">{user.student_id || "No ID"}</span>
-    },
-    {
-      header: "Role",
-      cell: (user) => <RoleBadge role={user.role} />
-    },
-    {
-      header: "Status",
-      cell: (user) => <StatusBadge status={user.status} />
-    },
-    {
-      header: "Academic Program",
-      className: "text-xs text-muted-foreground",
-      cell: (user) => (
-        <span className="text-xs text-muted-foreground">{user.department || "No Program"}</span>
-      )
-    }
-  ], []);
+        )
+      },
+      {
+        header: "ID",
+        sort: columnSort("id"),
+        className: "whitespace-nowrap",
+        cell: (user) => <span className="font-mono text-xs font-medium whitespace-nowrap">{user.student_id || "No ID"}</span>
+      },
+      {
+        header: "Role",
+        cell: (user) => <RoleBadge role={user.role} />
+      },
+      {
+        header: "Status",
+        cell: (user) => <StatusBadge status={user.status} />
+      },
+      {
+        header: "Academic Program",
+        sort: columnSort("program"),
+        className: "text-xs text-muted-foreground",
+        cell: (user) => (
+          <span className="text-xs text-muted-foreground">{user.department || "No Program"}</span>
+        )
+      }
+    ];
+  }, [sort, applySort]);
 
   return (
     <>
@@ -183,14 +209,14 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           loadError ? <div className="status-danger rounded-lg px-3 py-2 text-sm">{loadError}</div> : null
         }
         controls={(
-          <div className="flex items-center gap-2 w-full">
-            <div className="relative flex-1 min-w-0 sm:max-w-md">
+          <div className="app-toolbar-row w-full">
+            <div className="app-toolbar-search sm:max-w-md">
               <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 aria-label="Search users by name or email"
                 placeholder="Search by name or email"
-                className="h-11 sm:h-10 pl-9 rounded-xl"
+                className="app-toolbar-control pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -199,13 +225,12 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               <SheetTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-11 shrink-0 gap-2 rounded-xl px-3.5 lg:hidden"
-                  aria-label={activeTab !== "all" ? `Filter users (${roleFilterLabels[activeTab]})` : "Filter users"}
+                  className="app-toolbar-control max-w-full shrink-0 gap-2 px-3.5"
                 >
-                  <Filter size={14} aria-hidden="true" />
-                  <span>Filter</span>
+                  <SlidersHorizontal size={14} aria-hidden="true" />
+                  <span>Filters</span>
                   {activeTab !== "all" && (
-                    <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-[11px]">1</Badge>
+                    <span className="truncate rounded-md bg-primary/10 px-1.5 py-0.5 text-xs text-primary">{roleFilterLabels[activeTab]}</span>
                   )}
                 </Button>
               </SheetTrigger>
@@ -222,6 +247,8 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                       key={tab}
                       onClick={() => {
                         setActiveTab(tab);
+                        setDebouncedSearch(searchQuery);
+                        setCurrentPage(1);
                         setIsFilterModalOpen(false);
                       }}
                       variant={activeTab === tab ? "default" : "outline"}
@@ -234,23 +261,16 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
                 </div>
               </SheetContent>
             </Sheet>
-            <select
-              aria-label="Filter users by role or status"
-              className="hidden h-10 max-w-full rounded-xl border border-input bg-background px-3 text-sm lg:block"
-              value={activeTab}
-              onChange={(event) => {
-                const tab = visibleTabs.find((value) => value === event.currentTarget.value);
-                if (tab) setActiveTab(tab);
-              }}
-            >
-              {visibleTabs.map((tab) => (
-                <option key={tab} value={tab}>{roleFilterLabels[tab]}</option>
-              ))}
-            </select>
+            <TableSortSelect
+              className="md:hidden"
+              options={sortOptions}
+              value={sort}
+              onChange={(value) => applySort(value as UserDirectorySort)}
+            />
           </div>
         )}
         pagination={
-          !isLoadingUsers && totalUsers > 0 ? (
+          totalUsers > 0 ? (
             <CompactPagination
               page={currentPage}
               totalItems={totalUsers}
@@ -260,35 +280,37 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
           ) : null
         }
       >
-        <LuminaTable
-          data={users}
-          columns={columns}
-          isLoading={isLoadingUsers}
-          rowClassName="relative"
-          noBorder
-          renderMobileRow={(user) => (
-            <div className="flex items-start gap-3">
-              <Avatar className="h-10 w-10 shrink-0">
-              <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <Link href={`/users/${user.id}`} className="block truncate font-medium text-foreground text-sm underline-offset-2 hover:underline after:absolute after:inset-0">{user.name}</Link>
-                  <StatusBadge status={user.status} />
-                </div>
-                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                <div className="mt-2 flex items-center flex-wrap gap-2 text-xs text-muted-foreground">
-                  <RoleBadge role={user.role} />
-                  <span className="opacity-40">•</span>
-                  <span className="font-mono">{user.student_id || "No ID"}</span>
-                  <span className="opacity-40">•</span>
-                  <span className="truncate">{user.department}</span>
+        <div aria-busy={isLoadingUsers || undefined}>
+          <LuminaTable
+            data={users}
+            columns={columns}
+            isLoading={isLoadingUsers && users.length === 0}
+            rowClassName="relative"
+            noBorder
+            renderMobileRow={(user) => (
+              <div className="flex items-start gap-3">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={user.name} className="object-cover" />
+                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link href={`/users/${user.id}`} className="block truncate font-medium text-foreground text-sm underline-offset-2 hover:underline after:absolute after:inset-0">{user.name}</Link>
+                    <StatusBadge status={user.status} />
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                  <div className="mt-2 flex items-center flex-wrap gap-2 text-xs text-muted-foreground">
+                    <RoleBadge role={user.role} />
+                    <span className="opacity-40">•</span>
+                    <span className="font-mono">{user.student_id || "No ID"}</span>
+                    <span className="opacity-40">•</span>
+                    <span className="truncate">{user.department}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        />
+            )}
+          />
+        </div>
       </AdminTableShell>
     </>
   );

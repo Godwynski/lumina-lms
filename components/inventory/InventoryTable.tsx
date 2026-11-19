@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { BookDetailModal } from "@/components/catalog/BookDetailModal";
 import { getCategoryName } from "@/lib/utils";
 import type { Book } from "@/lib/types";
+import type { BookSortColumn } from "@/lib/catalog-sort";
 
 interface InventoryTableProps {
   books: Book[];
   canManage?: boolean;
   hasActiveFilters?: boolean;
   onClearFilters?: () => void;
+  columnSort?: (column: BookSortColumn) => LuminaColumn<Book>["sort"];
 }
 
 export function InventoryTable({
@@ -20,12 +22,14 @@ export function InventoryTable({
   canManage = true,
   hasActiveFilters = false,
   onClearFilters,
+  columnSort,
 }: InventoryTableProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
   const columns: LuminaColumn<Book>[] = [
     {
       header: "Title",
+      sort: columnSort?.("title"),
       mobileMain: true,
       accessor: (book) => (
         <div className="min-w-0">
@@ -38,6 +42,7 @@ export function InventoryTable({
     },
     {
       header: "Author",
+      sort: columnSort?.("author"),
       accessor: (book) => (
         <span className="text-xs font-medium text-muted-foreground">{book.author}</span>
       ),
@@ -56,6 +61,7 @@ export function InventoryTable({
     },
     {
       header: "Copies (Avail / Total)",
+      sort: columnSort?.("availability"),
       accessor: (book) => {
         const total = book.total_copies ?? book.available_copies;
         return (

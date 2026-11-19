@@ -84,6 +84,7 @@ export async function getBorrowingHistory(
   sort?: string
 ) {
   const supabase = preFetchedSupabase || await createClient();
+  const selectedSort = sort && HISTORY_SORTS.has(sort) ? sort : undefined;
 
   // Fast path: PostgreSQL RPC covering all fields (timeline dates, status, barcodes, books, patrons) in 1 query
   if (typeof supabase.rpc === 'function') {
@@ -99,8 +100,8 @@ export async function getBorrowingHistory(
       if (resolutionFilter && resolutionFilter !== 'all') {
         rpcParams.p_resolution = resolutionFilter.toUpperCase();
       }
-      if (sort && HISTORY_SORTS.has(sort)) {
-        rpcParams.p_sort = sort;
+      if (selectedSort) {
+        rpcParams.p_sort = selectedSort;
       }
       const { data: rpcData, error: rpcError } = await supabase.rpc('get_borrowing_history_v2', rpcParams);
 
@@ -143,6 +144,10 @@ export async function getBorrowingHistory(
       if (isAbortError(err)) throw err;
       // Fallback to table builder if RPC fails or in mock test environment
     }
+  }
+
+  if (selectedSort?.startsWith("title_") || selectedSort?.startsWith("patron_")) {
+    throw new Error("Unable to apply the selected borrowing history sort. Try again.");
   }
 
   const from = (page - 1) * pageSize;
@@ -222,7 +227,8 @@ export async function getBorrowingHistory(
   }
 
   const { data, error, count } = await query
-    .order("borrowed_at", { ascending: false })
+    .order(selectedSort?.startsWith("due_") ? "due_date" : "borrowed_at", { ascending: selectedSort?.endsWith("_asc") ?? false })
+    .order("id", { ascending: false })
     .range(from, to);
 
   if (error) {
@@ -490,9 +496,10 @@ export const getUserBorrowingHistory = createSafeAction(
     userId: z.string().min(1),
     page: z.number().int().min(1).default(1),
     pageSize: z.number().int().min(1).max(50).default(10),
+    sort: z.enum(["title_asc", "title_desc", "borrowed_asc", "borrowed_desc", "due_asc", "due_desc"]).optional(),
   }),
-  async ({ userId, page, pageSize }, { supabase }) => {
-    return getBorrowingHistory(userId, page, pageSize, "all", undefined, supabase);
+  async ({ userId, page, pageSize, sort }, { supabase }) => {
+    return getBorrowingHistory(userId, page, pageSize, "all", undefined, supabase, undefined, sort);
   },
   {
     allowedRoles: ["super_admin", "librarian"],
