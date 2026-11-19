@@ -375,7 +375,7 @@ export function AdminManagementContent({
     <div className="space-y-6">
       {/* Header Summary */}
       {!isEditing && (
-        <div className="flex min-w-0 gap-3 sm:gap-6">
+        <div className="flex min-w-0 gap-3 rounded-xl border border-border bg-card p-4 sm:gap-5 sm:p-5">
           <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-lg shadow-sm border border-border/40">
             <Image 
               src={coverImgSrc} 
@@ -591,7 +591,7 @@ export function AdminManagementContent({
 
       {/* Stats & Queue */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <div className="rounded-xl border border-border/20 bg-muted/5 p-4 flex items-center justify-between px-6">
+         <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-around gap-4">
             <div className="text-center">
               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total</p>
               <p className="text-xl font-semibold text-foreground leading-none">{book.total_copies ?? 0}</p>
@@ -704,7 +704,7 @@ export function AdminManagementContent({
               const isExpanded = canReadDetails && expandedCopy?.id === copy.id;
 
               return (
-                <div key={copy.id} className="group flex flex-col gap-2 rounded-lg border border-border/20 bg-muted/5 p-3 transition-colors hover:bg-muted/10">
+                <div key={copy.id} className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={cn("h-9 w-9 shrink-0 rounded-md border flex items-center justify-center transition-colors", statusCfg.bg, statusCfg.border)}>
@@ -726,7 +726,7 @@ export function AdminManagementContent({
                         <Select value={copy.status} onValueChange={(v) => {
                           if (isEditableStatus(v)) handleStatusChange(copy.id, v);
                         }}>
-                          <SelectTrigger aria-label={`Status for copy ${copyIdentifier}`} className="h-8 rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-semibold shadow-none transition-colors">
+                          <SelectTrigger aria-label={`Status for copy ${copyIdentifier}`} className="h-11 rounded-lg border border-border bg-background px-3 text-xs font-semibold shadow-none">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="border-border/40 shadow-xl">
@@ -757,7 +757,7 @@ export function AdminManagementContent({
                             setCopyNotice(null);
                             setExpandedCopy(isExpanded ? null : { id: copy.id, lostRequest: 0 });
                           }}
-                          className="gap-1 px-2 text-xs"
+                          className="min-h-11 gap-1 px-2 text-xs"
                         >
                           Copy details
                           <ChevronDown aria-hidden="true" className={cn('size-3.5 transition-transform motion-reduce:transition-none', isExpanded && 'rotate-180')} />

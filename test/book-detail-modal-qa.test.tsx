@@ -45,6 +45,18 @@ describe('BookDetailModal (student)', () => {
     expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeInTheDocument();
   });
 
+  it('returns to the standard size after closing an expanded dialog', async () => {
+    publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 1, total_copies: 1 }, availability: noHold });
+    const onOpenChange = vi.fn();
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={onOpenChange} />));
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Expand dialog"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')!.click());
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await act(async () => root.render(<BookDetailModal bookId="b" open={false} variant="student" onOpenChange={onOpenChange} />));
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={onOpenChange} />));
+    expect(document.querySelector('[aria-label="Expand dialog"]')).toBeInTheDocument();
+  });
+
   it('shows the description and DDC, and closes on Escape after tabbing', async () => {
     publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, availability: { ...noHold, outOfServiceCount: 0 } });
     const onOpenChange = vi.fn();

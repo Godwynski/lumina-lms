@@ -184,7 +184,7 @@ function StudentModalContent({
       </p>
 
       {/* Copy Meter */}
-      <div className="rounded-xl border border-border bg-muted/20 p-3">
+      <div className="rounded-xl border border-border bg-card p-4">
         <CopyMeter available={book.available_copies} total={book.total_copies} outOfService={availability.outOfServiceCount} />
       </div>
 
@@ -198,7 +198,7 @@ function StudentModalContent({
       </div>
 
       {/* Actions */}
-      {!readOnly && <div className="flex flex-wrap items-center gap-2 pt-1">
+      {!readOnly && <div className="flex flex-col items-stretch gap-2 pt-1 sm:flex-row sm:items-center">
         {(availability.hasReservation || !isOutOfService(book, availability)) && <ReserveTitleButton
           bookId={book.id}
           isAvailable={isAvailable}
@@ -208,7 +208,7 @@ function StudentModalContent({
           holdExpiresAt={availability.holdExpiresAt}
           nextAvailableDate={availability.nextAvailableDate}
           onReserveSuccess={handleReserveSuccess}
-          className="h-9 px-4 text-xs shadow-sm flex-1"
+          className="h-11 px-4 text-sm shadow-none flex-1"
         />}
         {availability.hasReservation && (
           <Button
@@ -216,7 +216,7 @@ function StudentModalContent({
             size="sm"
             disabled={isPending}
             onClick={() => setCancelDialogOpen(true)}
-            className="h-9 px-3 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
+            className="h-11 px-3 text-sm text-destructive border-destructive/30 hover:bg-destructive/5"
           >
             {isPending ? 'Cancelling…' : 'Cancel'}
           </Button>
@@ -225,7 +225,7 @@ function StudentModalContent({
           asChild
           variant="outline"
           size="sm"
-          className="h-9 px-3 text-xs"
+          className="h-11 px-3 text-sm"
         >
           <Link href={`/student-catalog/${book.id}`} onClick={onClose}>
             Open full page
@@ -237,7 +237,7 @@ function StudentModalContent({
 
       {readOnly && (
         <div className="flex justify-end pt-1">
-          <Button asChild variant="outline" size="sm" className="h-9 px-3 text-xs">
+          <Button asChild variant="outline" size="sm" className="h-11 px-3 text-sm">
             <Link href={`/student-catalog/${book.id}`} onClick={onClose}>
               Open full page
             </Link>
@@ -383,20 +383,21 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
   const activeAdminData = adminData || placeholderAdminData;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) setExpanded(false); onOpenChange(nextOpen); }}>
       <DialogContent onCloseAutoFocus={onCloseAutoFocus} className={cn(
-        "flex flex-col overflow-hidden gap-0 border-border bg-card text-card-foreground p-4 pt-4 sm:p-6",
-        expanded ? "h-[100dvh] max-h-[100dvh] w-screen max-w-none rounded-none" : cn("max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] sm:max-h-[90dvh]", variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg")
+        "flex flex-col overflow-hidden gap-0 border-border bg-background text-foreground p-0",
+        expanded ? "h-[100dvh] max-h-[100dvh] w-screen max-w-none rounded-none sm:max-w-none" : cn("max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] sm:max-h-[90dvh]", variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg")
       )}>
-        <DialogHeader className="mb-4 pr-20 text-left">
+        <DialogHeader className="shrink-0 border-b border-border bg-card px-4 py-4 pr-24 text-left sm:px-6 sm:pr-24">
           <DialogTitle>Book Details</DialogTitle>
           <DialogDescription>View book information</DialogDescription>
         </DialogHeader>
-        <Button type="button" variant="ghost" size="icon" className="absolute right-12 top-3 size-9" aria-label={expanded ? "Restore dialog size" : "Expand dialog"} onClick={() => setExpanded(!expanded)}>
+        <Button type="button" variant="ghost" size="icon" className="absolute right-12 top-3 size-10" aria-label={expanded ? "Restore dialog size" : "Expand dialog"} onClick={() => setExpanded(!expanded)}>
           {expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
         </Button>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+        <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar px-4 py-5 sm:px-6">
+        <div className={cn("mx-auto", expanded && (variant === 'super_admin' ? "max-w-5xl" : "max-w-2xl"))}>
         {(role === 'super_admin' || role === 'librarian') && <Link href={`/audit?bookId=${bookId}`} className="mb-4 inline-block text-sm font-semibold text-primary hover:underline" onClick={() => onOpenChange(false)}>View book records</Link>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
@@ -426,6 +427,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
             />
           </div>
         )}
+        </div>
         </div>
       </DialogContent>
     </Dialog>
