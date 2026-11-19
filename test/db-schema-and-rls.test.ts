@@ -724,6 +724,55 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
         throw new Error('rollback-demo-probe');
       })
     ).rejects.toThrow('rollback-demo-probe');
+
+    // Verify trigger function ensure_profile_library_card() is not directly executable by PUBLIC, anon, authenticated, or service_role
+    const cardFnPrivs = await db.query<{ anon_exec: boolean; auth_exec: boolean; pub_exec: boolean; sr_exec: boolean }>(
+      `SELECT
+        has_function_privilege('anon', 'public.ensure_profile_library_card()', 'EXECUTE') AS anon_exec,
+        has_function_privilege('authenticated', 'public.ensure_profile_library_card()', 'EXECUTE') AS auth_exec,
+        has_function_privilege('public', 'public.ensure_profile_library_card()', 'EXECUTE') AS pub_exec,
+        has_function_privilege('service_role', 'public.ensure_profile_library_card()', 'EXECUTE') AS sr_exec`
+    );
+    expect(cardFnPrivs.rows[0]).toEqual({
+      anon_exec: false,
+      auth_exec: false,
+      pub_exec: false,
+      sr_exec: false,
+    });
+
+    // Verify book_copy_lifecycle has explicit deny-all RLS policy and blocks reads/writes even if table privileges existed
+    const lifecyclePolicies = await db.query<{ policyname: string; cmd: string; qual: string; with_check: string }>(
+      `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = 'book_copy_lifecycle'`
+    );
+    expect(lifecyclePolicies.rows).toEqual([
+      {
+        policyname: 'Deny direct access to book copy lifecycle',
+        cmd: 'ALL',
+        qual: 'false',
+        with_check: 'false',
+      },
+    ]);
+
+    await expect(
+      db.transaction(async (tx) => {
+        await tx.exec(`INSERT INTO public.book_copy_lifecycle (copy_id, acquisition_method) VALUES ('${copyAvailableId}', 'DONATED')`);
+        await tx.exec(`GRANT ALL ON public.book_copy_lifecycle TO anon, authenticated`);
+        await tx.exec(`SET LOCAL ROLE authenticated`);
+        await tx.query(`SELECT set_config('request.jwt.claim.sub', $1, true)`, [superAdminId]);
+        const visible = await tx.query(`SELECT copy_id FROM public.book_copy_lifecycle`);
+        expect(visible.rows).toHaveLength(0);
+        await expect(
+          tx.query(`INSERT INTO public.book_copy_lifecycle (copy_id, acquisition_method) VALUES ('${copyAvailableId}', 'PURCHASED')`)
+        ).rejects.toThrow();
+        throw new Error('rollback-lifecycle-probe');
+      })
+    ).rejects.toThrow('rollback-lifecycle-probe');
+
+    // Verify covering FK index exists for borrowing_records.fine_settled_by
+    const fineSettledIdx = await db.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'borrowing_records' AND indexname = 'borrowing_records_fine_settled_by_idx'`
+    );
+    expect(fineSettledIdx.rows).toHaveLength(1);
   });
 
   it('enforces profiles RLS and fn_guard_profile_updates across all roles', async () => {

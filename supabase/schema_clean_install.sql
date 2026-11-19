@@ -371,6 +371,7 @@ CREATE INDEX IF NOT EXISTS borrowing_records_user_id_idx ON public.borrowing_rec
 CREATE INDEX IF NOT EXISTS borrowing_records_book_copy_id_idx ON public.borrowing_records(book_copy_id);
 CREATE INDEX IF NOT EXISTS borrowing_records_processed_by_idx ON public.borrowing_records(processed_by);
 CREATE INDEX IF NOT EXISTS borrowing_records_returned_by_idx ON public.borrowing_records(returned_by);
+CREATE INDEX IF NOT EXISTS borrowing_records_fine_settled_by_idx ON public.borrowing_records(fine_settled_by);
 CREATE INDEX IF NOT EXISTS reservations_user_id_idx ON public.reservations(user_id);
 CREATE INDEX IF NOT EXISTS reservations_book_id_idx ON public.reservations(book_id);
 CREATE INDEX IF NOT EXISTS reservations_copy_id_idx ON public.reservations(copy_id);
@@ -506,6 +507,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.ensure_profile_library_card()
+  FROM PUBLIC, anon, authenticated, service_role;
 
 -- Atomic transaction-safe ownership transfer function
 CREATE OR REPLACE FUNCTION public.transfer_super_admin_ownership(p_current_admin_id uuid, p_new_admin_id uuid)
@@ -2899,6 +2903,11 @@ CREATE TABLE IF NOT EXISTS public.book_copy_lifecycle (
 ALTER TABLE public.book_copy_lifecycle ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.book_copy_lifecycle FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.book_copy_lifecycle TO service_role;
+
+CREATE POLICY "Deny direct access to book copy lifecycle" ON public.book_copy_lifecycle
+  FOR ALL TO public
+  USING (false)
+  WITH CHECK (false);
 
 ALTER TABLE public.book_copies DROP CONSTRAINT IF EXISTS book_copies_status_check;
 ALTER TABLE public.book_copies ADD CONSTRAINT book_copies_status_check

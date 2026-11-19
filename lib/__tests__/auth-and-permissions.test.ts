@@ -458,6 +458,68 @@ describe('proxy.ts', () => {
     expect(res.cookies.get('sb-access-token')?.value).toBe('fresh-jwt');
   });
 
+  it('deletes cleared/expired cookies from request forwarding while propagating clearing Set-Cookie on response', async () => {
+    mockCreateServerClient.mockImplementation((_url, _key, options) => ({
+      auth: {
+        getClaims: async () => {
+          options.cookies.setAll([
+            { name: 'sb-old', value: '', options: { maxAge: 0, path: '/' } },
+          ]);
+          return { data: null, error: { code: 'refresh_token_not_found', message: 'Invalid Refresh Token: Refresh Token Not Found' } };
+        },
+      },
+    }));
+
+    const req = new NextRequest('https://lumina.test/dashboard', {
+      headers: { cookie: 'sb-old=stale-token' },
+    });
+
+    const res = await proxy(req);
+
+    expect(req.cookies.get('sb-old')).toBeUndefined();
+    const resCookie = res.cookies.get('sb-old');
+    expect(resCookie?.value).toBe('');
+    expect(resCookie?.maxAge).toBe(0);
+  });
+
+  it('resolves cleanly without throwing when getClaims() returns refresh_token_not_found or rejects', async () => {
+    mockCreateServerClient.mockImplementationOnce((_url, _key, options) => ({
+      auth: {
+        getClaims: async () => {
+          options.cookies.setAll([
+            { name: 'sb-old', value: '', options: { maxAge: 0, path: '/' } },
+          ]);
+          return { data: null, error: { code: 'refresh_token_not_found', message: 'Invalid Refresh Token: Refresh Token Not Found' } };
+        },
+      },
+    }));
+
+    const req1 = new NextRequest('https://lumina.test/student-catalog', {
+      headers: { cookie: 'sb-old=stale-token' },
+    });
+    const res1 = await proxy(req1);
+    expect(res1.status).toBe(200);
+    expect(res1.cookies.get('sb-old')?.maxAge).toBe(0);
+
+    mockCreateServerClient.mockImplementationOnce((_url, _key, options) => ({
+      auth: {
+        getClaims: async () => {
+          options.cookies.setAll([
+            { name: 'sb-old', value: '', options: { maxAge: 0, path: '/' } },
+          ]);
+          throw new Error('Auth service unavailable');
+        },
+      },
+    }));
+
+    const req2 = new NextRequest('https://lumina.test/student-catalog', {
+      headers: { cookie: 'sb-old=stale-token' },
+    });
+    const res2 = await proxy(req2);
+    expect(res2.status).toBe(200);
+    expect(res2.cookies.get('sb-old')?.maxAge).toBe(0);
+  });
+
   it('exports a matcher excluding static and image assets', () => {
     expect(proxyConfig.matcher).toHaveLength(1);
     const regex = new RegExp(`^${proxyConfig.matcher[0]}$`);

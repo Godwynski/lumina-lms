@@ -20,7 +20,13 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value, options }) => {
+            if (!value || options?.maxAge === 0) {
+              request.cookies.delete(name);
+            } else {
+              request.cookies.set(name, value);
+            }
+          });
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
@@ -29,7 +35,11 @@ export async function proxy(request: NextRequest) {
   );
 
   // Don't put code between createServerClient and getClaims: this call is what refreshes the token.
-  await supabase.auth.getClaims();
+  try {
+    await supabase.auth.getClaims();
+  } catch {
+    // Treat failed session refresh as unauthenticated rather than crashing middleware.
+  }
 
   return response;
 }
