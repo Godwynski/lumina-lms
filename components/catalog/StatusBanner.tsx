@@ -132,8 +132,8 @@ export function StatusBanner({
     );
   }
 
-  // State 4: every copy is in repair or lost
-  if (isOutOfService({ available_copies: book.available_copies, total_copies: book.total_copies ?? 0 }, availability)) {
+  if (book.total_copies !== undefined && isOutOfService({ available_copies: book.available_copies, total_copies: book.total_copies }, availability)) {
+    const noCopies = book.total_copies === 0;
     return (
       <div className={cn(
         "flex items-center gap-3 border border-border/40 bg-muted/30",
@@ -142,8 +142,8 @@ export function StatusBanner({
       )}>
         <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="min-w-0">
-          <p className="text-xs font-black text-foreground uppercase tracking-tight">Temporarily Unavailable</p>
-          <p className="text-[11px] font-bold text-muted-foreground mt-0.5">All copies are under maintenance. Please check back later.</p>
+          <p className="text-xs font-black text-foreground uppercase tracking-tight">{noCopies ? 'Unavailable' : 'Temporarily Unavailable'}</p>
+          <p className="text-[11px] font-bold text-muted-foreground mt-0.5">{noCopies ? 'This title has no copies in circulation.' : 'All copies are out of service.'}</p>
         </div>
       </div>
     );

@@ -121,7 +121,9 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
             </Badge>
             
             <div className="relative z-20">
-              <ReserveTitleButton
+              {book.total_copies === 0 && !reservedInfo ? (
+                <span className="text-xs text-muted-foreground">Unavailable</span>
+              ) : <ReserveTitleButton
                 bookId={book.id}
                 isAvailable={book.available_copies > 0}
                 hasExistingReservation={!!reservedInfo}
@@ -132,7 +134,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
                 size="sm"
                 className="h-8 text-xs px-2.5 rounded-lg"
                 onReserveSuccess={onReserveSuccess}
-              />
+              />}
             </div>
           </div>
 

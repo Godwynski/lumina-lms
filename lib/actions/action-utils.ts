@@ -21,7 +21,7 @@ type AuditMetadata = {
   details?: Record<string, unknown>;
   oldValue?: unknown;
   newValue?: unknown;
-  entityId?: string;
+  entityId?: string | null;
 };
 
 type SafeActionOptions = {
@@ -115,7 +115,9 @@ export function createSafeAction<TInput, TOutput>(
 
       // 4. Audit Logging (Optional)
       if (options.auditAction && options.auditEntity) {
-        const entityId = auditMeta?.entityId || (data as Record<string, unknown>)?.id as string || "system";
+        const entityId = auditMeta?.entityId === null
+          ? null
+          : auditMeta?.entityId || ((data as Record<string, unknown>)?.id as string | undefined) || "system";
         
         await logAuditActivity(
           me.user.id,

@@ -109,6 +109,9 @@ export function CatalogTable({
       header: "Action",
       accessor: (book) => {
         const reserved = reservedBooksMap.get(book.id);
+        if (book.total_copies === 0 && !reserved) {
+          return <span className="text-xs text-muted-foreground">Unavailable</span>;
+        }
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <ReserveTitleButton

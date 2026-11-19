@@ -25,11 +25,11 @@ export interface AvailabilityStatus {
   outOfServiceCount?: number;
 }
 
-/** No copy on the shelf and none on loan: every copy is in repair or lost, so a waitlist would never move. */
+/** No copy in stock or able to return to the shelf through normal circulation. */
 export function isOutOfService(
   book: Pick<BookDetail, 'available_copies' | 'total_copies'>,
   availability: Pick<AvailabilityStatus, 'outOfServiceCount'>
 ): boolean {
   const out = availability.outOfServiceCount ?? 0;
-  return book.available_copies <= 0 && out > 0 && book.total_copies - out <= 0;
+  return book.available_copies <= 0 && book.total_copies <= out;
 }

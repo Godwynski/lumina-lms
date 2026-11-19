@@ -73,13 +73,21 @@ describe('isOutOfService', () => {
     expect(isOutOfService({ available_copies: 0, total_copies: 2 }, { outOfServiceCount: 1 })).toBe(false);
     expect(isOutOfService({ available_copies: 1, total_copies: 2 }, { outOfServiceCount: 1 })).toBe(false);
     expect(isOutOfService({ available_copies: 0, total_copies: 1 }, {})).toBe(false);
-    expect(isOutOfService({ available_copies: 0, total_copies: 0 }, { outOfServiceCount: 0 })).toBe(false);
+    expect(isOutOfService({ available_copies: 0, total_copies: 0 }, { outOfServiceCount: 0 })).toBe(true);
   });
 });
 
 describe('StudentBookCard', () => {
   const defaultCover = '/images/default-book-cover.png';
   const remoteCover = 'https://covers.example.test/book.png';
+
+  it('labels a title with zero remaining copies as unavailable and hides reservation entry', async () => {
+    const book = { ...baseBook, available_copies: 0, total_copies: 0 } as unknown as Book;
+    await act(async () => root.render(<StudentBookCard book={book} />));
+    expect(el).toHaveTextContent('Unavailable');
+    expect(el.querySelector('button[aria-label*="Reserve"]')).toBeNull();
+    expect(el).not.toHaveTextContent('Join Queue');
+  });
 
   async function renderCard(coverUrl: string | null) {
     const book = { ...baseBook, cover_url: coverUrl, available_copies: 1, total_copies: 1 } as unknown as Book;

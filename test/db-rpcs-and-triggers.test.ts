@@ -6,6 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import { uuid_ossp } from '@electric-sql/pglite/contrib/uuid_ossp';
 import { isValidPolicyValue } from '@/lib/actions/policy-constants';
+import { libraryDate } from '@/lib/copy-acquisition';
 
 const SCHEMA_SQL = fs.readFileSync(
   path.resolve(process.cwd(), 'supabase/schema_clean_install.sql'),
@@ -79,6 +80,7 @@ async function bootLuminaDb(): Promise<PGlite> {
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261117140000_history_sort.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119050000_stable_borrowing_history_sort.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119043439_books_sort_indexes.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119120000_book_copy_lifecycle.sql'), 'utf8'));
   return db;
 }
 
@@ -193,6 +195,166 @@ async function createBookWithCopies(
 
   return { bookId, copies };
 }
+
+describe('Book copy acquisition and disposition', () => {
+  it('creates private per-copy acquisition details and rolls back an invalid batch', async () => {
+    const db = await bootLuminaDb();
+    try {
+      const { bookId } = await createBookWithCopies(db, { title: 'Batch' });
+      const create = (rows: object[]) => withRole(db, 'service_role', null, tx =>
+        tx.query<{ id: string }>('select id from public.create_book_copy_batch($1::jsonb)', [JSON.stringify(rows)]));
+      const acquired = { book_id: bookId, acquisition: { method: 'PURCHASED', acquiredOn: '2024-02-29', purchasePrice: '125.50' } };
+      const copies = await create([acquired, acquired]);
+      expect(copies.rows).toHaveLength(2);
+      const read = await db.query('select acquisition_method, acquired_on::text, purchase_price::text from public.book_copy_lifecycle order by copy_id');
+      expect(read.rows).toEqual(Array(2).fill({ acquisition_method: 'PURCHASED', acquired_on: '2024-02-29', purchase_price: '125.50' }));
+      await expect(create([acquired, { ...acquired, acquisition: { method: 'DONATED', purchasePrice: '1' } }])).rejects.toThrow();
+      expect((await db.query('select total_copies, available_copies from public.books where id = $1', [bookId])).rows).toEqual([{ total_copies: 3, available_copies: 3 }]);
+      await expect(withRole(db, 'authenticated', null, tx => tx.query('select * from public.book_copy_lifecycle'))).rejects.toThrow(/permission denied/i);
+      await expect(withRole(db, 'authenticated', null, tx => tx.query("select public.create_book_copy_batch('[]')"))).rejects.toThrow(/permission denied/i);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('keeps retired copy identities and history out of stock and release flows', async () => {
+    const db = await bootLuminaDb();
+    try {
+      const librarian = await createUser(db, { email: 'lifecycle-lib@alabang.sti.edu.ph', fullName: 'Librarian', role: 'librarian', status: 'ACTIVE' });
+      const patron = await createUser(db, { email: 'lifecycle.111111@alabang.sti.edu.ph', fullName: 'Patron', role: 'patron', status: 'ACTIVE' });
+      const { bookId, copies: [sold, donated] } = await createBookWithCopies(db, { title: 'Retired', copyStatuses: ['AVAILABLE', 'AVAILABLE'] });
+      await expect(withRole(db, 'authenticated', librarian.id, tx =>
+        tx.query("update public.book_copies set status='LOST' where id=$1", [sold.id]))).rejects.toThrow(/through inventory/i);
+      const change = (actor: string, id: string, change: object) => withRole(db, 'service_role', null, tx =>
+        tx.query('select public.change_book_copy_lifecycle($1, $2, $3::jsonb)', [actor, id, JSON.stringify(change)]));
+      await expect(change(patron.id, sold.id, { status: 'SOLD', occurredOn: '2024-05-01', saleAmount: '0' })).rejects.toThrow(/unauthorized/i);
+      await change(librarian.id, sold.id, { status: 'SOLD', occurredOn: '2024-05-01', saleAmount: '0' });
+      await change(librarian.id, donated.id, { status: 'DONATED_OUT', occurredOn: '2024-05-02' });
+      await expect(change(librarian.id, sold.id, { status: 'LOST', occurredOn: '2024-05-03' })).rejects.toThrow(/already.*circulation/i);
+      await db.query('select public.release_copy($1)', [sold.id]);
+      expect((await db.query('select status, qr_string from public.book_copies where id = $1', [sold.id])).rows).toEqual([{ status: 'SOLD', qr_string: sold.qr }]);
+      expect((await db.query('select total_copies, available_copies from public.books where id = $1', [bookId])).rows).toEqual([{ total_copies: 0, available_copies: 0 }]);
+      expect((await db.query("select subject_copy_id, new_value->>'sale_amount' as amount from public.audit_log_records where subject_book_id = $1 and action = 'update_copy_sold'", [bookId])).rows)
+        .toEqual([{ subject_copy_id: sold.id, amount: '0.00' }]);
+      const res = await withRole(db, 'authenticated', patron.id, tx =>
+        tx.query<{ result: { code: string } }>('select public.create_reservation_atomic($1,$2) as result', [patron.id, bookId]));
+      expect(res.rows[0].result.code).toBe('NO_CIRCULATING_COPIES');
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('keeps checkout, the reservation queue, a recorded loss and a later return consistent', async () => {
+    const db = await bootLuminaDb();
+    try {
+      const staff = await createUser(db, { email: 'copy-lib@alabang.sti.edu.ph', fullName: 'Librarian', role: 'librarian', status: 'ACTIVE' });
+      const borrower = await createUser(db, { email: 'copy.111111@alabang.sti.edu.ph', fullName: 'Borrower', status: 'ACTIVE', cardStatus: 'ACTIVE' });
+      const waiter = await createUser(db, { email: 'copy.222222@alabang.sti.edu.ph', fullName: 'Waiter', status: 'ACTIVE', cardStatus: 'ACTIVE' });
+      const { bookId, copies: [loaned, sellable] } = await createBookWithCopies(db, { title: 'Circulation', copyStatuses: ['AVAILABLE', 'MAINTENANCE'] });
+      const change = (copyId: string, status: string, saleAmount?: string) => db.query<{ result: { queueWaiting: boolean } }>(
+        'select public.change_book_copy_lifecycle($1, $2, $3::jsonb) as result',
+        [staff.id, copyId, JSON.stringify({ status, occurredOn: libraryDate(), saleAmount })]);
+      const checkout = (qr: string, key: string) => db.query<{ result: {ok: boolean; code?: string} }>(
+        'select public.process_qr_checkout($1,$2,$3,$4,false) as result', [staff.id, borrower.cardNumber, qr, key]);
+      expect((await checkout(loaned.qr, 'lifecycle-first-loan')).rows[0].result.ok).toBe(true);
+      await expect(db.query('select public.change_book_copy_lifecycle($1,$2,$3::jsonb)',
+        [staff.id, loaned.id, JSON.stringify({ status: 'LOST', occurredOn: '2024-01-01' })])).rejects.toThrow(/latest loss or loan activity/i);
+      await expect(change(loaned.id, 'SOLD', '15')).rejects.toThrow(/return or recover/i);
+      expect((await withRole(db, 'authenticated', waiter.id, tx =>
+        tx.query<{ result: { status: string } }>('select public.create_reservation_atomic($1,$2) as result', [waiter.id, bookId]))).rows[0].result.status).toBe('ACTIVE');
+      expect((await change(loaned.id, 'LOST')).rows[0].result.queueWaiting).toBe(true);
+      expect((await db.query('select status, returned_at from public.borrowing_records where book_copy_id=$1', [loaned.id])).rows)
+        .toEqual([{ status: 'LOST', returned_at: null }]);
+      await expect(change(sellable.id, 'SOLD', '15')).rejects.toThrow(/last copy/i);
+      const returned = await db.query<{ result: { ok: boolean } }>(
+        'select public.process_qr_return($1,$2,$3,false) as result', [staff.id, loaned.qr, 'lifecycle-return']);
+      expect(returned.rows[0].result.ok).toBe(true);
+      expect((await db.query('select status from public.book_copies where id=$1', [loaned.id])).rows).toEqual([{ status: 'RESERVED' }]);
+      expect((await db.query('select last_lost_on::text from public.book_copy_lifecycle where copy_id=$1', [loaned.id])).rows)
+        .toEqual([{ last_lost_on: libraryDate() }]);
+      await expect(change(loaned.id, 'DONATED_OUT')).rejects.toThrow(/on hold/i);
+      await change(sellable.id, 'SOLD', '15');
+      expect((await checkout(sellable.qr, 'lifecycle-retired-scan')).rows[0].result.ok).toBe(false);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('allocates initial copies and records ISBN retry summaries without duplicating copies', async () => {
+    const db = await bootLuminaDb();
+    try {
+      const acquisition = JSON.stringify({ method: 'DONATED', acquiredOn: '2024-02-29' });
+      const created = await db.query<{ result: { id: string; copyIds: string[] } }>(
+        'select public.create_book_with_acquisition($1,$2,$3) as result',
+        [JSON.stringify({ title: 'Donation', author: 'A' }), 2, acquisition]);
+      const { id, copyIds } = created.rows[0].result;
+      expect(copyIds).toHaveLength(2);
+      expect((await db.query(
+        'select acquisition_method, purchase_price from public.book_copy_lifecycle l join public.book_copies c on c.id = l.copy_id where c.book_id=$1', [id])).rows)
+        .toEqual(Array(2).fill({ acquisition_method: 'DONATED', purchase_price: null }));
+
+      const job = '00000000-0000-4000-8000-000000000001';
+      await db.query('select public.catalog_import_enqueue($1,null,$2,$3)', [
+        job, 'Batch', JSON.stringify([{ mode: 'create', isbn: '9781492040347', requested_copies: 2 }]),
+      ]);
+      const claim = await db.query<{ id: string; lease: string }>('select id, lease from public.catalog_import_claim()');
+      const item = claim.rows[0];
+      const metadata = JSON.stringify({ title: 'Imported', author: 'A' });
+      await db.query('select public.catalog_import_apply_book($1,$2,$3)', [item.id, item.lease, metadata]);
+      await db.query('select public.catalog_import_apply_book($1,$2,$3)', [item.id, item.lease, metadata]);
+      const audit = await db.query<{ details: { copyIds: string[]; copiesCount: number } }>(
+        "select details from public.audit_logs where action='create_isbn_import'");
+      expect(audit.rows).toHaveLength(1);
+      expect(audit.rows[0].details.copiesCount).toBe(2);
+      expect(new Set(audit.rows[0].details.copyIds).size).toBe(2);
+      expect((await db.query('select count(*)::int as count from public.book_copy_lifecycle')).rows[0]).toEqual({ count: 2 });
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('applies spreadsheet titles, categories and copy additions in one transaction', async () => {
+    const db = await bootLuminaDb();
+    try {
+      const { bookId } = await createBookWithCopies(db, { title: 'Existing' });
+      const titles = [{ book: { title: 'Imported', author: 'A' }, categoryName: 'Imported category', acquisitions: [null] }];
+      const applySheet = (copies: object[]) => withRole(db, 'service_role', null, tx =>
+        tx.query<{ result: { books: Array<{ id: string; title: string; copyIds: string[] }>; copyIds: string[] } }>(
+          'select public.apply_catalog_spreadsheet($1::jsonb, $2::jsonb) as result', [JSON.stringify(titles), JSON.stringify(copies)],
+        ));
+      await expect(applySheet([{ book_id: bookId, acquisition: { method: 'DONATED', purchasePrice: '4' } }])).rejects.toThrow();
+      expect((await db.query("select id from public.books where title = 'Imported'")).rows).toHaveLength(0);
+      expect((await db.query("select id from public.categories where name = 'Imported category'")).rows).toHaveLength(0);
+      expect((await db.query('select id from public.book_copies')).rows).toHaveLength(1);
+
+      const { result } = (await applySheet([{ book_id: bookId, acquisition: { method: 'DONATED', acquiredOn: '2024-02-29' } }])).rows[0];
+      expect(result.books).toEqual([expect.objectContaining({ title: 'Imported', copyIds: [expect.any(String)] })]);
+      expect(result.copyIds).toHaveLength(2);
+      expect((await db.query('select total_copies from public.books where id=$1', [bookId])).rows).toEqual([{ total_copies: 2 }]);
+      expect((await db.query("select name from public.categories where name = 'Imported category'")).rows).toHaveLength(1);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('releases a recovered copy once and never overwrites a new hold', async () => {
+    const db = await bootLuminaDb();
+    try {
+      const patron = await createUser(db, { email: 'hold.111111@alabang.sti.edu.ph', fullName: 'Patron', status: 'ACTIVE' });
+      const { bookId, copies: [copy] } = await createBookWithCopies(db, { title: 'Found', copyStatuses: ['LOST'] });
+      await db.query("insert into public.reservations (user_id, book_id, status, queue_position) values ($1,$2,'ACTIVE',1)", [patron.id, bookId]);
+      const recover = () => withRole(db, 'service_role', null, tx => tx.query('select public.recover_book_copy($1,$2)', [copy.id, 'LOST']));
+      await recover();
+      await expect(recover()).rejects.toThrow(/changed/i);
+      expect((await db.query('select status, copy_id from public.reservations where book_id=$1', [bookId])).rows)
+        .toEqual([{ status: 'READY', copy_id: copy.id }]);
+      expect((await db.query('select status from public.book_copies where id=$1', [copy.id])).rows)
+        .toEqual([{ status: 'RESERVED' }]);
+    } finally {
+      await db.close();
+    }
+  });
+});
 
 describe('Circulation RPCs: process_qr_checkout, process_qr_return & release_copy', () => {
   let db: PGlite;

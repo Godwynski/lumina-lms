@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FieldGroup } from "@/components/common/FieldGroup";
 import { cn } from "@/lib/utils";
 import { BookText, MapPin, Layers, Tag } from "lucide-react";
+import { OptionalCopyAcquisition } from "@/components/catalog/CopyAcquisitionFields";
+import type { CopyAcquisition } from "@/lib/copy-acquisition";
 
 interface BookDetailsFormProps {
   formData: {
@@ -25,6 +27,9 @@ interface BookDetailsFormProps {
   categories: Array<{ id: string; name: string }>;
   hideIsbnField?: boolean;
   validationAttempted?: boolean;
+  acquisition?: CopyAcquisition;
+  onAcquisitionChange?: (value: CopyAcquisition) => void;
+  acquisitionError?: string | null;
 }
 
 const UNIFIED_INPUT_CLASS = "h-10 w-full rounded-lg border-border/60 bg-background px-3 text-sm";
@@ -40,7 +45,10 @@ function SectionHeader({ icon: Icon, title }: { icon: React.ElementType, title: 
   );
 }
 
-export function BookDetailsForm({ formData, onUpdate, categories, hideIsbnField = false, validationAttempted = false }: BookDetailsFormProps) {
+export function BookDetailsForm({
+  formData, onUpdate, categories, hideIsbnField = false, validationAttempted = false,
+  acquisition, onAcquisitionChange, acquisitionError,
+}: BookDetailsFormProps) {
   return (
     <div className="space-y-8">
       {/* 1. Basic Information */}
@@ -190,6 +198,12 @@ export function BookDetailsForm({ formData, onUpdate, categories, hideIsbnField 
             />
           </FieldGroup>
         </div>
+        {acquisition && onAcquisitionChange && (
+          <div className="border-t border-border/40 pt-2">
+            <OptionalCopyAcquisition value={acquisition} onChange={onAcquisitionChange} />
+            {acquisitionError && <p role="alert" className="text-sm text-destructive">{acquisitionError}</p>}
+          </div>
+        )}
       </section>
     </div>
   );

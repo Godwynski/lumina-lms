@@ -54,9 +54,9 @@ export function auditLogQuery(supabase: SupabaseClient, params: URLSearchParams,
     };
     query = groups[action] ? query.or(groups[action]) : query.ilike('action', `%${sanitizeFilterInput(action === 'issuance' ? 'issuan' : action)}%`);
   }
-  if (filters.bookId) query = query.eq('subject_book_id', filters.bookId);
+  if (filters.bookId) query = query.or(`subject_book_id.eq.${filters.bookId},details->bookIds.cs.${JSON.stringify([filters.bookId])}`);
   if (filters.studentId) query = query.eq('subject_student_id', filters.studentId);
-  if (filters.copyId) query = query.eq('subject_copy_id', filters.copyId);
+  if (filters.copyId) query = query.or(`subject_copy_id.eq.${filters.copyId},details->copyIds.cs.${JSON.stringify([filters.copyId])}`);
   if (filters.userId) query = query.eq('admin_id', filters.userId);
   if (filters.startDate) query = query.gte('created_at', `${filters.startDate}T00:00:00+08:00`);
   if (filters.endDate) query = query.lte('created_at', `${filters.endDate}T23:59:59.999+08:00`);

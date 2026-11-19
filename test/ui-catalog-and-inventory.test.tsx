@@ -68,6 +68,7 @@ const mockGetBookPublicDetails = vi.fn();
 const mockAddBookCopies = vi.fn();
 const mockGetCategories = vi.fn();
 const mockGetBooksForExport = vi.fn();
+const mockGetCopyRecordsForExport = vi.fn();
 const mockBatchImportBooks = vi.fn();
 const mockLookupAndImportISBN = vi.fn();
 const mockCreateBook = vi.fn();
@@ -82,6 +83,7 @@ vi.mock('@/lib/actions/catalog', () => ({
   addBookCopies: (...args: unknown[]) => mockAddBookCopies(...args),
   getCategories: (...args: unknown[]) => mockGetCategories(...args),
   getBooksForExport: (...args: unknown[]) => mockGetBooksForExport(...args),
+  getCopyRecordsForExport: (...args: unknown[]) => mockGetCopyRecordsForExport(...args),
   batchImportBooks: (...args: unknown[]) => mockBatchImportBooks(...args),
   lookupAndImportISBN: (...args: unknown[]) => mockLookupAndImportISBN(...args),
   createBook: (...args: unknown[]) => mockCreateBook(...args),
@@ -1626,6 +1628,46 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       await clickElement(findButtonByText(document.body, 'JSON Data'));
       await flushPromises();
       expect(mockToastSuccess).toHaveBeenCalledWith('Catalog exported to JSON successfully!');
+    });
+
+    it('shows acquisition row errors before import and downloads Copy Records independently of catalog columns', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ jobs: [] }))));
+      const createObjectURL = vi.fn(() => 'blob:copy-records');
+      vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL: vi.fn() });
+      const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      mockGetCopyRecordsForExport.mockResolvedValue('Accession number,Status\nACC-00001,AVAILABLE');
+      mockBatchImportBooks.mockResolvedValue({ success: true, imported: 1, copiesAdded: 1, duplicates: 0 });
+      const { container } = await renderInventory();
+      await clickElement(container.querySelector('button[aria-label="Batch operations"]'));
+
+      const input = document.body.querySelector('input[type="file"]');
+      const csv = new File([
+        'Title,Author,ISBN,Acquisition method,Acquisition date,Price per copy\n',
+        'Purchased,Author,0123456789,Purchased,2024-02-29,15.25\n\n',
+        'Typo,Author,,Donated,2024-02-30,\n',
+      ], 'acquisition.csv', { type: 'text/csv' });
+      await act(async () => {
+        Object.defineProperty(input, 'files', { value: [csv] });
+        input?.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await flushPromises(50);
+      expect(document.body).toHaveTextContent('Row 4');
+      expect(document.body).toHaveTextContent('1 Books Detected');
+      await clickElement(findButtonByText(document.body, 'Commit & Import to Catalog'));
+      expect(mockBatchImportBooks).toHaveBeenCalledWith([
+        expect.objectContaining({
+          title: 'Purchased', isbn: '0123456789', rowNumber: 2,
+          acquisition: { method: 'PURCHASED', acquiredOn: '2024-02-29', purchasePrice: '15.25' },
+        }),
+      ], { addCopiesToDuplicates: false });
+
+      await clickElement(findButtonByText(document.body, 'Export Data'));
+      await clickElement(findButtonByText(document.body, 'Clear'));
+      await clickElement(findButtonByText(document.body, 'Copy Records CSV'));
+      expect(mockGetCopyRecordsForExport).toHaveBeenCalledOnce();
+      expect(mockGetBooksForExport).not.toHaveBeenCalled();
+      expect((download.mock.contexts[0] as HTMLAnchorElement).download).toBe('lumina_copy_records.csv');
+      download.mockRestore();
     });
 
     it('hides admin actions when canManage is false', async () => {

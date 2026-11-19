@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import Image from 'next/image';
 import {
   updateBookCopyStatus,
@@ -16,6 +16,9 @@ import { CompactPagination } from '@/components/ui/compact-pagination';
 import {
   CheckCircle2,
   AlertCircle,
+  Banknote,
+  ChevronDown,
+  Gift,
   Wrench,
   SearchX,
   History,
@@ -41,6 +44,9 @@ import { ReservationQueuePanel, formatRelativeTime, type ReservationQueueEntry }
 import { cn, getCategoryName } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+import { CopyDetails } from './admin/CopyDetails';
+import { EMPTY_ACQUISITION, OptionalCopyAcquisition } from './CopyAcquisitionFields';
+import { copyAcquisitionSchema, hasCopyAcquisition } from '@/lib/copy-acquisition';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 
@@ -50,6 +56,8 @@ const STATUS_CONFIG = {
   MAINTENANCE: { label: 'Maintenance', icon: Wrench,       color: 'text-amber-500',    bg: 'bg-amber-500/5',  border: 'border-amber-500/10'  },
   LOST:        { label: 'Lost',        icon: SearchX,      color: 'text-rose-500',       bg: 'bg-rose-500/5',    border: 'border-rose-500/10'    },
   RESERVED:    { label: 'Reserved',    icon: Clock,        color: 'text-indigo-500',   bg: 'bg-indigo-500/5', border: 'border-indigo-500/10' },
+  SOLD:        { label: 'Sold',        icon: Banknote,     color: 'text-muted-foreground', bg: 'bg-muted/40', border: 'border-border/60' },
+  DONATED_OUT: { label: 'Donated out', icon: Gift,         color: 'text-muted-foreground', bg: 'bg-muted/40', border: 'border-border/60' },
 } as const;
 
 const EDITABLE_STATUSES = ['AVAILABLE', 'MAINTENANCE', 'LOST'] as const;
@@ -59,7 +67,7 @@ function isEditableStatus(v: string): v is EditableStatus {
   return (EDITABLE_STATUSES as readonly string[]).includes(v);
 }
 function isBookCopyStatus(v: string): v is BookCopyWithReservation['status'] {
-  return ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'LOST', 'RESERVED'].includes(v);
+  return Object.hasOwn(STATUS_CONFIG, v);
 }
 
 
@@ -130,8 +138,12 @@ export function AdminManagementContent({
   const [restoreLoading, setRestoreLoading] = useState(false);
   
   const [showAddCopies, setShowAddCopies] = useState(false);
-  const [copiesToAdd, setCopiesToAdd] = useState(1);
+  const [copiesToAdd, setCopiesToAdd] = useState('1');
+  const [batchAcquisition, setBatchAcquisition] = useState(EMPTY_ACQUISITION);
+  const [addCopiesError, setAddCopiesError] = useState<string | null>(null);
   const [addCopiesLoading, setAddCopiesLoading] = useState(false);
+  const [expandedCopy, setExpandedCopy] = useState<{ id: string; lostRequest: number } | null>(null);
+  const [copyNotice, setCopyNotice] = useState<{ id: string; message: string } | null>(null);
 
   const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopyWithReservation['status']>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,6 +294,12 @@ export function AdminManagementContent({
   };
 
   const handleStatusChange = async (copyId: string, newStatus: EditableStatus) => {
+    if (!canManage) return;
+    if (newStatus === 'LOST') {
+      setCopyNotice(null);
+      setExpandedCopy((previous) => ({ id: copyId, lostRequest: (previous?.lostRequest ?? 0) + 1 }));
+      return;
+    }
     try {
       const result = await updateBookCopyStatus({ id: copyId, status: newStatus });
       if (!result.success) throw new Error(result.error);
@@ -293,37 +311,64 @@ export function AdminManagementContent({
     }
   };
 
-  const handleAddCopies = async () => {
-    if (copiesToAdd < 1) return;
+  const closeAddCopies = () => {
+    setShowAddCopies(false);
+    setCopiesToAdd('1');
+    setBatchAcquisition(EMPTY_ACQUISITION);
+    setAddCopiesError(null);
+  };
+
+  const handleAddCopies = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canManage || addCopiesLoading) return;
+    const copiesCount = Number(copiesToAdd);
+    if (!Number.isInteger(copiesCount) || copiesCount < 1 || copiesCount > 50) {
+      setAddCopiesError('Enter a whole number from 1 to 50.');
+      return;
+    }
+    const validation = copyAcquisitionSchema.safeParse(batchAcquisition);
+    if (!validation.success) {
+      setAddCopiesError(validation.error.issues[0].message);
+      return;
+    }
     setAddCopiesLoading(true);
+    setAddCopiesError(null);
     try {
-      const result = await addBookCopies({ bookId: book.id, copiesCount: copiesToAdd });
+      const result = await addBookCopies({
+        bookId: book.id,
+        copiesCount,
+        ...(hasCopyAcquisition(batchAcquisition) ? { acquisition: batchAcquisition } : {}),
+      });
       if (!result.success) throw new Error(result.error);
       await fetchData();
-      setBook(prev => ({
-        ...prev,
-        total_copies: (prev.total_copies || 0) + copiesToAdd,
-        available_copies: (prev.available_copies || 0) + copiesToAdd,
-      }));
-      setShowAddCopies(false);
-      setCopiesToAdd(1);
-      toast.success(`Successfully added ${copiesToAdd} ${copiesToAdd === 1 ? 'copy' : 'copies'}`);
+      closeAddCopies();
+      router.refresh();
+      toast.success(`Successfully added ${copiesCount} ${copiesCount === 1 ? 'copy' : 'copies'}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add copies');
+      setAddCopiesError(err instanceof Error ? err.message : 'Failed to add copies');
     } finally {
       setAddCopiesLoading(false);
     }
   };
 
+  const handleCopyDetailsSaved = async (id: string, message: string) => {
+    setCopyNotice({ id, message });
+    await fetchData();
+    router.refresh();
+  };
+
   const categoryName = getCategoryName(book.categories);
 
   const filteredCopies = copies.filter(c => copyFilter === 'ALL' || c.status === copyFilter);
+  const printableCopies = copies.filter((copy) => copy.status !== 'SOLD' && copy.status !== 'DONATED_OUT');
   const totalPages = Math.ceil(filteredCopies.length / COPIES_PER_PAGE);
   const activePage = Math.min(currentPage, Math.max(1, totalPages));
   const paginatedCopies = filteredCopies.slice(
     (activePage - 1) * COPIES_PER_PAGE,
     activePage * COPIES_PER_PAGE
   );
+  const showNoticeInRow = !loading && expandedCopy?.id === copyNotice?.id &&
+    paginatedCopies.some((copy) => copy.id === copyNotice?.id && (canManage || copy.lifecycle !== undefined));
   const isAvailable = book.available_copies > 0;
 
   return (
@@ -571,48 +616,23 @@ export function AdminManagementContent({
 
       {/* Inventory List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-border/20 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/20 pb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Inventory Assets</h3>
           </div>
           
-          <div className="flex items-center gap-4">
-            {copies.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {printableCopies.length > 1 && (
               <QRPrinterModal
                 bookTitle={book.title}
                 triggerLabel="Print all QR"
-                labels={copies.map((c) => ({ qrString: c.qr_string, accessionNumber: c.accession_number }))}
+                labels={printableCopies.map((c) => ({ qrString: c.qr_string, accessionNumber: c.accession_number }))}
               />
             )}
-            {canManage && (
-              !showAddCopies ? (
-                <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
-                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Copies
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
-                  <Input 
-                    type="number" 
-                    min={1} 
-                    max={50} 
-                    value={copiesToAdd} 
-                    aria-label="Number of copies to add"
-                    onKeyDown={(e) => {
-                      if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    onChange={e => setCopiesToAdd(parseInt(e.target.value) || 1)} 
-                    className="h-8 w-14 text-center text-xs px-1 rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <Button size="sm" onClick={handleAddCopies} disabled={addCopiesLoading} className="h-8 px-3 text-[11px] font-medium">
-                    {addCopiesLoading ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : 'Confirm'}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(false)} className="h-8 px-2 text-[11px] font-medium text-muted-foreground">
-                    Cancel
-                  </Button>
-                </div>
-              )
+            {canManage && !showAddCopies && (
+              <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
+                <Plus className="h-3.5 w-3.5" /> Add Copies
+              </Button>
             )}
             
             <Select value={copyFilter} onValueChange={(v) => {
@@ -631,7 +651,34 @@ export function AdminManagementContent({
           </div>
         </div>
 
-        <div className="space-y-2 min-h-[160px] max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+        {canManage && showAddCopies && (
+          <form aria-label="Add copies" noValidate onSubmit={handleAddCopies} className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <FieldGroup label="Number of copies to add">
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={copiesToAdd}
+                  aria-label="Number of copies to add"
+                  disabled={addCopiesLoading}
+                  onChange={(event) => { setCopiesToAdd(event.target.value); setAddCopiesError(null); }}
+                  className="h-9 w-24"
+                />
+              </FieldGroup>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={closeAddCopies} disabled={addCopiesLoading}>Cancel</Button>
+                <Button type="submit" size="sm" disabled={addCopiesLoading}>{addCopiesLoading ? 'Adding…' : 'Confirm'}</Button>
+              </div>
+            </div>
+            <OptionalCopyAcquisition value={batchAcquisition} onChange={(value) => { setBatchAcquisition(value); setAddCopiesError(null); }} disabled={addCopiesLoading} />
+            {addCopiesError && <p role="alert" className="text-sm text-destructive">{addCopiesError}</p>}
+          </form>
+        )}
+
+        {copyNotice && !showNoticeInRow && <p role="status" className="text-sm text-foreground">{copyNotice.message}</p>}
+
+        <div className="min-h-[160px] space-y-2">
           {loading ? (
             <div className="space-y-2">
               <InventoryItemSkeleton />
@@ -651,18 +698,22 @@ export function AdminManagementContent({
               const StatusIcon = statusCfg.icon;
               const res = copy.reservation;
               const r = res?.profiles as { full_name?: string | null; avatar_url?: string | null } | null;
+              const copyIdentifier = copy.accession_number || copy.qr_string;
+              const detailId = `copy-details-${copy.id}`;
+              const canReadDetails = canManage || copy.lifecycle !== undefined;
+              const isExpanded = canReadDetails && expandedCopy?.id === copy.id;
 
               return (
                 <div key={copy.id} className="group flex flex-col gap-2 rounded-lg border border-border/20 bg-muted/5 p-3 transition-colors hover:bg-muted/10">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={cn("h-9 w-9 shrink-0 rounded-md border flex items-center justify-center transition-colors", statusCfg.bg, statusCfg.border)}>
                         <StatusIcon size={16} className={statusCfg.color} />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="font-mono text-[12px] font-semibold text-foreground/90 truncate">{copy.qr_string}</p>
-                          <span className="text-[11px] font-medium text-muted-foreground px-1.5 py-0.5 border border-border/40 rounded bg-muted/40 uppercase tracking-tighter">{copy.accession_number}</span>
+                        <div className="mb-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="break-all font-mono text-xs font-semibold text-foreground/90">{copy.qr_string}</p>
+                          {copy.accession_number && <span className="break-all rounded border border-border/40 bg-muted/40 px-1.5 py-0.5 text-[11px] font-medium uppercase text-muted-foreground">{copy.accession_number}</span>}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                           <span className={cn("font-medium", statusCfg.color)}>{statusCfg.label}</span>
@@ -670,12 +721,12 @@ export function AdminManagementContent({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
                       {canManage && isEditableStatus(copy.status) ? (
                         <Select value={copy.status} onValueChange={(v) => {
                           if (isEditableStatus(v)) handleStatusChange(copy.id, v);
                         }}>
-                          <SelectTrigger aria-label={`Status for copy ${copy.accession_number || copy.qr_string}`} className="h-8 w-[100px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-semibold uppercase shadow-none focus:ring-0 transition-colors">
+                          <SelectTrigger aria-label={`Status for copy ${copyIdentifier}`} className="h-8 rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-semibold shadow-none transition-colors">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="border-border/40 shadow-xl">
@@ -694,6 +745,24 @@ export function AdminManagementContent({
                       <div>
                         <QRPrinterModal qrString={copy.qr_string} accessionNumber={copy.accession_number} bookTitle={book.title} />
                       </div>
+                      {canReadDetails && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Copy details for ${copyIdentifier}`}
+                          aria-expanded={isExpanded}
+                          aria-controls={detailId}
+                          onClick={() => {
+                            setCopyNotice(null);
+                            setExpandedCopy(isExpanded ? null : { id: copy.id, lostRequest: 0 });
+                          }}
+                          className="gap-1 px-2 text-xs"
+                        >
+                          Copy details
+                          <ChevronDown aria-hidden="true" className={cn('size-3.5 transition-transform motion-reduce:transition-none', isExpanded && 'rotate-180')} />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -721,6 +790,20 @@ export function AdminManagementContent({
                       </div>
                     </div>
                   )}
+                  <div id={detailId} hidden={!isExpanded}>
+                    {isExpanded && (
+                      <>
+                        <CopyDetails
+                          key={expandedCopy.lostRequest}
+                          copy={copy}
+                          canManage={canManage}
+                          reportLost={expandedCopy.lostRequest > 0}
+                          onSaved={(message) => handleCopyDetailsSaved(copy.id, message)}
+                        />
+                        {copyNotice?.id === copy.id && <p role="status" className="mt-3 text-sm text-foreground">{copyNotice.message}</p>}
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })

@@ -8,6 +8,8 @@ import { logger } from '@/lib/logger';
 import { assertStaffCatalogAccess } from './auth';
 import { fetchBooksCore } from '@/lib/actions/books-core';
 import { getBookOrdering } from '@/lib/catalog-sort';
+import { copyAcquisitionSchema, hasCopyAcquisition } from '@/lib/copy-acquisition';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
  * Retrieves a paginated list of books with optional filtering and search.
@@ -31,53 +33,58 @@ export async function getBooks(
 
 const CreateBookSchema = z.object({
   bookData: BookSchema,
-  copiesCount: z.number().min(0).default(1)
+  copiesCount: z.number().int().min(0).max(100).default(1),
+  acquisition: copyAcquisitionSchema.optional(),
 });
 
 export const createBook = createSafeAction(
   CreateBookSchema,
-  async ({ bookData, copiesCount }, { supabase }) => {
-    const { data, error } = await supabase
-      .from('books')
-      .insert([bookData])
-      .select()
-      .single();
+  async ({ bookData, copiesCount, acquisition }, { supabase }) => {
+    const withAcquisition = copiesCount > 0 && hasCopyAcquisition(acquisition);
+    const { data, error } = withAcquisition
+      ? await createAdminClient().rpc('create_book_with_acquisition', {
+        p_book: bookData, p_count: copiesCount, p_acquisition: acquisition,
+      })
+      : await supabase.from('books').insert([bookData]).select().single();
       
     if (error) {
       logger.error('catalog', 'Failed to insert book record', { error });
       throw new Error(`Failed to create book record: ${error.message}`);
     }
 
-    // Automatically create copies
-    if (copiesCount > 0) {
+    const bookId = data.id as string;
+    let copyIds: string[] = withAcquisition ? data.copyIds : [];
+    if (copiesCount > 0 && !withAcquisition) {
       const copies = Array.from({ length: copiesCount }).map(() => ({
-        book_id: data.id,
+        book_id: bookId,
         status: 'AVAILABLE'
       }));
 
-      const { error: copiesError } = await supabase
+      const { data: created, error: copiesError } = await supabase
         .from('book_copies')
-        .insert(copies);
+        .insert(copies)
+        .select('id');
 
       if (copiesError) {
-        logger.error('catalog', `Book created but copies failed for ID: ${data.id}`, { error: copiesError.message });
-        await supabase.from('books').delete().eq('id', data.id);
+        logger.error('catalog', `Book created but copies failed for ID: ${bookId}`, { error: copiesError.message });
+        await supabase.from('books').delete().eq('id', bookId);
         throw new Error('Failed to initialize book copies. Transaction rolled back.');
       }
+      copyIds = created?.map(copy => copy.id) ?? [];
     }
 
     // Fetch the updated book record with correct counts (synced by triggers)
     const { data: updatedData, error: refreshError } = await supabase
       .from('books')
       .select('*, categories(name)')
-      .eq('id', data.id)
+      .eq('id', bookId)
       .single();
 
     if (refreshError) {
       logger.error('catalog', 'Failed to refresh book record after copy sync', { error: refreshError });
     }
 
-    const finalData = updatedData || data;
+    const finalData = updatedData || (withAcquisition ? { ...bookData, id: bookId, total_copies: copiesCount, available_copies: copiesCount } : data);
 
     logger.info('catalog', `Book created: ${bookData.title}`, { bookId: finalData.id, isbn: bookData.isbn });
     revalidateTag('catalog', 'max');
@@ -87,7 +94,7 @@ export const createBook = createSafeAction(
     return [finalData, {
       reason: `Created new book: ${bookData.title}`,
       newValue: { ...bookData, copies_created: copiesCount },
-      details: { isbn: bookData.isbn }
+      details: { isbn: bookData.isbn, ...(copyIds.length > 0 ? { copyIds } : {}), ...(withAcquisition ? { acquisition } : {}) }
     }];
   },
   { 

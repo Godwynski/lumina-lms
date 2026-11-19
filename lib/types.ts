@@ -64,7 +64,7 @@ export interface Book {
   created_at?: string;
 }
 
-export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
+export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED' | 'SOLD' | 'DONATED_OUT';
 
 export interface BookCopy {
   id: string;
@@ -95,6 +95,7 @@ export interface CopyReservation {
 
 export interface BookCopyWithReservation extends Omit<BookCopy, 'status'> {
   status: BookCopyStatus;
+  lifecycle?: import('./copy-acquisition').CopyLifecycle | null;
   reservation: CopyReservation | null;
 }
 

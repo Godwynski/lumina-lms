@@ -524,6 +524,13 @@ describe('Accessibility A1 fixes (admin, policies, catalog, inventory)', () => {
       await new Promise((r) => setTimeout(r, 50));
     });
 
+    mockServerSupabase.rpc.mockResolvedValueOnce({
+      data: {
+        books: [{ id: 'new-book-1', title: 'Domain-Driven Design', author: 'Eric Evans', isbn: null, cover_url: null, copyIds: ['copy-1', 'copy-2'] }],
+        copyIds: ['copy-1', 'copy-2'],
+      },
+      error: null,
+    });
     await clickElement(findButtonByText(document.body, 'Commit & Import to Catalog'));
     await vi.waitFor(() => {
       expect(document.body).toHaveTextContent('Catalog Rows Imported');

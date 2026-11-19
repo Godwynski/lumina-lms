@@ -21,7 +21,7 @@ export type UserRole = 'super_admin' | 'librarian' | 'patron' | 'library_staff';
 export type BorrowStatus = 'ACTIVE' | 'RETURNED' | 'OVERDUE' | 'LOST';
 export type ReservationStatus = 'ACTIVE' | 'READY' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
 
-export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED';
+export type BookCopyStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'LOST' | 'RESERVED' | 'SOLD' | 'DONATED_OUT';
 export type ProfileStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'DELETED' | 'ARCHIVED';
 export type LibraryCardStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'EXPIRED' | 'ARCHIVED';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -210,6 +210,7 @@ export interface Database {
       categories: { Row: CategoriesRow; Insert: Partial<CategoriesRow>; Update: Partial<CategoriesRow> };
       books: { Row: BooksRow; Insert: Partial<BooksRow>; Update: Partial<BooksRow> };
       book_copies: { Row: BookCopiesRow; Insert: Partial<BookCopiesRow>; Update: Partial<BookCopiesRow> };
+      book_copy_lifecycle: { Row: { copy_id: string } & import('../lib/copy-acquisition').CopyLifecycle; Insert: never; Update: never };
       profiles: { Row: ProfilesRow; Insert: Partial<ProfilesRow>; Update: Partial<ProfilesRow> };
       library_cards: { Row: LibraryCardsRow; Insert: Partial<LibraryCardsRow>; Update: Partial<LibraryCardsRow> };
       borrowing_records: { Row: BorrowingRecordsRow; Insert: Partial<BorrowingRecordsRow>; Update: Partial<BorrowingRecordsRow> };

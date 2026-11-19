@@ -6,6 +6,7 @@ import {
   filterValidImportBooks,
   getImportTemplateHeaders,
   parseImportRows,
+  parseImportSheet,
 } from '@/lib/catalog-import';
 import { buildAnalyticsWorkbook } from '@/lib/analytics-export';
 
@@ -40,7 +41,44 @@ describe('WP5 Catalog Import Template & Analytics Export Helpers', () => {
       section: 'CS-A',
       dewey_decimal: '005.1',
       tags: 'software, craftsmanship',
+      rowNumber: 2,
+      acquisition: { method: 'PURCHASED', acquiredOn: '2024-01-15', purchasePrice: '350.50' },
     });
+  });
+
+  it('preserves spreadsheet row numbers and keeps old templates without acquisition columns valid', () => {
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Title', 'Author', 'ISBN', 'Acquisition method', 'Acquisition date', 'Price per copy'],
+      ['Legacy', 'Author', '0123456789'],
+      [],
+      ['Supply', 'Author', '0987654321', 'donated', 45351],
+      ['Typo', 'Author', '', 'purchased', '2025-02-29', 12],
+      ['Donation with price', 'Author', '', 'donated', '', 1],
+      ['Price too precise', 'Author', '', 'purchased', '', 25.001],
+    ]);
+    sheet.E4.z = 'm/d/yy';
+    sheet.F7.z = '0.00';
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Books');
+    const spreadsheet = XLSX.read(XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }), { cellDates: true });
+    const rows = parseImportSheet(XLSX, spreadsheet.Sheets.Books);
+
+    expect(rows[0]).toMatchObject({ title: 'Legacy', isbn: '0123456789', rowNumber: 2 });
+    expect(rows[0]).not.toHaveProperty('acquisition');
+    expect(rows[1]).toMatchObject({
+      title: 'Supply',
+      rowNumber: 4,
+      acquisition: { method: 'DONATED', acquiredOn: '2024-02-29', purchasePrice: null },
+    });
+    expect(rows.slice(2).map(row => [row.rowNumber, row.acquisitionError])).toEqual([
+      [5, expect.any(String)], [6, expect.any(String)], [7, expect.any(String)],
+    ]);
+    expect(filterValidImportBooks(rows).map(row => row.title)).toEqual(['Legacy', 'Supply']);
+  });
+
+  it('accepts the Bought label and records zero as a purchase price', () => {
+    const [row] = parseImportRows([{ Title: 'A', Author: 'B', 'Acquisition method': ' bought ', 'Price per copy': 0 }]);
+    expect(row.acquisition).toEqual({ method: 'PURCHASED', acquiredOn: null, purchasePrice: '0' });
   });
 
   it('builds analytics workbook with Summary and High Demand sheets for the selected date range', () => {

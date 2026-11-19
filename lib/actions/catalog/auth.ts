@@ -6,7 +6,7 @@ import { getMe } from '@/lib/auth-helpers';
  * Pass `allowAssistants` for the read-only inventory views student assistants also see.
  * Returns the authenticated Supabase client on success.
  */
-export async function assertStaffCatalogAccess(allowAssistants = false) {
+export async function getCatalogStaff(allowAssistants = false) {
   const me = await getMe();
   if (!me || !me.isStaff || me.isDeactivatedSA) throw new Error('Unauthorized');
 
@@ -16,5 +16,9 @@ export async function assertStaffCatalogAccess(allowAssistants = false) {
     }
   }
 
-  return me.supabase;
+  return me;
+}
+
+export async function assertStaffCatalogAccess(allowAssistants = false) {
+  return (await getCatalogStaff(allowAssistants)).supabase;
 }

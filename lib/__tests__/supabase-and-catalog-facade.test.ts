@@ -542,20 +542,20 @@ describe('lib/actions/catalog facade', () => {
       data: { id: 'copy-1', book_id: 'book-1', status: 'MAINTENANCE' },
     });
 
-    // updateBookCopyStatus: MAINTENANCE -> AVAILABLE triggers admin RPC release_copy
+    // updateBookCopyStatus: MAINTENANCE -> AVAILABLE requests locked recovery
     const selectCurrentMaint = createMockQueryBuilder({ status: 'MAINTENANCE' }, null);
     const selectAfterRelease = createMockQueryBuilder(
       { id: 'copy-1', book_id: 'book-1', status: 'AVAILABLE' },
       null
     );
     copyQueue.push(selectCurrentMaint, selectAfterRelease);
-    adminHelper.setRpcResponse(null, null, 'release_copy');
+    adminHelper.setRpcResponse(null, null, 'recover_book_copy');
 
     const copyAvail = await catalogFacade.updateBookCopyStatus({
       id: 'copy-1',
       status: 'AVAILABLE',
     });
-    expect(adminHelper.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-1' });
+    expect(adminHelper.rpc).toHaveBeenCalledWith('recover_book_copy', { p_copy_id: 'copy-1', p_expected_status: 'MAINTENANCE' });
     expect(copyAvail).toEqual({
       success: true,
       data: { id: 'copy-1', book_id: 'book-1', status: 'AVAILABLE' },
@@ -632,21 +632,13 @@ describe('lib/actions/catalog facade', () => {
     expect(exported).toEqual(exportRows);
 
     // batchImportBooks
-    const existingBooksPage = createMockQueryBuilder([], null);
-    const insertedBooksBuilder = createMockQueryBuilder(
-      [{ id: 'imp-1', title: 'Refactoring', author: 'Martin Fowler' }],
-      null
-    );
-    const booksBuilders = [existingBooksPage, insertedBooksBuilder];
-    const defaultFrom = serverHelper.from.getMockImplementation();
-    serverHelper.from.mockImplementation((table: string) => {
-      if (table === 'books' && booksBuilders.length > 0) {
-        return booksBuilders.shift()!;
-      }
-      return defaultFrom ? defaultFrom(table) : serverHelper.getTableBuilder(table);
-    });
-    serverHelper.setTableResponse('categories', [], null);
-    serverHelper.setTableResponse('book_copies', null, null);
+    serverHelper.setTableResponse('books', []);
+    serverHelper.setTableResponse('categories', []);
+    const copyIds = ['imp-copy-1', 'imp-copy-2'];
+    adminHelper.setRpcResponse({
+      books: [{ id: 'imp-1', title: 'Refactoring', author: 'Martin Fowler', isbn: '9780201485677', cover_url: null, copyIds }],
+      copyIds,
+    }, null, 'apply_catalog_spreadsheet');
 
     const importRow: ImportBookRow = {
       title: 'Refactoring',
@@ -667,7 +659,7 @@ describe('lib/actions/catalog facade', () => {
       null,
       'batch_import',
       expect.stringContaining('1 books created, 2 copies added'),
-      expect.any(Object)
+      expect.objectContaining({ bookIds: ['imp-1'], copyIds })
     );
 
     // lookupAndImportISBN: invalid blank ISBN

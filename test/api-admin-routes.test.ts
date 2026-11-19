@@ -269,9 +269,9 @@ describe("Admin API Route Handlers", () => {
         "created_at",
         "2026-01-31T23:59:59.999+08:00"
       );
-      expect(auditBuilder.eq).toHaveBeenCalledWith("subject_book_id", bookId);
+      expect(auditBuilder.or).toHaveBeenCalledWith(`subject_book_id.eq.${bookId},details->bookIds.cs.${JSON.stringify([bookId])}`);
       expect(auditBuilder.eq).toHaveBeenCalledWith("subject_student_id", studentId);
-      expect(auditBuilder.eq).toHaveBeenCalledWith("subject_copy_id", copyId);
+      expect(auditBuilder.or).toHaveBeenCalledWith(`subject_copy_id.eq.${copyId},details->copyIds.cs.${JSON.stringify([copyId])}`);
       expect(auditBuilder.eq).toHaveBeenCalledWith("admin_id", userId);
 
       const expectedPattern = JSON.stringify("%alice\\_50\\%%");

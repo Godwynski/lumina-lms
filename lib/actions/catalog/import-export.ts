@@ -7,8 +7,10 @@ import { scheduleCatalogImport } from '@/lib/catalog-import-scheduler';
 import { logAuditActivity } from '@/lib/audit';
 import { revalidateTag } from 'next/cache';
 import { assertStaffCatalogAccess } from './auth';
-import { getOrCreateCategoryByName } from './categories';
 import { getBookOrdering } from '@/lib/catalog-sort';
+import { assertRole } from '@/lib/auth-helpers';
+import { copyAcquisitionSchema, hasCopyAcquisition, type CopyAcquisition, type CopyLifecycle } from '@/lib/copy-acquisition';
+import { toCsv } from '@/lib/csv';
 
 export interface ImportBookRow {
   title?: string;
@@ -25,6 +27,8 @@ export interface ImportBookRow {
   location?: string;
   section?: string;
   dewey_decimal?: string | number;
+  rowNumber?: number;
+  acquisition?: CopyAcquisition;
 }
 
 export interface GoogleOrOpenLibraryBookDetails {
@@ -103,10 +107,55 @@ export async function getBooksForExport(filters?: ExportBooksFilters) {
 const MAX_BATCH_SIZE = 500;
 const MAX_COPIES_PER_ROW = 50;
 const PAGE_SIZE = 1000; // PostgREST returns at most 1,000 rows per request
-const COPY_INSERT_CHUNK = 1000;
+
+interface CopyRecordExportRow {
+  accession_number: string | null;
+  status: string | null;
+  books: { title: string; author: string | null; isbn: string | null } | null;
+  book_copy_lifecycle: CopyLifecycle | null;
+}
+
+/** Staff register with one row per copy, including copies of archived titles. */
+export async function getCopyRecordsForExport() {
+  await assertRole(['librarian', 'super_admin']);
+  const supabase = createAdminClient();
+  const rows: unknown[][] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('book_copies')
+      .select(`
+        accession_number, status, books(title, author, isbn),
+        book_copy_lifecycle(acquisition_method, acquired_on, purchase_price, disposition_on, sale_amount, last_lost_on)
+      `)
+      .order('accession_number')
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) {
+      logger.error('catalog', 'Failed to export copy records', { error: error.message });
+      throw new Error('Failed to export copy records.');
+    }
+    // PostgREST embeds an object for each of these to-one relationships.
+    const page = data as unknown as CopyRecordExportRow[];
+    for (const copy of page) {
+      const book = copy.books;
+      const lifecycle = copy.book_copy_lifecycle;
+      rows.push([
+        copy.accession_number, book?.title, book?.author, book?.isbn, copy.status,
+        lifecycle?.acquisition_method, lifecycle?.acquired_on, lifecycle?.purchase_price,
+        lifecycle?.disposition_on, lifecycle?.sale_amount, lifecycle?.last_lost_on,
+      ]);
+    }
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  return toCsv([
+    'Accession number', 'Title', 'Author', 'ISBN', 'Status', 'Acquisition method',
+    'Acquisition date', 'Price per copy', 'Disposition date', 'Proceeds', 'Last loss date',
+  ], rows);
+}
 
 /**
- * Imports catalog rows in bulk: one insert for the new books, then their copies in chunks.
+ * Applies new titles and copies in one transaction.
  * Books that already exist (same ISBN, or same title + author) are skipped unless
  * `addCopiesToDuplicates` is set, so running the same file twice never doubles the stock.
  */
@@ -114,11 +163,22 @@ export async function batchImportBooks(
   books: ImportBookRow[],
   options: { addCopiesToDuplicates?: boolean } = {}
 ) {
-  const supabase = await assertStaffCatalogAccess();
+  const { supabase, user } = await assertRole(['librarian', 'super_admin']);
 
   if (books.length > MAX_BATCH_SIZE) {
     throw new Error(`Maximum batch size is ${MAX_BATCH_SIZE} rows per import.`);
   }
+
+  const getRowNumber = (row: ImportBookRow, index: number) =>
+    row.rowNumber && Number.isSafeInteger(row.rowNumber) && row.rowNumber > 0 ? row.rowNumber : index + 1;
+  const acquisitionByRow = books.map((row, index) => {
+    if (row.acquisition == null) return null;
+    const acquisition = copyAcquisitionSchema.safeParse(row.acquisition);
+    if (!acquisition.success) {
+      throw new Error(`Row ${getRowNumber(row, index)}: ${acquisition.error.issues[0].message}`);
+    }
+    return hasCopyAcquisition(acquisition.data) ? acquisition.data : null;
+  });
 
   // Every existing book, page by page, so the duplicate check also sees books past the first 1,000.
   const existingBooks: { id: string; isbn: string | null; title: string | null; author: string | null; cover_url?: string | null }[] = [];
@@ -126,6 +186,7 @@ export async function batchImportBooks(
     const { data, error } = await supabase
       .from('books')
       .select('id, isbn, title, author, cover_url')
+      .order('id')
       .range(from, from + PAGE_SIZE - 1);
     if (error) {
       throw new Error(`Failed to perform duplicate check database prep: ${error.message}`);
@@ -136,7 +197,7 @@ export async function batchImportBooks(
   }
 
   // Lookup maps: value is an existing book id, or a pending row index (new in this file).
-  const cleanIsbnOf = (isbn: string) => isbn.replace(/[- ]/g, '');
+  const cleanIsbnOf = (isbn: string) => isbn.replace(/[\s-]/g, '').toUpperCase();
   const titleKey = (title: string, author: string) => `${title.trim().toLowerCase()}|||${author.trim().toLowerCase()}`;
   const isbnMap = new Map<string, string | number>();
   const titleAuthorMap = new Map<string, string | number>();
@@ -155,14 +216,19 @@ export async function batchImportBooks(
 
   const logs: string[] = [];
   let duplicateCount = 0;
-  const newBooks: { row: string; key: string; copies: number; insert: Record<string, unknown> }[] = [];
-  const copiesForExisting: { book_id: string; status: string }[] = [];
+  const newBooks: {
+    row: string;
+    acquisitions: (CopyAcquisition | null)[];
+    book: Record<string, unknown>;
+    categoryName?: string;
+  }[] = [];
+  const copyRows: { book_id: string; acquisition?: CopyAcquisition }[] = [];
   const enrichmentBooks = new Map<string, EnrichmentBook>();
   const existingById = new Map(existingBooks.map(book => [book.id, book]));
 
   for (let i = 0; i < books.length; i++) {
     const row = books[i];
-    const indexStr = `Row ${i + 1}`;
+    const indexStr = `Row ${getRowNumber(row, i)}`;
     const title = row.title?.trim();
     const author = row.author?.trim();
 
@@ -176,6 +242,7 @@ export async function batchImportBooks(
     const key = titleKey(title, author);
     const stock = parseInt(String(row.stock ?? row.copiesCount ?? '1'), 10);
     const copies = isNaN(stock) ? 1 : Math.min(Math.max(stock, 0), MAX_COPIES_PER_ROW);
+    const acquisition = acquisitionByRow[i];
     if (!isNaN(stock) && stock > MAX_COPIES_PER_ROW) {
       logs.push(`[${indexStr}] Stock capped at ${MAX_COPIES_PER_ROW} copies (file said ${stock}).`);
     }
@@ -188,30 +255,29 @@ export async function batchImportBooks(
           id: match, isbn: existing?.isbn || isbn || null, title: existing?.title || title,
           cover_url: row.cover_url || enrichmentBooks.get(match)?.cover_url || existing?.cover_url || null,
         });
-      } else if (row.cover_url && !newBooks[match].insert.cover_url) {
-        newBooks[match].insert.cover_url = row.cover_url;
+      } else if (row.cover_url && !newBooks[match].book.cover_url) {
+        newBooks[match].book.cover_url = row.cover_url;
       }
       duplicateCount++;
       const reason = cleanIsbn && isbnMap.has(cleanIsbn) ? `matching ISBN (${isbn})` : `matching Title & Author ("${title}" by ${author})`;
       if (!options.addCopiesToDuplicates || copies === 0) {
         logs.push(`[${indexStr}] Skipped duplicate (${reason}).`);
       } else if (typeof match === 'number') {
-        newBooks[match].copies = Math.min(newBooks[match].copies + copies, MAX_COPIES_PER_ROW);
-        logs.push(`[${indexStr}] Duplicate of an earlier row (${reason}): copies added to it.`);
+        const pendingCopies = newBooks[match].acquisitions;
+        const accepted = Math.min(copies, MAX_COPIES_PER_ROW - pendingCopies.length);
+        pendingCopies.push(...Array.from({ length: accepted }, () => acquisition));
+        logs.push(`[${indexStr}] Duplicate of an earlier row (${reason}): adding ${accepted} of ${copies} requested copies.`);
       } else {
-        for (let c = 0; c < copies; c++) copiesForExisting.push({ book_id: match, status: 'AVAILABLE' });
+        for (let copy = 0; copy < copies; copy++) {
+          copyRows.push(acquisition ? { book_id: match, acquisition } : { book_id: match });
+        }
         logs.push(`[${indexStr}] Duplicate (${reason}): adding ${copies} copies to the existing book.`);
       }
       continue;
     }
 
-    let categoryId: string | null = null;
     const categoryName = row.category?.trim() || row.category_name?.trim();
-    if (categoryName) {
-      const lowerCat = categoryName.toLowerCase();
-      categoryId = categoryCache.get(lowerCat) ?? (await getOrCreateCategoryByName(supabase, categoryName));
-      if (categoryId) categoryCache.set(lowerCat, categoryId);
-    }
+    const categoryId = categoryName ? categoryCache.get(categoryName.toLowerCase()) ?? null : null;
 
     let tagsArray: string[] = [];
     if (Array.isArray(row.tags)) {
@@ -225,9 +291,9 @@ export async function batchImportBooks(
     titleAuthorMap.set(key, index);
     newBooks.push({
       row: indexStr,
-      key,
-      copies,
-      insert: {
+      acquisitions: Array.from({ length: copies }, () => acquisition),
+      ...(!categoryId && categoryName ? { categoryName } : {}),
+      book: {
         title,
         author,
         isbn: isbn || null,
@@ -244,52 +310,42 @@ export async function batchImportBooks(
     });
   }
 
-  // One insert for all new books; match the returned ids back by title + author (unique in this batch).
-  const copyRows = [...copiesForExisting];
-  let importedCount = 0;
-  if (newBooks.length > 0) {
-    const { data: inserted, error: insertError } = await supabase
-      .from('books')
-      .insert(newBooks.map(b => b.insert))
-      .select('id, title, author, isbn, cover_url');
-    if (insertError) throw new Error(`Import failed, no books were added: ${insertError.message}`);
-
-    const idByKey = new Map((inserted ?? []).map((b: { id: string; title: string; author: string }) => [titleKey(b.title, b.author), b.id]));
-    for (const b of newBooks) {
-      const id = idByKey.get(b.key);
-      if (!id) continue;
-      importedCount++;
-      enrichmentBooks.set(id, { id, isbn: b.insert.isbn as string | null, title: String(b.insert.title), cover_url: b.insert.cover_url as string | null });
-      for (let c = 0; c < b.copies; c++) copyRows.push({ book_id: id, status: 'AVAILABLE' });
-      logs.push(`[${b.row}] Imported "${b.insert.title}" by ${b.insert.author} (${b.copies} copies).`);
-    }
+  let applied: { books: (EnrichmentBook & { author: string; copyIds: string[] })[]; copyIds: string[] } = { books: [], copyIds: [] };
+  if (newBooks.length > 0 || copyRows.length > 0) {
+    const { data, error } = await createAdminClient().rpc('apply_catalog_spreadsheet', {
+      p_books: newBooks.map(({ book, acquisitions, categoryName }) => ({
+        book, acquisitions, ...(categoryName ? { categoryName } : {}),
+      })),
+      p_copies: copyRows,
+    });
+    if (error) throw new Error(`Import failed. No books or copies were saved. ${error.message}`);
+    if (!data) throw new Error('Could not verify the spreadsheet import result.');
+    applied = data;
   }
 
-  let copiesAddedCount = 0;
-  for (let i = 0; i < copyRows.length; i += COPY_INSERT_CHUNK) {
-    const chunk = copyRows.slice(i, i + COPY_INSERT_CHUNK);
-    const { error: copyError } = await supabase.from('book_copies').insert(chunk);
-    if (copyError) {
-      logs.push(`Failed to add ${chunk.length} copies: ${copyError.message}`);
-    } else {
-      copiesAddedCount += chunk.length;
-    }
+  const bookIds = new Set(copyRows.map(copy => copy.book_id));
+  const { copyIds } = applied;
+  const importedCount = applied.books.length;
+  const copiesAddedCount = copyIds.length;
+  for (const [index, { id, title, author, isbn, cover_url, copyIds: bookCopyIds }] of applied.books.entries()) {
+    bookIds.add(id);
+    enrichmentBooks.set(id, { id, isbn, title, cover_url });
+    logs.push(`[${newBooks[index].row}] Imported "${title}" by ${author} (${bookCopyIds.length} copies).`);
   }
 
-  const { data: authData } = await supabase.auth.getUser();
   await logAuditActivity(
-    authData?.user?.id,
+    user.id,
     'book',
     null,
     'batch_import',
     `Batch import: ${importedCount} books created, ${copiesAddedCount} copies added, ${duplicateCount} duplicates.`,
-    { rows: books.length, imported: importedCount, copiesAdded: copiesAddedCount, duplicates: duplicateCount, addCopiesToDuplicates: Boolean(options.addCopiesToDuplicates) }
+    { rows: books.length, imported: importedCount, copiesAdded: copiesAddedCount, duplicates: duplicateCount, addCopiesToDuplicates: Boolean(options.addCopiesToDuplicates), bookIds: [...bookIds], copyIds }
   );
 
   let enrichmentJobId: string | undefined;
   if (enrichmentBooks.size) {
     try {
-      enrichmentJobId = await enqueueCatalogEnrichment([...enrichmentBooks.values()], authData?.user?.id || null) || undefined;
+      enrichmentJobId = await enqueueCatalogEnrichment([...enrichmentBooks.values()], user.id) || undefined;
       if (enrichmentJobId) scheduleCatalogImport();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown queue error';
@@ -301,6 +357,7 @@ export async function batchImportBooks(
   revalidateTag('public-books', 'max');
   revalidateTag('catalog', 'max');
   revalidateTag('books', 'max');
+  if (newBooks.some(book => book.categoryName)) revalidateTag('categories', 'max');
 
   return {
     success: true,

@@ -13,6 +13,8 @@ import { BookDetailsForm } from '@/components/catalog/add/BookDetailsForm';
 import { CoverUploader } from '@/components/catalog/add/CoverUploader';
 import { toast } from 'sonner';
 import { NavigationGuard } from '@/components/layout/NavigationGuard';
+import { EMPTY_ACQUISITION } from '@/components/catalog/CopyAcquisitionFields';
+import { copyAcquisitionSchema, hasCopyAcquisition } from '@/lib/copy-acquisition';
 
 const EMPTY_FORM = {
   title: '',
@@ -37,6 +39,9 @@ export function AddBookClient() {
   const [isbnLoading, setIsbnLoading] = useState(false);
   
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [acquisition, setAcquisition] = useState(EMPTY_ACQUISITION);
+  const [acquisitionError, setAcquisitionError] = useState<string | null>(null);
+  const hasAcquisition = hasCopyAcquisition(acquisition);
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   // Set after a successful save so leaving the page doesn't trigger the guard.
@@ -44,6 +49,7 @@ export function AddBookClient() {
   const isDirty =
     !saved &&
     (coverFile !== null ||
+      hasAcquisition ||
       (Object.keys(EMPTY_FORM) as Array<keyof typeof EMPTY_FORM>).some((k) => formData[k] !== EMPTY_FORM[k]));
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
@@ -99,6 +105,11 @@ export function AddBookClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setValidationAttempted(true);
+    const validation = copyAcquisitionSchema.safeParse(acquisition);
+    if (!validation.success) {
+      setAcquisitionError(validation.error.issues[0].message);
+      return;
+    }
     if (!e.currentTarget.checkValidity()) return;
     setLoading(true);
 
@@ -156,7 +167,8 @@ export function AddBookClient() {
           description: formData.description || null,
           published_year: formData.published_year ? Number(formData.published_year) : null,
         },
-        copiesCount: formData.copies
+        copiesCount: formData.copies,
+        ...(hasAcquisition ? { acquisition } : {}),
       });
 
       if (!result.success) throw new Error(result.error);
@@ -198,6 +210,12 @@ export function AddBookClient() {
               categories={categories}
               hideIsbnField
               validationAttempted={validationAttempted}
+              acquisition={acquisition}
+              onAcquisitionChange={(value) => {
+                setAcquisition(value);
+                setAcquisitionError(null);
+              }}
+              acquisitionError={acquisitionError}
             />
 
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-border/30 mt-8">

@@ -48,7 +48,8 @@ import { fetchBooksCore, fetchCategoriesCore } from '@/lib/actions/books-core';
 import { assertStaffCatalogAccess } from '@/lib/actions/catalog/auth';
 import { getCategories, getOrCreateCategoryByName } from '@/lib/actions/catalog/categories';
 import { getBooks, createBook, updateBook, softDeleteBook, restoreBook } from '@/lib/actions/catalog/books';
-import { addBookCopies, updateBookCopyStatus, getBookPublicDetails, getBookAdminDetails } from '@/lib/actions/catalog/copies';
+import { addBookCopies, updateBookCopyStatus, getBookPublicDetails, getBookAdminDetails, recordCopyDisposition, updateCopyAcquisition } from '@/lib/actions/catalog/copies';
+import { libraryDate } from '@/lib/copy-acquisition';
 import { getBooksForExport, batchImportBooks, lookupAndImportISBN } from '@/lib/actions/catalog/import-export';
 import { fetchISBNDetails } from '@/lib/actions/isbn-lookup';
 import { getPublicBooksCached, getPublicBookById, getCategoriesCached } from '@/lib/actions/public-catalog';
@@ -618,6 +619,8 @@ describe('Catalog & Books Server Actions', () => {
       ]);
       expect(mockRevalidatePath).toHaveBeenCalledWith('/inventory');
       expect(mockRevalidatePath).toHaveBeenCalledWith('/student-catalog/book-1');
+      expect(mockLogAuditActivity).toHaveBeenCalledWith('lib-1', 'book_copy', null, 'create',
+        expect.any(String), { book_id: 'book-1', copiesCount: 2, copyIds: [] }, null, null);
 
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       serverClientHelper.setTableResponse('book_copies', null, { message: 'DB err' });
@@ -660,11 +663,8 @@ describe('Catalog & Books Server Actions', () => {
     it('updateBookCopyStatus allows marking BORROWED copy as LOST and transitions active/overdue loans to LOST', async () => {
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
 
-      const fetchCurrent = createMockQueryBuilder({ status: 'BORROWED' }, null);
-      const updateCopy = createMockQueryBuilder([{ id: 'copy-1' }], null);
-      const fetchUpdated = createMockQueryBuilder({ id: 'copy-1', book_id: 'book-1', status: 'LOST' }, null);
-      queueTableBuilders(serverClientHelper, 'book_copies', [fetchCurrent, updateCopy, fetchUpdated]);
-      serverClientHelper.setTableResponse('borrowing_records', null, null);
+      adminClientHelper.setRpcResponse({ id: 'copy-1', bookId: 'book-1', status: 'LOST', queueWaiting: false }, null, 'change_book_copy_lifecycle');
+      serverClientHelper.setTableResponse('book_copies', { id: 'copy-1', book_id: 'book-1', status: 'LOST' }, null);
 
       const res = await updateBookCopyStatus({ id: 'copy-1', status: 'LOST' });
 
@@ -672,10 +672,42 @@ describe('Catalog & Books Server Actions', () => {
         success: true,
         data: { id: 'copy-1', book_id: 'book-1', status: 'LOST' },
       });
-      const loanBuilder = serverClientHelper.getTableBuilder('borrowing_records');
-      expect(loanBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'LOST' }));
-      expect(loanBuilder.eq).toHaveBeenCalledWith('book_copy_id', 'copy-1');
-      expect(loanBuilder.in).toHaveBeenCalledWith('status', ['ACTIVE', 'OVERDUE']);
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('change_book_copy_lifecycle', {
+        p_actor: 'lib-1', p_copy_id: 'copy-1', p_change: { status: 'LOST', occurredOn: libraryDate() },
+      });
+      expect(mockLogAuditActivity).not.toHaveBeenCalled();
+    });
+
+    it('saves acquisition and disposition only for authorized active staff and validates the change', async () => {
+      const disposition = { id: 'copy-1', status: 'SOLD', occurredOn: '2024-02-29', saleAmount: '0.50' };
+      const acquisition = { method: 'DONATED', acquiredOn: '2024-02-01', purchasePrice: null };
+      setAuthUser(serverClientHelper, { id: 'staff-1' }, { id: 'staff-1', role: 'library_staff', status: 'ACTIVE', permissions: { manage_inventory: true } });
+      expect(await recordCopyDisposition(disposition)).toEqual({ success: false, error: 'Unauthorized access' });
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'PENDING' });
+      expect(await updateCopyAcquisition({ id: 'copy-1', acquisition })).toMatchObject({ success: false });
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+      expect(await recordCopyDisposition({ ...disposition, saleAmount: '-1' })).toMatchObject({ success: false, validationErrors: { saleAmount: expect.any(Array) } });
+      expect(adminClientHelper.rpc).not.toHaveBeenCalled();
+      adminClientHelper.setRpcResponse({ id: 'copy-1', bookId: 'book-1', status: 'AVAILABLE', queueWaiting: false }, null, 'change_book_copy_lifecycle');
+      expect(await updateCopyAcquisition({ id: 'copy-1', acquisition })).toMatchObject({ success: true });
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('change_book_copy_lifecycle', {
+        p_actor: 'lib-1', p_copy_id: 'copy-1', p_change: { acquisition },
+      });
+      adminClientHelper.setRpcResponse({ id: 'copy-1', bookId: 'book-1', status: 'SOLD', queueWaiting: false }, null, 'change_book_copy_lifecycle');
+      expect(await recordCopyDisposition(disposition)).toMatchObject({ success: true, data: { status: 'SOLD' } });
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/student-catalog/book-1');
+    });
+
+    it('adds a received batch with its per-copy acquisition and a discoverable audit summary', async () => {
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+      const acquisition = { method: 'PURCHASED', acquiredOn: '2024-02-29', purchasePrice: '15.25' };
+      adminClientHelper.setRpcResponse([{ id: 'copy-1' }, { id: 'copy-2' }], null, 'create_book_copy_batch');
+      expect(await addBookCopies({ bookId: 'book-1', copiesCount: 2, acquisition })).toEqual({ success: true, data: null });
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('create_book_copy_batch', {
+        p_copies: [{ book_id: 'book-1', acquisition }, { book_id: 'book-1', acquisition }],
+      });
+      expect(mockLogAuditActivity).toHaveBeenCalledWith('lib-1', 'book_copy', null, 'create',
+        expect.any(String), { book_id: 'book-1', copiesCount: 2, copyIds: ['copy-1', 'copy-2'], acquisition }, null, null);
     });
 
     it('updateBookCopyStatus refuses LOST -> AVAILABLE while a lost loan is open, and allows it once none is', async () => {
@@ -688,7 +720,7 @@ describe('Catalog & Books Server Actions', () => {
         success: false,
         error: 'This copy is still on a lost loan. Scan it at the return desk to close the loan.',
       });
-      expect(adminClientHelper.rpc).not.toHaveBeenCalledWith('release_copy', expect.anything());
+      expect(adminClientHelper.rpc).not.toHaveBeenCalledWith('recover_book_copy', expect.anything());
       const loanBuilder = serverClientHelper.getTableBuilder('borrowing_records');
       expect(loanBuilder.eq).toHaveBeenCalledWith('status', 'LOST');
       expect(loanBuilder.is).toHaveBeenCalledWith('returned_at', null);
@@ -699,24 +731,24 @@ describe('Catalog & Books Server Actions', () => {
         createMockQueryBuilder({ id: 'copy-1', book_id: 'book-1', status: 'AVAILABLE' }, null),
       ]);
       serverClientHelper.setTableResponse('borrowing_records', [], null);
-      adminClientHelper.setRpcResponse(null, null, 'release_copy');
+      adminClientHelper.setRpcResponse(null, null, 'recover_book_copy');
       expect((await updateBookCopyStatus({ id: 'copy-1', status: 'AVAILABLE' })).success).toBe(true);
-      expect(adminClientHelper.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-1' });
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('recover_book_copy', { p_copy_id: 'copy-1', p_expected_status: 'LOST' });
       errSpy.mockRestore();
     });
 
-    it('updateBookCopyStatus calls release_copy RPC when returning MAINTENANCE/LOST copy to AVAILABLE, and handles optimistic lock failure', async () => {
+    it('updateBookCopyStatus requests a locked recovery for maintenance and handles an optimistic lock failure', async () => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
 
       const fetchCurrent = createMockQueryBuilder({ status: 'MAINTENANCE' }, null);
       const fetchUpdated = createMockQueryBuilder({ id: 'copy-1', book_id: 'book-1', status: 'AVAILABLE' }, null);
       queueTableBuilders(serverClientHelper, 'book_copies', [fetchCurrent, fetchUpdated]);
-      adminClientHelper.setRpcResponse(null, null, 'release_copy');
+      adminClientHelper.setRpcResponse(null, null, 'recover_book_copy');
 
       const res = await updateBookCopyStatus({ id: 'copy-1', status: 'AVAILABLE' });
       expect(res.success).toBe(true);
-      expect(adminClientHelper.rpc).toHaveBeenCalledWith('release_copy', { p_copy_id: 'copy-1' });
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('recover_book_copy', { p_copy_id: 'copy-1', p_expected_status: 'MAINTENANCE' });
 
       // Optimistic lock mismatch when setting MAINTENANCE
       queueTableBuilders(serverClientHelper, 'book_copies', [
@@ -824,6 +856,17 @@ describe('Catalog & Books Server Actions', () => {
       });
       expect(details.copies[1].reservation).toBeNull();
       expect(details.queue).toEqual([{ id: 'r-ready', status: 'READY' }]);
+      expect(details.copies[0]).not.toHaveProperty('lifecycle');
+      expect(adminClientHelper.from).not.toHaveBeenCalledWith('book_copy_lifecycle');
+
+      setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
+      adminClientHelper.setTableResponse('book_copy_lifecycle', [{
+        copy_id: 'copy-1', acquisition_method: 'PURCHASED', acquired_on: '2024-02-29',
+        purchase_price: 125, disposition_on: null, sale_amount: null, last_lost_on: null,
+      }]);
+      const managerDetails = await getBookAdminDetails('book-1');
+      expect(managerDetails.copies[0].lifecycle).toMatchObject({ acquisition_method: 'PURCHASED', purchase_price: 125 });
+      expect(managerDetails.copies[1].lifecycle).toBeNull();
 
       serverClientHelper.setTableResponse('books', null, { message: 'Not found' });
       await expect(getBookAdminDetails('book-missing')).rejects.toThrow('Not found');
@@ -883,22 +926,14 @@ describe('Catalog & Books Server Actions', () => {
     it('batchImportBooks skips invalid rows, handles duplicates (skip vs addCopiesToDuplicates), caps stock at 50, creates categories, and logs audit', async () => {
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
 
-      const existingBooksBuilder = createMockQueryBuilder(
-        [{ id: 'existing-1', isbn: '978-1111111111', title: 'Existing Book', author: 'Known Author' }],
-        null
-      );
-      const insertBooksBuilder = createMockQueryBuilder(
-        [{ id: 'new-1', title: 'New Book', author: 'New Author' }],
-        null
-      );
-      queueTableBuilders(serverClientHelper, 'books', [existingBooksBuilder, insertBooksBuilder]);
-
-      const existingCatsBuilder = createMockQueryBuilder([{ id: 'cat-1', name: 'Fiction' }], null);
-      const lookupCatBuilder = createMockQueryBuilder(null, null);
-      const createCatBuilder = createMockQueryBuilder({ id: 'cat-2' }, null);
-      queueTableBuilders(serverClientHelper, 'categories', [existingCatsBuilder, lookupCatBuilder, createCatBuilder]);
-
-      serverClientHelper.setTableResponse('book_copies', null, null);
+      serverClientHelper.setTableResponse('books', [{ id: 'existing-1', isbn: '978-1111111111', title: 'Existing Book', author: 'Known Author' }]);
+      serverClientHelper.setTableResponse('categories', [{ id: 'cat-1', name: 'Fiction' }]);
+      const newCopyIds = Array.from({ length: 50 }, (_, index) => `new-copy-${index}`);
+      const copyIds = [...newCopyIds, 'existing-copy-1', 'existing-copy-2'];
+      adminClientHelper.setRpcResponse({
+        books: [{ id: 'new-1', title: 'New Book', author: 'New Author', isbn: '978-2222222222', cover_url: null, copyIds: newCopyIds }],
+        copyIds,
+      }, null, 'apply_catalog_spreadsheet');
 
       const res = await batchImportBooks(
         [
@@ -916,6 +951,14 @@ describe('Catalog & Books Server Actions', () => {
       expect(res.copiesAdded).toBe(52); // 2 for existing + 50 capped for new
       expect(res.logs.some((l) => l.includes('Missing title or author'))).toBe(true);
       expect(res.logs.some((l) => l.includes('Stock capped at 50 copies'))).toBe(true);
+      expect(adminClientHelper.rpc).toHaveBeenCalledWith('apply_catalog_spreadsheet', {
+        p_books: [{
+          book: expect.objectContaining({ title: 'New Book', tags: ['tag1', 'tag2'], published_year: 2020 }),
+          acquisitions: Array.from({ length: 50 }, () => null),
+          categoryName: 'Philosophy',
+        }],
+        p_copies: [{ book_id: 'existing-1' }, { book_id: 'existing-1' }],
+      });
       expect(mockLogAuditActivity).toHaveBeenCalledWith(
         'lib-1',
         'book',
@@ -925,31 +968,29 @@ describe('Catalog & Books Server Actions', () => {
         expect.objectContaining({ addCopiesToDuplicates: true })
       );
       expect(mockRevalidateTag).toHaveBeenCalledWith('catalog', 'max');
+      expect(mockRevalidateTag).toHaveBeenCalledWith('categories', 'max');
     });
 
-    it('batchImportBooks skips duplicate copies when addCopiesToDuplicates is false and records copy insert failure in logs', async () => {
+    it('batchImportBooks skips duplicate copies when addCopiesToDuplicates is false and rejects a failed atomic import', async () => {
       setAuthUser(serverClientHelper, { id: 'lib-1' }, { id: 'lib-1', role: 'librarian', status: 'ACTIVE' });
 
-      queueTableBuilders(serverClientHelper, 'books', [
-        createMockQueryBuilder([{ id: 'ex-1', isbn: null, title: 'Dup', author: 'Auth' }], null),
-        createMockQueryBuilder([{ id: 'new-1', title: 'Fresh', author: 'Auth' }], null),
-      ]);
+      serverClientHelper.setTableResponse('books', [{ id: 'ex-1', isbn: null, title: 'Dup', author: 'Auth' }]);
       serverClientHelper.setTableResponse('categories', [], null);
-      serverClientHelper.setTableResponse('book_copies', null, { message: 'Copy DB error' });
+      adminClientHelper.setRpcResponse(null, { message: 'Copy DB error' }, 'apply_catalog_spreadsheet');
 
-      const res = await batchImportBooks(
+      await expect(batchImportBooks(
         [
           { title: 'dup', author: 'auth', stock: 3 },
           { title: 'Fresh', author: 'Auth', stock: 2 },
         ],
         { addCopiesToDuplicates: false }
-      );
-
-      expect(res.imported).toBe(1);
-      expect(res.duplicates).toBe(1);
-      expect(res.copiesAdded).toBe(0);
-      expect(res.logs.some((l) => l.includes('Skipped duplicate'))).toBe(true);
-      expect(res.logs.some((l) => l.includes('Failed to add 2 copies: Copy DB error'))).toBe(true);
+      )).rejects.toThrow('No books or copies were saved. Copy DB error');
+      expect(adminClientHelper.rpc).toHaveBeenCalledExactlyOnceWith('apply_catalog_spreadsheet', {
+        p_books: [{ book: expect.objectContaining({ title: 'Fresh' }), acquisitions: [null, null] }],
+        p_copies: [],
+      });
+      expect(mockLogAuditActivity).not.toHaveBeenCalled();
+      expect(mockRevalidateTag).not.toHaveBeenCalled();
     });
 
     it('lookupAndImportISBN enforces staff access, validates ISBN format, and queues catalog_import_jobs', async () => {

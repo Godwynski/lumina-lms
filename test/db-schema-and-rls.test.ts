@@ -149,7 +149,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     if (db) await db.close();
   });
 
-  it('creates all 19 public tables, audit_log_records view, FK indexes, and required columns on borrowing_records', async () => {
+  it('creates all 20 public tables, audit_log_records view, FK indexes, and required columns on borrowing_records', async () => {
     const tablesRes = await db.query<{ tablename: string }>(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
     );
@@ -159,6 +159,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       'attendance_archive',
       'audit_logs',
       'book_copies',
+      'book_copy_lifecycle',
       'books',
       'borrowing_records',
       'borrowing_records_archive',

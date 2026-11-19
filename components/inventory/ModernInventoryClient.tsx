@@ -27,6 +27,7 @@ import {
   buildImportTemplateWorkbook,
   filterValidImportBooks,
   parseImportRows,
+  parseImportSheet,
   type ParsedBook,
 } from "@/lib/catalog-import";
 export type { ParsedBook };
@@ -99,6 +100,7 @@ import { toast } from "sonner";
 import { toCsv } from "@/lib/csv";
 import { 
   getBooksForExport, 
+  getCopyRecordsForExport,
   batchImportBooks
 } from "@/lib/actions/catalog";
 import { useBatchTask } from "@/components/providers/BatchTaskProvider";
@@ -150,6 +152,7 @@ export function ModernInventoryClient({
   // Import File States
   const [importFile, setImportFile] = useState<File | null>(null);
   const [parsedBooks, setParsedBooks] = useState<ParsedBook[]>([]);
+  const [acquisitionErrors, setAcquisitionErrors] = useState<string[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const parseIdRef = useRef(0);
   const [isImporting, setIsImporting] = useState(false);
@@ -171,6 +174,7 @@ export function ModernInventoryClient({
   );
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
+  const [isExportingCopyRecords, setIsExportingCopyRecords] = useState(false);
   const [isExportingJSON, setIsExportingJSON] = useState(false);
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
@@ -187,6 +191,7 @@ export function ModernInventoryClient({
     const parseId = ++parseIdRef.current;
     setImportFile(file);
     setParsedBooks([]);
+    setAcquisitionErrors([]);
     setIsParsing(true);
     setImportResults(null);
 
@@ -208,40 +213,46 @@ export function ModernInventoryClient({
     reader.onload = async (event) => {
       if (parseId !== parseIdRef.current) return;
       try {
-        let jsonArray: Record<string, unknown>[] = [];
+        let normalized: ParsedBook[];
         
         if (fileType === "json") {
           const text = event.target?.result as string;
           const parsed = JSON.parse(text);
-          jsonArray = Array.isArray(parsed) ? parsed : [parsed];
+          normalized = parseImportRows(Array.isArray(parsed) ? parsed : [parsed]);
         } else if (fileType === "csv" || fileType === "xlsx" || fileType === "xls") {
           const XLSX = await import("xlsx");
           if (parseId !== parseIdRef.current) return;
           const data = new Uint8Array(event.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, {
+            type: "array",
+            cellDates: true,
+            ...(fileType === "csv" ? { raw: true, codepage: 65001 } : {}),
+          });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          jsonArray = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { raw: false, defval: "" });
+          normalized = worksheet ? parseImportSheet(XLSX, worksheet) : [];
         } else {
           failParse("Unsupported file format.");
           return;
         }
 
-        if (jsonArray.length === 0) {
+        if (normalized.length === 0) {
           failParse("The file appears to be empty.");
           return;
         }
 
-        // Normalize headers/keys using the shared importer column list
-        const normalized = parseImportRows(jsonArray);
+        const errors = normalized.flatMap(row =>
+          row.acquisitionError ? [`Row ${row.rowNumber}: ${row.acquisitionError}`] : []
+        );
         const validBooks = filterValidImportBooks(normalized);
-        if (validBooks.length === 0) {
+        if (validBooks.length === 0 && errors.length === 0) {
           failParse("No rows with both a title and an author were found.");
           return;
         }
+        setAcquisitionErrors(errors);
         setParsedBooks(validBooks);
         setIsParsing(false);
-        toast.success(`Successfully parsed ${validBooks.length} valid book records.`);
+        if (validBooks.length > 0) toast.success(`Successfully parsed ${validBooks.length} valid book records.`);
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         failParse(`Error reading file: ${errMsg}`);
@@ -425,6 +436,26 @@ export function ModernInventoryClient({
       toast.error(`CSV export failed: ${errMsg}`);
     } finally {
       setIsExportingCSV(false);
+    }
+  };
+
+  const handleExportCopyRecords = async () => {
+    setIsExportingCopyRecords(true);
+    try {
+      const csv = await getCopyRecordsForExport();
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "lumina_copy_records.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      toast.success("Copy records exported to CSV.");
+    } catch {
+      toast.error("Copy Records CSV export failed.");
+    } finally {
+      setIsExportingCopyRecords(false);
     }
   };
 
@@ -899,7 +930,7 @@ export function ModernInventoryClient({
                     <div className="flex-1 overflow-y-auto space-y-4 pr-1">
                       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/10 bg-muted/10 px-4 py-2.5">
                         <span className="text-xs text-muted-foreground font-medium">
-                          Need a starting spreadsheet? Download the template with accepted headers and a sample row.
+                          Optional copy fields include acquisition method (Bought or Donated), acquisition date (YYYY-MM-DD), and price per copy in pesos.
                         </span>
                         <Button
                           type="button"
@@ -937,6 +968,7 @@ export function ModernInventoryClient({
                                 e.stopPropagation();
                                 setImportFile(null);
                                 setParsedBooks([]);
+                                setAcquisitionErrors([]);
                                 setImportResults(null);
                               }}
                               className="relative mt-3 text-xs text-destructive font-bold hover:underline"
@@ -954,18 +986,29 @@ export function ModernInventoryClient({
                         )}
                       </div>
 
-                      {parsedBooks.length > 0 && !importResults && (
+                      {(parsedBooks.length > 0 || acquisitionErrors.length > 0) && !importResults && (
                         <div className="bg-muted/10 border border-border/10 rounded-2xl p-4 space-y-3">
                           <div className="flex justify-between items-center">
                             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dry-Run Preview Summary</span>
                             <Badge className="bg-primary/20 text-primary border-none">{parsedBooks.length} Books Detected</Badge>
                           </div>
                           <div className="max-h-32 overflow-y-auto text-xs space-y-1.5 custom-scrollbar pr-1">
-                            {parsedBooks.slice(0, 5).map((b, idx) => (
-                              <div key={idx} className="flex justify-between border-b border-border/5 py-1 text-muted-foreground">
-                                <span className="font-semibold text-foreground truncate max-w-[200px]">{b.title}</span>
-                                <span>by {b.author}</span>
-                                <span>{b.stock} cop{b.stock > 1 ? "ies" : "y"}</span>
+                            {parsedBooks.slice(0, 5).map(b => (
+                              <div key={b.rowNumber} className="border-b border-border/5 py-1 text-muted-foreground">
+                                <div className="flex justify-between gap-2">
+                                  <span className="font-semibold text-foreground truncate max-w-[200px]">{b.title}</span>
+                                  <span>by {b.author}</span>
+                                  <span className="shrink-0">{b.stock} {b.stock === 1 ? "copy" : "copies"}</span>
+                                </div>
+                                {b.acquisition && (
+                                  <p>
+                                    {[
+                                      b.acquisition.method === "PURCHASED" ? "Bought" : b.acquisition.method === "DONATED" ? "Donated" : null,
+                                      b.acquisition.acquiredOn,
+                                      b.acquisition.purchasePrice == null ? null : `₱${b.acquisition.purchasePrice} per copy`,
+                                    ].filter(Boolean).join(" · ")}
+                                  </p>
+                                )}
                               </div>
                             ))}
                             {parsedBooks.length > 5 && (
@@ -974,6 +1017,14 @@ export function ModernInventoryClient({
                               </div>
                             )}
                           </div>
+                          {acquisitionErrors.length > 0 && (
+                            <div role="alert" className="rounded-lg border border-destructive/30 px-3 py-2 text-xs text-destructive">
+                              <p className="font-semibold">Rows with invalid acquisition details will be skipped.</p>
+                              <ul className="mt-1 max-h-32 list-disc space-y-1 overflow-y-auto pl-4">
+                                {acquisitionErrors.map(error => <li key={error}>{error}</li>)}
+                              </ul>
+                            </div>
+                          )}
                           
                           <label className="flex items-center gap-2.5 text-xs text-muted-foreground cursor-pointer select-none pt-1">
                             <input
@@ -1274,6 +1325,19 @@ export function ModernInventoryClient({
                             <span className="block text-[11px] font-black uppercase tracking-wider text-foreground">Covers ZIP</span>
                             <span className="block text-[11px] text-muted-foreground font-semibold">Images (.zip)</span>
                           </div>
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/10 bg-muted/10 px-4 py-2.5">
+                        <span className="text-xs text-muted-foreground">One row per accession, including copies of archived titles.</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExportCopyRecords}
+                          disabled={isExportingCopyRecords}
+                        >
+                          {isExportingCopyRecords ? <Loader2 className="animate-spin" /> : <Download />}
+                          Copy Records CSV
                         </Button>
                       </div>
                     </div>
