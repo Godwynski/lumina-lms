@@ -8,6 +8,8 @@ import {
   Hash,
   Layers,
   Library,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -125,7 +127,7 @@ function StudentModalContent({
       <StatusBanner book={book} availability={availability} variant="compact" />
 
       {/* Cover + Title row */}
-      <div className="flex gap-4 pr-6">
+      <div className="flex min-w-0 gap-4">
         <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/20 shadow-sm">
           <Image 
             src={imgSrc} 
@@ -154,7 +156,7 @@ function StudentModalContent({
 
         <div className="flex-1 min-w-0 space-y-2">
           <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground leading-tight line-clamp-2">{book.title}</h2>
+            <h2 className="text-lg font-black tracking-tight text-foreground leading-tight break-words">{book.title}</h2>
             <p className="mt-0.5 text-sm font-bold text-muted-foreground">{book.author}</p>
           </div>
 
@@ -182,7 +184,7 @@ function StudentModalContent({
       </p>
 
       {/* Copy Meter */}
-      <div className="rounded-xl border border-border/30 bg-card/20 p-3 backdrop-blur-sm">
+      <div className="rounded-xl border border-border bg-muted/20 p-3">
         <CopyMeter available={book.available_copies} total={book.total_copies} outOfService={availability.outOfServiceCount} />
       </div>
 
@@ -264,6 +266,7 @@ export function BookDetailModal(props: BookDetailModalProps) {
 
 function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialData, canManage = true, onCancelSuccess, onCloseAutoFocus }: BookDetailModalProps) {
   const { role } = usePreferences();
+  const [expanded, setExpanded] = useState(false);
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -382,13 +385,16 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onCloseAutoFocus={onCloseAutoFocus} className={cn(
-        "flex max-h-[90dvh] flex-col overflow-hidden pt-12",
-        variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg"
+        "flex flex-col overflow-hidden gap-0 border-border bg-card text-card-foreground p-4 pt-4 sm:p-6",
+        expanded ? "h-[100dvh] max-h-[100dvh] w-screen max-w-none rounded-none" : cn("max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] sm:max-h-[90dvh]", variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg")
       )}>
-        <DialogHeader className="sr-only">
+        <DialogHeader className="mb-4 pr-20 text-left">
           <DialogTitle>Book Details</DialogTitle>
           <DialogDescription>View book information</DialogDescription>
         </DialogHeader>
+        <Button type="button" variant="ghost" size="icon" className="absolute right-12 top-3 size-9" aria-label={expanded ? "Restore dialog size" : "Expand dialog"} onClick={() => setExpanded(!expanded)}>
+          {expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+        </Button>
 
         <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
         {(role === 'super_admin' || role === 'librarian') && <Link href={`/audit?bookId=${bookId}`} className="mb-4 inline-block text-sm font-semibold text-primary hover:underline" onClick={() => onOpenChange(false)}>View book records</Link>}

@@ -20,7 +20,7 @@
   }
 }
 
-@container attendance-toolbar (min-width: 48rem) {
+@container attendance-toolbar (min-width: 60rem) {
   .groups {
     grid-template-columns: minmax(0, 3fr) minmax(19rem, 2fr);
   }

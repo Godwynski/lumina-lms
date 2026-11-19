@@ -574,7 +574,7 @@ export default function HistoryContent({
   const filterControls = (
     <div className="flex flex-col gap-2.5 sm:gap-3 w-full font-sans print:hidden">
       <div className="app-toolbar-row">
-        <div className="app-toolbar-search flex items-center gap-2 max-sm:basis-full">
+        <div className="app-toolbar-search flex items-center gap-2 max-lg:basis-full">
           <form 
             onSubmit={(e) => {
               e.preventDefault();
@@ -636,7 +636,7 @@ export default function HistoryContent({
           aria-label="Borrowing status"
           value={statusFilter}
           onChange={(event) => changeStatus(event.currentTarget.value)}
-          className="app-toolbar-control max-w-full border border-border bg-background pl-3 pr-7 lg:hidden"
+          className="app-toolbar-control min-w-0 flex-1 border border-border bg-background pl-3 pr-7 lg:hidden"
         >
           {STATUS_TABS.map((tab) => <option key={tab.key} value={tab.key}>{tab.key === "all" ? "All statuses" : tab.label}</option>)}
         </select>

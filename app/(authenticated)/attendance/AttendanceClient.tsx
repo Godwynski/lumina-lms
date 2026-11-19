@@ -931,8 +931,8 @@ function AttendanceHistoryFilters({ search, from, to, sort, onSearchChange, onDa
       aria-label="Attendance record filters"
       className="flex min-w-0 flex-col gap-2"
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="app-toolbar-search">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className="app-toolbar-search max-[380px]:basis-full">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             type="search"
@@ -950,7 +950,7 @@ function AttendanceHistoryFilters({ search, from, to, sort, onSearchChange, onDa
           aria-controls="attendance-history-dates"
           aria-expanded={isOpen}
           aria-label={hasRange ? `Date range: ${label}` : undefined}
-          className={cn('app-toolbar-control max-w-[52%] shrink-0 px-3', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
+          className={cn('app-toolbar-control max-w-full shrink-0 px-3', (hasRange || isOpen) && 'bg-accent text-accent-foreground')}
           onKeyDown={closeOnEscape}
           onClick={() => {
             if (!isOpen) {

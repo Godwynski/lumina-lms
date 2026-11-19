@@ -31,6 +31,20 @@ afterEach(() => {
 });
 
 describe('BookDetailModal (student)', () => {
+  it('expands and restores the book dialog without losing its content', async () => {
+    publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, availability: noHold });
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={vi.fn()} />));
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog).toHaveTextContent('Book Details');
+    const expand = dialog.querySelector<HTMLButtonElement>('[aria-label="Expand dialog"]')!;
+    await act(async () => expand.click());
+    expect(dialog).toHaveClass('h-[100dvh]');
+    expect(dialog).toHaveTextContent('Clean Systems');
+    await act(async () => dialog.querySelector<HTMLButtonElement>('[aria-label="Restore dialog size"]')!.click());
+    expect(dialog).not.toHaveClass('h-[100dvh]');
+    expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeInTheDocument();
+  });
+
   it('shows the description and DDC, and closes on Escape after tabbing', async () => {
     publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, availability: { ...noHold, outOfServiceCount: 0 } });
     const onOpenChange = vi.fn();

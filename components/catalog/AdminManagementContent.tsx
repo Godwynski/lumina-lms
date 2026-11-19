@@ -375,7 +375,7 @@ export function AdminManagementContent({
     <div className="space-y-6">
       {/* Header Summary */}
       {!isEditing && (
-        <div className="flex gap-6 pr-8">
+        <div className="flex min-w-0 gap-3 sm:gap-6">
           <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-lg shadow-sm border border-border/40">
             <Image 
               src={coverImgSrc} 
@@ -400,7 +400,7 @@ export function AdminManagementContent({
                  {!book.is_active ? "Archived" : isAvailable ? "In Stock" : "Out of Stock"}
                </span>
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground leading-none mb-1 line-clamp-1">{book.title}</h2>
+            <h2 className="text-lg sm:text-2xl font-semibold tracking-tight text-foreground leading-tight mb-1 break-words">{book.title}</h2>
             <p className="text-base text-muted-foreground mb-4">{book.author}</p>
             
             <div className="flex flex-wrap gap-1.5">
@@ -424,7 +424,7 @@ export function AdminManagementContent({
                  size="icon"
                  onClick={() => setIsEditing(true)}
                  aria-label={`Edit ${book.title}`}
-                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                 className="h-11 w-11 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                >
                  <Edit3 size={16} />
                </Button>

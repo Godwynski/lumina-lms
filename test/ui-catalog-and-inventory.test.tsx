@@ -974,9 +974,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       await flushPromises();
 
       // Open Edit Form
-      const editBtn = Array.from(handle.container.querySelectorAll('button')).find((b) =>
-        b.className.includes('rounded-full')
-      );
+      const editBtn = handle.container.querySelector(`button[aria-label="Edit ${book.title}"]`);
       await clickElement(editBtn);
       expect(handle.container).toHaveTextContent('Edit Library Asset Metadata');
 
@@ -1020,7 +1018,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Status updated');
 
       // Archive flow
-      await clickElement(Array.from(handle.container.querySelectorAll('button')).find((b) => b.className.includes('rounded-full')));
+      await clickElement(handle.container.querySelector('button[aria-label^="Edit "]'));
       await clickElement(findButtonByText(handle.container, 'Archive Asset'));
       expect(handle.container).toHaveTextContent('Archive this asset?');
       await clickElement(findButtonByText(handle.container, 'Confirm'));
@@ -1041,7 +1039,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       );
       await clickElement(findButtonByText(handle.container, 'Cancel'));
       expect(handle.container).toHaveTextContent('Archived');
-      await clickElement(Array.from(handle.container.querySelectorAll('button')).find((b) => b.className.includes('rounded-full')));
+      await clickElement(handle.container.querySelector('button[aria-label^="Edit "]'));
       await clickElement(findButtonByText(handle.container, 'Restore Asset'));
       await flushPromises();
       expect(mockRestoreBook).toHaveBeenCalledWith('book-1');
