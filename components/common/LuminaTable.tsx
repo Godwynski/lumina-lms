@@ -49,6 +49,7 @@ interface LuminaTableProps<T> {
 
   // Appearance
   noBorder?: boolean;
+  layoutClasses?: { compact: string; table: string };
 }
 
 export function LuminaTable<T extends { id: string | number }>({
@@ -65,6 +66,7 @@ export function LuminaTable<T extends { id: string | number }>({
   onPageChange,
   emptyState,
   noBorder,
+  layoutClasses,
 }: LuminaTableProps<T>) {
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
@@ -130,7 +132,7 @@ export function LuminaTable<T extends { id: string | number }>({
         ) : (
           <>
             {/* ── Mobile view ── */}
-            <div className="md:hidden print:hidden flex flex-col divide-y divide-border/50">
+            <div className={cn("print:hidden flex flex-col divide-y divide-border/50", layoutClasses?.compact ?? "md:hidden")}>
               {isLoading ? (
                 <div className="p-8 flex flex-col items-center gap-3 text-center">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -155,7 +157,7 @@ export function LuminaTable<T extends { id: string | number }>({
             </div>
 
             {/* ── Desktop table ── */}
-            <table className="hidden md:table print:table w-full text-left text-sm border-collapse">
+            <table className={cn("print:table w-full text-left text-sm border-collapse", layoutClasses?.table ?? "hidden md:table")}>
               <thead>
                 <tr className="border-b border-border/20 bg-muted/30">
                   {columns.map((col, idx) => (

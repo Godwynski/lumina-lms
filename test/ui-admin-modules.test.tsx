@@ -208,7 +208,7 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
     expect(document.body).toHaveTextContent('ID Verification');
   });
 
-  it('F23 & F24: AttendanceClient stacks gate input cleanly on mobile with nowrap IDs/times and renders static All-Time History', async () => {
+  it('F23 & F24: AttendanceClient exposes gate controls and full patron details to staff, with personal history for patrons', async () => {
     const records = [
       {
         id: 'att-1',
@@ -230,15 +230,16 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
       />
     );
 
-    const gateForm = staffHandle.container.querySelector('form[aria-label="Log attendance"]');
+    const staffView = staffHandle.container;
+    const gateForm = staffView.querySelector('form[aria-label="Log attendance"]');
     expect(gateForm).toBeInTheDocument();
-    expect(gateForm!.className).toContain('w-full');
+    expect(gateForm?.querySelector('input')).toHaveAccessibleName('Card or patron ID');
 
-    const mobileId = Array.from(staffHandle.container.querySelectorAll('span')).find(
-      (s) => s.textContent === 'STU-20220271'
-    );
-    expect(mobileId).toBeDefined();
-    expect(mobileId!.className).toContain('whitespace-nowrap');
+    const staffRecord = staffView.querySelector('article');
+    expect(staffRecord).toHaveTextContent('STU-20220271');
+    expect(staffRecord).toHaveTextContent('Paolo Bautista');
+    expect(staffRecord).toHaveTextContent(/Check in\s*07:23 PM/);
+    expect(staffRecord).toHaveTextContent('Still in library');
 
     cleanupClients();
 
@@ -250,11 +251,11 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
       />
     );
 
-    const allTimeLabel = Array.from(patronHandle.container.querySelectorAll('p')).find((p) =>
-      p.textContent?.includes('All-Time History')
-    );
-    expect(allTimeLabel).toBeDefined();
-    expect(allTimeLabel!.className).not.toContain('border');
+    const patronView = patronHandle.container;
+    expect(patronView).toHaveTextContent('All-Time History');
+    expect(patronView.querySelector('form[aria-label="Log attendance"]')).not.toBeInTheDocument();
+    expect(patronView.querySelector('article')).toHaveTextContent(/Check in\s*07:23 PM/);
+    expect(patronView.querySelector('article')).not.toHaveTextContent('STU-20220271');
   });
 
   it('F25: AnalyticsCharts disables Recharts mount animations, connects nulls, untruncates genre labels, and renders high-contrast demand bars', async () => {

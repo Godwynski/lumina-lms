@@ -79,7 +79,8 @@ import { CancelReservationDialog } from '@/components/catalog/CancelReservationD
 
 function findButtonByText(root: ParentNode, text: string): HTMLButtonElement | undefined {
   return Array.from(root.querySelectorAll('button')).find((btn) =>
-    btn.textContent?.toLowerCase().includes(text.toLowerCase())
+    btn.textContent?.toLowerCase().includes(text.toLowerCase()) ||
+    btn.getAttribute('aria-label')?.toLowerCase() === text.toLowerCase()
   ) as HTMLButtonElement | undefined;
 }
 
@@ -206,6 +207,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
         },
       });
       mockGetAttendanceHistory.mockResolvedValue([updatedRecord]);
+      mockGetAttendanceHistory.mockRejectedValueOnce(new Error('Today summary refresh failed'));
 
       await submitForm(cardInput.closest('form'));
 
@@ -218,31 +220,64 @@ describe('Admin, Catalog & Attendance UI Components', () => {
         'Transaction recorded',
         expect.objectContaining({ description: 'Checked out Maria Clara' })
       );
+      expect(container.querySelector('[aria-label="Attendance controls"] [role="status"]')).toHaveTextContent('Checked out Maria Clara');
       expect(cardInput.value).toBe('');
     });
 
-    it('discloses manual entry without losing a draft or disabling camera access', async () => {
+    it('leaves a rejected manual entry in place and shows the reason in the recording section', async () => {
       const { container } = await renderStaffAttendance();
-      const disclosure = findButtonByText(container, 'Manual entry')!;
+      await clickElement(findButtonByText(container, 'Enter ID'));
+      const entry = container.querySelector<HTMLInputElement>('#attendance-card-id')!;
+      await typeIntoInput(entry, 'INVALID-CARD');
+      mockRecordAttendanceByCard.mockResolvedValueOnce({ success: false, error: 'Card not found.' });
+      await submitForm(entry.form);
+      expect(container.querySelector('[aria-label="Attendance controls"] [role="alert"]')).toHaveTextContent('Card not found.');
+      expect(entry).toHaveValue('INVALID-CARD');
+    });
+
+    it('offers manual entry from a camera failure and focuses the ID field', async () => {
+      const { container } = await renderStaffAttendance();
+      await clickElement(findButtonByText(container, 'Scan QR'));
+      await vi.waitFor(() => expect(document.querySelector('[role="dialog"] [role="alert"]')).toHaveTextContent('Camera unavailable'));
+      await clickElement(findButtonByText(document.body, 'Enter ID instead'));
+      await vi.waitFor(() => {
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(document.activeElement).toBe(container.querySelector('#attendance-card-id'));
+      });
+      expect(mockRecordAttendanceByCard).not.toHaveBeenCalled();
+    });
+
+    it('keeps the toolbar compact and switches between manual entry and filters without losing a draft', async () => {
+      const { container } = await renderStaffAttendance();
+      const disclosure = findButtonByText(container, 'Enter ID')!;
       const camera = findButtonByText(container, 'Scan QR')!;
       expect(disclosure).toHaveAttribute('aria-expanded', 'false');
       const form = container.querySelector('form[aria-label="Log attendance"]')!;
       expect(disclosure).toHaveAttribute('aria-controls', form.id);
       const field = form.querySelector('input')!;
+      const toolbar = container.querySelector('[aria-label="Attendance controls"]')!;
+      const filterToggle = findButtonByText(toolbar, 'Date range')!;
+      const dates = toolbar.querySelector('form[aria-label="Date range"]')!;
+      const sort = toolbar.querySelector('select[aria-label="Sort by"]')!;
+      expect(toolbar.querySelectorAll('h2')).toHaveLength(0);
+      expect(dates).not.toBeVisible();
+      expect(sort).not.toBeVisible();
       await clickElement(disclosure);
       expect(disclosure).toHaveAttribute('aria-expanded', 'true');
       expect(document.activeElement).toBe(field);
       await typeIntoInput(field, 'LIB-1001');
-      await clickElement(disclosure);
+      await clickElement(filterToggle);
       expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+      expect(filterToggle).toHaveAttribute('aria-expanded', 'true');
+      expect(dates).toBeVisible();
+      expect(sort).toBeVisible();
       expect(camera).toBeEnabled();
-      const filters = container.querySelector('[aria-label="Attendance record filters"]')!;
-      const search = filters.querySelector('input[type="search"]');
+      const search = toolbar.querySelector('input[type="search"]');
       expect(search).toHaveAttribute('placeholder', 'Search logs');
       expect(camera.compareDocumentPosition(disclosure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(form.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(filters.querySelector('form[aria-label="Date range"]')).not.toBeVisible();
       await clickElement(disclosure);
+      expect(filterToggle).toHaveAttribute('aria-expanded', 'false');
+      expect(dates).not.toBeVisible();
       expect(field).toHaveValue('LIB-1001');
       expect(mockRecordAttendanceByCard).not.toHaveBeenCalled();
     });
@@ -334,6 +369,18 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(container.querySelector('[aria-label="Attendance log actions"]')).toBeNull();
     });
 
+    it('shows the Manila date, both times and checkout status together in a stacked log', async () => {
+      const record = makeAttendance({ check_in_at: '2026-11-13T16:30:00Z', check_out_at: '2026-11-13T17:45:00Z', notes: 'No Log Out' });
+      const { container } = await renderStaffAttendance([record], [record]);
+      const log = container.querySelector('article')!;
+      expect(log).toHaveTextContent('Maria Clara');
+      expect(log).toHaveTextContent('2024-0001');
+      expect(log).toHaveTextContent('Nov 14, 2026');
+      expect(log).toHaveTextContent(/Check in\s*12:30 AM/);
+      expect(log).toHaveTextContent(/Check out\s*01:45 AM/);
+      expect(log).toHaveTextContent('No Log Out');
+    });
+
     it('opens Gate Attendance Scanner modal and restores focus to trigger on Escape', async () => {
       const { container } = await renderStaffAttendance();
 
@@ -378,7 +425,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(findButtonByText(container, 'Today')).toBeUndefined();
       expect(findButtonByText(container, 'All History')).toBeUndefined();
       expect(container.querySelector('tbody')).toHaveTextContent('Earlier Patron');
-      const filters = container.querySelector('[aria-label="Attendance record filters"]')!;
+      const filters = container.querySelector('[aria-label="Attendance controls"]')!;
       const toggle = findButtonByText(filters, 'Date range')!;
       const search = filters.querySelector<HTMLInputElement>('input[type="search"]')!;
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -398,7 +445,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       await submitForm(from.form!);
       await vi.waitFor(() => expect(container.querySelector('tbody')).toHaveTextContent('Matching Patron'));
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
-      expect(toggle).toHaveTextContent('Mar 1, 2024');
+      expect(toggle).toHaveAccessibleName('Date range: Mar 1, 2024');
       expect(from).not.toBeVisible();
       expect(document.activeElement).toBe(toggle);
       expect(mockGetAttendanceHistory).toHaveBeenLastCalledWith(undefined, { range: 'all', limit: 300, dateRange: { from: '2024-03-01', to: '2024-03-01' } });
@@ -414,10 +461,12 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(container).not.toHaveTextContent('Matching Patron');
       mockGetAttendanceHistory.mockResolvedValueOnce([older]);
       await clickElement(toggle);
-      await clickElement(findButtonByText(container, 'Clear dates'));
+      expect(filters.querySelector('form[aria-label="Date range"]')).toHaveTextContent('Mar 1, 2024');
+      await clickElement(findButtonByText(filters, 'Clear dates'));
       await act(async () => { await vi.advanceTimersByTimeAsync(300); });
       expect(container.querySelector('tbody')).toHaveTextContent('Earlier Patron');
       expect(toggle).toHaveTextContent('Date range');
+      expect(document.activeElement).toBe(toggle);
       expect(search).toHaveValue('Earlier Patron');
     });
 
@@ -448,7 +497,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const initial = Array.from({ length: 12 }, (_, index) => makeAttendance({ id: `attendance-${index}` }));
       const oldest = makeAttendance({ id: 'older', profiles: { full_name: 'Oldest matching patron' } });
       const { container } = await renderStaffAttendance([], initial);
-      const filters = container.querySelector('[aria-label="Attendance record filters"]')!;
+      const filters = container.querySelector('[aria-label="Attendance controls"]')!;
       expect(mockGetAttendanceHistory).not.toHaveBeenCalled();
 
       vi.useFakeTimers();
@@ -496,7 +545,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(handle.container).toHaveTextContent('All-Time History');
       expect(handle.container).toHaveTextContent('Still in library');
       expect(handle.container.querySelector('#attendance-card-id')).not.toBeInTheDocument();
-      expect(findButtonByText(handle.container, 'Manual entry')).toBeUndefined();
+      expect(findButtonByText(handle.container, 'Enter ID')).toBeUndefined();
       expect(findButtonByText(handle.container, 'Scan QR')).toBeUndefined();
       expect(findButtonByText(handle.container, 'Date range')).toBeUndefined();
     });
