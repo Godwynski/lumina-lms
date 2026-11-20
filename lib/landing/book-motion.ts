@@ -72,6 +72,8 @@ export interface Layout {
   stacked: boolean;
   heroX: number;
   heroY: number;
+  /** Extra scale for the hero book so it fits under the hero copy on short phones. */
+  heroScale: number;
   /** Cards finish in a row when three fit across, otherwise in a column. */
   row: boolean;
   cardSlots: { x: number; y: number }[];
@@ -80,6 +82,8 @@ export interface Layout {
   stepsBookY: number;
   showCta: boolean;
   wordSpread: number;
+  /** Cards shrink (never below 0.72) when the finished column would run off a short screen. */
+  cardScale: number;
 }
 
 /** All positions are px offsets from the centre of the stage. */
@@ -91,10 +95,14 @@ export function computeLayout(i: LayoutInput): Layout {
   const row = 3 * cardWidth + 2 * gap <= vw - 48;
   const bookHalf = 110 * k; // half the height of the open book seen at its resting tilt
   const ctaTop = vh / 2 - vh * 0.045 - 44;
+  // On phones the closed book sits under the hero copy; its tilted height with shadow is about 1.15 x H.
+  const heroBook = 330 * k * 1.15;
+  const heroScale = stacked ? clamp((vh - heroBottom - 36) / heroBook, 0.38, 1) : 1;
 
   let cardSlots: { x: number; y: number }[];
   let eyebrowY: number;
   let stepsBookY: number;
+  let cardScale = 1;
   if (row) {
     const rowY = -vh * 0.17;
     const tallest = Math.max(0, ...cardHeights);
@@ -102,16 +110,19 @@ export function computeLayout(i: LayoutInput): Layout {
     eyebrowY = rowY - tallest / 2 - 24 - eyebrowHeight / 2;
     stepsBookY = vh * 0.15;
   } else {
-    const colGap = 10;
-    const top = -vh / 2 + Math.max(56, vh * 0.08) + eyebrowHeight + 12;
+    const top = -vh / 2 + Math.max(40, vh * 0.07) + eyebrowHeight + 12;
+    const natural = cardHeights.reduce((a, h) => a + h, 0) + 10 * Math.max(0, cardHeights.length - 1);
+    cardScale = natural > 0 ? clamp((vh / 2 - 16 - top) / natural, 0.72, 1) : 1;
+    const colGap = 10 * cardScale;
     let y = top;
     cardSlots = cardHeights.map((h) => {
-      const slot = { x: 0, y: y + h / 2 };
-      y += h + colGap;
+      const slot = { x: 0, y: y + (h * cardScale) / 2 };
+      y += h * cardScale + colGap;
       return slot;
     });
     eyebrowY = top - 12 - eyebrowHeight / 2;
-    stepsBookY = y - colGap + 24 + bookHalf;
+    // Keep at least the top of the book on screen so the cards visibly come out of it.
+    stepsBookY = Math.min(y - colGap + 24 + bookHalf, vh / 2 - 40);
   }
 
   return {
@@ -120,7 +131,8 @@ export function computeLayout(i: LayoutInput): Layout {
     k,
     stacked,
     heroX: stacked ? 0 : vw * (vw >= 1100 ? 0.23 : 0.22),
-    heroY: stacked ? heroBottom + 24 + 160 * k - vh / 2 : 0,
+    heroY: stacked ? heroBottom + 20 + (heroBook * heroScale) / 2 - vh / 2 : 0,
+    heroScale,
     row,
     cardSlots,
     eyebrowY,
@@ -128,6 +140,7 @@ export function computeLayout(i: LayoutInput): Layout {
     stepsBookY,
     showCta: stepsBookY + bookHalf + 8 < ctaTop,
     wordSpread: stacked ? 0.6 : 1,
+    cardScale,
   };
 }
 
@@ -194,7 +207,6 @@ export interface Frame {
   eyebrow: { y: number; opacity: number };
   captions: [number, number, number];
   stamp: { opacity: number; scale: number };
-  ambienceY: number;
   act: number;
 }
 
@@ -264,7 +276,7 @@ export function computeFrame(sIn: number, L: Layout, x: FrameExtras = {}): Frame
       rx: lerp(58, 0, e),
       ry: lerp(0, toward * 9, e),
       rz: lift * (L.row ? j - 1 : j % 2 ? 1 : -1) * 6,
-      scale: lerp(0.35, 1, e),
+      scale: lerp(0.35, 1, e) * L.cardScale,
       opacity: clamp(t * 5),
     };
   });
@@ -276,11 +288,11 @@ export function computeFrame(sIn: number, L: Layout, x: FrameExtras = {}): Frame
     scene: {
       x: lerp(L.heroX, 0, travel),
       y: lerp(L.heroY, 0, travel) - arc * L.vh * 0.1 + open * L.openBookY + toSteps * (L.stepsBookY - L.openBookY),
-      scale: L.k * (1 + arc * 0.1) * (1 - 0.06 * open) * (1 - 0.04 * settle),
+      scale: L.k * lerp(L.heroScale, 1, travel) * (1 + arc * 0.1) * (1 - 0.06 * open) * (1 - 0.04 * settle),
     },
     book: { x: open * (W / 2), rx: lerp(12, 52, tossE) + settle * 4, ry, rz: lerp(-5, 0, tossE) - arc * 12 },
     tilt: { rx: -pointerY * 5, ry: pointerX * 7 },
-    gloss: ((((ry % 360) + 360) % 360) / 360) * 66 - 33 + pointerX * 6,
+    gloss: ((((ry % 360) + 360) % 360) / 360) * 110 - 55 + pointerX * 10,
     cover: { z: zFor(0, coverAngle), angle: coverAngle, shade: Math.sin(-coverAngle * RAD) * 0.35 },
     leaves,
     shadow: { y: lerp(H / 2 + 26, H * 0.3, tossE), sx: lerp(1, 2, open), sy: lerp(1, 1.7, open), opacity: 0.9 * (1 - 0.65 * arc) },
@@ -290,7 +302,6 @@ export function computeFrame(sIn: number, L: Layout, x: FrameExtras = {}): Frame
     eyebrow: { y: L.eyebrowY + (1 - eyebrowIn) * 16, opacity: eyebrowIn },
     captions: [fade(s, 0.15, 0.37), fade(s, 0.39, 0.57), L.showCta ? fade(s, 0.9, 1.5) : 0],
     stamp: { opacity: easeOut(stampT), scale: lerp(1.9, 1, easeOut(stampT)) },
-    ambienceY: -s * 80,
     act: actIndex(s),
   };
 }

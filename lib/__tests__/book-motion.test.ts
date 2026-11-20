@@ -82,6 +82,35 @@ describe("computeLayout", () => {
     expect(computeLayout({ ...desktop, vw: 820, cardWidth: 208 }).row).toBe(true);
   });
 
+  it("shrinks the finished card column to fit a short phone and keeps the book's top on screen", () => {
+    const short: LayoutInput = { vw: 360, vh: 600, cardWidth: 320, cardHeights: [150, 170, 185], eyebrowHeight: 32, heroBottom: 455 };
+    const L = computeLayout(short);
+    expect(L.cardScale).toBeLessThan(1);
+    expect(L.cardScale).toBeGreaterThanOrEqual(0.72);
+    const firstTop = L.cardSlots[0].y - (short.cardHeights[0] * L.cardScale) / 2;
+    const lastBottom = L.cardSlots[2].y + (short.cardHeights[2] * L.cardScale) / 2;
+    expect(firstTop).toBeGreaterThan(-short.vh / 2);
+    expect(lastBottom).toBeLessThanOrEqual(short.vh / 2);
+    expect(L.stepsBookY).toBeLessThanOrEqual(short.vh / 2 - 40);
+    // Cards land at the shrunken size.
+    expect(computeFrame(1, L).cards.every((c) => c.scale === L.cardScale)).toBe(true);
+    // A roomy phone keeps full-size cards.
+    expect(computeLayout(phone).cardScale).toBe(1);
+  });
+
+  it("scales the hero book down to fit under the hero copy, then grows it back for the toss", () => {
+    const tight: LayoutInput = { ...phone, vh: 600, heroBottom: 455 };
+    const L = computeLayout(tight);
+    expect(L.heroScale).toBeLessThan(1);
+    expect(L.heroScale).toBeGreaterThanOrEqual(0.38);
+    const bookBottom = L.heroY + (330 * L.k * 1.15 * L.heroScale) / 2;
+    expect(bookBottom).toBeLessThanOrEqual(tight.vh / 2);
+    expect(L.heroY - (330 * L.k * 1.15 * L.heroScale) / 2).toBeGreaterThanOrEqual(tight.heroBottom - tight.vh / 2);
+    expect(computeFrame(0, L).scene.scale).toBeCloseTo(L.k * L.heroScale);
+    expect(computeFrame(0.38, L).scene.scale).toBeCloseTo(L.k);
+    expect(computeLayout(desktop).heroScale).toBe(1);
+  });
+
   it("drops the bottom call to action on phones too short to fit it under the book", () => {
     expect(computeLayout(tinyPhone).showCta).toBe(false);
     const f = computeFrame(1, computeLayout(tinyPhone));

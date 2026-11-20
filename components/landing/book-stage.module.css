@@ -107,7 +107,7 @@
 .coverTitle b { display: block; font-size: 34px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
 .coverTitle span { display: block; margin-top: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.7; }
 .coverFoot { position: absolute; left: 38px; bottom: 36px; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.5; }
-.gloss { position: absolute; top: -20%; bottom: -20%; left: -100%; width: 300%; background: linear-gradient(105deg, transparent 42%, hsl(0 0% 100% / 0.2) 49%, hsl(0 0% 100% / 0.05) 53%, transparent 58%); }
+.gloss { position: absolute; top: 0; bottom: 0; left: -40%; width: 180%; background: linear-gradient(105deg, transparent 42%, hsl(0 0% 100% / 0.2) 49%, hsl(0 0% 100% / 0.05) 53%, transparent 58%); }
 .ci { inset: 0; overflow: hidden; border-radius: 8px 2px 2px 8px; background: hsl(221 30% 90%); }
 .ci::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, hsl(221 30% 86%) 0 2px, transparent 2px 9px); }
 .slip { position: absolute; left: 30px; right: 30px; top: 46px; bottom: 60px; padding: 12px; border-radius: 2px; background: hsl(48 60% 94%); box-shadow: 0 1px 2px hsl(var(--foreground) / 0.15); font-size: 8.5px; color: hsl(222 30% 40%); }
@@ -133,12 +133,13 @@
   .track { position: relative; height: 640vh; }
   .stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; perspective: 1700px; perspective-origin: 50% 45%; }
 
-  .ambience { display: block; position: absolute; inset: -12% 0; pointer-events: none; }
-  .beam {
-    position: absolute; top: -10%; right: -8%; width: 62%; height: 130%; transform: skewX(-18deg);
-    background: linear-gradient(90deg, hsl(var(--chart-4) / 0), hsl(var(--chart-4) / 0.13) 45%, hsl(var(--chart-4) / 0) 100%);
+  /* Window light painted into the stage background: no layer of its own, never repainted. */
+  .ambience {
+    display: block; position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(108deg, transparent 46%, hsl(var(--chart-4) / 0.13) 62%, hsl(var(--chart-4) / 0.04) 80%, transparent 92%),
+      linear-gradient(108deg, transparent 30%, hsl(var(--chart-4) / 0.07) 36%, transparent 42%);
   }
-  .beam2 { right: 30%; width: 22%; opacity: 0.6; }
   .mote {
     position: absolute; width: var(--sz); height: var(--sz); border-radius: 50%; background: hsl(var(--primary) / 0.22);
     animation: drift var(--dur) linear var(--delay) infinite;
@@ -150,6 +151,9 @@
     100% { transform: translate3d(var(--dx), -140px, 0); opacity: 0; }
   }
   .root[data-paused="true"] .mote, .root[data-paused="true"] .float, .root[data-paused="true"] .scrollHint i::after { animation-play-state: paused; }
+  /* The idle bob belongs to the hero; past it the book moves with scroll alone. */
+  .root[data-act]:not([data-act="0"]) .float, .root[data-act]:not([data-act="0"]) .scrollHint i::after { animation-play-state: paused; }
+  .scene { will-change: transform; }
 
   .heroCopy { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; pointer-events: none; }
   .heroInner { max-width: min(34rem, 48%); padding-block: 0; pointer-events: auto; }
@@ -218,7 +222,9 @@
   .heroCopy { align-items: flex-start; }
   .heroInner { max-width: none; padding-top: max(1.5rem, 4svh); }
   .hud { display: none; }
-  .beam { right: -30%; width: 110%; }
+  /* Lighter scene for phone GPUs: fewer motes, words and riffled pages. */
+  .mote:nth-child(n + 9), .word:nth-child(even), .leaf[data-riffle], .scrollHint { display: none; }
+  .ambience { background: linear-gradient(115deg, transparent 40%, hsl(var(--chart-4) / 0.12) 62%, transparent 90%); }
   .card {
     --cw: min(22rem, calc(100vw - 40px));
     min-height: 0; padding: 14px 16px 16px;

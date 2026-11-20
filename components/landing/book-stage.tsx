@@ -102,8 +102,6 @@ export function BookStage({
       <div className={styles.track} data-part="track">
         <div className={styles.stage} data-part="stage">
           <div className={styles.ambience} data-part="ambience" aria-hidden="true">
-            <div className={styles.beam} />
-            <div className={`${styles.beam} ${styles.beam2}`} />
             {MOTES.map((style, i) => (
               <span key={i} className={`${styles.mote} ${i % 5 === 0 ? styles.moteAccent : ""}`} style={style} />
             ))}
@@ -162,7 +160,7 @@ export function BookStage({
                         <div className={styles.folio}>13</div>
                       </div>
                       {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className={styles.leaf} data-part="leaf">
+                        <div key={i} className={styles.leaf} data-part="leaf" data-riffle={i <= 2 ? "" : undefined}>
                           {pageFace("pf")}
                           {pageFace("pb")}
                           <div className={styles.leafOut} data-part="leaf-out">
@@ -275,8 +273,8 @@ function run(root: HTMLElement, jumpRef: { current: ((p: number) => boolean) | n
   const q = <T extends HTMLElement = HTMLElement>(part: string) => root.querySelector<T>(`[data-part='${part}']`)!;
   const qa = (part: string) => Array.from(root.querySelectorAll<HTMLElement>(`[data-part='${part}']`));
   const track = q("track"), stage = q("stage"), scene = q("scene"), book = q("book"), tilt = q("tilt");
-  const cover = q("cover"), gloss = q("gloss"), shadow = q("shadow"), hero = q("hero"), heroInner = q("hero-inner");
-  const eyebrow = q("eyebrow"), stamp = q("stamp"), ambience = q("ambience"), hud = q("hud");
+  const cover = q("cover"), gloss = q("gloss"), shadow = q("shadow"), heroInner = q("hero-inner");
+  const eyebrow = q("eyebrow"), stamp = q("stamp"), hud = q("hud");
   const coverShades = Array.from(cover.querySelectorAll<HTMLElement>(":scope > div > [data-shade]"));
   const leaves = qa("leaf").map((el) => ({
     el,
@@ -306,50 +304,64 @@ function run(root: HTMLElement, jumpRef: { current: ((p: number) => boolean) | n
     span = Math.max(1, track.offsetHeight - vh);
   };
 
+  // Each style is written only when its value changes, so parts that are not moving cost nothing.
+  const written = new Map<HTMLElement, Partial<Record<"transform" | "opacity" | "visibility", string>>>();
+  const put = (el: HTMLElement, key: "transform" | "opacity" | "visibility", value: string) => {
+    let seen = written.get(el);
+    if (!seen) written.set(el, (seen = {}));
+    if (seen[key] === value) return;
+    seen[key] = value;
+    el.style[key] = value;
+  };
+  const r = (n: number) => Math.round(n * 100) / 100;
+  // Shades repaint their page, so they move in coarse steps.
+  const shade = (v: number) => String(Math.round(v * 25) / 25);
+
   let lastAct = -1;
   const apply = (f: Frame) => {
-    scene.style.transform = `translate3d(${f.scene.x}px,${f.scene.y}px,0) scale(${f.scene.scale})`;
-    book.style.transform = `translate3d(${f.book.x}px,0,0) rotateX(${f.book.rx}deg) rotateY(${f.book.ry}deg) rotateZ(${f.book.rz}deg)`;
-    tilt.style.transform = `rotateX(${f.tilt.rx}deg) rotateY(${f.tilt.ry}deg)`;
-    gloss.style.transform = `translate3d(${f.gloss}%,0,0)`;
-    cover.style.transform = `translateZ(${f.cover.z}px) rotateY(${f.cover.angle}deg)`;
-    coverShades.forEach((el) => (el.style.opacity = String(f.cover.shade)));
+    put(scene, "transform", `translate3d(${r(f.scene.x)}px,${r(f.scene.y)}px,0) scale(${Math.round(f.scene.scale * 1000) / 1000})`);
+    put(book, "transform", `translate3d(${r(f.book.x)}px,0,0) rotateX(${r(f.book.rx)}deg) rotateY(${r(f.book.ry)}deg) rotateZ(${r(f.book.rz)}deg)`);
+    put(tilt, "transform", `rotateX(${r(f.tilt.rx)}deg) rotateY(${r(f.tilt.ry)}deg)`);
+    put(gloss, "transform", `translate3d(${r(f.gloss)}%,0,0)`);
+    put(cover, "transform", `translateZ(${r(f.cover.z)}px) rotateY(${r(f.cover.angle)}deg)`);
+    coverShades.forEach((el) => put(el, "opacity", shade(f.cover.shade)));
     leaves.forEach((lf, i) => {
       const p = f.leaves[i];
-      lf.el.style.transform = `translateZ(${p.z}px) rotateY(${p.angle}deg)`;
-      lf.outer.style.transform = `rotateY(${p.bend}deg)`;
-      lf.shades.forEach((el) => (el.style.opacity = String(p.shade)));
+      put(lf.el, "transform", `translateZ(${r(p.z)}px) rotateY(${r(p.angle)}deg)`);
+      put(lf.outer, "transform", `rotateY(${r(p.bend)}deg)`);
+      lf.shades.forEach((el) => put(el, "opacity", shade(p.shade)));
     });
-    shadow.style.transform = `translate3d(0,${f.shadow.y}px,-30px) scale(${f.shadow.sx},${f.shadow.sy})`;
-    shadow.style.opacity = String(f.shadow.opacity);
-    hero.style.opacity = String(f.hero.opacity);
-    hero.style.transform = `translate3d(${f.hero.x}px,0,0)`;
-    hero.style.visibility = f.hero.hidden ? "hidden" : "";
+    put(shadow, "transform", `translate3d(0,${r(f.shadow.y)}px,-30px) scale(${r(f.shadow.sx)},${r(f.shadow.sy)})`);
+    put(shadow, "opacity", String(r(f.shadow.opacity)));
+    put(heroInner, "opacity", String(r(f.hero.opacity)));
+    put(heroInner, "transform", `translate3d(${r(f.hero.x)}px,0,0)`);
+    put(heroInner, "visibility", f.hero.hidden ? "hidden" : "");
     words.forEach((el, i) => {
       const w = f.words[i];
-      el.style.opacity = String(w.opacity);
-      if (w.opacity > 0) el.style.transform = `translate(-50%,-50%) translate3d(${w.x}px,${w.y}px,${w.z}px) rotate(${w.rz}deg) scale(${w.scale})`;
+      put(el, "opacity", String(r(w.opacity)));
+      put(el, "visibility", w.opacity > 0 ? "visible" : "hidden");
+      if (w.opacity > 0) put(el, "transform", `translate(-50%,-50%) translate3d(${r(w.x)}px,${r(w.y)}px,${r(w.z)}px) rotate(${r(w.rz)}deg) scale(${r(w.scale)})`);
     });
     cards.forEach((el, i) => {
       const c = f.cards[i];
       if (!c) return;
-      el.style.transform = `translate3d(${c.x}px,${c.y - (cardHalf[i] ?? 86)}px,${c.z}px) rotateX(${c.rx}deg) rotateY(${c.ry}deg) rotateZ(${c.rz}deg) scale(${c.scale})`;
-      el.style.opacity = String(c.opacity);
-      el.style.visibility = c.opacity > 0 ? "visible" : "hidden";
+      put(el, "transform", `translate3d(${r(c.x)}px,${r(c.y - (cardHalf[i] ?? 86))}px,${r(c.z)}px) rotateX(${r(c.rx)}deg) rotateY(${r(c.ry)}deg) rotateZ(${r(c.rz)}deg) scale(${r(c.scale)})`);
+      put(el, "opacity", String(r(c.opacity)));
+      put(el, "visibility", c.opacity > 0 ? "visible" : "hidden");
     });
-    eyebrow.style.transform = `translate(-50%,-50%) translate3d(0,${f.eyebrow.y}px,0)`;
-    eyebrow.style.opacity = String(f.eyebrow.opacity);
+    put(eyebrow, "transform", `translate(-50%,-50%) translate3d(0,${r(f.eyebrow.y)}px,0)`);
+    put(eyebrow, "opacity", String(r(f.eyebrow.opacity)));
     captions.forEach((el, i) => {
-      const v = f.captions[i] ?? 0;
-      el.style.opacity = String(v);
-      el.style.transform = `translate3d(-50%,${(1 - v) * 18}px,0)`;
-      el.style.visibility = v > 0 ? "visible" : "hidden";
+      const v = r(f.captions[i] ?? 0);
+      put(el, "opacity", String(v));
+      put(el, "transform", `translate3d(-50%,${r((1 - v) * 18)}px,0)`);
+      put(el, "visibility", v > 0 ? "visible" : "hidden");
     });
-    stamp.style.opacity = String(f.stamp.opacity);
-    stamp.style.transform = `rotate(-7deg) scale(${f.stamp.scale})`;
-    ambience.style.transform = `translate3d(0,${f.ambienceY}px,0)`;
+    put(stamp, "opacity", String(r(f.stamp.opacity)));
+    put(stamp, "transform", `rotate(-7deg) scale(${r(f.stamp.scale)})`);
     if (f.act !== lastAct) {
       hudButtons.forEach((b, i) => b.toggleAttribute("data-on", i === f.act));
+      root.dataset.act = String(f.act);
       lastAct = f.act;
     }
   };
@@ -496,11 +508,12 @@ function run(root: HTMLElement, jumpRef: { current: ((p: number) => boolean) | n
     book.removeEventListener("pointerup", onUp);
     book.removeEventListener("pointercancel", onUp);
     hud.removeEventListener("click", onHud);
-    [scene, book, tilt, gloss, cover, shadow, hero, eyebrow, stamp, ambience, ...words, ...cards, ...captions].forEach((el) => {
+    [scene, book, tilt, gloss, cover, shadow, heroInner, eyebrow, stamp, ...coverShades, ...leaves.flatMap((l) => [l.el, l.outer, ...l.shades]), ...words, ...cards, ...captions].forEach((el) => {
       el.style.transform = "";
       el.style.opacity = "";
       el.style.visibility = "";
     });
     delete root.dataset.paused;
+    delete root.dataset.act;
   };
 }

@@ -156,7 +156,7 @@ describe('BookStage scroll animation', () => {
     const { container } = await render();
     expect((container.firstElementChild as HTMLElement).dataset.live).toBe('true');
     expect(part(container, 'book').style.transform).toContain('rotateY(-32deg)');
-    expect(part(container, 'hero').style.opacity).toBe('1');
+    expect(part(container, 'hero-inner').style.opacity).toBe('1');
     expect(parts(container, 'card').every((c) => c.style.visibility === 'hidden')).toBe(true);
   });
 
@@ -164,7 +164,7 @@ describe('BookStage scroll animation', () => {
     const { container } = await render();
     await scrollToProgress(1);
     expect(part(container, 'cover').style.transform).toContain('rotateY(-178deg)');
-    expect(part(container, 'hero').style.visibility).toBe('hidden');
+    expect(part(container, 'hero-inner').style.visibility).toBe('hidden');
     for (const card of parts(container, 'card')) {
       expect(card.style.opacity).toBe('1');
       expect(card.style.visibility).toBe('visible');
@@ -179,7 +179,7 @@ describe('BookStage scroll animation', () => {
     await scrollToProgress(1);
     await scrollToProgress(0);
     expect(part(container, 'cover').style.transform).toContain('rotateY(0deg)');
-    expect(part(container, 'hero').style.visibility).toBe('');
+    expect(part(container, 'hero-inner').style.visibility).toBe('');
     expect(parts(container, 'card').every((c) => c.style.visibility === 'hidden')).toBe(true);
   });
 
