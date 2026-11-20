@@ -103,8 +103,8 @@ export function StatusBanner({
   if (isAvailable) {
     if (isCompact) {
       return (
-        <div className={cn("status-success flex items-center gap-2.5 rounded-lg border px-3 py-2.5", className)}>
-          <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+        <div className={cn("flex items-center gap-2.5 rounded-lg border border-border bg-muted/50 px-3 py-2.5", className)}>
+          <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden="true" />
           <div className="min-w-0">
             <p className="text-sm font-semibold">
               {book.available_copies} {book.available_copies === 1 ? 'copy' : 'copies'} on shelf

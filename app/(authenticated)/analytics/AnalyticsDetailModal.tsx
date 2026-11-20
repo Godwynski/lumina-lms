@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { getAnalyticsDetail, type AnalyticsSelection, type AnalyticsDetailRow } from '@/lib/actions/analytics';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
 import { BorrowerDetailsModal, type BorrowerSummary } from '@/components/common/BorrowerDetailsModal';
+import { CompactPagination } from '@/components/ui/compact-pagination';
 export function AnalyticsDetailModal({ selection, onClose }: { selection: AnalyticsSelection; onClose: () => void }) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ rows: AnalyticsDetailRow[]; total: number } | null>(null);
@@ -40,11 +41,9 @@ export function AnalyticsDetailModal({ selection, onClose }: { selection: Analyt
               </li>)}</ul>}
           </>}
         </div>
-        {total !== null && <nav aria-label="Analytics records pagination" className="flex shrink-0 items-center justify-between gap-3 border-t border-border pt-3 text-sm">
-          <button type="button" aria-label="Previous page" disabled={!data || page === 1} className="min-h-10 rounded-md px-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40" onClick={() => changePage(page - 1)}>Previous</button>
-          <span aria-live="polite">Page {page} of {Math.max(1, Math.ceil(total / 20))}</span>
-          <button type="button" aria-label="Next page" disabled={!data || page * 20 >= total} className="min-h-10 rounded-md px-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40" onClick={() => changePage(page + 1)}>Next</button>
-        </nav>}
+        {total !== null && <div className="shrink-0 border-t border-border pt-3">
+          <CompactPagination page={page} totalItems={total} pageSize={20} onPageChange={changePage} itemLabel="records" disabled={!data} />
+        </div>}
       </DialogContent>
     </Dialog>
     {book && <BookDetailModal key={book} bookId={book} open variant="read_only" onOpenChange={(open) => { if (!open) setBook(null); }} />}

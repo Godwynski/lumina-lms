@@ -743,6 +743,7 @@ export function AdminManagementContent({
                   pageSize={COPIES_PER_PAGE}
                   onPageChange={setCurrentPage}
                   variant="ghost"
+                  itemLabel="copies"
                 />
               </div>
             )}

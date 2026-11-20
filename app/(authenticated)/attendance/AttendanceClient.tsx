@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   CircleCheck,
   ListFilter,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminTableShell } from "@/components/admin/AdminTableShell";
@@ -40,7 +41,6 @@ import { useScanner } from "@/hooks/use-scanner";
 import { useScanFeedback } from "@/hooks/use-scan-feedback";
 import { 
   Dialog, 
-  DialogClose,
   DialogContent, 
   DialogHeader, 
   DialogTrigger,
@@ -87,13 +87,16 @@ const ATTENDANCE_MODES = [
   { value: "out", label: "Check-Out", Icon: LogOut },
 ] as const;
 
-function AttendanceModeControl({ label, mode, onChange }: {
+const FEEDBACK_SUCCESS_MS = 4000;
+
+function AttendanceModeControl({ label, mode, onChange, className }: {
   label: string;
+  className?: string;
   mode: AttendanceMode;
   onChange: (mode: AttendanceMode) => void;
 }) {
   return (
-    <div role="group" aria-label={label} className="grid w-full shrink-0 grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:w-fit">
+    <div role="group" aria-label={label} className={cn("grid w-full shrink-0 grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:w-fit", className)}>
       {ATTENDANCE_MODES.map(({ value, label, Icon }) => (
         <button
           key={value}
@@ -170,7 +173,6 @@ export function AttendanceClient({
   const [manualFeedback, setManualFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const cardInput = useRef<HTMLInputElement>(null);
   const focusCardAfterModeChange = useRef(false);
-  const focusCardAfterScanner = useRef(false);
   const [blockedCheckIns, setBlockedCheckIns] = useState<
     Array<{ userId: string; userName: string; identifiers: string[] }>
   >([]);
@@ -233,6 +235,9 @@ export function AttendanceClient({
   // Process a card scan (manual entry or camera detection)
   const processScan = useCallback(async (scannedValue: string, isManual = false, activeMode: "in" | "out" = mode) => {
     const session = scannerSession.current;
+    // Manual entry and the open scanner each show the outcome inline; a toast is
+    // only a fallback for a scan whose dialog has since closed.
+    const showsInline = () => isManual || session === scannerSession.current;
     const clean = scannedValue.trim();
     if (!clean || processingRef.current) return;
     if (activeMode === "in" && isIdentifierBlockedForCheckIn(clean)) return;
@@ -282,7 +287,6 @@ export function AttendanceClient({
           if (!isManual && session === scannerSession.current) {
             setLastResult(message);
           }
-          toast.error(message, { id: "attendance-toast-error", description });
           return;
         }
 
@@ -292,7 +296,7 @@ export function AttendanceClient({
           if (!isManual && session === scannerSession.current) {
             setLastResult(message);
           }
-          toast.error(message, { id: "attendance-toast-error", description });
+          if (!showsInline()) toast.error(message, { id: "attendance-toast-error", description });
           return;
         }
 
@@ -315,12 +319,7 @@ export function AttendanceClient({
           setLastResult(`${userName} · ${description.replace(/ successfully|\.$/g, "")} · ${time}`);
         }
         if (isManual) {
-          setManualFeedback({ kind: 'success', message });
-          toast.success(outcome === "UPDATED" ? "Check-in updated" : "Transaction recorded", {
-            id: "attendance-toast",
-            description: message,
-            icon: status === "IN" ? <LogIn className="w-4 h-4 text-green-500" /> : <LogOut className="w-4 h-4 text-orange-500" />,
-          });
+          setManualFeedback({ kind: 'success', message: outcome === "UPDATED" ? `Check-in updated · ${message}` : message });
           setCardNumber("");
         }
 
@@ -334,13 +333,13 @@ export function AttendanceClient({
         playScanCue("error");
         if (isManual) setManualFeedback({ kind: 'error', message: result.error });
         if (!isManual && session === scannerSession.current) setLastResult(result.error);
-        toast.error(result.error, { id: "attendance-toast-error" });
+        if (!showsInline()) toast.error(result.error, { id: "attendance-toast-error" });
       }
     } catch {
       playScanCue("error");
       if (isManual) setManualFeedback({ kind: 'error', message: 'Could not verify this entry. Check the attendance log before retrying.' });
       if (!isManual && session === scannerSession.current) setLastResult("Could not verify this scan. Check the attendance log before retrying.");
-      toast.error("Failed to process attendance transaction.", { id: "attendance-toast-err" });
+      if (!showsInline()) toast.error("Failed to process attendance transaction.", { id: "attendance-toast-err" });
     } finally {
       processingRef.current = false;
       setIsProcessing(false);
@@ -378,6 +377,13 @@ export function AttendanceClient({
   useEffect(() => {
     if (manualEntryOpen) cardInput.current?.focus();
   }, [manualEntryOpen]);
+
+  // Success messages fade on their own; errors stay until edited or dismissed.
+  useEffect(() => {
+    if (manualFeedback?.kind !== 'success') return;
+    const timer = setTimeout(() => setManualFeedback(null), FEEDBACK_SUCCESS_MS);
+    return () => clearTimeout(timer);
+  }, [manualFeedback]);
 
   // Realtime subscription to refresh attendance logs across tabs automatically
   useEffect(() => {
@@ -634,7 +640,17 @@ export function AttendanceClient({
           {manualFeedback.kind === 'success'
             ? <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             : <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
-          <span className="min-w-0 break-words">{manualFeedback.message}</span>
+          <span className="min-w-0 flex-1 break-words">{manualFeedback.message}</span>
+          {manualFeedback.kind === 'error' && (
+            <button
+              type="button"
+              aria-label="Dismiss message"
+              className="-my-1 -mr-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-ring"
+              onClick={() => setManualFeedback(null)}
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          )}
         </p>
       )}
       {alreadyInWarning && (
@@ -711,6 +727,7 @@ export function AttendanceClient({
                 pageSize={PAGE_SIZE}
                 onPageChange={setStaffPage}
                 variant="ghost"
+                itemLabel="records"
               />
             ) : null
           }
@@ -718,12 +735,6 @@ export function AttendanceClient({
         >
             <DialogContent
               className="max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:max-w-md sm:p-6"
-              onCloseAutoFocus={(event) => {
-                if (!focusCardAfterScanner.current) return;
-                focusCardAfterScanner.current = false;
-                event.preventDefault();
-                cardInput.current?.focus();
-              }}
             >
               <DialogHeader className="text-center w-full pb-1">
                 <DialogTitle className="text-base font-bold flex items-center justify-center gap-2">
@@ -735,7 +746,7 @@ export function AttendanceClient({
                 </DialogDescription>
               </DialogHeader>
 
-              <AttendanceModeControl label="Scanner attendance mode" mode={mode} onChange={setMode} />
+              <AttendanceModeControl label="Scanner attendance mode" mode={mode} onChange={setMode} className="mx-auto" />
 
               <div className="relative aspect-square max-w-[280px] mx-auto w-full overflow-hidden rounded-xl border border-border bg-muted/30">
                 <div 
@@ -818,17 +829,7 @@ export function AttendanceClient({
 
               </div>
               {cameraIssue && !cameraOpen && !isInitializing && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
-                  <p role="alert" className="min-w-0 flex-1 basis-40 text-sm text-muted-foreground">{cameraIssue}</p>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline" className="h-11" onClick={() => {
-                      focusCardAfterScanner.current = true;
-                      setOpenPanel('manual');
-                    }}>
-                      Enter ID instead
-                    </Button>
-                  </DialogClose>
-                </div>
+                <p role="alert" className="sr-only">{cameraIssue}</p>
               )}
 
               {pendingScan && <div className="w-full space-y-3 rounded-xl border border-border p-3">
@@ -917,6 +918,7 @@ export function AttendanceClient({
             pageSize={PAGE_SIZE}
             onPageChange={setPersonalPage}
             variant="ghost"
+            itemLabel="records"
           />
         ) : null
       }

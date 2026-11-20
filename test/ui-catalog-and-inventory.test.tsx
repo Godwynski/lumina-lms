@@ -138,6 +138,7 @@ import { PreferencesProvider } from '@/components/providers/PreferencesProvider'
 import { CopyMeter } from '@/components/catalog/CopyMeter';
 import { MetaTile } from '@/components/catalog/MetaTile';
 import { StatusBanner } from '@/components/catalog/StatusBanner';
+import { CatalogBookDetails } from '@/components/catalog/CatalogBookDetails';
 import {
   ReservationQueuePanel,
   formatRelativeTime,
@@ -366,6 +367,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       );
       expect(handle.container).toHaveTextContent('Ready for Pickup');
       expect(handle.container).toHaveTextContent('Pick up by');
+      expect(handle.container.firstElementChild).toHaveClass('status-success');
 
       await handle.rerender(
         <StatusBanner
@@ -395,6 +397,10 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         <StatusBanner book={{ available_copies: 3 }} availability={baseAvail} variant="compact" />
       );
       expect(handle.container).toHaveTextContent('3 copies on shelf');
+      const onShelf = handle.container.firstElementChild as HTMLElement;
+      expect(onShelf).not.toHaveClass('status-success');
+      expect(onShelf).toHaveClass('border', 'border-border', 'bg-muted/50');
+      expect(onShelf.querySelector('svg')).toHaveClass('text-primary');
 
       await handle.rerender(
         <StatusBanner
@@ -415,6 +421,34 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         <StatusBanner book={{ available_copies: 0 }} availability={baseAvail} variant="compact" />
       );
       expect(handle.container).toHaveTextContent('Currently Unavailable');
+    });
+  });
+
+  describe('CatalogBookDetails', () => {
+    const detail: BookDetail = {
+      id: 'book-1', title: 'Clean Code', author: 'Robert C. Martin', isbn: null, cover_url: null,
+      section: null, location: null, available_copies: 2, total_copies: 3, categories: null, tags: [],
+    };
+    const avail: AvailabilityStatus = {
+      nextAvailableDate: null, hasReservation: false, isReady: false,
+      queuePosition: null, holdExpiresAt: null, reservationId: null,
+    };
+
+    it('renders a bordered banner-shaped placeholder while availability loads, then the on-shelf banner in the same box shape', async () => {
+      const handle = await renderClient(<CatalogBookDetails book={detail} availability={avail} isAvailabilityLoading />);
+      const placeholder = handle.container.querySelector('[role="status"]') as HTMLElement;
+      expect(placeholder.tagName).toBe('DIV');
+      expect(placeholder).toHaveClass('flex', 'items-center', 'gap-2.5', 'rounded-lg', 'border', 'border-border', 'bg-muted/50', 'px-3', 'py-2.5');
+      expect(placeholder).toHaveTextContent('Checking availability…');
+      expect(placeholder.querySelector('.animate-pulse.size-4')).not.toBeNull();
+      expect(handle.container).not.toHaveTextContent('on shelf');
+
+      await handle.rerender(<CatalogBookDetails book={detail} availability={avail} isAvailabilityLoading={false} />);
+      expect(handle.container.querySelector('[role="status"]')).toBeNull();
+      expect(handle.container).toHaveTextContent('2 copies on shelf');
+      const banner = [...handle.container.querySelectorAll('p')].find((p) => p.textContent === '2 copies on shelf')!.closest('.rounded-lg') as HTMLElement;
+      expect(banner).toHaveTextContent('2 copies on shelf');
+      expect(banner).not.toHaveClass('status-success');
     });
   });
 
@@ -1097,6 +1131,8 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(dialog).toHaveTextContent(action);
       expect(dialog.querySelector('button[aria-label="Close"]')).toBeVisible();
       expect(dialog.querySelector('a[href^="/audit"]')).toBeNull();
+      expect(dialog.querySelector('[aria-label="Open full page"]')).toBeNull();
+      expect(dialog.querySelector('a[href="/student-catalog/' + book.id + '"], a[href="/inventory/' + book.id + '"]')).toBeNull();
     });
 
     it('fetches student details, displays tags overflow & metadata, and cancels reservation via dialog', async () => {

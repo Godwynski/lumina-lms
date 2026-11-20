@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Ticket } from "lucide-react";
+import { ChevronRight, Sparkles, Ticket } from "lucide-react";
 import { LuminaTable, type LuminaColumn } from "@/components/common/LuminaTable";
 import { Badge } from "@/components/ui/badge";
 import { ReserveTitleButton } from "@/components/common/ReserveTitleButton";
@@ -38,6 +38,61 @@ export function CatalogTable({
   columnSort,
 }: CatalogTableProps) {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+
+  const renderAction = (book: Book) => {
+    const reserved = reservedBooksMap.get(book.id);
+    if (book.total_copies === 0 && !reserved) {
+      return <span className="text-xs text-muted-foreground">Unavailable</span>;
+    }
+    return (
+      <div onClick={(e) => e.stopPropagation()}>
+        <ReserveTitleButton
+          bookId={book.id}
+          isAvailable={book.available_copies > 0}
+          hasExistingReservation={!!reserved}
+          isReady={reserved?.status === "READY"}
+          queuePosition={reserved?.queuePosition}
+          holdExpiresAt={reserved?.holdExpiresAt}
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-semibold shadow-none hover:scale-100 [&_svg]:size-3.5"
+          onReserveSuccess={(pos, status, expires) => onReserveSuccess(book.id, pos, status, expires)}
+        />
+      </div>
+    );
+  };
+
+  const renderCopies = (book: Book) => {
+    const total = book.total_copies ?? book.available_copies;
+    return (
+      <Badge variant={book.available_copies === 0 ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-tight tabular-nums whitespace-nowrap">
+        {book.available_copies} / {total}
+      </Badge>
+    );
+  };
+
+  // Phone width: one compact list row per book. Tapping it opens the book dialog,
+  // whose footer holds the reserve action, so the row carries no button.
+  const renderMobileRow = (book: Book) => {
+    const reserved = reservedBooksMap.get(book.id);
+    return (
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{book.title}</p>
+          <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {reserved && (
+            <Badge variant="outline" className="h-5 px-1.5 text-xs font-semibold">
+              {reserved.status === "READY" ? "Ready" : `#${reserved.queuePosition}`}
+            </Badge>
+          )}
+          {renderCopies(book)}
+          <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />
+        </div>
+      </div>
+    );
+  };
 
   const columns: LuminaColumn<Book>[] = [
     {
@@ -95,40 +150,11 @@ export function CatalogTable({
     {
       header: "Copies (Avail / Total)",
       sort: columnSort?.("availability"),
-      accessor: (book) => {
-        const isOutOfStock = book.available_copies === 0;
-        const total = book.total_copies ?? book.available_copies;
-        return (
-          <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-tight tabular-nums whitespace-nowrap">
-            {book.available_copies} / {total}
-          </Badge>
-        );
-      },
+      accessor: renderCopies,
     },
     {
       header: "Action",
-      accessor: (book) => {
-        const reserved = reservedBooksMap.get(book.id);
-        if (book.total_copies === 0 && !reserved) {
-          return <span className="text-xs text-muted-foreground">Unavailable</span>;
-        }
-        return (
-          <div onClick={(e) => e.stopPropagation()}>
-            <ReserveTitleButton
-              bookId={book.id}
-              isAvailable={book.available_copies > 0}
-              hasExistingReservation={!!reserved}
-              isReady={reserved?.status === "READY"}
-              queuePosition={reserved?.queuePosition}
-              holdExpiresAt={reserved?.holdExpiresAt}
-              variant="outline"
-              size="sm"
-              className="min-h-11 md:min-h-0 md:h-8 text-xs px-3 md:px-2.5 rounded-lg"
-              onReserveSuccess={(pos, status, expires) => onReserveSuccess(book.id, pos, status, expires)}
-            />
-          </div>
-        );
-      },
+      accessor: renderAction,
     },
   ];
 
@@ -138,6 +164,7 @@ export function CatalogTable({
         data={books}
         columns={columns}
         onRowClick={(book) => setSelectedBook(book)}
+        renderMobileRow={renderMobileRow}
       />
 
       {selectedBook && (

@@ -30,16 +30,14 @@ afterEach(() => {
 });
 
 describe('BookDetailModal (student)', () => {
-  it('opens the full Catalog page from the header and keeps the reservation action in the footer', async () => {
+  it('has no full-page link in the header and keeps the reservation action in the footer', async () => {
     publicDetails.mockResolvedValue({ book: { ...baseBook, section: 'General', location: 'Shelf A2', available_copies: 2, total_copies: 3 }, availability: noHold });
     await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={vi.fn()} />));
     const dialog = document.querySelector('[role="dialog"]')!;
     const footer = dialog.querySelector('footer');
     const header = dialog.querySelector('[data-slot="dialog-header"]');
-    const fullPageLink = header?.querySelector('a[href="/student-catalog/b"]');
-    expect(fullPageLink).toHaveAccessibleName('Open full page');
-    expect(fullPageLink?.textContent).toBe('');
-    expect(dialog.querySelectorAll('a[href="/student-catalog/b"]')).toHaveLength(1);
+    expect(header?.querySelector('[aria-label="Open full page"]')).toBeNull();
+    expect(dialog.querySelector('a[href="/student-catalog/b"]')).toBeNull();
     expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeNull();
     expect(footer?.querySelector('a')).toBeNull();
     expect(footer).toHaveTextContent('Reserve for Pickup');
@@ -61,15 +59,13 @@ describe('BookDetailModal (student)', () => {
     expect(document.querySelector('footer')).not.toHaveTextContent('Join Waitlist');
   });
 
-  it('uses one icon in the Inventory header to open the management page', async () => {
+  it('has no full-page link in the Inventory header', async () => {
     adminDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, copies: [], queue: [] });
     await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={vi.fn()} />));
     const dialog = document.querySelector('[role="dialog"]')!;
     const header = dialog.querySelector('[data-slot="dialog-header"]')!;
-    const link = header.querySelector('a[href="/inventory/b"]');
-    expect(link).toHaveAccessibleName('Open full page');
-    expect(link?.textContent).toBe('');
-    expect(dialog.querySelectorAll('a[href="/inventory/b"]')).toHaveLength(1);
+    expect(header.querySelector('[aria-label="Open full page"]')).toBeNull();
+    expect(dialog.querySelector('a[href="/inventory/b"]')).toBeNull();
     expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeNull();
     expect(dialog).toHaveTextContent('Copies & acquisition');
   });

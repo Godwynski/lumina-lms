@@ -276,6 +276,7 @@ export function UsersContent({ usersPromise, currentRole }: UsersContentProps) {
               totalItems={totalUsers}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              itemLabel="users"
             />
           ) : null
         }

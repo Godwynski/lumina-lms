@@ -43,6 +43,8 @@ interface LuminaTableProps<T> {
   page?: number;
   pageSize?: number;
   onPageChange?: (page: number) => void;
+  /** Plural noun shown in the pagination range, e.g. "records". */
+  itemLabel?: string;
   
   // Empty State
   emptyState?: EmptyState;
@@ -64,6 +66,7 @@ export function LuminaTable<T extends { id: string | number }>({
   page,
   pageSize = 10,
   onPageChange,
+  itemLabel,
   emptyState,
   noBorder,
   layoutClasses,
@@ -223,6 +226,7 @@ export function LuminaTable<T extends { id: string | number }>({
             pageSize={pageSize}
             onPageChange={onPageChange}
             variant="ghost"
+            itemLabel={itemLabel}
           />
         </div>
       )}

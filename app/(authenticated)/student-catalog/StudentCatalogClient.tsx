@@ -488,6 +488,7 @@ export function StudentCatalogClient({
             onPageChange={handlePageChange}
             pageSizeOptions={CATALOG_PAGE_SIZES}
             onPageSizeChange={handlePageSizeChange}
+            itemLabel="books"
           />
         ) : null
       }

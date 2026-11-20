@@ -618,6 +618,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
             totalItems={data.total}
             pageSize={pageSize}
             onPageChange={setPage}
+            itemLabel="entries"
           />
         ) : null
       }

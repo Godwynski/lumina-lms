@@ -192,6 +192,7 @@ export function UserBorrowingHistorySection({
           page={page}
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
+          itemLabel="loans"
           emptyState={{
             icon: BookOpen,
             title: "No borrowing history",

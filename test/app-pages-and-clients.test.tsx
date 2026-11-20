@@ -2309,10 +2309,9 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         isManual: true,
       });
       expect(mockPlayScanCue).toHaveBeenCalledWith('success');
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Transaction recorded',
-        expect.objectContaining({ description: 'Checked in Pedro Reyes' })
-      );
+      // The inline banner carries the outcome; no duplicate toast.
+      expect(container.querySelector('[aria-label="Attendance controls"] [role="status"], [aria-label="Attendance controls"] [role="alert"]')).toHaveTextContent('Checked in Pedro Reyes');
+      expect(mockToastSuccess).not.toHaveBeenCalled();
       expect(cardInput.value).toBe('');
 
       mockRecordAttendanceByCard.mockResolvedValueOnce({
@@ -2322,16 +2321,14 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await typeIntoInput(cardInput, 'BAD-CARD');
       await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
       expect(mockPlayScanCue).toHaveBeenCalledWith('error');
-      expect(mockToastError).toHaveBeenCalledWith('Unknown card ID', {
-        id: 'attendance-toast-error',
-      });
+      expect(container.querySelector('[aria-label="Attendance controls"] [role="alert"]')).toHaveTextContent('Unknown card ID');
+      expect(mockToastError).not.toHaveBeenCalled();
 
       mockRecordAttendanceByCard.mockRejectedValueOnce(new Error('Network error'));
       await typeIntoInput(cardInput, 'ERR-CARD');
       await submitForm(container.querySelector('form[aria-label="Log attendance"]') as HTMLFormElement);
-      expect(mockToastError).toHaveBeenCalledWith('Failed to process attendance transaction.', {
-        id: 'attendance-toast-err',
-      });
+      expect(container.querySelector('[aria-label="Attendance controls"] [role="alert"]')).toHaveTextContent('Could not verify this entry');
+      expect(mockToastError).not.toHaveBeenCalled();
 
       mockGetAttendanceHistory.mockResolvedValueOnce([...allRecords, makeRecord('older-1', 'Older User', '2020-0001', true)]);
       await clickElement(findButtonByText(container, 'Load older records'));

@@ -216,10 +216,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
         mode: 'out',
         isManual: true,
       });
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Transaction recorded',
-        expect.objectContaining({ description: 'Checked out Maria Clara' })
-      );
+      expect(mockToastSuccess).not.toHaveBeenCalled();
       expect(container.querySelector('[aria-label="Attendance controls"] [role="status"]')).toHaveTextContent('Checked out Maria Clara');
       expect(cardInput.value).toBe('');
     });
@@ -233,17 +230,77 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       await submitForm(entry.form);
       expect(container.querySelector('[aria-label="Attendance controls"] [role="alert"]')).toHaveTextContent('Card not found.');
       expect(entry).toHaveValue('INVALID-CARD');
+      expect(mockToastError).not.toHaveBeenCalled();
     });
 
-    it('offers manual entry from a camera failure and focuses the ID field', async () => {
+    it('keeps an error banner until it is dismissed with ×, and clears it when the ID is edited', async () => {
+      const { container } = await renderStaffAttendance();
+      await clickElement(findButtonByText(container, 'Enter ID'));
+      const entry = container.querySelector<HTMLInputElement>('#attendance-card-id')!;
+      const alert = () => container.querySelector('[aria-label="Attendance controls"] [role="alert"]');
+
+      await typeIntoInput(entry, 'INVALID-CARD');
+      mockRecordAttendanceByCard.mockResolvedValueOnce({ success: false, error: 'Card not found.' });
+      await submitForm(entry.form);
+      await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+      expect(alert()).toHaveTextContent('Card not found.');
+      await clickElement(alert()!.querySelector('button[aria-label="Dismiss message"]'));
+      expect(alert()).toBeNull();
+
+      mockRecordAttendanceByCard.mockResolvedValueOnce({ success: false, error: 'Card not found.' });
+      await submitForm(entry.form);
+      expect(alert()).toHaveTextContent('Card not found.');
+      await typeIntoInput(entry, 'INVALID-CARD-2');
+      expect(alert()).toBeNull();
+    });
+
+    it('hides a success banner after 4 seconds and offers no dismiss button on it', async () => {
+      const { container } = await renderStaffAttendance();
+      await clickElement(findButtonByText(container, 'Enter ID'));
+      const entry = container.querySelector<HTMLInputElement>('#attendance-card-id')!;
+      await typeIntoInput(entry, 'LIB-1001');
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
+        success: true,
+        data: { status: 'IN', outcome: 'CHECKED_IN', userId: 'stu-7', userName: 'Ana Cruz', recordedAt: '2026-11-14T09:00:00Z', message: 'Checked in Ana Cruz', description: 'Timed in successfully.' },
+      });
+      vi.useFakeTimers();
+      try {
+        await submitForm(entry.form);
+        await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+        const status = () => container.querySelector('[aria-label="Attendance controls"] [role="status"]');
+        expect(status()).toHaveTextContent('Checked in Ana Cruz');
+        expect(status()!.querySelector('button')).toBeNull();
+        await act(async () => { await vi.advanceTimersByTimeAsync(3900); });
+        expect(status()).toHaveTextContent('Checked in Ana Cruz');
+        await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+        expect(status()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it('labels an updated check-in in the inline banner', async () => {
+      const { container } = await renderStaffAttendance();
+      await clickElement(findButtonByText(container, 'Enter ID'));
+      const entry = container.querySelector<HTMLInputElement>('#attendance-card-id')!;
+      await typeIntoInput(entry, 'LIB-1001');
+      mockRecordAttendanceByCard.mockResolvedValueOnce({
+        success: true,
+        data: { status: 'IN', outcome: 'UPDATED', userId: 'stu-7', userName: 'Ana Cruz', recordedAt: '2026-11-14T09:00:00Z', message: 'Checked in Ana Cruz', description: 'Updated.' },
+      });
+      await submitForm(entry.form);
+      expect(container.querySelector('[aria-label="Attendance controls"] [role="status"]')).toHaveTextContent('Check-in updated · Checked in Ana Cruz');
+    });
+
+    it('on camera failure shows only Retry camera and announces the reason to screen readers', async () => {
       const { container } = await renderStaffAttendance();
       await clickElement(findButtonByText(container, 'Scan QR'));
-      await vi.waitFor(() => expect(document.querySelector('[role="dialog"] [role="alert"]')).toHaveTextContent('Camera unavailable'));
-      await clickElement(findButtonByText(document.body, 'Enter ID instead'));
-      await vi.waitFor(() => {
-        expect(document.querySelector('[role="dialog"]')).toBeNull();
-        expect(document.activeElement).toBe(container.querySelector('#attendance-card-id'));
-      });
+      const dialog = () => document.querySelector('[role="dialog"]')!;
+      await vi.waitFor(() => expect(dialog().querySelector('[role="alert"]')).toHaveTextContent('Camera unavailable'));
+      expect(dialog().querySelector('[role="alert"]')).toHaveClass('sr-only');
+      expect(findButtonByText(dialog(), 'Enter ID instead')).toBeFalsy();
+      expect(findButtonByText(dialog(), 'Retry camera')).toBeTruthy();
       expect(mockRecordAttendanceByCard).not.toHaveBeenCalled();
     });
 
@@ -307,6 +364,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const alert = container.querySelector('[role="alert"]');
       expect(alert).toBeInTheDocument();
       expect(alert).toHaveTextContent('You are already checked in');
+      expect(mockToastError).not.toHaveBeenCalled();
       // Check-In is disabled for Maria Clara
       expect(submitBtn).toBeDisabled();
 
@@ -399,6 +457,7 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       expect(dialog).toBeInTheDocument();
       expect(document.body).toHaveTextContent('Gate Attendance Scanner');
       const scannerMode = dialog?.querySelector('[aria-label="Scanner attendance mode"]')!;
+      expect(scannerMode).toHaveClass('mx-auto', 'sm:w-fit');
       const scannerOut = findButtonByText(scannerMode, 'Check-Out')!;
       await clickElement(scannerOut);
       expect(scannerOut).toHaveAttribute('aria-pressed', 'true');

@@ -247,7 +247,7 @@ describe('B4 Dashboard, Catalog & History UI', () => {
     expect(container.querySelector('button[aria-expanded="false"]')).toHaveTextContent('Show card');
   });
 
-  it('BookDetailModal and StudentBookDetailClient label Section vs Shelf Location accurately and link to full page', async () => {
+  it('BookDetailModal and StudentBookDetailClient label Section vs Shelf Location accurately with no full-page link', async () => {
     expect(bookDetailsMetadata.title).toBe('Book Details');
 
     const bookDetail = {
@@ -308,8 +308,8 @@ describe('B4 Dashboard, Catalog & History UI', () => {
     const dialog = document.body.querySelector('[role="dialog"]') as HTMLElement;
     expect(dialog.textContent).toContain('SectionBiography');
     expect(dialog.querySelector('dl')).toHaveTextContent('Shelf locationShelf E4');
-    const fullPageLink = dialog.querySelector('a[href="/student-catalog/bk-bio-1"]');
-    expect(fullPageLink).toHaveAccessibleName('Open full page');
+    expect(dialog.querySelector('a[href="/student-catalog/bk-bio-1"]')).toBeNull();
+    expect(dialog.querySelector('[aria-label="Open full page"]')).toBeNull();
   });
 
   it('MyCardContainer uses Show card back / Show card front labels and ReserveTitleButton uses Join Waitlist', async () => {

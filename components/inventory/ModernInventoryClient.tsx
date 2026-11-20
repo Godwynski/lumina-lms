@@ -1392,6 +1392,7 @@ export function ModernInventoryClient({
           pageSize={pageSize}
           onPageChange={setPage}
           variant="default"
+          itemLabel="books"
         />
       )}
       </div>

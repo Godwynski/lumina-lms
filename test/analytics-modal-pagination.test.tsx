@@ -18,6 +18,8 @@ it('keeps close and pagination outside the scrolling records and loads the next 
   expect(body!.querySelector('button[aria-label="Next page"]')).toBeNull();
   const next = document.querySelector<HTMLButtonElement>('button[aria-label="Next page"]');
   expect(next).not.toBeNull();
+  expect(document.querySelector('[role="dialog"] nav[aria-label="Pagination"]')).not.toBeNull();
+  expect(document.querySelector('[role="dialog"]')).toHaveTextContent('1-20 of 21 records');
   await act(async () => next!.click());
   expect(getDetail).toHaveBeenLastCalledWith(selection, 2);
   expect(document.querySelector('[role="dialog"]')).toHaveTextContent('Page 2 of 2');

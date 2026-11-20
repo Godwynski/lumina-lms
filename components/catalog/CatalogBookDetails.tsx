@@ -55,7 +55,10 @@ export function CatalogBookDetails({ book, availability, isAvailabilityLoading, 
             )}
             <div className={cn('pt-2', fullPage && 'max-w-md')}>
               {isAvailabilityLoading ? (
-                <p role="status" className="text-sm text-muted-foreground">Checking availability…</p>
+                <div role="status" className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
+                  <span className="size-4 shrink-0 animate-pulse rounded-full bg-muted-foreground/30" aria-hidden="true" />
+                  <p className="text-sm font-semibold text-muted-foreground">Checking availability…</p>
+                </div>
               ) : (
                 <>
                   <StatusBanner book={book} availability={availability} variant="compact" />

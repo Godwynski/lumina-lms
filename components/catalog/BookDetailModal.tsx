@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useMemo } from 'react';
-import { Maximize2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePreferences } from '@/components/providers/PreferencesProvider';
@@ -236,7 +236,6 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
 
   const isInventory = variant === 'super_admin';
   const showBookRecords = variant === 'read_only' && (role === 'super_admin' || role === 'librarian');
-  const fullPageHref = (isInventory ? '/inventory/' : '/student-catalog/') + bookId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -258,11 +257,6 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
                 <Link href={'/audit?bookId=' + bookId} onClick={() => onOpenChange(false)}>Book records</Link>
               </Button>
             )}
-            <Button asChild variant="ghost" size="icon" className="size-11">
-              <Link href={fullPageHref} aria-label="Open full page" title="Open full page" onNavigate={() => onOpenChange(false)}>
-                <Maximize2 aria-hidden="true" />
-              </Link>
-            </Button>
             <DialogClose asChild>
               <Button type="button" variant="ghost" size="icon" className="size-11" aria-label="Close" data-slot="dialog-close">
                 <X aria-hidden="true" />

@@ -751,6 +751,7 @@ export default function HistoryContent({
               pageSize={10}
               onPageChange={(p) => updateFilters({ page: p })}
               variant="ghost"
+              itemLabel="records"
             />
           </div>
         ) : null
