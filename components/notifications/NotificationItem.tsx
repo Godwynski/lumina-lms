@@ -1,0 +1,161 @@
+'use client'
+
+import React, { memo } from 'react'
+import { useRouter } from 'next/navigation'
+import { 
+  Check, 
+  AlertTriangle, 
+  Clock, 
+  Bookmark, 
+  CalendarOff, 
+  Info
+} from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { Notification } from '@/hooks/use-notifications'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
+interface NotificationItemProps {
+  notification: Notification
+  onMarkRead: (id: string) => void
+  variant?: 'compact' | 'full'
+  /** When set, clicking the row opens details instead of marking read and redirecting. */
+  onOpen?: (notification: Notification) => void
+}
+
+export const typeConfig = {
+  OVERDUE: {
+    icon: AlertTriangle,
+    color: 'text-red-500',
+    bg: 'bg-red-500/10'
+  },
+  DUE_SOON: {
+    icon: Clock,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10'
+  },
+  RESERVATION: {
+    icon: Bookmark,
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500/10'
+  },
+  RESERVATION_EXPIRED: {
+    icon: CalendarOff,
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10'
+  },
+  SYSTEM: {
+    icon: Info,
+    color: 'text-slate-500',
+    bg: 'bg-slate-500/10'
+  }
+}
+
+export const getTargetUrl = (type: string) => {
+  switch (type) {
+    case 'OVERDUE':
+    case 'DUE_SOON':
+    case 'CIRCULATION':
+      return '/history'
+    case 'RESERVATION':
+    case 'RESERVATION_EXPIRED':
+      return '/student-catalog'
+    default:
+      return null
+  }
+}
+
+export const NotificationItem = memo(({ 
+  notification, 
+  onMarkRead, 
+  variant = 'full',
+  onOpen
+}: NotificationItemProps) => {
+  const router = useRouter()
+  const config = typeConfig[notification.type as keyof typeof typeConfig] || typeConfig.SYSTEM
+  const Icon = config.icon
+  const targetUrl = getTargetUrl(notification.type)
+
+  const handleClick = () => {
+    if (onOpen) {
+      onOpen(notification)
+      return
+    }
+    if (!notification.is_read) {
+      onMarkRead(notification.id)
+    }
+    if (targetUrl) {
+      router.push(targetUrl)
+    }
+  }
+
+  return (
+    <div 
+      className={cn(
+        "group relative flex items-start gap-3 transition-all duration-200 border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:bg-muted/30",
+        notification.is_read 
+          ? "bg-transparent" 
+          : "bg-primary/[0.03]",
+        variant === 'compact' ? "p-3 px-4" : "p-4 px-5"
+      )}
+    >
+      {/* Subtle Status Indicator */}
+      <div className={cn(
+        "mt-1.5 h-2 w-2 shrink-0 rounded-full transition-all duration-300",
+        notification.is_read ? "bg-muted-foreground/20" : "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]"
+      )} />
+
+      {/* Content Section */}
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Icon className={cn("h-4 w-4 shrink-0", notification.is_read ? "text-muted-foreground/50" : config.color)} />
+            <h4 className={cn(
+              "text-sm font-medium transition-colors",
+              variant === 'compact' ? "truncate" : "break-words",
+              !notification.is_read ? "text-foreground" : "text-muted-foreground"
+            )}>
+              <button type="button" onClick={handleClick} className="cursor-pointer text-left after:absolute after:inset-0 after:z-10 focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-primary">
+                {!notification.is_read && <span className="sr-only">Unread: </span>}
+                {notification.title}
+              </button>
+            </h4>
+          </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+          </span>
+        </div>
+        
+        <p className={cn(
+          "text-xs leading-relaxed font-medium transition-colors",
+          notification.is_read ? "text-muted-foreground" : "text-muted-foreground",
+          // The full page shows the whole message; the compact bell preview stays short.
+          variant === 'compact' ? "line-clamp-1" : "whitespace-pre-line break-words"
+        )}>
+          {notification.content}
+        </p>
+      </div>
+
+      {/* Single direct action: Mark as read (Unread items only) */}
+      {!notification.is_read && (
+        <div className="relative z-20 flex items-center self-start pt-0.5">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => {
+              e.stopPropagation()
+              onMarkRead(notification.id)
+            }}
+            className="h-11 w-11 sm:h-7 sm:w-7 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-80 group-hover:opacity-100"
+            title="Mark as read"
+            aria-label={`Mark "${notification.title}" as read`}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+})
+
+NotificationItem.displayName = 'NotificationItem'

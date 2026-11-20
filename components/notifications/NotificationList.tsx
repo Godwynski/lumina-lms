@@ -1,0 +1,81 @@
+'use client'
+
+import React from 'react'
+import { Bell, Loader2 } from 'lucide-react'
+import { Notification } from '@/hooks/use-notifications'
+import { NotificationItem } from './NotificationItem'
+import { Button } from '@/components/ui/button'
+
+interface NotificationListProps {
+  notifications: Notification[]
+  loading: boolean
+  onMarkRead: (id: string) => void
+  onOpen?: (notification: Notification) => void
+  variant?: 'compact' | 'full'
+  emptyMessage?: string
+  error?: string | null
+  onRetry?: () => void
+}
+
+export function NotificationList({
+  notifications,
+  loading,
+  onMarkRead,
+  onOpen,
+  variant = 'full',
+  emptyMessage = "You're all caught up",
+  error,
+  onRetry,
+}: NotificationListProps) {
+  // A failed load must never look like an empty inbox.
+  if (error && !loading && notifications.length === 0) {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center py-12 text-center gap-3">
+        <p className="text-sm text-foreground">{error}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            Retry
+          </Button>
+        )}
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div role="status" className="flex flex-col items-center justify-center py-12 gap-3">
+        <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+        <span className="text-sm text-muted-foreground">
+          Loading...
+        </span>
+      </div>
+    )
+  }
+
+  if (notifications.length === 0) {
+    return (
+      <div role="status" className="flex flex-col items-center justify-center py-16 text-center gap-3">
+        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+          <Bell className="w-5 h-5 text-muted-foreground" />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {emptyMessage}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col">
+      {notifications.map((notification) => (
+        <NotificationItem 
+          key={notification.id} 
+          notification={notification} 
+          onMarkRead={onMarkRead}
+          onOpen={onOpen}
+          variant={variant}
+        />
+      ))}
+    </div>
+  )
+}

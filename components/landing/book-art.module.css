@@ -1,0 +1,33 @@
+/*
+ * Every state of the book is a pure function of --p (0 = initial scroll position, 1 = end of section).
+ * --open maps 0..1 into 0.5..1.0 so the initial state shows an open two-page spread rather than a closed dark board,
+ * while scrolling turns the remaining leaf and draws the bookmark ribbon.
+ * Without JS or with reduced motion, --p falls back to 1 (--open = 1, the finished open spread).
+ */
+.shift {
+  --open: calc(0.5 + var(--p, 1) * 0.5);
+  transform: translateX(calc((1 - clamp(0, (var(--open) - 0.05) * 5, 1)) * -71px));
+}
+
+/* The curved page block only shows once the cover starts to lift. */
+.spread {
+  opacity: clamp(0, (var(--open) - 0.05) * 12, 1);
+}
+
+/* A leaf turning about the spine: its front narrows to nothing, then its back widens on the left. */
+.front,
+.back {
+  transform-origin: 160px 0;
+}
+.front {
+  transform: scaleX(clamp(0, 1 - (var(--open) - var(--a)) * 10, 1));
+}
+.back {
+  transform: scaleX(clamp(0, (var(--open) - var(--a)) * 10 - 1, 1));
+}
+
+/* pathLength is 1, so the ribbon is drawn out of the spine as the offset falls to 0. */
+.ribbon {
+  stroke-dasharray: 1;
+  stroke-dashoffset: clamp(0, 1 - (var(--open) - 0.7) * 3.4, 1);
+}

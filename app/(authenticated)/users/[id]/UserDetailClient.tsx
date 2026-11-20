@@ -1,0 +1,777 @@
+"use client";
+
+import { useState, useEffect, useMemo, useRef, useCallback, startTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  Shield, Phone, MapPin, User as UserIcon, Building, Trash2,
+  CheckCircle2, AlertCircle, UserCheck, Archive, Calendar, Key, Hash
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { ROLE_LABELS, getRoleLabel } from "@/components/common/RoleBadge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter, DialogClose
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { SettingsShell } from "@/components/settings/SettingsShell";
+import { Section } from "@/components/settings/SettingsShared";
+import { FieldGroup } from "@/components/common/FieldGroup";
+import { OverflowActionsMenu } from "@/components/common/OverflowActionsMenu";
+import { UserBorrowingHistorySection, type UserBorrowingHistoryData } from "@/components/users/UserBorrowingHistorySection";
+import { createClient } from "@/lib/supabase/client";
+import { mapProfileToUser } from "@/lib/utils/mappers";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
+import type { User } from "@/lib/types";
+
+function profileForm(user: User) {
+  return {
+    name: user.name || "",
+    email: user.email,
+    role: user.role,
+    patron_type: user.patron_type || "student",
+    status: user.status,
+    department: user.department || "",
+    student_id: user.student_id || "",
+    address: user.address || "",
+    phone: user.phone || "",
+    permissions: user.permissions || {},
+  };
+}
+type ProfileForm = ReturnType<typeof profileForm>;
+function sameField(key: keyof ProfileForm, left: ProfileForm, right: ProfileForm) {
+  if (key === "permissions") {
+    return [...new Set([...Object.keys(left.permissions), ...Object.keys(right.permissions)])]
+      .every(permission => !!left.permissions[permission] === !!right.permissions[permission]);
+  }
+  const normalize = (value: string) => key === "status" ? value.trim().toUpperCase() : key === "department" ? value.trim() || "General" : value.trim();
+  return normalize(left[key]) === normalize(right[key]);
+}
+const formKeys = ["name", "email", "role", "patron_type", "status", "department", "student_id", "address", "phone", "permissions"] as const;
+
+export function UserDetailClient({
+  initialUser,
+  currentRole,
+  initialHistory,
+}: {
+  initialUser: User;
+  currentRole: string;
+  initialHistory?: UserBorrowingHistoryData;
+}) {
+  const router = useRouter();
+  const [user, setUser] = useState<User>(initialUser);
+  const [form, setForm] = useState(() => profileForm(initialUser));
+  const savedUserRef = useRef(initialUser);
+  const receiveUser = useCallback((nextUser: User, submitted?: ProfileForm) => {
+    const previous = submitted || profileForm(savedUserRef.current);
+    const incoming = profileForm(nextUser);
+    const changedUser = savedUserRef.current.id !== nextUser.id;
+    savedUserRef.current = nextUser;
+    setUser(nextUser);
+    // Preserve local edits while refreshing fields the user has not changed.
+    setForm(current => changedUser ? incoming : Object.fromEntries(formKeys.map(key => [
+      key, sameField(key, current, previous) ? incoming[key] : current[key],
+    ])) as ProfileForm);
+  }, []);
+
+  useEffect(() => { receiveUser(initialUser); }, [initialUser, receiveUser]);
+  const [isSaving, setIsSaving] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
+
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefresh = useCallback(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      startTransition(() => {
+        router.refresh();
+      });
+    }, 500);
+  }, [router]);
+
+  // Realtime subscription for profile changes (e.g. avatar updates from the user)
+  useEffect(() => {
+    const channelId = `user-detail-${initialUser.id}-${Math.random().toString(36).slice(2, 9)}`;
+    const channel = supabase
+      .channel(channelId)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${initialUser.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            const updatedRow = payload.new as Record<string, unknown>;
+            const mapped = mapProfileToUser(updatedRow);
+            receiveUser({ ...savedUserRef.current, ...mapped, library_card: savedUserRef.current.library_card });
+          }
+          debouncedRefresh();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "borrowing_records",
+          filter: `user_id=eq.${initialUser.id}`,
+        },
+        debouncedRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "library_cards",
+          filter: `user_id=eq.${initialUser.id}`,
+        },
+        debouncedRefresh
+      )
+      .subscribe();
+
+    return () => {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      void supabase.removeChannel(channel);
+    };
+  }, [initialUser.id, supabase, debouncedRefresh, receiveUser]);
+
+  // Modals
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
+
+  const isAdmin = currentRole === "super_admin";
+  const isLibrarian = currentRole === "librarian";
+  const isTargetAdmin = initialUser.role === "super_admin";
+  const isTargetLibrarian = initialUser.role === "librarian";
+  const isReadOnly = isLibrarian && (isTargetAdmin || isTargetLibrarian);
+
+  const savedForm = profileForm(user);
+  const isDirty = formKeys.some(key => !sameField(key, form, savedForm));
+
+  const needsVerification = !isReadOnly && user.status.toUpperCase() === "PENDING";
+
+  const handleUpdateProfile = async () => {
+    if (!isDirty || isSaving) return;
+    setIsSaving(true);
+
+    try {
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          name: form.name.trim(),
+          role: form.role,
+          patron_type: form.patron_type,
+          status: form.status.trim().toUpperCase(),
+          department: form.patron_type === "faculty" ? form.department.trim() || null : (form.department.trim() || "General"),
+          student_id: form.student_id.trim(),
+          address: form.address.trim(),
+          phone: form.phone.trim(),
+          ...(isAdmin ? { permissions: form.permissions } : {}),
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.ok) throw new Error(result.message || "Failed to update profile");
+
+      receiveUser({ ...user, ...result.user, library_card: user.library_card }, form);
+      toast.success("Account updated successfully");
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update profile";
+      toast.error(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleVerifyAndApprove = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          name: form.name.trim(),
+          role: form.role,
+          patron_type: form.patron_type,
+          status: "ACTIVE", // Force Active
+          department: form.patron_type === "faculty" ? form.department.trim() || null : (form.department.trim() || "General"),
+          student_id: form.student_id.trim(),
+          address: form.address.trim(),
+          phone: form.phone.trim(),
+          ...(isAdmin ? { permissions: form.permissions } : {}),
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.ok) throw new Error(result.message || "Failed to approve account");
+
+      receiveUser({ ...user, ...result.user, library_card: user.library_card }, form);
+      setVerificationOpen(false);
+      toast.success("Identity verified and account activated!");
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to approve account";
+      toast.error(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStatusChange = (value: string) => {
+    if (!isAdmin && (value === "ARCHIVED" || value === "SUSPENDED")) {
+      toast.error("Only administrators can suspend or archive users.");
+      return;
+    }
+    setForm(prev => ({ ...prev, status: value }));
+  };
+
+  const statusOptions = [
+    { id: "ACTIVE", label: "Active", icon: CheckCircle2 },
+    { id: "PENDING", label: "Pending", icon: Calendar },
+    { id: "INACTIVE", label: "Inactive", icon: AlertCircle },
+    { id: "GRADUATED", label: "Graduated", icon: UserCheck },
+    { id: "DELETED", label: "Deleted", icon: Archive },
+    { id: "SUSPENDED", label: "Suspended", icon: AlertCircle, restricted: !isAdmin },
+    { id: "ARCHIVED", label: "Archived", icon: Archive, restricted: !isAdmin },
+  ];
+
+  const roleOptions = [
+    { id: "super_admin", label: ROLE_LABELS.super_admin, icon: Shield, hidden: !isAdmin },
+    { id: "librarian", label: ROLE_LABELS.librarian, icon: Building },
+    { id: "library_staff", label: ROLE_LABELS.library_staff, icon: UserCheck },
+    { id: "patron", label: ROLE_LABELS.patron, icon: UserIcon },
+  ];
+
+  return (
+    <SettingsShell isDirty={isDirty}>
+      <div className="flex flex-col gap-6 pt-2 min-w-0">
+        {needsVerification && (
+          <div
+            role="status"
+            className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300 mt-0.5" aria-hidden="true" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold text-foreground">Pending identity verification</p>
+                <p className="text-xs text-muted-foreground">
+                  Review this user&apos;s institutional ID and profile details, then approve to activate library access.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setVerificationOpen(true)}
+              className="h-11 sm:h-9 w-full sm:w-auto shrink-0 rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-700 gap-1.5"
+            >
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              Verify &amp; Approve
+            </Button>
+          </div>
+        )}
+
+        <div className="grid gap-6 min-w-0">
+
+          {/* ───── Section 1: User Identity & Core Access ───── */}
+          <Section title="User Profile" icon={UserIcon} hideHeaderOnMobile>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              {/* Left Column: Avatar & ID */}
+              <div className="flex flex-col items-center gap-4 rounded-xl border border-border/40 bg-muted/20 p-5 lg:w-56 shrink-0">
+                <Avatar className="h-24 w-24 rounded-2xl border-2 border-background shadow-lg">
+                <AvatarImage src={bustAvatarCache(user.avatarUrl, user.updatedAt)} alt={form.name} className="object-cover" />
+                  <AvatarFallback className="rounded-2xl bg-muted text-xl font-bold">
+                    {form.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {(isAdmin || (isLibrarian && !isTargetAdmin)) && <Link href={`/audit?studentId=${initialUser.id}`} className="text-sm font-semibold text-primary hover:underline">View patron records</Link>}
+                <div className="w-full space-y-3">
+                  <div className="text-center px-1">
+                    <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
+                    <p className="text-[11px] text-muted-foreground break-all mt-1">
+                      {form.email}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold text-center">Institutional ID</p>
+                    <div className="flex items-center justify-center gap-2 rounded-lg bg-background border border-border px-3 py-2 shadow-sm">
+                      <Hash className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                      <span className="font-mono text-xs font-bold text-foreground">
+                        {initialUser.student_id || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span>Since {user.joined || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Information & Controls */}
+              <div className="flex-1 min-w-0 space-y-6">
+                {/* Information Fields */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FieldGroup label="Display Name">
+                    <Input
+                      value={form.name}
+                      onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Full name"
+                      className="h-10 rounded-lg text-sm"
+                      disabled={isReadOnly}
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Department / Program">
+                    <div className="relative">
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={form.department || ""}
+                        onChange={e => setForm(prev => ({ ...prev, department: e.target.value }))}
+                        placeholder="e.g. IT, Admin"
+                        className="h-10 rounded-lg pl-9 text-sm"
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                  </FieldGroup>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FieldGroup label="Phone Number">
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={form.phone}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "");
+                          if (value.length <= 11) {
+                            setForm(prev => ({ ...prev, phone: value }));
+                          }
+                        }}
+                        placeholder="Contact number"
+                        className="h-10 rounded-lg pl-9 text-sm"
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                  </FieldGroup>
+                  <FieldGroup label="Home Address">
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        value={form.address}
+                        onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Street, City"
+                        className="h-10 rounded-lg pl-9 text-sm"
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                  </FieldGroup>
+                </div>
+
+                {/* System Controls - Compact Selects */}
+                <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-border/40">
+                  <FieldGroup label="System Role">
+                    <Select 
+                      value={form.role} 
+                      onValueChange={(val) => setForm(prev => ({ ...prev, role: val as User["role"] }))}
+                      disabled={isReadOnly || isLibrarian}
+                    >
+                      <SelectTrigger className="w-full h-10 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roleOptions.filter(r => !r.hidden).map(r => (
+                          <SelectItem key={r.id} value={r.id}>
+                            <div className="flex items-center gap-2">
+                              <r.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{r.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FieldGroup>
+
+                  <FieldGroup label="Account Status">
+                    <Select 
+                      value={form.status} 
+                      onValueChange={handleStatusChange}
+                      disabled={isReadOnly}
+                    >
+                      <SelectTrigger className="w-full h-10 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map(s => (
+                          <SelectItem key={s.id} value={s.id} disabled={s.restricted}>
+                            <div className="flex items-center gap-2">
+                              <s.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{s.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FieldGroup>
+                </div>
+
+                {/* Inline Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {form.role === "library_staff" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 sm:h-9 rounded-lg text-xs font-medium gap-1.5"
+                      onClick={() => setPermissionsOpen(true)}
+                    >
+                      <Key className="h-3.5 w-3.5" aria-hidden="true" />
+                      Manage Assistant Permissions
+                    </Button>
+                  )}
+
+                  <OverflowActionsMenu
+                    label="More user actions"
+                    className="sm:hidden ml-auto"
+                    actions={[
+                      {
+                        id: "other-info",
+                        label: "Other Information",
+                        icon: AlertCircle,
+                        onSelect: () => setSecondaryOpen(true),
+                      },
+                      ...(isAdmin
+                        ? [
+                            {
+                              id: "archive-user",
+                              label: "Archive",
+                              icon: Trash2,
+                              destructive: true,
+                              onSelect: () => setArchiveOpen(true),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:inline-flex h-9 rounded-lg text-xs font-medium gap-1.5"
+                    onClick={() => setSecondaryOpen(true)}
+                  >
+                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                    Other Information
+                  </Button>
+
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hidden sm:inline-flex h-9 rounded-lg text-xs font-medium gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                      onClick={() => setArchiveOpen(true)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Archive
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* ───── Save Footer ───── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-primary/10 bg-primary/5 p-4 mt-2 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-background shadow-sm shrink-0">
+                <UserCheck className="h-4 w-4 text-primary" />
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-xs font-bold text-foreground">{isDirty ? "Pending Changes" : "No Unsaved Changes"}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Role <span className="text-foreground font-medium">{getRoleLabel(form.role)}</span> · Status <span className="text-foreground font-medium">{form.status}</span>
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleUpdateProfile}
+              disabled={isSaving || !isDirty}
+              className="h-11 sm:h-10 w-full sm:w-auto rounded-xl sm:rounded-lg px-8 font-bold shadow-md transition-all active:scale-95 shrink-0"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+
+          {(isAdmin || isLibrarian) && (
+            <UserBorrowingHistorySection userId={user.id} initialHistory={initialHistory} />
+          )}
+
+        </div>
+      </div>
+
+      {/* ═══════════════ MODALS ═══════════════ */}
+
+      {/* Permissions Modal */}
+      <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
+              <Key className="h-4 w-4" />
+              Library Staff Access Control
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Grant specific administrative and operational capabilities to this Library Staff member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {[
+              { 
+                key: "manage_circulation", 
+                label: "Circulation Desk Access", 
+                desc: "Allows checking out library books, processing returns, managing reservations, and assisting patrons at the desk." 
+              },
+              { 
+                key: "manage_attendance", 
+                label: "Attendance Desk & Scanner", 
+                desc: "Allows processing card scans (barcode/QR code entries), viewing today's overall library attendance logs, and accessing the Gate Scanner Console." 
+              },
+              { 
+                key: "manage_inventory", 
+                label: "Inventory",
+                desc: "Allows access to the inventory catalog to view library books, stock, and availability."
+              },
+              { 
+                key: "view_admin_dashboard", 
+                label: "Staff Dashboard View",
+                desc: "Allows viewing staff operational summary on the dashboard."
+              },
+            ].map(p => (
+              <div
+                key={p.key}
+                className="flex items-start justify-between gap-4 px-3 py-3.5 rounded-xl hover:bg-muted/50 transition-all border border-border/40 bg-card"
+              >
+                <div className="space-y-1 pr-2">
+                  <p id={`perm-${p.key}-label`} className="text-xs font-bold text-foreground">{p.label}</p>
+                  <p id={`perm-${p.key}-desc`} className="text-[11px] text-muted-foreground leading-normal">{p.desc}</p>
+                </div>
+                <Switch
+                  aria-labelledby={`perm-${p.key}-label`}
+                  aria-describedby={`perm-${p.key}-desc`}
+                  checked={form.permissions?.[p.key] ?? false}
+                  onCheckedChange={(checked) =>
+                    setForm(prev => ({
+                      ...prev,
+                      permissions: { ...prev.permissions, [p.key]: checked },
+                    }))
+                  }
+                  disabled={isReadOnly || !isAdmin}
+                  className="mt-0.5 shrink-0"
+                />
+              </div>
+            ))}
+
+            {/* Unsaved Changes Alert Box */}
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 animate-in fade-in duration-300">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-normal font-medium text-amber-800">
+                <strong>Attention:</strong> These toggles adjust permissions locally. You must click <strong>&quot;Save Changes&quot;</strong> at the bottom of the main profile page to persist them to the database.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button className="w-full sm:w-auto h-9 font-bold bg-primary text-primary-foreground hover:bg-primary/90">
+                Confirm & Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Physical Verification Modal */}
+      <Dialog open={verificationOpen} onOpenChange={setVerificationOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              ID Verification
+            </DialogTitle>
+            <DialogDescription>
+              Verify patron identity via physical ID card presentation.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Identity Comparison Preview */}
+            <div className="space-y-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground px-1">Identity Preview</h4>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Full Name</p>
+                    <p className="text-sm font-bold text-foreground leading-tight">{form.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Patron ID</p>
+                    <p className="text-sm font-mono font-bold text-foreground">{initialUser.student_id}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-1 border-t border-border/40 pt-3">
+                  <p className="text-[11px] text-muted-foreground uppercase font-semibold">Program / Department</p>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <p className="text-sm font-medium">{form.department || "General"}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-3">
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Phone</p>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3 text-muted-foreground/60" />
+                      <p className="text-xs font-medium">{form.phone || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground uppercase font-semibold">Address</p>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3 text-muted-foreground/60" />
+                      <p className="text-xs font-medium truncate">{form.address || "—"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" className="h-9 font-bold">Cancel</Button>
+            </DialogClose>
+            <Button
+              className="h-9 font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-500/20"
+              onClick={handleVerifyAndApprove}
+              disabled={isSaving}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {isSaving ? "Activating..." : "Confirm & Activate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Other Information Modal */}
+      <Dialog open={secondaryOpen} onOpenChange={setSecondaryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <AlertCircle className="h-4 w-4" />
+              Other Information
+            </DialogTitle>
+            <DialogDescription>
+              Secondary identity details and system metadata.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Library Card Section */}
+            <div className="space-y-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Library Identity</h4>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Card Number</span>
+                  <span className="text-xs font-mono font-bold">{user.library_card?.card_number || "None"}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Card Status</span>
+                  <StatusBadge status={user.library_card?.status || "None"} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Expires At</span>
+                  <span className="text-xs font-medium">
+                    {user.library_card?.expires_at 
+                      ? new Date(user.library_card.expires_at).toLocaleDateString()
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* System Status Section */}
+            <div className="space-y-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">System Metadata</h4>
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Onboarding Status</span>
+                  <Badge variant={user.onboarding_completed ? "default" : "secondary"} className="h-5 text-[11px] uppercase font-bold">
+                    {user.onboarding_completed ? "Completed" : "Pending"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Account Created</span>
+                  <span className="text-xs font-medium">{user.joined}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" className="w-full sm:w-auto h-9 font-bold">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Confirmation Modal */}
+      <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-destructive font-bold">
+              <Trash2 className="h-4 w-4" />
+              Archive Identity
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure? This hides <span className="font-bold text-foreground">{user.name}</span> from directories.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" className="h-9 font-bold">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              className="h-9 font-bold"
+              onClick={() => {
+                handleStatusChange("ARCHIVED");
+                setArchiveOpen(false);
+              }}
+            >
+              Archive
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </SettingsShell>
+  );
+}

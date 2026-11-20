@@ -1,0 +1,153 @@
+import { revalidatePath } from "next/cache";
+import { DEFAULT_POLICIES, isValidPolicyValue } from "@/lib/actions/policy-constants";
+import { logAuditActivity } from "@/lib/audit";
+import { withAuthApi, apiSuccess, apiError } from "@/lib/api-utils";
+
+export const GET = withAuthApi(
+  async (request, { supabase }) => {
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("*")
+      .order("key", { ascending: true });
+
+    if (error) {
+      return apiError(error.message, "DATABASE_ERROR", 400);
+    }
+
+    return apiSuccess(data);
+  },
+  { allowedRoles: ["super_admin", "librarian"] }
+);
+
+export const POST = withAuthApi(
+  async (request, { user }) => {
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return apiError("Invalid JSON body", "BAD_REQUEST", 400);
+    }
+    const key = typeof body?.key === "string" ? body.key.trim() : "";
+    const value = typeof body?.value === "string" ? body.value.trim() : "";
+    const description =
+      typeof body.description === "string"
+        ? body.description.trim()
+        : DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.description;
+    const reason = typeof body.reason === "string" ? body.reason.trim() : null;
+
+    if (!key || !value) {
+      return apiError("key and value are required", "BAD_REQUEST", 400);
+    }
+
+    if (!isValidPolicyValue(key, value)) {
+      const validationType = DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.validation?.type;
+      return apiError(
+        validationType === "time"
+          ? "Invalid time format. Expected 24-hour HH:MM."
+          : "Invalid policy value",
+        "BAD_REQUEST",
+        400
+      );
+    }
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminClient = createAdminClient();
+
+    // Check if exists
+    const { data: existing } = await adminClient
+      .from("system_settings")
+      .select("*")
+      .eq("key", key)
+      .maybeSingle();
+
+    let result;
+    if (existing) {
+      const { data, error } = await adminClient
+        .from("system_settings")
+        .update({
+          value,
+          description,
+          updated_by: user.id,
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    } else {
+      const { data, error } = await adminClient
+        .from("system_settings")
+        .insert([{ key, value, description, updated_by: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    }
+
+    let auditReason = reason;
+    let auditDetails: Record<string, unknown> | null = null;
+
+    if (!auditReason) {
+      let displayValue = value;
+      if (value.startsWith("[") || value.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            let oldParsed: unknown[] = [];
+            if (existing && (existing.value.startsWith("[") || existing.value.startsWith("{"))) {
+              try {
+                const oldObj = JSON.parse(existing.value);
+                if (Array.isArray(oldObj)) oldParsed = oldObj;
+              } catch {
+                // Ignore parse errors
+              }
+            }
+            const newCount = parsed.length;
+            const oldCount = oldParsed.length;
+
+            const added = parsed.filter(newItem => !oldParsed.some(oldItem => JSON.stringify(oldItem) === JSON.stringify(newItem)));
+            const removed = oldParsed.filter(oldItem => !parsed.some(newItem => JSON.stringify(newItem) === JSON.stringify(oldItem)));
+            
+            if (added.length > 0 || removed.length > 0) {
+              auditDetails = { added, removed };
+            }
+            
+            if (existing) {
+              if (newCount > oldCount) displayValue = `a list of ${newCount} items (${newCount - oldCount} added)`;
+              else if (newCount < oldCount) displayValue = `a list of ${newCount} items (${oldCount - newCount} removed)`;
+              else displayValue = `a list of ${newCount} items (modified)`;
+            } else {
+              displayValue = `a list of ${newCount} items`;
+            }
+          } else {
+            displayValue = `a configuration object`;
+          }
+        } catch {
+          if (value.length > 100) displayValue = value.substring(0, 100) + "...";
+        }
+      } else if (value.length > 100) {
+        displayValue = value.substring(0, 100) + "...";
+      }
+      auditReason = `Updated ${key} to ${displayValue}`;
+    }
+
+    // Log the change with full context
+    await logAuditActivity(
+      user.id,
+      "policy",
+      result.id,
+      `Updated policy: ${key}`,
+      auditReason,
+      auditDetails,
+      existing ? { value: existing.value, key: existing.key } : null,
+      { value: result.value, key: result.key }
+    );
+
+    revalidatePath("/policies", "page");
+
+    return apiSuccess(result);
+  },
+  { allowedRoles: ["super_admin", "librarian"] }
+);

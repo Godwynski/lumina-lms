@@ -1,0 +1,395 @@
+'use client';
+
+import { useEffect, useId, useRef, useState } from 'react';
+import { ArrowLeft, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { FineSettlementDialog } from '@/components/common/FineSettlementDialog';
+import { CirculationStepper } from './CirculationStepper';
+import { ScanStep } from './steps/ScanStep';
+import { ReviewStep } from './steps/ReviewStep';
+import { SuccessStep } from './steps/SuccessStep';
+import { MemberPreview } from './MemberPreview';
+import { useCirculationWizard } from '@/hooks/use-circulation-wizard';
+import { usePreferences } from '@/components/providers/PreferencesProvider';
+import type { UserRole } from '@/lib/types';
+
+export interface CirculationWizardProps {
+  userRole?: UserRole | null;
+}
+
+/**
+ * Streamlined Circulation Wizard shell.
+ * Coordinates circulation step presentation while state management, audio cues,
+ * and server actions are isolated in dedicated hooks and subcomponents.
+ */
+export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
+  const { role: contextRole } = usePreferences();
+  const effectiveRole = userRole ?? contextRole;
+  const canOverrideBlock = effectiveRole === 'librarian' || effectiveRole === 'super_admin';
+
+  const {
+    mode,
+    steps,
+    currentStep,
+    activeStudent,
+    overrideReason,
+    isBlockedPendingOverride,
+    pendingCheckout,
+    pendingReturn,
+    isProcessing,
+    isCommitting,
+    isConfirmed,
+    reservationData,
+    switchMode,
+    handleReset: resetWizard,
+    applyOverride,
+    processScan,
+    confirmAction,
+  } = useCirculationWizard();
+
+  // View-only step override for going back. The hook derives `reachedStep` from
+  // the scanned data, so stepping back never clears the student or the draft.
+  const [session, setSession] = useState(0);
+  const reachedStep = currentStep;
+  const [viewStep, setViewStep] = useState<number | null>(null);
+  const step = isConfirmed || viewStep === null ? reachedStep : Math.min(viewStep, reachedStep);
+  const canNavigate = !isConfirmed && !isProcessing && !isCommitting;
+
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideDraft, setOverrideDraft] = useState('');
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const overrideFieldId = useId();
+
+  const goToStep = (id: number) => {
+    if (canNavigate && id >= 1 && id <= reachedStep) setViewStep(id < reachedStep ? id : null);
+  };
+  const clearOverrideDraft = () => {
+    setShowOverrideForm(false);
+    setOverrideDraft('');
+    setOverrideError(null);
+  };
+  const handleReset = () => {
+    setViewStep(null);
+    setSession(n => n + 1);
+    clearOverrideDraft();
+    resetWizard();
+  };
+  const handleSwitchMode = (next: typeof mode) => {
+    setViewStep(null);
+    clearOverrideDraft();
+    switchMode(next);
+  };
+  // A successful scan produces a fresh draft, so resume at the furthest step.
+  const handleScan: typeof processScan = async (value, isManual) => {
+    const ok = await processScan(value, isManual);
+    if (ok) {
+      setViewStep(null);
+      clearOverrideDraft();
+    }
+    return ok;
+  };
+  // Stepped back to student identification with a student already scanned.
+  const reviewingStudent = mode === 'checkout' && step === 1 && !!activeStudent && !isBlockedPendingOverride;
+
+  const handleOverrideContinue = () => {
+    const trimmed = overrideDraft.trim();
+    if (trimmed.length < 10 || trimmed.length > 300) {
+      setOverrideError('Override reason must be between 10 and 300 characters.');
+      return;
+    }
+    if (applyOverride(trimmed)) {
+      clearOverrideDraft();
+      setViewStep(null);
+    }
+  };
+
+  // When a step replaces the focused control, move focus to the new stage.
+  // Preserve normal route-entry focus and keep failed scans in the current field.
+  const stageRef = useRef<HTMLElement>(null);
+  const stageKey = `${mode}-${step}`;
+  const previousStage = useRef(stageKey);
+  useEffect(() => {
+    if (previousStage.current !== stageKey) {
+      previousStage.current = stageKey;
+      stageRef.current?.focus();
+    }
+  }, [stageKey]);
+  const stageLabel = isConfirmed
+    ? (mode === 'checkout' ? 'Checkout complete' : 'Return complete')
+    : `Step ${step} of ${steps.length}: ${steps[step - 1].label}`;
+
+  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+
+  const handleConfirmClick = () => {
+    if (mode === 'return' && (pendingReturn?.fineAmount ?? 0) > 0) {
+      setIsSettleModalOpen(true);
+      return;
+    }
+    void confirmAction(false);
+  };
+
+  return (
+    <div className="w-full space-y-3 sm:space-y-6 pb-12">
+      {/* Centered Compact Stepper */}
+      <div className="bg-card/30 border border-border/10 rounded-2xl p-3 sm:p-6 backdrop-blur-sm">
+        <CirculationStepper
+          steps={steps}
+          currentStep={step}
+          reachedStep={reachedStep}
+          onStepClick={canNavigate ? goToStep : undefined}
+        />
+      </div>
+
+      <div className="bg-card/50 border border-border/40 rounded-2xl p-3.5 sm:p-7 md:p-8 relative overflow-hidden transition-all duration-200">
+        {/* Header Action Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 sm:mb-6 sm:pb-5 border-b border-border/40">
+          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/40">
+            <Button
+              variant={mode === 'checkout' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-11 sm:h-9 rounded-lg px-4 text-xs font-semibold"
+              aria-pressed={mode === 'checkout'}
+              disabled={isCommitting}
+              onClick={() => mode !== 'checkout' && handleSwitchMode('checkout')}
+            >
+              Checkout
+            </Button>
+            <Button
+              variant={mode === 'return' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-11 sm:h-9 rounded-lg px-4 text-xs font-semibold"
+              aria-pressed={mode === 'return'}
+              disabled={isCommitting}
+              onClick={() => mode !== 'return' && handleSwitchMode('return')}
+            >
+              Return
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+          {step > 1 && !isConfirmed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-11 sm:h-9 gap-1.5 rounded-lg text-xs font-semibold text-muted-foreground transition-colors"
+              disabled={!canNavigate}
+              onClick={() => goToStep(step - 1)}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back</span>
+            </Button>
+          )}
+          {!isConfirmed && (reachedStep > 1 || isProcessing) && <Button
+            variant="ghost"
+            size="sm"
+            className="h-11 sm:h-9 gap-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            disabled={isCommitting}
+            onClick={handleReset}
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
+            <span>Start over</span>
+          </Button>}
+          </div>
+        </div>
+
+        <section ref={stageRef} tabIndex={-1} aria-label={stageLabel} className="scroll-mt-6 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+          {isConfirmed ? (
+            <SuccessStep 
+              title={mode === 'checkout' ? 'Checkout Complete' : 'Return Complete'}
+              message={mode === 'checkout' 
+                ? `The resource has been successfully assigned to ${activeStudent?.fullName}.`
+                : `The resource has been successfully returned.`}
+              nextLabel={mode === 'checkout' ? 'New checkout' : 'New return'}
+              onReset={handleReset}
+              reservationReady={reservationData.ready}
+              reservedFor={reservationData.studentName}
+            />
+          ) : (step === 1 || (step === 2 && mode === 'checkout')) ? (
+            <div key={`${mode}-${session}`}>
+              {activeStudent && mode === 'checkout' && (
+                <MemberPreview student={activeStudent} overrideReason={overrideReason} />
+              )}
+
+              {isBlockedPendingOverride ? (
+                <div className="rounded-2xl border border-border/20 bg-muted/10 p-5 space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Checkout cannot proceed while this patron has overdue books or unpaid fines.
+                    </p>
+                    {!canOverrideBlock && (
+                      <p className="text-xs text-muted-foreground">
+                        Only a Librarian or Super Admin can override a borrowing block.
+                      </p>
+                    )}
+                  </div>
+
+                  {showOverrideForm && canOverrideBlock ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={overrideFieldId} className="text-sm font-medium">
+                          Override reason
+                        </Label>
+                        <Textarea
+                          id={overrideFieldId}
+                          value={overrideDraft}
+                          onChange={(e) => {
+                            setOverrideDraft(e.target.value);
+                            if (overrideError) setOverrideError(null);
+                          }}
+                          placeholder="Enter reason for overriding this borrowing block (10–300 characters)"
+                          maxLength={300}
+                          aria-invalid={Boolean(overrideError)}
+                          className="min-h-24"
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span>Minimum 10 characters required.</span>
+                          <span className="tabular-nums">{overrideDraft.trim().length}/300</span>
+                        </div>
+                        {overrideError && (
+                          <p role="alert" className="text-xs font-medium text-destructive">
+                            {overrideError}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleReset}
+                          className="rounded-lg px-5 h-10"
+                        >
+                          Start over
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handleOverrideContinue}
+                          className="rounded-lg px-6 h-10"
+                        >
+                          Continue
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleReset}
+                        className="rounded-lg px-5 h-10"
+                      >
+                        Start over
+                      </Button>
+                      {canOverrideBlock && (
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setShowOverrideForm(true);
+                            setOverrideError(null);
+                          }}
+                          className="rounded-lg px-6 h-10 gap-2"
+                        >
+                          <ShieldAlert className="h-3.5 w-3.5" />
+                          Override
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : reviewingStudent ? (
+                <div className="flex justify-end pt-6">
+                  <Button
+                    onClick={() => goToStep(2)}
+                    className="rounded-lg px-8 h-10"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              ) : (
+              <ScanStep 
+                title={
+                  step === 1 
+                    ? (mode === 'checkout' ? 'Scan library card' : 'Scan item')
+                    : 'Scan item'
+                }
+                description={
+                  step === 1
+                    ? (mode === 'checkout' 
+                        ? 'Scan library card or enter number.' 
+                        : 'Scan item QR code to begin.')
+                    : `${activeStudent?.fullName} verified. Scan the QR on the physical item.`
+                }
+                label={
+                  step === 1
+                    ? (mode === 'checkout' ? 'Card or Patron ID' : 'Item QR code')
+                    : 'Item QR code'
+                }
+                placeholder={
+                  step === 1
+                    ? (mode === 'checkout' ? 'e.g. DEMO-STU-001' : 'e.g. BK-0001-01')
+                    : 'e.g. BK-0001-01'
+                }
+                onScan={handleScan}
+                isProcessing={isProcessing}
+                actionLabel={step === 1 ? 'Process' : 'Verify'}
+              />
+              )}
+            </div>
+          ) : (
+            <div key="review" className="space-y-8">
+              <ReviewStep 
+                type={mode}
+                studentName={mode === 'checkout' ? activeStudent!.fullName : pendingReturn!.studentName}
+                studentId={mode === 'checkout' ? activeStudent!.studentId : undefined}
+                copyCode={mode === 'checkout' ? pendingCheckout!.bookQr : pendingReturn!.bookQr}
+                bookTitle={mode === 'checkout' ? pendingCheckout!.bookTitle : pendingReturn!.bookTitle}
+                dueDate={mode === 'checkout' ? pendingCheckout!.dueDate : pendingReturn!.dueDate || 'N/A'}
+                borrowedAt={mode === 'return' ? pendingReturn!.borrowedAt : undefined}
+                fineAmount={mode === 'return' ? pendingReturn?.fineAmount : undefined}
+                overdueDays={mode === 'return' ? pendingReturn?.overdueDays : undefined}
+              />
+              
+              <div className="flex flex-wrap gap-3 justify-end pt-6 border-t border-border/20">
+                  <Button 
+                    onClick={handleConfirmClick} 
+                    disabled={isProcessing}
+                    className="rounded-lg px-8 h-10"
+                  >
+                    {isProcessing ? 'Finalizing...' : `Confirm ${mode === 'checkout' ? 'Checkout' : 'Return'}`}
+                  </Button>
+              </div>
+
+              <FineSettlementDialog
+                open={isSettleModalOpen}
+                onOpenChange={setIsSettleModalOpen}
+                title="Overdue Penalty Settlement"
+                description={
+                  <>
+                    This book is {pendingReturn?.overdueDays || 1} day(s) overdue with a penalty of{' '}
+                    <span className="font-bold text-destructive tabular-nums">
+                      ₱{Number(pendingReturn?.fineAmount ?? 0).toFixed(2)}
+                    </span>
+                    . Mark as Paid, Mark as Condoned, or return unpaid (Receivable) to settle later from Borrowing Logs.
+                  </>
+                }
+                fineAmount={Number(pendingReturn?.fineAmount ?? 0)}
+                isSubmitting={isProcessing}
+                allowReturnOnly
+                onReturnOnly={() => {
+                  setIsSettleModalOpen(false);
+                  void confirmAction(false);
+                }}
+                onResolve={(resolution, remarks) => {
+                  setIsSettleModalOpen(false);
+                  void confirmAction(true, resolution, remarks);
+                }}
+              />
+            </div>
+          )}
+        </section>
+
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,608 @@
+"use client";
+
+import { use, useMemo, useState, useRef, Suspense, useEffect, startTransition } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { 
+  ShieldCheck, 
+  History, 
+  Ticket, 
+  HelpCircle, 
+  User, 
+  RefreshCw,
+  Megaphone,
+  Tag,
+  AlertTriangle
+} from "lucide-react";
+import { DEFAULT_POLICIES } from "@/lib/actions/policy-constants";
+import { cn } from "@/lib/utils";
+import { PolicyCommitModal } from "../PolicyCommitModal";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CategoryManagement } from "../CategoryManagement";
+import { PolicySimulationPanel } from "../PolicySimulationPanel";
+import { PolicyField } from "./PolicyField";
+import { AnnualResetTool, ArchiveLogsTool, RunMaintenanceTool, TestEmailTool } from "../../settings/SettingsShared";
+import { SystemAnnouncement } from "../system-announcement";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+import { toast } from "sonner";
+
+const CATEGORY_MAP: Record<string, { label: string; icon: React.ElementType; group: string }> = {
+  circulation: { label: "Circulation", icon: History, group: "System Core" },
+  reservations: { label: "Reservations", icon: Ticket, group: "System Core" },
+  identity: { label: "Identity", icon: User, group: "System Data" },
+  categories: { label: "Categories", icon: Tag, group: "System Data" },
+  broadcasts: { label: "Broadcasts", icon: Megaphone, group: "Communication" },
+  support: { label: "Support", icon: HelpCircle, group: "Communication" },
+  lifecycle: { label: "Lifecycle", icon: RefreshCw, group: "Operations" },
+};
+
+import { PolicySetting, Category } from "@/types/admin";
+
+export function PolicyLayout({
+  settings,
+  canEdit,
+  role,
+  categoriesPromise,
+}: {
+  settings: PolicySetting[];
+  canEdit: boolean;
+  role: string;
+  categoriesPromise: Promise<Category[]> | PromiseLike<Category[]>;
+}) {
+  const router = useRouter();
+  const [activeCategory, setActiveCategory] = useState("circulation");
+  const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
+  const [pendingCategory, setPendingCategory] = useState<string | null>(null);
+
+  const [announcementDraft, setAnnouncementDraft] = useState<{
+    title: string;
+    content: string;
+    target: "all" | "students";
+  }>({
+    title: "",
+    content: "",
+    target: "students",
+  });
+
+  const isAnnouncementDirty =
+    announcementDraft.title.trim().length > 0 ||
+    announcementDraft.content.trim().length > 0;
+
+  const handleCategoryClick = (categoryId: string) => {
+    if (categoryId === activeCategory) return;
+    const hasUnsavedChanges =
+      (activeCategory === "broadcasts" && isAnnouncementDirty) ||
+      changedKeys.length > 0;
+
+    if (hasUnsavedChanges) {
+      setPendingCategory(categoryId);
+    } else {
+      clearDrafts();
+      setActiveCategory(categoryId);
+    }
+  };
+
+  // Realtime synchronization
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('policies-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_settings' },
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        () => {
+          startTransition(() => {
+            router.refresh();
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [router]);
+
+  const initialValues = useMemo(() => {
+    const byKey = new Map(settings.map((s) => [s.key, s.value]));
+    const values: Record<string, string> = {};
+    for (const [key, config] of Object.entries(DEFAULT_POLICIES)) {
+      values[key] = byKey.get(key) ?? config.value;
+    }
+    return values;
+  }, [settings]);
+
+  // Only explicit edits live in local state. Untouched fields always follow the
+  // latest server values, so a live refresh can't turn them into rollback edits.
+  // `base` is the server value when the edit started, used to detect conflicts.
+  const [edits, setEdits] = useState<Record<string, { value: string; base: string }>>({});
+  const formData = useMemo(() => {
+    const merged = { ...initialValues };
+    for (const [key, edit] of Object.entries(edits)) merged[key] = edit.value;
+    return merged;
+  }, [initialValues, edits]);
+  // Number fields currently showing an out-of-range draft. Saving is blocked
+  // while any exist. Bumping resetNonce remounts the fields to drop those drafts.
+  const [invalidKeys, setInvalidKeys] = useState<string[]>([]);
+  const [resetNonce, setResetNonce] = useState(0);
+  const clearDrafts = () => {
+    setInvalidKeys([]);
+    setResetNonce((n) => n + 1);
+  };
+  const discardEdits = () => {
+    setEdits({});
+    clearDrafts();
+  };
+  const handleInvalidChange = (key: string, invalid: boolean) =>
+    setInvalidKeys((prev) =>
+      invalid === prev.includes(key) ? prev : invalid ? [...prev, key] : prev.filter((k) => k !== key)
+    );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  const changedKeys = Object.keys(DEFAULT_POLICIES).filter((key) => (formData[key] ?? "") !== (initialValues[key] ?? ""));
+  // Edited keys whose server value changed after the local edit began.
+  const conflictKeys = Object.keys(edits).filter((key) => edits[key].base !== initialValues[key]);
+  const isDirty = changedKeys.length > 0 || isAnnouncementDirty;
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  // Defined the full set of categories in order
+  const sidebarItems = useMemo(() => {
+    const items = [
+      { id: "circulation", ...CATEGORY_MAP.circulation },
+      { id: "reservations", ...CATEGORY_MAP.reservations },
+      { id: "identity", ...CATEGORY_MAP.identity },
+      { id: "categories", ...CATEGORY_MAP.categories },
+      { id: "broadcasts", ...CATEGORY_MAP.broadcasts },
+      { id: "support", ...CATEGORY_MAP.support },
+    ];
+
+    if (role === "super_admin") {
+      items.push({ id: "lifecycle", ...CATEGORY_MAP.lifecycle });
+    }
+
+    return items;
+  }, [role]);
+
+  const groupedSidebar = useMemo(() => {
+    const groups: Record<string, typeof sidebarItems> = {};
+    sidebarItems.forEach(item => {
+      if (!groups[item.group]) groups[item.group] = [];
+      groups[item.group].push(item);
+    });
+    return groups;
+  }, [sidebarItems]);
+
+  const handleChange = (key: string, value: string) => {
+    setEdits((prev) => {
+      if (value === initialValues[key]) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: { value, base: prev[key]?.base ?? initialValues[key] } };
+    });
+    setError(null);
+  };
+
+  const resolveConflicts = (keep: "mine" | "server") => {
+    setEdits((prev) => {
+      const next = { ...prev };
+      for (const key of conflictKeys) {
+        if (keep === "server") delete next[key];
+        else next[key] = { value: next[key].value, base: initialValues[key] };
+      }
+      return next;
+    });
+  };
+
+  const handleConfirmCommit = async (reason: string) => {
+    if (!canEdit || invalidKeys.length > 0) return;
+    if (conflictKeys.length > 0) {
+      setIsCommitModalOpen(false);
+      toast.error("Another administrator changed a setting you edited. Resolve the conflict first.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setIsCommitModalOpen(false);
+
+    try {
+      for (const key of changedKeys) {
+        const value = formData[key];
+        const description = DEFAULT_POLICIES[key as keyof typeof DEFAULT_POLICIES]?.description;
+
+        const response = await fetch("/api/admin/policy-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value, description, reason }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save some settings");
+        }
+      }
+
+      setEdits({});
+      startTransition(() => {
+        router.refresh();
+      });
+      toast.success("Changes synchronized");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeKeys = Object.keys(DEFAULT_POLICIES).filter(k => DEFAULT_POLICIES[k as keyof typeof DEFAULT_POLICIES].category === activeCategory);
+
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragScrollLeft, setDragScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!navScrollRef.current) return;
+    setIsDragging(true);
+    setDragStartX(e.pageX - navScrollRef.current.offsetLeft);
+    setDragScrollLeft(navScrollRef.current.scrollLeft);
+  };
+  const handleMouseLeaveOrUp = () => setIsDragging(false);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !navScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - navScrollRef.current.offsetLeft;
+    const walk = (x - dragStartX) * 1.5;
+    navScrollRef.current.scrollLeft = dragScrollLeft - walk;
+  };
+
+  return (
+    <div className="w-full pb-12">
+
+      <div className="grid gap-8 lg:grid-cols-[220px_1fr] items-start">
+        {/* Mobile & Tablet Category Navigation (wraps cleanly without clipping) */}
+        <div
+          ref={navScrollRef}
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseLeaveOrUp}
+          onMouseLeave={handleMouseLeaveOrUp}
+          onMouseMove={handleMouseMove}
+          className={cn(
+            "lg:hidden pb-1",
+            isDragging ? "cursor-grabbing" : ""
+          )}
+        >
+          <div className="flex flex-wrap gap-2">
+            {sidebarItems.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleCategoryClick(item.id)}
+                className={cn(
+                  "min-h-11 lg:min-h-0 flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap border",
+                  activeCategory === item.id 
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                    : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
+                )}
+              >
+                <item.icon size={14} className="shrink-0" />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop Sidebar Navigation */}
+        <aside className="hidden lg:block space-y-6 sticky top-12 max-h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar pr-2">
+          {Object.entries(groupedSidebar).map(([group, items]) => (
+            <div key={group} className="space-y-1.5">
+              <p className="px-3 text-2xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {group}
+              </p>
+              <div className="space-y-0.5">
+                {items.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleCategoryClick(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all group relative",
+                      activeCategory === item.id 
+                        ? "text-primary font-semibold bg-primary/5" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    )}
+                  >
+                    {activeCategory === item.id && (
+                      <div className="absolute left-0 w-1 h-4 bg-primary rounded-r-full" />
+                    )}
+                    <item.icon size={16} className={cn(
+                      "shrink-0 transition-colors",
+                      activeCategory === item.id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </aside>
+
+        {/* ── Content ───────────────────────────────────────────── */}
+        <div className="min-w-0">
+           <div className="max-w-3xl">
+             <TooltipProvider>
+              {activeCategory === "broadcasts" ? (
+                <div className="space-y-10">
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                          <Megaphone className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-semibold text-foreground">Global Announcement</h2>
+                          <p className="text-xs text-muted-foreground leading-relaxed">Broadcast an immediate notification message to all student dashboards.</p>
+                        </div>
+                      </div>
+                      {isAnnouncementDirty && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 animate-in zoom-in-95 duration-200">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <span className="text-xs font-medium">Unsaved Draft</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6 rounded-xl border border-border/60 bg-card shadow-xs">
+                      <SystemAnnouncement
+                        draft={announcementDraft}
+                        onDraftChange={setAnnouncementDraft}
+                        onClearDraft={() =>
+                          setAnnouncementDraft({ title: "", content: "", target: "students" })
+                        }
+                      />
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-semibold text-foreground">Trigger Policies</h2>
+                        <p className="text-xs text-muted-foreground leading-relaxed">Set the rules for automated system alerts and borrowing reminders.</p>
+                      </div>
+                    </div>
+                    <div className="space-y-0">
+                      {activeKeys.map(key => (
+                        <PolicyField 
+                          key={`${key}-${resetNonce}`}
+                          policyKey={key}
+                          value={formData[key]}
+                          initialValue={initialValues[key]}
+                          onChange={(val) => handleChange(key, val)}
+                          onInvalidChange={(invalid) => handleInvalidChange(key, invalid)}
+                          disabled={!canEdit}
+                          loading={loading}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              ) : activeCategory === "categories" ? (
+                <div className="space-y-6">
+                  <Suspense fallback={<div className="h-48 w-full animate-pulse bg-muted/40 rounded-xl" />}>
+                     <CategoryManagementWrapper promise={categoriesPromise} />
+                  </Suspense>
+                </div>
+              ) : activeCategory === "lifecycle" ? (
+                <div className="space-y-6">
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
+                    <AnnualResetTool />
+                  </div>
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
+                    <ArchiveLogsTool />
+                  </div>
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
+                    <RunMaintenanceTool />
+                  </div>
+                  <div className="p-6 rounded-xl border border-border/60 bg-card/50">
+                    <TestEmailTool />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  {activeKeys.map(key => (
+                    <PolicyField 
+                      key={`${key}-${resetNonce}`}
+                      policyKey={key}
+                      value={formData[key]}
+                      initialValue={initialValues[key]}
+                      onChange={(val) => handleChange(key, val)}
+                      onInvalidChange={(invalid) => handleInvalidChange(key, invalid)}
+                      disabled={!canEdit}
+                      loading={loading}
+                    />
+                  ))}
+                  {activeCategory === "reservations" && (
+                    <div className="mt-10 pt-10 border-t border-border/50">
+                      <div className="mb-6">
+                        <h2 className="text-sm font-semibold text-foreground">Simulation Engine</h2>
+                        <p className="text-xs text-muted-foreground leading-relaxed">Preview the impact of reservation policies on system throughput.</p>
+                      </div>
+                      <PolicySimulationPanel formData={formData} />
+                    </div>
+                  )}
+                </div>
+              )}
+             </TooltipProvider>
+           </div>
+        </div>
+
+
+      </div>
+
+      {/* ── Floating Review Bar ───────────────────────────────── */}
+      {canEdit && conflictKeys.length > 0 && (
+        <div role="alert" className="fixed bottom-32 sm:bottom-28 left-1/2 -translate-x-1/2 z-50 px-3 sm:px-4 w-full max-w-md">
+          <div className="rounded-2xl border border-amber-500/30 bg-background/95 p-4 shadow-2xl backdrop-blur-xl space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
+              <p className="text-xs text-foreground leading-relaxed">
+                Another administrator changed{" "}
+                <span className="font-semibold">
+                  {conflictKeys
+                    .map((k) => DEFAULT_POLICIES[k as keyof typeof DEFAULT_POLICIES]?.label ?? k)
+                    .join(", ")}
+                </span>{" "}
+                while you were editing. Choose which value to keep.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" className="h-10 sm:h-9" onClick={() => resolveConflicts("server")}>
+                Use their value
+              </Button>
+              <Button size="sm" className="h-10 sm:h-9" onClick={() => resolveConflicts("mine")}>
+                Keep my edit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {canEdit && changedKeys.length > 0 && (
+        <div className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 px-3 sm:px-4 w-full max-w-md animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 rounded-xl border border-border bg-background/95 p-3 sm:p-2.5 sm:pl-4 shadow-2xl backdrop-blur-xl">
+             <div className="flex items-center gap-2.5">
+                <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                <span className="text-xs font-medium text-foreground">
+                  {changedKeys.length} unsaved changes
+                </span>
+             </div>
+             <div className="flex items-center gap-2 w-full sm:w-auto">
+               <Button
+                  variant="outline"
+                  onClick={() => {
+                    discardEdits();
+                    toast.success("All unsaved changes discarded");
+                  }}
+                  className="h-11 sm:h-9 flex-1 sm:flex-none rounded-lg px-3.5 text-xs font-medium border-border hover:bg-muted/50 transition-all"
+               >
+                  Discard
+               </Button>
+               <Button
+                  onClick={() => setIsCommitModalOpen(true)}
+                  disabled={conflictKeys.length > 0 || invalidKeys.length > 0}
+                  className="h-11 sm:h-9 flex-1 sm:flex-none rounded-lg px-4 text-xs font-semibold shadow-sm active:scale-[0.98] transition-all"
+               >
+                  Review Changes
+               </Button>
+             </div>
+          </div>
+        </div>
+      )}
+      <PolicyCommitModal
+        isOpen={isCommitModalOpen}
+        onClose={() => setIsCommitModalOpen(false)}
+        onConfirm={handleConfirmCommit}
+        changedKeys={changedKeys}
+        initialValues={initialValues}
+        formData={formData}
+        loading={loading}
+      />
+      <Dialog open={pendingCategory !== null} onOpenChange={(open) => { if (!open) setPendingCategory(null); }}>
+        <DialogContent className="sm:max-w-md border border-border bg-background rounded-2xl p-0 overflow-hidden shadow-xl">
+          <div className="p-6 space-y-5">
+            <div className="flex items-center justify-between pr-8">
+              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="px-2.5 py-0.5 rounded-lg bg-destructive/10 text-xs font-medium text-destructive border border-destructive/20">
+                Unsaved Changes
+              </div>
+            </div>
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle className="text-lg font-bold tracking-tight text-foreground">
+                {activeCategory === "broadcasts" && isAnnouncementDirty
+                  ? "Unsaved Announcement Draft"
+                  : "Unsaved Policy Changes"}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground leading-relaxed font-medium">
+                {activeCategory === "broadcasts" && isAnnouncementDirty
+                  ? "You have unsent announcement text in the broadcast fields. Moving to another section will discard your draft. Do you want to proceed?"
+                  : "You have unsaved changes in the current policy section. Moving to another section will discard these changes. Do you want to proceed?"}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 pt-0 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setPendingCategory(null)}
+              className="flex-1 h-10 rounded-lg text-sm font-medium border-border hover:bg-muted/40 transition-all"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingCategory) {
+                  if (activeCategory === "broadcasts") {
+                    setAnnouncementDraft({ title: "", content: "", target: "students" });
+                  }
+                  discardEdits();
+                  setActiveCategory(pendingCategory);
+                  setPendingCategory(null);
+                  toast.success("Changes discarded");
+                }
+              }}
+              className="flex-1 h-10 rounded-lg text-sm font-semibold shadow-sm transition-all"
+            >
+              Discard & Move
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CategoryManagementWrapper({ promise }: { promise: Promise<Category[]> | PromiseLike<Category[]> }) {
+  const categories = use(promise);
+  return <CategoryManagement initialCategories={Array.isArray(categories) ? categories : []} />;
+}
+
+

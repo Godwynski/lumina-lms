@@ -1,0 +1,362 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus, Layers, Edit3, Save, X, Loader2 } from "lucide-react";
+import { CategoryItem } from "./categories/CategoryItem";
+import { CategoryDialog } from "./categories/CategoryDialog";
+
+import { toast } from "sonner";
+import { Category } from "@/types/admin";
+import { toSlug } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+/**
+ * Main management interface for system categories.
+ * Handles CRUD operations and bulk modifications.
+ */
+export function CategoryManagement({ initialCategories }: { initialCategories: Category[] }) {
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [draftCategories, setDraftCategories] = useState<Category[]>(initialCategories);
+  const [isBulkEditing, setIsBulkEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    slug: "",
+    description: "",
+  });
+
+  const editingCategory = editingId ? categories.find((c) => c.id === editingId) : null;
+  const isChanged = !editingId || (editingCategory ? (
+    formData.name.trim() !== editingCategory.name.trim() ||
+    formData.slug.trim() !== (editingCategory.slug || "").trim() ||
+    formData.description.trim() !== (editingCategory.description || "").trim()
+  ) : true);
+
+  const resetForm = () => {
+    setFormData({ name: "", slug: "", description: "" });
+    setEditingId(null);
+    setError(null);
+  };
+
+  const resetBulkEdit = () => {
+    setDraftCategories(categories);
+    setIsBulkEditing(false);
+    setError(null);
+  };
+
+  const openDialog = (category?: Category) => {
+    if (category) {
+      setFormData({
+        name: category.name,
+        slug: category.slug || "",
+        description: category.description || "",
+      });
+      setEditingId(category.id);
+    } else {
+      resetForm();
+    }
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    const normalizedSlug = toSlug(formData.slug || formData.name);
+    if (!formData.name.trim() || !normalizedSlug) {
+      toast.error("Label and identifier are required");
+      return;
+    }
+
+    if (editingId && !isChanged) {
+      setDialogOpen(false);
+      resetForm();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (editingId) {
+        const response = await fetch(`/api/admin/categories/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          // No is_active here: editing an archived category must not restore it.
+          body: JSON.stringify({
+            ...formData,
+            slug: normalizedSlug,
+          }),
+        });
+
+        if (!response.ok) throw new Error("Failed to update category");
+
+        const updated = await response.json();
+        setCategories((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
+        setDraftCategories((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
+        toast.success("Category updated successfully");
+      } else {
+        const response = await fetch("/api/admin/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...formData, slug: normalizedSlug }),
+        });
+
+        if (!response.ok) throw new Error("Failed to create category");
+
+        const newCategory = await response.json();
+        setCategories((prev) => [...prev, newCategory]);
+        setDraftCategories((prev) => [...prev, newCategory]);
+        toast.success("Category added successfully");
+      }
+      setDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Internal system error";
+      toast.error(msg);
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleArchive = async (id: string) => {
+    const name = categories.find((c) => c.id === id)?.name ?? "this category";
+    if (!window.confirm(`Archive "${name}"? It will be hidden from the catalog filters.`)) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Failed to archive category");
+      }
+
+      setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
+      setDraftCategories((prev) => prev.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
+      toast.success("Category archived");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Archive failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: true }),
+      });
+
+      if (!response.ok) throw new Error("Failed to restore category");
+
+      const updated = await response.json();
+      setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      setDraftCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      toast.success("Category restored");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Restore failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changedIds = draftCategories.filter((draft) => {
+    const current = categories.find((c) => c.id === draft.id);
+    if (!current) return false;
+    return current.name !== draft.name || current.slug !== draft.slug || (current.description || "") !== (draft.description || "");
+  }).map((c) => c.id);
+
+  const changedSet = new Set(changedIds);
+
+  const handleBulkSave = async () => {
+    if (changedIds.length === 0) {
+      setIsBulkEditing(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const id of changedIds) {
+        const draft = draftCategories.find((c) => c.id === id);
+        if (!draft) continue;
+
+        const response = await fetch(`/api/admin/categories/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: draft.name,
+            slug: draft.slug,
+            description: draft.description || "",
+            is_active: draft.is_active,
+          }),
+        });
+
+        if (!response.ok) throw new Error(`Failed to commit changes for ${draft.name}`);
+      }
+
+      setCategories(draftCategories);
+      setIsBulkEditing(false);
+      toast.success(`Successfully updated ${changedIds.length} categories`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bulk commit failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDraftChange = (id: string, field: keyof Category, value: string) => {
+    setDraftCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: field === "slug" ? toSlug(value) : value } : c))
+    );
+  };
+
+  return (
+    <div className="w-full space-y-6 p-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+            <Layers className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Overview
+            </p>
+            <h2 className="text-sm font-semibold text-foreground tracking-tight">
+              {categories.length} Registered {categories.length === 1 ? 'Category' : 'Categories'}
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          {isBulkEditing ? (
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto animate-in fade-in slide-in-from-right-4 duration-500">
+              {changedIds.length > 0 && (
+                <div className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+                  {changedIds.length} Pending Mods
+                </div>
+              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={resetBulkEdit}
+                      disabled={loading}
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-3.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
+                    >
+                      <X className="h-4 w-4 mr-1.5" />
+                      Discard
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Discard all bulk edits and keep existing category information.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleBulkSave}
+                      disabled={loading || changedIds.length === 0}
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-4 rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
+                      Save Changes
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Save all modified category rows to the database.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsBulkEditing(true)}
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-3.5 rounded-lg text-xs font-medium border-border hover:bg-muted/40 transition-all"
+                    >
+                      <Edit3 className="h-4 w-4 mr-1.5" />
+                      Bulk Management
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Edit category titles and descriptions all at once in a table instead of opening each one individually.
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => openDialog()}
+                      className="h-11 sm:h-9 flex-1 sm:flex-none px-4 rounded-lg text-xs font-semibold shadow-sm transition-all"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Category
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    Create a new subject classification to organize catalog books.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {categories.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-muted/10 p-12 text-center">
+          <div className="h-14 w-14 rounded-xl bg-muted/40 flex items-center justify-center text-muted-foreground mx-auto mb-4">
+            <Layers className="h-7 w-7" />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground mb-1">No categories defined</h3>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+            Initialize your organization&apos;s classification system by adding your first category.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 min-w-0">
+          {(isBulkEditing ? draftCategories : categories).map((category) => (
+            <CategoryItem
+              key={category.id}
+              category={category}
+              draftCategory={draftCategories.find((c) => c.id === category.id)}
+              isBulkEditing={isBulkEditing}
+              isChanged={changedSet.has(category.id)}
+              onDraftChange={(field: keyof Category, value: string) => handleDraftChange(category.id, field, value)}
+              onEdit={openDialog}
+              onArchive={handleArchive}
+              onRestore={handleRestore}
+            />
+          ))}
+        </div>
+      )}
+
+      <CategoryDialog
+        isOpen={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        onSave={handleSave}
+        loading={loading}
+        error={error}
+        isChanged={isChanged}
+      />
+    </div>
+  );
+}
+

@@ -1,0 +1,96 @@
+import { Suspense } from 'react';
+import { getPublicBooksCached, getCategoriesCached } from '@/lib/actions/public-catalog';
+import { getMyReservations } from '@/lib/actions/reservations';
+import { StudentCatalogClient } from './StudentCatalogClient';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export function CatalogSkeletonView() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-9 w-64 rounded-lg" />
+        <Skeleton className="h-4 w-96 rounded-md opacity-40" />
+      </div>
+      <div className="h-12 w-full rounded-xl border border-border/40 bg-muted/20" />
+      <div className="space-y-3">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-20 w-full rounded-xl border border-border/40 bg-muted/10" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export const metadata = {
+  title: 'Catalog',
+  description: 'Browse the library catalog and check real-time availability.',
+};
+
+// Synchronous page shell — responds immediately.
+export default function StudentCatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    available?: string;
+    page?: string;
+    sort?: string;
+  }>;
+}) {
+  return (
+    <div className="space-y-6">
+      <Suspense fallback={<CatalogSkeletonView />}>
+        <StudentCatalogLoader searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+// Awaits only the URL search params (no network) then fires all data
+// fetches concurrently as non-blocking promises passed to the client.
+async function StudentCatalogLoader({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    available?: string;
+    page?: string;
+    sort?: string;
+  }>;
+}) {
+  // Only awaiting URL params — this is synchronous from Next.js's perspective
+  const params = await searchParams;
+  const q = params.q || '';
+  const categoryId = params.category || '';
+  const availableOnly = params.available === 'true';
+  const page = parseInt(params.page || '1', 10);
+  // The Sort dropdown's choice wins; otherwise searches rank by best match.
+  const hasQuery = q.trim().length > 0;
+  const requestedSort = params.sort as 'relevance' | 'title' | 'author' | 'availability' | 'newest' | undefined;
+  const sortBy = requestedSort && (requestedSort !== 'relevance' || hasQuery)
+    ? requestedSort
+    : (hasQuery ? 'relevance' : 'newest');
+  const pageSize = 16;
+
+  // All three fire concurrently — none are awaited here
+  const booksPromise = getPublicBooksCached(q, categoryId, '', availableOnly, page, pageSize, sortBy);
+  const categoriesPromise = getCategoriesCached();
+  const reservationsPromise = getMyReservations();
+
+  return (
+    <StudentCatalogClient
+      booksPromise={booksPromise}
+      categoriesPromise={categoriesPromise}
+      reservationsPromise={reservationsPromise}
+      initialFilters={{
+        q,
+        categoryId,
+        availableOnly,
+        page,
+        sortBy
+      }}
+    />
+  );
+}

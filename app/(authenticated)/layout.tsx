@@ -1,0 +1,112 @@
+import type { Metadata } from "next";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { BreadcrumbNav } from "@/components/layout/BreadcrumbNav";
+import { PreferencesProvider } from "@/components/providers/PreferencesProvider";
+import { MainHeader } from "@/components/layout/MainHeader";
+import { StreamedNav } from "./_components/StreamedNav";
+import { getMe, getPreferences } from "@/lib/auth-helpers";
+import { redirect } from "next/navigation";
+import { AccountPendingScreen } from "@/components/auth/AccountPendingScreen";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
+import NavAnimatePresence from "./NavAnimatePresence";
+import { SWRProvider } from "./_components/SWRProvider";
+import { BatchTaskProvider } from "@/components/providers/BatchTaskProvider";
+import { cookies } from "next/headers";
+import { isAccessBlocked as checkAccessBlocked, needsOnboarding, type Profile } from "@/lib/auth/permissions";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
+export default async function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const sidebarState = cookieStore.get("sidebar_state")?.value;
+  const defaultOpen = sidebarState === undefined ? true : sidebarState === "true";
+
+  // ─── Parallelize: fire both requests at the same time ────────────────────
+  // getPreferences() internally calls getMe() which is cache()-memoized,
+  // so there is no double network round-trip.
+  const [me, preferences] = await Promise.all([getMe(), getPreferences()]);
+
+  // ─── Auth guard: redirect before touching any UI ──────────────────────────
+  if (!me) {
+    redirect("/");
+  }
+
+  const { profile, role } = me;
+
+  const isStudent = role === "patron";
+
+  // ─── Access restriction: render a blocking screen (no shell needed) ───────
+  const isAccessBlocked = checkAccessBlocked(profile as Profile);
+
+  if (isAccessBlocked) {
+    return <AccountPendingScreen profile={profile} status={profile?.status} isStudent={isStudent} />;
+  }
+
+  // An approved patron who skipped the profile form completes it before seeing the dashboard.
+  if (needsOnboarding(role, profile as Profile)) {
+    return <AccountPendingScreen profile={profile} status={profile?.status} isStudent={isStudent} />;
+  }
+
+  // ─── Shell returns immediately — streamed children fill in behind it ──────
+  return (
+    <PreferencesProvider 
+      initialPreferences={preferences}
+      initialRole={role}
+      initialProfile={profile}
+      user={me.user}
+    >
+      <SWRProvider>
+        <BatchTaskProvider>
+          <NotificationsProvider>
+            <SidebarProvider defaultOpen={defaultOpen}>
+            {/* First tab stop: lets keyboard users jump past the navigation. */}
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              Skip to main content
+            </a>
+            <StreamedNav />
+
+            <SidebarInset className="flex min-h-screen min-w-0 flex-1 flex-col bg-background">
+              {/* Mobile header */}
+              <div className="md:hidden sticky top-0 z-40 flex w-full h-14 shrink-0 items-center justify-between border-b border-border bg-background/90 backdrop-blur-md px-2.5 shadow-sm">
+                <div className="flex flex-1 items-center gap-2 overflow-hidden min-w-0">
+                  <SidebarTrigger className="h-11 w-11 shrink-0" />
+                  <div className="truncate text-sm font-semibold tracking-tight">
+                    <BreadcrumbNav asHeading={false} />
+                  </div>
+                </div>
+                <div className="ml-1.5 shrink-0 flex items-center gap-1">
+                  <NotificationBell />
+                </div>
+              </div>
+
+              {/* Desktop header */}
+              <MainHeader />
+
+              {/* Page content */}
+              <div
+                id="main-content"
+                tabIndex={-1}
+                className="mx-auto mt-2 w-full max-w-7xl px-3 py-3 md:mt-0 md:pt-2 md:px-6 md:pb-6 outline-none"
+              >
+                <NavAnimatePresence>
+                  {children}
+                </NavAnimatePresence>
+              </div>
+            </SidebarInset>
+            </SidebarProvider>
+          </NotificationsProvider>
+        </BatchTaskProvider>
+      </SWRProvider>
+    </PreferencesProvider>
+  );
+}

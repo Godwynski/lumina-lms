@@ -1,0 +1,689 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DigitalCard from "./DigitalCard";
+import { m } from "framer-motion";
+import { Download, RefreshCw, RotateCcw, Wallet, QrCode } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import Image from "next/image";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+import { bustAvatarCache } from "@/lib/utils/avatar-cache";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+interface MyCardContainerProps {
+  initialData: {
+    fullName: string;
+    studentId: string;
+    cardNumber: string;
+    department: string;
+    status: "active" | "pending" | "suspended" | "expired";
+    expiryDate: string;
+    avatarUrl: string | null;
+    qrUrl: string | null;
+    address?: string;
+    phone?: string;
+    academicYear?: string;
+    roleLabel?: string;
+  };
+  variant?: "page" | "dashboard";
+}
+
+const SHOW_ASSET_REFRESH =
+  process.env.NEXT_PUBLIC_SHOW_CARD_ASSET_REFRESH === "true";
+
+const EXPORT_CARD_WIDTH = 560;
+const EXPORT_CARD_HEIGHT = 353;
+const WALLET_EXPORT_WIDTH = 1012;
+const WALLET_EXPORT_HEIGHT = 638;
+
+// html-to-image can wait forever on a blocked font or cross-origin image, so every export step is bounded
+// and the export always ends in either a download or an error toast.
+const EXPORT_STEP_TIMEOUT_MS = 20_000;
+
+const withTimeout = <T,>(promise: Promise<T>, label: string, ms = EXPORT_STEP_TIMEOUT_MS): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timed out while `)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+
+const isHiddenForCapture = (node: HTMLElement) => {
+  const style = window.getComputedStyle(node);
+  return style.display === "none" || style.visibility === "hidden";
+};
+
+const captureCardPng = async (node: HTMLElement) => {
+  const previousDisplay = node.style.display;
+  const hidden = isHiddenForCapture(node);
+  if (hidden) {
+    node.style.display = "block";
+  }
+
+  try {
+    const { toPng } = await withTimeout(import("html-to-image"), "loading the image exporter");
+    return await withTimeout(toPng(node, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: "#ffffff",
+      width: EXPORT_CARD_WIDTH,
+      height: EXPORT_CARD_HEIGHT,
+      canvasWidth: EXPORT_CARD_WIDTH * 2,
+      canvasHeight: EXPORT_CARD_HEIGHT * 2,
+      style: {
+        margin: "0",
+        padding: "0",
+        width: `${EXPORT_CARD_WIDTH}px`,
+        height: `${EXPORT_CARD_HEIGHT}px`,
+        transform: "none",
+      },
+    }), "rendering the card");
+  } finally {
+    if (hidden) {
+      node.style.display = previousDisplay;
+    }
+  }
+};
+
+type AssetStatusResponse = {
+  qr_url: string;
+  profile_url: string;
+  qr_exists: boolean;
+  profile_exists: boolean;
+  ready: boolean;
+};
+
+export default function MyCardContainer({ initialData, variant = "page" }: MyCardContainerProps) {
+  const { profile } = usePreferences();
+  // Hydrated card assets are kept apart from profile props, so a parent refresh
+  // (e.g. the dashboard passing qrUrl: null) can't wipe a loaded QR.
+  const [assets, setAssets] = useState<{
+    qrUrl?: string;
+    avatarUrl?: string;
+    studentId?: string;
+    cardNumber?: string;
+  }>({});
+  const data = useMemo(
+    () => ({
+      ...initialData,
+      qrUrl: assets.qrUrl ?? initialData.qrUrl,
+      avatarUrl: assets.avatarUrl ?? initialData.avatarUrl,
+      studentId: assets.studentId ?? initialData.studentId,
+      cardNumber: assets.cardNumber ?? initialData.cardNumber,
+    }),
+    [initialData, assets]
+  );
+  const [isRefreshingAssets, setIsRefreshingAssets] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showBack, setShowBack] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(true);
+  const [assetError, setAssetError] = useState(false);
+  const assetRequestRef = useRef(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Check for existing static card assets. Re-runs if the card owner changes.
+  const checkAssets = useCallback(async () => {
+    const requestId = ++assetRequestRef.current;
+    setIsLoadingAssets(true);
+    setAssetError(false);
+    try {
+      const response = await fetch("/api/my-card/assets-status", {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+
+      const status = (await response.json()) as AssetStatusResponse;
+      if (requestId !== assetRequestRef.current) return;
+
+      setAssets((current) => ({
+        ...current,
+        qrUrl: status.qr_exists ? status.qr_url : current.qrUrl,
+        avatarUrl:
+          status.profile_exists && status.profile_url ? status.profile_url : current.avatarUrl,
+      }));
+    } catch {
+      if (requestId === assetRequestRef.current) setAssetError(true);
+    } finally {
+      if (requestId === assetRequestRef.current) setIsLoadingAssets(false);
+    }
+  }, []);
+
+  // Each call bumps the request id, so a response for a previous owner is ignored.
+  useEffect(() => {
+    setAssets({});
+    void checkAssets();
+  }, [initialData.studentId, checkAssets]);
+
+  const qrReady = Boolean(data.qrUrl) && !isLoadingAssets;
+  const exportDisabled = isExporting || !qrReady;
+  const qrNotReadyMessage = isLoadingAssets
+    ? "Your card QR is still loading. Try again in a moment."
+    : "Your card QR isn't available yet. Retry loading it first.";
+
+  const refreshAssets = async () => {
+    setIsRefreshingAssets(true);
+    try {
+      const response = await fetch("/api/my-card/assets-refresh", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        toast.error("Failed to refresh card assets. Please try again.");
+        return;
+      }
+
+      const payload = (await response.json()) as {
+        qr_url?: string;
+        profile_url?: string | null;
+        student_id?: string;
+      };
+
+      setAssets((current) => ({
+        ...current,
+        qrUrl: payload.qr_url ?? current.qrUrl,
+        avatarUrl: payload.profile_url ?? current.avatarUrl,
+        studentId: payload.student_id ?? current.studentId,
+        cardNumber: payload.student_id ?? current.cardNumber,
+      }));
+      setAssetError(false);
+      toast.success("Card assets refreshed successfully!");
+    } catch {
+      toast.error("An error occurred while refreshing assets.");
+    } finally {
+      setIsRefreshingAssets(false);
+    }
+  };
+
+  const exportCardAsImage = async () => {
+    const frontCardEl = document.getElementById("library-card-front-export-card");
+    const backCardEl = document.getElementById("library-card-back-export-card");
+    if (isExporting) return;
+    if (!qrReady) {
+      toast.error(qrNotReadyMessage);
+      return;
+    }
+    if (!frontCardEl || !backCardEl) {
+      toast.error("Card preview isn't ready to export yet.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const frontUrl = await captureCardPng(frontCardEl);
+      const backUrl = await captureCardPng(backCardEl);
+
+      const frontImage = new window.Image();
+      const backImage = new window.Image();
+
+      const frontLoaded = new Promise<void>((resolve, reject) => {
+        frontImage.onload = () => resolve();
+        frontImage.onerror = () => reject(new Error("Failed to load front image"));
+      });
+
+      const backLoaded = new Promise<void>((resolve, reject) => {
+        backImage.onload = () => resolve();
+        backImage.onerror = () => reject(new Error("Failed to load back image"));
+      });
+
+      frontImage.src = frontUrl;
+      backImage.src = backUrl;
+
+      await withTimeout(Promise.all([frontLoaded, backLoaded]), "loading the card images");
+
+      const cardWidth = WALLET_EXPORT_WIDTH;
+      const cardHeight = WALLET_EXPORT_HEIGHT;
+      const gap = 20;
+      const padding = 16;
+      const canvas = document.createElement("canvas");
+      canvas.width = cardWidth * 2 + gap + padding * 2;
+      canvas.height = cardHeight + padding * 2;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not initialize export canvas");
+
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, "#f2f7ff");
+      gradient.addColorStop(0.5, "#ffffff");
+      gradient.addColorStop(1, "#eefaf4");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(frontImage, padding, padding, cardWidth, cardHeight);
+      ctx.drawImage(
+        backImage,
+        padding + cardWidth + gap,
+        padding,
+        cardWidth,
+        cardHeight
+      );
+
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const link = document.createElement("a");
+      const fileSafeName = data.fullName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      link.href = dataUrl;
+      link.download = `sti-alabang-library-card-${fileSafeName || data.studentId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      toast.error("Couldn't export your card. Check your connection and try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportWalletPreset = async () => {
+    const frontCardEl = document.getElementById("library-card-front-export-card");
+    if (isExporting) return;
+    if (!qrReady) {
+      toast.error(qrNotReadyMessage);
+      return;
+    }
+    if (!frontCardEl) {
+      toast.error("Card preview isn't ready to export yet.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const frontUrl = await captureCardPng(frontCardEl);
+
+      const frontImage = new window.Image();
+      await withTimeout(
+        new Promise<void>((resolve, reject) => {
+          frontImage.onload = () => resolve();
+          frontImage.onerror = () => reject(new Error("Failed to load front image"));
+          frontImage.src = frontUrl;
+        }),
+        "loading the card image",
+      );
+
+      const canvas = document.createElement("canvas");
+      canvas.width = WALLET_EXPORT_WIDTH;
+      canvas.height = WALLET_EXPORT_HEIGHT;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not initialize wallet export canvas");
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, WALLET_EXPORT_WIDTH, WALLET_EXPORT_HEIGHT);
+      ctx.drawImage(frontImage, 0, 0, WALLET_EXPORT_WIDTH, WALLET_EXPORT_HEIGHT);
+
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const fileSafeName = data.fullName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `sti-wallet-front-1012x638-${fileSafeName || data.studentId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      toast.error("Couldn't export the wallet card. Check your connection and try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const cardProps = {
+    fullName: data.fullName,
+    studentId: data.studentId,
+    cardNumber: data.cardNumber,
+    department: data.department,
+    status: data.status,
+    expiryDate: data.expiryDate,
+    avatarUrl: bustAvatarCache(profile?.avatar_url || data.avatarUrl, profile?.updated_at),
+    qrUrl: data.qrUrl,
+    address: data.address,
+    phone: data.phone,
+    academicYear: data.academicYear,
+  };
+
+  if (variant === "dashboard") {
+    return (
+      <div className="w-full relative group/dashboard">
+        {/* Subtle Background Glow */}
+        <div className="absolute -inset-4 bg-primary/5 rounded-[2rem] blur-2xl opacity-0 group-hover/dashboard:opacity-100 transition-opacity pointer-events-none" />
+        
+        <div className="relative mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Badge className="mb-1 bg-primary/15 text-primary border-none text-2xs font-semibold uppercase tracking-wider px-2.5 h-6">Official Library ID</Badge>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">{data.fullName}</h2>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => setShowBack((prev) => !prev)}
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 text-xs font-semibold"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {showBack ? "Show card front" : "Show card back"}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={exportCardAsImage}
+              disabled={exportDisabled}
+              size="sm"
+              className="h-9 gap-1.5 text-xs font-semibold"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isExporting ? "Exporting..." : "Export"}
+            </Button>
+          </div>
+        </div>
+
+        {assetError && !data.qrUrl && (
+          <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <span>Couldn&apos;t load your card QR.</span>
+            <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void checkAssets()}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        <m.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="relative"
+        >
+          <div id="library-card-front" className={cn("transition-all duration-300", showBack ? "opacity-0 invisible absolute inset-0" : "opacity-100 visible relative")}>
+            <DigitalCard
+              {...cardProps}
+              side="front"
+              roleLabel={data.roleLabel}
+              onQrClick={() => setIsQrOpen(true)}
+            />
+          </div>
+
+          <div id="library-card-back" className={cn("transition-all duration-300", !showBack ? "opacity-0 invisible absolute inset-0" : "opacity-100 visible relative")}>
+            <DigitalCard
+              {...cardProps}
+              side="back"
+              roleLabel={data.roleLabel}
+            />
+          </div>
+
+          {/* Export Hidden Layer */}
+          <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" inert aria-hidden>
+             <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
+              <DigitalCard
+                {...cardProps}
+                side="front"
+                exportMode
+                cardId="library-card-front-export-card"
+                roleLabel={data.roleLabel}
+              />
+            </div>
+            <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
+              <DigitalCard
+                {...cardProps}
+                side="back"
+                exportMode
+                cardId="library-card-back-export-card"
+                roleLabel={data.roleLabel}
+              />
+            </div>
+          </div>
+        </m.div>
+
+        <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
+          <DialogContent className="max-w-[320px] sm:max-w-[360px] border border-border/20 bg-card/95 backdrop-blur-md p-6 rounded-2xl shadow-xl flex flex-col items-center text-center gap-4">
+            <DialogHeader className="w-full flex flex-col items-center">
+              <DialogTitle className="text-lg font-black tracking-tight text-foreground uppercase">
+                {data.fullName}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mt-1">
+                Library Card QR
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="relative group w-48 h-48 sm:w-56 sm:h-56 border border-foreground/20 bg-white p-3 rounded-2xl shadow-inner flex items-center justify-center transition-all hover:scale-[1.02]">
+              {data.qrUrl ? (
+                <Image
+                  src={data.qrUrl}
+                  alt={`QR code for ${data.cardNumber}`}
+                  width={200}
+                  height={200}
+                  className="w-full h-full object-contain"
+                  unoptimized
+                />
+              ) : (
+                <QrCode className="h-12 w-12 text-muted-foreground" />
+              )}
+            </div>
+            
+            <div className="flex flex-col items-center gap-1">
+              <p className="font-mono text-base sm:text-lg font-black tracking-tighter text-foreground">
+                {data.cardNumber}
+              </p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Card Number
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex flex-col gap-4 border-b border-border/40 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">My Digital Card</h2>
+          <p className="text-sm text-muted-foreground">STI College Alabang official library identity card</p>
+        </div>
+
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-col sm:items-end">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+            <Button
+              type="button"
+              onClick={() => setShowBack((prev) => !prev)}
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[140px]"
+            >
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              {showBack ? "Show card front" : "Show card back"}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={exportCardAsImage}
+              disabled={exportDisabled}
+              size="sm"
+              className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[140px]"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              {isExporting ? "Exporting..." : "Export front + back"}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={exportWalletPreset}
+              disabled={exportDisabled}
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+            >
+              <Wallet className="mr-1.5 h-3.5 w-3.5" />
+              Wallet preset
+            </Button>
+
+            {SHOW_ASSET_REFRESH && (
+              <Button
+                type="button"
+                onClick={refreshAssets}
+                disabled={isRefreshingAssets}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none text-xs font-semibold sm:whitespace-nowrap sm:min-w-[132px]"
+              >
+                <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", isRefreshingAssets && "animate-spin")} />
+                {isRefreshingAssets ? "Refreshing..." : "Refresh assets"}
+              </Button>
+            )}
+          </div>
+
+          {assetError && !data.qrUrl && (
+            <div role="alert" className="flex w-full items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive sm:w-auto">
+              <span>Couldn&apos;t load your card QR.</span>
+              <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => void checkAssets()}>
+                Retry
+              </Button>
+            </div>
+          )}
+
+          <div className="hidden text-[11px] font-bold uppercase tracking-widest text-muted-foreground sm:block">
+            Verified • {mounted ? new Date().toLocaleDateString("en-US") : "..."}
+          </div>
+        </div>
+      </div>
+
+      <m.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="relative"
+      >
+        {isLoadingAssets && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-[2px]">
+            <div className="flex flex-col items-center gap-2">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-xs font-bold uppercase tracking-widest text-primary">Loading Assets...</p>
+            </div>
+          </div>
+        )}
+        <div id="library-card-front" className={showBack ? "hidden" : "block"}>
+          <DigitalCard
+            {...cardProps}
+            side="front"
+            onQrClick={() => setIsQrOpen(true)}
+          />
+        </div>
+
+        <div id="library-card-back" className={showBack ? "block" : "hidden"}>
+          <DigitalCard
+            {...cardProps}
+            side="back"
+          />
+        </div>
+
+        <div className="fixed left-[-12000px] top-0 pointer-events-none opacity-0" inert aria-hidden>
+          <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
+            <DigitalCard
+              {...cardProps}
+              side="front"
+              exportMode
+              cardId="library-card-front-export-card"
+            />
+          </div>
+          <div className="h-[353px] w-[560px] p-0 m-0 overflow-hidden">
+            <DigitalCard
+              {...cardProps}
+              side="back"
+              exportMode
+              cardId="library-card-back-export-card"
+            />
+          </div>
+        </div>
+      </m.div>
+
+      <p className="mt-2 text-[11px] text-muted-foreground sm:hidden">
+        Tip: Rotate your phone to landscape for the best card preview.
+      </p>
+
+
+
+      <div className="mt-8 rounded-xl border border-border/20 bg-card p-6 shadow-sm">
+        <h2 className="text-sm font-bold text-foreground uppercase tracking-widest mb-4">Quick Guide</h2>
+        <ul className="space-y-3 text-sm text-muted-foreground">
+          <li className="flex gap-3">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">1</span>
+            Present this QR code to the librarian during checkout.
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">2</span>
+            Back side now focuses on essential borrowing, returning, and support information.
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted border border-border/40 text-[11px] font-bold text-foreground">3</span>
+            Export options include front+back composite and wallet-size preset (1012x638 px).
+          </li>
+
+        </ul>
+      </div>
+      <Dialog open={isQrOpen} onOpenChange={setIsQrOpen}>
+        <DialogContent className="max-w-[320px] sm:max-w-[360px] border border-border/20 bg-card/95 backdrop-blur-md p-6 rounded-2xl shadow-xl flex flex-col items-center text-center gap-4">
+          <DialogHeader className="w-full flex flex-col items-center">
+            <DialogTitle className="text-lg font-black tracking-tight text-foreground uppercase">
+              {data.fullName}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mt-1">
+              Library Card QR
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="relative group w-48 h-48 sm:w-56 sm:h-56 border border-foreground/20 bg-white p-3 rounded-2xl shadow-inner flex items-center justify-center transition-all hover:scale-[1.02]">
+            {data.qrUrl ? (
+              <Image
+                src={data.qrUrl}
+                alt={`QR code for ${data.cardNumber}`}
+                width={200}
+                height={200}
+                className="w-full h-full object-contain"
+                unoptimized
+              />
+            ) : (
+              <QrCode className="h-12 w-12 text-muted-foreground" />
+            )}
+          </div>
+          
+          <div className="flex flex-col items-center gap-1">
+            <p className="font-mono text-base sm:text-lg font-black tracking-tighter text-foreground">
+              {data.cardNumber}
+            </p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              Card Number
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

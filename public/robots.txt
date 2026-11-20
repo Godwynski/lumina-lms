@@ -1,0 +1,31 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow authenticated, auth, and API routes
+Disallow: /analytics
+Disallow: /attendance
+Disallow: /audit
+Disallow: /borrow
+Disallow: /circulation
+Disallow: /dashboard
+Disallow: /history
+Disallow: /inventory
+Disallow: /notifications
+Disallow: /operations
+Disallow: /policies
+Disallow: /profile
+Disallow: /return
+Disallow: /security
+Disallow: /student-catalog
+Disallow: /users
+Disallow: /callback
+Disallow: /confirm
+Disallow: /error
+Disallow: /api/
+
+# Host
+Host: https://stilumina.vercel.app
+
+# Sitemaps
+Sitemap: https://stilumina.vercel.app/sitemap.xml
