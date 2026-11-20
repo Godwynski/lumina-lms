@@ -286,7 +286,7 @@ describe('B4 Dashboard, Catalog & History UI', () => {
 
     const detailText = detailRender.container.textContent || '';
     expect(detailText).toContain('SectionBiography');
-    expect(detailText).toContain('Shelf LocationShelf E4');
+    expect(detailRender.container.querySelector('dl')).toHaveTextContent('Shelf locationShelf E4');
     expect(detailText).toContain('Join Waitlist');
 
     cleanupClients();
@@ -307,9 +307,9 @@ describe('B4 Dashboard, Catalog & History UI', () => {
 
     const dialog = document.body.querySelector('[role="dialog"]') as HTMLElement;
     expect(dialog.textContent).toContain('SectionBiography');
-    expect(dialog.textContent).toContain('Shelf LocationShelf E4');
+    expect(dialog.querySelector('dl')).toHaveTextContent('Shelf locationShelf E4');
     const fullPageLink = dialog.querySelector('a[href="/student-catalog/bk-bio-1"]');
-    expect(fullPageLink).toHaveTextContent('Open full page');
+    expect(fullPageLink).toHaveAccessibleName('Open full page');
   });
 
   it('MyCardContainer uses Show card back / Show card front labels and ReserveTitleButton uses Join Waitlist', async () => {

@@ -6,6 +6,7 @@ import {
   renderClient,
   cleanupClients,
   clickElement,
+  pressKey,
 } from './helpers/render';
 import { createMockQueryBuilder } from './mocks/supabase';
 
@@ -328,11 +329,16 @@ describe('Accessibility A1 fixes (admin, policies, catalog, inventory)', () => {
       />
     );
 
-    expect(container.querySelector('button[aria-label="Edit Clean Architecture"]')).toBeInTheDocument();
+    await pressKey(container.querySelector('[role="tab"][id$="-trigger-book"]'), 'Enter');
+    const editBookButton = findButtonByText(container, 'Edit book information');
+    expect(editBookButton).toBeVisible();
+    expect(editBookButton).toHaveAccessibleName('Edit book information');
+    await pressKey(container.querySelector('[role="tab"][id$="-trigger-copies"]'), 'Enter');
+    await clickElement(container.querySelector('button[aria-label="Copy actions for ACC-001"]'));
 
     const comboboxes = Array.from(container.querySelectorAll('[role="combobox"]'));
     expect(comboboxes[0]).toHaveAttribute('aria-label', 'Filter copies by status');
-    expect(comboboxes[1]).toHaveAttribute('aria-label', 'Status for copy ACC-001');
+    expect(comboboxes[1]).toHaveAttribute('aria-label', 'Copy status for ACC-001');
 
     const availableTexts = container.querySelectorAll('.text-emerald-800');
     expect(availableTexts.length).toBeGreaterThanOrEqual(2);

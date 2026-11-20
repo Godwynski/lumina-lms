@@ -1756,7 +1756,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       const loaderEl1 = (pageEl1.props as { children: React.ReactElement }).children;
       const Loader1 = loaderEl1.type as (p: { searchParams: Promise<Record<string, string>> }) => Promise<React.ReactElement>;
       const clientEl1 = await Loader1({ searchParams: Promise.resolve({}) });
-      expect(mockGetPublicBooksCached).toHaveBeenCalledWith('', '', '', false, 1, 16, 'newest');
+      expect(mockGetPublicBooksCached).toHaveBeenCalledWith('', '', '', false, 1, 24, 'newest');
       const r1 = await renderClient(
         <Suspense fallback={<div>Loading</div>}>{clientEl1}</Suspense>
       );
@@ -1777,6 +1777,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
           category: 'cat-1',
           available: 'true',
           page: '2',
+          perPage: '48',
         }),
       });
       expect(mockGetPublicBooksCached).toHaveBeenCalledWith(
@@ -1785,13 +1786,13 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         '',
         true,
         2,
-        16,
+        48,
         'relevance'
       );
 
       // Explicit sort overrides default
       await Loader1({
-        searchParams: Promise.resolve({ q: 'clean', sort: 'title' }),
+        searchParams: Promise.resolve({ q: 'clean', sort: 'title', perPage: '999' }),
       });
       expect(mockGetPublicBooksCached).toHaveBeenCalledWith(
         'clean',
@@ -1799,9 +1800,32 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         '',
         false,
         1,
-        16,
+        24,
         'title'
       );
+    });
+
+    it('changes Catalog page size, preserving filters and returning to the first page', async () => {
+      mockSearchParams = new URLSearchParams('category=cat-1&available=true&page=2&perPage=12');
+      const books = Array.from({ length: 12 }, (_, index) => ({
+        id: `catalog-title-${index}`, title: `Catalog title ${index + 1}`, author: 'Author', available_copies: 1, total_copies: 1,
+      }));
+      const { container } = await renderClient(
+        <Suspense fallback="Loading Catalog">
+          <StudentCatalogClient
+            booksPromise={Promise.resolve({ books, total: 65, hasMore: true })}
+            categoriesPromise={Promise.resolve([{ id: 'cat-1', name: 'Science' }])}
+            reservationsPromise={Promise.resolve([])}
+            initialFilters={{ q: '', categoryId: 'cat-1', availableOnly: true, page: 2, sortBy: 'newest' }}
+          />
+        </Suspense>
+      );
+      const sizeControl = container.querySelector('[aria-label="Items per page"]');
+      expect(sizeControl).toHaveTextContent('12');
+      expect(container).toHaveTextContent(/Showing\s*13-24\s*of\s*65/);
+      await pressKey(sizeControl, 'Enter');
+      await clickElement(Array.from(document.querySelectorAll('[role="option"]')).find((option) => option.textContent === '48'));
+      expect(mockRouterReplace).toHaveBeenCalledWith('?category=cat-1&available=true&perPage=48', { scroll: false });
     });
 
     it('StudentBookDetailPage renders Book Details shell and forwards book/availability promises', async () => {
@@ -2611,7 +2635,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         await Promise.resolve();
       });
 
-      expect(container).toHaveTextContent('A copy is expected to be returned by');
+      expect(container).toHaveTextContent(/Expected return Nov.*25/i);
 
       // Cover image onError falls back to default cover
       const img = container.querySelector('img') as HTMLImageElement;
@@ -2643,7 +2667,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await act(async () => {
         await Promise.resolve();
       });
-      expect(queuedRender.container).toHaveTextContent('Queue #3');
+      expect(queuedRender.container).toHaveTextContent('Queue position #3');
 
       await clickElement(findButtonByText(queuedRender.container, 'Cancel Reservation'));
       await clickElement(findButtonByText(document.body, 'Yes, Cancel'));

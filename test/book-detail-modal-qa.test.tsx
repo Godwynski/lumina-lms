@@ -1,16 +1,15 @@
-import { act } from 'react';
+import { act, Suspense } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookDetailModal } from '@/components/catalog/BookDetailModal';
+import { StudentBookDetailClient } from '@/app/(authenticated)/student-catalog/[id]/StudentBookDetailClient';
 import { StudentBookCard } from '@/components/library/StudentBookCard';
 import { isOutOfService } from '@/components/catalog/types';
 import type { Book } from '@/lib/types';
 
-const { publicDetails } = vi.hoisted(() => ({ publicDetails: vi.fn() }));
-vi.mock('@/lib/actions/catalog', () => ({ getBookPublicDetails: publicDetails, getBookAdminDetails: vi.fn() }));
+const { publicDetails, adminDetails } = vi.hoisted(() => ({ publicDetails: vi.fn(), adminDetails: vi.fn() }));
+vi.mock('@/lib/actions/catalog', () => ({ getBookPublicDetails: publicDetails, getBookAdminDetails: adminDetails, getCategories: async () => [] }));
 vi.mock('@/lib/actions/reservations', () => ({ cancelReservation: vi.fn() }));
-vi.mock('@/components/common/ReserveTitleButton', () => ({ ReserveTitleButton: () => <button>Reserve title</button> }));
-vi.mock('@/components/catalog/AdminManagementContent', () => ({ AdminManagementContent: () => <div>Admin tools</div> }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({ channel: () => ({ on() { return this; }, subscribe() { return this; } }), removeChannel: vi.fn() }) }));
 
@@ -31,12 +30,44 @@ afterEach(() => {
 });
 
 describe('BookDetailModal (student)', () => {
-  it('expands and restores the book dialog without losing its content', async () => {
-    publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, availability: noHold });
+  it('opens the full Catalog page from the header and keeps the reservation action in the footer', async () => {
+    publicDetails.mockResolvedValue({ book: { ...baseBook, section: 'General', location: 'Shelf A2', available_copies: 2, total_copies: 3 }, availability: noHold });
     await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={vi.fn()} />));
     const dialog = document.querySelector('[role="dialog"]')!;
+    const footer = dialog.querySelector('footer');
+    const header = dialog.querySelector('[data-slot="dialog-header"]');
+    const fullPageLink = header?.querySelector('a[href="/student-catalog/b"]');
+    expect(fullPageLink).toHaveAccessibleName('Open full page');
+    expect(dialog.querySelectorAll('a[href="/student-catalog/b"]')).toHaveLength(1);
+    expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeNull();
+    expect(footer?.querySelector('a')).toBeNull();
+    expect(footer).toHaveTextContent('Reserve for Pickup');
+    expect(dialog.textContent?.match(/on shelf/gi)).toHaveLength(1);
+    expect(dialog.querySelector('dl')).toHaveTextContent('Shelf locationShelf A2');
+  });
+
+  it('shows the return date with the waitlist action, then shows the queue position for an existing hold', async () => {
+    const book = { ...baseBook, available_copies: 0, total_copies: 2 };
+    publicDetails.mockResolvedValueOnce({ book, availability: { ...noHold, nextAvailableDate: '2027-01-15' } });
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={vi.fn()} />));
+    expect(document.querySelector('footer')).toHaveTextContent('Join Waitlist');
+    expect(document.querySelector('[role="dialog"]')).toHaveTextContent(/Expected return Jan.*15/i);
+
+    publicDetails.mockResolvedValueOnce({ book, availability: { ...noHold, hasReservation: true, queuePosition: 2, reservationId: 'hold' } });
+    await act(async () => root.render(<BookDetailModal bookId="other-book" open variant="student" onOpenChange={vi.fn()} />));
+    expect(document.querySelector('[role="dialog"]')).toHaveTextContent('Queue position #2');
+    expect(document.querySelector('footer')).toHaveTextContent('Cancel reservation');
+    expect(document.querySelector('footer')).not.toHaveTextContent('Join Waitlist');
+  });
+
+  it('uses the Inventory header to expand and restore the dialog without losing its content', async () => {
+    adminDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, copies: [], queue: [] });
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={vi.fn()} />));
+    const dialog = document.querySelector('[role="dialog"]')!;
     expect(dialog).toHaveTextContent('Book Details');
-    const expand = dialog.querySelector<HTMLButtonElement>('[aria-label="Expand dialog"]')!;
+    const expand = dialog.querySelector<HTMLButtonElement>('[data-slot="dialog-header"] [aria-label="Expand dialog"]')!;
+    expect(dialog.querySelectorAll('[aria-label="Expand dialog"]')).toHaveLength(1);
+    expect(dialog.querySelector('a[href="/student-catalog/b"]')).toBeNull();
     await act(async () => expand.click());
     expect(dialog).toHaveClass('h-[100dvh]');
     expect(dialog).toHaveTextContent('Clean Systems');
@@ -46,14 +77,14 @@ describe('BookDetailModal (student)', () => {
   });
 
   it('returns to the standard size after closing an expanded dialog', async () => {
-    publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 1, total_copies: 1 }, availability: noHold });
+    adminDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 1, total_copies: 1 }, copies: [], queue: [] });
     const onOpenChange = vi.fn();
-    await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={onOpenChange} />));
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={onOpenChange} />));
     await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Expand dialog"]')!.click());
     await act(async () => document.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')!.click());
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    await act(async () => root.render(<BookDetailModal bookId="b" open={false} variant="student" onOpenChange={onOpenChange} />));
-    await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={onOpenChange} />));
+    await act(async () => root.render(<BookDetailModal bookId="b" open={false} variant="super_admin" onOpenChange={onOpenChange} />));
+    await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={onOpenChange} />));
     expect(document.querySelector('[aria-label="Expand dialog"]')).toBeInTheDocument();
   });
 
@@ -64,7 +95,7 @@ describe('BookDetailModal (student)', () => {
     const dialog = document.querySelector('[role="dialog"]')!;
     expect(dialog).toHaveTextContent('A book about systems.');
     expect(dialog).toHaveTextContent('005.1');
-    expect(dialog).toHaveTextContent('Reserve title');
+    expect(dialog).toHaveTextContent('Reserve for Pickup');
 
     const focused = (document.activeElement ?? dialog) as HTMLElement;
     await act(async () => {
@@ -82,14 +113,31 @@ describe('BookDetailModal (student)', () => {
     expect(dialog).toHaveTextContent('0 borrowed');
     expect(dialog).toHaveTextContent('1 unavailable');
     expect(dialog).not.toHaveTextContent('Fully Borrowed');
-    expect(dialog).not.toHaveTextContent('Reserve title');
+    expect(dialog.querySelector('footer button')).toBeNull();
   });
 
   it('keeps the waitlist for a title with copies on loan, and shows cancel for an existing hold on a maintenance-only title', async () => {
     publicDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 0, total_copies: 2 }, availability: { ...noHold, outOfServiceCount: 1 } });
     await act(async () => root.render(<BookDetailModal bookId="b" open variant="student" onOpenChange={vi.fn()} />));
-    expect(document.querySelector('[role="dialog"]')).toHaveTextContent('Reserve title');
+    expect(document.querySelector('[role="dialog"]')).toHaveTextContent('Join Waitlist');
     expect(document.querySelector('[role="dialog"]')).toHaveTextContent('Currently Unavailable');
+  });
+});
+
+describe('Catalog book page', () => {
+  it('shows a single shelf status alongside the book description, DDC and reservation action', async () => {
+    const book = { ...baseBook, section: 'General', location: 'Shelf A2', available_copies: 2, total_copies: 3 };
+    await act(async () => root.render(
+      <Suspense fallback="Loading">
+        <StudentBookDetailClient id="b" bookPromise={Promise.resolve(book)} availabilityPromise={Promise.resolve(noHold)} />
+      </Suspense>
+    ));
+    expect(el.querySelector('h2')).toHaveTextContent('Clean Systems');
+    expect(el.textContent?.match(/on shelf/gi)).toHaveLength(1);
+    expect(el).toHaveTextContent('A book about systems.');
+    expect(el).toHaveTextContent('005.1');
+    expect(el.querySelector('dl')).toHaveTextContent('Shelf locationShelf A2');
+    expect(el.querySelector('button')).toHaveAccessibleName('Reserve for Pickup');
   });
 });
 

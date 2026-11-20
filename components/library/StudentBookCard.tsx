@@ -115,7 +115,7 @@ export function StudentBookCard({ book, priority, reservedInfo, onReserveSuccess
             </div>
           </div>
 
-          <div className="mt-auto flex items-center justify-between pt-3 border-t border-border/30">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border/30 pt-3">
             <Badge variant={isOutOfStock ? "destructive" : "secondary"} className="rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-tight tabular-nums">
               {book.available_copies}<span className="sr-only"> available</span> / {book.total_copies}<span className="sr-only"> total copies</span>
             </Badge>

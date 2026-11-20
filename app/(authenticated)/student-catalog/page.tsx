@@ -4,6 +4,16 @@ import { getMyReservations } from '@/lib/actions/reservations';
 import { StudentCatalogClient } from './StudentCatalogClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { parseBookSort } from '@/lib/catalog-sort';
+import { getCatalogPageSize } from '@/lib/catalog-page-size';
+
+type CatalogSearchParams = {
+  q?: string;
+  category?: string;
+  available?: string;
+  page?: string;
+  perPage?: string | string[];
+  sort?: string;
+};
 
 export function CatalogSkeletonView() {
   return (
@@ -31,13 +41,7 @@ export const metadata = {
 export default function StudentCatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    q?: string;
-    category?: string;
-    available?: string;
-    page?: string;
-    sort?: string;
-  }>;
+  searchParams: Promise<CatalogSearchParams>;
 }) {
   return (
     <Suspense fallback={<CatalogSkeletonView />}>
@@ -51,13 +55,7 @@ export default function StudentCatalogPage({
 async function StudentCatalogLoader({
   searchParams,
 }: {
-  searchParams: Promise<{
-    q?: string;
-    category?: string;
-    available?: string;
-    page?: string;
-    sort?: string;
-  }>;
+  searchParams: Promise<CatalogSearchParams>;
 }) {
   // Only awaiting URL params — this is synchronous from Next.js's perspective
   const params = await searchParams;
@@ -68,7 +66,7 @@ async function StudentCatalogLoader({
   // The Sort dropdown's choice wins; otherwise searches rank by best match.
   const hasQuery = q.trim().length > 0;
   const sortBy = parseBookSort(params.sort, hasQuery) ?? (hasQuery ? 'relevance' : 'newest');
-  const pageSize = 16;
+  const pageSize = getCatalogPageSize(Array.isArray(params.perPage) ? params.perPage[0] : params.perPage);
 
   // All three fire concurrently — none are awaited here
   const booksPromise = getPublicBooksCached(q, categoryId, '', availableOnly, page, pageSize, sortBy);

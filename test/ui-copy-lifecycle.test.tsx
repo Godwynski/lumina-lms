@@ -77,17 +77,77 @@ Element.prototype.releasePointerCapture ??= () => {};
 afterEach(cleanupClients);
 
 describe('physical copy details', () => {
+  it('keeps the acquisition action in the row and names the controls in the expanded panel', async () => {
+    const { container } = await renderInventory();
+    const actionsButton = button(container, 'Copy actions for ACC-1');
+    await clickElement(actionsButton);
+    const panel = document.getElementById(actionsButton!.getAttribute('aria-controls')!)!;
+    expect(panel).toBeVisible();
+    expect(panel).not.toHaveTextContent('No acquisition details recorded');
+    expect(panel).toHaveTextContent('Copy status');
+    expect(button(panel, 'Print QR')).toBeVisible();
+    expect(button(panel, 'Record sale, donation, or loss')).toBeVisible();
+    const edit = button(container, 'Edit acquisition for ACC-1');
+    expect(edit).toBeVisible();
+    await clickElement(edit);
+    expect(edit).toHaveAttribute('aria-expanded', 'true');
+    expect(panel.querySelector('form')).toHaveAccessibleName('Acquisition for ACC-1');
+    expect(button(panel, 'Print QR')).toBeUndefined();
+    await clickElement(button(panel, 'Cancel'));
+    expect(edit).toHaveAttribute('aria-expanded', 'false');
+    expect(button(panel, 'Print QR')).toBeVisible();
+    expect(actions.updateCopyAcquisition).not.toHaveBeenCalled();
+  });
+
+  it('opens copies first and edits a donation directly from the matching accession row', async () => {
+    const donated = { ...copy(1), lifecycle: {
+      acquisition_method: 'DONATED' as const, acquired_on: '2025-01-02', purchase_price: null,
+      disposition_on: null, sale_amount: null, last_lost_on: null,
+    } };
+    const { container } = await renderInventory([donated, copy(2)]);
+    const copies = container.querySelector('[role="tab"][aria-selected="true"]');
+    expect(copies).toHaveTextContent('Copies & acquisition');
+    expect(container).toHaveTextContent('Donated');
+    expect(container).toHaveTextContent('Acquisition not recorded');
+    await clickElement(button(container, 'Edit acquisition for ACC-1'));
+    expect(container.querySelector('form[aria-label="Acquisition for ACC-1"]')).toBeVisible();
+    expect(input(container, 'Acquisition date')).toHaveValue('2025-01-02');
+    expect(input(container, 'Price per copy (₱)')).toBeUndefined();
+
+    await typeIntoInput(input(container, 'Acquisition date'), '2099-01-01');
+    await clickElement(button(container, 'Save acquisition'));
+    expect(container.querySelector('[role="alert"]')).toHaveTextContent('Date cannot be in the future.');
+    expect(actions.updateCopyAcquisition).not.toHaveBeenCalled();
+
+    await typeIntoInput(input(container, 'Acquisition date'), '2025-02-03');
+    actions.updateCopyAcquisition.mockResolvedValueOnce({ success: false, error: 'Could not update this copy.' });
+    await clickElement(button(container, 'Save acquisition'));
+    expect(container.querySelector('[role="alert"]')).toHaveTextContent('Could not update this copy.');
+    expect(input(container, 'Acquisition date')).toHaveValue('2025-02-03');
+
+    actions.updateCopyAcquisition.mockResolvedValueOnce({ success: true });
+    actions.getBookAdminDetails.mockResolvedValueOnce({
+      book, copies: [{ ...donated, lifecycle: { ...donated.lifecycle, acquired_on: '2025-02-03' } }, copy(2)], queue: [],
+    });
+    await clickElement(button(container, 'Save acquisition'));
+    expect(actions.updateCopyAcquisition).toHaveBeenLastCalledWith({
+      id: 'copy-1', acquisition: { method: 'DONATED', acquiredOn: '2025-02-03', purchasePrice: null },
+    });
+    expect(container.querySelector('[role="status"]')).toHaveTextContent('Acquisition details saved.');
+    expect(container).toHaveTextContent('Feb 3, 2025');
+  });
+
   it('expands only one copy and saves a bought acquisition at zero pesos with inline feedback', async () => {
     const { container } = await renderInventory();
-    const first = button(container, 'Copy details for ACC-1');
-    const second = button(container, 'Copy details for ACC-2');
+    const first = button(container, 'Copy actions for ACC-1');
+    const second = button(container, 'Copy actions for ACC-2');
     expect(first).toHaveAttribute('aria-expanded', 'false');
     await clickElement(first);
-    expect(container).toHaveTextContent('No acquisition details recorded');
+    expect(container).toHaveTextContent('Acquisition not recorded');
     await clickElement(second);
     expect(first).toHaveAttribute('aria-expanded', 'false');
     expect(second).toHaveAttribute('aria-expanded', 'true');
-    await clickElement(button(container, 'Edit acquisition'));
+    await clickElement(button(container, 'Edit acquisition for ACC-2'));
     expect(input(container, 'Price per copy (₱)')).toBeUndefined();
     await changeSelect(container, 'Acquisition method', 'PURCHASED');
     await typeIntoInput(input(container, 'Acquisition date'), '2025-01-02');
@@ -111,9 +171,10 @@ describe('physical copy details', () => {
 
   it('prefills Lost from the old status menu and keeps an inline server error open for retry', async () => {
     const { container } = await renderInventory();
-    await chooseStatus(container, 'Status for copy ACC-1', 'Lost');
+    await clickElement(button(container, 'Copy actions for ACC-1'));
+    await chooseStatus(container, 'Copy status for ACC-1', 'Lost');
     expect(actions.updateBookCopyStatus).not.toHaveBeenCalled();
-    expect(button(container, 'Copy details for ACC-1')).toHaveAttribute('aria-expanded', 'true');
+    expect(button(container, 'Copy actions for ACC-1')).toHaveAttribute('aria-expanded', 'true');
     expect(input(container, 'Sale amount (₱)')).toBeUndefined();
     await typeIntoInput(input(container, 'Date of change'), '2025-01-03');
     actions.recordCopyDisposition.mockResolvedValue({ success: false, error: 'A reservation must be resolved first.' });
@@ -127,8 +188,8 @@ describe('physical copy details', () => {
 
   it('requires sale amount, accepts zero, and reports a waiting queue after recording a sale', async () => {
     const { container } = await renderInventory();
-    await clickElement(button(container, 'Copy details for ACC-1'));
-    await clickElement(button(container, 'Record change'));
+    await clickElement(button(container, 'Copy actions for ACC-1'));
+    await clickElement(button(container, 'Record sale, donation, or loss'));
     await changeSelect(container, 'New status', 'SOLD');
     await typeIntoInput(input(container, 'Date of change'), '2025-01-03');
 
@@ -143,31 +204,32 @@ describe('physical copy details', () => {
 
     expect(actions.recordCopyDisposition).toHaveBeenCalledWith({ id: 'copy-1', status: 'SOLD', occurredOn: '2025-01-03', saleAmount: '0' });
     expect(container.querySelector('[role="status"]')).toHaveTextContent(/Sold.*reservation.*waiting/i);
-    expect(button(container, 'Record change')).toBeUndefined();
+    expect(button(container, 'Record sale, donation, or loss')).toBeUndefined();
   });
 
   it('keeps held copies out of the disposition form and lets a read-only user see copy details without editing', async () => {
     const { container, rerender } = await renderInventory([copy(1, 'RESERVED'), copy(2, 'BORROWED')]);
-    await clickElement(button(container, 'Copy details for ACC-1'));
-    expect(button(container, 'Record change')).toBeUndefined();
-    await clickElement(button(container, 'Copy details for ACC-2'));
-    await clickElement(button(container, 'Record change'));
+    await clickElement(button(container, 'Copy actions for ACC-1'));
+    expect(button(container, 'Record sale, donation, or loss')).toBeUndefined();
+    await clickElement(button(container, 'Copy actions for ACC-2'));
+    await clickElement(button(container, 'Report lost'));
     const status = Array.from(container.querySelectorAll('select')).find((select) => select.value === 'LOST');
     expect(Array.from(status?.options ?? []).map((option) => option.value)).toEqual(['LOST']);
 
     await rerender(<AdminManagementContent initialBook={book} initialCopies={[copy(1), { ...copy(2), lifecycle: null }]} canManage={false} onClose={vi.fn()} />);
-    expect(container).toHaveTextContent('No acquisition details recorded');
-    expect(button(container, 'Copy details for ACC-1')).toBeUndefined();
-    expect(button(container, 'Edit acquisition')).toBeUndefined();
-    expect(button(container, 'Record change')).toBeUndefined();
+    expect(container).toHaveTextContent('Acquisition not recorded');
+    expect(button(container, 'Copy actions for ACC-1')).toBeUndefined();
+    expect(button(container, 'Edit acquisition for ACC-2')).toBeUndefined();
+    expect(button(container, 'Report lost')).toBeUndefined();
+    expect(button(container, 'Record sale, donation, or loss')).toBeUndefined();
     expect(button(container, 'Confirm change')).toBeUndefined();
     expect(button(container, 'Add Copies')).toBeUndefined();
   });
 
   it('lets a catalog manager date a legacy lost copy and still mark it found through the status menu', async () => {
     const { container } = await renderInventory([copy(1, 'LOST')]);
-    await clickElement(button(container, 'Copy details for ACC-1'));
-    await clickElement(button(container, 'Record change'));
+    await clickElement(button(container, 'Copy actions for ACC-1'));
+    await clickElement(button(container, 'Add loss date'));
     await typeIntoInput(input(container, 'Date of change'), '2999-01-03');
     await clickElement(button(container, 'Confirm change'));
     expect(actions.recordCopyDisposition).not.toHaveBeenCalled();
@@ -185,17 +247,17 @@ describe('physical copy details', () => {
 
     expect(actions.recordCopyDisposition).toHaveBeenCalledWith({ id: 'copy-1', status: 'LOST', occurredOn: '2025-01-03' });
     expect(container).toHaveTextContent('Last reported lost');
-    expect(button(container, 'Record change')).toBeUndefined();
+    expect(button(container, 'Add loss date')).toBeUndefined();
     actions.updateBookCopyStatus.mockResolvedValue({ success: true });
-    await chooseStatus(container, 'Status for copy ACC-1', 'Available');
+    await chooseStatus(container, 'Copy status for ACC-1', 'Available');
     expect(actions.updateBookCopyStatus).toHaveBeenCalledWith({ id: 'copy-1', status: 'AVAILABLE' });
   });
 
   it('records a donation without a sale amount and keeps feedback visible when the active filter hides the row', async () => {
     const { container } = await renderInventory();
     await chooseStatus(container, 'Filter copies by status', 'Available');
-    await clickElement(button(container, 'Copy details for ACC-1'));
-    await clickElement(button(container, 'Record change'));
+    await clickElement(button(container, 'Copy actions for ACC-1'));
+    await clickElement(button(container, 'Record sale, donation, or loss'));
     await changeSelect(container, 'New status', 'SOLD');
     await typeIntoInput(input(container, 'Sale amount (₱)'), '100');
     await changeSelect(container, 'New status', 'DONATED_OUT');

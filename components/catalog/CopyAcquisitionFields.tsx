@@ -17,7 +17,7 @@ export function CopyLifecycleSelect({ id, className, ...props }: ComponentProps<
     <div className="relative">
       <select
         id={controlId}
-        className={cn('h-9 w-full appearance-none rounded-lg border border-input bg-background px-3 pr-8 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50', className)}
+        className={cn('h-11 w-full appearance-none rounded-lg border border-input bg-background px-3 pr-8 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50', className)}
         {...props}
       />
       <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -45,11 +45,11 @@ export function CopyAcquisitionFields({ value, onChange, disabled }: Acquisition
         </CopyLifecycleSelect>
       </FieldGroup>
       <FieldGroup label="Acquisition date">
-        <Input type="date" max={libraryDate()} className="h-9 min-w-0" value={value.acquiredOn ?? ''} onChange={(event) => onChange({ ...value, acquiredOn: event.target.value || null })} />
+        <Input type="date" max={libraryDate()} className="h-11 min-w-0" value={value.acquiredOn ?? ''} onChange={(event) => onChange({ ...value, acquiredOn: event.target.value || null })} />
       </FieldGroup>
       {value.method === 'PURCHASED' && (
         <FieldGroup label="Price per copy (₱)">
-          <Input type="number" inputMode="decimal" min={0} step="0.01" className="h-9" value={value.purchasePrice ?? ''} onChange={(event) => onChange({ ...value, purchasePrice: event.target.value || null })} />
+          <Input type="number" inputMode="decimal" min={0} step="0.01" className="h-11" value={value.purchasePrice ?? ''} onChange={(event) => onChange({ ...value, purchasePrice: event.target.value || null })} />
         </FieldGroup>
       )}
     </fieldset>

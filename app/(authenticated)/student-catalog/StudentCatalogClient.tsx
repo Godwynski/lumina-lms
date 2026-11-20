@@ -37,6 +37,7 @@ import { AnimatePresence, m } from 'framer-motion';
 import { AdminTableShell } from '@/components/admin/AdminTableShell';
 import { createClient } from '@/lib/supabase/client';
 import { BOOK_SORT_OPTIONS, bookColumnSort, normalizeBookSort, parseBookSort, type BookSortParam } from '@/lib/catalog-sort';
+import { CATALOG_PAGE_SIZES, DEFAULT_CATALOG_PAGE_SIZE, getCatalogPageSize } from '@/lib/catalog-page-size';
 
 
 
@@ -163,7 +164,7 @@ export function StudentCatalogClient({
   const pendingQueries = useRef<string[]>([]);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [page, setPage] = useState(initialFilters.page);
-  const pageSize = 16;
+  const pageSize = getCatalogPageSize(searchParams.get('perPage'));
 
   const [selectedCategory, setSelectedCategory] = useState(initialFilters.categoryId);
   const [availableOnly, setAvailableOnly] = useState(initialFilters.availableOnly);
@@ -254,6 +255,9 @@ export function StudentCatalogClient({
   const handleAvailableToggle = () => updateParams({ available: !availableOnly ? 'true' : null, page: 1 });
   const handleSortChange = (sort: string) => pushQuery(localQuery, sort);
   const handlePageChange = (p: number) => updateParams({ page: p });
+  const handlePageSizeChange = (size: number) => {
+    updateParams({ perPage: size === DEFAULT_CATALOG_PAGE_SIZE ? null : size, page: 1 });
+  };
   const viewMode = resolveViewMode(searchParams.get('view'), preferences.catalogView);
   const setViewMode = (nextView: CatalogViewMode) => {
     if (nextView === viewMode) return;
@@ -482,6 +486,8 @@ export function StudentCatalogClient({
             totalItems={totalBooks}
             pageSize={pageSize}
             onPageChange={handlePageChange}
+            pageSizeOptions={CATALOG_PAGE_SIZES}
+            onPageSizeChange={handlePageSizeChange}
           />
         ) : null
       }
@@ -505,7 +511,7 @@ export function StudentCatalogClient({
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.02 }}
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+              className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-4"
             >
               {books.map((book, index) => (
                 <StudentBookCard 

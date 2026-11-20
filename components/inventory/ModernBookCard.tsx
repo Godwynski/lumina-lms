@@ -61,25 +61,20 @@ export function ModernBookCard({ book, priority = false, canManage = true }: Mod
                 <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">by {book.author}</p>
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-lg">
-                  <MapPin size={12} className="text-primary/80 shrink-0" />
-                  <span className="font-medium text-muted-foreground">Location:</span>
-                  <span className="truncate text-foreground font-medium">{book.location || "Central Shelf"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
-                  <Layers size={12} className="text-primary/80 shrink-0" />
-                  <span className="font-medium text-muted-foreground">ISBN:</span>
-                  <span className="truncate font-mono text-foreground/90">{book.isbn || "INTERNAL-STOCK"}</span>
-                </div>
-                {book.dewey_decimal && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
-                    <Tag size={12} className="text-primary/80 shrink-0" />
-                    <span className="font-medium text-muted-foreground">DDC:</span>
-                    <span className="truncate font-mono text-foreground/90">{book.dewey_decimal}</span>
+              <dl className="space-y-1.5 text-xs">
+                {[
+                  { icon: MapPin, label: 'Location', value: book.location || 'Central Shelf' },
+                  { icon: Layers, label: 'ISBN', value: book.isbn || 'INTERNAL-STOCK' },
+                  { icon: Tag, label: 'DDC', value: book.dewey_decimal },
+                ].map(({ icon: Icon, label, value }) => value && (
+                  <div key={label} className="flex items-baseline gap-2">
+                    <dt className="flex shrink-0 items-center gap-1.5 font-medium text-muted-foreground">
+                      <Icon size={12} aria-hidden="true" /> {label}:
+                    </dt>
+                    <dd className="min-w-0 break-words text-foreground">{value}</dd>
                   </div>
-                )}
-              </div>
+                ))}
+              </dl>
             </div>
 
             <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted ring-1 ring-border/50 transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2">

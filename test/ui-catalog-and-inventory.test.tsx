@@ -365,7 +365,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         />
       );
       expect(handle.container).toHaveTextContent('Ready for Pickup');
-      expect(handle.container).toHaveTextContent('Claim by');
+      expect(handle.container).toHaveTextContent('Pick up by');
 
       await handle.rerender(
         <StatusBanner
@@ -384,7 +384,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
           variant="compact"
         />
       );
-      expect(handle.container).toHaveTextContent('Queue Position #2');
+      expect(handle.container).toHaveTextContent('Queue position #2');
 
       await handle.rerender(
         <StatusBanner book={{ available_copies: 1 }} availability={baseAvail} variant="full" />
@@ -948,7 +948,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       const comboboxes = Array.from(container.querySelectorAll('[role="combobox"]'));
       const filterTrigger = comboboxes[0]; // Only ALL status filter since copy-4 is MAINTENANCE (editable)
       await selectRadixOption(filterTrigger, 'Lost');
-      expect(container).toHaveTextContent('No matching assets found');
+      expect(container).toHaveTextContent('No matching copies');
     });
 
     it('validates published year, saves metadata edits, adds copies, changes copy status, and archives/restores', async () => {
@@ -974,15 +974,23 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       await flushPromises();
 
       // Open Edit Form
-      const editBtn = handle.container.querySelector(`button[aria-label="Edit ${book.title}"]`);
+      await pressKey(handle.container.querySelector('[role="tab"][id$="-trigger-book"]'), 'Enter');
+      const editBtn = findButtonByText(handle.container, 'Edit book information');
+      expect(editBtn).toBeVisible();
       await clickElement(editBtn);
-      expect(handle.container).toHaveTextContent('Edit Library Asset Metadata');
+      expect(handle.container.querySelector('h3')).toHaveTextContent('Edit book information');
+      const bookForm = handle.container.querySelector('form[aria-label="Edit book information"]')!;
+      expect(bookForm).toBeVisible();
+      expect(Array.from(bookForm.querySelectorAll('button')).filter((button) => button.textContent?.trim() === 'Cancel')).toHaveLength(1);
+      expect(findButtonByText(bookForm, 'Save Changes')).toHaveAttribute('type', 'submit');
 
       // Invalid year triggers toast error
       const yearInput = handle.container.querySelector('input[type="number"]') as HTMLInputElement;
       await typeIntoInput(yearInput, '999');
       await clickElement(findButtonByText(handle.container, 'Save Changes'));
       expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining('Published year must be between'));
+      expect(bookForm.querySelector('[role="alert"]')).toHaveTextContent('Published year must be between');
+      expect(yearInput).toHaveValue(999);
       expect(mockUpdateBook).not.toHaveBeenCalled();
 
       // Fix year and title, then save
@@ -1002,6 +1010,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Book metadata updated');
 
       // Add copies
+      await pressKey(handle.container.querySelector('[role="tab"][id$="-trigger-copies"]'), 'Enter');
       await clickElement(findButtonByText(handle.container, 'Add Copies'));
       const addCopiesInput = handle.container.querySelector('input[type="number"]') as HTMLInputElement;
       await typeIntoInput(addCopiesInput, '2');
@@ -1011,16 +1020,18 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Successfully added 2 copies');
 
       // Update copy status via Select
-      const copyTrigger = Array.from(handle.container.querySelectorAll('[role="combobox"]'))[1];
+      await clickElement(handle.container.querySelector('button[aria-label^="Copy actions for "]'));
+      const copyTrigger = handle.container.querySelector('[aria-label^="Copy status for "]');
       await selectRadixOption(copyTrigger, 'Maintenance');
       await flushPromises();
       expect(mockUpdateBookCopyStatus).toHaveBeenCalledWith({ id: 'c-1', status: 'MAINTENANCE' });
       expect(mockToastSuccess).toHaveBeenCalledWith('Status updated');
 
       // Archive flow
-      await clickElement(handle.container.querySelector('button[aria-label^="Edit "]'));
-      await clickElement(findButtonByText(handle.container, 'Archive Asset'));
-      expect(handle.container).toHaveTextContent('Archive this asset?');
+      await pressKey(handle.container.querySelector('[role="tab"][id$="-trigger-book"]'), 'Enter');
+      await clickElement(findButtonByText(handle.container, 'Edit book information'));
+      await clickElement(findButtonByText(handle.container, 'Archive book'));
+      expect(handle.container).toHaveTextContent('Archive this book?');
       await clickElement(findButtonByText(handle.container, 'Confirm'));
       await flushPromises();
       expect(mockSoftDeleteBook).toHaveBeenCalledWith('book-1');
@@ -1039,8 +1050,8 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       );
       await clickElement(findButtonByText(handle.container, 'Cancel'));
       expect(handle.container).toHaveTextContent('Archived');
-      await clickElement(handle.container.querySelector('button[aria-label^="Edit "]'));
-      await clickElement(findButtonByText(handle.container, 'Restore Asset'));
+      await clickElement(findButtonByText(handle.container, 'Edit book information'));
+      await clickElement(findButtonByText(handle.container, 'Restore book'));
       await flushPromises();
       expect(mockRestoreBook).toHaveBeenCalledWith('book-1');
       expect(mockToastSuccess).toHaveBeenCalledWith('Book restored');
@@ -1067,6 +1078,27 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
   });
 
   describe('BookDetailModal', () => {
+    it.each([
+      { page: 'Catalog', variant: 'student', action: 'Open full page' },
+      { page: 'Inventory', variant: 'super_admin', action: 'Copies & acquisition' },
+    ] as const)('omits the Audit Logs shortcut from $page for administrators', async ({ variant, action }) => {
+      const book = makeBook();
+      mockGetBookPublicDetails.mockResolvedValue({ book, availability: { hasReservation: false } });
+      mockGetBookAdminDetails.mockResolvedValue({ book, copies: [makeCopy()], queue: [] });
+
+      await renderClient(
+        <PreferencesProvider initialPreferences={{ theme: 'light' }} initialRole="super_admin">
+          <BookDetailModal bookId={book.id} open variant={variant} onOpenChange={vi.fn()} />
+        </PreferencesProvider>
+      );
+      await flushPromises();
+
+      const dialog = document.body.querySelector('[role="dialog"]')!;
+      expect(dialog).toHaveTextContent(action);
+      expect(dialog.querySelector('button[aria-label="Close"]')).toBeVisible();
+      expect(dialog.querySelector('a[href^="/audit"]')).toBeNull();
+    });
+
     it('fetches student details, displays tags overflow & metadata, and cancels reservation via dialog', async () => {
       const bookDetail: BookDetail = {
         id: 'book-1',
@@ -1111,10 +1143,11 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(mockGetBookPublicDetails).toHaveBeenCalledWith('book-1');
       expect(document.body).toHaveTextContent('Clean Architecture');
       expect(document.body).toHaveTextContent('+1');
-      expect(document.body).toHaveTextContent('✦ Ready');
+      expect(document.body).toHaveTextContent('Ready for Pickup');
+      expect(document.body).toHaveTextContent('Pick up by');
 
       // Cancel reservation flow
-      const cancelBtn = findButtonByText(document.body, 'Cancel')!;
+      const cancelBtn = findButtonByText(document.body, 'Cancel reservation')!;
       await clickElement(cancelBtn);
       expect(document.body).toHaveTextContent('Cancel Reservation?');
 
@@ -1160,7 +1193,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       );
       await flushPromises();
       expect(mockGetBookAdminDetails).toHaveBeenCalledWith('book-1');
-      expect(document.body).toHaveTextContent('Inventory Assets');
+      expect(document.body).toHaveTextContent('Physical copies');
     });
 
     it('renders read_only description, super_admin audit link, cover error fallback, cancel error, and realtime refresh', async () => {
@@ -1252,7 +1285,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
         />
       );
       await flushPromises();
-      await clickElement(findButtonByText(document.body, 'Cancel')!);
+      await clickElement(findButtonByText(document.body, 'Cancel reservation')!);
       await clickElement(findButtonByText(document.body, 'Yes, Cancel')!);
       await flushPromises();
       expect(mockToastError).toHaveBeenCalledWith('Cancel failed');
@@ -1286,6 +1319,9 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
       expect(handle.container).toHaveTextContent('by Robert C. Martin');
       expect(handle.container).toHaveTextContent('OUT');
       expect(handle.container).toHaveTextContent('0 / 3 In Pool');
+      const metadata = handle.container.querySelector('dl')!;
+      expect(Array.from(metadata.querySelectorAll('dt'), (label) => label.textContent?.trim())).toEqual(['Location:', 'ISBN:', 'DDC:']);
+      expect(metadata.querySelector('dd')).toHaveTextContent('Shelf A-2');
 
       // Image error fallback
       const img = handle.container.querySelector('img') as HTMLImageElement;

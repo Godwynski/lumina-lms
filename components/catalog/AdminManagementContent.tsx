@@ -30,8 +30,6 @@ import {
   Archive,
   RotateCw,
   Plus,
-  BookOpen,
-  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +41,7 @@ import { FieldGroup } from '@/components/common/FieldGroup';
 import { ReservationQueuePanel, formatRelativeTime, type ReservationQueueEntry } from './admin/ReservationQueuePanel';
 import { cn, getCategoryName } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CopyDetails } from './admin/CopyDetails';
 import { EMPTY_ACQUISITION, OptionalCopyAcquisition } from './CopyAcquisitionFields';
 import { copyAcquisitionSchema, hasCopyAcquisition } from '@/lib/copy-acquisition';
@@ -89,6 +87,23 @@ function InventoryItemSkeleton() {
   );
 }
 
+const BOOK_FIELD_CLASS = 'h-11 border-border bg-background text-base shadow-none sm:text-sm';
+
+function bookEditFields(book: Book) {
+  return {
+    title: book.title,
+    author: book.author,
+    isbn: book.isbn || '',
+    category_id: book.category_id || '',
+    description: book.description || '',
+    published_year: book.published_year ? String(book.published_year) : '',
+    cover_url: book.cover_url || '',
+    section: book.section || '',
+    location: book.location || '',
+    dewey_decimal: book.dewey_decimal || '',
+  };
+}
+
 // ─── Main Admin Management Content ─────────────────────────────────────────
 
 interface AdminManagementContentProps {
@@ -131,6 +146,7 @@ export function AdminManagementContent({
     if (initialCopies) setLoading(false);
   }, [initialCopies]);
   
+  const [activeTab, setActiveTab] = useState('copies');
   const [isEditing, setIsEditing] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -142,7 +158,7 @@ export function AdminManagementContent({
   const [batchAcquisition, setBatchAcquisition] = useState(EMPTY_ACQUISITION);
   const [addCopiesError, setAddCopiesError] = useState<string | null>(null);
   const [addCopiesLoading, setAddCopiesLoading] = useState(false);
-  const [expandedCopy, setExpandedCopy] = useState<{ id: string; lostRequest: number } | null>(null);
+  const [expandedCopy, setExpandedCopy] = useState<{ id: string; view: 'details' | 'acquisition' | 'lost'; request: number } | null>(null);
   const [copyNotice, setCopyNotice] = useState<{ id: string; message: string } | null>(null);
 
   const [copyFilter, setCopyFilter] = useState<'ALL' | BookCopyWithReservation['status']>('ALL');
@@ -154,18 +170,8 @@ export function AdminManagementContent({
     setCurrentPage(1);
   }, [copyFilter, copies.length]);
 
-  const [editForm, setEditForm] = useState({
-    title: initialBook.title,
-    author: initialBook.author,
-    isbn: initialBook.isbn || '',
-    category_id: initialBook.category_id || '',
-    description: initialBook.description || '',
-    published_year: initialBook.published_year ? String(initialBook.published_year) : '',
-    cover_url: initialBook.cover_url || '',
-    section: initialBook.section || '',
-    location: initialBook.location || '',
-    dewey_decimal: initialBook.dewey_decimal || '',
-  });
+  const [editForm, setEditForm] = useState(() => bookEditFields(initialBook));
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [failedCover, setFailedCover] = useState<string | null>(null);
@@ -189,23 +195,12 @@ export function AdminManagementContent({
     loadCategories();
   }, []);
 
-  // Sync edit form with actual book state when opening edit mode
-  useEffect(() => {
-    if (isEditing) {
-      setEditForm({
-        title: book.title,
-        author: book.author,
-        isbn: book.isbn || '',
-        category_id: book.category_id || '',
-        description: book.description || '',
-        published_year: book.published_year ? String(book.published_year) : '',
-        cover_url: book.cover_url || '',
-        section: book.section || '',
-        location: book.location || '',
-        dewey_decimal: book.dewey_decimal || '',
-      });
-    }
-  }, [isEditing, book]);
+  function beginBookEdit() {
+    setEditForm(bookEditFields(book));
+    setEditError(null);
+    setShowDeleteConfirm(false);
+    setIsEditing(true);
+  }
 
   const fetchData = useCallback(async () => {
     try {
@@ -226,11 +221,14 @@ export function AdminManagementContent({
     }
   }, [initialBook.id, initialCopies, fetchData]);
 
-  const handleUpdateBook = async () => {
+  const handleUpdateBook = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canManage || updateLoading) return;
     setUpdateLoading(true);
+    setEditError(null);
     try {
-      const year = editForm.published_year.trim() ? parseInt(editForm.published_year.trim(), 10) : null;
-      if (year !== null && (isNaN(year) || year < 1000 || year > new Date().getFullYear() + 1)) {
+      const year = editForm.published_year.trim() ? Number(editForm.published_year) : null;
+      if (year !== null && (!Number.isInteger(year) || year < 1000 || year > new Date().getFullYear() + 1)) {
         throw new Error(`Published year must be between 1000 and ${new Date().getFullYear() + 1}`);
       }
 
@@ -257,7 +255,9 @@ export function AdminManagementContent({
       await fetchData();
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Update failed');
+      const message = err instanceof Error ? err.message : 'Update failed';
+      setEditError(message);
+      toast.error(message);
     } finally {
       setUpdateLoading(false);
     }
@@ -293,11 +293,15 @@ export function AdminManagementContent({
     }
   };
 
+  const openCopy = (id: string, view: 'details' | 'acquisition' | 'lost') => {
+    setCopyNotice(null);
+    setExpandedCopy((previous) => ({ id, view, request: (previous?.request ?? 0) + 1 }));
+  };
+
   const handleStatusChange = async (copyId: string, newStatus: EditableStatus) => {
     if (!canManage) return;
     if (newStatus === 'LOST') {
-      setCopyNotice(null);
-      setExpandedCopy((previous) => ({ id: copyId, lostRequest: (previous?.lostRequest ?? 0) + 1 }));
+      openCopy(copyId, 'lost');
       return;
     }
     try {
@@ -369,463 +373,384 @@ export function AdminManagementContent({
   );
   const showNoticeInRow = !loading && expandedCopy?.id === copyNotice?.id &&
     paginatedCopies.some((copy) => copy.id === copyNotice?.id && (canManage || copy.lifecycle !== undefined));
-  const isAvailable = book.available_copies > 0;
+  const bookFields = [
+    { label: 'ISBN', value: book.isbn },
+    { label: 'DDC', value: book.dewey_decimal },
+    { label: 'Category', value: categoryName },
+    { label: 'Published year', value: book.published_year },
+    { label: 'Section', value: book.section },
+    { label: 'Shelf location', value: book.location },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Header Summary */}
-      {!isEditing && (
-        <div className="flex min-w-0 gap-3 rounded-xl border border-border bg-card p-4 sm:gap-5 sm:p-5">
-          <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-lg shadow-sm border border-border/40">
-            <Image 
-              src={coverImgSrc} 
-              alt={book.title} 
-              fill 
-              className="object-cover" 
-              unoptimized 
-              onError={() => setFailedCover(book.cover_url || null)}
-            />
-          </div>
-          <div className="flex-1 min-w-0 flex flex-col py-1">
-            <div className="flex items-center gap-2 mb-2">
-               <span className={cn(
-                 "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium tracking-tight",
-                 !book.is_active
-                   ? "bg-amber-500/10 text-amber-600"
-                   : isAvailable
-                     ? "bg-emerald-500/10 text-emerald-600"
-                     : "bg-rose-500/10 text-rose-600"
-               )}>
-                 <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />
-                 {!book.is_active ? "Archived" : isAvailable ? "In Stock" : "Out of Stock"}
-               </span>
-            </div>
-            <h2 className="text-lg sm:text-2xl font-semibold tracking-tight text-foreground leading-tight mb-1 break-words">{book.title}</h2>
-            <p className="text-base text-muted-foreground mb-4">{book.author}</p>
-            
-            <div className="flex flex-wrap gap-1.5">
-               <Badge variant="secondary" className="text-[11px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
-                 {categoryName || 'General'}
-               </Badge>
-               <Badge variant="secondary" className="text-[11px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
-                 DDC {book.dewey_decimal || 'N/A'}
-               </Badge>
-               {book.isbn && (
-                 <Badge variant="secondary" className="text-[11px] font-medium bg-muted/40 hover:bg-muted/40 text-muted-foreground border-none px-2 py-0">
-                   {book.isbn}
-                 </Badge>
-               )}
-            </div>
-          </div>
-          {canManage && (
-            <div className="flex flex-col self-start pt-1">
-               <Button 
-                 variant="ghost" 
-                 size="icon"
-                 onClick={() => setIsEditing(true)}
-                 aria-label={`Edit ${book.title}`}
-                 className="h-11 w-11 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-               >
-                 <Edit3 size={16} />
-               </Button>
-            </div>
-          )}
+    <div className="space-y-5">
+      <div className="flex min-w-0 items-start gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+        <div className="relative aspect-[2/3] w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:w-20">
+          <Image src={coverImgSrc} alt={book.title} fill className="object-cover" unoptimized onError={() => setFailedCover(book.cover_url || null)} />
         </div>
-      )}
-
-      {/* Edit Form */}
-      {isEditing && (
-        <div className="rounded-2xl border border-border/40 bg-card p-6 shadow-sm animate-in fade-in slide-in-from-top-2">
-          <div className="mb-6 flex items-center justify-between border-b border-border/20 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-1 bg-primary rounded-full" />
-              <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">Edit Library Asset Metadata</h3>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} className="h-7 px-2.5 text-[11px] font-bold uppercase rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">Cancel</Button>
-          </div>
-          
-          <div className="space-y-6">
-            {/* Segment 1: Basic Information & Taxonomy */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
-                <BookOpen size={13} className="text-primary/70" />
-                <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Basic Information & Cataloging</h4>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
-                <FieldGroup label="Title" className="sm:col-span-2 md:col-span-6">
-                  <Input 
-                    value={editForm.title} 
-                    onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))} 
-                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
-                  />
-                </FieldGroup>
-                <FieldGroup label="Author" className="sm:col-span-1 md:col-span-2">
-                  <Input 
-                    value={editForm.author} 
-                    onChange={e => setEditForm(prev => ({ ...prev, author: e.target.value }))} 
-                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
-                  />
-                </FieldGroup>
-                <FieldGroup label="Category" className="sm:col-span-1 md:col-span-2">
-                  <Select 
-                    value={editForm.category_id || 'none'} 
-                    onValueChange={v => setEditForm(prev => ({ ...prev, category_id: v === 'none' ? '' : v }))}
-                  >
-                    <SelectTrigger className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus:ring-1 focus:ring-primary/40">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent className="border-border/40 shadow-xl">
-                      <SelectItem value="none" className="text-xs">General / Uncategorized</SelectItem>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FieldGroup>
-                <FieldGroup label="Published Year" className="sm:col-span-1 md:col-span-2">
-                  <Input 
-                    type="number" 
-                    min={1000} 
-                    max={new Date().getFullYear() + 1} 
-                    value={editForm.published_year} 
-                    onKeyDown={(e) => {
-                      if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    onChange={e => setEditForm(prev => ({ ...prev, published_year: e.target.value }))} 
-                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
-                  />
-                </FieldGroup>
-                <FieldGroup label="ISBN" className="sm:col-span-1 md:col-span-3">
-                  <Input 
-                    value={editForm.isbn} 
-                    disabled
-                    className="h-9 rounded-xl text-xs bg-muted/40 border border-border/40 text-muted-foreground cursor-not-allowed select-all" 
-                  />
-                </FieldGroup>
-                <FieldGroup label="Dewey Decimal (DDC)" className="sm:col-span-1 md:col-span-3">
-                  <Input 
-                    value={editForm.dewey_decimal} 
-                    onChange={e => setEditForm(prev => ({ ...prev, dewey_decimal: e.target.value }))} 
-                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
-                  />
-                </FieldGroup>
-              </div>
-            </div>
-
-            {/* Segment 2: Physical Placement & Description */}
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-2 border-b border-border/10 pb-2">
-                <MapPin size={13} className="text-primary/70" />
-                <h4 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Physical Placement & Description</h4>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FieldGroup label="Location">
-                  <Input 
-                    value={editForm.location} 
-                    onChange={e => setEditForm(prev => ({ ...prev, location: e.target.value }))} 
-                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
-                    placeholder="e.g. Second Floor"
-                  />
-                </FieldGroup>
-                <FieldGroup label="Section">
-                  <Input 
-                    value={editForm.section} 
-                    onChange={e => setEditForm(prev => ({ ...prev, section: e.target.value }))} 
-                    className="h-9 rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40" 
-                    placeholder="e.g. Fiction Section"
-                  />
-                </FieldGroup>
-                <FieldGroup label="Description / Synopsis" className="sm:col-span-2">
-                  <Textarea 
-                    value={editForm.description} 
-                    onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} 
-                    className="min-h-[92px] rounded-xl text-xs bg-background/50 border border-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/40 resize-none custom-scrollbar" 
-                    placeholder="Enter book description or summary..."
-                  />
-                </FieldGroup>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center justify-between border-t border-border/20 pt-4">
-             {book.is_active ? (
-               showDeleteConfirm ? (
-                 <div className="flex items-center gap-2">
-                   <span className="text-[11px] font-black text-rose-600 uppercase tracking-widest">Archive this asset?</span>
-                   <Button onClick={handleDeleteBook} disabled={deleteLoading} variant="destructive" size="sm" className="h-8 text-[11px] font-black uppercase rounded-lg">
-                     Confirm
-                   </Button>
-                   <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)} className="h-8 text-[11px] font-bold uppercase rounded-lg">No</Button>
-                 </div>
-               ) : (
-                 <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)} className="h-8 px-0 text-rose-600 hover:text-rose-700 hover:bg-transparent text-[11px] font-black uppercase transition-colors">
-                   <Archive size={12} className="mr-1.5" /> Archive Asset
-                 </Button>
-               )
-             ) : (
-               <Button 
-                 variant="ghost" 
-                 size="sm" 
-                 onClick={handleRestoreBook} 
-                 disabled={restoreLoading}
-                 className="h-8 px-0 text-emerald-600 hover:text-emerald-700 hover:bg-transparent text-[11px] font-black uppercase transition-colors"
-               >
-                 {restoreLoading ? <Loader2 size={12} className="mr-1.5 animate-spin" /> : <RotateCw size={12} className="mr-1.5" />}
-                 Restore Asset
-               </Button>
-             )}
-             <div className="flex items-center gap-2">
-               <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="h-8 rounded-lg px-3 text-[11px] font-bold uppercase tracking-wider">
-                 Cancel
-               </Button>
-               <Button onClick={handleUpdateBook} disabled={updateLoading} size="sm" className="h-8 rounded-lg px-4 text-[11px] font-black uppercase tracking-widest">
-                 {updateLoading ? <Loader2 className="animate-spin h-3 w-3 mr-1.5" /> : <Save size={12} className="mr-1.5" />}
-                 Save Changes
-               </Button>
-             </div>
-          </div>
+        <div className="min-w-0 space-y-1">
+          <h2 className="break-words text-xl font-semibold leading-tight tracking-tight sm:text-2xl">{book.title}</h2>
+          <p className="break-words text-sm text-muted-foreground">{book.author}</p>
+          <p className="pt-1 text-sm tabular-nums">
+            <span className="font-semibold text-emerald-800">{book.available_copies ?? 0}</span>{' '}
+            <span className="text-emerald-800">available</span>
+            <span className="text-muted-foreground"> of {book.total_copies ?? 0} copies</span>
+            {book.is_active === false && <span className="ml-2 rounded-full px-2 py-0.5 text-xs status-warning">Archived</span>}
+          </p>
         </div>
-      )}
-
-      {/* Stats & Queue */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-around gap-4">
-            <div className="text-center">
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total</p>
-              <p className="text-xl font-semibold text-foreground leading-none">{book.total_copies ?? 0}</p>
-            </div>
-            <div className="w-px h-8 bg-border/20" />
-            <div className="text-center">
-              <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-widest mb-1">Available</p>
-              <p className="text-xl font-semibold text-emerald-800 leading-none">{book.available_copies ?? 0}</p>
-            </div>
-            {reservationQueue.length > 0 && (
-              <>
-                <div className="w-px h-8 bg-border/20" />
-                <div className="text-center">
-                  <p className="text-[11px] font-bold text-indigo-500/60 uppercase tracking-widest mb-1">Queue</p>
-                  <p className="text-xl font-semibold text-indigo-500 leading-none">{reservationQueue.length}</p>
-                </div>
-              </>
-            )}
-         </div>
-         <ReservationQueuePanel queue={reservationQueue} mounted={mounted} />
       </div>
 
-      {/* Inventory List */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/20 pb-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Inventory Assets</h3>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2">
-            {printableCopies.length > 1 && (
-              <QRPrinterModal
-                bookTitle={book.title}
-                triggerLabel="Print all QR"
-                labels={printableCopies.map((c) => ({ qrString: c.qr_string, accessionNumber: c.accession_number }))}
-              />
-            )}
-            {canManage && !showAddCopies && (
-              <Button variant="ghost" size="sm" onClick={() => setShowAddCopies(true)} className="h-8 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/5 px-2">
-                <Plus className="h-3.5 w-3.5" /> Add Copies
-              </Button>
-            )}
-            
-            <Select value={copyFilter} onValueChange={(v) => {
-              if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
-            }}>
-              <SelectTrigger aria-label="Filter copies by status" className="h-8 w-[110px] rounded-md border-none bg-muted/40 hover:bg-muted/60 px-2.5 text-[11px] font-medium text-muted-foreground shadow-none focus:ring-0 transition-colors">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-border/40 shadow-xl">
-                <SelectItem value="ALL" className="text-[11px] font-medium">All Statuses</SelectItem>
-                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key} className="text-[11px] font-medium">{cfg.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-4">
+        <TabsList aria-label="Inventory book sections" className="h-auto min-h-11 w-full sm:w-fit">
+          <TabsTrigger value="copies" className="min-h-11 whitespace-normal text-xs sm:flex-none sm:whitespace-nowrap sm:px-4 sm:text-sm">Copies &amp; acquisition</TabsTrigger>
+          <TabsTrigger value="book" className="min-h-11 whitespace-normal text-xs sm:flex-none sm:whitespace-nowrap sm:px-4 sm:text-sm">Book information</TabsTrigger>
+        </TabsList>
 
-        {canManage && showAddCopies && (
-          <form aria-label="Add copies" noValidate onSubmit={handleAddCopies} className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <FieldGroup label="Number of copies to add">
-                <Input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={copiesToAdd}
-                  aria-label="Number of copies to add"
-                  disabled={addCopiesLoading}
-                  onChange={(event) => { setCopiesToAdd(event.target.value); setAddCopiesError(null); }}
-                  className="h-9 w-24"
-                />
-              </FieldGroup>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={closeAddCopies} disabled={addCopiesLoading}>Cancel</Button>
-                <Button type="submit" size="sm" disabled={addCopiesLoading}>{addCopiesLoading ? 'Adding…' : 'Confirm'}</Button>
+        <TabsContent value="book" forceMount hidden={activeTab !== 'book'}>
+          {!isEditing && (
+            <section aria-label="Book information" className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-base font-semibold">Book information</h3>
+                {canManage && (
+                  <Button type="button" variant="outline" className="min-h-11" onClick={beginBookEdit}>
+                    <Edit3 aria-hidden="true" /> Edit book information
+                  </Button>
+                )}
+              </div>
+              <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {bookFields.map(({ label, value }) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                    <dd className="mt-0.5 break-words text-sm">{value ?? 'Not recorded'}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="border-t border-border pt-4">
+                <h4 className="text-sm font-semibold">Description</h4>
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
+                  {book.description || 'No description available.'}
+                </p>
+              </div>
+            </section>
+          )}
+
+          {canManage && isEditing && (
+            <form aria-label="Edit book information" onSubmit={handleUpdateBook} noValidate className="rounded-xl border border-border bg-card">
+              <div className="space-y-5 p-4 sm:p-5">
+                <h3 className="text-base font-semibold">Edit book information</h3>
+
+                <fieldset disabled={updateLoading} className="min-w-0">
+                  <legend className="mb-3 text-sm font-semibold">Catalog details</legend>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6 [&_label]:text-sm">
+                    <FieldGroup label="Title" className="min-w-0 sm:col-span-2 lg:col-span-6">
+                      <Input value={editForm.title} onChange={(e) => setEditForm((draft) => ({ ...draft, title: e.target.value }))}
+                        className={BOOK_FIELD_CLASS} />
+                    </FieldGroup>
+                    <FieldGroup label="Author" className="min-w-0 lg:col-span-2">
+                      <Input value={editForm.author} onChange={(e) => setEditForm((draft) => ({ ...draft, author: e.target.value }))}
+                        className={BOOK_FIELD_CLASS} />
+                    </FieldGroup>
+                    <FieldGroup label="Category" className="min-w-0 lg:col-span-2">
+                      <Select value={editForm.category_id || 'none'} disabled={updateLoading}
+                        onValueChange={(value) => setEditForm((draft) => ({ ...draft, category_id: value === 'none' ? '' : value }))}>
+                        <SelectTrigger className={cn('min-h-11 w-full', BOOK_FIELD_CLASS)}>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">General / Uncategorized</SelectItem>
+                          {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FieldGroup>
+                    <FieldGroup label="Published year" className="min-w-0 sm:col-span-2 lg:col-span-2">
+                      <Input type="number" inputMode="numeric" min={1000} max={new Date().getFullYear() + 1}
+                        value={editForm.published_year} onChange={(e) => setEditForm((draft) => ({ ...draft, published_year: e.target.value }))}
+                        className={BOOK_FIELD_CLASS} />
+                    </FieldGroup>
+                    <FieldGroup label="ISBN" className="min-w-0 lg:col-span-3">
+                      <Input value={editForm.isbn} readOnly placeholder="Not recorded" className={cn(BOOK_FIELD_CLASS, 'bg-muted/40 text-muted-foreground')} />
+                    </FieldGroup>
+                    <FieldGroup label="Dewey Decimal (DDC)" className="min-w-0 lg:col-span-3">
+                      <Input value={editForm.dewey_decimal} onChange={(e) => setEditForm((draft) => ({ ...draft, dewey_decimal: e.target.value }))}
+                        className={BOOK_FIELD_CLASS} />
+                    </FieldGroup>
+                  </div>
+                </fieldset>
+
+                <fieldset disabled={updateLoading} className="min-w-0">
+                  <legend className="mb-3 text-sm font-semibold">Shelf placement and description</legend>
+                  <div className="grid gap-3 sm:grid-cols-2 [&_label]:text-sm">
+                    <FieldGroup label="Shelf location">
+                      <Input value={editForm.location} onChange={(e) => setEditForm((draft) => ({ ...draft, location: e.target.value }))}
+                        className={BOOK_FIELD_CLASS} placeholder="e.g. Second Floor" />
+                    </FieldGroup>
+                    <FieldGroup label="Section">
+                      <Input value={editForm.section} onChange={(e) => setEditForm((draft) => ({ ...draft, section: e.target.value }))}
+                        className={BOOK_FIELD_CLASS} placeholder="e.g. Fiction" />
+                    </FieldGroup>
+                    <FieldGroup label="Description" className="sm:col-span-2">
+                      <Textarea value={editForm.description} onChange={(e) => setEditForm((draft) => ({ ...draft, description: e.target.value }))}
+                        className="min-h-24 rounded-lg border-border bg-background text-base shadow-none sm:text-sm" />
+                    </FieldGroup>
+                  </div>
+                </fieldset>
+
+                <div className="border-t border-border pt-3">
+                  {book.is_active ? (
+                    showDeleteConfirm ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium">Archive this book?</p>
+                        <Button type="button" onClick={handleDeleteBook} disabled={deleteLoading || updateLoading} variant="destructive" className="min-h-11">Confirm</Button>
+                        <Button type="button" variant="ghost" onClick={() => setShowDeleteConfirm(false)} className="min-h-11">Keep book</Button>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="ghost" onClick={() => setShowDeleteConfirm(true)} disabled={updateLoading} className="min-h-11 text-destructive">
+                        <Archive aria-hidden="true" /> Archive book
+                      </Button>
+                    )
+                  ) : (
+                    <Button type="button" variant="outline" onClick={handleRestoreBook} disabled={restoreLoading || updateLoading} className="min-h-11">
+                      {restoreLoading ? <Loader2 aria-hidden="true" className="animate-spin" /> : <RotateCw aria-hidden="true" />}
+                      Restore book
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 z-10 space-y-2 rounded-b-xl border-t border-border bg-card px-4 py-3 sm:px-5">
+                {editError && <p role="alert" className="text-sm text-destructive">{editError}</p>}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsEditing(false)} disabled={updateLoading} className="min-h-11">
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateLoading || deleteLoading || restoreLoading} className="min-h-11">
+                    {updateLoading ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Save aria-hidden="true" />}
+                    {updateLoading ? 'Saving…' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          )}
+        </TabsContent>
+
+        <TabsContent value="copies" forceMount hidden={activeTab !== 'copies'} className="space-y-5">
+          {/* Inventory List */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/20 pb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold">Physical copies <span className="ml-1 text-sm font-normal tabular-nums text-muted-foreground">({copies.length})</span></h3>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {printableCopies.length > 1 && (
+                  <QRPrinterModal
+                    bookTitle={book.title}
+                    triggerLabel="Print all QR"
+                    labels={printableCopies.map((c) => ({ qrString: c.qr_string, accessionNumber: c.accession_number }))}
+                  />
+                )}
+                {canManage && !showAddCopies && (
+                  <Button size="sm" onClick={() => setShowAddCopies(true)} className="min-h-11 px-3 text-sm">
+                    <Plus className="h-3.5 w-3.5" /> Add Copies
+                  </Button>
+                )}
+
+                <Select value={copyFilter} onValueChange={(v) => {
+                  if (v === 'ALL' || isBookCopyStatus(v)) setCopyFilter(v as 'ALL' | BookCopyWithReservation['status']);
+                }}>
+                  <SelectTrigger aria-label="Filter copies by status" className="h-11 w-auto min-w-32 rounded-lg border-border bg-card text-sm shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-border/40 shadow-xl">
+                    <SelectItem value="ALL" className="text-[11px] font-medium">All Statuses</SelectItem>
+                    {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                      <SelectItem key={key} value={key} className="text-[11px] font-medium">{cfg.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <OptionalCopyAcquisition value={batchAcquisition} onChange={(value) => { setBatchAcquisition(value); setAddCopiesError(null); }} disabled={addCopiesLoading} />
-            {addCopiesError && <p role="alert" className="text-sm text-destructive">{addCopiesError}</p>}
-          </form>
-        )}
 
-        {copyNotice && !showNoticeInRow && <p role="status" className="text-sm text-foreground">{copyNotice.message}</p>}
-
-        <div className="min-h-[160px] space-y-2">
-          {loading ? (
-            <div className="space-y-2">
-              <InventoryItemSkeleton />
-              <InventoryItemSkeleton />
-              <InventoryItemSkeleton />
-            </div>
-          ) : filteredCopies.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border/20 bg-muted/5">
-              <SearchX size={24} className="text-muted-foreground/20 mb-3" />
-              <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">No matching assets found</p>
-            </div>
-          ) : (
-            paginatedCopies.map((copy) => {
-              const statusCfg = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG] ?? {
-                label: copy.status, icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border'
-              };
-              const StatusIcon = statusCfg.icon;
-              const res = copy.reservation;
-              const r = res?.profiles as { full_name?: string | null; avatar_url?: string | null } | null;
-              const copyIdentifier = copy.accession_number || copy.qr_string;
-              const detailId = `copy-details-${copy.id}`;
-              const canReadDetails = canManage || copy.lifecycle !== undefined;
-              const isExpanded = canReadDetails && expandedCopy?.id === copy.id;
-
-              return (
-                <div key={copy.id} className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={cn("h-9 w-9 shrink-0 rounded-md border flex items-center justify-center transition-colors", statusCfg.bg, statusCfg.border)}>
-                        <StatusIcon size={16} className={statusCfg.color} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="mb-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          <p className="break-all font-mono text-xs font-semibold text-foreground/90">{copy.qr_string}</p>
-                          {copy.accession_number && <span className="break-all rounded border border-border/40 bg-muted/40 px-1.5 py-0.5 text-[11px] font-medium uppercase text-muted-foreground">{copy.accession_number}</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className={cn("font-medium", statusCfg.color)}>{statusCfg.label}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
-                      {canManage && isEditableStatus(copy.status) ? (
-                        <Select value={copy.status} onValueChange={(v) => {
-                          if (isEditableStatus(v)) handleStatusChange(copy.id, v);
-                        }}>
-                          <SelectTrigger aria-label={`Status for copy ${copyIdentifier}`} className="h-11 rounded-lg border border-border bg-background px-3 text-xs font-semibold shadow-none">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="border-border/40 shadow-xl">
-                            {EDITABLE_STATUSES.map((key) => (
-                              <SelectItem key={key} value={key} className="text-[11px] font-semibold uppercase">
-                                {STATUS_CONFIG[key].label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge variant="outline" className="h-8 px-2.5 text-[11px] font-semibold uppercase border-border/40">
-                          {statusCfg.label}
-                        </Badge>
-                      )}
-                      <div>
-                        <QRPrinterModal qrString={copy.qr_string} accessionNumber={copy.accession_number} bookTitle={book.title} />
-                      </div>
-                      {canReadDetails && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Copy details for ${copyIdentifier}`}
-                          aria-expanded={isExpanded}
-                          aria-controls={detailId}
-                          onClick={() => {
-                            setCopyNotice(null);
-                            setExpandedCopy(isExpanded ? null : { id: copy.id, lostRequest: 0 });
-                          }}
-                          className="min-h-11 gap-1 px-2 text-xs"
-                        >
-                          Copy details
-                          <ChevronDown aria-hidden="true" className={cn('size-3.5 transition-transform motion-reduce:transition-none', isExpanded && 'rotate-180')} />
-                        </Button>
-                      )}
-                    </div>
+            {canManage && showAddCopies && (
+              <form aria-label="Add copies" noValidate onSubmit={handleAddCopies} className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <FieldGroup label="Number of copies to add">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={copiesToAdd}
+                      aria-label="Number of copies to add"
+                      disabled={addCopiesLoading}
+                      onChange={(event) => { setCopiesToAdd(event.target.value); setAddCopiesError(null); }}
+                      className="h-9 w-24"
+                    />
+                  </FieldGroup>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={closeAddCopies} disabled={addCopiesLoading}>Cancel</Button>
+                    <Button type="submit" size="sm" disabled={addCopiesLoading}>{addCopiesLoading ? 'Adding…' : 'Confirm'}</Button>
                   </div>
+                </div>
+                <OptionalCopyAcquisition value={batchAcquisition} onChange={(value) => { setBatchAcquisition(value); setAddCopiesError(null); }} disabled={addCopiesLoading} />
+                {addCopiesError && <p role="alert" className="text-sm text-destructive">{addCopiesError}</p>}
+              </form>
+            )}
 
-                  {/* Reserver Info */}
-                  {copy.status === 'RESERVED' && r && (
-                    <div className="flex items-center gap-2.5 bg-indigo-500/5 rounded-md border border-indigo-500/10 p-2 mt-1">
-                      <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-background">
-                         {r.avatar_url ? (
-                           <Image src={r.avatar_url} alt="" fill className="object-cover" unoptimized />
-                         ) : (
-                           <div className="h-full w-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-                             <UserCircle2 size={12} className="text-indigo-400" />
-                           </div>
-                         )}
+            {copyNotice && !showNoticeInRow && <p role="status" className="text-sm text-foreground">{copyNotice.message}</p>}
+
+            <div className="min-h-[160px] space-y-2">
+              {loading ? (
+                <div className="space-y-2">
+                  <InventoryItemSkeleton />
+                  <InventoryItemSkeleton />
+                  <InventoryItemSkeleton />
+                </div>
+              ) : filteredCopies.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border/20 bg-muted/5">
+                  <SearchX size={24} className="text-muted-foreground/20 mb-3" />
+                  <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">No matching copies</p>
+                </div>
+              ) : (
+                paginatedCopies.map((copy) => {
+                  const statusCfg = STATUS_CONFIG[copy.status as keyof typeof STATUS_CONFIG] ?? {
+                    label: copy.status, icon: AlertCircle, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border'
+                  };
+                  const StatusIcon = statusCfg.icon;
+                  const res = copy.reservation;
+                  const r = res?.profiles as { full_name?: string | null; avatar_url?: string | null } | null;
+                  const copyIdentifier = copy.accession_number || copy.qr_string;
+                  const detailId = `copy-details-${copy.id}`;
+                  const canReadDetails = canManage || copy.lifecycle !== undefined;
+                  const isExpanded = canReadDetails && expandedCopy?.id === copy.id;
+                  const isEditingAcquisition = isExpanded && expandedCopy.view === 'acquisition';
+                  const method = copy.lifecycle?.acquisition_method;
+                  const acquisitionLabel = method === 'DONATED' ? 'Donated' : method === 'PURCHASED' ? 'Bought' : 'Acquisition not recorded';
+
+                  return (
+                    <div key={copy.id} className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg border", statusCfg.bg, statusCfg.border)}>
+                            <StatusIcon size={16} aria-hidden="true" className={statusCfg.color} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold">{copyIdentifier}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                              {copy.accession_number && <span className="break-all font-mono">{copy.qr_string}</span>}
+                              <span className="rounded-md bg-muted px-1.5 py-0.5 font-medium text-foreground">{statusCfg.label}</span>
+                              {(canManage || copy.lifecycle !== undefined) && <span>{acquisitionLabel}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex max-w-full flex-wrap gap-2">
+                          {canManage && (
+                            <Button type="button" variant="outline" className="min-h-11" aria-label={'Edit acquisition for ' + copyIdentifier}
+                              aria-expanded={isEditingAcquisition} aria-controls={detailId}
+                              onClick={() => { if (!isEditingAcquisition) openCopy(copy.id, 'acquisition'); }}>
+                              Edit acquisition
+                            </Button>
+                          )}
+                          {canReadDetails ? (
+                            <Button type="button" variant="ghost" className="min-h-11" aria-label={'Copy actions for ' + copyIdentifier}
+                              aria-expanded={isExpanded} aria-controls={detailId}
+                              onClick={() => isExpanded ? setExpandedCopy(null) : openCopy(copy.id, 'details')}>
+                              Copy actions
+                              <ChevronDown aria-hidden="true" className={cn('size-4', isExpanded && 'rotate-180')} />
+                            </Button>
+                          ) : (
+                            <QRPrinterModal qrString={copy.qr_string} accessionNumber={copy.accession_number} bookTitle={book.title} />
+                          )}
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tight truncate">
-                          Reserved by {r.full_name ?? 'Unknown User'}
-                        </p>
-                        {res?.hold_expires_at && (
-                          <p className="text-[11px] font-medium text-amber-500/80">
-                            Expires {formatRelativeTime(res.hold_expires_at, mounted)}
-                          </p>
+
+                      {/* Reserver Info */}
+                      {copy.status === 'RESERVED' && r && (
+                        <div className="flex items-center gap-2.5 bg-indigo-500/5 rounded-md border border-indigo-500/10 p-2 mt-1">
+                          <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-background">
+                             {r.avatar_url ? (
+                               <Image src={r.avatar_url} alt="" fill className="object-cover" unoptimized />
+                             ) : (
+                               <div className="h-full w-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                                 <UserCircle2 size={12} className="text-indigo-400" />
+                               </div>
+                             )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tight truncate">
+                              Reserved by {r.full_name ?? 'Unknown User'}
+                            </p>
+                            {res?.hold_expires_at && (
+                              <p className="text-[11px] font-medium text-amber-500/80">
+                                Expires {formatRelativeTime(res.hold_expires_at, mounted)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div id={detailId} hidden={!isExpanded} className="mt-1 space-y-3 border-t border-border px-1 pt-3 sm:px-2">
+                        {isExpanded && (
+                          <>
+                            <CopyDetails
+                              key={expandedCopy.request}
+                              copy={copy}
+                              canManage={canManage}
+                              reportLost={expandedCopy.view === 'lost'}
+                              editAcquisition={expandedCopy.view === 'acquisition'}
+                              onAcquisitionClose={() => setExpandedCopy((current) =>
+                                current?.id === copy.id && current.view === 'acquisition' ? { ...current, view: 'details' } : current
+                              )}
+                              copyActions={(
+                                <>
+                                  {canManage && isEditableStatus(copy.status) && (
+                                    <Select value={copy.status} onValueChange={(v) => {
+                                      if (isEditableStatus(v)) handleStatusChange(copy.id, v);
+                                    }}>
+                                    <FieldGroup label="Copy status" className="flex flex-wrap items-center gap-2 space-y-0">
+                                      <SelectTrigger aria-label={`Copy status for ${copyIdentifier}`} className="min-h-11 rounded-lg border-border bg-card px-3 text-sm shadow-none">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                    </FieldGroup>
+                                      <SelectContent className="border-border/40 shadow-xl">
+                                        {EDITABLE_STATUSES.map((key) => (
+                                          <SelectItem key={key} value={key} className="text-[11px] font-semibold uppercase">
+                                            {STATUS_CONFIG[key].label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+                                  <QRPrinterModal qrString={copy.qr_string} accessionNumber={copy.accession_number} bookTitle={book.title} />
+                                </>
+                              )}
+                              onSaved={(message) => handleCopyDetailsSaved(copy.id, message)}
+                            />
+                            {copyNotice?.id === copy.id && <p role="status" className="mt-3 text-sm text-foreground">{copyNotice.message}</p>}
+                          </>
                         )}
                       </div>
                     </div>
-                  )}
-                  <div id={detailId} hidden={!isExpanded}>
-                    {isExpanded && (
-                      <>
-                        <CopyDetails
-                          key={expandedCopy.lostRequest}
-                          copy={copy}
-                          canManage={canManage}
-                          reportLost={expandedCopy.lostRequest > 0}
-                          onSaved={(message) => handleCopyDetailsSaved(copy.id, message)}
-                        />
-                        {copyNotice?.id === copy.id && <p role="status" className="mt-3 text-sm text-foreground">{copyNotice.message}</p>}
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                  );
+                })
+              )}
+            </div>
 
-        {!loading && filteredCopies.length > COPIES_PER_PAGE && (
-          <div className="pt-2 border-t border-border/10">
-            <CompactPagination
-              page={activePage}
-              totalItems={filteredCopies.length}
-              pageSize={COPIES_PER_PAGE}
-              onPageChange={setCurrentPage}
-              variant="ghost"
-            />
+            {!loading && filteredCopies.length > COPIES_PER_PAGE && (
+              <div className="pt-2 border-t border-border/10">
+                <CompactPagination
+                  page={activePage}
+                  totalItems={filteredCopies.length}
+                  pageSize={COPIES_PER_PAGE}
+                  onPageChange={setCurrentPage}
+                  variant="ghost"
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="pt-2 border-t border-border/20 hidden">
-        {/* Analytics link removed per request to put everything in the modal */}
-      </div>
+          <ReservationQueuePanel queue={reservationQueue} mounted={mounted} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,16 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useMemo, useRef } from 'react';
-import Image from 'next/image';
-import {
-  MapPin,
-  Tag,
-  Hash,
-  Layers,
-  Library,
-  Maximize2,
-  Minimize2,
-} from 'lucide-react';
+import { Maximize2, Minimize2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePreferences } from '@/components/providers/PreferencesProvider';
@@ -18,23 +9,21 @@ import { ReserveTitleButton } from '@/components/common/ReserveTitleButton';
 import { cancelReservation } from '@/lib/actions/reservations';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
 import { getBookAdminDetails, getBookPublicDetails } from '@/lib/actions/catalog';
-import { cn, getCategoryName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { AdminManagementContent } from './AdminManagementContent';
 import { isOutOfService, type BookDetail, type AvailabilityStatus } from './types';
-import { CopyMeter } from './CopyMeter';
-import { MetaTile } from './MetaTile';
-import { StatusBanner } from './StatusBanner';
+import { CatalogBookDetails } from './CatalogBookDetails';
 import { CancelReservationDialog } from './CancelReservationDialog';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -81,8 +70,10 @@ function StudentModalContent({
   onClose,
   onCancelSuccess,
   readOnly = false,
+  isAvailabilityLoading,
 }: {
   readOnly?: boolean;
+  isAvailabilityLoading: boolean;
   book: BookDetail;
   availability: AvailabilityStatus;
   onClose: () => void;
@@ -91,11 +82,9 @@ function StudentModalContent({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [failedCover, setFailedCover] = useState<string | null>(null);
-  const imgSrc = book.cover_url && failedCover !== book.cover_url ? book.cover_url : "/images/default-book-cover.png";
-
   const isAvailable = book.available_copies > 0;
-  const categoryName = getCategoryName(book.categories);
+  const canReserve = !readOnly && !isAvailabilityLoading && !availability.hasReservation && !availability.isReady && !isOutOfService(book, availability);
+  const canCancel = !readOnly && !isAvailabilityLoading && availability.hasReservation;
 
   const handleCancelReservation = () => {
     const resId = availability.reservationId;
@@ -122,130 +111,30 @@ function StudentModalContent({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Real-time Status Banner */}
-      <StatusBanner book={book} availability={availability} variant="compact" />
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+        <div className="mx-auto max-w-2xl space-y-5">
+          <CatalogBookDetails book={book} availability={availability} isAvailabilityLoading={isAvailabilityLoading} />
+        </div>
+      </div>
 
-      {/* Cover + Title row */}
-      <div className="flex min-w-0 gap-4">
-        <div className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/20 shadow-sm">
-          <Image 
-            src={imgSrc} 
-            alt={book.title} 
-            fill 
-            className="object-cover" 
-            sizes="96px" 
-            unoptimized 
-            onError={() => setFailedCover(book.cover_url || null)}
-          />
-          {/* Availability ribbon */}
-          <div className={cn(
-            "absolute bottom-0 left-0 right-0 px-2 py-1 text-[11px] font-extrabold uppercase tracking-wider text-center backdrop-blur-sm",
-            availability.isReady ? 'bg-emerald-500/90 text-white'
-              : availability.hasReservation ? 'bg-primary/90 text-primary-foreground'
-              : isAvailable ? 'bg-emerald-500/85 text-white'
-              : 'bg-amber-500/90 text-white'
-          )}>
-            {availability.isReady ? '✦ Ready'
-              : availability.hasReservation ? `Queue #${availability.queuePosition ?? 1}`
-              : isAvailable ? 'On Shelf'
-              : isOutOfService(book, availability) ? 'Unavailable'
-              : 'Fully Borrowed'}
+      {(canReserve || canCancel) && (
+        <footer aria-label="Book actions" className="shrink-0 border-t border-border bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
+          <div className="mx-auto flex max-w-2xl flex-col gap-2 sm:flex-row sm:items-center">
+            {canReserve && (
+              <ReserveTitleButton bookId={book.id} isAvailable={isAvailable} hasExistingReservation={false}
+                onReserveSuccess={handleReserveSuccess} className="min-h-11" />
+            )}
+            {canCancel && (
+              <Button variant="outline" disabled={isPending} onClick={() => setCancelDialogOpen(true)}
+                className="min-h-11 text-destructive">
+                {isPending ? 'Cancelling…' : 'Cancel reservation'}
+              </Button>
+            )}
           </div>
-        </div>
-
-        <div className="flex-1 min-w-0 space-y-2">
-          <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground leading-tight break-words">{book.title}</h2>
-            <p className="mt-0.5 text-sm font-bold text-muted-foreground">{book.author}</p>
-          </div>
-
-          {/* Tags */}
-          {book.tags && book.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {book.tags.slice(0, 3).map((tag, i) => (
-                <Badge key={i} variant="secondary" className="text-[11px] px-1.5 py-0 font-bold">
-                  <Tag className="mr-0.5 h-2 w-2" />
-                  {tag}
-                </Badge>
-              ))}
-              {book.tags.length > 3 && (
-                <Badge variant="outline" className="text-[11px] px-1.5 py-0 font-bold text-muted-foreground">
-                  +{book.tags.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-        {book.description || 'No description available.'}
-      </p>
-
-      {/* Copy Meter */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <CopyMeter available={book.available_copies} total={book.total_copies} outOfService={availability.outOfServiceCount} />
-      </div>
-
-      {/* Metadata Grid */}
-      <div className="grid grid-cols-2 gap-2">
-        <MetaTile icon={Hash} label="ISBN" value={<span className="font-mono text-xs">{book.isbn || 'N/A'}</span>} variant="compact" />
-        <MetaTile icon={Tag} label="DDC" value={<span className="font-mono text-xs">{book.dewey_decimal || 'N/A'}</span>} variant="compact" />
-        <MetaTile icon={Library} label="Section" value={book.section || 'General'} variant="compact" />
-        <MetaTile icon={MapPin} label="Shelf Location" value={book.location || 'Main Floor'} variant="compact" />
-        <MetaTile icon={Layers} label="Category" value={categoryName || 'Uncategorized'} variant="compact" className="col-span-2" />
-      </div>
-
-      {/* Actions */}
-      {!readOnly && <div className="flex flex-col items-stretch gap-2 pt-1 sm:flex-row sm:items-center">
-        {(availability.hasReservation || !isOutOfService(book, availability)) && <ReserveTitleButton
-          bookId={book.id}
-          isAvailable={isAvailable}
-          hasExistingReservation={availability.hasReservation}
-          isReady={availability.isReady}
-          queuePosition={availability.queuePosition}
-          holdExpiresAt={availability.holdExpiresAt}
-          nextAvailableDate={availability.nextAvailableDate}
-          onReserveSuccess={handleReserveSuccess}
-          className="h-11 px-4 text-sm shadow-none flex-1"
-        />}
-        {availability.hasReservation && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isPending}
-            onClick={() => setCancelDialogOpen(true)}
-            className="h-11 px-3 text-sm text-destructive border-destructive/30 hover:bg-destructive/5"
-          >
-            {isPending ? 'Cancelling…' : 'Cancel'}
-          </Button>
-        )}
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="h-11 px-3 text-sm"
-        >
-          <Link href={`/student-catalog/${book.id}`} onClick={onClose}>
-            Open full page
-          </Link>
-        </Button>
-      </div>
-
-      }
-
-      {readOnly && (
-        <div className="flex justify-end pt-1">
-          <Button asChild variant="outline" size="sm" className="h-11 px-3 text-sm">
-            <Link href={`/student-catalog/${book.id}`} onClick={onClose}>
-              Open full page
-            </Link>
-          </Button>
-        </div>
+        </footer>
       )}
 
-      {/* Cancel confirmation dialog */}
       <CancelReservationDialog
         open={cancelDialogOpen}
         onOpenChange={setCancelDialogOpen}
@@ -254,7 +143,7 @@ function StudentModalContent({
         onConfirmCancel={handleCancelReservation}
         isReady={availability.isReady}
       />
-    </div>
+    </>
   );
 }
 
@@ -382,53 +271,90 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
   const activeStudentData = studentData || placeholderStudentData;
   const activeAdminData = adminData || placeholderAdminData;
 
+  const isInventory = variant === 'super_admin';
+  const showBookRecords = variant === 'read_only' && (role === 'super_admin' || role === 'librarian');
+
+  function changeOpen(nextOpen: boolean) {
+    if (!nextOpen) setExpanded(false);
+    onOpenChange(nextOpen);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) setExpanded(false); onOpenChange(nextOpen); }}>
-      <DialogContent onCloseAutoFocus={onCloseAutoFocus} className={cn(
-        "flex flex-col overflow-hidden gap-0 border-border bg-background text-foreground p-0",
-        expanded ? "h-[100dvh] max-h-[100dvh] w-screen max-w-none rounded-none sm:max-w-none" : cn("max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] sm:max-h-[90dvh]", variant === 'super_admin' ? "sm:max-w-3xl" : "sm:max-w-lg")
+    <Dialog open={open} onOpenChange={changeOpen}>
+      <DialogContent showCloseButton={false} onCloseAutoFocus={onCloseAutoFocus} className={cn(
+        'flex flex-col gap-0 overflow-hidden border-border bg-background p-0 text-foreground',
+        'max-sm:inset-0 max-sm:h-[100dvh] max-sm:max-h-none max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none',
+        expanded
+          ? 'h-[100dvh] max-h-[100dvh] max-w-none rounded-none sm:inset-0 sm:max-w-none sm:translate-x-0 sm:translate-y-0'
+          : isInventory ? 'sm:max-w-[min(calc(100%_-_2rem),58rem)]' : 'sm:max-w-[min(calc(100%_-_2rem),40rem)]'
       )}>
-        <DialogHeader className="shrink-0 border-b border-border bg-card px-4 py-4 pr-24 text-left sm:px-6 sm:pr-24">
-          <DialogTitle>Book Details</DialogTitle>
-          <DialogDescription>View book information</DialogDescription>
+        <DialogHeader className="flex shrink-0 flex-row items-center justify-between gap-3 border-b border-border bg-card px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 text-left sm:px-6">
+          <div className="min-w-0">
+            <DialogTitle>Book Details</DialogTitle>
+            <DialogDescription className="sr-only">
+              {isInventory ? 'View book information and physical copies.' : 'View book information and availability.'}
+            </DialogDescription>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {showBookRecords && (
+              <Button asChild variant="ghost" className="min-h-11 px-2 text-xs sm:px-3 sm:text-sm">
+                <Link href={'/audit?bookId=' + bookId} onClick={() => changeOpen(false)}>Book records</Link>
+              </Button>
+            )}
+            {isInventory ? (
+              <Button type="button" variant="ghost" size="icon" className="hidden size-11 sm:inline-flex"
+                aria-label={expanded ? 'Restore dialog size' : 'Expand dialog'} onClick={() => setExpanded((previous) => !previous)}>
+                {expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              </Button>
+            ) : (
+              <Button asChild variant="ghost" className="min-h-11 max-sm:size-11 max-sm:px-0">
+                <Link href={'/student-catalog/' + bookId} aria-label="Open full page" title="Open full page" onNavigate={() => changeOpen(false)}>
+                  <Maximize2 aria-hidden="true" />
+                  <span className="hidden sm:inline">Open full page</span>
+                </Link>
+              </Button>
+            )}
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" size="icon" className="size-11" aria-label="Close" data-slot="dialog-close">
+                <X aria-hidden="true" />
+              </Button>
+            </DialogClose>
+          </div>
         </DialogHeader>
-        <Button type="button" variant="ghost" size="icon" className="absolute right-12 top-3 size-10" aria-label={expanded ? "Restore dialog size" : "Expand dialog"} onClick={() => setExpanded(!expanded)}>
-          {expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-        </Button>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain custom-scrollbar px-4 py-5 sm:px-6">
-        <div className={cn("mx-auto", expanded && (variant === 'super_admin' ? "max-w-5xl" : "max-w-2xl"))}>
-        {(role === 'super_admin' || role === 'librarian') && <Link href={`/audit?bookId=${bookId}`} className="mb-4 inline-block text-sm font-semibold text-primary hover:underline" onClick={() => onOpenChange(false)}>View book records</Link>}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-
-        {!error && !activeAdminData && !activeStudentData && <ModalSkeleton />}
-
-        {!error && activeStudentData && variant !== 'super_admin' && (
-          <div>
-            <StudentModalContent
-              readOnly={variant === 'read_only'}
-              book={activeStudentData.book}
-              availability={activeStudentData.availability}
-              onClose={() => onOpenChange(false)}
-              onCancelSuccess={onCancelSuccess}
-            />
+        {error ? (
+          <div className="space-y-3 p-4 sm:p-6">
+            <p role="alert" className="text-sm text-destructive">{error}</p>
+            <Button type="button" variant="outline" onClick={fetchData}>Try again</Button>
+          </div>
+        ) : isInventory && activeAdminData ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+            <div className="mx-auto max-w-5xl">
+              <AdminManagementContent
+                initialBook={activeAdminData.book}
+                initialCopies={activeAdminData.copies}
+                initialQueue={activeAdminData.queue}
+                onClose={() => changeOpen(false)}
+                onRefresh={fetchData}
+                canManage={canManage}
+              />
+            </div>
+          </div>
+        ) : !isInventory && activeStudentData ? (
+          <StudentModalContent
+            readOnly={variant === 'read_only'}
+            isAvailabilityLoading={!studentData}
+            book={activeStudentData.book}
+            availability={activeStudentData.availability}
+            onClose={() => changeOpen(false)}
+            onCancelSuccess={onCancelSuccess}
+          />
+        ) : (
+          <div role="status" className="p-4 sm:p-6">
+            <span className="sr-only">Loading book details…</span>
+            <ModalSkeleton />
           </div>
         )}
-
-        {!error && activeAdminData && variant === 'super_admin' && (
-          <div>
-            <AdminManagementContent 
-              initialBook={activeAdminData.book} 
-              initialCopies={activeAdminData.copies}
-              initialQueue={activeAdminData.queue}
-              onClose={() => onOpenChange(false)}
-              onRefresh={fetchData}
-              canManage={canManage}
-            />
-          </div>
-        )}
-        </div>
-        </div>
       </DialogContent>
     </Dialog>
   );
