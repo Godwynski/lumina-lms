@@ -281,7 +281,6 @@ import {
 } from '@/components/providers/PreferencesProvider';
 
 import { BookArt } from '@/components/landing/book-art';
-import { ScrollProgress } from '@/components/landing/scroll-progress';
 import { Hero } from '@/components/hero';
 import { EnvVarWarning } from '@/components/env-var-warning';
 
@@ -2473,36 +2472,6 @@ describe('Landing, Hero & EnvVarWarning Components', () => {
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute('aria-hidden')).toBe('true');
     expect(svg?.querySelectorAll('path').length).toBeGreaterThan(5);
-  });
-
-  it('ScrollProgress sets --p inside a section and cleans up on unmount, respecting reduced motion', async () => {
-    const { container, unmount } = await renderClient(
-      <section>
-        <ScrollProgress className="progress-box">
-          <span>Artwork</span>
-        </ScrollProgress>
-      </section>
-    );
-
-    const box = container.querySelector('.progress-box') as HTMLDivElement;
-    expect(lastIntersectionObserver?.observed).toContain(container.querySelector('section'));
-    expect(box.style.getPropertyValue('--p')).not.toBe('');
-
-    unmount();
-    expect(lastIntersectionObserver?.disconnected).toBe(true);
-    expect(box.style.getPropertyValue('--p')).toBe('');
-
-    // Reduced motion skips setting --p
-    mockReducedMotion = true;
-    const { container: reducedContainer } = await renderClient(
-      <section>
-        <ScrollProgress className="reduced-box">
-          <span>Static</span>
-        </ScrollProgress>
-      </section>
-    );
-    const reducedBox = reducedContainer.querySelector('.reduced-box') as HTMLDivElement;
-    expect(reducedBox.style.getPropertyValue('--p')).toBe('');
   });
 
   it('Hero renders signed-in dashboard link or Microsoft + demo sign-in actions', async () => {
