@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback, useMemo, useRef } from 'react';
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { useState, useEffect, useTransition, useCallback, useMemo } from 'react';
+import { Maximize2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePreferences } from '@/components/providers/PreferencesProvider';
@@ -20,7 +20,7 @@ import {
 import { getBookAdminDetails, getBookPublicDetails } from '@/lib/actions/catalog';
 import { cn } from '@/lib/utils';
 import type { Book, BookCopyWithReservation } from '@/lib/types';
-import { createClient } from '@/lib/supabase/client';
+import { useBookDetailRealtime } from '@/hooks/use-book-detail-realtime';
 import { AdminManagementContent } from './AdminManagementContent';
 import { isOutOfService, type BookDetail, type AvailabilityStatus } from './types';
 import { CatalogBookDetails } from './CatalogBookDetails';
@@ -155,7 +155,6 @@ export function BookDetailModal(props: BookDetailModalProps) {
 
 function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialData, canManage = true, onCancelSuccess, onCloseAutoFocus }: BookDetailModalProps) {
   const { role } = usePreferences();
-  const [expanded, setExpanded] = useState(false);
   const [studentData, setStudentData] = useState<{ book: BookDetail; availability: AvailabilityStatus } | null>(null);
   const [adminData, setAdminData] = useState<{ book: Book; copies?: BookCopyWithReservation[]; queue?: ReservationQueueEntry[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -202,43 +201,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
     }
   }, [error]);
 
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedRefresh = useCallback(() => {
-    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-    refreshTimeoutRef.current = setTimeout(() => {
-      void fetchData();
-    }, 500);
-  }, [fetchData]);
-
-  // Real-time synchronization for the modal content
-  useEffect(() => {
-    if (!open || !bookId) return;
-
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`modal-realtime-${bookId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'books', filter: `id=eq.${bookId}` },
-        debouncedRefresh
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'book_copies', filter: `book_id=eq.${bookId}` },
-        debouncedRefresh
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reservations', filter: `book_id=eq.${bookId}` },
-        debouncedRefresh
-      )
-      .subscribe();
-
-    return () => {
-      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
-      void supabase.removeChannel(channel);
-    };
-  }, [open, bookId, debouncedRefresh]);
+  useBookDetailRealtime(open ? bookId : null, fetchData);
 
   const placeholderStudentData = useMemo(() => {
     if (initialData && variant === 'student') {
@@ -273,20 +236,14 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
 
   const isInventory = variant === 'super_admin';
   const showBookRecords = variant === 'read_only' && (role === 'super_admin' || role === 'librarian');
-
-  function changeOpen(nextOpen: boolean) {
-    if (!nextOpen) setExpanded(false);
-    onOpenChange(nextOpen);
-  }
+  const fullPageHref = (isInventory ? '/inventory/' : '/student-catalog/') + bookId;
 
   return (
-    <Dialog open={open} onOpenChange={changeOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} onCloseAutoFocus={onCloseAutoFocus} className={cn(
         'flex flex-col gap-0 overflow-hidden border-border bg-background p-0 text-foreground',
         'max-sm:inset-0 max-sm:h-[100dvh] max-sm:max-h-none max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none',
-        expanded
-          ? 'h-[100dvh] max-h-[100dvh] max-w-none rounded-none sm:inset-0 sm:max-w-none sm:translate-x-0 sm:translate-y-0'
-          : isInventory ? 'sm:max-w-[min(calc(100%_-_2rem),58rem)]' : 'sm:max-w-[min(calc(100%_-_2rem),40rem)]'
+        isInventory ? 'sm:max-w-[min(calc(100%_-_2rem),58rem)]' : 'sm:max-w-[min(calc(100%_-_2rem),40rem)]'
       )}>
         <DialogHeader className="flex shrink-0 flex-row items-center justify-between gap-3 border-b border-border bg-card px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 text-left sm:px-6">
           <div className="min-w-0">
@@ -298,22 +255,14 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
           <div className="flex shrink-0 items-center gap-1">
             {showBookRecords && (
               <Button asChild variant="ghost" className="min-h-11 px-2 text-xs sm:px-3 sm:text-sm">
-                <Link href={'/audit?bookId=' + bookId} onClick={() => changeOpen(false)}>Book records</Link>
+                <Link href={'/audit?bookId=' + bookId} onClick={() => onOpenChange(false)}>Book records</Link>
               </Button>
             )}
-            {isInventory ? (
-              <Button type="button" variant="ghost" size="icon" className="hidden size-11 sm:inline-flex"
-                aria-label={expanded ? 'Restore dialog size' : 'Expand dialog'} onClick={() => setExpanded((previous) => !previous)}>
-                {expanded ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-              </Button>
-            ) : (
-              <Button asChild variant="ghost" className="min-h-11 max-sm:size-11 max-sm:px-0">
-                <Link href={'/student-catalog/' + bookId} aria-label="Open full page" title="Open full page" onNavigate={() => changeOpen(false)}>
-                  <Maximize2 aria-hidden="true" />
-                  <span className="hidden sm:inline">Open full page</span>
-                </Link>
-              </Button>
-            )}
+            <Button asChild variant="ghost" size="icon" className="size-11">
+              <Link href={fullPageHref} aria-label="Open full page" title="Open full page" onNavigate={() => onOpenChange(false)}>
+                <Maximize2 aria-hidden="true" />
+              </Link>
+            </Button>
             <DialogClose asChild>
               <Button type="button" variant="ghost" size="icon" className="size-11" aria-label="Close" data-slot="dialog-close">
                 <X aria-hidden="true" />
@@ -334,7 +283,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
                 initialBook={activeAdminData.book}
                 initialCopies={activeAdminData.copies}
                 initialQueue={activeAdminData.queue}
-                onClose={() => changeOpen(false)}
+                onClose={() => onOpenChange(false)}
                 onRefresh={fetchData}
                 canManage={canManage}
               />
@@ -346,7 +295,7 @@ function BookDetailModalContent({ bookId, open, onOpenChange, variant, initialDa
             isAvailabilityLoading={!studentData}
             book={activeStudentData.book}
             availability={activeStudentData.availability}
-            onClose={() => changeOpen(false)}
+            onClose={() => onOpenChange(false)}
             onCancelSuccess={onCancelSuccess}
           />
         ) : (

@@ -366,6 +366,7 @@ import AttendancePage, { AttendanceSkeleton } from '@/app/(authenticated)/attend
 import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
 import AuditPage, { AuditSkeleton } from '@/app/(authenticated)/audit/page';
 import InventoryPage from '@/app/(authenticated)/inventory/page';
+import InventoryBookDetailPage from '@/app/(authenticated)/inventory/[id]/page';
 import AddBookPage from '@/app/(authenticated)/inventory/add/page';
 import StudentCatalogLayout from '@/app/(authenticated)/student-catalog/layout';
 import StudentCatalogPage, { CatalogSkeletonView } from '@/app/(authenticated)/student-catalog/page';
@@ -1739,6 +1740,45 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       const libAdd = await AddGate();
       expect(libAdd).toBeTruthy();
+    });
+
+    it('gates standalone Inventory details and renders copy editing only for managers', async () => {
+      const id = '20000000-0000-4000-8000-000000000042';
+      const showBook = (bookId = id) => InventoryBookDetailPage({ params: Promise.resolve({ id: bookId }) });
+      mockGetMe.mockResolvedValueOnce(null);
+      await expect(showBook()).rejects.toThrow('NEXT_REDIRECT:/');
+
+      for (const [role, status, manage_inventory] of [
+        ['patron', 'ACTIVE', true],
+        ['library_staff', 'ACTIVE', false],
+        ['library_staff', 'SUSPENDED', true],
+      ] as const) {
+        mockGetMe.mockResolvedValueOnce({ role, profile: { status, permissions: { manage_inventory } } });
+        await expect(showBook()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+      }
+
+      mockGetMe.mockResolvedValue({ role: 'librarian', profile: { status: 'ACTIVE' } });
+      await expect(showBook('not-a-book-id')).rejects.toThrow('NEXT_NOT_FOUND');
+      expect(mockGetBookAdminDetails).not.toHaveBeenCalled();
+      mockGetBookAdminDetails.mockResolvedValueOnce({ book: null, copies: [], queue: [] });
+      await expect(showBook()).rejects.toThrow('NEXT_NOT_FOUND');
+
+      mockGetBookAdminDetails.mockResolvedValue({
+        book: { id, title: 'Inventory title', author: 'Author', available_copies: 1, total_copies: 1 },
+        copies: [{ id: 'copy-1', qr_string: 'QR-1', accession_number: 'ACC-1', status: 'AVAILABLE', reservation: null }],
+        queue: [],
+      });
+      const manager = await renderClient(await showBook());
+      expect(manager.container).toHaveTextContent('Inventory title');
+      expect(manager.container.querySelector('[role="dialog"]')).toBeNull();
+      expect(manager.container.querySelector('button[aria-label="Edit acquisition for ACC-1"]')).toBeVisible();
+      expect(mockGetBookAdminDetails).toHaveBeenLastCalledWith(id);
+      cleanupClients();
+
+      mockGetMe.mockResolvedValueOnce({ role: 'library_staff', profile: { status: 'ACTIVE', permissions: { manage_inventory: true } } });
+      const assistant = await renderClient(await showBook());
+      expect(assistant.container).toHaveTextContent('ACC-1');
+      expect(assistant.container.querySelector('button[aria-label="Edit acquisition for ACC-1"]')).toBeNull();
     });
 
     it('StudentCatalogPage resolves searchParams, defaults sortBy, and passes props to StudentCatalogClient', async () => {

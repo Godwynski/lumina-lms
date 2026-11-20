@@ -38,6 +38,7 @@ describe('BookDetailModal (student)', () => {
     const header = dialog.querySelector('[data-slot="dialog-header"]');
     const fullPageLink = header?.querySelector('a[href="/student-catalog/b"]');
     expect(fullPageLink).toHaveAccessibleName('Open full page');
+    expect(fullPageLink?.textContent).toBe('');
     expect(dialog.querySelectorAll('a[href="/student-catalog/b"]')).toHaveLength(1);
     expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeNull();
     expect(footer?.querySelector('a')).toBeNull();
@@ -60,32 +61,25 @@ describe('BookDetailModal (student)', () => {
     expect(document.querySelector('footer')).not.toHaveTextContent('Join Waitlist');
   });
 
-  it('uses the Inventory header to expand and restore the dialog without losing its content', async () => {
+  it('uses one icon in the Inventory header to open the management page', async () => {
     adminDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 2, total_copies: 3 }, copies: [], queue: [] });
     await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={vi.fn()} />));
     const dialog = document.querySelector('[role="dialog"]')!;
-    expect(dialog).toHaveTextContent('Book Details');
-    const expand = dialog.querySelector<HTMLButtonElement>('[data-slot="dialog-header"] [aria-label="Expand dialog"]')!;
-    expect(dialog.querySelectorAll('[aria-label="Expand dialog"]')).toHaveLength(1);
-    expect(dialog.querySelector('a[href="/student-catalog/b"]')).toBeNull();
-    await act(async () => expand.click());
-    expect(dialog).toHaveClass('h-[100dvh]');
-    expect(dialog).toHaveTextContent('Clean Systems');
-    await act(async () => dialog.querySelector<HTMLButtonElement>('[aria-label="Restore dialog size"]')!.click());
-    expect(dialog).not.toHaveClass('h-[100dvh]');
-    expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeInTheDocument();
+    const header = dialog.querySelector('[data-slot="dialog-header"]')!;
+    const link = header.querySelector('a[href="/inventory/b"]');
+    expect(link).toHaveAccessibleName('Open full page');
+    expect(link?.textContent).toBe('');
+    expect(dialog.querySelectorAll('a[href="/inventory/b"]')).toHaveLength(1);
+    expect(dialog.querySelector('[aria-label="Expand dialog"]')).toBeNull();
+    expect(dialog).toHaveTextContent('Copies & acquisition');
   });
 
-  it('returns to the standard size after closing an expanded dialog', async () => {
+  it('keeps a separate close action in the Inventory dialog', async () => {
     adminDetails.mockResolvedValue({ book: { ...baseBook, available_copies: 1, total_copies: 1 }, copies: [], queue: [] });
     const onOpenChange = vi.fn();
     await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={onOpenChange} />));
-    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Expand dialog"]')!.click());
     await act(async () => document.querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')!.click());
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    await act(async () => root.render(<BookDetailModal bookId="b" open={false} variant="super_admin" onOpenChange={onOpenChange} />));
-    await act(async () => root.render(<BookDetailModal bookId="b" open variant="super_admin" onOpenChange={onOpenChange} />));
-    expect(document.querySelector('[aria-label="Expand dialog"]')).toBeInTheDocument();
   });
 
   it('shows the description and DDC, and closes on Escape after tabbing', async () => {

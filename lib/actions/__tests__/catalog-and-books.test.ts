@@ -845,7 +845,7 @@ describe('Catalog & Books Server Actions', () => {
       serverClientHelper.setTableResponse('reservations', [{ id: 'r-ready', status: 'READY' }]);
 
       const details = await getBookAdminDetails('book-1');
-      expect(details.book.id).toBe('book-1');
+      expect(details.book?.id).toBe('book-1');
       expect(serverClientHelper.getTableBuilder('book_copies').select).toHaveBeenCalledWith(expect.stringContaining('accession_number'));
       expect(details.copies[0].reservation).toEqual({
         id: 'r-ready',
@@ -870,6 +870,9 @@ describe('Catalog & Books Server Actions', () => {
 
       serverClientHelper.setTableResponse('books', null, { message: 'Not found' });
       await expect(getBookAdminDetails('book-missing')).rejects.toThrow('Not found');
+
+      serverClientHelper.setTableResponse('books', null, null);
+      await expect(getBookAdminDetails('book-missing')).resolves.toEqual({ book: null, copies: [], queue: [] });
     });
   });
 

@@ -28,6 +28,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // Context-aware labels for UUID segments based on their parent path
 const DYNAMIC_SEGMENT_LABELS: Record<string, string> = {
   "student-catalog": "Book Details",
+  "inventory": "Book Details",
   "catalog": "Book Details",
   "users": "User Profile",
   "audit": "Log Entry",

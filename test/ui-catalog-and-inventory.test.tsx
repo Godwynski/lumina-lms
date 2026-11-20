@@ -1079,7 +1079,7 @@ describe('Catalog, Inventory, Library & QR UI Components', () => {
 
   describe('BookDetailModal', () => {
     it.each([
-      { page: 'Catalog', variant: 'student', action: 'Open full page' },
+      { page: 'Catalog', variant: 'student', action: 'Reserve for Pickup' },
       { page: 'Inventory', variant: 'super_admin', action: 'Copies & acquisition' },
     ] as const)('omits the Audit Logs shortcut from $page for administrators', async ({ variant, action }) => {
       const book = makeBook();

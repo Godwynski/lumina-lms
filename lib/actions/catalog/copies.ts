@@ -250,7 +250,7 @@ export async function getBookAdminDetails(bookId: string) {
       .from('books')
       .select(`*, categories(name)`)
       .eq('id', bookId)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('book_copies')
       .select(`
@@ -304,6 +304,7 @@ export async function getBookAdminDetails(bookId: string) {
   if (copiesResponse.error) throw new Error(copiesResponse.error.message);
   if (queueResponse.error) throw new Error(queueResponse.error.message);
   if (lifecycleResponse?.error) throw new Error(lifecycleResponse.error.message);
+  if (!bookResponse.data) return { book: null, copies: [], queue: [] };
   const lifecycleByCopy = new Map<string, CopyLifecycle>(
     (lifecycleResponse?.data ?? []).map(({ copy_id, book_copies: _book, ...details }) => [copy_id, details]),
   );
