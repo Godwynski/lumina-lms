@@ -4,6 +4,35 @@ import { BookStage } from '@/components/landing/book-stage';
 import { CINE_QUERY, STEPS_DONE_AT } from '@/lib/landing/book-motion';
 import { cleanupClients, clickElement, renderClient } from './helpers/render';
 
+// Lenis is a third-party scroll engine (external boundary): record how the component drives it.
+const lenisInstances = vi.hoisted(
+  () =>
+    [] as {
+      options: Record<string, unknown>;
+      handlers: Record<string, () => void>;
+      scrollTo: ReturnType<typeof import('vitest').vi.fn>;
+      destroy: ReturnType<typeof import('vitest').vi.fn>;
+    }[],
+);
+vi.mock('lenis', async () => {
+  const { vi: v } = await import('vitest');
+  return {
+    default: class FakeLenis {
+      options: Record<string, unknown>;
+      handlers: Record<string, () => void> = {};
+      scrollTo = v.fn();
+      destroy = v.fn();
+      constructor(options: Record<string, unknown>) {
+        this.options = options;
+        lenisInstances.push(this);
+      }
+      on(event: string, fn: () => void) {
+        this.handlers[event] = fn;
+      }
+    },
+  };
+});
+
 const STEPS = [
   { title: 'Find the title in the catalog', body: 'Search by title, author or ISBN.' },
   { title: 'Reserve a copy for pickup', body: 'A copy is held until the pickup date.' },
@@ -12,6 +41,7 @@ const STEPS = [
 
 // --- environment stubs (browser APIs jsdom lacks; the component itself is real) ---
 let cineMatches = true;
+let finePointer = false;
 const mqListeners = new Set<() => void>();
 let frames: FrameRequestCallback[] = [];
 let clock = 0;
@@ -23,7 +53,9 @@ function installMatchMedia() {
     writable: true,
     value: (query: string) => ({
       get matches() {
-        return query === CINE_QUERY ? cineMatches : query === '(hover: hover)';
+        if (query === CINE_QUERY) return cineMatches;
+        if (query === '(hover: hover) and (pointer: fine)') return finePointer;
+        return query === '(hover: hover)';
       },
       media: query,
       addEventListener: (_: string, fn: () => void) => mqListeners.add(fn),
@@ -71,6 +103,8 @@ const parts = (root: ParentNode, name: string) => Array.from(root.querySelectorA
 
 beforeEach(() => {
   cineMatches = true;
+  finePointer = false;
+  lenisInstances.length = 0;
   mqListeners.clear();
   frames = [];
   clock = 0;
@@ -283,5 +317,76 @@ describe('BookStage scroll animation', () => {
     setScrollY(1000);
     window.dispatchEvent(new Event('scroll'));
     expect(frames).toHaveLength(0);
+  });
+});
+
+describe('BookStage natural scrolling', () => {
+  it('keeps native touch scrolling: no Lenis, and the book catches up with the scroll within a few frames', async () => {
+    const { container } = await render();
+    expect(lenisInstances).toHaveLength(0);
+    setScrollY(0.5 * (TRACK_HEIGHT - window.innerHeight));
+    await act(async () => {
+      window.dispatchEvent(new Event('scroll'));
+    });
+    const hero = part(container, 'hero-inner');
+    const before = hero.style.opacity;
+    // Run a handful of frames (~130 ms): the touch follow time is short, so the hero has already moved on.
+    await act(async () => {
+      for (let i = 0; i < 8 && frames.length; i++) {
+        const queue = frames;
+        frames = [];
+        clock += 16;
+        queue.forEach((cb) => cb(clock));
+      }
+    });
+    expect(hero.style.opacity).not.toBe(before);
+    await flushFrames();
+    expect(frames).toHaveLength(0);
+  });
+
+  it('glides the wheel with Lenis on mouse devices and draws the book in the same frame', async () => {
+    finePointer = true;
+    const { container, unmount } = await render();
+    expect(lenisInstances).toHaveLength(1);
+    const lenis = lenisInstances[0];
+    expect(lenis.options).toMatchObject({ smoothWheel: true, syncTouch: false, autoRaf: true });
+
+    const hero = part(container, 'hero-inner');
+    const resting = hero.style.transform;
+    setScrollY(0.3 * (TRACK_HEIGHT - window.innerHeight));
+    frames = [];
+    await act(async () => {
+      lenis.handlers.scroll();
+    });
+    // Drawn synchronously from the Lenis position, with no frame needed to catch up.
+    expect(hero.style.transform).not.toBe(resting);
+    const drawn = hero.style.transform;
+    await flushFrames();
+    expect(hero.style.transform).toBe(drawn);
+
+    unmount();
+    expect(lenis.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('jumps through Lenis instead of the browser scroll on mouse devices', async () => {
+    finePointer = true;
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    const { container } = await render();
+    const span = TRACK_HEIGHT - window.innerHeight;
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    await act(async () => {
+      container.querySelector('a[href="#how-borrowing-works"]')!.dispatchEvent(ev);
+    });
+    expect(ev.defaultPrevented).toBe(true);
+    expect(lenisInstances[0].scrollTo).toHaveBeenLastCalledWith(STEPS_DONE_AT * span, { duration: 1.6 });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('does not start Lenis when motion is not allowed', async () => {
+    finePointer = true;
+    cineMatches = false;
+    await render();
+    expect(lenisInstances).toHaveLength(0);
   });
 });

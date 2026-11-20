@@ -276,3 +276,9 @@ body [data-sonner-toaster][data-sonner-theme="light"] {
     color: black !important;
   }
 }
+
+/* Lenis smooth wheel scrolling (landing page, mouse and trackpad only) */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }

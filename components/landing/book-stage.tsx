@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import Lenis from "lenis";
 import { BookArt } from "./book-art";
 import styles from "./book-stage.module.css";
 import {
@@ -378,12 +379,27 @@ function run(root: HTMLElement, jumpRef: { current: ((p: number) => boolean) | n
     target = Math.min(1, Math.max(0, (window.scrollY - trackTop) / span));
   };
   const draw = () => apply(computeFrame(s, L, { spin: spin.angle, pointerX: tx, pointerY: ty }));
+
+  // Natural scroll: a mouse wheel moves in coarse notches, so on mouse-and-trackpad devices Lenis glides
+  // the page itself and the book reads that same position in the same frame (no second layer of lag).
+  // Touch keeps the browser's native scroll and momentum; the book follows it almost directly.
+  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const lenis = finePointer
+    ? new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false, autoRaf: true, anchors: true })
+    : null;
+  const follow = lenis ? 0 : finePointer ? 0.085 : 0.035; // seconds the book takes to catch the scroll
+  lenis?.on("scroll", () => {
+    readTarget();
+    s = target;
+    draw();
+  });
+
   const loop = (now: number) => {
     raf = 0;
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
     last = now;
     const a = 1 - Math.exp(-dt / 0.085);
-    s += (target - s) * a;
+    s += (target - s) * (follow ? 1 - Math.exp(-dt / follow) : 1);
     if (Math.abs(target - s) < 0.0003) s = target;
     tx += (px - tx) * a;
     ty += (py - ty) * a;
@@ -441,7 +457,9 @@ function run(root: HTMLElement, jumpRef: { current: ((p: number) => boolean) | n
   };
 
   const jump = (p: number) => {
-    window.scrollTo({ top: trackTop + p * span, behavior: "smooth" });
+    const top = trackTop + p * span;
+    if (lenis) lenis.scrollTo(top, { duration: 1.6 });
+    else window.scrollTo({ top, behavior: "smooth" });
     return true;
   };
   jumpRef.current = jump;
@@ -497,6 +515,7 @@ function run(root: HTMLElement, jumpRef: { current: ((p: number) => boolean) | n
 
   return () => {
     cancelAnimationFrame(raf);
+    lenis?.destroy();
     clearTimeout(resizeTimer);
     clearTimeout(nudge);
     io?.disconnect();
