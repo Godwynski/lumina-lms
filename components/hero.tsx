@@ -72,7 +72,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
   if (user) {
     return (
       <div className="space-y-3">
-        <Button asChild size="lg" className="h-auto min-h-12 w-full whitespace-normal rounded-xl py-3 shadow-sm transition-all hover:shadow-md active:scale-[0.99]">
+        <Button asChild size="lg" className="h-auto min-h-12 w-full whitespace-normal py-3">
           <Link href="/dashboard">
             Go to Dashboard
             <ArrowRight />
@@ -86,35 +86,33 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Button
-          type="button"
-          size="lg"
-          className="h-auto min-h-12 w-full gap-3 whitespace-normal rounded-xl py-3 text-sm font-semibold shadow-sm transition-all hover:shadow-md active:scale-[0.99] focus-visible:transition-none"
-          onClick={handleMicrosoftLogin}
-          disabled={isLoading}
-        >
-          {isLoading && !loadingEmail ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <MicrosoftIcon />
-          )}
-          <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Sign in with your <span className="font-medium text-foreground">@alabang.sti.edu.ph</span> Microsoft account.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <Button
+        type="button"
+        size="lg"
+        className="h-auto min-h-12 w-full gap-3 whitespace-normal py-3 focus-visible:transition-none"
+        onClick={handleMicrosoftLogin}
+        disabled={isLoading}
+      >
+        {isLoading && !loadingEmail ? (
+          <Loader2 className="animate-spin" />
+        ) : (
+          <MicrosoftIcon />
+        )}
+        <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
+      </Button>
 
       {showDemo && (
-        <div className="space-y-3 rounded-xl border border-border/60 bg-card/80 p-3.5 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Quick Demo Access
-            </span>
+        <div className="space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-2xs font-semibold uppercase tracking-wider">
+              <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-3">
             {DEMO_BUTTONS.map((item) => {
               const Icon = item.icon;
               const isThisLoading = loadingEmail === item.email;
@@ -123,13 +121,11 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
                   key={item.email}
                   type="button"
                   variant="outline"
-                  className="h-11 justify-start gap-2.5 rounded-lg border-border/70 bg-background px-3 text-xs font-semibold text-foreground shadow-none transition-colors hover:border-primary/30 hover:bg-accent/70"
+                  className="h-11 justify-start gap-2.5 px-3.5 text-xs font-medium text-foreground"
                   onClick={() => signInDemo(item.email)}
                   disabled={isLoading}
                 >
-                  <span className="grid size-6 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
-                    {isThisLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Icon className="size-3.5" />}
-                  </span>
+                  {isThisLoading ? <Loader2 className="animate-spin" /> : <Icon />}
                   <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>
                 </Button>
               );
