@@ -1,51 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as React from 'react';
 import { act } from 'react';
-import { BookStage } from '@/components/landing/book-stage';
-import { CINE_QUERY, STEPS_DONE_AT } from '@/lib/landing/book-motion';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AnimationProvider } from '@/components/providers/animation-provider';
+import { BorrowingWalkthrough } from '@/components/landing/BorrowingWalkthrough';
+import { DigitalCardShowcase } from '@/components/landing/DigitalCardShowcase';
+import { InteractiveBook } from '@/components/landing/InteractiveBook';
+import { LandingFaq } from '@/components/landing/LandingFaq';
+import { LandingHeader } from '@/components/landing/LandingHeader';
+import { DEFAULT_POLICIES } from '@/lib/actions/policy-constants';
+import { REDUCED_MOTION_QUERY } from '@/lib/landing/book-motion';
 import { cleanupClients, clickElement, renderClient } from './helpers/render';
 
-// Lenis is a third-party scroll engine (external boundary): record how the component drives it.
-const lenisInstances = vi.hoisted(
-  () =>
-    [] as {
-      options: Record<string, unknown>;
-      handlers: Record<string, () => void>;
-      scrollTo: ReturnType<typeof import('vitest').vi.fn>;
-      destroy: ReturnType<typeof import('vitest').vi.fn>;
-    }[],
-);
-vi.mock('lenis', async () => {
-  const { vi: v } = await import('vitest');
-  return {
-    default: class FakeLenis {
-      options: Record<string, unknown>;
-      handlers: Record<string, () => void> = {};
-      scrollTo = v.fn();
-      destroy = v.fn();
-      constructor(options: Record<string, unknown>) {
-        this.options = options;
-        lenisInstances.push(this);
-      }
-      on(event: string, fn: () => void) {
-        this.handlers[event] = fn;
-      }
-    },
-  };
-});
-
-const STEPS = [
-  { title: 'Find the title in the catalog', body: 'Search by title, author or ISBN.' },
-  { title: 'Reserve a copy for pickup', body: 'A copy is held until the pickup date.' },
-  { title: 'Borrow and return at the circulation desk', body: 'Staff scan your library card.' },
-];
-
-// --- environment stubs (browser APIs jsdom lacks; the component itself is real) ---
-let cineMatches = true;
-let finePointer = false;
+let reducedMotion = false;
+let hoverMatches = true;
 const mqListeners = new Set<() => void>();
 let frames: FrameRequestCallback[] = [];
 let clock = 0;
-const TRACK_HEIGHT = 5000;
 
 function installMatchMedia() {
   Object.defineProperty(window, 'matchMedia', {
@@ -53,9 +23,9 @@ function installMatchMedia() {
     writable: true,
     value: (query: string) => ({
       get matches() {
-        if (query === CINE_QUERY) return cineMatches;
-        if (query === '(hover: hover) and (pointer: fine)') return finePointer;
-        return query === '(hover: hover)';
+        if (query === REDUCED_MOTION_QUERY) return reducedMotion;
+        if (query === '(hover: hover)') return hoverMatches;
+        return false;
       },
       media: query,
       addEventListener: (_: string, fn: () => void) => mqListeners.add(fn),
@@ -64,12 +34,7 @@ function installMatchMedia() {
   });
 }
 
-function setScrollY(y: number) {
-  Object.defineProperty(window, 'scrollY', { configurable: true, value: y });
-}
-
-/** Runs queued animation frames until the loop goes to sleep. */
-async function flushFrames(limit = 3000) {
+async function flushFrames(limit = 400) {
   await act(async () => {
     for (let i = 0; i < limit && frames.length; i++) {
       const queue = frames;
@@ -80,36 +45,27 @@ async function flushFrames(limit = 3000) {
   });
 }
 
-async function scrollToProgress(p: number) {
-  setScrollY(p * (TRACK_HEIGHT - window.innerHeight));
-  await act(async () => {
-    window.dispatchEvent(new Event('scroll'));
-  });
-  await flushFrames();
-}
-
 function pointer(type: string, target: EventTarget, clientX: number, extra: Record<string, unknown> = {}) {
-  const ev = new MouseEvent(type, { bubbles: true, clientX, clientY: 300 });
+  const ev = new MouseEvent(type, { bubbles: true, clientX, clientY: 200 });
   for (const [k, v] of Object.entries(extra)) Object.defineProperty(ev, k, { value: v });
   target.dispatchEvent(ev);
 }
 
-const render = () =>
-  renderClient(
-    <BookStage title="STI College Alabang Library" intro="Search the library catalog." actions={<button type="button">Sign in with Microsoft</button>} steps={STEPS} />,
-  );
-const part = (root: ParentNode, name: string) => root.querySelector<HTMLElement>(`[data-part='${name}']`)!;
-const parts = (root: ParentNode, name: string) => Array.from(root.querySelectorAll<HTMLElement>(`[data-part='${name}']`));
+const part = (root: ParentNode, name: string) =>
+  root.querySelector<HTMLElement>(`[data-part='${name}']`)!;
+
+const findButton = (root: ParentNode, text: string) =>
+  Array.from(root.querySelectorAll('button')).find((b) =>
+    b.textContent?.toLowerCase().includes(text.toLowerCase()),
+  ) as HTMLButtonElement;
 
 beforeEach(() => {
-  cineMatches = true;
-  finePointer = false;
-  lenisInstances.length = 0;
+  reducedMotion = false;
+  hoverMatches = true;
   mqListeners.clear();
   frames = [];
   clock = 0;
   installMatchMedia();
-  setScrollY(0);
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
     frames.push(cb);
     return frames.length;
@@ -117,10 +73,7 @@ beforeEach(() => {
   vi.stubGlobal('cancelAnimationFrame', () => {
     frames = [];
   });
-  // jsdom has no layout: give the scroll track a real height so progress maps onto it.
-  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
-    return this.dataset.part === 'track' ? TRACK_HEIGHT : 0;
-  });
+  Object.defineProperty(window, 'scrollY', { configurable: true, writable: true, value: 0 });
 });
 
 afterEach(() => {
@@ -130,263 +83,244 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('BookStage content', () => {
-  it('renders the hero copy, the sign-in actions and the steps as an ordered list', async () => {
-    const { container } = await render();
-    expect(container.querySelector('h1')?.textContent).toBe('STI College Alabang Library');
-    expect(container.querySelector('#sign-in button')?.textContent).toBe('Sign in with Microsoft');
-    const items = Array.from(container.querySelectorAll('ol > li[data-part="card"]'));
-    expect(items.map((li) => li.querySelector('h3')?.textContent)).toEqual(STEPS.map((s) => s.title));
-    expect(items[1].textContent).toContain('Step 2');
-    expect(container.querySelector('#how-borrowing-works')?.tagName).toBe('H2');
-    // The 3D scene and the chapter rail are decorative.
-    expect(part(container, 'scene').closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(part(container, 'hud').getAttribute('aria-hidden')).toBe('true');
-  });
-
-  it("stamps today's date on the slip inside the cover", async () => {
+describe('InteractiveBook', () => {
+  it('renders accessible controls, hides decorative 3D scene from assistive tech, and stamps today', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 10, 21, 9, 0));
-    const { container } = await render();
+
+    const { container } = await renderClient(<InteractiveBook />);
+    const openBtn = findButton(container, 'Open book');
+    const spinBtn = findButton(container, 'Spin book');
+
+    expect(openBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(spinBtn).toBeInTheDocument();
+    expect(part(container, 'book').closest('[aria-hidden="true"]')).not.toBeNull();
     expect(part(container, 'stamp').textContent).toBe('NOV 21');
-  });
-});
-
-describe('BookStage still mode', () => {
-  it('stays on the plain layout with the flat BookArt when motion is not allowed', async () => {
-    cineMatches = false;
-    const { container } = await render();
-    const root = container.firstElementChild as HTMLElement;
-    expect(root.dataset.live).toBe('false');
-    expect(container.querySelector('svg[aria-hidden="true"] path')).not.toBeNull();
-    await scrollToProgress(1);
-    expect(frames).toHaveLength(0);
-    expect(parts(container, 'card')[0].style.transform).toBe('');
+    expect(part(container, 'book').style.transform).toContain('rotateY(-26deg)');
   });
 
-  it('leaves the in-page link to the browser instead of scrolling the stage', async () => {
-    cineMatches = false;
-    const scrollTo = vi.fn();
-    vi.stubGlobal('scrollTo', scrollTo);
-    const { container } = await render();
-    const link = container.querySelector<HTMLAnchorElement>('a[href="#how-borrowing-works"]')!;
-    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
-    await act(async () => {
-      link.dispatchEvent(ev);
-    });
-    expect(scrollTo).not.toHaveBeenCalled();
-    expect(ev.defaultPrevented).toBe(false);
-  });
+  it('opens and closes smoothly via the control button and tap on the book', async () => {
+    const { container } = await renderClient(<InteractiveBook />);
+    const openBtn = findButton(container, 'Open book');
 
-  it('does not crash where matchMedia does not exist', async () => {
-    Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: undefined });
-    const { container } = await render();
-    expect((container.firstElementChild as HTMLElement).dataset.live).toBe('false');
-  });
-});
+    await clickElement(openBtn);
+    expect(openBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(openBtn).toHaveTextContent('Close book');
 
-describe('BookStage scroll animation', () => {
-  it('starts with the closed book beside the visible hero', async () => {
-    const { container } = await render();
-    expect((container.firstElementChild as HTMLElement).dataset.live).toBe('true');
-    expect(part(container, 'book').style.transform).toContain('rotateY(-32deg)');
-    expect(part(container, 'hero-inner').style.opacity).toBe('1');
-    expect(parts(container, 'card').every((c) => c.style.visibility === 'hidden')).toBe(true);
-  });
-
-  it('opens the book and lands every step card by the end of the track', async () => {
-    const { container } = await render();
-    await scrollToProgress(1);
-    expect(part(container, 'cover').style.transform).toContain('rotateY(-178deg)');
-    expect(part(container, 'hero-inner').style.visibility).toBe('hidden');
-    for (const card of parts(container, 'card')) {
-      expect(card.style.opacity).toBe('1');
-      expect(card.style.visibility).toBe('visible');
-    }
-    const [, , cta] = parts(container, 'caption');
-    expect(cta.style.visibility).toBe('visible');
-    expect(part(container, 'hud').querySelectorAll('button')[4].hasAttribute('data-on')).toBe(true);
-  });
-
-  it('plays backwards when scrolled back to the top', async () => {
-    const { container } = await render();
-    await scrollToProgress(1);
-    await scrollToProgress(0);
-    expect(part(container, 'cover').style.transform).toContain('rotateY(0deg)');
-    expect(part(container, 'hero-inner').style.visibility).toBe('');
-    expect(parts(container, 'card').every((c) => c.style.visibility === 'hidden')).toBe(true);
-  });
-
-  it('jumps to the finished steps from the in-page link and from the chapter rail', async () => {
-    const scrollTo = vi.fn();
-    vi.stubGlobal('scrollTo', scrollTo);
-    const { container } = await render();
-    const span = TRACK_HEIGHT - window.innerHeight;
-    const link = container.querySelector<HTMLAnchorElement>('a[href="#how-borrowing-works"]')!;
-    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
-    await act(async () => {
-      link.dispatchEvent(ev);
-    });
-    expect(ev.defaultPrevented).toBe(true);
-    expect(scrollTo).toHaveBeenLastCalledWith({ top: STEPS_DONE_AT * span, behavior: 'smooth' });
-
-    await clickElement(part(container, 'hud').querySelectorAll('button')[2]);
-    expect(scrollTo.mock.lastCall?.[0].top).toBeCloseTo((0.38 + 0.02) * span);
-  });
-
-  it('tilts toward a mouse pointer but ignores touch pointers', async () => {
-    const { container } = await render();
-    pointer('pointermove', window, window.innerWidth, { pointerType: 'touch' });
     await flushFrames();
-    expect(part(container, 'tilt').style.transform).toBe('rotateX(0deg) rotateY(0deg)');
-    pointer('pointermove', window, window.innerWidth, { pointerType: 'mouse' });
-    await flushFrames();
-    expect(part(container, 'tilt').style.transform).toMatch(/rotateY\(6\.9\d*deg\)|rotateY\(7deg\)/);
-  });
+    expect(part(container, 'cover').style.transform).toContain('rotateY(-172deg)');
+    expect(part(container, 'stamp').style.opacity).toBe('1');
 
-  it('spins the book while dragged and springs it back to face the reader', async () => {
-    const { container } = await render();
+    // Clicking the book itself closes it back to 0deg
     const book = part(container, 'book');
+    await act(async () => {
+      pointer('pointerdown', book, 120);
+      pointer('pointerup', book, 120);
+    });
+    await flushFrames();
+    expect(openBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(part(container, 'cover').style.transform).toContain('rotateY(0deg)');
+  });
+
+  it('spins on Spin book click and springs back after horizontal drag', async () => {
+    const { container } = await renderClient(<InteractiveBook />);
+    const book = part(container, 'book');
+
+    // Drag closed book horizontally
     await act(async () => {
       pointer('pointerdown', book, 100);
-      pointer('pointermove', book, 220);
+      pointer('pointermove', book, 200);
     });
     await flushFrames();
-    expect(book.style.transform).toContain('rotateY(40deg)'); // -32 + 120px * 0.6
-    await act(async () => {
-      pointer('pointerup', book, 220);
-    });
-    await flushFrames();
-    expect(book.style.transform).toContain('rotateY(-32deg)');
-  });
+    expect(book.style.transform).toContain('rotateY(39deg)'); // -26 + 100 * 0.65
 
-  it('flips the book on a tap with a short vibration, and ignores grabs once the toss starts', async () => {
-    const vibrate = vi.fn();
-    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vibrate });
-    const { container } = await render();
-    const book = part(container, 'book');
     await act(async () => {
-      pointer('pointerdown', book, 150);
-      pointer('pointerup', book, 150);
+      pointer('pointerup', book, 200);
     });
-    expect(vibrate).toHaveBeenCalledWith(8);
-    let peak = -32;
+    await flushFrames();
+    expect(book.style.transform).toContain('rotateY(-26deg)');
+
+    // Click Spin book while open: closes and completes a >200deg flip before settling
+    await clickElement(findButton(container, 'Open book'));
+    await flushFrames();
+    await clickElement(findButton(container, 'Spin book'));
+
+    let peak = -26;
     await act(async () => {
-      for (let i = 0; i < 3000 && frames.length; i++) {
+      for (let i = 0; i < 400 && frames.length; i++) {
         const q = frames;
         frames = [];
         clock += 16;
         q.forEach((cb) => cb(clock));
         const ry = Number(/rotateY\((-?[\d.]+)deg\)/.exec(book.style.transform)?.[1]);
-        peak = Math.max(peak, ry);
+        if (!Number.isNaN(ry)) peak = Math.max(peak, ry);
       }
     });
     expect(peak).toBeGreaterThan(200);
-    expect(book.style.transform).toContain('rotateY(-32deg)');
-
-    await scrollToProgress(0.3);
-    const during = book.style.transform;
-    await act(async () => {
-      pointer('pointerdown', book, 100);
-      pointer('pointermove', book, 300);
-    });
-    await flushFrames();
-    expect(book.style.transform).toBe(during);
+    expect(book.style.transform).toContain('rotateY(-26deg)');
   });
 
-  it('switches to the still layout when reduced motion turns on, and cleans up on unmount', async () => {
-    const { container, unmount } = await render();
-    const root = container.firstElementChild as HTMLElement;
-    await scrollToProgress(1);
-    cineMatches = false;
-    await act(async () => {
-      mqListeners.forEach((fn) => fn());
-    });
-    expect(root.dataset.live).toBe('false');
-    expect(parts(container, 'card')[0].style.transform).toBe('');
-    await scrollToProgress(0.5);
-    expect(frames).toHaveLength(0);
+  it('tilts toward mouse pointers, ignores touch pointers, and cleans up on unmount', async () => {
+    const { container, unmount } = await renderClient(<InteractiveBook />);
+    const stage = container.firstElementChild as HTMLElement;
 
-    cineMatches = true;
     await act(async () => {
-      mqListeners.forEach((fn) => fn());
+      pointer('pointermove', stage, 500, { pointerType: 'touch' });
     });
-    expect(root.dataset.live).toBe('true');
+    await flushFrames();
+    expect(part(container, 'tilt').style.transform).toBe('rotateX(0deg) rotateY(0deg)');
+
+    await act(async () => {
+      pointer('pointermove', stage, window.innerWidth, { pointerType: 'mouse' });
+    });
+    await flushFrames();
+    expect(part(container, 'tilt').style.transform).toMatch(/rotateY\((7\.9\d*|8)deg\)/);
+
     unmount();
     expect(mqListeners.size).toBe(0);
-    setScrollY(1000);
-    window.dispatchEvent(new Event('scroll'));
+    expect(frames).toHaveLength(0);
+  });
+
+  it('switches to static BookArt when prefers-reduced-motion is enabled', async () => {
+    reducedMotion = true;
+    const { container } = await renderClient(<InteractiveBook />);
+    expect((container.firstElementChild as HTMLElement).dataset.reducedMotion).toBe('true');
+    expect(container.querySelector('svg[aria-hidden="true"] path')).not.toBeNull();
+    expect(findButton(container, 'Spin book')).toBeUndefined();
     expect(frames).toHaveLength(0);
   });
 });
 
-describe('BookStage natural scrolling', () => {
-  it('keeps native touch scrolling: no Lenis, and the book catches up with the scroll within a few frames', async () => {
-    const { container } = await render();
-    expect(lenisInstances).toHaveLength(0);
-    setScrollY(0.5 * (TRACK_HEIGHT - window.innerHeight));
+describe('LandingHeader', () => {
+  it('renders brand lockup, nav links, scroll progress bar, and reveals Sign in past hero', async () => {
+    const signInAnchor = document.createElement('div');
+    signInAnchor.id = 'sign-in';
+    document.body.appendChild(signInAnchor);
+
+    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 2000 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
+
+    const { container } = await renderClient(
+      <LandingHeader authSlot={<span data-testid="auth-slot">Account</span>} isSignedIn={false} showSignInButton={true} />,
+    );
+
+    expect(container).toHaveTextContent('Lumina');
+    expect(container).toHaveTextContent('STI Alabang Library');
+    expect(container.querySelector('nav[aria-label="Landing sections"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="auth-slot"]')).toBeInTheDocument();
+
+    const headerSignIn = part(container, 'header-signin');
+    expect(headerSignIn.dataset.visible).toBe('false');
+
     await act(async () => {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 500 });
       window.dispatchEvent(new Event('scroll'));
     });
-    const hero = part(container, 'hero-inner');
-    const before = hero.style.opacity;
-    // Run a handful of frames (~130 ms): the touch follow time is short, so the hero has already moved on.
-    await act(async () => {
-      for (let i = 0; i < 8 && frames.length; i++) {
-        const queue = frames;
-        frames = [];
-        clock += 16;
-        queue.forEach((cb) => cb(clock));
-      }
-    });
-    expect(hero.style.opacity).not.toBe(before);
-    await flushFrames();
-    expect(frames).toHaveLength(0);
+
+    expect(part(container, 'scroll-progress').style.transform).toBe('scaleX(0.5)');
+    expect(headerSignIn.dataset.visible).toBe('true');
+    signInAnchor.remove();
   });
 
-  it('glides the wheel with Lenis on mouse devices and draws the book in the same frame', async () => {
-    finePointer = true;
-    const { container, unmount } = await render();
-    expect(lenisInstances).toHaveLength(1);
-    const lenis = lenisInstances[0];
-    expect(lenis.options).toMatchObject({ smoothWheel: true, syncTouch: false, autoRaf: true });
+  it('hides quick Sign in when user is already signed in', async () => {
+    const { container } = await renderClient(
+      <LandingHeader authSlot={null} isSignedIn={true} showSignInButton={true} />,
+    );
+    expect(container.querySelector('[data-part="header-signin"]')).toBeNull();
+  });
+});
 
-    const hero = part(container, 'hero-inner');
-    const resting = hero.style.transform;
-    setScrollY(0.3 * (TRACK_HEIGHT - window.innerHeight));
-    frames = [];
-    await act(async () => {
-      lenis.handlers.scroll();
+describe('BorrowingWalkthrough', () => {
+  const STEPS = [
+    { title: 'Find the title in the catalog', body: 'Search by title, author or ISBN.' },
+    { title: 'Reserve a copy for pickup', body: 'Hold a copy or join the queue.' },
+    { title: 'Borrow and return at the circulation desk', body: 'Show your QR library card.' },
+  ];
+
+  it('renders ordered steps and switches live preview pane on step selection', async () => {
+    vi.unstubAllGlobals();
+    const { container } = await renderClient(
+      <AnimationProvider>
+        <BorrowingWalkthrough steps={STEPS} />
+      </AnimationProvider>,
+    );
+
+    const stepButtons = Array.from(container.querySelectorAll('ol button'));
+    expect(stepButtons).toHaveLength(3);
+    expect(stepButtons[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(container.querySelector('[data-preview-step="0"]')).toBeInTheDocument();
+
+    await clickElement(stepButtons[1]);
+    expect(stepButtons[1]).toHaveAttribute('aria-pressed', 'true');
+    await vi.waitFor(() => {
+      expect(container.querySelector('[data-preview-step="1"]')).toBeInTheDocument();
     });
-    // Drawn synchronously from the Lenis position, with no frame needed to catch up.
-    expect(hero.style.transform).not.toBe(resting);
-    const drawn = hero.style.transform;
-    await flushFrames();
-    expect(hero.style.transform).toBe(drawn);
 
-    unmount();
-    expect(lenis.destroy).toHaveBeenCalledTimes(1);
+    await clickElement(stepButtons[2]);
+    expect(stepButtons[2]).toHaveAttribute('aria-pressed', 'true');
+    await vi.waitFor(() => {
+      expect(container.querySelector('[data-preview-step="2"]')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('DigitalCardShowcase', () => {
+  it('renders STI Alabang card preview, real DEFAULT_POLICIES limits, and flips front/back', async () => {
+    const { container } = await renderClient(<DigitalCardShowcase />);
+
+    expect(container).toHaveTextContent('LIBRARY CARD');
+    expect(container).toHaveTextContent('Juan Dela Cruz');
+    expect(container).toHaveTextContent(`${DEFAULT_POLICIES.loan_period_days.value} days`);
+    expect(container).toHaveTextContent(`Up to ${DEFAULT_POLICIES.max_borrow_limit.value} books`);
+
+    const flipBtn = findButton(container, 'View back of card');
+    expect(flipBtn).toHaveAttribute('aria-pressed', 'false');
+
+    await clickElement(flipBtn);
+    expect(flipBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(flipBtn).toHaveTextContent('View front of card');
+
+    await clickElement(part(container, 'card-flip-surface'));
+    expect(flipBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(flipBtn).toHaveTextContent('View back of card');
   });
 
-  it('jumps through Lenis instead of the browser scroll on mouse devices', async () => {
-    finePointer = true;
-    const scrollTo = vi.fn();
-    vi.stubGlobal('scrollTo', scrollTo);
-    const { container } = await render();
-    const span = TRACK_HEIGHT - window.innerHeight;
-    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
-    await act(async () => {
-      container.querySelector('a[href="#how-borrowing-works"]')!.dispatchEvent(ev);
-    });
-    expect(ev.defaultPrevented).toBe(true);
-    expect(lenisInstances[0].scrollTo).toHaveBeenLastCalledWith(STEPS_DONE_AT * span, { duration: 1.6 });
-    expect(scrollTo).not.toHaveBeenCalled();
-  });
+  it('switches faces cleanly without 3D transform when reduced motion is preferred', async () => {
+    reducedMotion = true;
+    const { container } = await renderClient(<DigitalCardShowcase />);
+    const flipBtn = findButton(container, 'View back of card');
 
-  it('does not start Lenis when motion is not allowed', async () => {
-    finePointer = true;
-    cineMatches = false;
-    await render();
-    expect(lenisInstances).toHaveLength(0);
+    await clickElement(flipBtn);
+    expect(flipBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(part(container, 'card-flip-surface').style.perspective).toBe('');
+  });
+});
+
+describe('LandingFaq', () => {
+  const ITEMS = [
+    { q: 'Which account do I use?', a: 'Your @alabang.sti.edu.ph Microsoft account.' },
+    { q: 'Where do I check due dates?', a: 'Under My Borrowing on your dashboard.' },
+  ];
+
+  it('opens the first item by default and toggles items with aria-expanded and inert', async () => {
+    const { container } = await renderClient(<LandingFaq items={ITEMS} />);
+    const triggers = Array.from(container.querySelectorAll('button'));
+
+    expect(triggers[0]).toHaveAttribute('aria-expanded', 'true');
+    expect(triggers[1]).toHaveAttribute('aria-expanded', 'false');
+
+    const panel0 = document.getElementById(triggers[0].getAttribute('aria-controls')!)!;
+    const panel1 = document.getElementById(triggers[1].getAttribute('aria-controls')!)!;
+    expect(panel0.hasAttribute('inert')).toBe(false);
+    expect(panel1.hasAttribute('inert')).toBe(true);
+
+    await clickElement(triggers[1]);
+    expect(triggers[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(triggers[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(panel0.hasAttribute('inert')).toBe(true);
+    expect(panel1.hasAttribute('inert')).toBe(false);
+
+    await clickElement(triggers[1]);
+    expect(triggers[1]).toHaveAttribute('aria-expanded', 'false');
   });
 });
