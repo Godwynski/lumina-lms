@@ -1,0 +1,10 @@
+.workspace {
+  container: circulation / inline-size;
+}
+
+@container circulation (min-width: 42rem) {
+  .header {
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 2rem;
+  }
+}

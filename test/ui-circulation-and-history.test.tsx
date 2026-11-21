@@ -442,6 +442,9 @@ describe('Circulation & History UI Components', () => {
 
       const { container } = await renderClient(<CirculationWizard />);
       const stage = container.querySelector('section')!;
+      expect(container.querySelector('footer')).toBeNull();
+      const scrollHeaderIntoView = vi.fn();
+      Object.assign(container.querySelector('header')!, { scrollIntoView: scrollHeaderIntoView });
       const cancel = vi.fn();
       const animate = vi.fn(() => ({ cancel }));
       Object.assign(stage, { animate });
@@ -459,9 +462,15 @@ describe('Circulation & History UI Components', () => {
         [{ opacity: 0.75 }, { opacity: 1 }],
         expect.objectContaining({ duration: 140 }),
       );
+      const navigation = container.querySelector('footer')!;
+      expect(navigation).toBeInTheDocument();
+      expect(stage.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(findButtonByText(navigation, 'Back')).toBeEnabled();
+      expect(findButtonByText(navigation, 'Start over')).toBeEnabled();
 
       // Click Back -> goes to Step 1 reviewingStudent state with Continue button
       await clickElement(findButtonByText(container, 'Back'));
+      expect(scrollHeaderIntoView).toHaveBeenCalledWith({ block: 'nearest' });
       expect(container).toHaveTextContent('Continue');
       expect(container.querySelector('#circulation-code')).toBeNull();
       expect(document.activeElement).toBe(stage);
@@ -486,8 +495,10 @@ describe('Circulation & History UI Components', () => {
 
       // Click Start over -> resets wizard back to clean Step 1
       await clickElement(findButtonByText(container, 'Start over'));
+      expect(scrollHeaderIntoView).toHaveBeenCalledTimes(2);
       expect(container).toHaveTextContent('Scan library card');
       expect(container).not.toHaveTextContent('Melchora Aquino');
+      expect(container.querySelector('footer')).toBeNull();
       expect(document.activeElement).toBe(container.querySelector('#circulation-code'));
       expect(container.querySelector('section')).toBe(stage);
       expect(animate).toHaveBeenCalledTimes(6);
@@ -502,12 +513,16 @@ describe('Circulation & History UI Components', () => {
       expect(modeControls).toBeInTheDocument();
       const checkoutButton = findButtonByExactText(modeControls, 'Checkout')!;
       const returnButton = findButtonByExactText(modeControls, 'Return')!;
-      const checkoutStep = handle.container.querySelector('[aria-current="step"]')!;
+      const checkoutStep = handle.container.querySelector<HTMLElement>('[aria-current="step"]')!;
+      const header = modeControls.closest('header');
+      expect(header).toContainElement(checkoutStep);
       expect(modeControls.compareDocumentPosition(checkoutStep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      const stage = handle.container.querySelector('section');
+      const stage = handle.container.querySelector('section')!;
+      expect(checkoutButton).toHaveAttribute('aria-controls', stage.id);
+      expect(returnButton).toHaveAttribute('aria-controls', stage.id);
       const cancel = vi.fn();
       const animate = vi.fn(() => ({ cancel }));
-      Object.assign(stage!, { animate });
+      Object.assign(stage, { animate });
       const checkoutInput = handle.container.querySelector<HTMLInputElement>('#circulation-code')!;
       await typeIntoInput(checkoutInput, 'UNSUBMITTED-CARD');
 
@@ -534,6 +549,15 @@ describe('Circulation & History UI Components', () => {
         expect(document.activeElement).toBe(handle.container.querySelector('#circulation-code'));
         expect(animate).toHaveBeenCalledTimes(3);
         expect(cancel).toHaveBeenCalledTimes(2);
+
+        mockReturnBook.mockResolvedValueOnce({ success: false, error: 'Item is not on loan' });
+        const invalidInput = handle.container.querySelector<HTMLInputElement>('#circulation-code')!;
+        await typeIntoInput(invalidInput, 'INVALID-QR');
+        await submitForm(invalidInput.closest('form'));
+        expect(mockToastError).toHaveBeenCalledWith('Item is not on loan');
+        expect(returnButton).toHaveAttribute('aria-pressed', 'true');
+        expect(invalidInput).toHaveValue('INVALID-QR');
+        expect(handle.container.querySelector('footer')).toBeNull();
 
         handle.unmount();
         expect(cancel).toHaveBeenCalledTimes(3);
@@ -589,7 +613,8 @@ describe('Circulation & History UI Components', () => {
       expect(container).toHaveTextContent('₱25.00');
       // Still at step 1 (no book scan input)
       expect(container.querySelector('#circulation-code')).toBeNull();
-      expect(findButtonByText(container, 'Start over')).toBeDefined();
+      expect(container.querySelector('footer')).toBeNull();
+      expect(findButtonByText(container.querySelector('section')!, 'Start over')).toBeEnabled();
       expect(findButtonByText(container, 'Override')).toBeUndefined();
       expect(findButtonByText(container, 'Continue')).toBeUndefined();
 

@@ -14,6 +14,7 @@ import { MemberPreview } from './MemberPreview';
 import { useCirculationWizard } from '@/hooks/use-circulation-wizard';
 import { usePreferences } from '@/components/providers/PreferencesProvider';
 import type { UserRole } from '@/lib/types';
+import styles from './CirculationWizard.module.css';
 
 export interface CirculationWizardProps {
   userRole?: UserRole | null;
@@ -62,6 +63,8 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   const [overrideError, setOverrideError] = useState<string | null>(null);
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const overrideFieldId = useId();
+  const stageId = useId();
+  const headerRef = useRef<HTMLElement>(null);
 
   const goToStep = (id: number) => {
     if (canNavigate && id >= 1 && id <= reachedStep) setViewStep(id < reachedStep ? id : null);
@@ -137,6 +140,8 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   const stageLabel = isConfirmed
     ? (mode === 'checkout' ? 'Checkout complete' : 'Return complete')
     : `Step ${step} of ${steps.length}: ${steps[step - 1].label}`;
+  const showBack = step > 1 && !isConfirmed;
+  const showReset = !isConfirmed && (reachedStep > 1 || isProcessing);
 
   const handleConfirmClick = () => {
     if (mode === 'return' && (pendingReturn?.fineAmount ?? 0) > 0) {
@@ -147,14 +152,15 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
   };
 
   return (
-    <div className="w-full space-y-3 sm:space-y-6">
-      <div className="app-toolbar app-toolbar-row justify-between">
-        <div role="group" aria-label="Circulation mode" className="flex items-center gap-1">
+    <div className={`${styles.workspace} mx-auto w-full min-w-0 max-w-5xl rounded-2xl border border-border/50 bg-card/50`}>
+      <header ref={headerRef} className={`${styles.header} grid items-center gap-4 border-b border-border/50 px-3 py-3 sm:px-6 sm:py-4`}>
+        <div role="group" aria-label="Circulation mode" className="app-toolbar-segments grid w-full max-w-xs grid-cols-2 justify-self-center">
           <Button
             type="button"
             variant={mode === 'checkout' ? 'default' : 'ghost'}
-            className="app-toolbar-control w-24"
+            className="app-toolbar-control"
             aria-pressed={mode === 'checkout'}
+            aria-controls={stageId}
             disabled={isCommitting}
             onClick={() => handleSwitchMode('checkout')}
           >
@@ -163,8 +169,9 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
           <Button
             type="button"
             variant={mode === 'return' ? 'default' : 'ghost'}
-            className="app-toolbar-control w-24"
+            className="app-toolbar-control"
             aria-pressed={mode === 'return'}
+            aria-controls={stageId}
             disabled={isCommitting}
             onClick={() => handleSwitchMode('return')}
           >
@@ -172,45 +179,16 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {step > 1 && !isConfirmed && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="app-toolbar-control gap-1.5 text-muted-foreground"
-              disabled={!canNavigate}
-              onClick={() => goToStep(step - 1)}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back</span>
-            </Button>
-          )}
-          {!isConfirmed && (reachedStep > 1 || isProcessing) && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="app-toolbar-control gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              disabled={isCommitting}
-              onClick={handleReset}
-            >
-              <RefreshCcw className="h-3.5 w-3.5" />
-              <span>Start over</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="p-3 sm:py-4">
         <CirculationStepper
           steps={steps}
           currentStep={step}
           reachedStep={reachedStep}
           onStepClick={canNavigate ? goToStep : undefined}
         />
-      </div>
+      </header>
 
-      <div className="relative rounded-2xl border border-border/40 bg-card/50 p-3.5 sm:p-7 md:p-8">
-        <section ref={stageRef} tabIndex={-1} aria-label={stageLabel} className="scroll-mt-6 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+      <div className="p-3 sm:p-6">
+        <section id={stageId} ref={stageRef} tabIndex={-1} aria-label={stageLabel} className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
           {isConfirmed ? (
             <SuccessStep 
               title={mode === 'checkout' ? 'Checkout Complete' : 'Return Complete'}
@@ -404,8 +382,42 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
             </div>
           )}
         </section>
-
       </div>
+
+      {(showBack || showReset) && (
+        <footer className="flex flex-wrap items-center gap-2 border-t border-border/50 px-3 py-1.5 sm:px-6">
+          {showBack && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="app-toolbar-control gap-1.5"
+              disabled={!canNavigate}
+              onClick={() => {
+                goToStep(step - 1);
+                headerRef.current?.scrollIntoView?.({ block: 'nearest' });
+              }}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </Button>
+          )}
+          {showReset && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="app-toolbar-control ml-auto gap-1.5 hover:bg-destructive/10 hover:text-destructive"
+              disabled={isCommitting}
+              onClick={() => {
+                handleReset();
+                headerRef.current?.scrollIntoView?.({ block: 'nearest' });
+              }}
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              Start over
+            </Button>
+          )}
+        </footer>
+      )}
     </div>
   );
 }
