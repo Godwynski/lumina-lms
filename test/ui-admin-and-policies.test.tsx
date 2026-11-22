@@ -76,7 +76,7 @@ import { PolicyLayout } from '@/components/admin/policies/PolicyLayout';
 import { PolicyCommitModal } from '@/components/admin/PolicyCommitModal';
 import { PolicySimulationPanel } from '@/components/admin/PolicySimulationPanel';
 import { AuditLogClient } from '@/components/admin/AuditLogClient';
-import { AuditLogExportImportModal } from '@/components/admin/AuditLogExportImportModal';
+import { AuditLogExportModal } from '@/components/admin/AuditLogExportModal';
 import { AuditSubjectFilter, AuditSubjectChip } from '@/components/admin/AuditSubjectFilter';
 import { CategoryManagement } from '@/components/admin/CategoryManagement';
 import { CategoryDialog } from '@/components/admin/categories/CategoryDialog';
@@ -761,7 +761,7 @@ describe('Admin & Policies UI Components', () => {
       });
     });
 
-    it('debounces search, validates advanced filter dates, clears filters, and opens Export/Import modal', async () => {
+    it('debounces search, validates advanced filter dates, clears filters, and opens Export modal', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ logs: [sampleLog], total: 1 }),
@@ -807,33 +807,32 @@ describe('Admin & Policies UI Components', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('All filters cleared');
       await clickElement(findButtonByText(document.body, 'Done'));
 
-      // Open Export / Import modal
-      await clickElement(findButtonByText(handle.container, 'Export / Import'));
-      expect(document.body).toHaveTextContent('Audit Log Operations');
+      // Open Export modal
+      await clickElement(findButtonByText(handle.container, 'Export'));
+      expect(document.body).toHaveTextContent('Export Audit Logs');
     });
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 7. AuditLogExportImportModal
+  // 7. AuditLogExportModal
   // ───────────────────────────────────────────────────────────────────────────
-  describe('AuditLogExportImportModal', () => {
+  describe('AuditLogExportModal', () => {
     it('configures export format & columns, triggers download, and validates empty columns', async () => {
       const onClose = vi.fn();
 
       await renderClient(
-        <AuditLogExportImportModal
+        <AuditLogExportModal
           isOpen={true}
           onClose={onClose}
           currentFilters={{ query: 'book', entityType: 'book', startDate: '2026-11-01' }}
         />
       );
 
-      expect(document.body).toHaveTextContent('Audit Log Operations');
+      expect(document.body).toHaveTextContent('Export Audit Logs');
       expect(document.body).toHaveTextContent('Search: "book"');
       expect(document.body).toHaveTextContent('Customize Columns (15 / 15)');
       expect(document.body).toHaveTextContent('Copy barcode');
       expect(document.body).toHaveTextContent('Patron ID');
-      expect(document.body).toHaveTextContent('Restoration & Import');
 
       // Switch format to Developer JSON
       await clickElement(findButtonByText(document.body, 'Developer JSON'));
@@ -863,103 +862,14 @@ describe('Admin & Policies UI Components', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('parses uploaded JSON audit backup, previews valid/skipped rows, and commits restoration', async () => {
-      const onImportSuccess = vi.fn();
-      const fetchMock = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ count: 1 }),
-      });
-      vi.stubGlobal('fetch', fetchMock);
-
+    it('offers export only: no import tab, file picker, or restore action', async () => {
       await renderClient(
-        <AuditLogExportImportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          onImportSuccess={onImportSuccess}
-          currentFilters={{}}
-        />
+        <AuditLogExportModal isOpen={true} onClose={vi.fn()} currentFilters={{}} />
       );
-
-      await clickElement(findButtonByText(document.body, 'Restoration & Import'));
-      expect(document.body).toHaveTextContent('Restoration Warning');
-
-      const firstFileInput = document.body.querySelector('input[type="file"]') as HTMLInputElement;
-
-      // Reject unsupported extension
-      const badFile = new File(['hello'], 'notes.txt', { type: 'text/plain' });
-      await act(async () => {
-        Object.defineProperty(firstFileInput, 'files', { value: [badFile], configurable: true });
-        firstFileInput.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise((resolve) => setTimeout(resolve, 40));
-      });
-      expect(mockToastError).toHaveBeenCalledWith(
-        'Unsupported file format. Please upload JSON, CSV, or XLSX.'
-      );
-
-      // Re-query input since it remounts after importFile resets to null
-      const fileInput = document.body.querySelector('input[type="file"]') as HTMLInputElement;
-
-      // Upload valid JSON with 1 valid and 1 invalid row
-      const payload = [
-        {
-          entity_type: 'book',
-          action: 'create',
-          reason: 'Initial import',
-          created_at: '2026-11-10T08:00:00.000Z',
-        },
-        {
-          entity_type: '',
-          action: 'update',
-          reason: 'Missing entity',
-        },
-      ];
-      const jsonFile = new File([JSON.stringify(payload)], 'audit-backup.json', {
-        type: 'application/json',
-      });
-
-      await act(async () => {
-        Object.defineProperty(fileInput, 'files', { value: [jsonFile], configurable: true });
-        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise((resolve) => setTimeout(resolve, 40));
-      });
-
-      expect(document.body).toHaveTextContent('audit-backup.json');
-      expect(document.body).toHaveTextContent('Total Rows');
-      expect(document.body).toHaveTextContent('Valid Records');
-      expect(document.body).toHaveTextContent('Skipped Rows');
-      expect(mockToastWarning).toHaveBeenCalledWith(
-        'Parsed file. Warning: 1 rows are missing required entity/action columns.'
-      );
-
-      // Commit restoration
-      await clickElement(findButtonByText(document.body, 'Commit Restoration'));
-      expect(fetchMock).toHaveBeenCalledWith(
-        '/api/admin/audit-logs/import',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ logs: [payload[0]] }),
-        })
-      );
-      expect(document.body).toHaveTextContent('Restoration Complete!');
-      expect(document.body).toHaveTextContent('Successfully inserted 1 valid audit logs');
-      expect(onImportSuccess).toHaveBeenCalledTimes(1);
-
-      // Reset via Import Another File
-      await clickElement(findButtonByText(document.body, 'Import Another File'));
-      expect(document.body).toHaveTextContent('Drag & Drop Log Backup');
-    });
-
-    it('hides Restoration & Import tab when canImport is false (librarian view)', async () => {
-      await renderClient(
-        <AuditLogExportImportModal
-          isOpen={true}
-          onClose={vi.fn()}
-          canImport={false}
-          currentFilters={{}}
-        />
-      );
-      expect(document.body).not.toHaveTextContent('Restoration & Import');
       expect(document.body).toHaveTextContent('Download Backup File');
+      expect(document.body).not.toHaveTextContent('Import');
+      expect(document.body).not.toHaveTextContent('Restoration');
+      expect(document.body.querySelector('input[type="file"]')).toBeNull();
     });
   });
 
@@ -1230,20 +1140,15 @@ describe('Admin & Policies UI Components', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 10. Coverage Expansion: Audit Export/Import, AuditLogClient, AuditSubjectFilter,
+  // 10. Coverage Expansion: Audit Export, AuditLogClient, AuditSubjectFilter,
   //     PolicyField, PolicyLayout, CategoryDialog & CategoryItem
   // ───────────────────────────────────────────────────────────────────────────
   describe('Uncovered Admin & Policies Branches', () => {
-    it('AuditLogExportImportModal parses CSV with Excel/Unix/ISO dates, handles drag-drop, empty/malformed files, and import API errors', async () => {
-      const fetchMock = vi.fn().mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: 'Import rejected by server' }),
-      });
-      vi.stubGlobal('fetch', fetchMock);
+    it('AuditLogExportModal shows active filters, switches formats, toggles columns, and cancels', async () => {
       const onClose = vi.fn();
 
       await renderClient(
-        <AuditLogExportImportModal
+        <AuditLogExportModal
           isOpen={true}
           onClose={onClose}
           currentFilters={{
@@ -1270,53 +1175,6 @@ describe('Admin & Policies UI Components', () => {
       const firstCheckbox = document.body.querySelector('input[type="checkbox"]') as HTMLInputElement;
       await clickElement(firstCheckbox);
       expect(document.body).toHaveTextContent('Customize Columns (14 / 15)');
-
-      // Switch to Import tab
-      await clickElement(findButtonByText(document.body, 'Restoration & Import'));
-
-      // 1. Empty JSON array via drag & drop onto the drop zone containing the file input
-      const emptyFile = new File(['[]'], 'empty.json', { type: 'application/json' });
-      const dropZone = document.body.querySelector('input[type="file"]')?.parentElement as HTMLElement;
-      await act(async () => {
-        const dragOverEvent = new Event('dragover', { bubbles: true, cancelable: true });
-        dropZone.dispatchEvent(dragOverEvent);
-        const dropEvent = new Event('drop', { bubbles: true, cancelable: true });
-        Object.defineProperty(dropEvent, 'dataTransfer', { value: { files: [emptyFile] } });
-        dropZone.dispatchEvent(dropEvent);
-        await new Promise((r) => setTimeout(r, 40));
-      });
-      expect(mockToastError).toHaveBeenCalledWith('The file is empty.');
-
-      // 2. Malformed JSON
-      const badJson = new File(['{bad json'], 'broken.json', { type: 'application/json' });
-      const fileInput1 = document.body.querySelector('input[type="file"]') as HTMLInputElement;
-      await act(async () => {
-        Object.defineProperty(fileInput1, 'files', { value: [badJson], configurable: true });
-        fileInput1.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise((r) => setTimeout(r, 40));
-      });
-      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining('File parsing error:'));
-
-      // 3. Valid CSV with Excel serial date, Unix seconds, Unix ms, and JSON cells
-      const csvRows = [
-        'Timestamp,Entity,Action,Reason,Old Value,New Value,Details',
-        '46161.5,book,create,Excel serial date,"{""a"":1}","{""a"":2}","{""note"":""ok""}"',
-        '1779321600,profile,update,Unix seconds,,,',
-        '1779321600000,book_copy,archive,Unix ms,,,',
-      ].join('\n');
-      const csvFile = new File([csvRows], 'backup.csv', { type: 'text/csv' });
-      const fileInput2 = document.body.querySelector('input[type="file"]') as HTMLInputElement;
-      await act(async () => {
-        Object.defineProperty(fileInput2, 'files', { value: [csvFile], configurable: true });
-        fileInput2.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise((r) => setTimeout(r, 60));
-      });
-      expect(document.body).toHaveTextContent('backup.csv');
-      expect(mockToastSuccess).toHaveBeenCalledWith('Successfully parsed 3 audit records.');
-
-      // Commit restoration -> server returns 400/500 -> toast error
-      await clickElement(findButtonByText(document.body, 'Commit Restoration'));
-      expect(mockToastError).toHaveBeenCalledWith('Import rejected by server');
 
       // Cancel calls onClose
       await clickElement(findButtonByText(document.body, 'Cancel'));

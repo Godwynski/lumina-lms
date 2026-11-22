@@ -55,7 +55,6 @@ import { getMinArchiveCutoffDate } from "@/lib/archive";
 import { GET as auditLogsGet } from "@/app/api/admin/audit-logs/route";
 import { GET as auditLogsExportGet } from "@/app/api/admin/audit-logs/export/route";
 import { GET as auditLogsOptionsGet } from "@/app/api/admin/audit-logs/options/route";
-import { POST as auditLogsImportPost } from "@/app/api/admin/audit-logs/import/route";
 import {
   GET as categoriesGet,
   POST as categoriesPost,
@@ -642,114 +641,6 @@ describe("Admin API Route Handlers", () => {
         "librarian",
         "library_staff",
       ]);
-    });
-  });
-
-  describe("POST /api/admin/audit-logs/import", () => {
-    it("denies unauthorized or non-super_admin requests", async () => {
-      setupAuth(supabase, null);
-      expect(
-        (
-          await auditLogsImportPost(
-            new Request("http://localhost/api/admin/audit-logs/import", {
-              method: "POST",
-              body: JSON.stringify({ logs: [] }),
-            })
-          )
-        ).status
-      ).toBe(401);
-
-      setupAuth(supabase, "librarian");
-      expect(
-        (
-          await auditLogsImportPost(
-            new Request("http://localhost/api/admin/audit-logs/import", {
-              method: "POST",
-              body: JSON.stringify({ logs: [{ entity_type: "book", action: "create" }] }),
-            })
-          )
-        ).status
-      ).toBe(403);
-    });
-
-    it("returns 400 for invalid JSON, empty logs array, or missing required fields", async () => {
-      setupAuth(supabase, "super_admin");
-
-      const badJson = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: "{not-json",
-        })
-      );
-      expect(badJson.status).toBe(400);
-
-      const emptyLogs = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({ logs: [] }),
-        })
-      );
-      expect(emptyLogs.status).toBe(400);
-
-      const missingField = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({ logs: [{ entity_type: "book" }] }),
-        })
-      );
-      expect(missingField.status).toBe(400);
-    });
-
-    it("imports logs in batches, attributes admin_id to importer, parses dates, and logs summary", async () => {
-      setupAuth(supabase, "super_admin", "ACTIVE", "importer-1");
-      adminSupabase.setTableResponse("audit_logs", [], null);
-
-      const payloadLogs = Array.from({ length: 105 }, (_, i) => ({
-        admin_id: `original-admin-${i}`,
-        entity_type: "Book",
-        action: "CREATE",
-        created_at: i === 0 ? 46161.5 : i === 1 ? 1779321600 : "2026-02-01T00:00:00Z",
-        details: { row: i },
-      }));
-
-      const res = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({ logs: payloadLogs }),
-        })
-      );
-      const body = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(body).toEqual({ success: true, count: 105 });
-      const insertCalls = adminSupabase.getTableBuilder("audit_logs").insert.mock.calls;
-      // 2 batches (100 + 5) + 1 audit summary insert
-      expect(insertCalls).toHaveLength(3);
-      expect(insertCalls[0][0]).toHaveLength(100);
-      expect(insertCalls[1][0]).toHaveLength(5);
-      expect(insertCalls[0][0][0]).toMatchObject({
-        admin_id: "importer-1",
-        entity_type: "book",
-        action: "create",
-        details: { row: 0, imported: true, original_admin_id: "original-admin-0" },
-      });
-    });
-
-    it("returns 500 when batch insert fails", async () => {
-      setupAuth(supabase, "super_admin");
-      adminSupabase.setTableResponse("audit_logs", null, { message: "Insert constraint error" });
-
-      const res = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({
-            logs: [{ entity_type: "book", action: "create" }],
-          }),
-        })
-      );
-      const body = await res.json();
-      expect(res.status).toBe(500);
-      expect(body.error).toBe("Failed to import audit logs due to a database error");
     });
   });
 

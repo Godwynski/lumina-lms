@@ -101,7 +101,6 @@ import { MainHeader } from '@/components/layout/MainHeader';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { BatchTaskProvider } from '@/components/providers/BatchTaskProvider';
 import { ModernInventoryClient } from '@/components/inventory/ModernInventoryClient';
-import { AuditLogExportImportModal } from '@/components/admin/AuditLogExportImportModal';
 import { AuditLogClient } from '@/components/admin/AuditLogClient';
 import { AnimationProvider } from '@/components/providers/animation-provider';
 import RootLayout from '@/app/layout';
@@ -306,64 +305,22 @@ describe('P2 client performance and duplicate work', () => {
     anchorClickSpy.mockRestore();
   });
 
-  it('Item 2: AuditLogExportImportModal parses .xlsx via dynamic import and AuditLogClient lazy-loads it on click', async () => {
-    // 1. AuditLogExportImportModal parses real .xlsx workbook
-    await renderClient(
-      <AuditLogExportImportModal
-        isOpen={true}
-        onClose={vi.fn()}
-        currentFilters={{}}
-      />
-    );
-
-    const importTab = Array.from(document.body.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Restoration & Import')
-    );
-    await clickElement(importTab);
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet([
-      {
-        Timestamp: '2026-11-10T08:00:00.000Z',
-        'Entity Type': 'book',
-        Action: 'create',
-        Reason: 'XLSX restore test',
-      },
-    ]);
-    XLSX.utils.book_append_sheet(wb, ws, 'Logs');
-    const xlsxBytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
-    const xlsxFile = new File([xlsxBytes], 'audit.xlsx', {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-
-    const fileInput = document.body.querySelector('input[type="file"]') as HTMLInputElement;
-    await act(async () => {
-      Object.defineProperty(fileInput, 'files', { value: [xlsxFile], configurable: true });
-      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    await vi.waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith('Successfully parsed 1 audit records.');
-    });
-    expect(document.body).toHaveTextContent('audit.xlsx');
-
-    cleanupClients();
-
-    // 2. AuditLogClient does not mount AuditLogExportImportModal until Export / Import is clicked
+  it('Item 2: AuditLogClient lazy-loads the export modal on click', async () => {
+    // AuditLogClient does not mount AuditLogExportModal until Export is clicked
     const { container } = await renderClient(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
         <AuditLogClient />
       </SWRConfig>
     );
 
-    expect(document.body).not.toHaveTextContent('Audit Log Operations');
+    expect(document.body).not.toHaveTextContent('Export Audit Logs');
     const openBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Export / Import')
+      b.textContent?.trim() === 'Export'
     );
     await clickElement(openBtn);
 
     await vi.waitFor(() => {
-      expect(document.body).toHaveTextContent('Audit Log Operations');
+      expect(document.body).toHaveTextContent('Export Audit Logs');
     });
   });
 

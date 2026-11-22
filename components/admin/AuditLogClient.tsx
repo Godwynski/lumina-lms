@@ -48,8 +48,8 @@ const timestampSortOptions = [
   { value: "oldest", label: "Oldest first" },
 ];
 
-const AuditLogExportImportModal = dynamic(
-  () => import("./AuditLogExportImportModal").then((mod) => mod.AuditLogExportImportModal),
+const AuditLogExportModal = dynamic(
+  () => import("./AuditLogExportModal").then((mod) => mod.AuditLogExportModal),
   { ssr: false }
 );
 
@@ -406,8 +406,7 @@ function DataDiff({ oldVal, newVal }: { oldVal: Record<string, unknown> | null; 
 
 // --- Main Component ---
 
-export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string } = {}) {
-  const canImport = userRole === "super_admin";
+export function AuditLogClient() {
   const urlFilters = useSearchParams();
   const updateFilters = useCallback((changes: Record<string, string>) => {
     const params = new URLSearchParams(window.location.search);
@@ -475,7 +474,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
   const hasAnyFilterActive = useMemo(() => {
     return !!(bookId || studentId || copyId || userId || search || entityType !== "all" || actionType !== "all" || startDate || endDate);
   }, [search, entityType, actionType, startDate, endDate, bookId, studentId, copyId, userId]);
-  const [isExportImportOpen, setIsExportImportOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const pageSize = 20; // Increased page size for dense table
 
@@ -508,7 +507,7 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
     return params.toString();
   }, [page, sort, debouncedSearch, entityType, actionType, startDate, endDate, bookId, studentId, copyId, userId]);
 
-  const { data, error, isLoading, mutate } = useSWR<{
+  const { data, error, isLoading } = useSWR<{
     logs: AuditLog[];
     total: number;
   }>(`/api/admin/audit-logs?${queryParams}`, fetcher, {
@@ -580,10 +579,10 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
                 className="lg:hidden"
                 actions={[
                   {
-                    id: "export-import-audit",
-                    label: canImport ? "Export / Import" : "Export",
+                    id: "export-audit",
+                    label: "Export",
                     icon: Download,
-                    onSelect: () => setIsExportImportOpen(true),
+                    onSelect: () => setIsExportOpen(true),
                   },
                 ]}
               />
@@ -591,11 +590,11 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => setIsExportImportOpen(true)}
+                onClick={() => setIsExportOpen(true)}
                 className="app-toolbar-control hidden px-4 lg:inline-flex"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-                <span>{canImport ? "Export / Import" : "Export"}</span>
+                <span>Export</span>
               </Button>
             </div>
           </div>
@@ -1125,12 +1124,10 @@ export function AuditLogClient({ userRole = "super_admin" }: { userRole?: string
     </Dialog>
 
       {detailBookId && <BookDetailModal bookId={detailBookId} open onOpenChange={open => { if (!open) setDetailBookId(null); }} variant="read_only" />}
-      {isExportImportOpen && (
-        <AuditLogExportImportModal
-          isOpen={isExportImportOpen}
-          onClose={() => setIsExportImportOpen(false)}
-          onImportSuccess={() => mutate()}
-          canImport={canImport}
+      {isExportOpen && (
+        <AuditLogExportModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
           currentFilters={{
             query: debouncedSearch,
             entityType,

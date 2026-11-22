@@ -248,11 +248,12 @@ export function UserDetailClient({
     { id: "ACTIVE", label: "Active", icon: CheckCircle2 },
     { id: "PENDING", label: "Pending", icon: Calendar },
     { id: "INACTIVE", label: "Inactive", icon: AlertCircle },
-    { id: "GRADUATED", label: "Graduated", icon: UserCheck },
-    { id: "DELETED", label: "Deleted", icon: Archive },
     { id: "SUSPENDED", label: "Suspended", icon: AlertCircle, restricted: !isAdmin },
     { id: "ARCHIVED", label: "Archived", icon: Archive, restricted: !isAdmin },
   ];
+  // Graduated/Deleted are retired; show one only so an old account still displays its current value.
+  const legacyStatus = ({ GRADUATED: "Graduated", DELETED: "Deleted" } as Record<string, string>)[initialUser.status ?? ""];
+  if (legacyStatus) statusOptions.push({ id: initialUser.status!, label: legacyStatus, icon: Archive, restricted: true });
 
   const roleOptions = [
     { id: "super_admin", label: ROLE_LABELS.super_admin, icon: Shield, hidden: !isAdmin },

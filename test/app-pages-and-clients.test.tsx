@@ -1145,6 +1145,31 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent(status[0] + status.slice(1).toLowerCase());
     });
 
+    const openStatusOptions = async (container: HTMLElement) => {
+      const triggers = Array.from(container.querySelectorAll('button[role="combobox"]'));
+      const statusTrigger = triggers.find((t) => /Active|Graduated|Deleted/.test(t.textContent ?? '')) as HTMLElement;
+      await act(async () => {
+        statusTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      });
+      return Array.from(document.body.querySelectorAll('[role="option"]'));
+    };
+
+    it('does not offer the retired Graduated or Deleted statuses', async () => {
+      const { container } = await renderClient(<UserDetailClient initialUser={{ ...sampleUser, status: 'ACTIVE' }} currentRole="super_admin" />);
+      const labels = (await openStatusOptions(container)).map((o) => o.textContent);
+      expect(labels).toEqual(expect.arrayContaining(['Active', 'Pending', 'Inactive', 'Suspended', 'Archived']));
+      expect(labels).not.toContain('Graduated');
+      expect(labels).not.toContain('Deleted');
+    });
+
+    it('keeps an old Graduated account labelled but not re-selectable', async () => {
+      const { container } = await renderClient(<UserDetailClient initialUser={{ ...sampleUser, status: 'GRADUATED' }} currentRole="super_admin" />);
+      const options = await openStatusOptions(container);
+      const graduated = options.find((o) => o.textContent === 'Graduated');
+      expect(graduated).toHaveAttribute('aria-disabled', 'true');
+      expect(options.find((o) => o.textContent === 'Deleted')).toBeUndefined();
+    });
+
     it('updates profile, verifies pending student, manages SA permissions, and enforces librarian read-only in UserDetailClient', async () => {
       const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response(
@@ -1644,10 +1669,10 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         expect(libRender.container).toHaveTextContent('0 matching records');
       });
       expect(findButtonByText(libRender.container, 'Export')).toBeDefined();
-      expect(findButtonByText(libRender.container, 'Export / Import')).toBeUndefined();
+      expect(libRender.container).not.toHaveTextContent('Import');
       cleanupClients();
 
-      // super_admin renders AuditLogClient (Export / Import)
+      // super_admin gets the same export-only toolbar
       mockGetUserRole.mockResolvedValueOnce('super_admin');
       const adminGateResult = await GateFn();
       const { container } = await renderClient(
@@ -1658,7 +1683,8 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       await vi.waitFor(() => {
         expect(container).toHaveTextContent('0 matching records');
       });
-      expect(findButtonByText(container, 'Export / Import')).toBeDefined();
+      expect(findButtonByText(container, 'Export')).toBeDefined();
+      expect(container).not.toHaveTextContent('Import');
       consoleErrorSpy.mockRestore();
     });
 

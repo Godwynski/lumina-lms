@@ -143,6 +143,10 @@ export const PATCH = withAuthApi(
       nextStatus &&
       Object.prototype.hasOwnProperty.call(profile, "status")
     ) {
+      // Graduated and Deleted are retired: there is no graduation or delete flow. Old rows may keep them.
+      if ((nextStatus === "GRADUATED" || nextStatus === "DELETED") && nextStatus !== profile.status) {
+        return apiError("This account status is no longer available", "VALIDATION_ERROR", 400);
+      }
       if (nextStatus === "ARCHIVED" || nextStatus === "SUSPENDED") {
         if (requesterRole !== "super_admin") {
           return apiError("Only admins can archive or suspend users", "FORBIDDEN", 403);

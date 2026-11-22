@@ -106,7 +106,7 @@ import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceCli
 import { TrendChart, CategoryPieChart, PeakHoursBarChart } from '@/app/(authenticated)/analytics/AnalyticsCharts';
 import { AnalyticsClient } from '@/app/(authenticated)/analytics/AnalyticsClient';
 import { AuditLogClient } from '@/components/admin/AuditLogClient';
-import { AuditLogExportImportModal } from '@/components/admin/AuditLogExportImportModal';
+import { AuditLogExportModal } from '@/components/admin/AuditLogExportModal';
 import type { User } from '@/lib/types';
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -327,7 +327,7 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
     expect(demandBarFill).toBeInTheDocument();
   });
 
-  it('F33 & F34: AuditLogClient renders mobile/tablet cards without min-w-[1000px] clipping and AuditLogExportImportModal aligns format cards', async () => {
+  it('F33 & F34: AuditLogClient renders mobile/tablet cards without min-w-[1000px] clipping and AuditLogExportModal aligns format cards', async () => {
     const sampleLog = {
       id: 'log-1',
       admin_id: 'admin-1',
@@ -365,7 +365,7 @@ describe('B6 Admin Modules (Users, Attendance, Analytics, Audit)', () => {
     cleanupClients();
 
     await renderClient(
-      <AuditLogExportImportModal isOpen={true} onClose={vi.fn()} currentFilters={{}} />
+      <AuditLogExportModal isOpen={true} onClose={vi.fn()} currentFilters={{}} />
     );
 
     const formatBtns = Array.from(document.body.querySelectorAll('button[aria-pressed]')).filter((b) =>

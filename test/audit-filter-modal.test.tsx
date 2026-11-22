@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(w
 const { useSWRMock } = vi.hoisted(() => ({ useSWRMock: vi.fn() }));
 vi.mock('swr', () => ({ default: useSWRMock }));
 vi.mock('@/components/catalog/BookDetailModal', () => ({ BookDetailModal: () => null }));
-vi.mock('@/components/admin/AuditLogExportImportModal', () => ({ AuditLogExportImportModal: () => null }));
+vi.mock('@/components/admin/AuditLogExportModal', () => ({ AuditLogExportModal: () => null }));
 
 it('keeps selectors inside the filter modal and restores them when reopened', async () => {
   useSWRMock.mockReturnValue({ data: { logs: [], total: 0, options: [] }, mutate: vi.fn() });

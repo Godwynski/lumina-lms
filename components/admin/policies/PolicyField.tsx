@@ -256,7 +256,8 @@ export function PolicyField({
               />
             </div>
           ) : (
-            <div className="relative group/input">
+            <div className="group/input">
+              <div className="flex items-center gap-2">
               <Input
                 id={fieldId}
                 aria-label={unit ? `${labelText} (${unit.toLowerCase()})` : labelText}
@@ -273,16 +274,17 @@ export function PolicyField({
                 onBlur={() => { if (!fieldError) setDraft(null); }}
                 disabled={loading || disabled}
                 className={cn(
-                  "h-10 rounded-lg border-border bg-background text-sm font-medium transition-all shadow-xs",
-                  unit ? "pr-20" : "pr-3",
+                  "h-10 min-w-0 flex-1 rounded-lg border-border bg-background text-sm font-medium transition-all shadow-xs",
                   fieldError && "border-destructive focus-visible:ring-destructive/30"
                 )}
               />
+              {/* Beside the box, not inside it, so a long unit like "PHP / Day" never crowds the number. */}
               {unit && (
-                <span aria-hidden="true" className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
+                <span aria-hidden="true" className="shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground">
                   {unit}
                 </span>
               )}
+              </div>
               {fieldError && (
                 <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-destructive">
                   {fieldError}

@@ -703,6 +703,11 @@ describe('Admin, Catalog & Attendance UI Components', () => {
       const input = handle.container.querySelector('input') as HTMLInputElement;
       expect(input).toHaveAttribute('aria-label', 'Daily Overdue Fine (php / day)');
       expect(input.labels?.[0]).toHaveTextContent('Daily Overdue Fine');
+      // The unit sits beside the box, not overlaid on the number.
+      const unit = input.nextElementSibling as HTMLElement;
+      expect(unit).toHaveTextContent('PHP / Day');
+      expect(unit.className).not.toContain('absolute');
+      expect(input.className).not.toMatch(/\bpr-20\b/);
 
       // Valid numeric change
       await typeIntoInput(input, '15');

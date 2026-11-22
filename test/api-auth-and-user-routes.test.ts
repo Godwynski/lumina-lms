@@ -757,6 +757,32 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       expect(adminSupabase.from).not.toHaveBeenCalled();
     });
 
+    it.each(["graduated", "DELETED"])("rejects moving an account to the retired %s status", async (status) => {
+      setupAuth(supabase, "super_admin", "ACTIVE", "adm-1");
+      supabase.getTableBuilder("profiles").single
+        .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "stu-1", role: "patron", status: "ACTIVE", full_name: "Stu" }, error: null });
+      const res = await usersPatch(new Request("http://localhost/api/users", { method: "PATCH", body: JSON.stringify({ id: "stu-1", status }) }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain("no longer available");
+      expect(adminSupabase.from).not.toHaveBeenCalled();
+    });
+
+    it("lets an old Graduated account be saved without changing its status", async () => {
+      setupAuth(supabase, "super_admin", "ACTIVE", "adm-1");
+      const target = { id: "stu-1", role: "patron", status: "GRADUATED", full_name: "Stu" };
+      supabase.getTableBuilder("profiles").single
+        .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE" }, error: null })
+        .mockResolvedValueOnce({ data: target, error: null });
+      adminSupabase.setTableResponse("profiles", { ...target, full_name: "Stu Two" });
+      adminSupabase.setTableResponse("library_cards", []);
+      const res = await usersPatch(
+        new Request("http://localhost/api/users", { method: "PATCH", body: JSON.stringify({ id: "stu-1", name: "Stu Two", status: "GRADUATED" }) })
+      );
+      expect(res.status).toBe(200);
+      expect(adminSupabase.getTableBuilder("library_cards").update).toHaveBeenLastCalledWith(expect.objectContaining({ status: "EXPIRED" }));
+    });
+
     it("enforces librarian privilege boundaries and super_admin self-demotion guard", async () => {
       setupAuth(supabase, "librarian", "ACTIVE", "lib-1");
       const profilesBuilder = supabase.getTableBuilder("profiles");
@@ -939,7 +965,7 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       );
 
       // Profile statuses that cards do not have are mapped to a valid card status (GAP-029)
-      for (const [profileStatus, cardStatus] of [["inactive", "SUSPENDED"], ["graduated", "EXPIRED"], ["deleted", "ARCHIVED"], ["active", "ACTIVE"]]) {
+      for (const [profileStatus, cardStatus] of [["inactive", "SUSPENDED"], ["active", "ACTIVE"]]) {
         profilesBuilder.single
           .mockResolvedValueOnce({ data: { id: "adm-1", role: "super_admin", status: "ACTIVE", email: "adm@alabang.sti.edu.ph" }, error: null })
           .mockResolvedValueOnce({ data: targetProfile, error: null });

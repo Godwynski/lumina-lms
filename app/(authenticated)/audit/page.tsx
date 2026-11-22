@@ -26,7 +26,7 @@ async function AuditAuthGate() {
   }
 
   return (
-    <AuditLogClient userRole={role} />
+    <AuditLogClient />
   );
 }
 

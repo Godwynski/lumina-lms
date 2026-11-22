@@ -648,32 +648,16 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
     expect(document.body).toHaveTextContent('Archive Identity');
   });
 
-  it('AuditLogClient mobile overflow menu labels Export / Import for super_admin and Export for librarian', async () => {
-    const libHandle = await renderClient(
+  it('AuditLogClient mobile overflow menu offers Export only', async () => {
+    const { container } = await renderClient(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <AuditLogClient userRole="librarian" />
+        <AuditLogClient />
       </SWRConfig>
     );
-    const libTrigger = libHandle.container.querySelector(
-      'button[aria-label="Audit log actions"]'
-    ) as HTMLButtonElement;
-    await pressKey(libTrigger, 'Enter');
-    const libItem = document.body.querySelector('[role="menuitem"]') as HTMLElement;
-    expect(libItem.textContent?.trim()).toBe('Export');
-    await pressKey(document.body.querySelector('[role="menu"]') as HTMLElement, 'Escape');
-    libHandle.unmount();
-
-    const adminHandle = await renderClient(
-      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <AuditLogClient userRole="super_admin" />
-      </SWRConfig>
-    );
-    const adminTrigger = adminHandle.container.querySelector(
-      'button[aria-label="Audit log actions"]'
-    ) as HTMLButtonElement;
-    await pressKey(adminTrigger, 'Enter');
-    const adminItem = document.body.querySelector('[role="menuitem"]') as HTMLElement;
-    expect(adminItem.textContent?.trim()).toBe('Export / Import');
+    const trigger = container.querySelector('button[aria-label="Audit log actions"]') as HTMLButtonElement;
+    await pressKey(trigger, 'Enter');
+    const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
+    expect(items.map((i) => i.textContent?.trim())).toEqual(['Export']);
   });
 
   it('CategoryManagement keeps Add Category available and starts bulk editing from the compact menu', async () => {
@@ -785,7 +769,7 @@ describe('Mobile Layout & Progressive Disclosure Behavioral Tests', () => {
 
     const { container } = await renderClient(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <AuditLogClient userRole="librarian" />
+        <AuditLogClient />
       </SWRConfig>
     );
 

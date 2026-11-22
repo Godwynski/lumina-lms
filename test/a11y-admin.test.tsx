@@ -98,7 +98,6 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: vi.fn(() => mockServerSupabase),
 }));
 
-import { AuditLogExportImportModal } from '@/components/admin/AuditLogExportImportModal';
 import { AuditLogClient } from '@/components/admin/AuditLogClient';
 import { AdminManagementContent } from '@/components/catalog/AdminManagementContent';
 import { IdentityListManager } from '@/components/admin/policies/IdentityListManager';
@@ -193,55 +192,6 @@ describe('Accessibility A1 fixes (admin, policies, catalog, inventory)', () => {
   afterEach(() => {
     cleanupClients();
     vi.unstubAllGlobals();
-  });
-
-  it('Item 1, 4, 6: AuditLogExportImportModal adds accessible remove-file name, contrast classes, and th scope="col"', async () => {
-    await renderClient(
-      <AuditLogExportImportModal
-        isOpen={true}
-        onClose={vi.fn()}
-        currentFilters={{}}
-      />
-    );
-
-    await clickElement(findButtonByText(document.body, 'Restoration & Import'));
-    const fileInput = document.body.querySelector('input[type="file"]') as HTMLInputElement;
-
-    const jsonPayload = [
-      {
-        action: 'create',
-        entity_type: 'book',
-        reason: 'Initial catalog entry',
-        created_at: '2026-11-14T00:00:00.000Z',
-      },
-      {
-        // missing required fields -> skipped row
-        entity_type: 'book',
-      },
-    ];
-    const jsonFile = new File([JSON.stringify(jsonPayload)], 'backup.json', {
-      type: 'application/json',
-    });
-
-    await act(async () => {
-      Object.defineProperty(fileInput, 'files', { value: [jsonFile], configurable: true });
-      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise((r) => setTimeout(r, 50));
-    });
-
-    const removeBtn = document.body.querySelector('button[aria-label="Remove backup.json"]');
-    expect(removeBtn).toBeInTheDocument();
-
-    expect(document.body.querySelector('.text-emerald-800')).toHaveTextContent('1');
-    expect(document.body.querySelector('.text-amber-800')).toHaveTextContent('1');
-    expect(document.body.querySelector('.text-emerald-600')).toBeNull();
-    expect(document.body.querySelector('.text-amber-600')).toBeNull();
-
-    const headers = Array.from(document.body.querySelectorAll('table thead th'));
-    expect(headers).toHaveLength(4);
-    for (const th of headers) {
-      expect(th).toHaveAttribute('scope', 'col');
-    }
   });
 
   it('Item 4 & 6: AuditLogClient adds scope="col" on headers and status-* classes on action badges', async () => {

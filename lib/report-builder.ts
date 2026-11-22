@@ -31,7 +31,7 @@ export const REPORT_DATASETS = {
     metrics: { registrations: "New registrations", records: "User list" },
     columns: { created_at: "Registered", full_name: "Name", email: "Email", student_id: "Patron ID", role: "Role", status: "Account status", department: "Department", patron_type: "Patron type" },
     defaults: ["created_at", "role", "status", "department"],
-    filters: { all: "All accounts", ACTIVE: "Active", PENDING: "Pending", INACTIVE: "Inactive", SUSPENDED: "Suspended", GRADUATED: "Graduated", DELETED: "Deleted", ARCHIVED: "Archived" },
+    filters: { all: "All accounts", ACTIVE: "Active", PENDING: "Pending", INACTIVE: "Inactive", SUSPENDED: "Suspended", ARCHIVED: "Archived" },
     search: "Name, email, ID, or department",
   },
 } as const;

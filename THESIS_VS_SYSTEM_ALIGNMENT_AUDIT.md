@@ -170,7 +170,7 @@ Legend:
 | **REQ033** | Security table tracking timestamps, identities, action types, affected entities, descriptions. | **VERIFIED** | `app/(authenticated)/audit/page.tsx`, `components/admin/AuditLogClient.tsx`. | Master immutable audit grid. |
 | **REQ034** | Dedicated button on log entries to view granular technical differences (diffs). | **VERIFIED** | `components/admin/AuditLogClient.tsx`, `AuditLogDetailModal.tsx`. | JSON diff viewer modal. |
 | **REQ035** | Search audit logs by name/action/reason, sort via dropdowns, and execute live data refreshes. | **VERIFIED** | `components/admin/AuditLogClient.tsx`. | Full search/filter/refresh controls. |
-| **REQ036** | Import and export audit log records in Spreadsheet CSV and developer JSON formats. | **VERIFIED** | `components/admin/AuditLogExportImportModal.tsx`, `audit-logs/export/route.ts`. | Streaming multi-format exporter. |
+| **REQ036** | Import and export audit log records in Spreadsheet CSV and developer JSON formats. | **PARTIAL (by design)** | `components/admin/AuditLogExportModal.tsx`, `audit-logs/export/route.ts`. | Export only. Import was removed on purpose: audit logs must not be insertable after the fact. |
 | **REQ037** | Header notification bell icon to view drop-down panel displaying recent alerts. | **VERIFIED** | `components/notifications/NotificationBell.tsx`, `MainHeader.tsx`. | Bell badge and slide-out panel. |
 | **REQ038** | Dedicated notifications page equipped with quick filter tabs and search bar. | **VERIFIED** | `app/(authenticated)/notifications/page.tsx`. | Tabs (All, Unread, History). |
 | **REQ039** | Read-only profile page: name, ID, email, phone, address, status, role, security details. | **VERIFIED** | `app/(authenticated)/profile/page.tsx`, `PersonalInfoForm.tsx`. | All 8 read-only attributes active. |
@@ -226,7 +226,7 @@ Legend:
 | **REQ089** | Modular architecture allowing policy and program updates without circulation disruption. | **VERIFIED** | Dynamic `system_settings` table and `DEFAULT_POLICIES` hot-reloading. | Zero downtime policy updates. |
 | **REQ090** | Consistent functionality across Google Chrome, Mozilla Firefox, Microsoft Edge, Safari. | **VERIFIED** | HTML5 camera APIs, responsive Tailwind CSS, cross-browser Playwright test matrix. | Cross-browser compatibility. |
 | **REQ091** | Fully accessible and responsive across mobile, tablet, and desktop hardware. | **VERIFIED** | Mobile slide-out drawer, touch-friendly QR scan views, responsive data grids. | Viewport density optimizations. |
-| **REQ092** | Customizable data export operations for catalog and audit logs (CSV, JSON, ZIP). | **VERIFIED** | `ModernInventoryClient.tsx` (Excel, CSV, JSON, ZIP), `AuditLogExportImportModal.tsx`. | Multi-column custom exports. |
+| **REQ092** | Customizable data export operations for catalog and audit logs (CSV, JSON, ZIP). | **VERIFIED** | `ModernInventoryClient.tsx` (Excel, CSV, JSON, ZIP), `AuditLogExportModal.tsx`. | Multi-column custom exports. |
 
 ---
 
@@ -313,7 +313,7 @@ graph TD
 ### 4.3 Report Specifications Parity (`09_input_and_output.txt`)
 The manuscript specifies 7 reports as `"Table / Printable"`. In the codebase:
 - **Inventory Report & Book Records Report:** Fully implemented and **exceeds specification**. `components/inventory/ModernInventoryClient.tsx` provides multi-column client-side export to **Excel (.xlsx)**, **CSV**, and **JSON** via SheetJS (`xlsx`).
-- **Audit Logs Report:** Fully implemented. `components/admin/AuditLogExportImportModal.tsx` supports streaming export to **CSV, JSON, and XLSX**.
+- **Audit Logs Report:** Fully implemented. `components/admin/AuditLogExportModal.tsx` supports streaming export to **CSV, JSON, and XLSX**.
 - **Borrowing History & Return Records Reports:** Implemented as interactive filtered data tables (`app/(authenticated)/history/HistoryContent.tsx`), but **lack a dedicated `@media print` paper stylesheet or print button**.
 - **Reservation Report:** Fragmented. Accessible per-book inside `BookDetailModal.tsx` and per-patron in `/dashboard`, but lacks a single centralized master export table.
 
@@ -375,7 +375,7 @@ graph LR
 
     subgraph Actual Codebase Reality
         C1[Not Implemented: Valid Recommendation]
-        C2[ALREADY IMPLEMENTED: AuditLogExportImportModal.tsx<br>CSV, JSON, XLSX streaming active]
+        C2[ALREADY IMPLEMENTED: AuditLogExportModal.tsx<br>CSV, JSON, XLSX streaming active]
         C3[Not Implemented: Valid Recommendation]
     end
 
@@ -384,7 +384,7 @@ graph LR
     R3 --> C3
 ```
 
-* **Critical Hazard in Recommendation 2:** Recommending *"Automated Data-Anonymized CSV/JSON Audit Exporters"* implies the system cannot export audit logs. In reality, the Super Admin panel already features a comprehensive export modal (`AuditLogExportImportModal.tsx`) and streaming route (`app/api/admin/audit-logs/export/route.ts`) supporting **CSV, JSON, and XLSX** with date, admin, and action filtering!
+* **Critical Hazard in Recommendation 2:** Recommending *"Automated Data-Anonymized CSV/JSON Audit Exporters"* implies the system cannot export audit logs. In reality, the Super Admin panel already features a comprehensive export modal (`AuditLogExportModal.tsx`) and streaming route (`app/api/admin/audit-logs/export/route.ts`) supporting **CSV, JSON, and XLSX** with date, admin, and action filtering!
 * **Remediation:** Rephrase Recommendation 2 to focus strictly on cryptographic PII anonymization and pre-calculated PACUCOA/CHED accreditation metrics.
 
 ---

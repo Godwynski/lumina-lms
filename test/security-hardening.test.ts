@@ -57,7 +57,6 @@ vi.mock("next/server", async () => {
 
 import { PATCH as usersPatch } from "@/app/api/users/route";
 import { POST as uploadPost } from "@/app/api/upload/route";
-import { POST as auditLogsImportPost } from "@/app/api/admin/audit-logs/import/route";
 import { PATCH as uiPreferencesPatch, GET as uiPreferencesGet } from "@/app/api/ui-preferences/route";
 import { POST as bulkNotificationsPost } from "@/app/api/notifications/bulk/route";
 import { POST as maintenancePost } from "@/app/api/notifications/maintenance/route";
@@ -338,38 +337,7 @@ describe("Security Hardening Verification", () => {
     });
   });
 
-  describe("4. Zod validation and size caps for audit-logs/import and ui-preferences", () => {
-    it("rejects > 500 rows, extra top-level fields, and oversized log fields in audit-logs/import", async () => {
-      setupAuth(supabase, "super_admin", "ACTIVE");
-
-      const tooManyLogs = Array.from({ length: 501 }, () => ({ entity_type: "book", action: "create" }));
-      const overCapRes = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({ logs: tooManyLogs }),
-        })
-      );
-      expect(overCapRes.status).toBe(400);
-
-      const extraTopLevelRes = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({ logs: [{ entity_type: "book", action: "create" }], extra: true }),
-        })
-      );
-      expect(extraTopLevelRes.status).toBe(400);
-
-      const hugeDetailsRes = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({
-            logs: [{ entity_type: "book", action: "create", details: { blob: "x".repeat(20_000) } }],
-          }),
-        })
-      );
-      expect(hugeDetailsRes.status).toBe(400);
-    });
-
+  describe("4. Zod validation and size caps for ui-preferences", () => {
     it("rejects unknown keys, invalid values, oversized payloads, and >200 readProgress entries in ui-preferences", async () => {
       setupAuth(supabase, "patron", "ACTIVE");
 
@@ -485,17 +453,6 @@ describe("Security Hardening Verification", () => {
       );
       expect(resetRes.status).toBe(500);
       expect(JSON.stringify(await resetRes.json())).not.toContain("postgres");
-
-      // admin/audit-logs/import
-      adminSupabase.setTableResponse("audit_logs", null, { message: secretMsg });
-      const importRes = await auditLogsImportPost(
-        new Request("http://localhost/api/admin/audit-logs/import", {
-          method: "POST",
-          body: JSON.stringify({ logs: [{ entity_type: "book", action: "create" }] }),
-        })
-      );
-      expect(importRes.status).toBe(500);
-      expect(JSON.stringify(await importRes.json())).not.toContain("postgres");
 
       // ui-preferences GET
       supabase.setTableResponse("ui_preferences", null, { message: secretMsg });
