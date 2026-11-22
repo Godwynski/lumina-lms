@@ -45,12 +45,18 @@ export async function submitOnboarding(formData: {
     throw new Error(parsed.error.issues[0]?.message || "Invalid onboarding input");
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles').select('onboarding_completed, status').eq('id', user.id).single();
+  if (profileError) throw new Error(profileError.message);
+  if (!profile) throw new Error('Profile not found');
+  if (profile.onboarding_completed && profile.status !== 'PENDING') throw new Error('Onboarding already completed');
+
   const { address, phone, patron_type, department } = parsed.data;
   const resolvedDepartment = patron_type === "faculty" ? (department?.trim() || null) : department!.trim();
 
   // student_id is not set here: the sign-up trigger and card provisioning assign it,
   // and the profile guard trigger rejects users setting it themselves.
-  const { error } = await supabase
+  const { data: updatedProfile, error } = await supabase
     .from('profiles')
     .update({
       address,
@@ -60,9 +66,13 @@ export async function submitOnboarding(formData: {
       onboarding_completed: true,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', user.id);
+    .eq('id', user.id)
+    .or('status.eq.PENDING,onboarding_completed.is.null,onboarding_completed.eq.false')
+    .select('id')
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!updatedProfile) throw new Error('Onboarding already completed');
 
   await logAuditActivity(
     user.id,

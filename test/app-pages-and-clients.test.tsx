@@ -368,6 +368,7 @@ import AuditPage, { AuditSkeleton } from '@/app/(authenticated)/audit/page';
 import InventoryPage from '@/app/(authenticated)/inventory/page';
 import InventoryBookDetailPage from '@/app/(authenticated)/inventory/[id]/page';
 import AddBookPage from '@/app/(authenticated)/inventory/add/page';
+import ProfilePage from '@/app/(authenticated)/profile/page';
 import StudentCatalogLayout from '@/app/(authenticated)/student-catalog/layout';
 import StudentCatalogPage, { CatalogSkeletonView } from '@/app/(authenticated)/student-catalog/page';
 import StudentBookDetailPage, { BookDetailSkeleton } from '@/app/(authenticated)/student-catalog/[id]/page';
@@ -731,7 +732,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       expect(container).toHaveTextContent('Visits10Check-ins in selected period');
       expect([...container.querySelectorAll('h1')].filter(heading => heading.textContent === 'Analytics')).toHaveLength(0);
       expect(container).toHaveTextContent('Loans issued5Loans in selected period');
-      expect(container).toHaveTextContent('Inventory520Current catalog total');
+      expect(container).toHaveTextContent('Inventory520Physical copies in collection');
       expect(container).toHaveTextContent('Active loans14Currently out');
       expect(container).toHaveTextContent('Dune');
       expect(mockGetAnalyticsSummary).toHaveBeenCalledWith(
@@ -772,6 +773,10 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       mockGetAnalyticsSummary.mockResolvedValueOnce(summary30);
       await clickElement(findButtonByText(errRender.container, 'Retry'));
       expect(errRender.container).toHaveTextContent('Dune');
+      mockGetBookAdminDetails.mockResolvedValueOnce({ book: { id: 'book-99', title: 'Dune', author: 'Frank Herbert', available_copies: 1, total_copies: 1 }, copies: [{ id: 'copy-1', qr_string: 'QR-1', accession_number: 'ACC-1', status: 'AVAILABLE', reservation: null }], queue: [] });
+      await clickElement(findButtonByText(errRender.container, 'Dune'));
+      await vi.waitFor(() => expect(document.querySelector('button[aria-label="Edit acquisition for ACC-1"]')).toBeVisible());
+      await clickElement(document.querySelector('[role="dialog"] button[aria-label="Close"]'));
 
       // Export (.xlsx) writes Summary + High Demand workbook and Print invokes window.print()
       const printSpy = vi.fn();
@@ -1757,8 +1762,7 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
         role: 'library_staff',
         profile: { status: 'ACTIVE', permissions: { manage_inventory: true } },
       });
-      const allowedAdd = await AddGate();
-      expect(allowedAdd).toBeTruthy();
+      await expect(AddGate()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
 
       mockGetMe.mockResolvedValueOnce({
         role: 'librarian',
@@ -1766,6 +1770,19 @@ describe('App Router Pages, Clients & Loading Skeletons', () => {
       });
       const libAdd = await AddGate();
       expect(libAdd).toBeTruthy();
+    });
+
+    it('renders faculty profiles without an academic program and student profiles with one', async () => {
+      const page = ProfilePage();
+      const child = (page.props as { children: React.ReactElement }).children;
+      const content = child.type as () => Promise<React.ReactElement>;
+      for (const patron_type of ['faculty', 'student'] as const) {
+        mockGetMe.mockResolvedValueOnce({ role: 'patron', profile: { role: 'patron', status: 'ACTIVE', patron_type, full_name: 'Reader' } });
+        const rendered = await renderClient(await content());
+        if (patron_type === 'faculty') expect(rendered.container).not.toHaveTextContent('Academic Program');
+        else expect(rendered.container).toHaveTextContent('Academic Program');
+        cleanupClients();
+      }
     });
 
     it('gates standalone Inventory details and renders copy editing only for managers', async () => {

@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getMe } from '@/lib/auth-helpers';
-import { isStaff } from '@/lib/auth/permissions';
 import { AddBookClient } from './AddBookClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -13,11 +12,7 @@ async function AddBookGate() {
     redirect('/');
   }
 
-  const hasInventoryAccess = me.role === 'library_staff'
-    ? me.profile?.permissions?.manage_inventory === true
-    : true;
-
-  if (!isStaff(me.role, me.profile) || !hasInventoryAccess) {
+  if (me.role !== 'super_admin' && me.role !== 'librarian') {
     redirect('/dashboard');
   }
 

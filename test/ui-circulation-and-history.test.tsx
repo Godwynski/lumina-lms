@@ -1438,6 +1438,8 @@ describe('Circulation & History UI Components', () => {
       expect(handle.container).toHaveTextContent('123 Alabang Rd');
       expect(handle.container).toHaveTextContent('09171234567');
       expect(handle.container).toHaveTextContent('Important Reminders');
+      expect(handle.container).toHaveTextContent('non-transferable');
+      expect(handle.container).not.toHaveTextContent('Surrender this card');
       expect(handle.container).toHaveTextContent('Student');
     });
   });

@@ -237,7 +237,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
             label: "Inventory", 
             value: stats.totalBooks, 
             icon: Library, 
-            desc: "Current catalog total",
+            desc: "Physical copies in collection",
             href: "/inventory"
           },
           { 
@@ -411,7 +411,7 @@ export function AnalyticsClient({ statsPromise, initialSummaryPromise, initialDa
           open={modalOpen}
           onOpenChange={setModalOpen}
           variant="super_admin"
-          canManage={role === 'super_admin'}
+          canManage={role === 'super_admin' || role === 'librarian'}
         />
       )}
     </div>

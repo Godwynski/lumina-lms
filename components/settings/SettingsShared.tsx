@@ -60,7 +60,7 @@ export function AnnualResetTool() {
   const [isResetting, setIsResetting] = useState(false);
 
   const handleReset = async () => {
-    if (!confirm("This will suspend all student accounts. Proceed?")) {
+    if (!confirm("This will suspend all patron accounts (students and faculty). Proceed?")) {
       return;
     }
 
@@ -94,12 +94,12 @@ export function AnnualResetTool() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs max-w-xs">
-                Temporarily freezes student accounts at the end of the academic year until their enrollment is renewed for the next school term.
+                Temporarily freezes patron accounts (students and faculty) at the end of the academic year until their access is renewed.
               </TooltipContent>
             </Tooltip>
           </div>
           <p className="text-xs text-muted-foreground">
-            Suspends all student accounts for the new academic year.
+            Suspends all patron accounts (students and faculty) for the new academic year.
           </p>
         </div>
         <Tooltip>

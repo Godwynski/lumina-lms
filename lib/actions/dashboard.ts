@@ -134,8 +134,10 @@ export async function getDashboardStats({
       ? safeWrap(
           Promise.resolve(
             supabase
-              .from('books')
-              .select('id', { count: 'exact', head: true })
+              .from('book_copies')
+              .select('id, books!inner(is_active)', { count: 'exact', head: true })
+              .eq('books.is_active', true)
+              .in('status', ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'RESERVED'])
               .then(res => ({ count: res.count ?? 0 }))
           ),
           { count: 0 }

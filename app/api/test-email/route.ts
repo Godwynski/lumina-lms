@@ -74,4 +74,4 @@ export const POST = withAuthApi(async (request, { profile }) => {
     console.error('Test email route error:', error);
     return NextResponse.json({ error: 'Failed to send test email' }, { status: 500 });
   }
-}, { allowedRoles: ['super_admin', 'librarian'] });
+}, { allowedRoles: ['super_admin'] });

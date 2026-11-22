@@ -424,6 +424,7 @@ describe("Security Hardening Verification", () => {
       expect(JSON.stringify(await bulkRes.json())).not.toContain("postgres");
 
       // notifications/maintenance
+      setupAuth(supabase, "super_admin", "ACTIVE");
       mockRunMaintenanceTasks.mockRejectedValueOnce(new Error(secretMsg));
       const maintRes = await maintenancePost(
         new Request("http://localhost/api/notifications/maintenance", { method: "POST" })

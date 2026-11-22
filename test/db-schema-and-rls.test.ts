@@ -240,6 +240,10 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     expect(settings.get('max_borrow_limit')).toMatchObject({ value: '5', data_type: 'number' });
     expect(settings.get('loan_period_days')).toMatchObject({ value: '14', data_type: 'number' });
     expect(settings.get('hold_expiry_days')).toMatchObject({ value: '3', data_type: 'number' });
+    expect(DEFAULT_POLICIES.hold_expiry_days.value).toBe('3');
+    expect(DEFAULT_POLICIES.hold_expiry_days.example).toBe('Example: 3 days.');
+    expect(JSON.parse(DEFAULT_POLICIES.student_faq_list.value)[1].answer).toMatch(/circulation desk|librarian/i);
+    expect(JSON.parse(DEFAULT_POLICIES.student_faq_list.value)[1].answer).not.toMatch(/report action/i);
     expect(settings.get('overdue_fine_per_day')).toMatchObject({ value: '5', data_type: 'number' });
     expect(settings.get('library_closing_time')).toMatchObject({ value: '17:00', data_type: 'string' });
 
@@ -808,11 +812,24 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     );
     expect(saUpdateOther.rows).toHaveLength(0);
 
+    const otherLibrarian = student2Id;
+    await db.query("UPDATE public.profiles SET role = 'librarian', status = 'ACTIVE' WHERE id = $1", [otherLibrarian]);
+    await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET full_name = 'Changed' WHERE id = $1`, [otherLibrarian]);
+    await withRole(db, 'authenticated', librarianId, tx => tx.query(`UPDATE public.profiles SET full_name = 'Own name' WHERE id = $1`, [librarianId]));
+    await db.query("UPDATE public.profiles SET role = 'patron' WHERE id = $1", [otherLibrarian]);
+    for (const status of ['PENDING', 'INACTIVE', 'ACTIVE']) {
+      const changed = await withRole(db, 'authenticated', librarianId, tx => tx.query(`UPDATE public.profiles SET status = $1 WHERE id = $2 RETURNING status`, [status, saId]));
+      expect(changed.rows).toEqual([{ status }]);
+    }
+
     // librarian can update student status/student_id, cannot change role, permissions, or edit super_admin
     await withRole(db, 'authenticated', librarianId, async (tx) => {
-      await tx.query(`UPDATE public.profiles SET status = 'SUSPENDED' WHERE id = $1`, [student2Id]);
+      await tx.query(`UPDATE public.profiles SET status = 'INACTIVE' WHERE id = $1`, [student2Id]);
       await tx.query(`UPDATE public.profiles SET status = 'ACTIVE' WHERE id = $1`, [student2Id]);
     });
+    await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET status = 'SUSPENDED' WHERE id = $1`, [student2Id]);
+    await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET status = 'ARCHIVED' WHERE id = $1`, [student2Id]);
+    await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET status = 'INACTIVE' WHERE id = $1`, [librarianId]);
     await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET role = 'librarian' WHERE id = $1`, [student2Id]);
     await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET permissions = '{"x":true}'::jsonb WHERE id = $1`, [student2Id]);
     await expectRoleFailure(db, 'authenticated', librarianId, `UPDATE public.profiles SET full_name = 'No' WHERE id = $1`, [superAdminId]);

@@ -617,6 +617,7 @@ describe('Auth & Settings UI Components', () => {
       } as Response);
 
       const { container } = await renderClient(<AnnualResetTool />);
+      expect(container).toHaveTextContent('patron accounts (students and faculty)');
       const resetBtn = findButtonByText(container, 'Execute Reset')!;
 
       // Cancelled confirmation -> no fetch

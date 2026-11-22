@@ -20,6 +20,7 @@ async function ProfileContent() {
         address: profile?.address || null,
         phone: profile?.phone || null,
         department: profile?.department || null,
+        patron_type: profile?.patron_type || null,
         status: profile?.status || "PENDING",
         student_id: profile?.student_id || null,
         email: profile?.email || null,

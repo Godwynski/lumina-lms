@@ -154,6 +154,7 @@ describe("Admin API Route Handlers", () => {
 
       expect(res.status).toBe(200);
       expect(body.success).toBe(true);
+      expect(body.message).toMatch(/patron accounts.*students and faculty/i);
       expect(supabase.rpc).toHaveBeenCalledWith("annual_student_reset");
       expect(adminSupabase.from).toHaveBeenCalledWith("audit_logs");
       expect(adminSupabase.getTableBuilder("audit_logs").insert).toHaveBeenCalledWith(

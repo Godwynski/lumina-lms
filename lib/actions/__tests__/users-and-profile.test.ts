@@ -276,7 +276,7 @@ describe('Users, Onboarding & Profile Server Actions', () => {
       ).rejects.toThrow('Unauthorized');
 
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', null, null);
+      serverClientHelper.setTableResponse('profiles', { onboarding_completed: false }, null);
 
       const res = await submitOnboarding({
         address: '456 Elm St',
@@ -306,16 +306,43 @@ describe('Users, Onboarding & Profile Server Actions', () => {
       expect(mockRevalidatePath).toHaveBeenCalledWith('/');
     });
 
+    it('rejects a profile whose onboarding is already completed', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
+      serverClientHelper.setTableResponse('profiles', { onboarding_completed: true, status: 'ACTIVE' }, null);
+      await expect(submitOnboarding({ address: '123 Main', phone: '09171234567', department: 'CS' })).rejects.toThrow(/already completed/i);
+      expect(serverClientHelper.getTableBuilder('profiles').update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { onboarding_completed: null, status: 'ACTIVE' },
+      { onboarding_completed: false, status: 'ACTIVE' },
+      { onboarding_completed: true, status: 'PENDING' },
+    ])('accepts eligible onboarding state $onboarding_completed / $status with an atomic condition', async (profile) => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
+      const read = createMockQueryBuilder(profile);
+      const update = createMockQueryBuilder({ id: 'stu-1' });
+      queueProfileBuilders(serverClientHelper, [read, update]);
+      await expect(submitOnboarding({ address: '123 Main', phone: '09171234567', department: 'CS' })).resolves.toEqual({ success: true });
+      expect(update.or).toHaveBeenCalledWith('status.eq.PENDING,onboarding_completed.is.null,onboarding_completed.eq.false');
+    });
+
+    it('rejects when eligibility changes before the update', async () => {
+      serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
+      queueProfileBuilders(serverClientHelper, [createMockQueryBuilder({ status: 'PENDING', onboarding_completed: true }), createMockQueryBuilder(null)]);
+      await expect(submitOnboarding({ address: '123 Main', phone: '09171234567', department: 'CS' })).rejects.toThrow(/already completed/i);
+      expect(mockLogAuditActivity).not.toHaveBeenCalled();
+    });
+
     it('preserves the account status when completing an approved profile', async () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'approved-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', null, null);
+      serverClientHelper.setTableResponse('profiles', { onboarding_completed: false }, null);
       await submitOnboarding({ address: '123 Main', phone: '09171234567', department: 'CS' });
       expect(serverClientHelper.getTableBuilder('profiles').update.mock.calls[0][0]).not.toHaveProperty('status');
     });
 
     it('submitOnboarding allows faculty without department and rejects student without department', async () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'fac-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', null, null);
+      serverClientHelper.setTableResponse('profiles', { onboarding_completed: false }, null);
 
       await expect(
         submitOnboarding({ address: '123 Main', phone: '09171234567', patron_type: 'student', department: '' })
@@ -350,11 +377,14 @@ describe('Users, Onboarding & Profile Server Actions', () => {
 
     it('submitOnboarding throws when database update fails', async () => {
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'stu-1' } }, error: null });
-      serverClientHelper.setTableResponse('profiles', null, { message: 'Profile update blocked' });
+      const read = createMockQueryBuilder({ onboarding_completed: false, status: 'PENDING' });
+      const update = createMockQueryBuilder(null, { message: 'Profile update blocked' });
+      queueProfileBuilders(serverClientHelper, [read, update]);
 
       await expect(
         submitOnboarding({ address: '123', phone: '456', department: 'CS' })
       ).rejects.toThrow('Profile update blocked');
+      expect(update.update).toHaveBeenCalled();
     });
   });
 

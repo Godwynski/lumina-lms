@@ -632,6 +632,8 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
       expect((await maintenanceNotificationsPost(new Request("http://localhost/api/notifications/maintenance", { method: "POST" }))).status).toBe(403);
 
       setupAuth(supabase, "librarian");
+      expect((await maintenanceNotificationsPost(new Request("http://localhost/api/notifications/maintenance", { method: "POST" }))).status).toBe(403);
+      setupAuth(supabase, "super_admin");
       const summary = { remindersSent: 1, overdueTagged: 4, reservationsExpired: 2, errors: [] };
       mockRunMaintenanceTasks.mockResolvedValueOnce(summary);
       const okRes = await maintenanceNotificationsPost(
@@ -669,6 +671,9 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         ).status
       ).toBe(403);
 
+      setupAuth(supabase, "librarian");
+      expect((await testEmailPost(new Request("http://localhost/api/test-email", { method: "POST", body: "{}" }))).status).toBe(403);
+
       setupAuth(supabase, "super_admin", "ACTIVE", VALID_USER_UUID, null);
       const noEmail = await testEmailPost(
         new Request("http://localhost/api/test-email", { method: "POST", body: "{}" })
@@ -685,7 +690,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
     });
 
     it("sends overdue, due_soon, and test emails and maps SMTP errors cleanly", async () => {
-      setupAuth(supabase, "librarian", "ACTIVE", VALID_USER_UUID, "lib@alabang.sti.edu.ph");
+      setupAuth(supabase, "super_admin", "ACTIVE", VALID_USER_UUID, "lib@alabang.sti.edu.ph");
       mockSendOverdueEmail.mockResolvedValueOnce({ success: true, messageId: "msg-1" });
       mockSendDueSoonEmail.mockResolvedValueOnce({ success: true, messageId: "msg-2" });
       mockSendTestEmail.mockResolvedValueOnce({ success: true, messageId: "msg-3" });
@@ -717,7 +722,7 @@ describe("Catalog, Circulation, Notifications & Cron API Routes", () => {
         })
       );
       expect(testTypeRes.status).toBe(200);
-      expect(mockSendTestEmail).toHaveBeenCalledWith("lib@alabang.sti.edu.ph", "Test librarian");
+      expect(mockSendTestEmail).toHaveBeenCalledWith("lib@alabang.sti.edu.ph", "Test super_admin");
 
       // SMTP 535 helpful diagnostic
       mockSendOverdueEmail.mockResolvedValueOnce({

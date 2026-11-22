@@ -81,6 +81,7 @@ async function bootLuminaDb(): Promise<PGlite> {
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119050000_stable_borrowing_history_sort.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119043439_books_sort_indexes.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261119120000_book_copy_lifecycle.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261122120000_profile_status_guard.sql'), 'utf8'));
   return db;
 }
 
@@ -295,19 +296,43 @@ describe('Book copy acquisition and disposition', () => {
 
       const job = '00000000-0000-4000-8000-000000000001';
       await db.query('select public.catalog_import_enqueue($1,null,$2,$3)', [
-        job, 'Batch', JSON.stringify([{ mode: 'create', isbn: '9781492040347', requested_copies: 2 }]),
+        job, 'Batch', JSON.stringify([{ mode: 'create', isbn: '9781492040347', requested_copies: 2 }, { mode: 'create', isbn: '9780132350884', requested_copies: 1 }]),
       ]);
       const claim = await db.query<{ id: string; lease: string }>('select id, lease from public.catalog_import_claim()');
       const item = claim.rows[0];
       const metadata = JSON.stringify({ title: 'Imported', author: 'A' });
       await db.query('select public.catalog_import_apply_book($1,$2,$3)', [item.id, item.lease, metadata]);
       await db.query('select public.catalog_import_apply_book($1,$2,$3)', [item.id, item.lease, metadata]);
+      const second = claim.rows[1];
+      await db.query('select public.catalog_import_apply_book($1,$2,$3)', [second.id, second.lease, metadata]);
+      const auditRows = await db.query<{ id: string; details: { jobId: string } }>("select id, details from public.audit_logs where action='create_isbn_import'");
+      expect(auditRows.rows).toHaveLength(2);
+      expect(new Set(auditRows.rows.map(row => row.id)).size).toBe(2);
+      expect(auditRows.rows.every(row => row.details.jobId === job)).toBe(true);
+      await expect(db.query("update public.audit_logs set reason='changed' where id=$1", [auditRows.rows[0].id])).rejects.toThrow(/append.only/i);
+      for (const role of ['anon', 'authenticated', 'service_role']) {
+        await expect(db.transaction(async tx => {
+          await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role })]);
+          await tx.query("update public.audit_logs set reason='changed' where id=$1", [auditRows.rows[0].id]);
+        })).rejects.toThrow(/append.only/i);
+      }
+      for (const role of ['anon', 'authenticated']) {
+        await expect(db.transaction(async tx => {
+          await tx.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ role })]);
+          await tx.query('delete from public.audit_logs where id=$1', [auditRows.rows[0].id]);
+        })).rejects.toThrow(/append.only/i);
+      }
       const audit = await db.query<{ details: { copyIds: string[]; copiesCount: number } }>(
         "select details from public.audit_logs where action='create_isbn_import'");
-      expect(audit.rows).toHaveLength(1);
-      expect(audit.rows[0].details.copiesCount).toBe(2);
-      expect(new Set(audit.rows[0].details.copyIds).size).toBe(2);
+      expect(audit.rows).toHaveLength(2);
+      const twoCopies = audit.rows.find(row => row.details.copiesCount === 2);
+      expect(twoCopies).toBeDefined();
+      expect(new Set(twoCopies!.details.copyIds).size).toBe(2);
       expect((await db.query('select count(*)::int as count from public.book_copy_lifecycle')).rows[0]).toEqual({ count: 2 });
+      await withRole(db, 'service_role', null, tx => tx.query('delete from public.audit_logs where id=$1', [auditRows.rows[0].id]));
+      await db.query('delete from public.audit_logs where id=$1', [auditRows.rows[1].id]);
+      expect((await db.query("select id from public.audit_logs where action='create_isbn_import'")).rows).toHaveLength(0);
+      expect((await db.query("select has_function_privilege('authenticated', 'public.guard_audit_logs_append_only()', 'execute') as allowed")).rows[0]).toEqual({ allowed: false });
     } finally {
       await db.close();
     }
@@ -1594,11 +1619,12 @@ describe('Reservation, Search, Ownership Transfer, Analytics, Bulk & Cron RPCs',
   });
 
   it('annual_student_reset, reactivate_users_bulk, send_bulk_notifications_by_target, get_analytics_summary, and auto_checkout_forgotten_attendance work with proper RBAC', async () => {
-    // annual_student_reset: librarian & student rejected, super_admin suspends only students & their cards
+    // annual_student_reset: all patrons, including faculty, are suspended
     await expect(
       withRole(db, 'authenticated', librarian.id, (tx) => tx.query(`SELECT public.annual_student_reset()`))
     ).rejects.toThrow(/Unauthorized/);
 
+    await db.query("UPDATE public.profiles SET patron_type = 'faculty' WHERE id = $1", [student1.id]);
     const resetRes = await withRole(db, 'authenticated', admin.id, (tx) =>
       tx.query<{ cnt: number }>(`SELECT public.annual_student_reset() AS cnt`)
     );

@@ -116,12 +116,11 @@ describe('Dashboard & Analytics Server Actions', () => {
     it('gates book totals for active vs deactivated library_staff', async () => {
       // Active SA: gets totalBooks and archivedBooks, not pendingApprovals/totalUsers/overdueBorrows/readyHolds
       serverClientHelper.auth.getUser.mockResolvedValue({ data: { user: { id: 'sa-1' } }, error: null });
+      const copiesQuery = createMockQueryBuilder(null, null, 120);
       queueTableBuilders(serverClientHelper, {
         profiles: [createMockQueryBuilder({ id: 'sa-1', role: 'library_staff', status: 'ACTIVE' }, null)],
-        books: [
-          createMockQueryBuilder(null, null, 120),
-          createMockQueryBuilder(null, null, 8),
-        ],
+        book_copies: [copiesQuery],
+        books: [createMockQueryBuilder(null, null, 8)],
       });
       serverClientHelper.setTableResponse('borrowing_records', null, null, 4);
       serverClientHelper.setTableResponse('attendance', null, null, 5);
@@ -130,6 +129,9 @@ describe('Dashboard & Analytics Server Actions', () => {
 
       const activeSaStats = await getDashboardStats({ role: 'library_staff' });
       expect(activeSaStats.totalBooks).toBe(120);
+      expect(copiesQuery.select).toHaveBeenCalledWith('id, books!inner(is_active)', { count: 'exact', head: true });
+      expect(copiesQuery.in).toHaveBeenCalledWith('status', ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'RESERVED']);
+      expect(copiesQuery.eq).toHaveBeenCalledWith('books.is_active', true);
       expect(activeSaStats.archivedBooks).toBe(8);
       expect(activeSaStats.pendingApprovals).toBe(0);
       expect(activeSaStats.totalUsers).toBe(0);
@@ -158,10 +160,8 @@ describe('Dashboard & Analytics Server Actions', () => {
           createMockQueryBuilder(null, null, 34), // activeBorrows
           createMockQueryBuilder(null, null, 7), // overdueBorrows
         ],
-        books: [
-          createMockQueryBuilder(null, null, 500), // totalBooks
-          createMockQueryBuilder(null, null, 22), // archivedBooks
-        ],
+        book_copies: [createMockQueryBuilder(null, null, 500)],
+        books: [createMockQueryBuilder(null, null, 22)],
         library_cards: [createMockQueryBuilder(null, null, 9)], // pendingApprovals
         attendance: [createMockQueryBuilder(null, null, 41)], // attendanceToday
         reservations: [createMockQueryBuilder(null, null, 6)], // readyHolds

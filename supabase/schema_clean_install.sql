@@ -783,6 +783,13 @@ BEGIN
 
   -- Librarians may also change status and student_id (approvals, corrections)
   IF v_actor_role = 'librarian'::public.user_role THEN
+    IF OLD.role = 'librarian'::public.user_role AND OLD.id IS DISTINCT FROM (SELECT auth.uid()) THEN
+      RAISE EXCEPTION 'Cannot edit another librarian profile';
+    END IF;
+    IF NEW.status IS DISTINCT FROM OLD.status AND
+       (OLD.role NOT IN ('patron', 'library_staff') OR NEW.status NOT IN ('ACTIVE', 'PENDING', 'INACTIVE')) THEN
+      RAISE EXCEPTION 'Cannot modify status: unauthorized status escalation';
+    END IF;
     RETURN NEW;
   END IF;
 
@@ -798,6 +805,20 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.guard_audit_logs_append_only()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND COALESCE((auth.jwt() ->> 'role'), '') NOT IN ('anon', 'authenticated') THEN
+    RETURN OLD;
+  END IF;
+  RAISE EXCEPTION 'Audit logs are append-only';
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.guard_audit_logs_append_only() FROM PUBLIC, anon, authenticated;
+CREATE OR REPLACE TRIGGER audit_logs_append_only
+  BEFORE UPDATE OR DELETE ON public.audit_logs
+  FOR EACH ROW EXECUTE FUNCTION public.guard_audit_logs_append_only();
 
 -- 7. TABLE TRIGGERS
 CREATE OR REPLACE TRIGGER trg_auto_student_id
@@ -1446,7 +1467,7 @@ BEGIN
 END;
 $$;
 
--- M8: Annual student reset in one atomic statement (no 1,000-row cap)
+-- M8: Annual reset suspends all patrons, including students and faculty (no 1,000-row cap)
 CREATE OR REPLACE FUNCTION public.annual_student_reset()
  RETURNS integer
  LANGUAGE plpgsql
@@ -1482,6 +1503,7 @@ BEGIN
   RETURN v_count;
 END;
 $$;
+COMMENT ON FUNCTION public.annual_student_reset() IS 'Suspends all patron accounts, including students and faculty.';
 
 -- WP6 #10: Archive eligible completed borrowing_records and attendance rows older than p_before
 CREATE OR REPLACE FUNCTION public.archive_old_logs(p_before DATE)
@@ -1915,15 +1937,12 @@ BEGIN
     )
     SELECT coalesce(jsonb_agg(id), '[]'::jsonb) INTO v_copy_ids FROM created;
     IF jsonb_array_length(v_copy_ids) > 0 THEN
-      INSERT INTO public.audit_logs AS audit (id, admin_id, entity_type, entity_id, action, reason, details)
-      SELECT i.job_id, j.created_by, 'book_copy', NULL, 'create_isbn_import',
+      INSERT INTO public.audit_logs (admin_id, entity_type, entity_id, action, reason, details)
+      SELECT j.created_by, 'book_copy', NULL, 'create_isbn_import',
         'Created copies from an ISBN import',
         jsonb_build_object('bookIds', jsonb_build_array(target), 'copyIds', v_copy_ids, 'copiesCount', jsonb_array_length(v_copy_ids), 'jobId', i.job_id)
       FROM public.catalog_import_jobs j WHERE j.id = i.job_id
-      ON CONFLICT (id) DO UPDATE SET details = audit.details || jsonb_build_object(
-        'bookIds', (audit.details->'bookIds') || (EXCLUDED.details->'bookIds'),
-        'copyIds', (audit.details->'copyIds') || (EXCLUDED.details->'copyIds'),
-        'copiesCount', (audit.details->>'copiesCount')::int + (EXCLUDED.details->>'copiesCount')::int);
+;
     END IF;
   END IF;
   UPDATE public.catalog_import_items

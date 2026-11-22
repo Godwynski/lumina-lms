@@ -10,4 +10,4 @@ export const POST = withAuthApi(async () => {
     console.error('Maintenance task error:', error);
     return NextResponse.json({ error: 'Failed to run maintenance tasks' }, { status: 500 });
   }
-}, { allowedRoles: ['super_admin', 'librarian'] });
+}, { allowedRoles: ['super_admin'] });

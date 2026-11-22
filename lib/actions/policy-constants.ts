@@ -45,16 +45,16 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
     validation: { min: 0, max: 500, type: "number" }
   },
   hold_expiry_days: { 
-    value: "7", 
+    value: "3",
     label: "Pickup Hold Window",
     description: "How many days a reserved book stays on the pickup shelf before the reservation is automatically cancelled and offered to the next student.",
-    example: "Example: 7 days.",
+    example: "Example: 3 days.",
     category: "reservations",
     icon: "Clock",
     validation: { min: 1, max: 14, type: "number" }
   },
   max_reservations_per_student: { 
-    value: "3", 
+    value: "3",
     label: "Maximum Active Holds",
     description: "The maximum number of book hold requests a student can place at the same time.",
     example: "Example: 3 books.",
@@ -65,7 +65,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyConfig> = {
   student_faq_list: { 
     value: JSON.stringify([
       { question: "How do I borrow a book?", answer: "Open the catalog, find a title, then present your digital library card QR at the circulation desk for checkout." },
-      { question: "What if the catalog says available but I cannot find it?", answer: "Open the book details and use the report action. The librarian queue will be notified for shelf verification." },
+      { question: "What if the catalog says available but I cannot find it?", answer: "Tell the circulation desk or a librarian so they can verify the shelf." },
       { question: "Can I use the card on my phone only?", answer: "Yes. The QR on your digital card is valid. You can also export a copy from the My Card page if needed." },
       { question: "Where can I see my current borrows?", answer: "Use My Borrowing from the dashboard quick actions to review active and past borrowing records." }
     ]),

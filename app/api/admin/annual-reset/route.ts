@@ -26,7 +26,7 @@ export const POST = withAuthApi(async (req, { supabase, user }) => {
     "system",
     null,
     "annual_reset",
-    "Mass suspension of all student accounts for the new school year.",
+    "Mass suspension of all patron accounts (students and faculty) for the new school year.",
     {
       affectedCount: affectedCount ?? 0,
       role: "patron",
@@ -38,6 +38,6 @@ export const POST = withAuthApi(async (req, { supabase, user }) => {
 
   return NextResponse.json({
     success: true,
-    message: "Annual reset complete. All student accounts have been suspended."
+    message: "Annual reset complete. All patron accounts (students and faculty) have been suspended."
   });
 }, { allowedRoles: ["super_admin"] });

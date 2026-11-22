@@ -415,7 +415,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
     // Scoped getDashboardStats skips unused tables
     serverSupa.setTableResponse('borrowing_records', null, null, 7);
     serverSupa.setTableResponse('attendance', null, null, 19);
-    serverSupa.setTableResponse('books', null, null, 340);
+    serverSupa.setTableResponse('book_copies', null, null, 340);
     serverSupa.setTableResponse('profiles', {
       id: 'admin-1',
       role: 'super_admin',
@@ -439,6 +439,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
     setupStaffAuth(serverSupa, 'super_admin', 'admin-1');
     serverSupa.setTableResponse('borrowing_records', null, null, 14);
     serverSupa.setTableResponse('attendance', null, null, 42);
+    serverSupa.setTableResponse('book_copies', null, null, 520);
     serverSupa.setTableResponse('books', [
       { id: 'book-99', author: 'Frank Herbert', isbn: '9780441172719' },
     ], null, 520);
@@ -475,7 +476,7 @@ describe('P1 Server Data & Caching Optimizations', () => {
     expect(container).toHaveTextContent('Frank Herbert');
     expect(container).toHaveTextContent('Visits10Check-ins in selected period');
     expect(container).toHaveTextContent('Loans issued5Loans in selected period');
-    expect(container).toHaveTextContent('Inventory520Current catalog total');
+    expect(container).toHaveTextContent('Inventory520Physical copies in collection');
     // Only the 1 server RPC call ran — no extra client round-trip after hydration!
     const rpcCallsBeforeSwitch = serverSupa.rpc.mock.calls.filter(
       ([fn]) => fn === 'get_analytics_summary_window'

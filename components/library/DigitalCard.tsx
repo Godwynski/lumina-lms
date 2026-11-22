@@ -307,7 +307,7 @@ function CardBack({
             <ol className={cn("list-decimal space-y-0.5 pl-5 font-sans leading-tight text-foreground", exportMode ? "pl-6 text-[11px]" : "sm:pl-6 text-[9px] sm:text-[11px]")}>
               <li>This card is non-transferable.</li>
               <li>Present this card every time you borrow books and other library materials.</li>
-              <li>Surrender this card at the end of the semester for clearance.</li>
+              <li>Present this digital card at the desk for borrowing and attendance.</li>
             </ol>
           </div>
 
