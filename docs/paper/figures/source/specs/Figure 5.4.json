@@ -1,0 +1,123 @@
+{
+ "id": "Figure 5.4",
+ "title": "Librarian Analytics Flowchart",
+ "rankdir": "TB",
+ "nodes": [
+  {
+   "id": "c_in",
+   "type": "offpage",
+   "label": "C"
+  },
+  {
+   "id": "range",
+   "type": "io",
+   "label": "Analytics: select date range"
+  },
+  {
+   "id": "display",
+   "type": "process",
+   "label": "View KPIs, 3 charts & top books"
+  },
+  {
+   "id": "act",
+   "type": "decision",
+   "label": "Select action?"
+  },
+  {
+   "id": "ov_dec",
+   "type": "decision",
+   "label": "Drill down or export?"
+  },
+  {
+   "id": "drill",
+   "type": "process",
+   "label": "Inspect chart slice or book"
+  },
+  {
+   "id": "ov_exp",
+   "type": "document",
+   "label": "Export Excel or print"
+  },
+  {
+   "id": "rb",
+   "type": "process",
+   "label": "Report Builder: datasets & sections"
+  },
+  {
+   "id": "rb_exp",
+   "type": "document",
+   "label": "Export PDF, Excel or CSV"
+  },
+  {
+   "id": "logout",
+   "type": "terminator",
+   "label": "Log Out"
+  },
+  {
+   "id": "c_out",
+   "type": "offpage",
+   "label": "C"
+  }
+ ],
+ "edges": [
+  {
+   "from": "c_in",
+   "to": "range"
+  },
+  {
+   "from": "range",
+   "to": "display"
+  },
+  {
+   "from": "display",
+   "to": "act"
+  },
+  {
+   "from": "act",
+   "to": "ov_dec",
+   "label": "Overview",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "act",
+   "to": "rb",
+   "label": "Report Builder",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "act",
+   "to": "logout",
+   "label": "Log Out",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "ov_dec",
+   "to": "ov_exp",
+   "label": "Export / Print",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "ov_dec",
+   "to": "drill",
+   "label": "Drill Down",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "drill",
+   "to": "c_out"
+  },
+  {
+   "from": "ov_exp",
+   "to": "c_out"
+  },
+  {
+   "from": "rb",
+   "to": "rb_exp"
+  },
+  {
+   "from": "rb_exp",
+   "to": "c_out"
+  }
+ ],
+ "nodeSpacing": 36
+}

@@ -1,0 +1,199 @@
+{
+ "id": "Figure 2.1",
+ "title": "Lumina LMS Data Flow Diagram (Level 1 - Access & Catalog)",
+ "rankdir": "LR",
+ "keepOrder": false,
+ "nodeSpacing": 20,
+ "layerSpacing": 24,
+ "nodes": [
+  {
+   "id": "patron",
+   "type": "external",
+   "label": "Patron",
+   "partition": 0
+  },
+  {
+   "id": "staff",
+   "type": "external",
+   "label": "Library Staff",
+   "partition": 0
+  },
+  {
+   "id": "lib",
+   "type": "external",
+   "label": "Librarian",
+   "partition": 0
+  },
+  {
+   "id": "sa",
+   "type": "external",
+   "label": "Super Administrator",
+   "partition": 0
+  },
+  {
+   "id": "p1",
+   "type": "dfdprocess",
+   "num": "1.0",
+   "label": "Auth & Users",
+   "partition": 1
+  },
+  {
+   "id": "p2",
+   "type": "dfdprocess",
+   "num": "2.0",
+   "label": "Catalog & Holds",
+   "partition": 1
+  },
+  {
+   "id": "o365",
+   "type": "external",
+   "label": "Microsoft O365",
+   "partition": 2
+  },
+  {
+   "id": "apis",
+   "type": "external",
+   "label": "Book Metadata APIs",
+   "partition": 2
+  },
+  {
+   "id": "d1",
+   "type": "datastore",
+   "num": "D1",
+   "label": "Profiles & Cards",
+   "partition": 2
+  },
+  {
+   "id": "d2",
+   "type": "datastore",
+   "num": "D2",
+   "label": "Books, Copies & Holds",
+   "partition": 2
+  },
+  {
+   "id": "d3",
+   "type": "datastore",
+   "num": "D3",
+   "label": "Borrowing & Visits",
+   "partition": 2
+  },
+  {
+   "id": "d4",
+   "type": "datastore",
+   "num": "D4",
+   "label": "Policies, Alerts & Audit",
+   "partition": 2
+  }
+ ],
+ "edges": [
+  {
+   "from": "patron",
+   "to": "p1",
+   "label": "Onboarding profile"
+  },
+  {
+   "from": "p1",
+   "to": "patron",
+   "label": "Digital card"
+  },
+  {
+   "from": "patron",
+   "to": "p2",
+   "label": "Queries & holds"
+  },
+  {
+   "from": "p2",
+   "to": "patron",
+   "label": "Catalog & holds"
+  },
+  {
+   "from": "staff",
+   "to": "p1",
+   "label": "Profile setup"
+  },
+  {
+   "from": "staff",
+   "to": "p2",
+   "label": "Queries & holds"
+  },
+  {
+   "from": "p2",
+   "to": "staff",
+   "label": "Inventory & QR"
+  },
+  {
+   "from": "lib",
+   "to": "p1",
+   "label": "Approvals & edits"
+  },
+  {
+   "from": "lib",
+   "to": "p2",
+   "label": "Catalog & copies"
+  },
+  {
+   "from": "sa",
+   "to": "p1",
+   "label": "Roles & permissions"
+  },
+  {
+   "from": "sa",
+   "to": "p2",
+   "label": "Catalog & copies"
+  },
+  {
+   "from": "p1",
+   "to": "o365",
+   "label": "OAuth request"
+  },
+  {
+   "from": "o365",
+   "to": "p1",
+   "label": "O365 identity"
+  },
+  {
+   "from": "p2",
+   "to": "apis",
+   "label": "ISBN lookup"
+  },
+  {
+   "from": "apis",
+   "to": "p2",
+   "label": "Book metadata"
+  },
+  {
+   "from": "p1",
+   "to": "d1",
+   "label": "Users & cards",
+   "bidirectional": true
+  },
+  {
+   "from": "p1",
+   "to": "d4",
+   "label": "User audit"
+  },
+  {
+   "from": "p2",
+   "to": "d2",
+   "label": "Books & holds",
+   "bidirectional": true
+  },
+  {
+   "from": "p2",
+   "to": "d4",
+   "label": "Rules & audit",
+   "bidirectional": true
+  },
+  {
+   "from": "d1",
+   "to": "p2",
+   "label": "Patron status"
+  },
+  {
+   "from": "d3",
+   "to": "p2",
+   "label": "Unpaid fines"
+  }
+ ],
+ "labelWrap": 15
+}

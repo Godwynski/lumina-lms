@@ -1,13 +1,14 @@
 # Capstone 2 Paper vs. Lumina LMS — Alignment Audit
 
-**Paper:** `capstone 2 Docu.docx` (proposal dated May 23, 2026). Line refs `Lnnn` = extracted text lines.
+**Paper:** audited on `capstone 2 Docu.docx` (proposal dated May 23, 2026); line refs `Lnnn` = its extracted text lines. The latest paper is now the Capstone 2 Manuscript (`docs/paper/capstone-2-manuscript.docx`).
 **System:** `development` @ a7bb0c2. Code is the source of truth.
 **Method:** Gemini 4 Neon and GPT-6.1 Sol audited independently, then cross-examined each other's findings (confirm / dispute / re-grade) and did a missed-items sweep. Claude adjudicated disagreements and spot-checked every system-bug claim in code. Read-only; tests not run.
 
 ## Status (2026-11-22)
 - **Section B (system bugs):** fixed in commit `e871280`, together with the Inventory KPI change (it now counts physical copies). On owner decision, S1 was kept as is: the reset covers all patrons, and only the wording changed.
-- **Section A (paper):** fixed as tracked changes in `docs/paper/capstone-2-revised-tracked.docx` (347 changes; see `docs/paper/capstone-2-change-log.md`). P1 (demo login) is out of scope: demo access is removed for the defense and the paper stays O365-only.
-- **Still open for the team:** redraw figures 4.4, 4.7, 5.4, 5.7, 6.5 and 7.2; add or justify flowcharts for Librarian Audit Logs, staff Catalog, Report Builder and Notifications; delete the unused OTP notation row; update the TOC and List of Figures fields in Word.
+- **Section A (paper):** fixed as tracked changes in the Manuscript, `docs/paper/capstone-2-manuscript-revised-tracked.docx` (397 changes; see `docs/paper/capstone-2-manuscript-change-log.md`). P1 (demo login) is out of scope: demo access is removed for the defense and the paper stays O365-only.
+- **Figures (2026-11-23):** all figures redrawn from the current system as editable draw.io files in `docs/paper/figures/`. The ERD is now Figures 1–1.3 and the Level 1 DFD is Figure 2.1 in three parts; the new captions still have to be added in Word.
+- **Still open for the team:** add or justify flowcharts for Librarian Audit Logs, staff Catalog, Report Builder and Notifications; delete the unused OTP notation row; update the TOC and List of Figures fields in Word.
 
 Severity: **Critical** = paper promises something the system lacks or contradicts (panel will catch it). **Major** = wrong rule, permission, workflow or metric. **Minor** = naming / wording / editorial.
 

@@ -1,0 +1,39 @@
+{
+  "id": "Figure 6.6",
+  "title": "Library Staff Borrowing Logs Flowchart",
+  "rankdir": "TB",
+  "nodeSpacing": 28,
+  "layerSpacing": 30,
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "D" },
+    { "id": "perm", "type": "decision", "label": "Active & manage_circulation?" },
+    { "id": "fallback", "type": "subprocess", "label": "My Borrowing\n(Figure 6.5)" },
+    { "id": "filter", "type": "io", "label": "Search or filter Borrowing Logs" },
+    { "id": "action", "type": "decision", "label": "Select action?" },
+    { "id": "settleMode", "type": "decision", "label": "Fine resolution?" },
+    { "id": "paid", "type": "process", "label": "(Return &) mark Paid" },
+    { "id": "remarks", "type": "io", "label": "Enter remarks\n(min 5 chars)" },
+    { "id": "condoned", "type": "process", "label": "(Return &) mark Condoned" },
+    { "id": "receivable", "type": "process", "label": "Return only;\nkeep Receivable" },
+    { "id": "details", "type": "process", "label": "View loan & borrower details" },
+    { "id": "end", "type": "offpage", "label": "D" }
+  ],
+  "edges": [
+    { "from": "start", "to": "perm" },
+    { "from": "perm", "to": "filter", "label": "Yes", "exitSide": "SOUTH" },
+    { "from": "perm", "to": "fallback", "label": "No", "exitSide": "EAST" },
+    { "from": "fallback", "to": "end" },
+    { "from": "filter", "to": "action" },
+    { "from": "action", "to": "settleMode", "label": "Return / Settle", "exitSide": "SOUTH" },
+    { "from": "action", "to": "details", "label": "Details", "exitSide": "WEST" },
+    { "from": "action", "to": "end", "label": "Done", "exitSide": "EAST" },
+    { "from": "settleMode", "to": "receivable", "label": "Receivable", "exitSide": "SOUTH" },
+    { "from": "settleMode", "to": "remarks", "label": "Condoned", "exitSide": "EAST" },
+    { "from": "settleMode", "to": "paid", "label": "Paid", "exitSide": "WEST" },
+    { "from": "paid", "to": "end" },
+    { "from": "remarks", "to": "condoned" },
+    { "from": "condoned", "to": "end" },
+    { "from": "receivable", "to": "end" },
+    { "from": "details", "to": "end" }
+  ]
+}

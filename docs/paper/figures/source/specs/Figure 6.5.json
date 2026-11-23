@@ -1,0 +1,30 @@
+{
+  "id": "Figure 6.5",
+  "title": "Library Staff My Borrowing Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "D" },
+    { "id": "open", "type": "process", "label": "Open My Borrowing" },
+    { "id": "list", "type": "process", "label": "Display own loans, status, and penalty column" },
+    { "id": "action", "type": "decision", "label": "Filter, export, or log out?" },
+    { "id": "filter", "type": "io", "label": "Search or filter status / Settlements (Paid/Condoned)" },
+    { "id": "filtered", "type": "process", "label": "View filtered records or open book details" },
+    { "id": "exportDec", "type": "decision", "label": "Export or print records?" },
+    { "id": "exportDoc", "type": "document", "label": "Export Excel (.xlsx) or print" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "end", "type": "offpage", "label": "D" }
+  ],
+  "edges": [
+    { "from": "start", "to": "open" },
+    { "from": "open", "to": "list" },
+    { "from": "list", "to": "action" },
+    { "from": "action", "to": "filter", "label": "Filter / Search" },
+    { "from": "action", "to": "exportDoc", "label": "Export / Print" },
+    { "from": "action", "to": "logout", "label": "Log Out" },
+    { "from": "filter", "to": "filtered" },
+    { "from": "filtered", "to": "exportDec" },
+    { "from": "exportDec", "to": "end", "label": "No", "exitSide": "SOUTH" },
+    { "from": "exportDec", "to": "exportDoc", "label": "Yes", "exitSide": "EAST" },
+    { "from": "exportDoc", "to": "end" }
+  ]
+}

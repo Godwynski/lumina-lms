@@ -1,0 +1,33 @@
+{
+  "id": "Figure 6",
+  "title": "Library Staff Dashboard Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "D" },
+    { "id": "dash", "type": "process", "label": "Open Library Staff Dashboard" },
+    { "id": "overview", "type": "process", "label": "View Digital Card, announcements, and FAQs" },
+    { "id": "action", "type": "decision", "label": "Select dashboard section?" },
+    { "id": "perm", "type": "decision", "label": "Active with desk permissions?" },
+    { "id": "desk", "type": "process", "label": "Open Circulation Desk, Attendance Logs, or Catalog" },
+    { "id": "activity", "type": "process", "label": "View Current Borrows (with fines), Reservations, Attendance" },
+    { "id": "cancelDec", "type": "decision", "label": "Cancel a reservation?" },
+    { "id": "doCancel", "type": "process", "label": "Cancel reservation and update queue" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "end", "type": "offpage", "label": "D" }
+  ],
+  "edges": [
+    { "from": "start", "to": "dash" },
+    { "from": "dash", "to": "overview" },
+    { "from": "overview", "to": "action" },
+    { "from": "action", "to": "perm", "label": "Desk Shortcuts" },
+    { "from": "action", "to": "activity", "label": "My Activity" },
+    { "from": "action", "to": "logout", "label": "Log Out" },
+    { "from": "perm", "to": "desk", "label": "Yes" },
+    { "from": "perm", "to": "end", "label": "No" },
+    { "from": "desk", "to": "end" },
+    { "from": "activity", "to": "cancelDec" },
+    { "from": "cancelDec", "to": "doCancel", "label": "Yes" },
+    { "from": "cancelDec", "to": "end", "label": "No" },
+    { "from": "doCancel", "to": "end" }
+  ]
+}

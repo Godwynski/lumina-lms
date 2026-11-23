@@ -1,0 +1,133 @@
+{
+ "id": "Figure 4.1",
+ "title": "Super Administrator Inventory Flowchart",
+ "rankdir": "TB",
+ "nodes": [
+  {
+   "id": "b_in",
+   "type": "offpage",
+   "label": "B"
+  },
+  {
+   "id": "inv",
+   "type": "process",
+   "label": "Inventory: search & filter titles"
+  },
+  {
+   "id": "act",
+   "type": "decision",
+   "label": "Action?"
+  },
+  {
+   "id": "det",
+   "type": "process",
+   "label": "View book, copies & queue"
+  },
+  {
+   "id": "ed",
+   "type": "decision",
+   "label": "Edit or QR?"
+  },
+  {
+   "id": "edit",
+   "type": "process",
+   "label": "Edit book, copies or disposal"
+  },
+  {
+   "id": "qr",
+   "type": "document",
+   "label": "Print QR labels"
+  },
+  {
+   "id": "add",
+   "type": "process",
+   "label": "Add via ISBN or batch import"
+  },
+  {
+   "id": "save",
+   "type": "process",
+   "label": "Auto-generate accession nos."
+  },
+  {
+   "id": "exp",
+   "type": "document",
+   "label": "Export catalog (Excel, CSV, JSON, ZIP)"
+  },
+  {
+   "id": "b_out",
+   "type": "offpage",
+   "label": "B"
+  }
+ ],
+ "edges": [
+  {
+   "from": "b_in",
+   "to": "inv"
+  },
+  {
+   "from": "inv",
+   "to": "act"
+  },
+  {
+   "from": "act",
+   "to": "det",
+   "label": "Book Details",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "act",
+   "to": "add",
+   "label": "Add / Batch",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "act",
+   "to": "exp",
+   "label": "Export",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "det",
+   "to": "ed"
+  },
+  {
+   "from": "ed",
+   "to": "edit",
+   "label": "Edit / Copies",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "ed",
+   "to": "qr",
+   "label": "Print QR",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "ed",
+   "to": "b_out",
+   "label": "Back",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "add",
+   "to": "save"
+  },
+  {
+   "from": "save",
+   "to": "b_out"
+  },
+  {
+   "from": "edit",
+   "to": "b_out"
+  },
+  {
+   "from": "qr",
+   "to": "b_out"
+  },
+  {
+   "from": "exp",
+   "to": "b_out"
+  }
+ ],
+ "layerSpacing": 38
+}

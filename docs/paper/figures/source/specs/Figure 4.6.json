@@ -1,0 +1,33 @@
+{
+  "id": "Figure 4.6",
+  "title": "Super Administrator Attendance Logs Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "b_in", "type": "offpage", "label": "B" },
+    { "id": "task", "type": "decision", "label": "Select action?" },
+    { "id": "scan", "type": "io", "label": "Choose In/Out; scan or enter ID" },
+    { "id": "active", "type": "decision", "label": "Card & account Active?" },
+    { "id": "sessionOk", "type": "decision", "label": "Valid In/Out state?" },
+    { "id": "record", "type": "process", "label": "Record visit (close stale)" },
+    { "id": "err", "type": "process", "label": "Show attendance error" },
+    { "id": "search", "type": "io", "label": "Search patron or date range" },
+    { "id": "display", "type": "process", "label": "View logs & status badges" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "b_out", "type": "offpage", "label": "B" }
+  ],
+  "edges": [
+    { "from": "b_in", "to": "task" },
+    { "from": "task", "to": "scan", "label": "Log Visit", "exitSide": "SOUTH" },
+    { "from": "task", "to": "search", "label": "Filter Logs", "exitSide": "WEST" },
+    { "from": "task", "to": "logout", "label": "Log Out", "exitSide": "EAST" },
+    { "from": "scan", "to": "active" },
+    { "from": "active", "to": "sessionOk", "label": "Yes", "exitSide": "SOUTH" },
+    { "from": "active", "to": "err", "label": "No", "exitSide": "EAST" },
+    { "from": "sessionOk", "to": "record", "label": "Yes", "exitSide": "SOUTH" },
+    { "from": "sessionOk", "to": "err", "label": "No", "exitSide": "EAST" },
+    { "from": "record", "to": "b_out" },
+    { "from": "err", "to": "b_out" },
+    { "from": "search", "to": "display" },
+    { "from": "display", "to": "b_out" }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+ "id": "Figure 5.7",
+ "title": "Librarian System Policies Flowchart",
+ "rankdir": "TB",
+ "nodes": [
+  {
+   "id": "c_in",
+   "type": "offpage",
+   "label": "C"
+  },
+  {
+   "id": "pol",
+   "type": "process",
+   "label": "Open System Policies (no lifecycle tools)"
+  },
+  {
+   "id": "sec",
+   "type": "decision",
+   "label": "Select section?"
+  },
+  {
+   "id": "edit",
+   "type": "io",
+   "label": "Edit loan, fine, hold, hours, reminder, program & FAQ settings"
+  },
+  {
+   "id": "reason",
+   "type": "io",
+   "label": "Enter reason (min 10 chars)"
+  },
+  {
+   "id": "commit",
+   "type": "process",
+   "label": "Commit settings & log audit"
+  },
+  {
+   "id": "cats",
+   "type": "process",
+   "label": "Edit categories or broadcast"
+  },
+  {
+   "id": "logout",
+   "type": "terminator",
+   "label": "Log Out"
+  },
+  {
+   "id": "c_out",
+   "type": "offpage",
+   "label": "C"
+  }
+ ],
+ "edges": [
+  {
+   "from": "c_in",
+   "to": "pol"
+  },
+  {
+   "from": "pol",
+   "to": "sec"
+  },
+  {
+   "from": "sec",
+   "to": "edit",
+   "label": "Settings",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "sec",
+   "to": "cats",
+   "label": "Categories / Broadcast",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "sec",
+   "to": "logout",
+   "label": "Log Out",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "edit",
+   "to": "reason"
+  },
+  {
+   "from": "reason",
+   "to": "commit"
+  },
+  {
+   "from": "commit",
+   "to": "c_out"
+  },
+  {
+   "from": "cats",
+   "to": "c_out"
+  }
+ ]
+}

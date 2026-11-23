@@ -1,0 +1,1428 @@
+[p0] A WEB-BASED LIBRARY BOOK RESERVATION, BORROWING, AND INVENTORY MANAGEMENT SYSTEM WITH QR-BASED SCANNING FOR STI COLLEGE ALABANG
+[p3] A Capstone Project
+[p4] Presented to the Faculty of the
+[p5] Information and Communications Technology Program
+[p6] STI College Alabang
+[p8] In Partial Fulfilment
+[p9] of the Requirements for the Degree
+[p10] Bachelor of Science in Information Technology
+[p11] Dadea, Jerico B.
+[p12] Floriano, Kayle Andrew P.
+[p13] Neri, Godwyn O.
+[p14] Resurreccion, Rhed R.Tolentino, Kenneth James B
+[p19] December 5, 2026
+[p21] ENDORSEMENT FORM FOR ORAL DEFENSE
+[p24] TITLE OF RESEARCH: 	TITLE OF RESEARCH: A WEB-BASED LIBRARY BOOK RESERVATION, BORROWING, AND INVENTORY MANAGEMENT SYSTEM WITH QR-BASED SCANNING FOR STI COLLEGE ALABANG
+[p27] NAME OF PROPONENTS: Dadea, Jerico B.
+[p28] Floriano, Kayle Andrew P.
+[p29] Neri, Godwyn O
+[p30] Resurreccion, Rhed R.
+[p31] Tolentino, Kenneth James B.
+[p35] In Partial Fulfilment of the Requirements
+[p36] for the degree Bachelor of Science in Information Technology
+[p37] has been examined and is recommended for Oral Defense.
+[p41] ENDORSED BY:
+[p44] Mr. John Renaund L. BaybayCapstone Project Adviser
+[p46] APPROVED FOR ORAL DEFENSE:
+[p50] Mr. Richard Rodney T. IbarretaCapstone Project Coordinator
+[p54] NOTED BY:
+[p58] Mr. Richard Rodney T. Ibarreta Program Head
+[p61] December 5, 2026
+[p63] APPROVAL SHEET
+[p64] This capstone project titled A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang, prepared and submitted by Jerico B. Dadea, Kayle Andrew P. Floriano, Godwyn O. Neri, Rhed R. Resurreccion, and Kenneth James B. Tolentino in partial fulfillment of the requirements for the degree of Bachelor of Science in Information Technology, has been examined and is recommended for acceptance and approval.
+[p65] Mr. John Renaund L. Baybay
+[p66] Capstone Project Adviser
+[p67] Accepted and approved by the Capstone Project Review Panel
+[p68] in partial fulfillment of the requirements for the degree of
+[p69] Bachelor of Science in Information Technology
+[p71][tbl] Mr. Ronjo Lauron
+[p72][tbl] Mr. John Lloyd Deang
+[p73][tbl] Panel Member
+[p74][tbl] Panel Member
+[p76] Ms. Darryl Pauline Nietes
+[p77] Lead Panelist
+[p79] Noted:
+[p80][tbl] Mr. Richard Rodney T. Ibarreta
+[p81][tbl] Mr. Richard Rodney T. Ibarreta
+[p82][tbl] Capstone Project Coordinator
+[p83][tbl] Program Head
+[p85] December 5, 2026
+[p86] Acknowledgements
+[p87] The researchers would like to express their deepest gratitude to all those who have supported this capstone project.
+[p88] First and foremost, the researchers would like to thank the advisor of this project, Mr. John renaund l. Baybay, for his invaluable guidance, encouragement, and continuous support. His expertise, constructive feedback, and unwavering patience have been essential to the success of this project.
+[p89] The researchers would also like to extend their sincere appreciation to Mr. Ricson M Ricardo, the client for this project, for providing the proponents the opportunity to work on such an engaging and meaningful project. His collaboration, insightful feedback, and trust in this work have been vital in shaping the direction and outcome of this project. The knowledge and resources he shared have been invaluable.
+[p91] Additionally, the researchers would like to acknowledge the contributions of their colleagues, friends, and family members. Their feedback, moral support, and understanding have helped the proponents to stay focused and motivated during the challenging phase of this project. Finally, the researchers are deeply grateful to STI COLLEGE ALABANG for providing resources and an environment that have facilitated the academic and professional growth throughout this journey.
+[p92] This capstone project would not have been possible without the encouragement and support of all these individuals and institutions.
+[p93] Abstract
+[p94] Title of research:	TITLE OF RESEARCH: A WEB-BASED LIBRARY BOOK RESERVATION, BORROWING, AND INVENTORY MANAGEMENT SYSTEM WITH QR-BASED SCANNING FOR STI COLLEGE ALABANG
+[p96] Researchers:		Dadea, Jerico B.
+[p97] Floriano, Kayle Andrew P.
+[p98] Neri, Godwyn O
+[p99] Resurreccion, Rhed R.
+[p100] Tolentino, Kenneth James B
+[p102] Degree:		Bachelor of Science in Information Technology
+[p104] Date of Completion:	<Month year of graduation>
+[p106] Keywords:	Library Book Reservation, Borrowing, Inventory Management, QR Based Scanning
+[p107] Lumina, a library book reservation, borrowing, and inventory management system are crucial aspects of academic administration in STI College Alabang, ensuring that educational institutions operate efficiently while meeting the needs of the faculty and Patrons. This capstone project aims to explore the challenges and solutions in creating optimized tracking that balances book availability, borrowing queues, inventory counts, and conflict resolutions.
+[p108] The study also evaluates QR-based scanning integration to prevent manual data entry errors while ensuring a balanced distribution of library resources.
+[p109] By leveraging web hosting and securing a dedicated domain, the project aims to establish a widely secure platform for day-to-day operations. The adoption of a web-based application framework aligns with institutional standards, providing a polished and professional interface for all users.
+[p110] The primary objective is to offer a system that supports strategic tasks, improves utilization, enhances Patron learning experience, and addresses the academic needs of Patrons.
+[p111] Table of Contents
+[p113][tbl] Page
+[p114][tbl] Title Page
+[p115][tbl] i
+[p116][tbl] Endorsement form for Oral Defense
+[p117][tbl] ii
+[p118][tbl] Abstract
+[p119][tbl] iii
+[p120][tbl] Approval Sheet
+[p121][tbl] iv
+[p122][tbl] Acknowledgments
+[p123][tbl] v
+[p124][tbl] Table of Contents
+[p125][tbl] vi
+[p126][tbl] List of Figures
+[p127][tbl] vii
+[p128][tbl] List of Tables
+[p129][tbl] viii
+[p130][tbl] List of Notations
+[p131][tbl] ix
+[p132][tbl] Introduction
+[p133][tbl] 1
+[p135][tbl] Project Context
+[p138][tbl] Purpose and Description
+[p141][tbl] Objectives
+[p144][tbl] Scope and Limitations
+[p145][tbl] Review of Related Literature/Studies/Systems
+[p147][tbl] Methodology
+[p150][tbl] Technical Background
+[p153][tbl] Requirements Analysis
+[p156][tbl] Requirements Documentation
+[p159][tbl] Design of Software, System, Product, and/or Processes
+[p162][tbl] Development
+[p164][tbl] Results and Discussion
+[p167][tbl] Testing
+[p170][tbl] Description of Prototype
+[p173][tbl] Implementation Plan
+[p176][tbl] Implementation Results
+[p178][tbl] Conclusion
+[p180][tbl] References
+[p182][tbl] Appendices
+[p185][tbl] Resource Persons
+[p188][tbl] Relevant Source Code
+[p191][tbl] Evaluation Tool/Test Documents
+[p194][tbl] Sample Input/Output/Reports
+[p197][tbl] User’s Guide
+[p200][tbl] Personal Technical Vitae
+[p207] Introduction
+[p208] Project Context
+[p209] The way information is managed continues to change as technology becomes more advanced, yet many school libraries still face challenges in organizing and maintaining their resources at STI College Alabang, the library serves a large number of Patrons, including students from different academic programs and faculty, each needing access to various books, references, and learning materials every day. Because of this high demand, the library needs a system that can efficiently track and manage all resources.
+[p211] At present, the library still uses manual methods such as writing borrowed books in logbooks or recording them in spreadsheets. Librarians also check shelves manually to see if books are available. These methods take a lot of time and can lead to mistakes. Records may not always be updated right away, information can be misplaced, and handwriting may be difficult to read. Because of this, Patrons sometimes have a hard time finding the books they need, and librarians struggle to keep accurate records.
+[p213] This problem is not only seen in STI College Alabang but also in many schools that still use traditional library systems. As the number of Patrons and books increases, it becomes harder to manage all transactions properly. Books may be returned late, misplaced, or even lost without proper tracking. Over time, this can lead to incorrect inventory records, which affects how the library operates.
+[p215] To solve these problems, this study proposes a web-based library book reservation, borrowing, and inventory management system with QR-based scanning for STI College Alabang. The system is designed to make library transactions faster and easier. Patrons can reserve books online, while librarians can manage records through a single system. QR codes will be used to quickly identify books and process borrowing and returning.
+[p217] With QR-based scanning, each physical book copy is given a unique code that can be scanned using a device. This makes the process faster and reduces human error. It also allows the system to update records in real time, helping ensure that the inventory is always accurate.
+[p219] The system also aims to improve convenience for both Patrons and librarians. Patrons will no longer need to manually search for book availability, as they can easily check and reserve materials through the system. Librarians, on the other hand, can spend less time on manual encoding and focus more on assisting Patrons.
+[p221] In addition, the system helps improve data safety and organization. Digital records are easier to store, update, and back up compared to manual records. It also helps reduce the risk of losing important information and ensures that only authorized users can access or modify data.
+[p223] Lastly, the system can help the library make better decisions. With organized data, librarians can see which books are most used, which materials need updating, and how resources are being used overall. This helps improve the library’s services and better support Patron needs.
+[p225] Purpose and Description
+[p226] This project provides STI College Alabang with a streamlined digital library management system that replaces manual processes with efficient QR code scanning and online book reservations. Designed for reliability, the user-friendly platform centralizes library tasks into one accessible web interface, ensuring that data is managed effectively and operations remain consistent. By modernizing circulation and inventory tracking, the system enhances data security and provides a more organized, seamless experience for both Patrons and library personnel. Library Staff refers to student assistants; Patrons include students and faculty.
+[p228] Statement of the Problem
+[p229] General Problem
+[p230] The primary challenge of this research is to design, develop, and implement a comprehensive, web-based library management ecosystem for STI College Alabang that replaces manual or fragmented processes with a unified digital framework. Specifically, the problem centers on how to effectively integrate Microsoft O365 authentication for secure institutional access and QR-based scanning technology for efficient asset tracking, while simultaneously providing a unified system supporting automatic reservations, staff-processed borrowing and returns, overdue fine recording and settlement, and inventory management for Patrons (students and faculty) and library administrators.
+[p232] Specific Problem
+[p233] Super Administrator
+[p234] How to implement a secure login module using Microsoft O365 authentication for Super Administrator?
+[p235] In this module, Super Administrator can access the system using their institutional accounts to verify their identity. This ensures that only authorized personnel can access sensitive library administrative tools and data through a standardized sign-in process.
+[p236] How to develop a centralized dashboard module that provides a real-time overview of daily library operations for Super Administrators?
+[p237] In this module, Super Administrators can monitor key metrics such as Today's Visitors, Active Borrows, Inventory (physical copies), and total users in real time, plus an Action Center (card applications, overdue borrows, ready holds), live activity feed, recently cataloged books, and their Library Card; Analytics and Audit Logs open from the sidebar.
+[p238] How to design an efficient inventory module that enables automated and batch cataloging operations for the Super Administrator?
+[p239] In this module, the Super Administrator can manage the library's collection by automatically fetching book details via ISBN lookup and manually finalizing storage and classification records. This ensures streamlined data entry through spreadsheet and background batch ISBN imports (up to 500 books), auto-generated accession numbers, QR label printing, per-copy acquisition and disposal tracking, and customizable exports.
+[p240] How to automate the borrowing and returning process using QR-code scanning technologies for the circulation desk?
+[p241] In this module, the system supports camera or handheld scanning and typed entry: checkout requires card and copy IDs plus confirmation; return uses the copy only. Self-checkout is prohibited. Only a Librarian or Super Administrator may override overdue/lost-item or unpaid-fine blocks, with a recorded reason. Fines may be paid in person, condoned with remarks, or left Receivable.
+[p242] How to create a comprehensive borrowing logs module that allows the Super Administrator to monitor, filter, and settle overdue fines on book transactions?
+[p243] In this module, the Super Administrator can track library items through a centralized, interactive log displaying borrower details, book info, loan timelines, and overdue penalties. It provides search, All/Active/Overdue/Returned/Settlements tabs, and Return / Settle or Settle actions (in-person payment or condoning with remarks).
+[p244] How to develop an analytics module with data visualization tools to track system trends and library performance for the Super Administrator?
+[p245] In this module, the Super Administrator can filter performance metrics across preset or custom ranges to evaluate Visits, Loans Issued, physical-copy Inventory, and Active Loans. It provides Peak Visiting Hours (bar), Circulation Trends (line), and Genre Popularity (donut) charts, a demand leaderboard, Excel export/print, and a Report Builder (PDF, Excel, CSV).
+[p246] How to implement a comprehensive user directory module that enables the Super Administrator to manage and modify registered user accounts?
+[p247] In this module, the Super Administrator can view a master list of users detailing names, unique IDs, system roles, and student academic programs, with search (name, email, student ID) and filters. Profile pages support verifying and approving pending accounts, granting Library Staff permissions, setting statuses (Active, Pending, Inactive, Suspended, Archived), and transferring Super Administrator ownership.
+[p248] How to implement an attendance logs module using card-scanning technology to monitor Patron traffic within the library?
+[p249] In this module, the Super Administrator can track library usage by selecting Check-In or Check-Out mode and scanning library cards or typing card numbers/student IDs. It logs entry and exit timestamps, auto-closes forgotten exits at closing time as "No Log Out," and supports archiving records older than one year.
+[p250] How to develop a centralized System Policies module that enables the Super Administrator to manage operational rules and backend configurations?
+[p251] In this module, the Super Administrator can set circulation and reservation limits, fine rates, categories, academic programs, dashboard FAQs (requiring change reasons), and audience-targeted announcements, plus lifecycle tools for annual patron resets, archiving records older than one year (after Excel backup), maintenance, and test emails.
+[p252] How to implement a secure audit logs module that tracks, filters, and exports system activities for administrative accountability?
+[p253] In this module, the Super Administrator can access a security tracking system that records timestamps, user identities, and technical differences for key administrative and circulation actions. It provides search, entity, action, subject, and date filters, and CSV, JSON, and Excel exports.
+[p255] How to design an efficient notification module that alerts the Super Administrator about critical system events and updates in real time?
+[p256] In this module, the Super Administrator can access recent alerts instantly through a header bell dialog or a dedicated notifications page with All, Unread, and History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read controls.
+[p257] How to create a secure profile module with read-only account details and photo controls for logged-in users?
+[p258] In this module, authenticated users can review their own institutional and contact information including full name, system ID, official email, and an Account Access note. Approved details are read-only, Pending users can update onboarding details via Edit Info, and all users can upload, crop, change, or remove their profile photo.
+[p259] Librarian
+[p260] How to implement a secure login module using Microsoft O365 authentication for Librarian?
+[p261] In this module, Librarian can access the system using their institutional accounts to verify their identity. This ensures that only authorized personnel can access sensitive library administrative tools and data through a standardized sign-in process.
+[p262] How to develop a centralized dashboard module that provides a real-time overview of daily library operations for the librarian?
+[p263] In this module, the librarian can monitor critical real-time data such as Today's Visitors, Active Borrows, Inventory (physical copies), and total users, plus an Action Center (card applications, overdue borrows, ready holds), live activity feed, recently cataloged books, and their Library Card; Analytics and Audit Logs open from the sidebar.
+[p264] How to design an efficient inventory module that enables automated and batch cataloging operations for the librarian?
+[p265] In this module, the librarian can manage the library's collection by automatically fetching book details via ISBN lookup and manually refining specific storage and classification records. This ensures optimal workflow efficiency through spreadsheet and background batch ISBN imports (up to 500 books), auto-generated accession numbers, QR label printing, per-copy acquisition and disposal tracking, and customizable exports.
+[p266] How to automate the borrowing and returning process using QR-code scanning technologies for the librarian at the circulation desk?
+[p267] In this module, the system supports camera or handheld scanning and typed entry: checkout requires card and copy IDs plus confirmation; return uses the copy only. Self-checkout is prohibited. A Librarian or Super Administrator may override overdue/lost-item or unpaid-fine blocks with a recorded reason. Fines may be paid in person, condoned with remarks, or left Receivable.
+[p268] How to create a centralized borrowing logs module that allows the librarian to track, filter, and settle overdue fines on book transactions?
+[p269] In this module, the librarian can track loan lifecycles through a comprehensive, interactive log showing borrower details, book info, due and return timelines, and overdue penalties. It provides search, All/Active/Overdue/Returned/Settlements tabs, and Return / Settle or Settle actions (in-person payment or condoning with remarks).
+[p270] How to build an analytics module with dynamic visualization components to track library trends and system performance for the librarian?
+[p271] In this module, the librarian can filter and evaluate system metrics across preset or custom ranges to monitor Visits, Loans Issued, physical-copy Inventory, and Active Loans. It offers Peak Visiting Hours (bar), Circulation Trends (line), and Genre Popularity (donut) charts, a demand leaderboard, Excel export/print, and a Report Builder (PDF, Excel, CSV).
+[p272] How to implement a structured user directory module that allows the librarian to review accounts and modify specific status permissions?
+[p273] In this module, the librarian can oversee patron and staff accounts (excluding Super Administrators) with names, IDs, roles, and student academic programs. It supports search (name, email, student ID), filters, and profile pages to verify and approve pending accounts, edit Patron and Library Staff details (excluding other librarians), view borrowing history, and set Active, Pending, or Inactive status.
+[p274] How to integrate an attendance logs module utilizing card-scanning technology to assist the librarian in tracking daily library traffic?
+[p275] In this module, the librarian can monitor daily Patron facility utilization using Check-In or Check-Out mode with card scans or typed card numbers/student IDs. It logs entry and exit timestamps and auto-closes forgotten exits at closing time as "No Log Out."
+[p276] How to configure a dedicated System Policies module that enables the librarian to adjust library rules and manage dashboard FAQs?
+[p277] In this module, the librarian can utilize several specialized views to set circulation and reservation limits, fine rates, categories, academic programs, audience-targeted announcements, and dashboard Support & FAQs (with required change reasons).
+[p278] How to provide an Audit Logs module for the librarian? In this module, the librarian searches, filters (subject, entity, action, date), inspects diffs, and exports key logs (CSV, JSON, Excel), excluding Super Administrator actions.
+[p279] How to construct an intuitive notification module that keeps the librarian instantly updated on major system actions and changes?
+[p280] In this module, the librarian can view urgent alerts dynamically via a header bell dialog or standalone notifications page with All, Unread, and History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read actions.
+[p282] How to establish a secure profile module for librarians to verify read-only credentials and manage their photo?
+[p283] In this module, the logged-in librarian can cross-reference their account specifics including name, institutional ID, official email, and an Account Access note. Institutional details remain read-only while the librarian can upload, crop, change, or remove their profile photo.
+[p284] Library Staff
+[p285] How to implement a secure login module using Microsoft O365 authentication for Library Staff?
+[p286] In this module, Library Staff can access the system using their institutional accounts to verify their identity. Operational access requires an Active account and Super Administrator permissions (Inventory viewing, Circulation Desk/Borrowing Logs, or Attendance Logs).
+[p287] How to develop a personalized dashboard module that provides a quick overview of daily activities and personal metrics for Library Staff?
+[p288] In this module, Library Staff can view their Digital Library Card, announcements, Support & FAQs, and desk shortcuts for their granted permissions. This ensures personal activity tracking by also displaying a personalized bottom row showcasing the Library Staff's current borrows, reservations, and recent attendance.
+[p289] How to design an intuitive catalog module that allows Library Staff to browse, search, and reserve items from the book collection?
+[p290] In this module, Library Staff can look up books using a keyword search bar for titles, authors, or ISBN codes, and refine results using category filters, an availability toggle, and sorting options. This ensures a streamlined discovery process while enabling users to reserve available copies for pickup or join a waitlist automatically.
+[p291] How to implement a read-only inventory monitoring module with tabular data and QR-code viewing and printing for Library Staff?
+[p292] In this module, Library Staff can monitor book titles with available/total copy counts using a structured data table displaying titles, authors, categories, and ISBN codes. This ensures easy tracking and item location through category selection filters, search options, and viewing and printing individual copy QR codes inside book details.
+[p293] How to automate the borrowing and returning process using QR-code scanning technologies for the Library Staff at the circulation desk?
+[p294] In this module, the system utilizes library card and copy scans (or typed entry) with confirmation for checkout, and copy only for return. Overdue fines are settled in person on return or in Borrowing Logs.
+[p295] How to create a structured My Borrowing module for Library Staff to track their personal book transactions?
+[p296] In this module, Library Staff can view their personal transaction timelines, including borrowed dates, due dates, actual return dates, penalties, and item statuses. It offers timeline search, All/Active/Overdue/Returned/Settlements filters, Excel export, and print.
+[p297] How to implement a borrowing logs module that allows Library Staff to monitor global library transactions?
+[p298] In this module, Library Staff can access a centralized list tracking borrower details, book titles, due-date timelines, and penalties across the library. It supports search, All/Active/Overdue/Returned/Settlements filters, and Return / Settle or Settle (pay in person or condone with remarks). Active Library Staff with attendance or circulation permission can also use the Report Builder for those datasets only.
+[p300] How to design a personal attendance tracking module for Library Staff to review their library visitation history?
+[p301] In this module, Library Staff can reference a structured data table showing dates, check-in/check-out timestamps, and session statuses for their library visits. This ensures transparent personal record keeping by allowing users to seamlessly review their chronological logs through a date-range filter for unarchived records.
+[p302] How to integrate an attendance logs module using card-scanning technology to help Library Staff track daily library traffic?
+[p303] In this module, Library Staff can track facility utilization by using Check-In/Check-Out mode with card scans or typed card/student IDs. This ensures straightforward administrative monitoring by populating visitor timestamps; forgotten exits close at closing time as "No Log Out".
+[p304] How to build a responsive notification module that updates Library Staff on system-wide events and alerts?
+[p305] In this module, Library Staff can view urgent updates via a header bell dialog or manage comprehensive alerts on a dedicated notifications page. It provides All/Unread/History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read.
+[p306] How to establish a secure profile module for Library Staff to verify their personal account details?
+[p307] In this module, logged-in Library Staff can cross-reference their account information such as full name, system ID, account status, and membership role on their profile page. Institutional details are read-only with an Account Access note, while users can upload, crop, change, or remove their photo.
+[p309] Patron
+[p310] How to implement a secure login module using Microsoft O365 authentication for Patrons?
+[p311] In this module, Patrons can access the system using their institutional accounts to verify their identity. This ensures that only institutional users can access their library services and personal records through a standardized sign-in process.
+[p312] How to design a personalized dashboard module that provides Patrons with a real-time overview of their library account status and credentials?
+[p313] In this module, Patrons can access a digital library card with a scannable QR code alongside tracked sections for current borrows including returned books with unpaid fines, cancellable reservations, and recent attendance histories. This ensures a centralized, user-centric experience by also integrating an easily accessible support and FAQs panel for quick system troubleshooting.
+[p314] How to implement an intuitive Catalog module that enables Patrons to search, filter, and reserve books from the library collection?
+[p315] In this module, Patrons can explore books using specialized fractional availability indicators and search parameters for titles, authors, or ISBN codes. This ensures seamless book discovery and acquisition by pairing category filters and an availability toggle with Reserve for Pickup or Join Waitlist actions.
+[p316] How to build a structured My Borrowing module that allows Patrons to monitor personal book transactions and due dates?
+[p317] In this module, Patrons can navigate a transactional table detailing library resources, borrowing dates, due/return dates, and penalties. It provides keyword search, All/Active/Overdue/Returned/Settlements filters, Excel export, and print.
+[p319] How to develop a personal attendance tracking module for Patrons to review their chronological library visits?
+[p320] In this module, Patrons can review visit dates, recorded check-in/out times, and Still in library or No Log Out badges through a date-range filter for unarchived records.
+[p321] How to create a responsive notification module that alerts Patrons regarding important library updates and usage events?
+[p322] In this module, Patrons can open the header bell dialog or the notifications page to view alerts. It provides All/Unread/History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read.
+[p323] How to establish a secure profile module for Patrons to verify their institutional account information?
+[p324] In this module, Patrons can review read-only account details, academic program (students only), and an Account Access note. Users can upload, crop, change, or remove their profile photo.
+[p326] Objective
+[p327] General Objectives
+[p328] To design and develop Lumina, a web-based library book reservation, borrowing, and inventory management system with QR-based scanning for STI College Alabang. The system aims to enhance efficiency in library transactions through a centralized online platform, improve inventory tracking accuracy, and provide seamless real-time access to library services for Patrons (students and faculty) and library personnel.
+[p330] Specific Objectives
+[p331] Super Administrator
+[p332] To integrate a secure login module using Microsoft O365 authentication for identity verification.
+[p333] This objective ensures a secure and standardized sign-in process by leveraging institutional accounts, verifying that only authorized personnel can access administrative tools.
+[p334] To develop a Centralized Dashboard Module that displays a real-time overview of daily library operations, critical system metrics, an Action Center, and recent activity.
+[p335] This objective aims to provide the Super Administrator with a centralized, high-level control panel of Today's Visitors, Active Borrows, Inventory (physical copies), and total users, plus an Action Center (card applications, overdue borrows, ready holds), live activity feed, recently cataloged books, and their Library Card.
+[p337] To develop an Inventory Module that enables Super Administrators to manage the library’s book collection through automated ISBN fetching and detailed manual cataloging.
+[p338] This objective aims to provide the Super Administrator with a streamlined system to add new items by automatically retrieving book information via ISBN, while filling missing Dewey Decimal numbers, categories, copies, and shelf locations, with background batch ISBN imports, auto-generated accession numbers, QR label printing, and per-copy acquisition/disposal records.
+[p339] To develop a Circulation Desk Module that automates the library's borrowing and returning processes utilizing QR-code scanning technologies.
+[p340] This objective aims to streamline front-desk operations by allowing staff to scan or type card and copy IDs, then confirm checkout; returns require only the copy ID. Self-checkout is prohibited. Only a Librarian or Super Administrator may override overdue/lost-item or unpaid-fine blocks, with a recorded reason.
+[p341] To develop a Borrowing Logs Module that provides a centralized, interactive tracking and fine-settlement log for borrowing and returning.
+[p342] This objective aims to provide the Super Administrator and staff with a consolidated overview of key transaction details including borrower information, book metadata, timelines, overdue penalties, and All/Active/Overdue/Returned/Settlements tabs with search, filters, and Return / Settle or Settle actions (including condoning with remarks).
+[p343] To develop an Analytics Module that provides a visual data dashboard to track system trends, library performance, and historical data distributions.
+[p344] This objective aims to provide the Super Administrator with key metric summaries including Visits, Loans Issued, physical-copy Inventory, and Active Loans with preset/custom date filters, Peak Visiting Hours (bar), Circulation Trends (line), Genre Popularity (donut), demand leaderboard, Excel export/print, and Report Builder (PDF, Excel, CSV).
+[p345] To develop a User Directory Module that allows the Super Administrator to view, manage, and modify all registered user accounts in a centralized master list.
+[p346] This objective aims to provide the Super Administrator with efficient user management capabilities including search (name, email, student ID), filters, profile views, verifying and approving pending accounts, Library Staff permission grants, role/status updates (Active, Pending, Inactive, Suspended, Archived), and Super Administrator ownership transfer.
+[p347] To develop an Attendance Logs Module that enables the Super Administrator to monitor and track Patron traffic within the library in real time.
+[p348] This objective aims to provide the Super Administrator with an automated tracking system that uses Check-In/Check-Out modes with card QR scans or typed card/student IDs to log Patron visits, auto-closing forgotten exits at closing time as "No Log Out" and supporting archiving of records older than one year.
+[p349] To develop a System Policies Module that enables the Super Administrator to manage system rules, operational configurations, and backend maintenance through dedicated setup views.
+[p350] This objective aims to provide the Super Administrator with centralized administrative controls including tools to set circulation/reservation limits, fine rates, academic programs, categories, dashboard FAQs (with change reasons), and targeted announcements, plus lifecycle tools (annual patron resets, archiving records older than one year after Excel backup, maintenance, and test emails).
+[p351] To develop an Audit Logs Module that provides a secure tracking system to record, monitor, and review key administrative and circulation activities.
+[p352] This objective aims to provide the Super Administrator with a comprehensive security table detailing exact timestamps, user identities, action types, affected entities, and technical differences, integrated with search, entity/action/subject/date filters, and CSV, JSON, and Excel exports to ensure robust accountability, rapid incident investigation, and efficient compliance auditing.
+[p353] To develop a Notification Module that alerts the Super Administrator about critical system events and updates via real-time header indicators and a dedicated management interface.
+[p354] This objective aims to provide administrators and staff with immediate situational awareness through a header notification bell and dialog, paired with a dedicated notifications page featuring All/Unread/History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read.
+[p355] To develop a  Profile Module that provides a secure interface with read-only account details and photo controls for logged-in users.
+[p356] This objective aims to provide users with a centralized, read-only profile page displaying critical account data including full names, system IDs, official emails, contact details, residential addresses, roles, and an Account Access note, while letting users upload, crop, change, or remove their photo.
+[p357] Librarian
+[p358] To develop a secure Login Module that serves as a standardized entry point for authorized library staff using Microsoft O365 authentication.
+[p359] This objective aims to protect library data by restricting access to administrative tools, ensuring that only verified personnel can log in and manage the system's core backend features.
+[p360] To develop a Centralized Dashboard Module that displays a real-time overview of daily library operations, critical system metrics, an Action Center, and recent activity.
+[p361] This objective aims to provide Librarians with a centralized, high-level control panel of Today's Visitors, Active Borrows, Inventory (physical copies), and total users, plus an Action Center (card applications, overdue borrows, ready holds), live activity feed, recently cataloged books, and their Library Card.
+[p362] To develop an Inventory Module that enables Librarians to manage the library’s book collection through automated ISBN fetching and detailed manual cataloging.
+[p363] This objective aims to provide the Librarian with a streamlined system to add new items by automatically retrieving book information via ISBN, while filling missing Dewey Decimal numbers, categories, copies, and shelf locations, with background batch ISBN imports, auto-generated accession numbers, QR label printing, and per-copy acquisition/disposal records.
+[p364] To develop a Circulation Desk Module that automates the library's borrowing and returning processes utilizing QR-code scanning technologies.
+[p365] This objective aims to streamline front-desk operations by allowing staff to scan or type card and copy IDs, then confirm checkout; returns require only the copy ID. Self-checkout is prohibited. Only a Librarian or Super Administrator may override overdue/lost-item or unpaid-fine blocks, with a recorded reason.
+[p366] To develop a Borrowing Logs Module that provides a centralized, interactive tracking and fine-settlement log for borrowing and returning.
+[p367] This objective aims to provide the Librarian and staff with a consolidated overview of key transaction details including borrower information, book metadata, timelines, overdue penalties, and All/Active/Overdue/Returned/Settlements tabs with search, filters, and Return / Settle or Settle actions (including condoning with remarks).
+[p368] To develop an Analytics Module that provides a visual data dashboard to track system trends, library performance, and historical data distributions.
+[p369] This objective aims to provide the Librarian with key metric summaries including Visits, Loans Issued, physical-copy Inventory, and Active Loans with preset/custom date filters, Peak Visiting Hours (bar), Circulation Trends (line), Genre Popularity (donut), demand leaderboard, Excel export/print, and Report Builder (PDF, Excel, CSV).
+[p371] To develop a User Directory Module that allows the Librarian to view, manage, and modify registered user accounts from a centralized master list.
+[p372] This objective aims to provide the Librarian with comprehensive user management capabilities including search (name, email, student ID), filters, profile and borrowing-history views, approving pending accounts, editing Patron/Library Staff details (excluding other librarians and Super Administrators), and setting Active, Pending, or Inactive status.
+[p373] To develop an Attendance Logs Module that enables the Librarian to monitor and track Patron traffic within the library in real time.
+[p374] This objective aims to provide an automated tracking system that uses Check-In/Check-Out modes with card QR scans or typed card/student IDs to log Patron visits, auto-closing forgotten exits at closing time as "No Log Out."
+[p375] To develop a System Policies Module that enables the Librarian to configure library rules, operational setups, and support documentation through dedicated views.
+[p376] This objective aims to provide the Librarian with centralized administrative control to set circulation/reservation limits, fine rates, academic programs, categories, audience-targeted announcements, and dashboard Support & FAQs (with change reasons), while lifecycle tools remain Super Administrator-only.
+[p377] To develop an Audit Logs Module allowing the Librarian to search, filter (subject, entity, action, date), inspect diffs, and export key logs (CSV, JSON, Excel), excluding Super Administrator actions.
+[p378] To develop a Notification Module that alerts the Librarian about critical system events and updates via real-time header indicators and a dedicated management interface.
+[p379] This objective aims to provide administrators and staff with immediate situational awareness through a header notification bell and dialog, paired with a dedicated notifications page featuring All/Unread/History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read.
+[p381] To develop a  Profile Module that provides a secure interface with read-only account details and photo controls for logged-in users.
+[p382] This objective aims to provide users with a centralized, read-only profile page displaying critical account data including full names, system IDs, official emails, contact details, residential addresses, roles, and an Account Access note, while letting users upload, crop, change, or remove their photo.
+[p383] Library Staff
+[p384] To develop a secure Login Module that serves as a standardized entry point for library staff utilizing Microsoft O365 authentication.
+[p385] This objective aims to safeguard system data by restricting administrative access to authorized personnel, ensuring that only Active Library Staff with Super Administrator-granted permissions can access operational modules.
+[p386] To develop a Dashboard Module displaying the Digital Library Card, announcements, Support & FAQs, and personal activity rows.
+[p387] This objective aims to provide Library Staff with desk shortcuts for their granted permissions and a personalized tracking section for their own borrows, reservations, and recent attendance.
+[p388] To develop a Catalog Module that enables Library Staff to browse, search, and filter the library's entire book collection.
+[p389] This objective aims to provide an interactive search interface displaying detailed book cards with fractional availability indicators, integrated with multi-parameter filtering options and Reserve for Pickup or Join Waitlist actions to allow users to efficiently locate and hold books.
+[p390] To develop an Inventory Module that provides Library Staff with a read-only tabular overview to view book titles and available/total copy counts within the system.
+[p391] This objective aims to provide an organized data table detailing book titles, authors, categories, and ISBN codes, equipped with keyword search tools, category filters, and individual copy QR codes inside book details for viewing and printing to streamline asset tracking.
+[p392] To develop a Circulation Desk Module that automates the library's borrowing and returning processes utilizing QR-code scanning technologies.
+[p393] This objective aims to streamline front-desk operations by allowing Library Staff to scan or type card and copy IDs with confirmation for checkout, or copy ID only for return. Overdue fines are settled in person on return or in Borrowing Logs.
+[p394] To develop a My Borrowing Module that provides a structured timeline view of a Library Staff's personal borrow history.
+[p395] This objective aims to deliver an organized transactional table showing resource metadata, borrow dates, due date timelines, penalties, and status logs, embedded with search bars and status filters for All/Active/Overdue/Returned/Settlements views, with Excel export and print.
+[p396] To develop a Borrowing Logs Module that provides Library Staff with an interactive list to track broad system-wide borrowing and returning histories.
+[p397] This objective aims to provide a centralized monitoring page displaying borrower data, book details, and transaction timelines alongside color-coded status tags, keyword search tools, All/Active/Overdue/Returned/Settlements tabs, penalties (Receivable/Paid/Condoned), and Return / Settle or Settle. Active Library Staff with attendance or circulation permission can also use the Report Builder for those datasets only.
+[p399] To develop a My Attendance Module that provides Library Staff with a personal, read-only tracking record of their individual library visits.
+[p400] This objective aims to grant Library Staff transparent access to their own check-in and check-out sessions, displaying dates, recorded entry/exit times, and session statuses through a date-range filter for unarchived records.
+[p401] To develop an Attendance Logs Module that enables Library Staff to monitor and track Patron traffic within the library.
+[p402] This objective aims to provide an automated tracking system that utilizes Check-In/Check-Out mode with card scans or typed card/student IDs to log visits, auto-closing forgotten exits at closing time as "No Log Out."
+[p403] To develop a Notification Module that alerts Library Staff about important system events and updates through multi-layered interface elements.
+[p404] This objective aims to maintain prompt situational awareness through a header notification bell and dialog, paired with a dedicated alerts management page featuring search, All/Unread/History tabs, Circulation/Reservation/System filters, mark-all-read, and clear-read.
+[p405] To develop a Profile Module that provides a secure interface with read-only details and photo controls for logged-in users to review their personal account information.
+[p406] This objective aims to provide users with a clean, read-only display of critical account data including full names, system IDs, official emails, contact details, residential addresses, membership roles, and an Account Access note, plus photo upload, cropping, replacement, or removal.
+[p408] Patron
+[p409] To develop a secure Login Module that enables Patrons to sign in using Microsoft O365 institutional accounts and includes an onboarding profile completion and approval workflow.
+[p410] This objective aims to create accounts as Pending at O365 sign-in. Patrons select Student or Faculty and submit contact and residential details (academic program for students only), editable via "Edit Info" until a Librarian or Super Administrator approves the account as Active.
+[p411] To develop a Centralized Dashboard Module that provides Patrons with a personalized, real-time overview of their library account status and support resources.
+[p412] This objective aims to present Patrons with an interactive interface featuring an exportable digital Library Card with a scannable QR code, real-time tracking tables for current borrows including returned books with unpaid fines, cancellable reservations, and recent attendance durations, alongside a dedicated Support & FAQs panel.
+[p413] To develop a Catalog Module that enables Patrons to browse, look up, and place holds on items within the library’s book collection.
+[p414] This objective aims to provide Patrons with an interactive visual catalog displaying detailed book cards and fractional availability indicators, integrated with search, category filters, an availability toggle, and sorting, with automatic Reserve for Pickup or Join Waitlist actions.
+[p415] To develop a My Borrowing Module that provides Patrons with a structured, chronological timeline of their personal borrowing histories.
+[p416] This objective aims to provide Patrons with resource metadata, borrowing and return dates, penalties, keyword search, All/Active/Overdue/Returned/Settlements tabs, Excel export, and print.
+[p418] To develop a My Attendance Module that provides Patrons with a detailed, personal record of their library check-in and check-out sessions.
+[p419] This objective aims to give Patrons visibility into recorded visit times and Still in library/No Log Out badges, with a date-range filter for unarchived visits.
+[p420] To develop a Notification Module that alerts Patrons about critical library updates, system events, and personal usage logs.
+[p421] This objective aims to alert Patrons through the header bell dialog and notifications page, with All/Unread/History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read.
+[p422] To develop a Profile Module that provides a secure interface with read-only details and photo controls for logged-in users to review their personal account information.
+[p423] This objective aims to provide Patrons with a clean, read-only display of their critical account data including full names, system IDs, official emails, contact numbers, residential addresses, membership roles, and an Account Access note, plus photo upload, cropping, replacement, or removal.
+[p426] Scope and Limitations
+[p427] This project brings digital library tools to STI College Alabang for Patrons (students and faculty). Library Staff operational access requires an Active account and Super Administrator grants: manage_inventory for read-only Inventory, manage_circulation for Circulation Desk/Borrowing Logs, and manage_attendance for Attendance Logs.
+[p429] Scope of the Study
+[p430] Super Administrator
+[p431] Login Module
+[p432] This module provides a secure and standardized entry point for library staff using Microsoft O365 authentication. It restricts access to administrative tools to ensure that only authorized personnel can manage library data.
+[p433] Dashboard Module
+[p434] This module provides a centralized, high-level control panel that gives Super Administrators a real-time overview of daily operations and system metrics. It displays critical data including Today's Visitors, Active Borrows, Inventory (physical copies), and total users. It also provides an Action Center (card applications, overdue borrows, ready holds), live activity feed, recently cataloged books, and the user's Library Card, while Attendance Logs, Audit Logs, and Analytics open from the sidebar.
+[p435] Catalog Module: Lets the Super Administrator browse/search books (title, author, ISBN), filter by category/availability, sort, view fractional availability, and Reserve for Pickup or Join Waitlist.
+[p437] Inventory Module
+[p438] This module allows the Super Administrator to manage the library's collection of books by automatically fetching details via ISBN lookup and finalizing Dewey Decimal numbers (auto-fetched when available, else manual), categories, copy counts, and shelf locations. The main table lists titles with available/total copies; book details track per-copy acquisition (bought/donated, date, price), disposal (sold, donated out, lost, maintenance), auto-generated accession numbers (ACC-00001), and printable QR labels. Batch tools support spreadsheet upload, background batch ISBN import (up to 500 books), and CSV, JSON, Excel, or cover ZIP exports.
+[p439] Circulation Desk Module
+[p440] This module supports camera or handheld scanning and typed entry: checkout requires card and copy IDs plus confirmation; return uses the copy only. Self-checkout is prohibited. Only a Librarian or Super Administrator may override overdue/lost-item or unpaid-fine blocks, with a recorded reason. Fines may be paid in person, condoned with remarks, or left Receivable.
+[p441] Borrowing Logs Module
+[p442] This module shows a centralized, interactive log for tracking loans and settling overdue fines. It lists borrower name and ID, book title and author, borrow/due/return dates, overdue penalty (default PHP 5/day), and status tags. Authorized staff can search, switch tabs (All, Active, Overdue, Returned, Settlements for Paid/Condoned fines), and run Return / Settle or Settle (in-person payment; remarks required to condone).
+[p444] Analytics Module
+[p445] This module provides Super Administrator with a visual data dashboard to track system trends and performance over time. It allows users to filter data across 7 days, 30 days, 1 year, or custom ranges, with Excel export and print. It shows summary cards (Visits, Loans Issued, physical-copy Inventory, Active Loans), Peak Visiting Hours (bar), Circulation Trends (line), Genre Popularity (donut), and a demand leaderboard, plus a Report Builder (Attendance, Borrowing, Inventory, Users; up to 8 sections; PDF, Excel, or CSV).
+[p446] User Directory Module
+[p447] This module allows the Super Administrator to view and manage all registered user accounts in the system. It displays a master list of users with their names, emails, unique IDs, system roles, account statuses, and student academic programs. The Super Administrator can search by name, email, or student ID and filter accounts. Opening a profile allows reviewing contacts, verifying and approving pending accounts, changing roles, granting Library Staff permissions, setting statuses (Active, Pending, Inactive, Suspended, Archived), or transferring Super Administrator ownership.
+[p448] Attendance Logs Module
+[p449] This module allows the Super Administrator to monitor and track Patron traffic within the library. Selecting Check-In or Check-Out mode and scanning library cards (or typing card numbers/student IDs) logs entry and exit timestamps; forgotten exits close at closing time as "No Log Out," and records older than one year can be archived.
+[p451] System Policies Module
+[p452] This module allows Super Administrator to manage system rules and operational configurations through several dedicated setup views. It enables Super Administrator to set loan and hold limits (defaults: 14-day loan, 5 books, 3 holds, 3-day pickup), the fine rate (default PHP 5/calendar day), programs, categories, announcements (Patrons & Library Staff, or all users), and dashboard FAQs with change reasons. Lifecycle tools suspend all Patrons (students and faculty) during the annual reset, archive records older than one year after Excel backup, run maintenance, and send test emails.
+[p453] Audit Logs Module
+[p454] This module provides a security tracking system that records key administrative and circulation actions (catalog, copies, policies, users, circulation, fines, resets). It displays a table detailing the exact timestamp of each action, the name of the administrator or user who performed it, the type of action taken, the affected entity, a short reason or description of the change, and a button to view specific technical differences. Super Administrator can easily manage large lists of logs using the search bar to find names, actions, or reasons, filter by entity, action, subject, and date, and export CSV, JSON, or Excel.
+[p455] Notification Module
+[p456] This module alerts Super Administrator about important system events and updates. Clicking the notification bell in the system header opens a dialog of recent alerts. The notifications page offers All, Unread, and History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read; a daily Nodemailer job emails due-soon and overdue reminders.
+[p457] My Profile Module
+[p458] This module provides read-only account details (full name, system ID, official email, contact number, residential address, account status, membership role, and an Account Access note) while letting users upload, crop, change, or remove their photo.
+[p459] Librarian
+[p460] Login Module
+[p461] This module provides a secure and standardized entry point for library staff using Microsoft O365 authentication. It restricts access to administrative tools to ensure that only authorized personnel can manage library data.
+[p462] Dashboard Module
+[p463] This module provides a centralized, high-level control panel that gives Librarian a real-time overview of daily operations and system metrics. It displays critical data including Today's Visitors, Active Borrows, Inventory (physical copies), and total users. It also provides an Action Center (card applications, overdue borrows, ready holds), live activity feed, recently cataloged books, and the user's Library Card, while Audit Logs and Analytics open from the sidebar.
+[p464] Catalog Module: Lets the Librarian browse/search books (title, author, ISBN), filter by category/availability, sort, view fractional availability, and Reserve for Pickup or Join Waitlist.
+[p465] Inventory Module
+[p466] This module allows the Librarian to manage the library's collection of books by automatically fetching details via ISBN lookup and finalizing Dewey Decimal numbers (auto-fetched when available, else manual), categories, copy counts, and shelf locations. The main table lists titles with available/total copies; book details track per-copy acquisition and disposal, auto-generated accession numbers (ACC-00001), and printable QR labels. Batch tools support spreadsheet upload, background batch ISBN import (up to 500 books), and CSV, JSON, Excel, or cover ZIP exports.
+[p467] Circulation Desk Module
+[p468] This module lets the Librarian scan or type card and copy IDs, then confirm checkout, or use the copy ID alone for returns. Self-checkout is prohibited. A Librarian or Super Administrator may override overdue/lost-item or unpaid-fine blocks with a recorded reason. Fines may be paid in person, condoned with remarks, or left Receivable.
+[p470] Borrowing Logs Module
+[p471] This module shows a centralized, interactive log for the Librarian to track loans and settle overdue fines. It lists borrower name and ID, book title and author, borrow/due/return dates, overdue penalty (default PHP 5/day), and status tags. Authorized staff can search, switch tabs (All, Active, Overdue, Returned, Settlements for Paid/Condoned fines), and run Return / Settle or Settle (in-person payment; remarks required to condone).
+[p472] Analytics Module
+[p473] This module provides the Librarian with a visual data dashboard to track system trends and performance over time. It allows users to filter data across 7 days, 30 days, 1 year, or custom ranges, with Excel export and print. It shows summary cards (Visits, Loans Issued, physical-copy Inventory, Active Loans), Peak Visiting Hours (bar), Circulation Trends (line), Genre Popularity (donut), and a demand leaderboard, plus a Report Builder (Attendance, Borrowing, Inventory, Users; up to 8 sections; PDF, Excel, or CSV).
+[p474] User Directory Module
+[p475] This module allows the Librarian to view and manage patron and staff accounts (excluding Super Administrators). It lists names, emails, IDs, roles, statuses, and student academic programs, with search (name, email, student ID) and filters. Opening a profile lets the Librarian view contacts and borrowing history, verify and approve pending accounts, edit Patron and Library Staff details (excluding other librarians), and set Active, Pending, or Inactive status.
+[p477] Attendance Logs Module
+[p478] This module allows the Librarian to monitor and track Patron traffic within the library. Selecting Check-In or Check-Out mode and scanning library cards (or typing card numbers/student IDs) logs entry and exit timestamps; forgotten exits close at closing time as "No Log Out."
+[p479] System Policies Module
+[p480] This module allows Librarian to manage system rules and operational configurations through several dedicated setup views. It enables the Librarian to set circulation/reservation limits, fine rates, academic programs, categories, announcements (Patrons & Library Staff, or all users), and dashboard Support & FAQs (reason required per change); lifecycle tools are Super Administrator-only.
+[p481] Audit Logs Module: Gives the Librarian a security table of key administrative/circulation actions (excluding Super Administrator actions), with search, subject/entity/action/date filters, diffs, and CSV/JSON/Excel export.
+[p482] Notification module
+[p483] This module alerts Librarian about important system events and updates. Clicking the notification bell in the system header opens a dialog of recent alerts. The notifications page offers All, Unread, and History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read; a daily Nodemailer job emails due-soon and overdue reminders.
+[p484] My Profile Module
+[p485] This module provides read-only account details (full name, system ID, official email, contact number, residential address, account status, membership role, and an Account Access note) while letting users upload, crop, change, or remove their photo.
+[p486] Library Staff
+[p487] Login Module
+[p488] This module provides a secure and standardized entry point for library staff using Microsoft O365 authentication. It restricts access to administrative tools to ensure that only Active Library Staff with Super Administrator permissions can access Inventory (view only), Circulation Desk/Borrowing Logs, or Attendance Logs.
+[p490] Dashboard Module
+[p491] This module provides Library Staff with a personal dashboard showing the Digital Library Card, announcements, Support & FAQs, and desk shortcuts only for granted permissions. The bottom section includes a visual row showing their current borrows (including returned books with unpaid fines), reservations (with cancel), and Recent Attendance.
+[p492] Catalog Module
+[p493] This module allows the Library Staff to browse and search the library's book collection. Each book card displays the book's title, author name, cover image, and a fractional availability indicator showing the number of available copies. Users can look up items using a keyword search bar that supports titles, authors, or ISBN codes, and refine the list using category filters, an availability toggle, and sorting options. Additionally, each book contains Reserve for Pickup or Join Waitlist actions, allocating holds automatically.
+[p494] Inventory Module
+[p495] This module gives Active Library Staff with manage_inventory permission a read-only tabular overview of book titles and available/total copy counts. The data table displays Title, Author, Category, and ISBN, with category filters, keyword search, and viewable/printable copy QR codes inside book details.
+[p496] Circulation Desk Module
+[p497] This module automates the borrowing and returning process by utilizing QR-Code scanning technologies. Active Library Staff with manage_circulation permission scan or type card/copy IDs (confirmed) for checkout, and copy ID only for return. Self-checkout and loans with overdue/lost items or unpaid fines are blocked (Librarian/Super Administrator override with reason); fines are paid in person or condoned with remarks.
+[p498] My Borrowing Module
+[p499] This module provides Library Staff with a structured timeline of their borrowed history. The main interface features a transactional table listing the library Resource (displaying the title, and author), the Borrowed date, a detailed Timeline showing the due date along with actual return dates, and the current Status and Penalty. Library Staff can locate specific entries using a keyword timeline search bar or instantly filter the list by five views: All, Active, Overdue, Returned, and Settlements (Paid/Condoned), with Excel export and print.
+[p500] Borrowing Logs Module
+[p501] This module lets Active Library Staff with manage_circulation permission search and filter Borrowing Logs (All/Active/Overdue/Returned/Settlements), review borrowers, books, dates and Penalty, and Return / Settle or Settle. Overdue fines accrue per calendar day (default PHP 5) as Receivable, Paid or Condoned; payment is in person and condoning requires remarks. Active Library Staff may use Report Builder for attendance/borrowing datasets allowed by their respective grants (up to 8 sections; PDF/Excel/CSV).
+[p502] My Attendance Module
+[p503] This module provides Library Staff with a personal record of their library check-in and check-out sessions. The interface features a structured data table displaying the Date, Check In time, Check Out time, and session Status for each visit. Library Staff can also view their chronological tracking logs through a date-range filter (unarchived visits) with Still in library/No Log Out badges.
+[p504] Attendance Logs Module
+[p505] This module allows Active Library Staff with manage_attendance permission to monitor and track patron traffic within the library. Using Check-In/Check-Out mode with card scans or typed card/student IDs, Library Staff can see checked-in and checked-out patrons with recorded entry and exit timestamps, providing a simple way to track daily usage. Forgotten exits close at closing time as "No Log Out," and records older than one year may be archived by the Super Administrator.
+[p507] Notification Module
+[p508] This module alerts Library Staff about important system events and updates. Clicking the notification bell in the system header opens a dialog showing recent alerts. The dedicated notifications page allows Library Staff to manage alerts using All/Unread/History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read.
+[p509] My Profile Module
+[p510] This module provides a page with read-only details and photo controls where logged-in users can check their personal account details. It displays the user's full name, system ID, official email, contact number, residential address, account status, membership role, and an Account Access note, plus photo upload, cropping, replacement, or removal.
+[p511] Patron
+[p512] Login Module
+[p513] This module enables students and faculty to sign in using Microsoft O365. Accounts start Pending; users choose Student or Faculty and complete contact and residential details (program for students only). "Edit Info" remains available while Pending; details become read-only after Librarian or Super Administrator approval as Active.
+[p514] Dashboard Module
+[p515] This module provides Patrons with a personalized overview of their library account status. The top section features their digital Library Card, showing their profile picture, name, program, automatically computed academic year, a scannable QR code, and card-flip and export actions. Below, the interface tracks three sections: Current Borrows (active books, due dates, and returned books with unpaid fines), Reservations (books ready for pickup or queue placement with a cancel option), and Recent Attendance (a snapshot of check-in/out timestamps and visit durations). The bottom includes a Support & FAQs panel for Patrons to know about the system.
+[p516] Catalog Module
+[p517] This module allows Patrons to browse and search book cards with title, author, cover, and available/total copies. It supports title/author/ISBN search, category filters, an availability toggle, and sorting. Reserve for Pickup or Join Waitlist allocates holds automatically: free copies become Ready for pickup, returns serve the next queued Patron, and uncollected holds expire daily (defaults: 3 active holds, 3-day pickup).
+[p518] My Borrowing Module
+[p519] This module provides Patrons with a structured timeline of their borrowed history. The main interface features a transactional table listing the library Resource (displaying the title, and author), the Borrowed date, a detailed Timeline showing the due date along with actual return dates, and the current Status and Penalty. Patrons can locate specific entries using a keyword timeline search bar or instantly filter the list by five views: All, Active, Overdue, Returned, and Settlements (Paid/Condoned), with Excel export and print.
+[p520] My Attendance Module
+[p521] This module provides Patrons with a personal record of their library check-in and check-out sessions. The interface features a structured data table displaying the Date, Check In time, Check Out time, and Still in library/No Log Out badges. Patrons can also view their chronological tracking logs through a date-range filter for unarchived visits.
+[p522] Notification Module
+[p523] This module alerts Patrons through a header bell dialog and the notifications page. It provides All/Unread/History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read. A daily job sends due-soon and overdue email reminders.
+[p525] My Profile Module
+[p526] This module provides a page with read-only details and photo controls where logged-in users can check their personal account details. It displays the user's full name, system ID, official email, contact number, residential address, account status, membership role, and an Account Access note, plus photo upload, cropping, replacement, or removal.
+[p527] Limitations
+[p528] The system requires an active internet connection to synchronize data and operate its cloud-based features.
+[p529] System capacity and performance are restricted by the database size, serverless execution bounds, and storage limits of the chosen free-tier cloud infrastructure.
+[p530] Automated fetching of book data via ISBN can be supplemented manually when metadata is incomplete; accession numbers are auto-generated sequentially by the database (ACC-XXXXX), while Dewey Decimal classification can be retrieved via ISBN API lookup or manually specified.
+[p531] Authentication is exclusively tied to Microsoft 365 institutional accounts, which prevents access for outside researchers or users without an official school email.
+[p532] The QR-based automation supports optional camera or handheld scanning and typed identifiers; if a camera is unavailable or a printed code is damaged, staff can enter the card number, student ID, or copy accession number manually.
+[p533] The searchable catalog focuses strictly on the library's physical book collection (including titles with copies on loan), meaning it does not integrate with enterprise-grade electronic research databases like EBSCO.
+[p534] The application is constrained by external API rate limits and real-time synchronization quotas, which may restrict the volume of requests processed during peak library hours.
+[p536] Review of Related Literature/Studies/Systems
+[p537] Review of related literature
+[p538] Global shift toward digital library transformation
+[p539] The rapid evolution of digital technologies has significantly impacted how libraries operate, leading to a shift in library services locally and internationally. Despite the widespread acknowledgment of this digital shift, there remains a substantial gap in understanding of how academic libraries are adapting, specifically in integrating digital innovations to enhance user access and engagement. In the study of distanont et al (2024), there is a critical global trend toward integrating digital innovations to enhance user engagement. This shift is not merely about digitizing records but about strategic adaptation to a landscape where users expect seamless access. This is further supported by wijaya et al (2025), which emphasizes that libraries relying on manual bookkeeping face inaccurate data recording and time-consuming searches, which hinder the efficiency of library services and reduce the interest of Patrons.  As libraries, such as sti college alabang, manage growing collections and Patron population, the integration of modern identification and tracking technologies has become essential for maintaining operational integrity and user satisfaction.
+[p540] Institutional security and microsoft 365 integration
+[p541] A primary concern in digital transformation is the security of institutional data. Literature on identity and access management (iam) highlights that existing platforms, like microsoft o365, provides enterprise-grade security, including multi-factor authentication (mfa). In line with this, kasahara and shimayoshi (2022) provided a high-level technical precedent for the use of microsoft 365 tenants to manage university Patrons. The research highlights the necessity of multi-factor authentication (mfa) and azure active directory to prevent malicious software from compromising Patron accounts. By implementing m365 authentication, the present study aligns with global best practices that prioritize controls of user access behavior, ensuring that library services are restricted to verified Patrons while offering a self-enrolling convenience that reduces administrative conflict (kasahara & shimayoshi, 2022).
+[p542] Qr-based scanning and operational efficiency
+[p543] The integration of quick response (qr) codes represents an opportunity to modernize asset tracking. Paul and naikar (2024) defined qr codes as powerful tools for instant access to catalog information and operational efficiency. Unlike traditional bookkeeping, qr codes can be scanned using mobile devices or low-cost scanners and qr technology allows for fast data retrieval at a minimal cost (din & fazla, 2021). This automation ensures that every transaction is instantly linked to the correct user profile, maintaining a precise digital borrowed history.
+[p544] However, in practical application, as seen in the study of mulya and sari (2024), the transition from conventional systems to qr-web-based applications enables librarians to manage large quantities of data effectively. This technology minimizes manual effort and reduces data-entry errors by automating the link between the identity of the borrower and the library asset (pebrian & gunanto; 2025, wijaya et al., 2025).
+[p545] Centralized web-based architectures and real-time data
+[p546] modern library management information systems (mis) are increasingly built on robust web frameworks, like javascript, tailwind css, typescript, or postgresql, to ensure structured and secure development (rajee et al., 2022, wijaya et al., 2025). The literature suggests that a module-based approach, which comprises registration and circulation among the university is the most effective way to meet the needs of diverse users (abdullah et al., 2021). Furthermore, the inclusion of an audit log provides a transparent trail of all system modifications, which suggests that automated logs are essential for preventing unauthorized changes and ensuring the safety of institutional data.
+[p547] A benefit identified in the study of pebrian and gunanto (2025) is the real-time synchronization of stock quantities. When a Patron submits a borrowing request using a web interface, the system updates in real-time, providing an up-to-date status that supports data-driven evaluation and strategic decision-making for administrators, such as librarians and even university principals.
+[p548] Enhancing user experience through personalization and visualization
+[p549] Modern library users expect the same level of convenience found in e-commerce platforms. Beyond simple borrowing, advanced web applications are now incorporating data visualization and personalized recommendations to meet the evolving needs of Patrons (facunla & encarnacion, 2024). Guided by technological acceptance theory (tat), researchers found that tailored web applications can achieve effectiveness rates as high as 97.48% when they focus on usability and reliability. This aligns with the lumina project goal of providing a personalized Patron dashboard to help Patrons track their own history and deadlines, thereby increasing their engagement with library resources.
+[p550] Related studies and systems
+[p551] Local studies and/or systems
+[p552] The research conducted on library management systems highlights the importance of efficient resource tracking and circulation in educational institutions. The studies emphasize the significance of accurate, real-time library inventories to prevent data loss, ensure optimal resource utilization, and seamlessly meet the academic needs of both Patrons and library personnel.
+[p553] The studies reviewed the functionality of automated library management systems in terms of speed, data handling, accuracy, security, stability, and usability. They compared traditional manual logbook methods with digitized web-based systems, highlighting the massive advantages of integrating qr-code technology and automated workflows in solving administrative challenges, eliminating manual encoding errors, and improving overall library functionality.
+[p554] Enhanced information retrieval: aemilianum college inc.'s library management system (2023)
+[p555] This research details the development of a web-based library management system aimed at overcoming the limitations of physical document deterioration, rising costs, and the frequent misplacement of files. Just as this study ensures seamless access to educational resources through an intuitive and convenient interface, lumina will provide sti college alabang with a centralized, reliable digital platform. By transitioning to this web-based solution, lumina aligns directly with the goal of maximizing the utility of technological resources to make information retrieval, cataloging, and inventory auditing far more efficient (gito et al., 2023).
+[p556] Development and evaluation of an ict-based library automation system for northern iloilo polytechnic state college using iso standards (2025)
+[p557] This study addresses the inefficiencies of predominantly manual library operations, such as handwritten client logging and inventory updates, by proposing an information and communication technology (ict)-based library automation system. Just as this study demonstrated that transitioning to a qr-integrated digital platform drastically reduces manual workload and improves service delivery, lumina will implement similar qr-based borrowing and returning transactions for sti college alabang to ensure high system accuracy, efficiency, and secure user account management (villoga, 2025).
+[p558] Library systems development: utilization, usability and impact for private schools in negros occidental, philippines (2025)
+[p559] This study details the creation and deployment of a web-based library management system (lms) at colegio de sta. Ana de victorias to replace traditional, inefficient manual library processes. This successful implementation of a centralized dashboard and online catalog directly inspires lumina’s objective to provide sti college alabang with a searchable online catalog displaying real-time book availability. By adapting these features, lumina will automate the circulation tracker to reduce processing time and grant Patrons instantaneous retrieval of information (lampaza et al., 2025).
+[p560] Aligning expectations and perceptions: analyzing library user satisfaction in higher education in rural philippines (2025)
+[p561] This research examines the alignment between user expectations and perceptions of academic library services, revealing that modern Patrons hold high expectations for digital service provision and efficient communication channels. Addressing the critical service quality gaps identified in traditional setups, lumina aims to provide a responsive, user-centered digital framework for sti college alabang. By digitizing borrowing policies and improving technology availability, lumina aligns directly with modern Patrons' high expectations for accessible and equitable learning resources (seno-sanoria, 2025).
+[p562] School management system 1: library with qr code innovation and book monitoring: Patron information in bestlink college of the philippines (2026)
+[p563] This proposed system introduces a modernized approach to managing school libraries by streamlining the tracking and access of library resources through qr code scanning, an automated fine tracker, and an online book reservation option. Similar to how this system replaces disorganized collections and outdated checking methods, lumina aims to resolve these exact frustrations at sti college alabang. By adapting these qr code innovations and online reservation features, lumina will minimize errors in tracking overdue items, create a much smoother transaction process, and guarantee a highly convenient library experience for both Patrons and librarians (gargoles et al., 2026).
+[p564] School management system: library management system with online reservation and renewal powered by a.i. based adaptive learning and skill development (2026)
+[p565] This study presents a modernized library management system designed to enhance operational efficiency through online book reservation, real-time penalty notifications, and a centralized digital library database. Just as this system significantly automates administrative tasks and improves user engagement, lumina will implement similar web-based reservation and real-time tracking features. By adapting these digital capabilities, lumina ensures that sti college alabang Patrons can seamlessly check book availability and manage their borrowing transactions online, fostering a highly convenient, efficient, and learner-centered academic environment (mendiola et al., 2026).
+[p566] Foreign studies and/or systems
+[p567] A smart qr: based library management system (2024)
+[p568] The reviewed study describes a QR code approach to library management in tertiary institutions as an alternative to RFID or IoT systems (Aliyu, Mohammed, & Yakubu, 2024). Lumina applies this approach to item identification: Patrons search and reserve books online, while authorized staff process checkouts, returns, and in-person fine settlement.
+[p569] A dual-validation mobile attendance application for discipline-oriented vocational schools: development and evaluation using the waterfall (2025)
+[p570] While focusing on a different educational administrative process, this study highlights the effectiveness of using qr codes to digitize and secure tracking systems that were previously entirely manual and prone to data manipulation. This validates lumina's core mechanism, demonstrating that by linking unique qr codes to a centralized digital database, lumina will substantially enhance data integrity, drastically reduce administrative workloads, and provide a highly reliable tool for tracking library resources at sti college alabang (kurnia et al., 2025).
+[p571] Enhancing library efficiency with vmedulife integrated library management cloud based system: a case study at svpm’s institute of management malegaon bk (2025)
+[p572] This study highlights the effectiveness of using a cloud-based integrated library management system (ilms) to modernize academic institutions by offering a digital catalog, Patron self-service portals, and real-time analytical reports. Aligning with this cloud-based approach, lumina will implement a highly secure web architecture to empower Patrons with a self-service dashboard where they can independently search for books, track due dates, and reserve titles. As proven by this study, bringing these operations to the cloud ensures that library services remain continuously accessible while drastically reducing the manual workload of administrators (wayal, 2025).
+[p573] Integration of koha library management system with open-source tools for customized readers id card with qr codes (2025)
+[p574] This research explores the integration of qr codes into library reader id cards to ensure quick and error-free library transactions, such as check-ins, check-outs, and gate entries. Validating lumina's core tracking mechanism, this study demonstrates that replacing traditional manual cards with unique qr codes linked directly to the library’s central database substantially minimizes human intervention. By adopting this methodology, lumina will avoid manual data entry errors, prevent alignment mismatches, and provide a highly reliable, cost-effective tool for tracking resource circulation at sti college alabang (koya & waral, 2025).
+[p575] Library automation and its impact on services: a case study of the central library (2025)
+[p576] Modern advancements in academic infrastructure emphasize the transition from physical card-based systems to technology-driven procedures that utilize integrated library management systems (ilms) to consolidate diverse functions. Research indicates that platforms such as koha serve as a foundation for contemporary library administration by automating repetitive tasks including acquisitions, circulation, and user account management which effectively reduces the necessity for manual intervention. By replacing traditional manual methods with digital transaction records and automated searching through an online public access catalog (opac), institutions can significantly minimize manual errors and enhance real-time resource tracking. For collegiate environments like sti college alabang, adopting this automated methodology not only optimizes internal operations and reduces administrative burdens for library personnel but also improves Patron engagement by providing seamless access to digital and physical resources (sujana & putu, 2025).
+[p579] Synthesis
+[p580] The global transition from manual library processes to digital platforms is driven by the need to overcome inefficient data recording and time-consuming searches that hinder user engagement. Modern literature establishes that deploying robust, web-based architectures integrated with Quick Response (QR) technology is the most effective strategy for automating resource tracking and minimizing manual data-entry errors. QR codes provide a highly cost-effective alternative to traditional systems, enabling instant catalog access and the seamless synchronization of borrowed assets. Furthermore, centralized cloud-based architectures provide real-time data, allowing administrators to continuously monitor stock quantities and make data-driven decisions while ensuring the safety of institutional records through automated audit logs.
+[p581] Beyond operational efficiency, recent studies emphasize that automated systems must strictly prioritize institutional security and user-centered design. Implementing enterprise-grade access controls, such as Microsoft 365 and Multi-Factor Authentication (MFA), is crucial for restricting services to verified users and preventing malicious data breaches. Additionally, equipping systems with personalized dashboards, online reservations, and real-time visualizations directly aligns with the modern Patron's high expectations for convenience, significantly enhancing their overall academic experience.
+[p582] The proposed project, Lumina, is highly justified as it actively synthesizes the most effective technological advancements identified in both local and foreign literature. By completely replacing outdated, error-prone manual procedures with a centralized web platform, Lumina addresses the critical service quality gaps at STI College Alabang. Its seamless integration of QR-based tracking, secure Microsoft 365 authentication, and real-time inventory auditing ensures a modernized, secure, and highly efficient digital learning environment that effectively meets the evolving demands of both Patrons and library personnel
+[p584] METHODOLOGY
+[p585] This project uses the Iterative Development method to build and set up A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang. We chose this approach for one main reason: it allows us to build the system and write our research paper at the same time. Instead of waiting to finish all the paperwork before writing code, this method lets us work on small parts of both tasks together. This helps us make steady progress and ensures our written report always matches the real, working system
+[p586] Stage 1: Planning
+[p587] In this first step, we plan the main features we want to create for a specific part of the library system, such as the login page or the QR scanner. At the same time, we write down these initial plans and requirements directly into our project document.
+[p588] Stage 2: Design
+[p589] Next, we design how that specific part of the system will look and work. We map out the user screens and database layouts for that feature. As soon as the design is ready, we add these sketches and diagrams to our paper.
+[p590] Stage 3: Implementation
+[p591] This is the step where we actually write the code and build the feature we just designed, like creating the book inventory table. Working this way allows us to draft the technical descriptions in our manuscript while the coding is fresh in our minds.
+[p592] Stage 4: Testing
+[p593] Once the feature is coded, we test it carefully to make sure there are no errors. We check that the QR codes scan properly and that books can be borrowed without issues. All the test results and fixes are written straight into our report.
+[p594] Stage 5: Deployment
+[p595] In this step, we release the tested and verified feature into the live environment so that library users and administrators can start using it in practice. Any initial deployment steps or rollout notes are documented directly in our project records.
+[p596] Stage 6: Evaluation
+[p597] In this final step of the cycle, we look at the deployed feature to see what works and what needs to be fixed. Once this part is reviewed and finalized, we update our paper to match it perfectly, and then we start the cycle all over again for the next system feature.
+[p599] Technical Background
+[p600] Overview of current Technologies to be used in the system
+[p601] The system is built upon a modern, high-performance tech stack designed for scalability, security, and a premium user experience. At its core, the application utilizes Next.js 16, a powerful React 19 framework that enables server-side rendering and optimized routing, ensuring fast load times and seamless navigation. This foundation is reinforced by TypeScript, which provides a robust type system to catch errors early and maintain high code quality across the entire development lifecycle. The combination of these core technologies allows for a highly responsive and maintainable codebase that can adapt to evolving requirements.
+[p602] For backend infrastructure, the system leverages Supabase, an open-source Backend-as-a-Service that provides a managed PostgreSQL database, integrated authentication, and database APIs. This allows the system to handle complex data relationships and user security with minimal overhead, utilizing Row-Level Security (RLS) to ensure data integrity at the database level. The backend is further supported by Node.js 24, providing a scalable runtime environment for executing server-side logic and managing asynchronous operations efficiently.
+[p603] The user interface is crafted with a focus on aesthetics and accessibility, utilizing Tailwind CSS for rapid, utility-first styling and Radix UI for unstyled, accessible component primitives. Fluid animations and interactive transitions are powered by Framer Motion, while Lucide React provides a consistent and modern iconography set. Data visualization is handled by Recharts, offering clear and actionable insights through responsive charts. Together, these tools create a cohesive design system that feels premium, alive, and intuitive for every user.
+[p605] Date-fns
+[p606] Date-fns is a modern JavaScript date utility library that provides a comprehensive and modular set of functions for manipulating and formatting dates. Unlike traditional libraries, it is built with a functional approach, allowing developers to import only the specific functions they need, which significantly reduces the final bundle size. It supports a wide range of locales and provides precise control over date arithmetic, making it indispensable for handling time-sensitive data within the library system.
+[p607] ESLint
+[p608] ESLint serves as the primary pluggable and configurable linting tool for the project, used to identify and report on patterns in JavaScript and TypeScript code. By enforcing a consistent coding style and flagging potential bugs or anti-patterns during development, it ensures that the codebase remains clean and maintainable. It integrates directly into the development workflow, providing real-time feedback and maintaining high standards across the entire development team.
+[p609] Figma
+[p610] Figma is a browser-based web design and prototyping tool that plays a critical role in the system's UI and UX design phase. It allows for real-time collaboration between designers and developers, ensuring that visual components, layout structures, and user flows are finalized before implementation. By using Figma, the team can create high-fidelity mockups and interactive prototypes that serve as the visual blueprint for the entire web application.
+[p611] Framer Motion
+[p612] Framer Motion is a production-ready motion library for React that is used to create fluid, interactive, and high-performance animations. It simplifies the process of adding complex transitions, gestures, and physics-based animations to UI components, making the interface feel more responsive and engaging. In this system, it is utilized to enhance the "premium" feel by providing smooth state transitions and subtle micro-animations that guide user attention.
+[p613] HTML5-QRCode
+[p614] HTML5-QRCode is a lightweight and versatile library used for scanning QR codes directly within the web browser. It leverages the device's camera via HTML5 standards to provide a fast and reliable scanning experience for library materials and Patron identification cards. The qrcode library generates QR images. Scanning is a core component of the system's circulation and attendance modules, enabling quick data entry and verification without the need for specialized hardware.
+[p615] Lucide React
+[p616] Lucide React is a library of consistent and beautiful icons designed to provide clear visual cues and enhance the overall user interface. Each icon is built as a highly customizable React component, allowing for easy integration with the system's design system and styling tools. These icons are strategically placed throughout the application to improve scannability and ensure that navigation remains intuitive and visually cohesive.
+[p617] Next.js
+[p618] Next.js is a comprehensive React framework used for building the full-stack web application, providing essential features like server-side rendering (SSR), static site generation (SSG), and optimized routing. It streamlines the development process by handling complex configurations and offering built-in performance optimizations like image processing and code splitting. This framework is the primary engine of the system, ensuring that the application is both SEO-friendly and exceptionally fast for the end user.
+[p619] Node.js
+[p620] Node.js is a cross-platform JavaScript runtime environment that allows the execution of JavaScript code outside of a web browser. In the context of this system, it provides the foundation for the build tools, server-side logic, and various background scripts that handle data processing. Its non-blocking, event-driven architecture makes it ideal for handling the multiple concurrent requests and real-time updates required by a modern library management system.
+[p622] Nodemailer
+[p623] Nodemailer is a Node.js module for SMTP email delivery. In this system, a daily scheduled job sends due-soon and overdue reminders; the Super Administrator can send test emails. Microsoft O365 handles authentication and any multi-factor verification.
+[p624] Radix UI
+[p625] Radix UI is an unstyled, accessible component library that provides the foundational building blocks for creating high-quality design systems. By offering "headless" components that handle complex logic such as focus management, keyboard navigation, and ARIA attributes it allows developers to focus entirely on custom styling. This ensures that the system's interactive elements are fully accessible and standards-compliant while maintaining a unique and premium visual identity.
+[p626] Recharts
+[p627] Recharts is a composable charting library built with React components, specifically designed for rendering data-rich analytics and statistics. It uses a declarative approach to define charts, making it easy to build complex visualizations like line graphs, bar charts, and pie charts that are both responsive and interactive. In the Analytics module, Recharts is used to translate raw library data into actionable visual insights for administrators and librarians.
+[p628] Sonner
+[p629] Sonner is an opinionated and lightweight toast component for React that provides customizable, non-intrusive notifications for user actions. It is used to deliver real-time feedback such as success messages after saving data or error alerts when a scan fails without disrupting the user's flow. Its clean design and smooth animations align perfectly with the system's aesthetic, providing a polished way to manage transient application states.
+[p631] Supabase
+[p632] Supabase is an open-source Backend-as-a-Service (BaaS) that provides the core infrastructure for the system, including a PostgreSQL database, user authentication, and real-time APIs. It simplifies backend development by offering a unified interface for data management and security, allowing the team to implement complex features like Row-Level Security (RLS) with ease. Supabase serves as the "source of truth" for all system data, ensuring reliability and high availability.
+[p633] Tailwind CSS
+[p634] Tailwind CSS is a utility-first CSS framework used for rapidly building and styling custom, responsive user interfaces. Instead of writing traditional CSS, it allows developers to apply styles directly within HTML or JSX using predefined utility classes, which promotes consistency and speed. This framework is essential for maintaining the system's high-density layout and ensuring that the design remains responsive across various device types.
+[p635] TypeScript
+[p636] TypeScript is a strongly typed programming language that builds on JavaScript by adding static type definitions. It is used throughout the codebase to ensure better code quality, improve developer productivity, and eliminate entire classes of runtime bugs. By providing clear interfaces and type safety for both frontend and backend logic, TypeScript makes the system more robust and easier to refactor as it grows in complexity.
+[p637] Vercel
+[p638] Vercel is a cloud platform specifically tailored for Next.js workflows, used for deploying and hosting the web application. It provides a seamless CI/CD pipeline, automatically deploying changes from the repository and offering global edge network delivery for maximum performance. Vercel's infrastructure supports application availability, performance, and security, with features like automatic SSL and serverless function scaling.
+[p640] Zod
+[p641] Zod is a TypeScript-first schema declaration and validation library used for ensuring the integrity of form and API inputs. It allows developers to define clear data schemas that are automatically synchronized with TypeScript types, providing both runtime validation and compile-time safety. In this system, Zod is used to validate form submissions and API input, preventing malformed data from causing system errors.
+[p643] Calendar of Activities
+[p644] Brainstorming
+[p645] The proponents spent the initial phase of the development period collaborating and exchanging ideas to identify the common problems in the current library operations of STI College Alabang. This phase focused on planning the core features, such as the QR-based scanning for books, the book reservation workflow, and the inventory management modules for both Patrons and administrators.
+[p646] Documentation: Chapter I
+[p647] The developers completed Chapter I with consistent weekly revisions. This chapter serves as the foundation of the study, covering the Project Context, Statement of the Problem, Purpose and Description of the Project, and the Scope and Limitations. It provides a clear roadmap for how the Web-Based Library Book Reservation, Borrowing, and Inventory Management System will function.
+[p648] Documentation: Chapter II
+[p649] Chapter II was developed and refined to provide theoretical support for the project. This section includes the Review of Related Literature and Related Systems, comparing existing library software with the proposed QR-based system to ensure the project offers unique and helpful features for the school.
+[p650] Documentation: Chapter III
+[p651] The developers completed Chapter III to outline the technical side of the project. This chapter explains the software and hardware requirements, the calendar of activities, and the specific technologies used, such as Microsoft O365 for user authentication, providing a clear overview of the development timeline.
+[p653] Diagrams
+[p654] The developers designed the Entity Relationship Diagram (ERD) and Data Flow Diagrams (DFDs) for the system. These diagrams were revised multiple times to accurately represent how the database stores book information and how data flows through the library system's features.
+[p655] Flowchart
+[p656] The developers created detailed flowcharts to illustrate the step-by-step processes of the system. These charts show the workflow for scanning QR codes, the logic for borrowing and returning books, and how notifications are sent to Patrons when their automatic holds become ready for pickup.
+[p658] Gantt Chart
+[p660] Resources
+[p661] Specification:
+[p662][tbl] Hardware Requirements
+[p663][tbl] Processor
+[p664][tbl] Intel Core i5-12400
+[p665][tbl] Graphics Card
+[p666][tbl] AMD Radeon RX 580
+[p667][tbl] Memory
+[p668][tbl] 32 GB
+[p669][tbl] Disk Storage
+[p670][tbl] 500 GB
+[p672] Table 1  Hardware Requirements
+[p673][tbl] Software Requirements
+[p674][tbl] Operating System
+[p675][tbl] Windows 11
+[p676][tbl] Integrated Development Environment (IDE) and/or Code Editors
+[p677][tbl] Visual Studio Code
+[p678][tbl] Database
+[p679][tbl] Supabase (PostgreSQL 15+)
+[p680][tbl] Programming Languages and other Technologies
+[p681][tbl] Next.js 16, React 19, TypeScript 5, Tailwind CSS, Node.js 24, npm 11
+[p682][tbl] Documentation
+[p683][tbl] Microsoft Office 365 Word
+[p685] Table 2  Software Requirements
+[p686] Requirements Analysis
+[p687][tbl] Minimum Hardware Requirements (For Development)
+[p689][tbl] MINIMUM
+[p690][tbl] RECOMMENDED
+[p691][tbl] Processor
+[p692][tbl] Intel Core i3-10100 @ 3.6GHz (4 cores, 8 threads) / AMD Ryzen 3 3200G @ 3.6GHz (4 cores, 4 threads)
+[p693][tbl] Intel Core i5-11400 @ 2.60GHz (6 cores, 12 threads) / AMD Ryzen 5 5600X @ 3.7GHz (6 cores, 12 threads)
+[p694][tbl] Memory
+[p695][tbl] 8GB DDR4
+[p696][tbl] 16GB DDR4
+[p697][tbl] Graphics Card
+[p698][tbl] Integrated Graphics (e.g., Intel UHD Graphics 630 / AMD Radeon Vega 8)
+[p699][tbl] Dedicated Graphics (e.g., NVIDIA GeForce GTX 1660 6GB / AMD Radeon RX 5600 XT 6GB)
+[p700][tbl] Disk Storage
+[p701][tbl] 128GB
+[p702][tbl] 256GB or more
+[p704] Table 3 Minimum Hardware Requirements (For Development)
+[p706][tbl] Minimum Hardware Requirements (For Users)
+[p707][tbl] Processor
+[p708][tbl] Intel Core 2 Duo E8400 @ 3.0GHz / AMD Athlon II X2 250 @3.0GHz.
+[p709][tbl] Memory
+[p710][tbl] 4GB RAM
+[p711][tbl] Graphics
+[p712][tbl] Standard display adapter (1024x768 minimum) and a modern web browser (Chrome, Edge, Firefox, Safari); camera and handheld scanner are optional, with typed entry supported
+[p714] Table 4 Minimum Hardware Requirements (For Users)
+[p715] Requirements Documentation
+[p716] This specific part defines the software features of the web-based system of Lumina: A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang. The requirements stated below are formulated based on the data gathered, standard operating procedure analysis, and key stakeholder consultations conducted with the library staff and administration of STI College Alabang, as well as particularly selected information based on the specific objectives of this study. The defined requirements below are expected to cater to the operational needs of STI College Alabang to enhance library transaction efficiency, inventory tracking accuracy, and asset security. The requirements below also describe how all the authorized users Super Administrators, Librarians, Library Staff, and Patrons (students and faculty) of STI College Alabang can interact with the system.
+[p718] 4.1. Functional Requirements
+[p719] 4.1.1. Log In (Super Administrator)
+[p720] REQ001. The Super Administrator shall be able to log in securely using Microsoft O365 institutional account credentials.
+[p721] REQ002. The system shall restrict administrative tools according to each user's role, account status, and granted permissions.
+[p722] 4.1.2. Dashboard Module (Super Administrator)
+[p723] REQ003. The Super Administrator shall be able to view a real-time overview displaying metric summary counters for Today's Visitors, Active Borrows, Inventory (physical copies), and total users.
+[p724] REQ004. The Super Administrator shall be able to view an Action Center (card applications, overdue borrows, ready holds) and live activity feed, while accessing Circulation Desk, Inventory, User Directory, Attendance Logs, Audit Logs, and Analytics via the sidebar.
+[p725] REQ005. The Super Administrator shall be able to view recently cataloged books and their Library Card, and use Catalog to search (title, author, ISBN), filter/sort, check copies, and reserve or join a waitlist.
+[p726] 4.1.3. Inventory (Super Administrator)
+[p727] REQ006. The Super Administrator shall be able to automatically fetch book metadata (title, author, cover, and Dewey Decimal when available) via ISBN lookup (Google Books/Open Library).
+[p728] REQ007. The Super Administrator shall be able to enter missing Dewey Decimal numbers, categories, copies, and shelf locations; book details provide per-copy acquisition/disposal, auto accession numbers, and QR labels.
+[p729] REQ008. The Super Administrator shall be able to utilize a Batch Catalog Operations panel equipped with a drag-and-drop Import Sheet tool for uploading inventory spreadsheets.
+[p730] REQ009. The Super Administrator shall be able to run background batch ISBN imports (up to 500 books) with automatic cover retrieval.
+[p731] REQ010. The Super Administrator shall be able to export active catalog data with custom column selections into Spreadsheet, CSV, JSON Data, or Covers ZIP file formats.
+[p732] 4.1.4. Circulation Desk (Super Administrator)
+[p733] REQ011. The Super Administrator shall be able to scan or type Patron card and copy QR/accession IDs for checkout, and copy ID only for return (camera optional).
+[p734] REQ012. The system shall require checkout confirmation, block self-checkout, and block overdue/lost/unpaid-fine loans unless a Librarian or Super Administrator overrides with a recorded reason.
+[p735] 4.1.5. Borrowing Logs (Super Administrator)
+[p736] REQ013. The Super Administrator shall be able to view non-archived loans and use Return / Settle or Settle for in-person payment or condoning (with remarks); records over one year may be archived.
+[p737] REQ014. The Super Administrator shall be able to view complete transaction details including borrower name, borrower ID, book title, author, borrow date, due date timeline, return date, and overdue penalty.
+[p738] REQ015. The Super Administrator shall be able to identify transaction statuses through color-coded status tags (Active, Returned, Overdue) and fine statuses (Receivable, Paid, Condoned).
+[p739] REQ016. The Super Administrator shall be able to search borrowing records by keyword and filter logs using status tab buttons (All, Active, Overdue, Returned, Settlements).
+[p740] 4.1.6. Analytics (Super Administrator)
+[p741] REQ017. The Super Administrator shall be able to view system performance metrics filtered by 7 days, 30 days, 1 year, or custom date ranges, and export to Excel or print.
+[p742] REQ018. The Super Administrator shall be able to view summary counters for Visits, Loans Issued, Inventory (physical copies), and Active Loans.
+[p743] REQ019. The Super Administrator shall be able to view a Peak Visiting Hours bar chart and a Circulation Trends line chart.
+[p744] REQ020. The Super Administrator shall be able to view a Genre Popularity donut chart across borrowed catalog categories.
+[p745] REQ021. The Super Administrator shall be able to view a demand leaderboard list of top-borrowed books and use Report Builder (Attendance, Borrowing, Inventory, Users; up to 8 sections; PDF, Excel, CSV).
+[p746] 4.1.7. User Directory (Super Administrator)
+[p747] REQ022. The Super Administrator shall be able to view a master list of all registered accounts displaying user full names, emails, unique IDs, system roles, account statuses, and student academic programs.
+[p748] REQ023. The Super Administrator shall be able to search user accounts by name, email, or student ID and narrow lists using filter buttons.
+[p749] REQ024. The Super Administrator shall be able to click on any user entry to open their detailed profile page and inspect contact information.
+[p750] REQ025. The Super Administrator shall be able to approve pending accounts, change roles, grant Library Staff permissions (manage_inventory, manage_circulation, manage_attendance), set Active/Pending/Inactive/Suspended/Archived status, and transfer Super Administrator ownership.
+[p752] 4.1.8. Attendance Logs (Super Administrator)
+[p753] REQ026. The Super Administrator shall be able to track Patron traffic in real time by using Check-In/Check-Out mode with Patron card scans or typed card/student IDs.
+[p754] REQ027. The Super Administrator shall be able to view a list of checked-in and checked-out Patrons with entry/exit timestamps; forgotten exits auto-close as "No Log Out," and records over one year may be archived.
+[p755] 4.1.9. System Policies (Super Administrator)
+[p756] REQ028. The Super Administrator shall be able to configure loan limits (default 14 days, 5 books), hold limits (default 3 active holds, 3-day pickup window), and fine rate (default PHP 5/day).
+[p757] REQ029. The Super Administrator shall be able to configure student academic programs and organize catalog book categories.
+[p758] REQ030. The Super Administrator shall be able to create and publish announcements to Patrons & Library Staff or all users.
+[p759] REQ031. The Super Administrator shall be able to manage dashboard Support & FAQs, recording a required reason for every policy or FAQ change.
+[p760] REQ032. The Super Administrator shall be able to run lifecycle tools: annual resets suspending all Patrons (students and faculty), 1-year archiving (after Excel backup), maintenance, and test emails.
+[p761] 4.1.10. Audit Logs (Super Administrator)
+[p762] REQ033. The Super Administrator shall be able to view a security table of key actions (catalog, copies, policies, users, circulation, fines, resets) tracking timestamps, administrator/user identities, action types, affected entities, and change descriptions.
+[p763] REQ034. The Super Administrator shall be able to click a dedicated button on log entries to view granular technical differences (diffs).
+[p764] REQ035. The Super Administrator shall be able to search audit logs by name, action type, or reason, and filter logs by entity, action, subject, and date range.
+[p765] REQ036. The Super Administrator shall be able to export audit log records in CSV, JSON, and Excel formats.
+[p766] 4.1.11. Notification (Super Administrator)
+[p767] REQ037. The Super Administrator shall be able to click a header notification bell icon to view a modal dialog displaying recent system alerts.
+[p768] REQ038. The Super Administrator shall be able to access a dedicated notifications page with All/Unread/History tabs, search, Circulation/Reservation/System filters, mark-all-read, clear-read, and daily Nodemailer due/overdue emails.
+[p769] 4.1.12. My Profile (Super Administrator)
+[p770] REQ039. The Super Administrator shall be able to view a read-only profile page displaying their full name, system ID, official email, contact number, residential address, account status, membership role, and an Account Access note, and upload, crop, change, or remove their photo.
+[p771] 4.1.13. Log In (Librarian)
+[p772] REQ040. The librarian shall be able to log in securely using Microsoft O365 institutional account credentials.
+[p773] 4.1.14. Dashboard (Librarian)
+[p774] REQ041. The librarian shall be able to view real-time metrics for Today's Visitors, Active Borrows, Inventory (physical copies), and total users.
+[p775] REQ042. The librarian shall be able to view the Action Center (applications, overdue borrows, ready holds), recent books, activity feed, and Library Card (other modules via sidebar), and use Catalog to search, filter/sort, and reserve or join a waitlist.
+[p777] 4.1.15. Inventory (Librarian)
+[p778] REQ043. The librarian shall be able to manage book collections using ISBN automated lookups, manual Dewey Decimal entry when unavailable, shelf locations, copy counts, per-copy acquisition/disposal, automatic accession numbers and QR labels, spreadsheet and background batch ISBN imports (up to 500 books), and CSV/JSON/Excel/cover ZIP exports.
+[p779] 4.1.16. Circulation Desk (Librarian)
+[p780] REQ044. The librarian shall be able to scan or type card and copy IDs, then confirm checkout; returns use only the copy. Self-checkout, borrowing blocks, and fines follow REQ012?REQ015.
+[p781] 4.1.17. Borrowing Logs (Librarian)
+[p782] REQ045. The librarian shall be able to access interactive Borrowing Logs with search, All/Active/Overdue/Returned/Settlements tabs, timelines, overdue penalties, and Return / Settle or Settle (pay in person or condone with remarks).
+[p783] 4.1.18. Analytics (Librarian)
+[p784] REQ046. The librarian shall be able to analyze Visits, Loans Issued, Inventory (physical copies), and Active Loans for preset or custom dates; view Peak Visiting Hours (bar), Circulation Trends (line), Genre Popularity (donut), and demand rankings; export to Excel or print; and use Report Builder (REQ021).
+[p785] 4.1.19. User Directory (Librarian)
+[p786] REQ047. The librarian shall be able to search accounts (name, email, student ID), view profiles/borrow history, approve Pending accounts, edit Patron/Library Staff details (not other librarians), and set Active/Pending/Inactive status; Super Administrators are hidden.
+[p787] 4.1.20. Attendance Logs (Librarian)
+[p788] REQ048. The librarian shall be able to log Patron visits in Check-In/Check-Out mode via card scans or typed card/student IDs; forgotten exits close at closing time as "No Log Out."
+[p790] 4.1.21. System Policies (Librarian)
+[p791] REQ049. The librarian shall be able to configure loan/hold limits, fine rates, programs, categories, targeted announcements, and dashboard FAQs with change reasons (lifecycle tools are Super Administrator-only), plus search, filter (subject/entity/action/date), inspect diffs, and export Audit Logs (CSV/JSON/Excel), excluding Super Administrator actions.
+[p792] 4.1.22. Notification (Librarian)
+[p793] REQ050. The librarian shall be able to monitor system alerts via header bell dialogs and manage notifications via All/Unread/History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read.
+[p794] 4.1.23. My Profile (Librarian)
+[p795] REQ051. The librarian shall be able to view their read-only personal details, account status, membership role, and an Account Access note, and upload, crop, change, or remove their photo.
+[p796] 4.1.24. Log In (Library Staff)
+[p797] REQ052. The Library Staff shall be able to log in using Microsoft O365 institutional credentials.
+[p798] 4.1.25. Dashboard (Library Staff)
+[p799] REQ053. The Library Staff dashboard shall display the digital Library Card, Assistant Desk Shortcuts (for permitted modules), personal activity tracking, and Support FAQs, without administrative summary metrics.
+[p800] REQ054. The Library Staff shall be able to utilize shortcuts to the Circulation Desk and Attendance Logs for granted permissions, and browse the Catalog.
+[p801] REQ055. The Library Staff shall be able to view a personal tracking section displaying their own current borrows, hold reservations, and recent attendance entries.
+[p803] 4.1.26. Catalog (Library Staff)
+[p804] REQ056. The Library Staff shall be able to browse book cards displaying book titles, authors, cover images, and fractional availability indicators (e.g., available copies vs. total copies).
+[p805] REQ057. The Library Staff shall be able to search catalog books using a keyword bar (titles, authors, ISBNs) and refine results using category filters, an availability toggle, and sorting options.
+[p806] REQ058. The Library Staff shall use "Reserve for Pickup" or "Join Waitlist" for automatic holds.
+[p807] 4.1.27. Inventory (Library Staff)
+[p808] REQ059. The Library Staff shall view a read-only title table (Title, Author, Category, ISBN, available/total copies) and view/print copy QR codes inside book details (with Active status and inventory permission).
+[p809] REQ060. The Library Staff shall be able to filter inventory entries by category and keyword search.
+[p810] 4.1.28. Circulation Desk (Library Staff)
+[p811] REQ061. The Library Staff shall process loans (with Active status and circulation permission) via scanned/typed card and copy IDs (confirmed) for checkout and copy only for return; self-checkout is blocked, overdue/lost/unpaid fines block loans (Librarian/Super Administrator override with a recorded reason), and fines are settled in person on return or in Borrowing Logs.
+[p812] 4.1.29. My Borrowing (Library Staff)
+[p813] REQ062. The Library Staff shall view personal borrow history (metadata, dates, status, penalties), search, filter (All/Active/Overdue/Returned/Settlements), export Excel, and print.
+[p814] 4.1.30. Borrowing Logs (Library Staff)
+[p815] REQ063. With an Active account and circulation permission, the Library Staff shall access interactive Borrowing Logs (All/Active/Overdue/Returned/Settlements tabs, Receivable/Paid/Condoned penalties, Return / Settle or Settle for in-person payment or condoning with remarks); an Active account with attendance or circulation permission also unlocks those Report Builder datasets (up to 8 sections; PDF/Excel/CSV).
+[p816] 4.1.31. My Attendance (Library Staff)
+[p817] REQ064. The Library Staff shall view personal attendance (dates, check-in/out times, Still in library/No Log Out badges) with a date-range filter for unarchived visits.
+[p818] 4.1.32. Attendance Logs (Library Staff)
+[p819] REQ065. The Library Staff shall log patron visits (with Active status and attendance permission) in Check-In/Check-Out mode via card scans or typed card/student IDs; forgotten exits close at closing time as "No Log Out."
+[p820] 4.1.33. Notification (Library Staff)
+[p821] REQ066. The Library Staff shall view alerts in a header bell dialog and manage notifications via All/Unread/History tabs, search, Circulation/Reservation/System filters, mark-all-read, and clear-read.
+[p822] 4.1.34. My Profile (Library Staff)
+[p823] REQ067. The Library Staff shall view read-only account details and an Account Access note, and upload, crop, change, or remove their photo.
+[p824] 4.1.35. Log In and Profile Completion (Patron)
+[p825] REQ068. The Patron shall be able to log in using their Microsoft O365 institutional account.
+[p826] REQ069. The Patron shall complete onboarding by choosing Student or Faculty and entering residential and contact details (academic program for students only).
+[p827] REQ070. The system shall create Patron accounts as Pending at O365 sign-in; users may use "Edit Info" until a Librarian or Super Administrator approves them as Active, after which details are read-only.
+[p828] 4.1.36. Dashboard (Patron)
+[p829] REQ071. The Patron shall view a digital Library Card showing photo, name, program, automatically computed academic year, QR code, and card-flip/export actions.
+[p830] REQ072. The Patron shall be able to view personalized tracking sections for Current Borrows (including returned books with unpaid fines), Reservations (with cancel hold option), and Recent Attendance snapshots (check-in/out timestamps and visit durations).
+[p831] REQ073. The Patron shall be able to access an interactive Support & FAQs panel to learn about library systems and policies.
+[p832] 4.1.37. Catalog (Patron)
+[p833] REQ074. The Patron shall be able to search and filter book collections, view fractional availability indicators, and use "Reserve for Pickup" or "Join Waitlist" for automatic holds.
+[p834] 4.1.38. My Borrowing (Patron)
+[p835] REQ075. The Patron shall view personal borrow history (resource details, borrowing and due/return dates, penalties), search, filter All/Active/Overdue/Returned/Settlements, export Excel, and print.
+[p836] 4.1.39. My Attendance (Patron)
+[p837] REQ076. The Patron shall view personal visit dates, recorded entry/exit times, and Still in library/No Log Out badges, with a date-range filter for unarchived visits; records older than one year may be archived by the Super Administrator.
+[p838] 4.1.40. Notification (Patron)
+[p839] REQ077. The Patron shall receive alerts through the header bell dialog and notifications page, with All/Unread/History tabs, search, Circulation/Reservation/System filters, mark all read, and clear read.
+[p840] 4.1.41. My Profile (Patron)
+[p841] REQ078. The Patron shall be able to view their read-only account details including full name, system ID, official email, contact number, residential address, account status, membership role, and an Account Access note, and upload, crop, change, or remove their photo.
+[p843] 4.2. Non-Functional Requirements
+[p844] 4.2.1. Performance
+[p845] REQ079. The system shall process and display real-time transaction updates (such as QR-based borrowing, returning, and entry/exit card scans) after successful validation and transaction confirmation where required.
+[p846] REQ080. The system shall maintain smooth response times for concurrent user activities (such as simultaneous catalog browsing, reservation holds, and administrative reporting) without performance degradation.
+[p847] REQ081. The system shall load search query results, inventory filtering options, and analytics visualizations without noticeable interface lag.
+[p848] 4.2.2. Availability
+[p849] REQ082. The system shall remain operationally accessible 24 hours a day, 7 days a week, subject to planned maintenance and Microsoft O365, Vercel, and Supabase service availability.
+[p850] 4.2.3. Security
+[p851] REQ083. The system must enforce user authentication exclusively through Microsoft O365 institutional accounts (via Azure OAuth) across all user roles (Super Administrator, Librarian, Library Staff, Patron) to prevent unauthorized access.
+[p852] REQ084. The system must enforce strict Role-Based Access Control (RBAC), ensuring that non-administrative accounts (Patrons) cannot view administrative tools, audit logs, or backend directories. Library Staff operational access requires an Active account and the relevant Super Administrator permission.
+[p853] REQ085. The system must maintain an access-controlled audit trail of key administrative actions (catalog, copies, policies, users, circulation, fines, resets).
+[p855] 4.2.4. Usability
+[p856] REQ086. The system must feature an intuitive, visually clear, and consistent interface layout tailored specifically to each of the four distinct user roles.
+[p857] REQ087. The system shall utilize consistent color-coded visual badges (e.g., green for Returned, blue/yellow for Active, red for Overdue) across all tables to optimize operational readability.
+[p858] REQ088. The system shall provide quick-access keyword search bars and dropdown filters across all catalog, directory, log, and notification interfaces.
+[p859] 4.2.5. Maintainability
+[p860] REQ089. The system architecture shall be modularly designed to allow updates to system rules, borrowing configurations, or academic program lists without disrupting core circulation services.
+[p861] 4.2.6. Portability and Deployment
+[p862] REQ090. The system must function consistently across major modern web browsers, including Google Chrome, Mozilla Firefox, Microsoft Edge, and Apple Safari, without requiring special extensions.
+[p863] REQ091. The system shall be fully accessible and responsive across multiple hardware devices and operating systems (Windows, macOS, Linux, iOS, Android).
+[p864] REQ092. The system shall support customizable data export operations, allowing administrative catalog data and audit logs to be downloaded in CSV, JSON, or Excel, with cover ZIP for inventory.
+[p866] Design of Software, System, Product, and/or Processes
+[p867] In designing our software, system, and process, we utilized structured architectural and design approaches to create a secure, efficient, and user-centered system. The system follows a layered architecture consisting of the Presentation, Process/Logic, Database Client, and Database Core layers, ensuring clear separation of responsibilities and maintainability. Database design applies Third Normal Form (3NF) to minimize redundancy and maintain data integrity, while ACID transactions, row-level locking, advisory locks, and database triggers support reliable and concurrent library operations. Security was incorporated through authentication, role-based access control (RBAC), input validation using Zod, Row Level Security (RLS), restricted database procedures, and audit logging of key administrative actions. The system also applies ISO/IEC 25010 quality attributes, focusing on functional suitability, performance efficiency, compatibility, usability, reliability, security, maintainability, and portability. Integrating these architectural, database, security, and quality design practices resulted in a robust, scalable, and user-friendly library management product.
+[p868] Development
+[p869] In this part, the developers shall describe in detail how they developed the system in accordance with standards.
+[p870] RESULTS AND DISCUSSION
+[p871] Testing
+[p872] In this part, the proponents present the testing activities conducted for Lumina: A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang. Testing focuses on verifying whether the developed modules and functions operate according to their intended requirements. The system follows the Iterative Development method, where each feature is tested after implementation to identify errors and necessary improvements. The testing includes Microsoft O365 authentication, book searching and reservation, QR-based scanning, borrowing, returning and fine settlement, attendance monitoring, inventory management, notifications, Report Builder, and administrative permissions, with the results used to improve the system in the next development cycle.
+[p874] Description of Prototype
+[p875] The prototype is a web-based library management system designed to provide Patrons and library personnel with a centralized platform for accessing and managing library services. It includes features such as book searching and reservation, borrowing and returning, fines and in-person settlement, Report Builder, inventory management, attendance monitoring, notifications, and user profile management. The system uses Next.js, TypeScript, Supabase, Tailwind CSS, and HTML5-QRCode for client-side camera scanning, alongside qrcode and sharp for server-side generation and rasterization of digital library cards and copy QR codes. Overall, the prototype is designed to improve the efficiency of library transactions, organize book records, and provide convenient access to library services for Patrons and library personnel.
+[p877] Implementation Plan
+[p878] The implementation of  A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang resulted in a centralized platform that supports book searching, reservations, borrowing and returning, inventory management, and attendance monitoring. Patrons can search and reserve books, view borrowing history and due dates, check attendance records, receive notifications, and access their profiles. Library personnel can manage book records and transactions using QR-based scanning, while administrators can manage inventory, borrowing logs, analytics and Report Builder, users, System Policies, and audit logs. Overall, the implemented features provide an organized digital platform that supports library operations, improves access to information, and reduces reliance on manual recording
+[p879] Implementation Results
+[p880] The implementation of  A Web-Based Library Book Reservation, Borrowing, and Inventory Management System with QR-Based Scanning for STI College Alabang resulted in a functional system that integrates the major library processes into one centralized web-based platform. The implemented modules allow Patrons to browse available books, reserve books for staff checkout, view borrowing history, and review profile details and manage their photo, while administrators can manage book records, monitor inventory, process borrowing and returns, and manage user transactions. The QR-based scanning feature was also implemented to support faster and more accurate identification of books and borrowing transactions. Overall, the implementation results demonstrate that the developed system successfully addresses the identified limitations of the existing manual processes by providing a more organized, accessible, and efficient approach to library management.
+[p882] ConclusionThe development and implementation of Lumina directly addresses the longstanding inefficiencies associated with manual library operations at STI College Alabang. By replacing time-consuming paper logbooks and manual shelf checks with a centralized, web-based platform, the project unifies book reservation, borrowing, circulation, and inventory auditing into a cohesive digital ecosystem.
+[p883] Through the integration of QR-based scanning technologies, Microsoft O365 enterprise authentication, and a flexible iterative development methodology, Lumina ensures real-time data accuracy, minimizes administrative wait times, and safeguards institutional records. The modular system design fosters an intuitive, user-centric environment that simplifies daily tasks for administrators, librarians, Library Staff, and Patrons alike.Ultimately, transitioning from traditional record-keeping to a modern, cloud-based digital framework resolves immediate operational bottlenecks while laying a scalable, future-ready foundation. This transformation directly supports STI College Alabang's broader commitment to academic excellence, data integrity, and digital innovation in library management.
+[p885] Recommendation
+[p886] The researchers conducted a complete evaluation of the system and identified advanced areas for system expansion, specifically AI-Driven Predictive Shelf-Life and Condition Forecasting, Automated Institutional Accreditation Metric Transformations for CHEd and PAASCU Compliance, and Offline Queueing for Mobile QR Scanning.
+[p888] The proponents propose the following recommendation:
+[p889] 1.AI-Driven Predictive Shelf-Life and Condition Forecasting  The integration of a machine learning regression model within the management information system (MIS) will optimize physical asset preservation. By tracking how often a specific physical book is circulated, its age, and historical damage logs, the system can flag textbooks that are at high risk of structural wear, allowing librarians to proactively plan for repairs, rebinding, or replacements before the material becomes unusable.
+[p890] 2. Automated Institutional Accreditation Metric Transformations for CHEd and PAASCU Compliance
+[p891] Implementing an automated compliance module within the super-admin panel will greatly simplify institutional evaluation processes. Expanding upon existing CSV, JSON, and XLSX export capabilities, the system could provide automated accreditation metric transformations such as Patron-to-book ratio calculations, departmental retention indices, and automated PII scrubbing for CHEd and institutional accreditation reporting without compromising Patron privacy or data integrity controls.
+[p892] 3. Queueing for Mobile QR Scanning.
+[p893] Give librarians and Library Staff who perform inventories in remote areas of the library or have poor internet connectivity offline access so they can continue scanning book QR codes; once a stable internet link is established, the scanned data and transaction logs will be automatically synchronized with the Supabase database.
+[p895] References
+[p896] Abdullah, A., Nasir, N. E., Mei, L. C., & Lee, K. M. (2021, March). Automating secondary school libraries: a web-based library management system. In IASL Annual Conference Proceedings (pp. 193-202). https://doi.org/10.29173/iasl8078
+[p897] Aliyu, M., Mohammed, L., & Yakubu, I. Z. (2024). A smart QR: Based library management system. International Journal of Innovative Science and Research Technology, 9(10), 714-719. https://doi.org/10.38124/ijisrt/IJISRT24OCT212
+[p898] Din, M. M., & Fazal Fazla, A. (2021, March). Integration of Web-Based and Mobile Application with QR Code implementation for the library management system. In Journal of Physics: Conference Series (Vol. 1860, No. 1, p. 012018). IOP Publishing. https://doi.org/10.1088/1742-6596/1860/1/012018
+[p899] Distanont, A., Khongmalai, O., Distanont, S., & Treenuchagron, C. (2024, September). Library Trends and developments in a technologically driven era. In European Conference on Innovation and Entrepreneurship (pp. 158-166). Academic Conferences International Limited. https://doi.org/10.34190/ecie.19.1.2486
+[p900] Facunla, H. L., & Encarnacion, P. C. (2024). Development of a Web application for MLIS and BLIS library academic resources. International Journal, 13(3). https://doi.org/10.30534/ijatcse/2024/051332024
+[p901] Gargoles, J., Peria, N. R., Obelidor, I., Ricablanca, C., Bamba, M., & Roldan, R. G. Jr. (2026). School management system 1: Library with QR code innovation and book monitoring: Patron information in Bestlink College of the Philippines. Ascendens Asia Singapore – Bestlink College of the Philippines Journal of Multidisciplinary Research, 7(1). Retrieved from https://ojs.aaresearchindex.com/index.php/aasgbcpjmra/article/view/16329
+[p902] Gito, J., et al. (2023). Enhanced information retrieval: Aemilianum College Inc.’s Library Management System. Global Scientific Journal, 11(7), 1648-1651. https://www.globalscientificjournal.com/researchpaper/ENHANCED_INFORMATION_RETRIEVAL_AEMILIANUM_COLLEGE_INC_S_LIBRARY_MANAGEMENT_SYSTEM.pdf
+[p903] Kasahara, Y., & Shimayoshi, T. (2022, March). Our Design and Implementation of Multi-Factor Authentication Deployment for Microsoft 365 in Kyushu University. In Proceedings of the 2022 ACM SIGUCCS Annual Conference (pp. 56-61).https://doi.org/10.1145/3501292.3511569
+[p905] Koya, U. P. T., & Waral, N. L. (2025). Integration of Koha library management system with open-source tools for customized readers ID card with QR codes. International Journal of Research and Innovation in Applied Science, 10(6), 1307-1314. https://doi.org/10.51584/IJRIAS.2025.10060098
+[p906] Kurnia, H., Farell, G., Kurniadi, D., & Marta, R. (2025). A dual-validation mobile attendance application for discipline-oriented vocational schools: Development and evaluation using the waterfall. Journal of Hypermedia & Technology-Enhanced Learning, 3(3), 283–295. https://doi.org/10.58536/j-hytel.200
+[p907] Lampaza, S. L., Parrenas, M. J. P., Suarez, A. D., & Soberano, K. T. (2025). Library systems development: Utilization, usability and impact for private schools in Negros Occidental, Philippines. International Journal of Computer Science and Mobile Computing, 14(1), 11-19. https://doi.org/10.47760/ijcsmc.2025.v14i01.002
+[p908] Mendiola, V. J., Panganiban, M. S., Vicotorino, J. K., Santiago, F. III, Delos Reyes, G., & Laynesa, M. (2026). School management system: Library management system with online reservation and renewal powered by A.I. based adaptive learning and skill development. Ascendens Asia Singapore – Bestlink College of the Philippines Journal of Multidisciplinary Research, 7(1). https://ojs.aaresearchindex.com/index.php/aasgbcpjmra/article/view/16355
+[p909] Mulya, N., & Sari, I. W. (2024). Web-Based Library Information System Application with QR Code support (Case Study at SMK Negeri 1 Tambusai). Jukoti-Journal of Computer and Technology, 1(1), 15-23.https://zakirjournal.com/jukoti/article/view/3
+[p910] Paul, M., & Naikar, S. (2024). Innovative use of QR codes in academic libraries: Benefits and challenges. Journal of Emerging Technologies and Innovative Research (JETIR), 11(6), 565-572. https://www.researchgate.net/publication/382073914_Innovative_Use_of_QR_Codes_in_Academic_Libraries_Benefits_and_Challenges
+[p911] Pebrian, R., & Gunanto, S. (2025). Implementation of a Web-Based E-Library System for Optimizing Library Services: A Case Study of SMAN 1 Abung Pekurun. Jurnal Ilmiah Multidisiplin Indonesia (JIM-ID), 4(10), 1565-1576.https://ejournal.seaninstitute.or.id/index.php/esaprom/article/view/7532/5697
+[p912] Rajee, A., Roy, S., Nushera Islam, M. S., & Ali, M. A. (2022). Online Library Management System. Library Hi Tech News. https://doi.org/10.13140/rg.2.2.33360.48649
+[p914] Seno-Sanoria, M. T. (2025). Aligning expectations and perceptions: Analyzing library user satisfaction in higher education in rural Philippines. Journal of Interdisciplinary Perspectives, 3(8), 480-493. https://doi.org/10.69569/jip.2024.394
+[p915] Villoga, J. B. (2025). Development and evaluation of an ICT-based library automation system for Northern Iloilo Polytechnic State College using ISO standards. Technologique: A Global Journal on Technological Developments and Scientific Innovations, 6(1), 13-22. https://doi.org/10.62718/vmca.tech-gjtdsi.6.1.SC-1125-023
+[p916] Wayal, R. S. (2025). Enhancing library efficiency with Vmedulife integrated library management cloud based system: A case study at SVPM’s Institute of Management Malegaon Bk. International Journal of Research and Scientific Innovation, 12(8), 2159-2166. https://doi.org/10.51244/IJRSI.2025.120800194
+[p921] Appendices
+[p923] Appendix A. reSOURCE PERSONS
+[p924] Resource Person
+[p925] The developers of this capstone project would like to express their gratitude to several individuals whose contributions were invaluable to its successful completion. We are particularly indebted to our esteemed capstone advisor, Mr. John Renaund L. Baybay. His insightful guidance, unwavering support, and vast knowledge in the field were instrumental in shaping this project's direction. Mr.Baybay's extensive knowledge and wealth of experience have left an indelible mark on the academic research and daily pursuit of the developers.
+[p926] Furthermore, the authors express their sincere gratitude to the faculty at STI College Alabang. Their unwavering support, patience, and insightful feedback throughout the project journey significantly enhanced the outcome of the Capstone Project.
+[p930] Appendix B. relevant source code
+[p932] APPENDIX C. EVALUATION TOOL/TEST DOCUMENTS
+[p934] APPENDIX D. SAMPLE INPUT/OUTPUT/REPORTS
+[p935] INPUT/OUTPUT/REPORTS
+[p936] Input Table
+[p937] The tables show data supplied by Patrons and library personnel, plus system-generated identifiers, dates, counts, and statuses for library operations. Onboarding records Patron Type (Student/Faculty), Contact Number and Residential Address; Academic Program is required for students only.
+[p938] 1. Patron Information
+[p939][tbl] Field
+[p940][tbl] Description
+[p941][tbl] Example
+[p942][tbl] Full Name
+[p943][tbl] Name of the Patron using the system
+[p944][tbl] Juan Dela Cruz
+[p945][tbl] Patron ID
+[p946][tbl] Student identifier; faculty patrons have no required student ID
+[p947][tbl] 02000123456
+[p948][tbl] Official Email
+[p949][tbl] Official email account used for authentication
+[p950][tbl] delacruz.123456@alabang.sti.edu.ph
+[p951][tbl] Academic Program
+[p952][tbl] Student Patron's academic program
+[p953][tbl] Information Technology
+[p954] 2. Book Information
+[p955][tbl] Field
+[p956][tbl] Description
+[p957][tbl] Example
+[p958][tbl] Book Title
+[p959][tbl] Title of the library book
+[p960][tbl] Introduction to Programming
+[p961][tbl] Author
+[p962][tbl] Author of the book
+[p963][tbl] John Smith
+[p964][tbl] ISBN
+[p965][tbl] International Standard Book Number
+[p966][tbl] 9780132350884
+[p967][tbl] Category
+[p968][tbl] Classification of the book
+[p969][tbl] Computer Science
+[p970][tbl] Quantity
+[p971][tbl] System-computed total/available physical copies; quantity is entered when adding copies
+[p972][tbl] 5
+[p973][tbl] Copy Status
+[p974][tbl] Copy status: AVAILABLE, BORROWED, MAINTENANCE, LOST, RESERVED, SOLD, DONATED_OUT
+[p975][tbl] AVAILABLE
+[p976] 3. Reservation Information
+[p977][tbl] Field
+[p978][tbl] Description
+[p979][tbl] Example
+[p980][tbl] Patron Account ID
+[p981][tbl] Signed-in Patron profile UUID; derived from the session
+[p982][tbl] a1234567-e89b-42d3-a456-426614174000
+[p983][tbl] Book ID
+[p984][tbl] Unique identifier of the selected book (UUID)
+[p985][tbl] 550e8400-e29b-41d4-a716-446655440000
+[p986][tbl] Reservation Date
+[p987][tbl] Date when the reservation was made
+[p988][tbl] September 29, 2026
+[p989][tbl] Reservation Status
+[p990][tbl] Automatic lifecycle: ACTIVE (queued), READY (pickup), FULFILLED, CANCELLED, EXPIRED
+[p991][tbl] ACTIVE / READY
+[p994] 4. Borrowing and Return Information
+[p995][tbl] Field
+[p996][tbl] Description
+[p997][tbl] Example
+[p998][tbl] Library Card Number
+[p999][tbl] Card required at checkout; returns require only the physical copy
+[p1000][tbl] LIB-2026-A1B2C3D4
+[p1001][tbl] Accession Number
+[p1002][tbl] Physical copy accession number of the borrowed book
+[p1003][tbl] ACC-00001
+[p1004][tbl] QR Code
+[p1005][tbl] Physical copy QR or library card QR; generated by the system
+[p1006][tbl] QR-1 (copy) / LIB-2026-A1B2C3D4 (card)
+[p1007][tbl] Borrow Date
+[p1008][tbl] Date when the book was borrowed
+[p1009][tbl] September 29, 2026
+[p1010][tbl] Due Date
+[p1011][tbl] System-calculated return deadline (default 14 calendar days)
+[p1012][tbl] October 13, 2026
+[p1013][tbl] Return Date
+[p1014][tbl] Date when the book was returned
+[p1015][tbl] October 5, 2026
+[p1016] 5. Inventory Information
+[p1017][tbl] Field
+[p1018][tbl] Description
+[p1019][tbl] Example
+[p1020][tbl] Accession Number
+[p1021][tbl] Automatically generated physical copy accession number
+[p1022][tbl] ACC-00001
+[p1023][tbl] Book Title
+[p1024][tbl] Title of the book
+[p1025][tbl] Introduction to Programming
+[p1026][tbl] Category
+[p1027][tbl] Category of the book
+[p1028][tbl] Computer Science
+[p1029][tbl] Quantity
+[p1030][tbl] Physical copy count; each copy also tracks acquisition (Bought/Donated, date, price) and disposal (Sold/Donated out/Lost/Maintenance)
+[p1031][tbl] 5
+[p1032][tbl] Availability
+[p1033][tbl] Copy status: AVAILABLE, BORROWED, MAINTENANCE, LOST, RESERVED, SOLD, DONATED_OUT
+[p1034][tbl] AVAILABLE
+[p1036] Output Table
+[p1037] The outputs are the results generated by the Lumina system after processing the inputs. These outputs provide Patrons and library personnel with information regarding books, reservations, borrowing transactions, attendance confirmations and logs, and inventory. Penalties show overdue fines (default PHP 5/calendar day) as Receivable, Paid, or Condoned; payments occur in person and condoning requires remarks.
+[p1038][tbl] Output Field
+[p1039][tbl] Description
+[p1040][tbl] Output Type
+[p1041][tbl] Book Search Results
+[p1042][tbl] List of books matching the Patron's search criteria
+[p1043][tbl] System Display
+[p1044][tbl] Book Details
+[p1045][tbl] Information about a selected book, including title, author, category, and availability
+[p1046][tbl] System Display
+[p1047][tbl] Reservation Confirmation
+[p1048][tbl] Confirmation and status of a Patron's book reservation
+[p1049][tbl] System Display / Notification
+[p1050][tbl] Borrowing Record
+[p1051][tbl] Record containing Patron, book/copy, borrow date, due date, and penalty
+[p1052][tbl] Table View
+[p1053][tbl] Return Record
+[p1054][tbl] Record of returned books and their return date, with any unpaid penalty retained as Receivable
+[p1055][tbl] Table View
+[p1056][tbl] My Borrowing
+[p1057][tbl] List of previous and current borrowing transactions of a Patron, including penalties and Settlements (Paid/Condoned)
+[p1058][tbl] Table View
+[p1059][tbl] Updated Book Status
+[p1060][tbl] Current availability status of a book after reservation, borrowing, or return
+[p1061][tbl] System Display
+[p1062][tbl] Updated Inventory
+[p1063][tbl] Updated records of books and their available quantities
+[p1064][tbl] Table View
+[p1065][tbl] QR Scan Result
+[p1066][tbl] Validated library-card or copy identification, or attendance Check-In/Check-Out confirmation; forgotten exits close as No Log Out
+[p1067][tbl] System Display
+[p1068][tbl] Notifications
+[p1069][tbl] System messages regarding reservations, borrowing, returns, or other library activities
+[p1070][tbl] Notification
+[p1072] Report Specifications
+[p1073] The system provides catalog exports (Excel/CSV/JSON/cover ZIP), Audit Log exports (CSV/JSON/Excel), personal borrowing Excel/print, and Analytics Excel/print. Report Builder combines Attendance, Borrowing, Books & Inventory, or Users in up to 8 sections as PDF/Excel/CSV (CSV exports the selected section). Active Library Staff access only datasets allowed by their attendance/circulation grants.
+[p1074][tbl] Report Name
+[p1075][tbl] Description
+[p1076][tbl] Report Type
+[p1077][tbl] Audience
+[p1078][tbl] Borrowing & Return History Logs
+[p1079][tbl] Interactive All/Active/Overdue/Returned/Settlements views, penalties, and staff Return / Settle or Settle actions
+[p1080][tbl] Interactive View; reports through Report Builder
+[p1081][tbl] Super Administrator / Librarian / Active Library Staff with circulation permission
+[p1082][tbl] Catalog Data Export
+[p1083][tbl] Export of registered catalog books and metadata in multi-format archives (Excel .xlsx, CSV, JSON, ZIP covers)
+[p1084][tbl] Export / Interactive View
+[p1085][tbl] Super Administrator / Librarian
+[p1086][tbl] Audit Log Export
+[p1087][tbl] Key administrative actions with subject/date filters and column selection (CSV/JSON/Excel)
+[p1088][tbl] Export / Interactive View
+[p1089][tbl] Super Administrator (all); Librarian (except Super Administrator actions)
+[p1090][tbl] Attendance Logs
+[p1091][tbl] Check-In/Check-Out records; forgotten exits close at closing time as No Log Out; records older than one year may be archived
+[p1092][tbl] Interactive View / Report Builder
+[p1093][tbl] Super Administrator / Librarian / permitted Active Library Staff
+[p1094][tbl] User Directory Records
+[p1095][tbl] Account profiles, roles, and statuses; Librarians cannot see Super Administrator accounts or edit other Librarians
+[p1096][tbl] Table View
+[p1097][tbl] Super Administrator / Librarian
+[p1098][tbl] Analytics & Metric Summaries
+[p1099][tbl] Visits, Loans issued, physical-copy Inventory, Active loans; Peak Visiting Hours (bar), Circulation Trends (line), Genre Popularity (donut); preset/custom ranges
+[p1100][tbl] Export / Interactive View
+[p1101][tbl] Super Administrator / Librarian
+[p1102][tbl] Active Hold & Reservation Queue
+[p1103][tbl] Ready-for-pickup and queued holds with cancellation and automatic expiry; returned copies serve the next Patron
+[p1104][tbl] Interactive View
+[p1105][tbl] Super Administrator / Librarian / Active Library Staff with inventory permission
+[p1107] The Input/Output section demonstrates how information is entered into the Lumina system and how the system processes and presents the resulting information. The inputs provided by Patrons and library personnel allow Lumina to perform its library management functions, while the outputs provide updated records, confirmations, notifications, and reports for the appropriate users.
+[p1111] APPENDIX E. USER’S GUIDE
+[p1112] USERS GUIDE
+[p1113] This guide provides instructions for Patrons and library personnel on how to navigate and efficiently use the Lumina system. The system is designed to simplify library book reservation, borrowing, returning, inventory management, and attendance monitoring through a centralized web-based platform.
+[p1114] Lumina uses Microsoft 365 authentication for secure user login and provides role-based access to features intended for Patrons and authorized library personnel.
+[p1116] System Requirements
+[p1117] A device with internet access such as a PC, laptop, or smartphone.
+[p1118] A valid STI Microsoft 365 account.
+[p1119] A compatible web browser such as Microsoft Edge, Google Chrome, or Mozilla Firefox.
+[p1120] An active internet connection.
+[p1121] 1. Logging Into the System
+[p1122] 1.1 Launch the System
+[p1123] Open a compatible web browser and navigate to the Lumina system website.
+[p1124] 1.2 Microsoft 365 Login
+[p1125] On the login page, select Sign in with Microsoft.
+[p1126] 1.3 Enter Credentials
+[p1127] Enter the user's STI Microsoft 365 account credentials and complete the required authentication process.
+[p1129] 1.4 Role-Based Access
+[p1130] Patrons start Pending at O365 sign-in and complete Student/Faculty, contacts and address (program for students only). "Edit Info" works until Librarian/Super Administrator approval as Active; then the role-based dashboard opens and details are read-only.
+[p1131] 2. User Roles and Features (Patron, Library Staff, Librarian, Super Administrator)
+[p1132] A. Patrons
+[p1133] Patrons (students and faculty) use Lumina to search for books, make reservations, monitor borrowed books, and view their library information.
+[p1134] Key Features
+[p1135] View the Patron Dashboard.
+[p1136] Search and browse available books.
+[p1137] View book details.
+[p1138] Reserve available books or join a waitlist.
+[p1139] Track loan return deadlines and due soon reminders.
+[p1140] View active borrows and unpaid fines.
+[p1141] View and cancel reservations.
+[p1142] View, export (Excel), and print borrowing history; view My Attendance.
+[p1143] Access the digital library card.
+[p1144] Export the library card.
+[p1145] View frequently asked questions.
+[p1146] View read-only profile details and manage profile photo.
+[p1148] How To:
+[p1149] Search for a Book:
+[p1150] Open Catalog (/student-catalog) and enter title, author, or ISBN, optionally using category, availability, or sort filters.
+[p1151] Select the desired book.
+[p1152] Review the book details and availability.
+[p1153] Reserve a Book:
+[p1154] Open Catalog (/student-catalog).
+[p1155] Select a book.
+[p1156] Click "Reserve for Pickup" (or "Join Waitlist" for unavailable titles). The reservation is placed immediately upon click with a toast notification.
+[p1157] View Active Borrowed Books:
+[p1158] Open the Patron Dashboard.
+[p1159] Locate the Current Borrows section.
+[p1160] Review currently borrowed books, due dates, and returned books with unpaid fines.
+[p1161] View Borrowing History:
+[p1162] Navigate to My Borrowing (/history).
+[p1163] Filter by All, Active, Overdue, Returned, or Settlements to review loans and penalties, or export Excel/print.
+[p1165] B. Library Staff, Librarian, and Super Administrator
+[p1166] Library personnel and administrators manage library resources according to assigned roles: Active Library Staff use only Super Administrator-granted Inventory (view/QR print), Circulation Desk/Borrowing Logs, and Attendance Logs permissions. Report Builder access covers only permitted Borrowing/Attendance datasets. Librarians manage inventory, circulation, fines, analytics, users (excluding Super Administrators and edits to other Librarians), policies, and Audit Logs excluding Super Administrator actions. Super Administrators retain full administration and lifecycle tools.
+[p1167] Key Features
+[p1168] Manage library books and assets.
+[p1169] Add and edit book records.
+[p1170] Monitor book statuses.
+[p1171] Generate and print QR codes.
+[p1172] Process book checkouts.
+[p1173] Process book returns and settle overdue fines.
+[p1174] Scan QR codes.
+[p1175] Manage reservations.
+[p1176] Monitor borrowing logs, attendance logs, analytics, Report Builder, and audit logs.
+[p1177] Manage users.
+[p1178] Configure System Policies (including fine rates and dashboard FAQs).
+[p1179] Manage book categories and programs.
+[p1180] Manage announcements.
+[p1182] How To:
+[p1183] Add a Book:
+[p1184] As a Librarian or Super Administrator, open Inventory (/inventory).
+[p1185] Select "Add Book" (/inventory/add).
+[p1186] Enter the required book information.
+[p1187] Use the automated ISBN lookup bar or enter book details, then click "Save to Catalog".
+[p1188] Edit a Book:
+[p1189] As a Librarian or Super Administrator, open Inventory (/inventory).
+[p1190] Select the desired book or asset.
+[p1191] Open the "Book information" tab and click "Edit book information".
+[p1192] Update the required information.
+[p1193] Click "Save Changes".
+[p1194] Generate or Print a QR Code:
+[p1195] Open the book in Inventory (/inventory) under "Copies & acquisition".
+[p1196] Click "Print QR" on a copy row (under "Copy actions" for managers) or "Print all QR".
+[p1197] Review the generated QR code.
+[p1198] In the QR label dialog, click "Print Label" for one copy or "Print Labels" for multiple copies.
+[p1200] Circulation Desk Functions
+[p1201] The Circulation Desk is used by authorized library personnel to process book borrowing and returning transactions.
+[p1202] Navigate to Circulation Desk (/circulation).
+[p1203] Select Checkout.
+[p1204] Use a handheld scanner, type the ID, or click "Start camera" (optional).
+[p1205] Step 1 (Scan library card): Scan or type the card or Patron ID and click "Process". For overdue/lost-item or unpaid-fine blocks, a Librarian or Super Administrator may click "Override" and enter a 10?300 character reason.
+[p1206] Step 2 (Scan item): Scan or type the Item QR code/accession number and click "Verify".
+[p1207] Step 3 (Review): Review the transaction details and click "Confirm Checkout" to finalize the loan.
+[p1208] B. Returning a Book
+[p1209] Navigate to the Circulation Desk.
+[p1210] Select Return.
+[p1211] Use a handheld scanner, type the ID, or click "Start camera" (optional).
+[p1212] Step 1 (Scan item): Scan or type the Item QR code/accession number and click "Process".
+[p1213] Step 2 (Review Return): Review and click "Confirm Return". If overdue, record in-person payment with "Mark as Paid" or condone with "Mark as Condoned" (remarks: at least 5 characters). "Return Only (Pay Later)" leaves the fine Receivable.
+[p1214] C. Resetting the Scanner
+[p1215] If a scanning transaction needs to be cleared, click "Start over", or use "Stop camera" and "Switch camera" while the camera is active.
+[p1216] 4. Managing Inventory
+[p1217] The inventory management functions allow authorized library personnel to monitor and maintain library book records.
+[p1219] Key Functions
+[p1220] Add new library assets.
+[p1221] Edit existing asset information.
+[p1222] Monitor book status.
+[p1223] Assign book categories.
+[p1224] Generate QR codes.
+[p1225] Update inventory, copy acquisition/disposal, and run Batch Operations.
+[p1227] How To:
+[p1228] Open Inventory (/inventory). Librarians and Super Administrators can update records; Active Library Staff with Inventory permission can only view records and print QR labels.
+[p1229] Select the appropriate inventory function.
+[p1230] Search for the required book or asset.
+[p1231] Add or update the necessary information.
+[p1232] Save the changes.
+[p1233] 5. Managing Reservations
+[p1234] Reservations are automatic (Ready for pickup or waitlisted); staff monitor queues and fulfill holds at checkout.
+[p1236] How To:
+[p1237] Access the appropriate reservation or circulation section.
+[p1238] Review the list of active reservations.
+[p1239] Check the Patron's reservation information.
+[p1240] Verify the corresponding book.
+[p1241] Monitor reservation queues within the Inventory book detail page ("Copies & acquisition" tab) and fulfill ready holds at the Circulation Desk during checkout.
+[p1243] 6. My Borrowing and Borrowing Logs
+[p1244] My Borrowing shows personal loans and penalties; Borrowing Logs lets authorized staff return items and settle fines.
+[p1245] Patron
+[p1246] Patrons can open My Borrowing (/history), use All/Active/Overdue/Returned/Settlements tabs, review Penalty, and choose Export (.xlsx) or Print. Settlements can be filtered by Paid or Condoned.
+[p1247] Library Personnel
+[p1248] Authorized staff open Borrowing Logs (/history?view=logs), click "Return / Settle" (overdue) or "Settle" (returned unpaid), and choose "Mark as Paid" (in person), "Mark as Condoned" (Remarks, 5+ chars), or "Return Only (Pay Later)" (Receivable). For custom reports, open Report Builder (/analytics/reports), set Report title, From/To dates, and up to 8 sections (Dataset, Metric, filters, Group by, Display), then click Print / Save PDF, Download Excel, or Download CSV (selected section only); Active Library Staff see only permitted attendance/borrowing datasets.
+[p1249] 7. User Directory
+[p1250] The User Directory allows authorized library personnel to manage registered users.
+[p1253] Key Functions
+[p1254] View accounts by role; Librarians cannot see Super Administrator accounts or edit other Librarians.
+[p1255] Search by name, email, or student ID.
+[p1256] Open a user profile to review details and borrowing history. For a completed Pending profile, click "Verify & Approve", check the institutional ID, then "Confirm & Activate".
+[p1257] Librarians can edit Patron/Library Staff details and set Active/Pending/Inactive. Super Administrators manage all roles and Active/Pending/Inactive/Suspended/Archived statuses, grant Library Staff permissions, and transfer ownership.
+[p1258] 8. System Policies
+[p1259] System Policies (/policies) allows Librarians and Super Administrators to configure library rules and information; lifecycle tools are Super Administrator-only.
+[p1261] Available Policies
+[p1262] Borrowing window.
+[p1263] Maximum books allowed per Patron.
+[p1264] Loan period (default 14 days), maximum books (5), pickup window (3 days), and overdue fine rate (PHP 5/calendar day).
+[p1265] Reservation shelf life.
+[p1266] Maximum active holds (default 3).
+[p1267] Academic programs (students only).
+[p1268] Book categories.
+[p1269] Announcements (Patrons & Library Staff or all users), dashboard FAQs, and Super Administrator lifecycle tools (annual reset of all Patrons including faculty, archiving records older than one year after Excel backup, maintenance, and test email).
+[p1271] How To:
+[p1272] Navigate to System Policies (/policies).
+[p1273] Select the policy or configuration that needs to be updated.
+[p1274] Enter the required information.
+[p1275] Review the changes.
+[p1276] Click "Review Changes" on the floating bar, enter a mandatory Audit Protocol Reason (minimum 10 characters), and click "Confirm & Commit".
+[p1277] 9. Common Functions
+[p1278] A. Reporting a Missing Book
+[p1279] Contact library personnel about a missing book.
+[p1280] B. Viewing the Library Card
+[p1281] Open the Patron Dashboard.
+[p1282] Locate the Library Card section.
+[p1283] View the digital library card.
+[p1284] Use "Show card back" or "Show card front" to inspect the card, click its QR code to enlarge it, and use Export to save a PNG image.
+[p1285] C. Viewing FAQs
+[p1286] Open the Patron Dashboard.
+[p1287] Locate the inline Support & FAQs section on the dashboard.
+[p1288] Select the question related to the user's concern.
+[p1289] Review the provided information.
+[p1291] 10. Updating Personal Information
+[p1292] Users can review personal information and update their profile photo.
+[p1293] Navigate to My Profile (/profile).
+[p1294] Review the read-only details and Account Access note; academic program appears for student Patrons only.
+[p1295] Click "Click to update photo", select an image, and adjust its crop and zoom. Use "Remove photo" to remove an existing image. Pending users can use "Edit Info" on the approval screen to revise onboarding details.
+[p1296] For photo uploads or replacements, click "Save Changes" in the crop dialog; removal needs no separate save.
+[p1297] 11. Logging Out
+[p1298] To securely exit Lumina:
+[p1299] Click the user's profile icon.
+[p1300] Select "Log out", then click "Log out" in the confirmation dialog.
+[p1301] The system will end the current session.
+[p1302] Users should always log out after using Lumina on shared or public computers.
+[p1303] 12. Troubleshooting and Support
+[p1304][tbl] Issue
+[p1305][tbl] Suggested Solution
+[p1306][tbl] Unable to log in
+[p1307][tbl] Check Microsoft O365 credentials. At "Activation Required", present a valid school ID at the library desk for Librarian/Super Administrator approval; suspended accounts require Super Administrator assistance.
+[p1308][tbl] Cannot access a feature
+[p1309][tbl] Check account status and role; Library Staff need an Active account and the relevant Super Administrator permission.
+[p1310][tbl] Book cannot be reserved
+[p1311][tbl] Check the active hold limit (default 3); if no copy is free, use "Join Waitlist".
+[p1312][tbl] QR code cannot be scanned
+[p1313][tbl] Check camera alignment and access; if needed, use a handheld scanner or typed copy/card number (student ID also works for checkout and attendance).
+[p1314][tbl] Book information is incorrect
+[p1315][tbl] Report the issue to authorized library personnel.
+[p1316][tbl] Borrowing or returning transaction cannot be completed
+[p1317][tbl] Verify card/copy details and account status. Overdue/lost items or unpaid fines block borrowing; a Librarian or Super Administrator may override with a recorded reason. Self-checkout is blocked; returns need only the copy.
+[p1318][tbl] System is not loading
+[p1319][tbl] Check the internet connection and refresh the browser.
+[p1321] For unresolved issues, users should contact the authorized library personnel or system administrator.
+[p1322] 13. Quick Reference Table for Roles and Access
+[p1323][tbl] Role
+[p1324][tbl] Key Features
+[p1325][tbl] Patron
+[p1326][tbl] Catalog search, automatic holds, My Borrowing (penalties/settlements, Excel/print), My Attendance, digital card, notifications, FAQs, read-only profile details and photo controls
+[p1327][tbl] Library Personnel / Administrator
+[p1328][tbl] Librarian: Catalog, Inventory, Circulation Desk, Borrowing Logs, Attendance Logs, Analytics/Report Builder, User Directory, System Policies, and Audit Logs (except Super Administrator actions). Super Administrator: all modules, all accounts/statuses, permission grants, ownership transfer, and lifecycle tools. Active Library Staff: personal modules; manage_inventory grants read-only Inventory and copy QR view/print, manage_circulation grants Circulation Desk/Borrowing Logs, and manage_attendance grants Attendance Logs; Report Builder exposes only permitted attendance/borrowing datasets.
+[p1330] 14. Important Reminders
+[p1331] Users must log in using their authorized Microsoft 365 account.
+[p1332] Patrons should verify book information before making a reservation.
+[p1333] Library personnel should verify transactions before processing checkouts and returns.
+[p1334] QR codes should correspond to the correct library assets.
+[p1335] Users should log out after completing their session.
+[p1336] Library policies configured in Lumina should be followed when borrowing, returning, and reserving books.
+[p1338] APPENDIX F. PERSONAL TECHNICAL VITAE
+[p1339] Curriculum Vitae of
+[p1340] Dadea, Jerico B.
+[p1341] 300 Marcelo 2 Bagumbayan, Taguig City
+[p1342] Jericodadea26@gmail.com
+[p1343] 09854036633
+[p1347] EDUCATIONAL BACKGROUND
+[p1349][tbl] Level
+[p1350][tbl] Inclusive Dates
+[p1351][tbl] Name of school/ Institution
+[p1352][tbl] Tertiary
+[p1353][tbl] 2023 - Present
+[p1354][tbl] STI College Alabang
+[p1355][tbl] Vocational/Technical
+[p1356][tbl] 2018 - 2020
+[p1357][tbl] Amtic National High School
+[p1358][tbl] High School
+[p1359][tbl] 2014 - 2018
+[p1360][tbl] Amtic National High School
+[p1361][tbl] Elementary
+[p1362][tbl] 2008 - 2014
+[p1363][tbl] Basag Elementary School
+[p1366] PROFESSIONAL OR VOLUNTEER EXPERIENCE
+[p1368][tbl] Inclusive Dates
+[p1369][tbl] Nature of Experience/
+[p1370][tbl] Job Title
+[p1371][tbl] Name and Address of Company or Organization
+[p1372][tbl] 2024
+[p1373][tbl] NSTP
+[p1374][tbl] STI College Alabang
+[p1379] AFFILIATIONS
+[p1381][tbl] Inclusive Dates
+[p1382][tbl] Name of Organization
+[p1383][tbl] Position
+[p1384][tbl] 2024 - Present
+[p1385][tbl] 2024 - Present
+[p1386][tbl] Computer Society
+[p1387][tbl] Coders Club
+[p1388][tbl] Technical
+[p1389][tbl] Technical
+[p1390] .
+[p1391] SKILLS
+[p1393][tbl] SKILLS
+[p1394][tbl] Level of Competency
+[p1395][tbl] Date Acquired
+[p1396][tbl] SAP
+[p1397][tbl] Beginner
+[p1398][tbl] 2025
+[p1399][tbl] SAP
+[p1400][tbl] Advance
+[p1401][tbl] 2025
+[p1402][tbl] JAVA
+[p1403][tbl] Beginner
+[p1404][tbl] 2023
+[p1407] TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+[p1409][tbl] Inclusive Dates
+[p1410][tbl] Title of Training, Seminar, or Workshop
+[p1411][tbl] 2024
+[p1412][tbl] 2023
+[p1413][tbl] 2023
+[p1414][tbl] Key IT Trends to Watch
+[p1415][tbl] Step Info Success Pre Employment Essentials for the future
+[p1416][tbl] What’s Next In Tech
+[p1419] Curriculum Vitae of
+[p1420] Floriano, Kayle Andrew P.
+[p1421] Blk 5 Lot 46 Cristina Homes San Pedro Laguna
+[p1422] kaylefloriano1826@gmail.com
+[p1423] 09615091963
+[p1427] EDUCATIONAL BACKGROUND
+[p1429][tbl] Level
+[p1430][tbl] Inclusive Dates
+[p1431][tbl] Name of school/ Institution
+[p1432][tbl] Tertiary
+[p1433][tbl] 2023 - Current
+[p1434][tbl] STI College Alabang
+[p1435][tbl] Vocational/Technical
+[p1436][tbl] 2021 - 2023
+[p1437][tbl] Laguna Northwestern College
+[p1438][tbl] High School
+[p1439][tbl] 2017-2021
+[p1440][tbl] Muntinlupa National High School
+[p1441][tbl] Elementary
+[p1442][tbl] 2011-2017
+[p1443][tbl] Mountaintop Christian Academy
+[p1445] PROFESSIONAL OR VOLUNTEER EXPERIENCE
+[p1447][tbl] Inclusive Dates
+[p1448][tbl] Nature of Experience/
+[p1449][tbl] Job Title
+[p1450][tbl] Name and Address of Company or Organization
+[p1451][tbl] 2023
+[p1452][tbl] NSTP
+[p1453][tbl] STI College Alabang
+[p1456] AFFILIATIONS
+[p1458][tbl] Inclusive Dates
+[p1459][tbl] Name of Organization
+[p1460][tbl] Position
+[p1462][tbl] N/A
+[p1467] SKILLS
+[p1468][tbl] SKILLS
+[p1469][tbl] Level of Competency
+[p1470][tbl] Date Acquired
+[p1471][tbl] SAP
+[p1472][tbl] Beginner
+[p1473][tbl] 2025
+[p1474][tbl] CSS
+[p1475][tbl] Beginner
+[p1476][tbl] 2024
+[p1477][tbl] HTML
+[p1478][tbl] Beginner
+[p1479][tbl] 2024
+[p1480][tbl] JAVA
+[p1481][tbl] Beginner
+[p1482][tbl] 2023
+[p1484] TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+[p1486][tbl] Inclusive Dates
+[p1487][tbl] Title of Training, Seminar, or Workshop
+[p1488][tbl] 2024
+[p1489][tbl] Cyber Awareness Seminar
+[p1490][tbl] 2023
+[p1491][tbl] Elms Tech Tool
+[p1498] Curriculum Vitae of
+[p1499] Godwyn Neri
+[p1500] 12A Laos, Better Living Paranaque
+[p1501] kuyagodwyn@gmai.com
+[p1502] 09935223815
+[p1506] EDUCATIONAL BACKGROUND
+[p1508][tbl] Level
+[p1509][tbl] Inclusive Dates
+[p1510][tbl] Name of school/ Institution
+[p1511][tbl] Tertiary
+[p1512][tbl] 2023 - Present
+[p1513][tbl] STI College Alabang
+[p1514][tbl] Vocational/Technical
+[p1515][tbl] 2021 - 2023
+[p1516][tbl] Siniloan Integrated National High School
+[p1517][tbl] High School
+[p1518][tbl] 2017 - 2021
+[p1519][tbl] Gov. Felicisimo T. San Luis National Agro Industrial Integrated High School
+[p1520][tbl] Elementary
+[p1521][tbl] 2011 - 2017
+[p1522][tbl] Kapatalan Elementary School
+[p1524] PROFESSIONAL OR VOLUNTEER EXPERIENCE
+[p1526][tbl] Inclusive Dates
+[p1527][tbl] Nature of Experience/
+[p1528][tbl] Job Title
+[p1529][tbl] Name and Address of Company or Organization
+[p1531][tbl] 2023
+[p1532][tbl] NSTP
+[p1533][tbl] STI College Alabang
+[p1536] AFFILIATIONS
+[p1538][tbl] Inclusive Dates
+[p1539][tbl] Name of Organization
+[p1540][tbl] Position
+[p1541][tbl] 2025 - Present
+[p1542][tbl] Coders Club
+[p1543][tbl] Auditor
+[p1545] SKILLS
+[p1547][tbl] SKILLS
+[p1548][tbl] Level of Competency
+[p1549][tbl] Date Acquired
+[p1550][tbl] ESP32 & IoT Development
+[p1551][tbl] Intermediate
+[p1552][tbl] 2025
+[p1555] TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+[p1557][tbl] Inclusive Dates
+[p1558][tbl] Title of Training, Seminar, or Workshop
+[p1559][tbl] 2024
+[p1560][tbl] 2023
+[p1561][tbl] 2023
+[p1562][tbl] Key IT Trends to Watch
+[p1563][tbl] Step Info Success Pre Employment Essentials for the future
+[p1564][tbl] What’s Next In Tech
+[p1568] Curriculum Vitae of
+[p1569] Resurreccion, Rhed R.
+[p1570] Phase 1 Block 10 Lot 26 Southville 3
+[p1571] Poblacion, Muntinlupa City
+[p1572] rhedresurreccion@gmail.com
+[p1573] 0945-972-7869/0949-838-1414
+[p1577] EDUCATIONAL BACKGROUND
+[p1579][tbl] Level
+[p1580][tbl] Inclusive Dates
+[p1581][tbl] Name of school/ Institution
+[p1582][tbl] Tertiary
+[p1583][tbl] 2023 - Present
+[p1584][tbl] STI College Alabang
+[p1585][tbl] Vocational/Technical
+[p1586][tbl] 2021 - 2023
+[p1587][tbl] Tunasan National High-School
+[p1588][tbl] High School
+[p1589][tbl] 2017 - 2021
+[p1590][tbl] Poblacion National High-School
+[p1591][tbl] Elementary
+[p1592][tbl] 2011 - 2017
+[p1593][tbl] Poblacion Elementary School
+[p1596] PROFESSIONAL OR VOLUNTEER EXPERIENCE
+[p1598][tbl] Inclusive Dates
+[p1599][tbl] Nature of Experience/
+[p1600][tbl] Job Title
+[p1601][tbl] Name and Address of Company or Organization
+[p1602][tbl] 2023
+[p1603][tbl] NSTP
+[p1604][tbl] STI College Alabang
+[p1607] AFFILIATIONS
+[p1609][tbl] Inclusive Dates
+[p1610][tbl] Name of Organization
+[p1611][tbl] Position
+[p1612][tbl] 2024 - Present
+[p1613][tbl] Computer Society
+[p1614][tbl] Technical Officer
+[p1619] SKILLS
+[p1621][tbl] SKILLS
+[p1622][tbl] Level of Competency
+[p1623][tbl] Date Acquired
+[p1624][tbl] JAVA
+[p1625][tbl] Beginner
+[p1626][tbl] 2023
+[p1627][tbl] JAVA
+[p1628][tbl] Beginner
+[p1629][tbl] 2023
+[p1635] TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+[p1637][tbl] Inclusive Dates
+[p1638][tbl] Title of Training, Seminar, or Workshop
+[p1639][tbl] 2023
+[p1640][tbl] Basic Training
+[p1641][tbl] 2023
+[p1642][tbl] MARPOL Training
+[p1645] Curriculum Vitae of
+[p1646] Tolentino, Kenneth James B.
+[p1647] #21A San Nicolas de Tolentino st.
+[p1648] Purok 2 Brgy. Cupang, Muntinlupa City
+[p1649] kennethjaemstolentino4@gmail.com
+[p1650] 0969.166.0480
+[p1653] EDUCATIONAL BACKGROUND
+[p1655][tbl] Level
+[p1656][tbl] Inclusive Dates
+[p1657][tbl] Name of school/ Institution
+[p1658][tbl] Tertiary
+[p1659][tbl] 2023-Present
+[p1660][tbl] STI College Alabang
+[p1661][tbl] Vocational/Technical
+[p1662][tbl] 2021-2023
+[p1663][tbl] Cupang Senior High School
+[p1664][tbl] High School
+[p1665][tbl] 2017-2021
+[p1666][tbl] Muntinlupa Business High School Main
+[p1667][tbl] Elementary
+[p1668][tbl] 2010 - 2017
+[p1669][tbl] Cupang Elementary School Main
+[p1672] PROFESSIONAL OR VOLUNTEER EXPERIENCE
+[p1674][tbl] Inclusive Dates
+[p1675][tbl] Nature of Experience/
+[p1676][tbl] Job Title
+[p1677][tbl] Name and Address of Company or Organization
+[p1678][tbl] 2023
+[p1679][tbl] NSTP
+[p1680][tbl] STI College Alabang
+[p1686] AFFILIATIONS
+[p1688][tbl] Inclusive Dates
+[p1689][tbl] Name of Organization
+[p1690][tbl] Position
+[p1691][tbl] 2024
+[p1692][tbl] Computer Society
+[p1693][tbl] Technical Officer
+[p1695] SKILLS
+[p1697][tbl] SKILLS
+[p1698][tbl] Level of Competency
+[p1699][tbl] Date Acquired
+[p1700][tbl] SAP
+[p1701][tbl] Beginner
+[p1702][tbl] 2025
+[p1703][tbl] SAP
+[p1704][tbl] Advance
+[p1705][tbl] 2025
+[p1706][tbl] HTML
+[p1707][tbl] Beginner
+[p1708][tbl] 2024
+[p1709][tbl] JAVA
+[p1710][tbl] Beginner
+[p1711][tbl] 2023
+[p1714] TRAININGS, SEMINARS, OR WORKSHOPS ATTENDED
+[p1716][tbl] Inclusive Dates
+[p1717][tbl] Title of Training, Seminar, or Workshop
+[p1718][tbl] 2024
+[p1719][tbl] Cyber Awareness Seminar
+[p1720][tbl] 2023
+[p1721][tbl] Elms Tech Tool

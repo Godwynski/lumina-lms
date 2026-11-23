@@ -1,0 +1,136 @@
+{
+ "id": "Figure 4.7",
+ "title": "Super Administrator System Policies Flowchart",
+ "rankdir": "TB",
+ "nodes": [
+  {
+   "id": "b_in",
+   "type": "offpage",
+   "label": "B"
+  },
+  {
+   "id": "pol",
+   "type": "process",
+   "label": "Open System Policies"
+  },
+  {
+   "id": "sec",
+   "type": "decision",
+   "label": "Select section?"
+  },
+  {
+   "id": "edit",
+   "type": "io",
+   "label": "Edit loan, fine, hold, hours, reminder, program & FAQ settings"
+  },
+  {
+   "id": "reason",
+   "type": "io",
+   "label": "Enter reason (min 10 chars)"
+  },
+  {
+   "id": "commit",
+   "type": "process",
+   "label": "Commit settings & log audit"
+  },
+  {
+   "id": "life_dec",
+   "type": "decision",
+   "label": "Archive records?"
+  },
+  {
+   "id": "backup",
+   "type": "document",
+   "label": "Download Excel backup"
+  },
+  {
+   "id": "archive",
+   "type": "process",
+   "label": "Archive old logs"
+  },
+  {
+   "id": "life",
+   "type": "process",
+   "label": "Annual reset, maintenance or test email"
+  },
+  {
+   "id": "cats",
+   "type": "process",
+   "label": "Edit categories or broadcast"
+  },
+  {
+   "id": "b_out",
+   "type": "offpage",
+   "label": "B"
+  }
+ ],
+ "edges": [
+  {
+   "from": "b_in",
+   "to": "pol"
+  },
+  {
+   "from": "pol",
+   "to": "sec"
+  },
+  {
+   "from": "sec",
+   "to": "edit",
+   "label": "Settings",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "sec",
+   "to": "life_dec",
+   "label": "Lifecycle",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "sec",
+   "to": "cats",
+   "label": "Categories / Broadcast",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "edit",
+   "to": "reason"
+  },
+  {
+   "from": "reason",
+   "to": "commit"
+  },
+  {
+   "from": "commit",
+   "to": "b_out"
+  },
+  {
+   "from": "life_dec",
+   "to": "life",
+   "label": "No",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "life_dec",
+   "to": "backup",
+   "label": "Yes",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "backup",
+   "to": "archive"
+  },
+  {
+   "from": "archive",
+   "to": "b_out"
+  },
+  {
+   "from": "life",
+   "to": "b_out"
+  },
+  {
+   "from": "cats",
+   "to": "b_out"
+  }
+ ],
+ "nodeSpacing": 14
+}

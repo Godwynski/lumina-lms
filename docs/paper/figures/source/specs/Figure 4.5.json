@@ -1,0 +1,32 @@
+{
+  "id": "Figure 4.5",
+  "title": "Super Administrator User Directory Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "b_in", "type": "offpage", "label": "B" },
+    { "id": "search", "type": "io", "label": "User Directory: search or filter" },
+    { "id": "act", "type": "decision", "label": "Select action?" },
+    { "id": "pending", "type": "decision", "label": "Pending?" },
+    { "id": "approve", "type": "process", "label": "Verify ID & approve account" },
+    { "id": "manage", "type": "decision", "label": "Admin action?" },
+    { "id": "edit", "type": "io", "label": "Edit role, status or permissions" },
+    { "id": "transfer", "type": "process", "label": "Set role to Super Administrator" },
+    { "id": "save", "type": "process", "label": "Save, sync card & log audit" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "b_out", "type": "offpage", "label": "B" }
+  ],
+  "edges": [
+    { "from": "b_in", "to": "search" },
+    { "from": "search", "to": "act" },
+    { "from": "act", "to": "pending", "label": "Select User", "exitSide": "SOUTH" },
+    { "from": "act", "to": "logout", "label": "Log Out", "exitSide": "EAST" },
+    { "from": "pending", "to": "manage", "label": "No", "exitSide": "SOUTH" },
+    { "from": "pending", "to": "approve", "label": "Yes", "exitSide": "WEST" },
+    { "from": "approve", "to": "b_out" },
+    { "from": "manage", "to": "edit", "label": "Edit / Permissions", "exitSide": "SOUTH" },
+    { "from": "manage", "to": "transfer", "label": "Transfer", "exitSide": "WEST" },
+    { "from": "edit", "to": "save" },
+    { "from": "transfer", "to": "save" },
+    { "from": "save", "to": "b_out" }
+  ]
+}

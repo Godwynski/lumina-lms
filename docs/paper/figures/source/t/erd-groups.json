@@ -1,0 +1,77 @@
+[
+ {
+  "id": "Figure 1",
+  "title": "Entity Relationship Diagram: Catalog and Inventory",
+  "columns": [
+   [
+    "categories",
+    "books",
+    "profiles"
+   ],
+   [
+    "book_copies",
+    "book_copy_lifecycle",
+    "catalog_import_jobs",
+    "catalog_import_items"
+   ]
+  ],
+  "stubs": {
+   "profiles": "see Figure 1.2"
+  }
+ },
+ {
+  "id": "Figure 1.1",
+  "title": "Entity Relationship Diagram: Circulation and Reservations",
+  "columns": [
+   [
+    "books",
+    "book_copies",
+    "profiles"
+   ],
+   [
+    "reservations",
+    "borrowing_records"
+   ]
+  ],
+  "stubs": {
+   "books": "see Figure 1",
+   "book_copies": "see Figure 1",
+   "profiles": "see Figure 1.2"
+  }
+ },
+ {
+  "id": "Figure 1.2",
+  "title": "Entity Relationship Diagram: Users, Cards and Notifications",
+  "columns": [
+   [
+    "profiles",
+    "ui_preferences"
+   ],
+   [
+    "library_cards",
+    "attendance",
+    "notifications"
+   ]
+  ]
+ },
+ {
+  "id": "Figure 1.3",
+  "title": "Entity Relationship Diagram: Administration and Archives",
+  "columns": [
+   [
+    "profiles",
+    "audit_logs",
+    "checkout_idempotency",
+    "return_idempotency"
+   ],
+   [
+    "system_settings",
+    "borrowing_records_archive",
+    "attendance_archive"
+   ]
+  ],
+  "stubs": {
+   "profiles": "see Figure 1.2"
+  }
+ }
+]

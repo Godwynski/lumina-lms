@@ -1,0 +1,25 @@
+{
+  "id": "Figure 7.3",
+  "title": "Patron My Attendance Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "E" },
+    { "id": "open", "type": "process", "label": "Open My Attendance" },
+    { "id": "view", "type": "process", "label": "View own logs (Still in library / No Log Out)" },
+    { "id": "action", "type": "decision", "label": "Next action?" },
+    { "id": "filter", "type": "io", "label": "Select date range or sort order" },
+    { "id": "update", "type": "process", "label": "Display filtered attendance history" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "end", "type": "offpage", "label": "E" }
+  ],
+  "edges": [
+    { "from": "start", "to": "open" },
+    { "from": "open", "to": "view" },
+    { "from": "view", "to": "action" },
+    { "from": "action", "to": "filter", "label": "Filter / Sort" },
+    { "from": "action", "to": "end", "label": "Return" },
+    { "from": "action", "to": "logout", "label": "Log Out" },
+    { "from": "filter", "to": "update" },
+    { "from": "update", "to": "end" }
+  ]
+}

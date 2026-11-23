@@ -1,0 +1,35 @@
+{
+  "id": "Figure 7",
+  "title": "Patron Dashboard Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "E" },
+    { "id": "dash", "type": "process", "label": "Open Patron Dashboard" },
+    { "id": "card", "type": "process", "label": "View Digital Library Card and announcements" },
+    { "id": "section", "type": "decision", "label": "Select dashboard section?" },
+    { "id": "borrows", "type": "process", "label": "View Current Borrows (with fines) and Attendance" },
+    { "id": "resList", "type": "process", "label": "View holds (Ready for Pickup or queued)" },
+    { "id": "cancelDec", "type": "decision", "label": "Cancel a reservation?" },
+    { "id": "doCancel", "type": "process", "label": "Cancel reservation and update queue" },
+    { "id": "faqOrOut", "type": "decision", "label": "View Support & FAQs or Log Out?" },
+    { "id": "faqs", "type": "process", "label": "View Support & FAQs" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "end", "type": "offpage", "label": "E" }
+  ],
+  "edges": [
+    { "from": "start", "to": "dash" },
+    { "from": "dash", "to": "card" },
+    { "from": "card", "to": "section" },
+    { "from": "section", "to": "borrows", "label": "Borrows & Attendance" },
+    { "from": "section", "to": "resList", "label": "Reservations" },
+    { "from": "section", "to": "faqOrOut", "label": "FAQs / Log Out" },
+    { "from": "borrows", "to": "end" },
+    { "from": "resList", "to": "cancelDec" },
+    { "from": "cancelDec", "to": "doCancel", "label": "Yes" },
+    { "from": "cancelDec", "to": "end", "label": "No" },
+    { "from": "doCancel", "to": "end" },
+    { "from": "faqOrOut", "to": "faqs", "label": "Support & FAQs" },
+    { "from": "faqOrOut", "to": "logout", "label": "Log Out" },
+    { "from": "faqs", "to": "end" }
+  ]
+}

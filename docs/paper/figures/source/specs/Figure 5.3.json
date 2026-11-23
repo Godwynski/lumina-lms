@@ -1,0 +1,33 @@
+{
+  "id": "Figure 5.3",
+  "title": "Librarian Borrowing Logs Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "c_in", "type": "offpage", "label": "C" },
+    { "id": "filter", "type": "io", "label": "Search or filter Borrowing Logs" },
+    { "id": "action", "type": "decision", "label": "Select action?" },
+    { "id": "settleMode", "type": "decision", "label": "Resolution?" },
+    { "id": "paid", "type": "process", "label": "(Return &) mark Paid" },
+    { "id": "remarks", "type": "io", "label": "Enter remarks (min 5 chars)" },
+    { "id": "condoned", "type": "process", "label": "(Return &) mark Condoned" },
+    { "id": "receivable", "type": "process", "label": "Return only; keep Receivable" },
+    { "id": "details", "type": "process", "label": "View borrower, book & penalty" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "c_out", "type": "offpage", "label": "C" }
+  ],
+  "edges": [
+    { "from": "c_in", "to": "filter" },
+    { "from": "filter", "to": "action" },
+    { "from": "action", "to": "settleMode", "label": "Return / Settle", "exitSide": "SOUTH" },
+    { "from": "action", "to": "details", "label": "Details", "exitSide": "WEST" },
+    { "from": "action", "to": "logout", "label": "Log Out", "exitSide": "EAST" },
+    { "from": "settleMode", "to": "paid", "label": "Paid", "exitSide": "SOUTH" },
+    { "from": "settleMode", "to": "remarks", "label": "Condoned", "exitSide": "WEST" },
+    { "from": "settleMode", "to": "receivable", "label": "Receivable", "exitSide": "EAST" },
+    { "from": "remarks", "to": "condoned" },
+    { "from": "paid", "to": "c_out" },
+    { "from": "condoned", "to": "c_out" },
+    { "from": "receivable", "to": "c_out" },
+    { "from": "details", "to": "c_out" }
+  ]
+}

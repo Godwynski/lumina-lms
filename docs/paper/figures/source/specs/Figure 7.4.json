@@ -1,0 +1,30 @@
+{
+  "id": "Figure 7.4",
+  "title": "Patron My Profile Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "E" },
+    { "id": "view", "type": "process", "label": "View read-only profile (program if student)" },
+    { "id": "action", "type": "decision", "label": "Select action?" },
+    { "id": "selectFile", "type": "io", "label": "Select photo (max 5 MB)" },
+    { "id": "valid", "type": "decision", "label": "Valid image?" },
+    { "id": "crop", "type": "process", "label": "Crop and save photo" },
+    { "id": "err", "type": "process", "label": "Show error" },
+    { "id": "remove", "type": "process", "label": "Confirm & remove photo" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "end", "type": "offpage", "label": "E" }
+  ],
+  "edges": [
+    { "from": "start", "to": "view" },
+    { "from": "view", "to": "action" },
+    { "from": "action", "to": "selectFile", "label": "Upload / Change", "exitSide": "SOUTH" },
+    { "from": "action", "to": "remove", "label": "Remove Photo", "exitSide": "WEST" },
+    { "from": "action", "to": "logout", "label": "Log Out", "exitSide": "EAST" },
+    { "from": "selectFile", "to": "valid" },
+    { "from": "valid", "to": "crop", "label": "Yes", "exitSide": "SOUTH" },
+    { "from": "valid", "to": "err", "label": "No", "exitSide": "EAST" },
+    { "from": "crop", "to": "end" },
+    { "from": "err", "to": "end" },
+    { "from": "remove", "to": "end" }
+  ]
+}

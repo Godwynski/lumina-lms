@@ -1,0 +1,25 @@
+{
+  "id": "Figure 6.3",
+  "title": "Library Staff My Attendance Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "D" },
+    { "id": "open", "type": "process", "label": "Open My Attendance" },
+    { "id": "view", "type": "process", "label": "View own logs (Still in library / No Log Out)" },
+    { "id": "action", "type": "decision", "label": "Next action?" },
+    { "id": "filter", "type": "io", "label": "Select date range or sort order" },
+    { "id": "update", "type": "process", "label": "Display filtered attendance history" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "end", "type": "offpage", "label": "D" }
+  ],
+  "edges": [
+    { "from": "start", "to": "open" },
+    { "from": "open", "to": "view" },
+    { "from": "view", "to": "action" },
+    { "from": "action", "to": "filter", "label": "Filter / Sort" },
+    { "from": "action", "to": "end", "label": "Return" },
+    { "from": "action", "to": "logout", "label": "Log Out" },
+    { "from": "filter", "to": "update" },
+    { "from": "update", "to": "end" }
+  ]
+}

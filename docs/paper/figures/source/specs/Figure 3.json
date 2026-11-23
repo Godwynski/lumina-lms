@@ -1,0 +1,190 @@
+{
+ "id": "Figure 3",
+ "title": "Entry Authentication and Onboarding Flowchart",
+ "rankdir": "TB",
+ "nodeSpacing": 8,
+ "layerSpacing": 34,
+ "nodes": [
+  {
+   "id": "start",
+   "type": "terminator",
+   "label": "Start"
+  },
+  {
+   "id": "signin",
+   "type": "io",
+   "label": "Microsoft O365 sign-in"
+  },
+  {
+   "id": "valid",
+   "type": "decision",
+   "label": "School O365?"
+  },
+  {
+   "id": "endErr",
+   "type": "terminator",
+   "label": "End (sign-in error)"
+  },
+  {
+   "id": "status",
+   "type": "decision",
+   "label": "Account status?"
+  },
+  {
+   "id": "fill",
+   "type": "io",
+   "label": "Edit Info & await approval"
+  },
+  {
+   "id": "signout",
+   "type": "terminator",
+   "label": "Sign Out"
+  },
+  {
+   "id": "isSA",
+   "type": "decision",
+   "label": "Super Administrator?"
+  },
+  {
+   "id": "isLib",
+   "type": "decision",
+   "label": "Librarian?"
+  },
+  {
+   "id": "isStaff",
+   "type": "decision",
+   "label": "Library Staff?"
+  },
+  {
+   "id": "onb",
+   "type": "decision",
+   "label": "Onboarded?"
+  },
+  {
+   "id": "patFill",
+   "type": "io",
+   "label": "Complete profile"
+  },
+  {
+   "id": "b",
+   "type": "offpage",
+   "label": "B"
+  },
+  {
+   "id": "c",
+   "type": "offpage",
+   "label": "C"
+  },
+  {
+   "id": "d",
+   "type": "offpage",
+   "label": "D"
+  },
+  {
+   "id": "e",
+   "type": "offpage",
+   "label": "E"
+  },
+  {
+   "id": "signout2",
+   "type": "terminator",
+   "label": "Sign Out"
+  }
+ ],
+ "edges": [
+  {
+   "from": "start",
+   "to": "signin"
+  },
+  {
+   "from": "signin",
+   "to": "valid"
+  },
+  {
+   "from": "valid",
+   "to": "status",
+   "label": "Yes",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "valid",
+   "to": "endErr",
+   "label": "No",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "status",
+   "to": "isSA",
+   "label": "Active",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "status",
+   "to": "fill",
+   "label": "Pending",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "status",
+   "to": "signout2",
+   "label": "Blocked",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "fill",
+   "to": "signout"
+  },
+  {
+   "from": "isSA",
+   "to": "isLib",
+   "label": "No",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "isSA",
+   "to": "b",
+   "label": "Yes",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "isLib",
+   "to": "isStaff",
+   "label": "No",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "isLib",
+   "to": "c",
+   "label": "Yes",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "isStaff",
+   "to": "onb",
+   "label": "No",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "isStaff",
+   "to": "d",
+   "label": "Yes",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "onb",
+   "to": "e",
+   "label": "Yes",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "onb",
+   "to": "patFill",
+   "label": "No",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "patFill",
+   "to": "e"
+  }
+ ]
+}

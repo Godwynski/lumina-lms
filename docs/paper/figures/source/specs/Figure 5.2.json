@@ -1,0 +1,155 @@
+{
+ "id": "Figure 5.2",
+ "title": "Librarian Circulation Desk Flowchart",
+ "rankdir": "TB",
+ "nodeSpacing": 20,
+ "layerSpacing": 30,
+ "nodes": [
+  {
+   "id": "c_in",
+   "type": "offpage",
+   "label": "C"
+  },
+  {
+   "id": "mode",
+   "type": "decision",
+   "label": "Desk mode?"
+  },
+  {
+   "id": "scanCard",
+   "type": "io",
+   "label": "Scan card / ID"
+  },
+  {
+   "id": "active",
+   "type": "decision",
+   "label": "Active & not self?"
+  },
+  {
+   "id": "blocked",
+   "type": "decision",
+   "label": "Overdue, lost or fines?"
+  },
+  {
+   "id": "override",
+   "type": "decision",
+   "label": "Override with reason (10-300 chars)?"
+  },
+  {
+   "id": "scanCopy",
+   "type": "io",
+   "label": "Scan copy / accession"
+  },
+  {
+   "id": "copyOk",
+   "type": "decision",
+   "label": "Valid & under limit?"
+  },
+  {
+   "id": "confirmOut",
+   "type": "process",
+   "label": "Confirm checkout"
+  },
+  {
+   "id": "scanRet",
+   "type": "io",
+   "label": "Scan copy / accession"
+  },
+  {
+   "id": "confirmRet",
+   "type": "process",
+   "label": "Return copy, settle or record fine & update queue"
+  },
+  {
+   "id": "c_out",
+   "type": "offpage",
+   "label": "C"
+  }
+ ],
+ "edges": [
+  {
+   "from": "c_in",
+   "to": "mode"
+  },
+  {
+   "from": "mode",
+   "to": "scanCard",
+   "label": "Checkout",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "mode",
+   "to": "scanRet",
+   "label": "Return",
+   "exitSide": "WEST"
+  },
+  {
+   "from": "scanCard",
+   "to": "active"
+  },
+  {
+   "from": "active",
+   "to": "blocked",
+   "label": "Yes",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "active",
+   "to": "c_out",
+   "label": "No",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "blocked",
+   "to": "scanCopy",
+   "label": "No",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "blocked",
+   "to": "override",
+   "label": "Yes",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "override",
+   "to": "c_out",
+   "label": "No",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "scanCopy",
+   "to": "copyOk"
+  },
+  {
+   "from": "copyOk",
+   "to": "confirmOut",
+   "label": "Yes",
+   "exitSide": "SOUTH"
+  },
+  {
+   "from": "copyOk",
+   "to": "c_out",
+   "label": "No",
+   "exitSide": "EAST"
+  },
+  {
+   "from": "confirmOut",
+   "to": "c_out"
+  },
+  {
+   "from": "scanRet",
+   "to": "confirmRet"
+  },
+  {
+   "from": "confirmRet",
+   "to": "c_out"
+  },
+  {
+   "from": "override",
+   "to": "scanCopy",
+   "label": "Yes",
+   "exitSide": "SOUTH"
+  }
+ ]
+}

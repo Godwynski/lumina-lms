@@ -1,0 +1,36 @@
+{
+  "id": "Figure 6.4",
+  "title": "Library Staff Attendance Logs Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "D" },
+    { "id": "perm", "type": "decision", "label": "Active & manage_attendance?" },
+    { "id": "fallback", "type": "subprocess", "label": "My Attendance (Fig. 6.3)" },
+    { "id": "task", "type": "decision", "label": "Log visit or filter logs?" },
+    { "id": "scan", "type": "io", "label": "Choose In/Out; scan or enter ID" },
+    { "id": "active", "type": "decision", "label": "Card & account Active?" },
+    { "id": "sessionOk", "type": "decision", "label": "Valid In/Out state?" },
+    { "id": "err", "type": "process", "label": "Show attendance error" },
+    { "id": "record", "type": "process", "label": "Record visit (close stale)" },
+    { "id": "search", "type": "io", "label": "Search patron or date range" },
+    { "id": "display", "type": "process", "label": "View logs & status badges" },
+    { "id": "end", "type": "offpage", "label": "D" }
+  ],
+  "edges": [
+    { "from": "start", "to": "perm" },
+    { "from": "perm", "to": "task", "label": "Yes" },
+    { "from": "perm", "to": "fallback", "label": "No" },
+    { "from": "fallback", "to": "end" },
+    { "from": "task", "to": "scan", "label": "Log Visit" },
+    { "from": "task", "to": "search", "label": "Filter Logs" },
+    { "from": "scan", "to": "active" },
+    { "from": "active", "to": "sessionOk", "label": "Yes" },
+    { "from": "active", "to": "err", "label": "No" },
+    { "from": "sessionOk", "to": "record", "label": "Yes" },
+    { "from": "sessionOk", "to": "err", "label": "No" },
+    { "from": "err", "to": "end" },
+    { "from": "record", "to": "end" },
+    { "from": "search", "to": "display" },
+    { "from": "display", "to": "end" }
+  ]
+}

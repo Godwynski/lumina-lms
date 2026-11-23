@@ -1,0 +1,182 @@
+{
+ "id": "Figure 2.1 (part 3)",
+ "title": "Lumina LMS Data Flow Diagram (Level 1 - Policies, Lifecycle & Reporting)",
+ "rankdir": "LR",
+ "keepOrder": true,
+ "nodes": [
+  {
+   "id": "patron",
+   "type": "external",
+   "label": "Patron",
+   "partition": 0
+  },
+  {
+   "id": "staff",
+   "type": "external",
+   "label": "Library Staff",
+   "partition": 0
+  },
+  {
+   "id": "lib",
+   "type": "external",
+   "label": "Librarian",
+   "partition": 0
+  },
+  {
+   "id": "sa",
+   "type": "external",
+   "label": "Super Administrator",
+   "partition": 0
+  },
+  {
+   "id": "p4",
+   "type": "dfdprocess",
+   "num": "4.0",
+   "label": "Policies, Lifecycle & Alerts",
+   "partition": 1
+  },
+  {
+   "id": "p5",
+   "type": "dfdprocess",
+   "num": "5.0",
+   "label": "Analytics & Audit",
+   "partition": 1
+  },
+  {
+   "id": "smtp",
+   "type": "external",
+   "label": "Email SMTP Service",
+   "partition": 2
+  },
+  {
+   "id": "d1",
+   "type": "datastore",
+   "num": "D1",
+   "label": "Profiles & Cards",
+   "partition": 2
+  },
+  {
+   "id": "d2",
+   "type": "datastore",
+   "num": "D2",
+   "label": "Books, Copies & Holds",
+   "partition": 2
+  },
+  {
+   "id": "d3",
+   "type": "datastore",
+   "num": "D3",
+   "label": "Borrowing & Visits",
+   "partition": 2
+  },
+  {
+   "id": "d4",
+   "type": "datastore",
+   "num": "D4",
+   "label": "Policies, Alerts & Audit",
+   "partition": 2
+  }
+ ],
+ "edges": [
+  {
+   "from": "p4",
+   "to": "patron",
+   "label": "Alerts & notices"
+  },
+  {
+   "from": "p4",
+   "to": "staff",
+   "label": "Alerts & notices"
+  },
+  {
+   "from": "p5",
+   "to": "staff",
+   "label": "Scoped reports"
+  },
+  {
+   "from": "lib",
+   "to": "p4",
+   "label": "Policies & notices"
+  },
+  {
+   "from": "p4",
+   "to": "lib",
+   "label": "System alerts"
+  },
+  {
+   "from": "p5",
+   "to": "lib",
+   "label": "Reports & audit"
+  },
+  {
+   "from": "sa",
+   "to": "p4",
+   "label": "Policies & lifecycle"
+  },
+  {
+   "from": "p4",
+   "to": "sa",
+   "label": "Archive backups"
+  },
+  {
+   "from": "p5",
+   "to": "sa",
+   "label": "Full audit & analytics"
+  },
+  {
+   "from": "p4",
+   "to": "smtp",
+   "label": "Due & test emails"
+  },
+  {
+   "from": "smtp",
+   "to": "p4",
+   "label": "Delivery status"
+  },
+  {
+   "from": "p4",
+   "to": "d1",
+   "label": "Reset & emails",
+   "bidirectional": true
+  },
+  {
+   "from": "p4",
+   "to": "d2",
+   "label": "Categories & expired holds",
+   "bidirectional": true
+  },
+  {
+   "from": "p4",
+   "to": "d3",
+   "label": "Reminders & archive",
+   "bidirectional": true
+  },
+  {
+   "from": "p4",
+   "to": "d4",
+   "label": "Policies, alerts & audit",
+   "bidirectional": true
+  },
+  {
+   "from": "d1",
+   "to": "p5",
+   "label": "User metrics"
+  },
+  {
+   "from": "d2",
+   "to": "p5",
+   "label": "Inventory & genres"
+  },
+  {
+   "from": "d3",
+   "to": "p5",
+   "label": "Loan & visit logs"
+  },
+  {
+   "from": "d4",
+   "to": "p5",
+   "label": "Audit log records"
+  }
+ ],
+ "labelWrap": 13
+}

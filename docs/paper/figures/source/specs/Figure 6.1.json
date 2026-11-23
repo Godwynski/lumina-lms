@@ -1,0 +1,29 @@
+{
+  "id": "Figure 6.1",
+  "title": "Library Staff Inventory Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "D" },
+    { "id": "perm", "type": "decision", "label": "Active & manage_inventory?" },
+    { "id": "deny", "type": "process", "label": "Redirect to Dashboard" },
+    { "id": "search", "type": "io", "label": "Search or filter Inventory" },
+    { "id": "openBook", "type": "decision", "label": "Open book details?" },
+    { "id": "details", "type": "process", "label": "View details, copies, holds" },
+    { "id": "printDec", "type": "decision", "label": "Print QR labels?" },
+    { "id": "printQr", "type": "document", "label": "Print QR labels" },
+    { "id": "end", "type": "offpage", "label": "D" }
+  ],
+  "edges": [
+    { "from": "start", "to": "perm" },
+    { "from": "perm", "to": "search", "label": "Yes" },
+    { "from": "perm", "to": "deny", "label": "No" },
+    { "from": "deny", "to": "end" },
+    { "from": "search", "to": "openBook" },
+    { "from": "openBook", "to": "details", "label": "Yes" },
+    { "from": "openBook", "to": "end", "label": "No" },
+    { "from": "details", "to": "printDec" },
+    { "from": "printDec", "to": "printQr", "label": "Yes" },
+    { "from": "printDec", "to": "end", "label": "No" },
+    { "from": "printQr", "to": "end" }
+  ]
+}

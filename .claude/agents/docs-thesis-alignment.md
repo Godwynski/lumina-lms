@@ -8,6 +8,6 @@ You own `README.md`, `docs/` and `CAPSTONE2_VS_SYSTEM_ALIGNMENT_AUDIT.md`.
 
 Rules:
 - Verify every claim against the code before writing it (routes, tables, test counts, roles).
-- The latest paper is `docs/paper/capstone-2.docx`; the revised version (tracked changes) is `docs/paper/capstone-2-revised-tracked.docx`, with searchable text in `docs/paper/capstone-2-revised.txt`.
+- The latest paper is `docs/paper/capstone-2-manuscript.docx`; the revised version (tracked changes) is `docs/paper/capstone-2-manuscript-revised-tracked.docx`, with searchable text in `docs/paper/capstone-2-manuscript-revised.txt`. The editable figures (draw.io + PNG) are in `docs/paper/figures/`.
 - The paper follows the system: flag gaps between the paper and what is built; do not hide them.
 - Plain language; no marketing filler.

@@ -1,0 +1,32 @@
+{
+  "id": "Figure 7.1",
+  "title": "Patron Catalog Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "start", "type": "offpage", "label": "E" },
+    { "id": "search", "type": "io", "label": "Search Catalog & open book" },
+    { "id": "action", "type": "decision", "label": "Reserve or cancel hold?" },
+    { "id": "eligible", "type": "decision", "label": "Unblocked & under limit?" },
+    { "id": "err", "type": "process", "label": "Show block or limit error" },
+    { "id": "avail", "type": "decision", "label": "Copy available?" },
+    { "id": "ready", "type": "process", "label": "Hold Ready for Pickup" },
+    { "id": "waitlist", "type": "process", "label": "Join waitlist queue" },
+    { "id": "cancel", "type": "process", "label": "Cancel reservation" },
+    { "id": "end", "type": "offpage", "label": "E" }
+  ],
+  "edges": [
+    { "from": "start", "to": "search" },
+    { "from": "search", "to": "action" },
+    { "from": "action", "to": "eligible", "label": "Reserve" },
+    { "from": "action", "to": "cancel", "label": "Cancel Hold" },
+    { "from": "action", "to": "end", "label": "Back" },
+    { "from": "eligible", "to": "avail", "label": "Yes" },
+    { "from": "eligible", "to": "err", "label": "No" },
+    { "from": "err", "to": "end" },
+    { "from": "avail", "to": "ready", "label": "Yes" },
+    { "from": "avail", "to": "waitlist", "label": "No" },
+    { "from": "ready", "to": "end" },
+    { "from": "waitlist", "to": "end" },
+    { "from": "cancel", "to": "end" }
+  ]
+}

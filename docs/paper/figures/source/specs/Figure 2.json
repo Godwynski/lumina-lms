@@ -1,0 +1,128 @@
+{
+ "id": "Figure 2",
+ "title": "Lumina LMS Data Flow Diagram (Level 0 - Context Diagram)",
+ "rankdir": "LR",
+ "nodes": [
+  {
+   "id": "patron",
+   "type": "external",
+   "label": "Patron",
+   "partition": 0
+  },
+  {
+   "id": "staff",
+   "type": "external",
+   "label": "Library Staff",
+   "partition": 0
+  },
+  {
+   "id": "lib",
+   "type": "external",
+   "label": "Librarian",
+   "partition": 0
+  },
+  {
+   "id": "sa",
+   "type": "external",
+   "label": "Super Administrator",
+   "partition": 0
+  },
+  {
+   "id": "sys",
+   "type": "dfdprocess",
+   "num": "0",
+   "label": "Lumina Library Management System",
+   "partition": 1
+  },
+  {
+   "id": "o365",
+   "type": "external",
+   "label": "Microsoft O365",
+   "partition": 2
+  },
+  {
+   "id": "apis",
+   "type": "external",
+   "label": "Book Metadata APIs",
+   "partition": 2
+  },
+  {
+   "id": "smtp",
+   "type": "external",
+   "label": "Email SMTP Service",
+   "partition": 2
+  }
+ ],
+ "edges": [
+  {
+   "from": "patron",
+   "to": "sys",
+   "label": "Profile, queries & holds"
+  },
+  {
+   "from": "sys",
+   "to": "patron",
+   "label": "Card, catalog, loans, visits & alerts"
+  },
+  {
+   "from": "staff",
+   "to": "sys",
+   "label": "Scans, settlements & self-service"
+  },
+  {
+   "from": "sys",
+   "to": "staff",
+   "label": "Inventory, results, reports & alerts"
+  },
+  {
+   "from": "lib",
+   "to": "sys",
+   "label": "Approvals, catalog, scans & policies"
+  },
+  {
+   "from": "sys",
+   "to": "lib",
+   "label": "Results, reports, audit & alerts"
+  },
+  {
+   "from": "sa",
+   "to": "sys",
+   "label": "Roles, catalog, scans, policies & lifecycle"
+  },
+  {
+   "from": "sys",
+   "to": "sa",
+   "label": "Results, full audit, analytics & backups"
+  },
+  {
+   "from": "sys",
+   "to": "o365",
+   "label": "OAuth sign-in request"
+  },
+  {
+   "from": "o365",
+   "to": "sys",
+   "label": "Verified O365 identity"
+  },
+  {
+   "from": "sys",
+   "to": "apis",
+   "label": "ISBN lookup request"
+  },
+  {
+   "from": "apis",
+   "to": "sys",
+   "label": "Book metadata & cover"
+  },
+  {
+   "from": "sys",
+   "to": "smtp",
+   "label": "Due, overdue & test emails"
+  },
+  {
+   "from": "smtp",
+   "to": "sys",
+   "label": "Email delivery status"
+  }
+ ]
+}

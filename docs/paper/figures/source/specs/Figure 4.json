@@ -1,0 +1,23 @@
+{
+  "id": "Figure 4",
+  "title": "Super Administrator Dashboard Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "b_in", "type": "offpage", "label": "B" },
+    { "id": "dash", "type": "process", "label": "Dashboard: live feed, Action Center & 4 KPIs" },
+    { "id": "choice", "type": "decision", "label": "Select action?" },
+    { "id": "ops_sub", "type": "subprocess", "label": "Inventory, Circulation Desk, Logs, Users, Book or Card" },
+    { "id": "side_sub", "type": "subprocess", "label": "Catalog, Analytics, System Policies, Audit Logs & My Profile" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "b_out", "type": "offpage", "label": "B" }
+  ],
+  "edges": [
+    { "from": "b_in", "to": "dash" },
+    { "from": "dash", "to": "choice" },
+    { "from": "choice", "to": "ops_sub", "label": "Widgets", "exitSide": "SOUTH" },
+    { "from": "choice", "to": "side_sub", "label": "Sidebar / Menu", "exitSide": "WEST" },
+    { "from": "choice", "to": "logout", "label": "Log Out", "exitSide": "EAST" },
+    { "from": "ops_sub", "to": "b_out" },
+    { "from": "side_sub", "to": "b_out" }
+  ]
+}

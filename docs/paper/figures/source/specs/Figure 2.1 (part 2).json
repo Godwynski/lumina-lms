@@ -1,0 +1,129 @@
+{
+ "id": "Figure 2.1 (part 2)",
+ "title": "Lumina LMS Data Flow Diagram (Level 1 - Circulation & Visits)",
+ "rankdir": "LR",
+ "keepOrder": true,
+ "nodeSpacing": 20,
+ "layerSpacing": 24,
+ "nodes": [
+  {
+   "id": "patron",
+   "type": "external",
+   "label": "Patron",
+   "partition": 0
+  },
+  {
+   "id": "staff",
+   "type": "external",
+   "label": "Library Staff",
+   "partition": 0
+  },
+  {
+   "id": "lib",
+   "type": "external",
+   "label": "Librarian",
+   "partition": 0
+  },
+  {
+   "id": "sa",
+   "type": "external",
+   "label": "Super Administrator",
+   "partition": 0
+  },
+  {
+   "id": "p3",
+   "type": "dfdprocess",
+   "num": "3.0",
+   "label": "Circulation & Visits",
+   "partition": 1
+  },
+  {
+   "id": "d1",
+   "type": "datastore",
+   "num": "D1",
+   "label": "Profiles & Cards",
+   "partition": 2
+  },
+  {
+   "id": "d2",
+   "type": "datastore",
+   "num": "D2",
+   "label": "Books, Copies & Holds",
+   "partition": 2
+  },
+  {
+   "id": "d3",
+   "type": "datastore",
+   "num": "D3",
+   "label": "Borrowing & Visits",
+   "partition": 2
+  },
+  {
+   "id": "d4",
+   "type": "datastore",
+   "num": "D4",
+   "label": "Policies, Alerts & Audit",
+   "partition": 2
+  }
+ ],
+ "edges": [
+  {
+   "from": "p3",
+   "to": "patron",
+   "label": "Loans & visits"
+  },
+  {
+   "from": "staff",
+   "to": "p3",
+   "label": "Scans & fines"
+  },
+  {
+   "from": "p3",
+   "to": "staff",
+   "label": "Scan results"
+  },
+  {
+   "from": "lib",
+   "to": "p3",
+   "label": "Scans & overrides"
+  },
+  {
+   "from": "p3",
+   "to": "lib",
+   "label": "Desk results"
+  },
+  {
+   "from": "sa",
+   "to": "p3",
+   "label": "Scans & overrides"
+  },
+  {
+   "from": "p3",
+   "to": "sa",
+   "label": "Desk results"
+  },
+  {
+   "from": "d1",
+   "to": "p3",
+   "label": "Card & status"
+  },
+  {
+   "from": "p3",
+   "to": "d2",
+   "label": "Copy & holds",
+   "bidirectional": true
+  },
+  {
+   "from": "p3",
+   "to": "d3",
+   "label": "Loans & visits",
+   "bidirectional": true
+  },
+  {
+   "from": "p3",
+   "to": "d4",
+   "label": "Rules, alerts & audit",
+   "bidirectional": true
+  }
+ ]
+}

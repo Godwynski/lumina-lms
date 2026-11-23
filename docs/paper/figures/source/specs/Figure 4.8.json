@@ -1,0 +1,25 @@
+{
+  "id": "Figure 4.8",
+  "title": "Super Administrator Audit Logs Flowchart",
+  "rankdir": "TB",
+  "nodes": [
+    { "id": "b_in", "type": "offpage", "label": "B" },
+    { "id": "audit", "type": "process", "label": "Audit Logs: search & filter records" },
+    { "id": "act", "type": "decision", "label": "Select action?" },
+    { "id": "diff", "type": "process", "label": "Expand old/new diff & reason" },
+    { "id": "exp_cfg", "type": "io", "label": "Pick columns & format" },
+    { "id": "exp_doc", "type": "document", "label": "Export CSV, JSON or Excel" },
+    { "id": "logout", "type": "terminator", "label": "Log Out" },
+    { "id": "b_out", "type": "offpage", "label": "B" }
+  ],
+  "edges": [
+    { "from": "b_in", "to": "audit" },
+    { "from": "audit", "to": "act" },
+    { "from": "act", "to": "exp_cfg", "label": "Export", "exitSide": "SOUTH" },
+    { "from": "act", "to": "diff", "label": "Inspect", "exitSide": "WEST" },
+    { "from": "act", "to": "logout", "label": "Log Out", "exitSide": "EAST" },
+    { "from": "diff", "to": "b_out" },
+    { "from": "exp_cfg", "to": "exp_doc" },
+    { "from": "exp_doc", "to": "b_out" }
+  ]
+}
