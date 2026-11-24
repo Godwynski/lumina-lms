@@ -249,7 +249,7 @@ export function ProtectedNav({ user }: { user?: User | null }) {
         }
       } else {
         items.push({
-          group: item.href === "/analytics" && currentRole === "library_staff" ? "records" : item.group,
+          group: item.group,
           href: item.href,
           label: item.label,
           icon: item.icon,
