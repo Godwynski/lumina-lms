@@ -1691,7 +1691,7 @@ describe('Layout Components', () => {
     );
     expect(container.textContent).not.toContain('Inventory');
     expect(container.textContent).toContain('Catalog');
-    expect(container.querySelector('a[href="/analytics"]')).toBeInTheDocument();
+    expect(container.querySelector('a[href="/analytics"]')).toBeNull();
     expect(container.querySelector('a[href="/attendance?view=logs"]')).toBeInTheDocument();
     expect(container.querySelector('a[href="/history?view=logs"]')).toBeInTheDocument();
 

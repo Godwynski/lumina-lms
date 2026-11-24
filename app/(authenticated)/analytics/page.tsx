@@ -18,10 +18,7 @@ export default async function AnalyticsPage() {
   
   const { role } = me;
 
-  if (!getReportDatasets(role, me.profile).length) redirect('/dashboard');
-  if (role !== 'super_admin' && role !== 'librarian') {
-    redirect('/analytics/reports');
-  }
+  if (!getReportDatasets(role, me.profile).length || (role !== 'super_admin' && role !== 'librarian')) redirect('/dashboard');
 
   const initialDates = analyticsDates('30d');
   const statsPromise = getDashboardStats({ role, scope: 'analytics' });

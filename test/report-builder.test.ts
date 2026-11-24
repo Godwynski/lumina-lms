@@ -96,11 +96,11 @@ describe("Analytics report builder data", () => {
     expect(db.from.mock.calls.every(([table]) => table === "profiles")).toBe(true);
   });
 
-  it("permits delegated attendance while rejecting suspended staff and patrons", async () => {
+  it("rejects library staff (even with delegated permissions), suspended staff and patrons", async () => {
     db.setTableResponse("attendance", []);
     const request = config(createReportSection("attendance", "a"));
-    signIn("library_staff", "ACTIVE", { manage_attendance: true });
-    await expect(buildReport(request)).resolves.toHaveProperty("sections");
+    signIn("library_staff", "ACTIVE", { manage_attendance: true, manage_circulation: true });
+    await expect(buildReport(request)).rejects.toThrow("Forbidden");
     signIn("library_staff", "SUSPENDED", { manage_attendance: true });
     await expect(buildReport(request)).rejects.toThrow("Forbidden");
     signIn("patron");

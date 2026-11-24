@@ -96,9 +96,6 @@ export function BreadcrumbNav() {
   // For the back link, navigate to the parent path (e.g. /student-catalog) not the root segment
   let backHref = pathSegments.length > 1 ? `/${pathSegments.slice(0, -1).join("/")}` : null;
   let backLabel = parentSegment ? formatSegment(parentSegment) : null;
-  if (current === "reports" && parentSegment === "analytics" && role === "library_staff") {
-    backHref = null;
-  }
   if (parentSegment === "history") {
     const isViewingLogs = viewParam === "logs" && 
                           (role === "super_admin" || role === "librarian" || role === "library_staff");

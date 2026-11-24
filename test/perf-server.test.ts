@@ -76,6 +76,7 @@ import {
 } from '@/app/api/admin/categories/[id]/route';
 import { AttendanceClient } from '@/app/(authenticated)/attendance/AttendanceClient';
 import AnalyticsPage from '@/app/(authenticated)/analytics/page';
+import ReportsPage from '@/app/(authenticated)/analytics/reports/page';
 import { AnalyticsClient } from '@/app/(authenticated)/analytics/AnalyticsClient';
 import { getDashboardStats } from '@/lib/actions/dashboard';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
@@ -83,7 +84,7 @@ import { getMe, getPreferences } from '@/lib/auth-helpers';
 
 function setupStaffAuth(
   helper: MockSupabaseClientHelper,
-  role: 'super_admin' | 'librarian' | 'patron' = 'librarian',
+  role: 'super_admin' | 'librarian' | 'library_staff' | 'patron' = 'librarian',
   userId = 'user-1'
 ) {
   helper.auth.getUser.mockResolvedValue({
@@ -407,6 +408,13 @@ describe('P1 Server Data & Caching Optimizations', () => {
     });
     expect(serverSupa.from.mock.calls.filter(([t]) => t === 'attendance')).toHaveLength(1);
     expect(serverSupa.getTableBuilder('attendance').eq).toHaveBeenCalledWith('user_id', 'stu-9');
+  });
+
+  it('sends library staff away from analytics and the report builder, even with every delegated permission', async () => {
+    setupStaffAuth(serverSupa, 'library_staff', 'staff-1');
+    await expect(AnalyticsPage()).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+    await expect(ReportsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow('NEXT_REDIRECT:/dashboard');
+    expect(serverSupa.rpc).not.toHaveBeenCalled();
   });
 
   it('Item 4: AnalyticsPage prefetches default summary + scoped stats in parallel, avoiding client mount round-trip while keeping range switching working', async () => {
