@@ -321,7 +321,7 @@ export function CirculationWizard({ userRole }: CirculationWizardProps = {}) {
                 }
                 placeholder={
                   step === 1
-                    ? (mode === 'checkout' ? 'e.g. DEMO-STU-001' : 'e.g. BK-0001-01')
+                    ? (mode === 'checkout' ? 'e.g. LIB-2026-0001' : 'e.g. BK-0001-01')
                     : 'e.g. BK-0001-01'
                 }
                 onScan={handleScan}

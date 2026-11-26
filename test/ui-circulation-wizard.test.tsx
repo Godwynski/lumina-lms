@@ -134,7 +134,7 @@ describe('B3 Circulation & Fines UI', () => {
   it('CirculationWizard supplies concrete ID placeholder on initial step 1', async () => {
     const { container } = await renderClient(<CirculationWizard />);
     const input = container.querySelector('#circulation-code') as HTMLInputElement;
-    expect(input.placeholder).toContain('DEMO-STU-001');
+    expect(input.placeholder).toContain('LIB-2026-0001');
     expect(document.activeElement).toBe(input);
   });
 

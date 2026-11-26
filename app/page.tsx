@@ -4,7 +4,6 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { Hero } from "@/components/hero";
 import { BookStage } from "@/components/landing/book-stage";
 import { hasEnvVars } from "@/lib/utils";
-import { isDemoModeEnabled } from "@/lib/demo/config";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getMe } from "@/lib/auth-helpers";
@@ -86,7 +85,7 @@ export default async function Home() {
       <BookStage
         title="STI College Alabang Library"
         intro="Search the library catalog, reserve a copy for pickup and keep track of what you have borrowed."
-        actions={<Hero user={me?.user ?? null} role={me?.role ?? null} showDemo={isDemoModeEnabled()} />}
+        actions={<Hero user={me?.user ?? null} role={me?.role ?? null} />}
         steps={STEPS}
       />
 

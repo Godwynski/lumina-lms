@@ -15,8 +15,6 @@ vi.mock('@supabase/ssr', () => ({
 
 import { hasPermission, isStaff, isAccessBlocked, ROLE_RANKS, type NavItem } from '@/lib/auth/permissions';
 import { normalizeUserRole, getMe, getPreferences, getUserRole, assertRole } from '@/lib/auth-helpers';
-import { isDemoModeEnabled, findDemoAccount, DEMO_ACCOUNTS } from '@/lib/demo/config';
-import { DEMO_ACCOUNTS as DIRECT_DEMO_ACCOUNTS } from '@/lib/demo/accounts';
 import { proxy, config as proxyConfig } from '@/proxy';
 
 describe('lib/auth/permissions', () => {
@@ -357,68 +355,6 @@ describe('lib/auth-helpers', () => {
       const me = await assertRole(['librarian', 'super_admin']);
       expect(me.role).toBe('librarian');
     });
-  });
-});
-
-describe('lib/demo/config and lib/demo/accounts', () => {
-  it('exposes demo mode and all 4 evaluation accounts', () => {
-    expect(isDemoModeEnabled()).toBe(true);
-    expect(DEMO_ACCOUNTS).toBe(DIRECT_DEMO_ACCOUNTS);
-    expect(DEMO_ACCOUNTS).toHaveLength(4);
-    expect(DEMO_ACCOUNTS.map((a) => a.role)).toEqual([
-      'super_admin',
-      'librarian',
-      'library_staff',
-      'patron',
-    ]);
-  });
-
-  it('finds demo accounts case-insensitively with whitespace trimming', () => {
-    const admin = findDemoAccount('  DEMO.AQUINO@ALABANG.STI.EDU.PH ');
-    expect(admin?.role).toBe('super_admin');
-    expect(admin?.cardNumber).toBe('DEMO-ADM-001');
-
-    const student = findDemoAccount('demo.bautista.20220271@alabang.sti.edu.ph');
-    expect(student?.label).toBe('Patron');
-    expect(student?.permissions).toEqual({
-      manage_circulation: false,
-      manage_attendance: false,
-      view_admin_dashboard: false,
-      manage_inventory: false,
-    });
-
-    const assistant = findDemoAccount('demo.marasigan.20230148@alabang.sti.edu.ph');
-    expect(assistant?.label).toBe('Library Staff');
-    expect(assistant?.permissions.manage_inventory).toBe(false);
-
-    expect(findDemoAccount('unknown@example.com')).toBeUndefined();
-  });
-
-  it('uses school emails and complete biodata with IDs matching the email convention', () => {
-    for (const account of DEMO_ACCOUNTS) {
-      expect(account.email).toMatch(/@alabang\.sti\.edu\.ph$/);
-      const data = account as unknown as Record<string, unknown>;
-      for (const key of ['fullName', 'studentId', 'department', 'phone', 'address', 'cardNumber']) {
-        expect(data[key], `${account.role}: ${key}`).toBeTruthy();
-      }
-      const local = account.email.split('@')[0];
-      const digits = local.match(/\d{6,}/)?.[0];
-      expect(data.studentId).toBe(digits ? `STU-${digits}` : `FAC-${local.toUpperCase()}`);
-      expect(account.cardNumber).not.toBe(data.studentId);
-    }
-  });
-
-  it('gives the student assistant the permissions required by staff navigation', () => {
-    const account = DEMO_ACCOUNTS.find((a) => a.role === 'library_staff')!;
-    for (const permissionKey of ['manage_circulation', 'manage_attendance', 'view_admin_dashboard'] as const) {
-      expect(
-        hasPermission(
-          account.role,
-          { href: '/', label: 'Staff', minRole: 'library_staff', permissionKey },
-          { status: 'ACTIVE', permissions: account.permissions }
-        )
-      ).toBe(true);
-    }
   });
 });
 

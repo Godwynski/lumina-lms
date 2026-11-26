@@ -679,13 +679,6 @@ BEGIN
 END;
 $$;
 
--- Demo accounts allowlist (empty unless scripts/demo.ts demo:on is run)
-CREATE TABLE IF NOT EXISTS public.demo_accounts (
-  email TEXT PRIMARY KEY
-);
-ALTER TABLE public.demo_accounts ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.demo_accounts FROM PUBLIC, anon, authenticated;
-
 -- Creates user profiles & library cards automatically upon auth registration
 -- The first sign-up becomes the ACTIVE super admin; everyone after defaults to student / PENDING
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -697,11 +690,8 @@ AS $$
 DECLARE
   card_number_val TEXT;
   v_first BOOLEAN;
-  v_demo BOOLEAN;
 BEGIN
-  v_demo := EXISTS (SELECT 1 FROM public.demo_accounts WHERE email = lower(COALESCE(new.email, '')));
-
-  IF NOT v_demo AND lower(COALESCE(new.email, '')) !~ '^[^@]+@alabang\.sti\.edu\.ph$' THEN
+  IF lower(COALESCE(new.email, '')) !~ '^[^@]+@alabang\.sti\.edu\.ph$' THEN
     RAISE EXCEPTION 'Sign-up is limited to @alabang.sti.edu.ph accounts';
   END IF;
 
@@ -2147,12 +2137,6 @@ CREATE POLICY "import_staff_read" ON public.catalog_import_items
         AND status = 'ACTIVE'
     )
   );
-
--- demo_accounts Policies (explicit deny-all; table is managed solely via service_role / SECURITY DEFINER)
-CREATE POLICY "Deny direct access to demo accounts" ON public.demo_accounts
-  FOR ALL TO public
-  USING (false)
-  WITH CHECK (false);
 
 CREATE POLICY "Librarians can update borrowing records" ON public.borrowing_records
   FOR UPDATE TO authenticated

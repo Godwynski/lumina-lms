@@ -2474,7 +2474,7 @@ describe('Landing, Hero & EnvVarWarning Components', () => {
     expect(svg?.querySelectorAll('path').length).toBeGreaterThan(5);
   });
 
-  it('Hero renders signed-in dashboard link or Microsoft + demo sign-in actions', async () => {
+  it('Hero renders signed-in dashboard link or Microsoft sign-in action without demo access', async () => {
     const { container, rerender } = await renderClient(
       <Hero user={makeUser()} role="librarian" />
     );
@@ -2486,35 +2486,26 @@ describe('Landing, Hero & EnvVarWarning Components', () => {
       'Signed in as Ada Lovelace with the Librarian role.'
     );
 
-    // Unauthenticated with demo mode: OAuth error resets loading state
+    // Unauthenticated: OAuth error resets loading state and no Quick Demo Access is shown
     const sb = makeSupabaseMock({ oauthError: { message: 'Azure error' } });
     mockCreateClient.mockReturnValue(sb);
 
-    await rerender(<Hero user={null} role={null} showDemo={true} />);
+    await rerender(<Hero user={null} role={null} />);
+    expect(container.textContent).not.toContain('Quick Demo Access');
     await clickElement(findButtonByText(container, 'Sign in with Microsoft'));
     expect(sb.auth.signInWithOAuth).toHaveBeenCalledWith(
       expect.objectContaining({ provider: 'azure' })
     );
     expect(mockToastError).toHaveBeenCalledWith('Microsoft sign-in failed');
 
-    // Demo login error resets loading state
-    fetchSpy.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: 'Demo disabled' }),
-    });
-    await clickElement(findButtonByText(container, 'Patron'));
-    expect(mockToastError).toHaveBeenCalledWith('Demo disabled');
-
-    // Demo login success
-    fetchSpy.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
-    await clickElement(findButtonByText(container, 'Super Admin'));
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/demo-login',
-      expect.objectContaining({ method: 'POST' })
+    // OAuth success initiates redirect
+    const sbOk = makeSupabaseMock();
+    mockCreateClient.mockReturnValue(sbOk);
+    await rerender(<Hero user={null} role={null} />);
+    await clickElement(findButtonByText(container, 'Sign in with Microsoft'));
+    expect(sbOk.auth.signInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'azure' })
     );
-    expect(mockToastSuccess).toHaveBeenCalledWith('Successfully logged in!');
-    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
-    expect(mockRouterRefresh).toHaveBeenCalled();
   });
 
   it('EnvVarWarning renders warning badge and disabled Sign in / Sign up buttons', async () => {

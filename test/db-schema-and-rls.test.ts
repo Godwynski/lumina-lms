@@ -167,7 +167,6 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
       'catalog_import_jobs',
       'categories',
       'checkout_idempotency',
-      'demo_accounts',
       'library_cards',
       'notifications',
       'profiles',
@@ -371,7 +370,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     ).rejects.toThrow();
   });
 
-  it('handle_new_user and auto_set_student_id handle first super_admin, subsequent students, STI IDs, and non-STI / demo accounts', async () => {
+  it('handle_new_user and auto_set_student_id handle first super_admin, subsequent students, STI IDs, and non-STI rejection', async () => {
     // 1. Non-STI account rejected by default
     await expect(
       insertAuthUser(db, { email: 'outsider@gmail.com', fullName: 'Outsider' })
@@ -423,21 +422,13 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     expect(secondCard.rows[0].status).toBe('PENDING');
     expect(secondCard.rows[0].card_number).not.toBe(firstCard.rows[0].card_number);
 
-    // 4. Demo allowlisted non-STI account succeeds and keeps student_id NULL
-    await db.query(`INSERT INTO public.demo_accounts (email) VALUES ('demo.patron@lumina.test')`);
-    const demoId = await insertAuthUser(db, {
-      email: 'demo.patron@lumina.test',
-      fullName: 'Demo Patron',
-    });
-    const demoProfile = await db.query<{ role: string; status: string; student_id: string | null }>(
-      `SELECT role::text, status, student_id FROM public.profiles WHERE id = $1`,
-      [demoId]
-    );
-    expect(demoProfile.rows[0]).toEqual({
-      role: 'patron',
-      status: 'PENDING',
-      student_id: null,
-    });
+    // 4. Non-STI @lumina.test accounts are rejected now that demo_accounts is removed
+    await expect(
+      insertAuthUser(db, {
+        email: 'demo.patron@lumina.test',
+        fullName: 'Demo Patron',
+      })
+    ).rejects.toThrow(/Sign-up is limited to @alabang\.sti\.edu\.ph accounts/);
 
     // 5. Sign-up + profile library card trigger provisions a library_cards row for every role (firstId covers super_admin), and patron_type rejects invalid values
     const adminCard = await db.query<{ card_number: string }>(
@@ -458,7 +449,7 @@ describe('DB Schema, Constraints, Seeds & Triggers', () => {
     }
 
     await expect(
-      db.query(`UPDATE public.profiles SET patron_type = 'guest' WHERE id = $1`, [demoId])
+      db.query(`UPDATE public.profiles SET patron_type = 'guest' WHERE id = $1`, [secondId])
     ).rejects.toThrow();
   });
 
@@ -677,7 +668,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     expect(await checkHelpers(superAdminId)).toEqual({ staff: true, mgr: true });
   });
 
-  it('enforces sensitive RPC EXECUTE revocations and demo_accounts isolation', async () => {
+  it('enforces sensitive RPC EXECUTE revocations and confirms demo_accounts removal', async () => {
     for (const fnCall of [
       `SELECT public.process_qr_checkout('${librarianId}', 'X', 'Y', NULL, true)`,
       `SELECT public.process_qr_return('${librarianId}', 'Y', NULL, true)`,
@@ -694,40 +685,9 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     await expectRoleFailure(db, 'anon', null, `SELECT * FROM public.get_borrowing_history_v2()`);
     await expectRoleFailure(db, 'anon', null, `SELECT public.annual_student_reset()`);
     await expectRoleFailure(db, 'anon', null, `SELECT public.get_analytics_summary('7d')`);
-    await expectRoleFailure(db, 'anon', null, `SELECT * FROM public.demo_accounts`);
-    await expectRoleFailure(db, 'anon', null, `INSERT INTO public.demo_accounts (email) VALUES ('anon@example.com')`);
-    await expectRoleFailure(db, 'authenticated', superAdminId, `SELECT * FROM public.demo_accounts`);
-    await expectRoleFailure(db, 'authenticated', superAdminId, `INSERT INTO public.demo_accounts (email) VALUES ('admin@example.com')`);
-    await expectRoleFailure(db, 'authenticated', superAdminId, `UPDATE public.demo_accounts SET email = 'x@example.com'`);
-    await expectRoleFailure(db, 'authenticated', superAdminId, `DELETE FROM public.demo_accounts`);
 
-    // Verify demo_accounts has the explicit deny-all RLS policy and blocks reads/writes even if table privileges existed
-    const demoPolicies = await db.query<{ policyname: string; cmd: string; qual: string; with_check: string }>(
-      `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = 'demo_accounts'`
-    );
-    expect(demoPolicies.rows).toEqual([
-      {
-        policyname: 'Deny direct access to demo accounts',
-        cmd: 'ALL',
-        qual: 'false',
-        with_check: 'false',
-      },
-    ]);
-
-    await expect(
-      db.transaction(async (tx) => {
-        await tx.exec(`INSERT INTO public.demo_accounts (email) VALUES ('seed@example.com')`);
-        await tx.exec(`GRANT ALL ON public.demo_accounts TO anon, authenticated`);
-        await tx.exec(`SET LOCAL ROLE authenticated`);
-        await tx.query(`SELECT set_config('request.jwt.claim.sub', $1, true)`, [superAdminId]);
-        const visible = await tx.query(`SELECT email FROM public.demo_accounts`);
-        expect(visible.rows).toHaveLength(0);
-        await expect(
-          tx.query(`INSERT INTO public.demo_accounts (email) VALUES ('blocked@example.com')`)
-        ).rejects.toThrow();
-        throw new Error('rollback-demo-probe');
-      })
-    ).rejects.toThrow('rollback-demo-probe');
+    const demoTableReg = await db.query<{ reg: string | null }>(`SELECT to_regclass('public.demo_accounts') AS reg`);
+    expect(demoTableReg.rows[0].reg).toBeNull();
 
     // Verify trigger function ensure_profile_library_card() is not directly executable by PUBLIC, anon, authenticated, or service_role
     const cardFnPrivs = await db.query<{ anon_exec: boolean; auth_exec: boolean; pub_exec: boolean; sr_exec: boolean }>(
@@ -1255,6 +1215,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
 
     const wp9RollbackSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8');
     const wp9MigrationSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8');
+    const removeDemoSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261127031000_remove_demo_access.sql'), 'utf8');
     await db.exec(wp9RollbackSql);
     await db.exec(wp4RollbackSql);
     await db.exec(rollbackSql);
@@ -1295,16 +1256,19 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     const libCard = await db.query<{ status: string }>(`SELECT status FROM public.library_cards WHERE user_id = $1`, [librarianId]);
     expect(libCard.rows[0]?.status).toBe('ACTIVE');
     await db.exec(wp9MigrationSql);
+    await db.exec(removeDemoSql);
   });
 
   it('migrates existing role values and metadata, preserves permissions, and rolls back', async () => {
     const rollback = fs.readFileSync(path.resolve(process.cwd(), 'supabase/rollback/20261116_undo_rename_role_values.sql'), 'utf8');
     const migration = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261116200000_rename_role_values.sql'), 'utf8');
+    const removeDemoSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/migrations/20261127031000_remove_demo_access.sql'), 'utf8');
     await db.exec(rollback);
     await db.query(`UPDATE auth.users SET raw_app_meta_data = '{"role":"student","keep":true}', raw_user_meta_data = '{"role":"student_assistant","keep":true}' WHERE id = $1`, [student1Id]);
     const before = await db.query<{ role: string }>(`SELECT role::text FROM public.profiles WHERE id IN ($1, $2, $3, $4) ORDER BY role`, [superAdminId, librarianId, saId, student1Id]);
     expect(before.rows.map(r => r.role)).toEqual(['librarian', 'student', 'student_assistant', 'super_admin']);
     await db.exec(migration);
+    await db.exec(removeDemoSql);
     const migrated = await db.query<{ role: string }>(`SELECT role::text FROM public.profiles WHERE id IN ($1, $2, $3, $4) ORDER BY role`, [superAdminId, librarianId, saId, student1Id]);
     expect(migrated.rows.map(r => r.role)).toEqual(['librarian', 'library_staff', 'patron', 'super_admin']);
     const meta = await db.query<{ app: unknown; usr: unknown }>(`SELECT raw_app_meta_data AS app, raw_user_meta_data AS usr FROM auth.users WHERE id = $1`, [student1Id]);
@@ -1319,6 +1283,7 @@ describe('Helper Functions, Privilege Revocations & Row-Level Security (RLS)', (
     const restored = await db.query<{ role: string; app: string; usr: string }>(`SELECT p.role::text, u.raw_app_meta_data->>'role' AS app, u.raw_user_meta_data->>'role' AS usr FROM public.profiles p JOIN auth.users u ON u.id = p.id WHERE p.id = $1`, [student1Id]);
     expect(restored.rows[0]).toEqual({ role: 'student', app: 'student', usr: 'student_assistant' });
     await db.exec(migration);
+    await db.exec(removeDemoSql);
   });
 
   it('enforces super_admin read-only RLS on archive tables and applies WP6 rollback/migration cleanly', async () => {

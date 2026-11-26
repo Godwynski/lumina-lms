@@ -75,10 +75,6 @@ vi.mock('@/lib/actions/public-catalog', () => ({
   getPublicBookById: (...args: unknown[]) => mockGetPublicBookById(...args),
 }));
 
-vi.mock('@/lib/demo/config', () => ({
-  isDemoModeEnabled: () => true,
-}));
-
 // Components & pages under test
 import AuthErrorPage from '@/app/(auth)/error/page';
 import PublicBookDetailPage from '@/app/(public)/book/[id]/page';
@@ -217,24 +213,18 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
     expect(container).toHaveTextContent('SICP');
   });
 
-  it('Home landing renders Quick Demo Access buttons synchronously without skeleton delay', async () => {
+  it('Home landing renders Microsoft sign-in without Quick Demo Access', async () => {
     mockGetMe.mockResolvedValue(null);
-    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal('fetch', fetchSpy);
     const { container } = await renderClient(await Home());
-    expect(container).toHaveTextContent('Quick Demo Access');
-    const demoLabels = ['Super Admin', 'Librarian', 'Library Staff', 'Patron'];
-    for (const label of demoLabels) {
+    expect(container).toHaveTextContent('Sign in with Microsoft');
+    expect(container).not.toHaveTextContent('Quick Demo Access');
+    for (const label of ['Super Admin', 'Librarian', 'Library Staff', 'Patron']) {
       const btn = Array.from(container.querySelectorAll('button')).find(
         (b) => b.textContent?.trim() === label
       );
-      expect(btn).toBeDefined();
-      expect(btn?.getAttribute('type')).toBe('button');
+      expect(btn).toBeUndefined();
     }
     expect(container).toHaveTextContent('My Borrowing');
-    await clickElement(Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Patron'));
-    expect(fetchSpy).toHaveBeenCalledWith('/api/demo-login', expect.objectContaining({ method: 'POST' }));
-    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
   });
 
   it('Home redirects signed-in users to /dashboard except blocked patrons; blocked staff still go in', async () => {
@@ -258,19 +248,18 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
     }
   });
 
-  it('Hero triggers demo sign-in and navigates to /dashboard', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal('fetch', fetchSpy);
+  it('Hero triggers Microsoft OAuth sign-in when clicked', async () => {
+    const signInWithOAuth = vi.fn().mockResolvedValue({ error: null });
+    mockCreateBrowserClient.mockReturnValue({ auth: { signInWithOAuth } });
 
-    const { container } = await renderClient(<Hero user={null} role={null} showDemo={true} />);
-    const patronBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.trim() === 'Patron'
+    const { container } = await renderClient(<Hero user={null} role={null} />);
+    expect(container).not.toHaveTextContent('Quick Demo Access');
+    const msBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Sign in with Microsoft')
     );
-    await clickElement(patronBtn);
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/demo-login',
-      expect.objectContaining({ method: 'POST' })
+    await clickElement(msBtn);
+    expect(signInWithOAuth).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'azure' })
     );
-    expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
   });
 });

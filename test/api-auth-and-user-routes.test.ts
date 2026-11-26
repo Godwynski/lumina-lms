@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import {
   createMockSupabaseClient,
@@ -13,7 +13,6 @@ const {
   mockFetchImage,
   mockRedirect,
   mockAfter,
-  mockIsDemoModeEnabled,
 } = vi.hoisted(() => ({
   mockCreateClient: vi.fn(),
   mockCreateAdminClient: vi.fn(),
@@ -23,7 +22,6 @@ const {
     throw new Error(`NEXT_REDIRECT:${url}`);
   }),
   mockAfter: vi.fn((cb: () => unknown) => Promise.resolve(cb())),
-  mockIsDemoModeEnabled: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -46,14 +44,6 @@ vi.mock("@/lib/fetch-image", async () => {
   };
 });
 
-vi.mock("@/lib/demo/config", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/demo/config")>("@/lib/demo/config");
-  return {
-    ...actual,
-    isDemoModeEnabled: mockIsDemoModeEnabled,
-  };
-});
-
 vi.mock("next/navigation", () => ({
   redirect: mockRedirect,
 }));
@@ -68,7 +58,6 @@ vi.mock("next/server", async () => {
 
 import { GET as authCallbackGet } from "@/app/(auth)/callback/route";
 import { GET as authConfirmGet } from "@/app/(auth)/confirm/route";
-import { POST as demoLoginPost, demoLoginRateLimiter } from "@/app/api/demo-login/route";
 import { POST as assetsRefreshPost } from "@/app/api/my-card/assets-refresh/route";
 import { GET as assetsStatusGet } from "@/app/api/my-card/assets-status/route";
 import {
@@ -133,28 +122,16 @@ function setupAuth(
 describe("Auth, Card, Preferences, Upload & User API Routes", () => {
   let supabase: MockSupabaseClientHelper;
   let adminSupabase: MockSupabaseClientHelper;
-  const originalDemoPassword = process.env.DEMO_PASSWORD;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    demoLoginRateLimiter.reset();
     supabase = createMockSupabaseClient();
     adminSupabase = createMockSupabaseClient();
     mockCreateClient.mockResolvedValue(supabase.client);
     mockCreateAdminClient.mockReturnValue(adminSupabase.client);
-    mockIsDemoModeEnabled.mockReturnValue(true);
     supabase.auth.exchangeCodeForSession = vi.fn();
     supabase.auth.verifyOtp = vi.fn();
-    supabase.auth.signInWithPassword = vi.fn();
     vi.spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    if (originalDemoPassword === undefined) {
-      delete process.env.DEMO_PASSWORD;
-    } else {
-      process.env.DEMO_PASSWORD = originalDemoPassword;
-    }
   });
 
   describe("GET /(auth)/callback", () => {
@@ -287,91 +264,6 @@ describe("Auth, Card, Preferences, Upload & User API Routes", () => {
       await expect(
         authConfirmGet(new NextRequest("http://localhost/confirm"))
       ).rejects.toThrow("NEXT_REDIRECT:/error?error=No%20token%20hash%20or%20type");
-    });
-  });
-
-  describe("POST /api/demo-login", () => {
-    it("returns 404 when demo mode disabled and 400 JSON when email/role is not a demo account", async () => {
-      mockIsDemoModeEnabled.mockReturnValueOnce(false);
-      const disabledRes = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", {
-          method: "POST",
-          body: JSON.stringify({ email: "demo.aquino@alabang.sti.edu.ph" }),
-        })
-      );
-      expect(disabledRes.status).toBe(404);
-
-      const unknownRes = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", {
-          method: "POST",
-          body: JSON.stringify({ email: "stranger@alabang.sti.edu.ph" }),
-        })
-      );
-      expect(unknownRes.status).toBe(400);
-      expect((await unknownRes.json()).error).toMatch(/unknown demo account/i);
-
-      const roleOnlyRes = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", {
-          method: "POST",
-          body: JSON.stringify({ role: "super_hacker" }),
-        })
-      );
-      expect(roleOnlyRes.status).toBe(400);
-      expect((await roleOnlyRes.json()).error).toBeTruthy();
-    });
-
-    it("returns 400 on malformed JSON or non-object payload, and 503 if DEMO_PASSWORD is missing", async () => {
-      const badJson = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", { method: "POST", body: "{bad" })
-      );
-      expect(badJson.status).toBe(400);
-
-      const arrayBody = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", { method: "POST", body: "[]" })
-      );
-      expect(arrayBody.status).toBe(400);
-
-      delete process.env.DEMO_PASSWORD;
-      const misconfigured = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", {
-          method: "POST",
-          body: JSON.stringify({ email: "demo.aquino@alabang.sti.edu.ph" }),
-        })
-      );
-      expect(misconfigured.status).toBe(503);
-    });
-
-    it("signs in matching demo account (case-insensitive) and returns 401 if credentials fail", async () => {
-      process.env.DEMO_PASSWORD = "demo-secret-password";
-      (supabase.auth.signInWithPassword as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        data: { user: { id: "demo-1" } },
-        error: null,
-      });
-
-      const okRes = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", {
-          method: "POST",
-          body: JSON.stringify({ email: "  DEMO.AQUINO@ALABANG.STI.EDU.PH  " }),
-        })
-      );
-      expect(okRes.status).toBe(200);
-      expect(await okRes.json()).toEqual({ ok: true });
-      expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: "demo.aquino@alabang.sti.edu.ph",
-        password: "demo-secret-password",
-      });
-
-      (supabase.auth.signInWithPassword as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        data: { user: null },
-        error: { message: "Invalid login credentials" },
-      });
-      const failRes = await demoLoginPost(
-        new Request("http://localhost/api/demo-login", {
-          method: "POST",
-          body: JSON.stringify({ email: "demo.aquino@alabang.sti.edu.ph" }),
-        })
-      );
-      expect(failRes.status).toBe(401);
     });
   });
 
