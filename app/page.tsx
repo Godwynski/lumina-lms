@@ -2,6 +2,7 @@ import { EnvVarWarning } from "@/components/env-var-warning";
 import { Logo } from "@/components/layout/Logo";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { Hero } from "@/components/hero";
+import { isDemoModeEnabled } from "@/lib/demo/config";
 import { BookStage } from "@/components/landing/book-stage";
 import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
@@ -85,7 +86,7 @@ export default async function Home() {
       <BookStage
         title="STI College Alabang Library"
         intro="Search the library catalog, reserve a copy for pickup and keep track of what you have borrowed."
-        actions={<Hero user={me?.user ?? null} role={me?.role ?? null} />}
+        actions={<Hero user={me?.user ?? null} role={me?.role ?? null} showDemo={isDemoModeEnabled()} />}
         steps={STEPS}
       />
 

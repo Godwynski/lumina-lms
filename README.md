@@ -71,3 +71,15 @@ The seed and clean scripts are listed in [package.json](package.json). Review ea
 Lumina is a **Restricted / Authenticated OPAC** for patrons (students and faculty) and authorized library personnel. Koha and MARC 21 inform the library-system and bibliographic-reference context; they are references, not integrated products. The application’s role labels are Patron and Library Staff; the database role values are `patron` and `library_staff`.
 
 Cash fine payments and official receipts are handled manually in a physical ledger. Lumina computes fines and tracks Receivable, Paid, and Condoned resolutions, but does not provide full digital accounting or receipt issuance. Book purchase price, replacement cost, and donation tracking are not implemented.
+
+### Capstone evaluation
+
+Set distinct server-only `DEMO_ACCESS_CODE` (at least 24 characters) and `DEMO_PASSWORD`
+(at least 12 characters) to show Quick Demo Access. Share only the evaluator access
+code. The password is used by the server to authenticate the four fixture users.
+
+Against the explicitly selected Supabase host, run
+`npx ts-node -T scripts/seed-demo.ts <supabase-host>` using the same demo password.
+The script refuses to replace an institutional Super Admin and inserts stable
+fixture records without clearing application tables. Remove the deployment's
+demo configuration after evaluation and rotate or disable the demo users in Supabase.
