@@ -1,9 +1,7 @@
 import { DEMO_ACCOUNTS, type DemoAccount } from './accounts.ts';
 
 export function isDemoModeEnabled(): boolean {
-  return (process.env.DEMO_ACCESS_CODE?.length ?? 0) >= 24
-    && (process.env.DEMO_PASSWORD?.length ?? 0) >= 12
-    && process.env.DEMO_ACCESS_CODE !== process.env.DEMO_PASSWORD;
+  return process.env.DEMO_ONLY === 'true' && (process.env.DEMO_PASSWORD?.length ?? 0) >= 12;
 }
 
 export function findDemoAccount(email: string): DemoAccount | undefined {

@@ -133,6 +133,27 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
     vi.restoreAllMocks();
   });
 
+  it('shows only four one-click demo choices and submits the selected account without a code', async () => {
+    const demoRequest = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal('fetch', demoRequest);
+    try {
+      const { container } = await renderClient(<Hero user={null} role={null} showDemo />);
+      const choices = [...container.querySelectorAll('button')];
+      expect(choices.map((button) => button.textContent)).toEqual([
+        'Super Admin', 'Librarian', 'Library Staff', 'Patron',
+      ]);
+      expect(container.querySelector('input')).toBeNull();
+      await clickElement(choices[3]);
+      expect(demoRequest).toHaveBeenCalledWith('/api/demo-login', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'demo.bautista.20220271@alabang.sti.edu.ph' }),
+      }));
+      expect(mockRouterPush).toHaveBeenCalledWith('/dashboard');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('/error uses AuthPageShell and derives dynamic subtitle per error code', async () => {
     const generic = await renderClient(
       <AuthErrorPage searchParams={Promise.resolve({})} />

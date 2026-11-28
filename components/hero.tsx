@@ -3,7 +3,6 @@
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ArrowRight, BookOpen, GraduationCap, Loader2, ShieldCheck, UserCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -20,7 +19,6 @@ const DEMO_BUTTONS = DEMO_ACCOUNTS.map(({ label, email, role }) => ({ label: ROL
 /** Sign-in actions for the landing page. The headline and copy are static in app/page.tsx. */
 export function Hero({ user, role, showDemo = false }: { user: User | null; role: string | null; showDemo?: boolean }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [accessCode, setAccessCode] = useState('');
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
   const router = useRouter();
 
@@ -55,7 +53,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
       const res = await fetch('/api/demo-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, accessCode }),
+        body: JSON.stringify({ email }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -89,20 +87,22 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
 
   return (
     <div className="space-y-5">
-      <Button
-        type="button"
-        size="lg"
-        className="h-auto min-h-12 w-full gap-3 whitespace-normal py-3 focus-visible:transition-none"
-        onClick={handleMicrosoftLogin}
-        disabled={isLoading}
-      >
-        {isLoading && !loadingEmail ? (
-          <Loader2 className="animate-spin" />
-        ) : (
-          <MicrosoftIcon />
-        )}
-        <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
-      </Button>
+      {!showDemo && (
+        <Button
+          type="button"
+          size="lg"
+          className="h-auto min-h-12 w-full gap-3 whitespace-normal py-3 focus-visible:transition-none"
+          onClick={handleMicrosoftLogin}
+          disabled={isLoading}
+        >
+          {isLoading && !loadingEmail ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <MicrosoftIcon />
+          )}
+          <span>{isLoading && !loadingEmail ? "Redirecting..." : "Sign in with Microsoft"}</span>
+        </Button>
+      )}
 
       {showDemo && (
         <div className="space-y-4">
@@ -114,16 +114,6 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
               <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
             </div>
           </div>
-            <label className="block space-y-2 text-sm font-medium">
-              <span>Evaluator access code</span>
-              <Input
-                type="password"
-                autoComplete="off"
-                maxLength={256}
-                value={accessCode}
-                onChange={(event) => setAccessCode(event.target.value)}
-              />
-            </label>
           <div className="grid grid-cols-2 gap-3">
             {DEMO_BUTTONS.map((item) => {
               const Icon = item.icon;
@@ -135,7 +125,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
                   variant="outline"
                   className="h-11 justify-start gap-2.5 px-3.5 text-xs font-medium text-foreground"
                   onClick={() => signInDemo(item.email)}
-                    disabled={isLoading || !accessCode}
+                  disabled={isLoading}
                 >
                   {isThisLoading ? <Loader2 className="animate-spin" /> : <Icon />}
                   <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>

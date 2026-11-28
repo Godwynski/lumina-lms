@@ -74,9 +74,10 @@ Cash fine payments and official receipts are handled manually in a physical ledg
 
 ### Capstone evaluation
 
-Set distinct server-only `DEMO_ACCESS_CODE` (at least 24 characters) and `DEMO_PASSWORD`
-(at least 12 characters) to show Quick Demo Access. Share only the evaluator access
-code. The password is used by the server to authenticate the four fixture users.
+Set server-only `DEMO_ONLY=true` and `DEMO_PASSWORD` (at least 12 characters) to
+show the four one-click Quick Demo Access buttons. Use a demo-only Supabase
+project with Microsoft Azure and public sign-up disabled. Demo mode also
+disables outbound mail.
 
 Against the explicitly selected Supabase host, run
 `npx ts-node -T scripts/seed-demo.ts <supabase-host>` using the same demo password.

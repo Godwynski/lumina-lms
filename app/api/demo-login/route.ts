@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { findDemoAccount, isDemoModeEnabled } from '@/lib/demo/config';
@@ -10,6 +9,25 @@ export const dynamic = 'force-dynamic';
 // brute-forced against the published demo account emails. Exported so tests can
 // reset the in-memory window between cases.
 export const demoLoginRateLimiter = createRateLimiter({ limit: 5, windowMs: 60_000 });
+
+async function signupIsDisabled() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return false;
+
+  try {
+    const response = await fetch(new URL('/auth/v1/settings', url), {
+      headers: { apikey: key },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return false;
+    const settings = await response.json();
+    return settings.disable_signup === true && settings.external?.azure === false;
+  } catch {
+    return false;
+  }
+}
 
 // Signs a demo account in server-side so the password never reaches the browser.
 export async function POST(request: Request) {
@@ -25,7 +43,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { email?: unknown; accessCode?: unknown };
+  let body: { email?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -41,13 +59,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unknown demo account. Use one of the listed demo accounts.' }, { status: 400 });
   }
 
-  const expectedCode = process.env.DEMO_ACCESS_CODE;
-  if (typeof body.accessCode !== 'string' || body.accessCode.length > 256 || !expectedCode
-      || !timingSafeEqual(
-        createHash('sha256').update(body.accessCode).digest(),
-        createHash('sha256').update(expectedCode).digest(),
-      )) {
-    return NextResponse.json({ error: 'Invalid demo access code' }, { status: 403 });
+  if (!(await signupIsDisabled())) {
+    return NextResponse.json({ error: 'Demo sign-in is unavailable.' }, { status: 503 });
   }
 
   const password = process.env.DEMO_PASSWORD;

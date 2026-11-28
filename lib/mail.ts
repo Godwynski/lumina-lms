@@ -142,6 +142,7 @@ export async function sendOverdueEmail({
   dueDate,
   overdueDays,
 }: SendOverdueEmailOptions) {
+  if (process.env.DEMO_ONLY === 'true') return { success: false, error: 'Outbound email is disabled in demo mode' };
   if (!to) return { success: false, error: 'No email address' };
 
   const subject = `URGENT: Your borrowed book is ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue`;
@@ -190,6 +191,7 @@ export async function sendDueSoonEmail({
   bookTitle,
   dueDate,
 }: SendDueSoonEmailOptions) {
+  if (process.env.DEMO_ONLY === 'true') return { success: false, error: 'Outbound email is disabled in demo mode' };
   if (!to) return { success: false, error: 'No email address' };
 
   const subject = `Reminder: Your borrowed book is due on ${dueDate}`;
@@ -233,6 +235,7 @@ export async function sendDueSoonEmail({
  * Sends a professional test email to verify SMTP configuration.
  */
 export async function sendTestEmail(to: string, userName: string) {
+  if (process.env.DEMO_ONLY === 'true') return { success: false, error: 'Outbound email is disabled in demo mode' };
   if (!to) return { success: false, error: 'No email address' };
 
   const subject = 'Lumina LMS: Email System Test';

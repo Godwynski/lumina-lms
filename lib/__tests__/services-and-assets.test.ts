@@ -153,6 +153,20 @@ describe('lib/mail', () => {
     vi.unstubAllEnvs();
   });
 
+  it('suppresses all outbound email in demo-only mode', async () => {
+    vi.stubEnv('DEMO_ONLY', 'true');
+    try {
+      const input = { to: 'receiver@example.com', userName: 'Demo', bookTitle: 'Book', dueDate: 'Jan 1' };
+      const result = { success: false, error: 'Outbound email is disabled in demo mode' };
+      expect(await sendOverdueEmail({ ...input, overdueDays: 2 })).toEqual(result);
+      expect(await sendDueSoonEmail(input)).toEqual(result);
+      expect(await sendTestEmail(input.to, input.userName)).toEqual(result);
+      expect(mockSendMail).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('formats getFromAddress across empty, full, bare email, and bare name SMTP_FROM', () => {
     vi.stubEnv('SMTP_FROM', '');
     expect(getFromAddress()).toBe('"Lumina LMS" <no-reply@lumina-lms.com>');
