@@ -77,7 +77,10 @@ Cash fine payments and official receipts are handled manually in a physical ledg
 Set server-only `DEMO_ONLY=true` and `DEMO_PASSWORD` (at least 12 characters) to
 show the four one-click Quick Demo Access buttons. Use a demo-only Supabase
 project with Microsoft Azure and public sign-up disabled. Demo mode also
-disables outbound mail.
+disables outbound mail. On the institutional deployment, set `DEMO_SITE_ORIGIN`
+to the demo deployment's HTTPS origin. On the demo deployment, set
+`DEMO_LANDING_ORIGIN` to the institutional origin so users can click through and
+sign in from the main site.
 
 Against the explicitly selected Supabase host, run
 `npx ts-node -T scripts/seed-demo.ts <supabase-host>` using the same demo password.

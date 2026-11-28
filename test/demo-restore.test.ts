@@ -63,6 +63,30 @@ describe('Quick Demo Access', () => {
     expect(signIn).not.toHaveBeenCalled();
   });
 
+  it('accepts a browser form from the configured institutional landing page', async () => {
+    vi.stubEnv('DEMO_LANDING_ORIGIN', 'https://library.example.com');
+    signIn.mockResolvedValue({ data: { user: { id: 'demo' } }, error: null });
+    const response = await POST(new Request('https://demo.example.com/api/demo-login', {
+      method: 'POST',
+      headers: { origin: 'https://library.example.com' },
+      body: new URLSearchParams({ email }),
+    }));
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('https://demo.example.com/dashboard');
+    expect(signIn).toHaveBeenCalledExactlyOnceWith({ email, password });
+  });
+
+  it('rejects cross-site browser forms from an unrelated site', async () => {
+    vi.stubEnv('DEMO_LANDING_ORIGIN', 'https://library.example.com');
+    const response = await POST(new Request('https://demo.example.com/api/demo-login', {
+      method: 'POST',
+      headers: { origin: 'https://unrelated.example.com' },
+      body: new URLSearchParams({ email }),
+    }));
+    expect(response.status).toBe(403);
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
   it('throttles repeated attempts', async () => {
     for (let i = 0; i < 5; i += 1) {
       expect((await submit({})).status).toBe(400);

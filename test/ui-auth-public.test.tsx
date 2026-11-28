@@ -154,6 +154,19 @@ describe('B8 — Auth, Landing & Public Pages UI', () => {
     }
   });
 
+  it('keeps Microsoft sign-in and submits all demo roles to the isolated site', async () => {
+    const endpoint = 'https://demo.example.com/api/demo-login';
+    const { container } = await renderClient(<Hero user={null} role={null} demoLoginUrl={endpoint} />);
+    expect(container).toHaveTextContent('Sign in with Microsoft');
+    expect(container.querySelector('input')).toBeNull();
+    const form = container.querySelector('form');
+    expect(form).toHaveAttribute('action', endpoint);
+    expect(form).toHaveAttribute('method', 'post');
+    const buttons = [...form!.querySelectorAll('button')];
+    expect(buttons.map((button) => button.textContent)).toEqual(['Super Admin', 'Librarian', 'Library Staff', 'Patron']);
+    expect(buttons.every((button) => button.name === 'email' && button.type === 'submit')).toBe(true);
+  });
+
   it('/error uses AuthPageShell and derives dynamic subtitle per error code', async () => {
     const generic = await renderClient(
       <AuthErrorPage searchParams={Promise.resolve({})} />

@@ -17,7 +17,9 @@ const DEMO_ICONS = { super_admin: ShieldCheck, librarian: BookOpen, library_staf
 const DEMO_BUTTONS = DEMO_ACCOUNTS.map(({ label, email, role }) => ({ label: ROLE_LABELS[role] || label, email, icon: DEMO_ICONS[role] }));
 
 /** Sign-in actions for the landing page. The headline and copy are static in app/page.tsx. */
-export function Hero({ user, role, showDemo = false }: { user: User | null; role: string | null; showDemo?: boolean }) {
+export function Hero({ user, role, showDemo = false, demoLoginUrl }: {
+  user: User | null; role: string | null; showDemo?: boolean; demoLoginUrl?: string;
+}) {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
   const router = useRouter();
@@ -85,6 +87,26 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
     );
   }
 
+  const demoButtons = DEMO_BUTTONS.map((item) => {
+    const Icon = item.icon;
+    const isThisLoading = loadingEmail === item.email;
+    return (
+      <Button
+        key={item.email}
+        type={demoLoginUrl ? 'submit' : 'button'}
+        name={demoLoginUrl ? 'email' : undefined}
+        value={demoLoginUrl ? item.email : undefined}
+        variant="outline"
+        className="h-11 justify-start gap-2.5 px-3.5 text-xs font-medium text-foreground"
+        onClick={demoLoginUrl ? undefined : () => signInDemo(item.email)}
+        disabled={isLoading}
+      >
+        {isThisLoading ? <Loader2 className="animate-spin" /> : <Icon />}
+        <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>
+      </Button>
+    );
+  });
+
   return (
     <div className="space-y-5">
       {!showDemo && (
@@ -104,7 +126,7 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
         </Button>
       )}
 
-      {showDemo && (
+      {(showDemo || demoLoginUrl) && (
         <div className="space-y-4">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -114,25 +136,11 @@ export function Hero({ user, role, showDemo = false }: { user: User | null; role
               <span className="bg-background px-4 text-muted-foreground">Quick Demo Access</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {DEMO_BUTTONS.map((item) => {
-              const Icon = item.icon;
-              const isThisLoading = loadingEmail === item.email;
-              return (
-                <Button
-                  key={item.email}
-                  type="button"
-                  variant="outline"
-                  className="h-11 justify-start gap-2.5 px-3.5 text-xs font-medium text-foreground"
-                  onClick={() => signInDemo(item.email)}
-                  disabled={isLoading}
-                >
-                  {isThisLoading ? <Loader2 className="animate-spin" /> : <Icon />}
-                  <span className="truncate">{isThisLoading ? 'Signing in...' : item.label}</span>
-                </Button>
-              );
-            })}
-          </div>
+          {demoLoginUrl ? (
+            <form method="post" action={demoLoginUrl} className="grid grid-cols-2 gap-3">{demoButtons}</form>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">{demoButtons}</div>
+          )}
         </div>
       )}
     </div>

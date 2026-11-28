@@ -43,18 +43,29 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { email?: unknown };
+  const isForm = request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded');
+  const requestOrigin = new URL(request.url).origin;
+  const origin = request.headers.get('origin');
+  if (isForm && (!origin || (origin !== requestOrigin && origin !== process.env.DEMO_LANDING_ORIGIN))) {
+    return NextResponse.json({ error: 'Invalid sign-in origin' }, { status: 403 });
+  }
+
+  let email: unknown;
   try {
-    body = await request.json();
+    if (isForm) {
+      email = (await request.formData()).get('email');
+    } else {
+      const body = await request.json();
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+      }
+      email = body.email;
+    }
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-  }
-
-  const account = typeof body.email === 'string' ? findDemoAccount(body.email) : undefined;
+  const account = typeof email === 'string' ? findDemoAccount(email) : undefined;
   if (!account) {
     return NextResponse.json({ error: 'Unknown demo account. Use one of the listed demo accounts.' }, { status: 400 });
   }
@@ -77,5 +88,6 @@ export async function POST(request: Request) {
     );
   }
 
+  if (isForm) return NextResponse.redirect(new URL('/dashboard', requestOrigin), 303);
   return NextResponse.json({ ok: true });
 }
